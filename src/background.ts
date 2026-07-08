@@ -1,10 +1,11 @@
-const INSTALL_STATE_KEY = "myChromeUtilitiesInstalledAt";
+function openSidePanelForActiveTab(tab: chrome.tabs.Tab): void {
+  if (tab.id === undefined) {
+    return;
+  }
 
-function recordInstallation(): void {
-  const installedAt = new Date().toISOString();
-  void chrome.storage.local.set({ [INSTALL_STATE_KEY]: installedAt });
+  void chrome.sidePanel.open({ tabId: tab.id });
 }
 
-chrome.runtime.onInstalled.addListener(recordInstallation);
+chrome.action.onClicked.addListener(openSidePanelForActiveTab);
 
 export {};

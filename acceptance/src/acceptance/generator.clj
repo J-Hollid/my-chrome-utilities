@@ -32,7 +32,7 @@
 
 (defn- entrypoint-text [ir-path]
   (format
-   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.steps.project-skeleton :as steps]\n            [aps.json :as aps-json]))\n\n(defn -main [& args]\n  (let [ir-path (or (first args) %s)\n        feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature steps/handlers)\n    (println \"acceptance passed\")))\n\n(apply -main *command-line-args*)\n"
+   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.steps.all :as steps]\n            [aps.json :as aps-json]))\n\n(defn -main [& args]\n  (let [ir-path (or (first args) %s)\n        feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature steps/handlers)\n    (println \"acceptance passed\")))\n\n(apply -main *command-line-args*)\n"
    (pr-str ir-path)))
 
 (defn generate!

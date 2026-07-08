@@ -1,14 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "My Chrome Utilities",
+  "name": "my-chrome-utilities",
   "version": "0.1.0",
-  "description": "Small Chrome utility extension scaffold.",
+  "description": "Small Chrome utility extension.",
   "action": {
-    "default_title": "My Chrome Utilities"
+    "default_title": "my-chrome-utilities"
   },
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage"]
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
+  "permissions": ["sidePanel"]
 }
