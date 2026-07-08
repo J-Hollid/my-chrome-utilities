@@ -15,6 +15,10 @@ import {
   type DataLayerHistoryObserverState,
 } from "./data-layer-observer";
 import {
+  observerAttachmentStatus,
+  restartObservation,
+} from "./data-layer-recovery";
+import {
   captureEntry,
   DATA_LAYER_SESSION_STORAGE_KEY,
   endDataLayerTestingSession,
@@ -51,6 +55,9 @@ const sessionHistoryPath = document.querySelector<HTMLElement>(
 const sessionTimeline = document.querySelector<HTMLElement>("#session-timeline");
 const sessionWarning = document.querySelector<HTMLElement>("#session-warning");
 const observerStatus = document.querySelector<HTMLElement>("#observer-status");
+const restartObservationButton = document.querySelector<HTMLButtonElement>(
+  "#restart-observation",
+);
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -142,8 +149,10 @@ function appendDefinition(list: HTMLElement, label: string, value: string): void
 
 function renderObserverState(): void {
   if (observerStatus) {
-    observerStatus.textContent =
-      dataLayerObserverState.observer?.status ?? "inactive";
+    observerStatus.textContent = observerAttachmentStatus(
+      dataLayerSessionState,
+      dataLayerObserverState,
+    );
   }
 }
 
@@ -287,6 +296,17 @@ historyPathInput?.addEventListener("input", () => {
     historyPath: path,
     pageUrl: globalThis.location.href,
   });
+  renderObserverState();
+});
+
+restartObservationButton?.addEventListener("click", () => {
+  dataLayerObserverState = restartObservation(
+    dataLayerSessionState,
+    dataLayerObserverState,
+    {
+      pageUrl: globalThis.location.href,
+    },
+  );
   renderObserverState();
 });
 
