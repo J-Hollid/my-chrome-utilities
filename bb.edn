@@ -1,0 +1,4 @@
+{:paths ["vendor/acceptance-pipeline-specification/bb/src"]
+ :tasks
+ {gherkin-parser aps.cli.gherkin-parser/-main
+  gherkin-ir-dry-checker aps.cli.gherkin-ir-dry-checker/-main}}
