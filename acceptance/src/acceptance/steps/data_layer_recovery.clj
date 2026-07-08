@@ -50,6 +50,9 @@
 (defn forbidden-recovery-capability-findings [files]
   (support/pattern-findings forbidden-recovery-capability-patterns files))
 
+(defn forbidden-recovery-capability-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-recovery-capability-findings files)))
+
 (defn- inspect-recovery-implementation [root]
   {"src/data-layer-session.ts" (support/source-file root "src/data-layer-session.ts")
    "src/data-layer-recovery.ts" (support/source-file root "src/data-layer-recovery.ts")
@@ -172,9 +175,9 @@
 
    {:pattern #"^cross-device sync is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :cross-device-sync (:kind %))
-                                      (forbidden-recovery-capability-findings
-                                       (:recovery-files world)))]
+               (let [findings (forbidden-recovery-capability-findings-of-kind
+                               (:recovery-files world)
+                               :cross-device-sync)]
                  (support/assert! (empty? findings)
                                   "Disallowed sync behavior was found."
                                   {:findings (vec findings)})
@@ -182,9 +185,9 @@
 
    {:pattern #"^automatic background monitoring of every tab is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :automatic-every-tab-monitoring (:kind %))
-                                      (forbidden-recovery-capability-findings
-                                       (:recovery-files world)))]
+               (let [findings (forbidden-recovery-capability-findings-of-kind
+                               (:recovery-files world)
+                               :automatic-every-tab-monitoring)]
                  (support/assert! (empty? findings)
                                   "Disallowed background monitoring was found."
                                   {:findings (vec findings)})

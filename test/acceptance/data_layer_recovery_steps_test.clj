@@ -46,3 +46,15 @@
          (recovery/forbidden-recovery-capability-findings
           {"src/sync.ts" "crossDeviceSync();"
            "src/all-tabs.ts" "monitorEveryTabInBackground();"}))))
+
+(deftest filters-disallowed-recovery-capabilities-by-kind
+  (let [files {"src/sync.ts" "crossDeviceSync();"
+               "src/all-tabs.ts" "monitorEveryTabInBackground();"}]
+    (is (= [{:kind :cross-device-sync :path "src/sync.ts"}]
+           (vec (recovery/forbidden-recovery-capability-findings-of-kind
+                 files
+                 :cross-device-sync))))
+    (is (= [{:kind :automatic-every-tab-monitoring :path "src/all-tabs.ts"}]
+           (vec (recovery/forbidden-recovery-capability-findings-of-kind
+                 files
+                 :automatic-every-tab-monitoring))))))
