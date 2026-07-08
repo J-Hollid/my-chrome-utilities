@@ -59,3 +59,20 @@
           {"src/timeline-filter.ts" "timelineFilter.apply();"
            "src/timeline-search.ts" "timelineSearch('signup');"
            "src/validation-results.ts" "validationResults.render();"}))))
+
+(deftest filters-disallowed-timeline-capabilities-by-kind
+  (let [files {"src/timeline-filter.ts" "timelineFilter.apply();"
+               "src/timeline-search.ts" "timelineSearch('signup');"
+               "src/validation-results.ts" "validationResults.render();"}]
+    (is (= [{:kind :timeline-filtering :path "src/timeline-filter.ts"}]
+           (vec (timeline/forbidden-timeline-capability-findings-of-kind
+                 files
+                 :timeline-filtering))))
+    (is (= [{:kind :timeline-search :path "src/timeline-search.ts"}]
+           (vec (timeline/forbidden-timeline-capability-findings-of-kind
+                 files
+                 :timeline-search))))
+    (is (= [{:kind :validation-results :path "src/validation-results.ts"}]
+           (vec (timeline/forbidden-timeline-capability-findings-of-kind
+                 files
+                 :validation-results))))))

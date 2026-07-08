@@ -51,15 +51,29 @@
 (defn- first-visible-entry [world]
   (first (visible-timeline-entries world)))
 
+(defn- example-value-or [example key fallback]
+  (or (support/example-value example key) fallback))
+
+(defn- default-payload-label [event-name]
+  (str event-name "-values"))
+
+(defn- default-raw-label [event-name]
+  (str event-name "-raw"))
+
 (defn- example-entry-options [example]
   (let [event-name (support/require-example example "event_name")]
     {:event-name event-name
      :page-url (support/require-example example "page_url")
      :history-path (support/require-example example "history_path")
-     :payload-label (or (support/example-value example "payload_label")
-                        (str event-name "-values"))
-     :raw-label (or (support/example-value example "raw_label")
-                    (str event-name "-raw"))}))
+     :payload-label (example-value-or example
+                                      "payload_label"
+                                      (default-payload-label event-name))
+     :raw-label (example-value-or example
+                                  "raw_label"
+                                  (default-raw-label event-name))}))
+
+(defn forbidden-timeline-capability-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-timeline-capability-findings files)))
 
 (def handlers
   [{:pattern #"^observed event entries are recorded$"
@@ -181,9 +195,9 @@
 
    {:pattern #"^timeline filtering is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :timeline-filtering (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :timeline-filtering)]
                  (support/assert! (empty? findings)
                                   "Timeline filtering was found."
                                   {:findings (vec findings)})
@@ -191,9 +205,9 @@
 
    {:pattern #"^timeline search is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :timeline-search (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :timeline-search)]
                  (support/assert! (empty? findings)
                                   "Timeline search was found."
                                   {:findings (vec findings)})
@@ -201,9 +215,9 @@
 
    {:pattern #"^validation results are not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :validation-results (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :validation-results)]
                  (support/assert! (empty? findings)
                                   "Validation results were found."
                                   {:findings (vec findings)})
