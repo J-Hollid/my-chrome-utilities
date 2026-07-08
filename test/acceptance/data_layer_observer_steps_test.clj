@@ -63,3 +63,20 @@
           {"src/object-observer.ts" "objectPushEventsWithEventFields();"
            "src/beacon.ts" "navigator.sendBeacon('/analytics');"
            "src/snapshot.ts" "captureObjectSnapshot(window.dataLayer);"}))))
+
+(deftest filters-disallowed-observer-capabilities-by-kind
+  (let [files {"src/object-observer.ts" "objectPushEventsWithEventFields();"
+               "src/beacon.ts" "navigator.sendBeacon('/analytics');"
+               "src/snapshot.ts" "captureObjectSnapshot(window.dataLayer);"}]
+    (is (= [{:kind :object-push-events :path "src/object-observer.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :object-push-events))))
+    (is (= [{:kind :analytics-beacons :path "src/beacon.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :analytics-beacons))))
+    (is (= [{:kind :object-snapshots :path "src/snapshot.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :object-snapshots))))))

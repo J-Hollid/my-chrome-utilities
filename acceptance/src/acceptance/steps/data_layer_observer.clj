@@ -18,6 +18,9 @@
 (defn- path-value [page-object path]
   (get-in page-object (path-parts path)))
 
+(defn- state-page-object [state]
+  (or (:page-object state) (default-page-object)))
+
 (defn- history-entry [event-name payload-label]
   {:event event-name
    :payload {:label payload-label}})
@@ -31,35 +34,49 @@
    :payload (get-in raw-value [:payload :label])
    :raw-value raw-value})
 
+(defn- observer-active-count [status]
+  (if (= "ready" status) 1 0))
+
+(defn- observer-state [status history-path page-url]
+  {:status status
+   :history-path history-path
+   :page-url page-url
+   :active-count (observer-active-count status)})
+
 (defn attach-observer [state {:keys [history-path page-url]}]
-  (let [page-object (or (:page-object state) (default-page-object))
+  (let [page-object (state-page-object state)
         status (data-layer/path-status page-object history-path)]
     (assoc state
            :page-object page-object
-           :observer {:status status
-                      :history-path history-path
-                      :page-url page-url
-                      :active-count (if (= "ready" status) 1 0)})))
+           :observer (observer-state status history-path page-url))))
 
 (defn reinstall-observer [state options]
   (attach-observer (assoc state :page-object (default-page-object)) options))
 
+(defn- observer-ready? [observer]
+  (= "ready" (:status observer)))
+
+(defn- capture-observed-entry-in-session [state entry]
+  (if (:session-state state)
+    (update state :session-state session/capture-entry entry)
+    state))
+
+(defn- observed-push-state [state observer raw-value]
+  (let [parts (path-parts (:history-path observer))
+        page-object (update-in (:page-object state) parts conj raw-value)
+        push-return (count (get-in page-object parts))
+        entry (observed-entry observer raw-value)]
+    (-> state
+        (assoc :page-object page-object
+               :push-return push-return)
+        (update :observed-entries (fnil conj []) entry)
+        (capture-observed-entry-in-session entry))))
+
 (defn page-push [state event-name payload-label]
   (let [raw-value (history-entry event-name payload-label)
-        observer (:observer state)
-        history-path (:history-path observer)]
-    (if (= "ready" (:status observer))
-      (let [parts (path-parts history-path)
-            page-object (update-in (:page-object state) parts conj raw-value)
-            push-return (count (get-in page-object parts))
-            entry (observed-entry observer raw-value)
-            next-state (-> state
-                           (assoc :page-object page-object
-                                  :push-return push-return)
-                           (update :observed-entries (fnil conj []) entry))]
-        (if (:session-state next-state)
-          (update next-state :session-state session/capture-entry entry)
-          next-state))
+        observer (:observer state)]
+    (if (observer-ready? observer)
+      (observed-push-state state observer raw-value)
       (assoc state :push-return nil))))
 
 (defn last-observed-entry [state]
@@ -75,6 +92,9 @@
 
 (defn forbidden-observer-capability-findings [files]
   (support/pattern-findings forbidden-observer-capability-patterns files))
+
+(defn forbidden-observer-capability-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-observer-capability-findings files)))
 
 (defn- inspect-observer-implementation [root]
   {"src/data-layer-observer.ts" (support/source-file root "src/data-layer-observer.ts")
@@ -269,9 +289,9 @@
 
    {:pattern #"^object push events with event fields are not observed$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :object-push-events (:kind %))
-                                      (forbidden-observer-capability-findings
-                                       (:observer-files world)))
+               (let [findings (forbidden-observer-capability-findings-of-kind
+                               (:observer-files world)
+                               :object-push-events)
                      object-state (attach-observer {:page-object {:queue {:history {:push []
                                                                                     :event "signup"}}}}
                                                    {:history-path "queue.history"
@@ -286,9 +306,9 @@
 
    {:pattern #"^analytics beacons are not observed$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :analytics-beacons (:kind %))
-                                      (forbidden-observer-capability-findings
-                                       (:observer-files world)))]
+               (let [findings (forbidden-observer-capability-findings-of-kind
+                               (:observer-files world)
+                               :analytics-beacons)]
                  (support/assert! (empty? findings)
                                   "Analytics beacon observation was found."
                                   {:findings (vec findings)})
@@ -296,9 +316,9 @@
 
    {:pattern #"^object snapshots are not captured$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :object-snapshots (:kind %))
-                                      (forbidden-observer-capability-findings
-                                       (:observer-files world)))]
+               (let [findings (forbidden-observer-capability-findings-of-kind
+                               (:observer-files world)
+                               :object-snapshots)]
                  (support/assert! (empty? findings)
                                   "Object snapshot capture was found."
                                   {:findings (vec findings)})
