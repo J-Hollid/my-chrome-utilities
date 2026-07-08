@@ -2,6 +2,7 @@
   (:require [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
+            [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.package-flow :as package-flow]
@@ -15,6 +16,7 @@
                command-registry/handlers
                data-layer/handlers
                data-layer-observer/handlers
+               data-layer-recovery/handlers
                data-layer-session/handlers
                data-layer-timeline/handlers
                palette/handlers
