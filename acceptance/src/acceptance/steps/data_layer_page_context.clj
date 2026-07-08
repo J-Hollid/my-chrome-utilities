@@ -21,14 +21,25 @@
                             :url (:url active-tab)
                             :history-path history-path}))))
 
+(defn start-testing-command [state]
+  (start-active-session state (:history-path state)))
+
+(defn end-testing-command [state]
+  (assoc state
+         :session-state
+         (session/end-session (:session-state state))))
+
+(def side-panel-command-handlers
+  {"data-layer.start-testing" start-testing-command
+   "data-layer.end-testing" end-testing-command})
+
+(defn side-panel-command-handler [command-id]
+  (or (get side-panel-command-handlers command-id)
+      (throw (ex-info (str "Unsupported side panel command: " command-id)
+                      {:command-id command-id}))))
+
 (defn run-side-panel-command [state command-id]
-  (case command-id
-    "data-layer.start-testing" (start-active-session state (:history-path state))
-    "data-layer.end-testing" (assoc state
-                                    :session-state
-                                    (session/end-session (:session-state state)))
-    (throw (ex-info (str "Unsupported side panel command: " command-id)
-                    {:command-id command-id}))))
+  ((side-panel-command-handler command-id) state))
 
 (defn page-appends-history-entry
   [state {:keys [page-url event-name payload-label]}]

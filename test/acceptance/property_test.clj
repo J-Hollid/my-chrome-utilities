@@ -3,6 +3,7 @@
             [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
+            [acceptance.steps.data-layer-page-context :as data-layer-page-context]
             [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
@@ -333,4 +334,39 @@
                             (data-layer-recovery/restored-history-path state))
                          (= next-url (get-in state [:session :current-url]))
                          (= "active" (get-in state [:session :status]))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-page-context-keeps-side-panel-url-out-of-session-timeline
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               next-route path-segment-gen
+                               event-name path-segment-gen
+                               payload-label path-segment-gen]
+                  (let [side-panel-url "chrome-extension://extension/side-panel.html"
+                        start-url (str "https://example.test/" route)
+                        page-url (str "https://example.test/" next-route)
+                        state (-> {}
+                                  (data-layer-page-context/open-side-panel
+                                   side-panel-url)
+                                  (data-layer-page-context/set-active-tab-url
+                                   start-url)
+                                  (data-layer-page-context/start-active-session
+                                   "queue.history")
+                                  (data-layer-page-context/navigate-active-tab
+                                   {:start-url start-url
+                                    :page-url page-url})
+                                  (data-layer-page-context/page-appends-history-entry
+                                   {:page-url page-url
+                                    :event-name event-name
+                                    :payload-label payload-label}))
+                        entry (data-layer-page-context/timeline-entry
+                               state
+                               event-name)]
+                    (and (= page-url
+                            (get-in state
+                                    [:session-state :session :current-url]))
+                         (= page-url (:url entry))
+                         (not (data-layer-page-context/timeline-uses-url?
+                               state
+                               side-panel-url))))))]
     (is (:pass? result) (pr-str result))))
