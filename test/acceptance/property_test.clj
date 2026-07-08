@@ -3,6 +3,7 @@
             [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
+            [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.package-flow :as package-flow]
@@ -307,4 +308,29 @@
                          (= (str second-event "-values") (:payload expanded))
                          (= (str second-event "-raw") (:raw-value expanded))
                          (= visible session-visible)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-recovery-preserves-session-history-after-navigation
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               next-route path-segment-gen
+                               event-name path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        next-url (str "https://example.test/" next-route)
+                        state (-> {}
+                                  (data-layer-session/start-session
+                                   (session-options 1 url "queue.history"))
+                                  (data-layer-recovery/capture-observed-event
+                                   {:event-name event-name
+                                    :page-url url
+                                    :history-path "queue.history"})
+                                  (data-layer-recovery/reopen-after-navigation
+                                   next-url))
+                        entry (data-layer-recovery/timeline-entry state event-name)]
+                    (and (= event-name (:name entry))
+                         (= url (:url entry))
+                         (= "queue.history"
+                            (data-layer-recovery/restored-history-path state))
+                         (= next-url (get-in state [:session :current-url]))
+                         (= "active" (get-in state [:session :status]))))))]
     (is (:pass? result) (pr-str result))))

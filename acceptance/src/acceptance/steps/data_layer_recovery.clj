@@ -28,10 +28,18 @@
   (or (:restored-history-path state)
       (get-in state [:session :history-path])))
 
+(defn- observed-event-urls [state]
+  (->> (get-in state [:session :timeline])
+       (filter #(= "observed" (:type %)))
+       (map :url)))
+
+(defn- restart-observation-available? [status]
+  (contains? #{"attached" "needs sync"} status))
+
 (defn refresh-active-session [state status]
   (assoc state
          :observer-status status
-         :restart-observation-available? true))
+         :restart-observation-available? (restart-observation-available? status)))
 
 (defn restart-observation [state]
   (assoc state :observer-status "attached"))
@@ -49,6 +57,9 @@
 
 (defn forbidden-recovery-capability-findings [files]
   (support/pattern-findings forbidden-recovery-capability-patterns files))
+
+(defn forbidden-recovery-capability-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-recovery-capability-findings files)))
 
 (defn- inspect-recovery-implementation [root]
   {"src/data-layer-session.ts" (support/source-file root "src/data-layer-session.ts")
@@ -100,8 +111,8 @@
    {:pattern #"^the event entry remains associated with page <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key]]
                (let [expected (support/require-example example page-url-key)]
-                 (support/assert! (some #(= expected (:url %))
-                                        (get-in world [:session-state :session :timeline]))
+                 (support/assert! (some #(= expected %)
+                                        (observed-event-urls (:session-state world)))
                                   "Event entry page association was not restored."
                                   {:expected expected
                                    :session-state (:session-state world)})
@@ -172,9 +183,9 @@
 
    {:pattern #"^cross-device sync is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :cross-device-sync (:kind %))
-                                      (forbidden-recovery-capability-findings
-                                       (:recovery-files world)))]
+               (let [findings (forbidden-recovery-capability-findings-of-kind
+                               (:recovery-files world)
+                               :cross-device-sync)]
                  (support/assert! (empty? findings)
                                   "Disallowed sync behavior was found."
                                   {:findings (vec findings)})
@@ -182,10 +193,14 @@
 
    {:pattern #"^automatic background monitoring of every tab is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :automatic-every-tab-monitoring (:kind %))
-                                      (forbidden-recovery-capability-findings
-                                       (:recovery-files world)))]
+               (let [findings (forbidden-recovery-capability-findings-of-kind
+                               (:recovery-files world)
+                               :automatic-every-tab-monitoring)]
                  (support/assert! (empty? findings)
                                   "Disallowed background monitoring was found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T23:13:29.806739233+02:00", :module-hash "559010487", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1724478247"} {:id "def/recovery-timestamp", :kind "def", :line 6, :end-line nil, :hash "-829136013"} {:id "defn/capture-observed-event", :kind "defn", :line 8, :end-line nil, :hash "2002826544"} {:id "defn/reopen-after-navigation", :kind "defn", :line 18, :end-line nil, :hash "1175227345"} {:id "defn/timeline-entry", :kind "defn", :line 23, :end-line nil, :hash "-1808051897"} {:id "defn/restored-history-path", :kind "defn", :line 27, :end-line nil, :hash "1405355457"} {:id "defn-/observed-event-urls", :kind "defn-", :line 31, :end-line nil, :hash "-1284049393"} {:id "defn-/restart-observation-available?", :kind "defn-", :line 36, :end-line nil, :hash "1280026819"} {:id "defn/refresh-active-session", :kind "defn", :line 39, :end-line nil, :hash "193455126"} {:id "defn/restart-observation", :kind "defn", :line 44, :end-line nil, :hash "-1184222671"} {:id "defn/reopen-side-panel", :kind "defn", :line 47, :end-line nil, :hash "693468688"} {:id "def/forbidden-recovery-capability-patterns", :kind "def", :line 52, :end-line nil, :hash "1231321701"} {:id "defn/forbidden-recovery-capability-findings", :kind "defn", :line 58, :end-line nil, :hash "1181618589"} {:id "defn/forbidden-recovery-capability-findings-of-kind", :kind "defn", :line 61, :end-line nil, :hash "1965889639"} {:id "defn-/inspect-recovery-implementation", :kind "defn-", :line 64, :end-line nil, :hash "1472227023"} {:id "def/handlers", :kind "def", :line 70, :end-line nil, :hash "-2071532688"}]}
+;; clj-mutate-manifest-end
