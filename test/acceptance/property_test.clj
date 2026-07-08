@@ -205,6 +205,24 @@
                              path))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-history-path-text-entry-records-generated-paths
+  (let [result (check
+                (prop/for-all [root path-segment-gen
+                               leaf path-segment-gen]
+                  (let [history-path (str root "." leaf)
+                        state (data-layer/enter-history-array-path
+                               {:side-panel-html
+                                "<section id=\"data-layer-settings\"><input id=\"history-path\" /></section>"
+                                :side-panel-source
+                                (str "historyPathInput.addEventListener('input', () => { "
+                                     "const path = setHistoryArrayPath(historyPathInput.value); "
+                                     "renderHistoryPath(path); });")}
+                               history-path)]
+                    (and (= history-path (:history-path state))
+                         (= history-path
+                            (:history-path-field-value state))))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-session-lifecycle-preserves-active-session-invariants
   (let [result (check
                 (prop/for-all [tab-id gen/pos-int

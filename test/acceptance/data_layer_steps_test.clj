@@ -38,6 +38,16 @@
        "queue.history"))
   (is (data-layer/history-path-persisted-locally? data-layer-source)))
 
+(deftest records-history-path-text-entry
+  (let [state (data-layer/enter-history-array-path
+               {:side-panel-html settings-html
+                :side-panel-source (str "historyPathInput.addEventListener('input', () => { "
+                                        "const path = setHistoryArrayPath(historyPathInput.value); "
+                                        "renderHistoryPath(path); });")}
+               "some.deep.object.history")]
+    (is (= "some.deep.object.history" (:history-path-field-value state)))
+    (is (= "some.deep.object.history" (:history-path state)))))
+
 (deftest reports-disallowed-data-layer-scope
   (is (empty?
        (data-layer/forbidden-data-layer-scope-findings
