@@ -59,6 +59,9 @@
 (defn forbidden-session-scope-findings [files]
   (support/pattern-findings forbidden-session-patterns files))
 
+(defn forbidden-session-scope-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-session-scope-findings files)))
+
 (defn- inspect-session-implementation [root]
   {"src/data-layer-session.ts" (support/source-file root "src/data-layer-session.ts")
    "src/side-panel.ts" (support/source-file root "src/side-panel.ts")})
@@ -223,9 +226,9 @@
 
    {:pattern #"^a multi-profile session manager is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :multi-profile-session-manager (:kind %))
-                                      (forbidden-session-scope-findings
-                                       (:session-files world)))]
+               (let [findings (forbidden-session-scope-findings-of-kind
+                               (:session-files world)
+                               :multi-profile-session-manager)]
                  (support/assert! (empty? findings)
                                   "Multi-profile session manager was found."
                                   {:findings (vec findings)})
@@ -233,9 +236,9 @@
 
    {:pattern #"^event replay is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :event-replay (:kind %))
-                                      (forbidden-session-scope-findings
-                                       (:session-files world)))]
+               (let [findings (forbidden-session-scope-findings-of-kind
+                               (:session-files world)
+                               :event-replay)]
                  (support/assert! (empty? findings)
                                   "Event replay was found."
                                   {:findings (vec findings)})

@@ -54,3 +54,15 @@
          (session/forbidden-session-scope-findings
           {"src/profiles.ts" "multiProfileSessionManager();"
            "src/replay.ts" "eventReplay();"}))))
+
+(deftest filters-disallowed-session-scope-by-kind
+  (let [files {"src/profiles.ts" "multiProfileSessionManager();"
+               "src/replay.ts" "eventReplay();"}]
+    (is (= [{:kind :multi-profile-session-manager :path "src/profiles.ts"}]
+           (vec (session/forbidden-session-scope-findings-of-kind
+                 files
+                 :multi-profile-session-manager))))
+    (is (= [{:kind :event-replay :path "src/replay.ts"}]
+           (vec (session/forbidden-session-scope-findings-of-kind
+                 files
+                 :event-replay))))))
