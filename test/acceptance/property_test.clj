@@ -1,6 +1,7 @@
 (ns acceptance.property-test
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
             [clojure.string :as str]
@@ -94,6 +95,12 @@
     (when keybinding-editor?
       [{:kind :keybinding-editor :path "src/settings.ts"}]))))
 
+(defn- extension-build-files [manifest-version background? side-panel?]
+  (cond-> {"manifest.json" (format "{\"manifest_version\":%d,\"background\":{\"service_worker\":\"background.js\"},\"side_panel\":{\"default_path\":\"side-panel.html\"}}"
+                                   manifest-version)}
+    background? (assoc "background.js" "")
+    side-panel? (assoc "side-panel.html" "")))
+
 (deftest expand-executions-preserves-scenario-example-shape
   (let [result (check
                 (prop/for-all [{:keys [background scenarios] :as feature} feature-gen]
@@ -144,4 +151,16 @@
                       (palette-scope-input packages
                                            global-shortcut?
                                            keybinding-editor?)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest loadable-extension-build-requires-mv3-background-and-side-panel
+  (let [result (check
+                (prop/for-all [manifest-version gen/pos-int
+                               background? gen/boolean
+                               side-panel? gen/boolean]
+                  (= (and (= 3 manifest-version) background? side-panel?)
+                     (package-flow/loadable-extension-build?
+                      (extension-build-files manifest-version
+                                             background?
+                                             side-panel?)))))]
     (is (:pass? result) (pr-str result))))
