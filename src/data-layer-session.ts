@@ -1,4 +1,4 @@
-import { getHistoryArrayPath } from "./data-layer";
+import { getHistoryArrayPath } from "./data-layer.js";
 
 export type DataLayerSessionStatus = "active" | "ended";
 
