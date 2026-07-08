@@ -27,21 +27,10 @@
     :pattern #"(?i)chrome\.storage|localStorage|indexedDB|fetch\s*\(|data layer"}])
 
 (defn forbidden-scope-findings [files]
-  (vec
-   (for [{:keys [kind pattern]} forbidden-scopes
-         path (sort (keys files))
-         :when (re-find pattern (get files path))]
-     {:kind kind :path path})))
-
-(defn- source-files [root]
-  (->> (file-seq (fs/file (fs/path root "src")))
-       (filter fs/regular-file?)
-       (map (fn [file]
-              [(str (fs/relativize root file)) (slurp (str file))]))
-       (into (sorted-map))))
+  (support/pattern-findings forbidden-scopes files))
 
 (defn- implementation-files [root]
-  (assoc (source-files root)
+  (assoc (support/source-files root)
          "manifest.json" (slurp (str (fs/path root "manifest.json")))))
 
 (defn- inspect-manifest [world]
@@ -55,15 +44,6 @@
 
 (defn- dist-path [world path]
   (fs/path (:root world) "dist" path))
-
-(defn- ensure-build-passed! [world]
-  (let [result (:build-result world)]
-    (support/assert! result "Build command has not been run." {})
-    (support/assert! (zero? (:exit result))
-                     "Build command failed."
-                     {:exit (:exit result)
-                      :out (:out result)
-                      :err (:err result)})))
 
 (def handlers
   [{:pattern #"^the extension manifest is inspected$"
@@ -136,7 +116,7 @@
 
    {:pattern #"^dist can be loaded unpacked in Chrome$"
     :handler (fn [world _example _captures]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (let [manifest (built-manifest world)
                      contract (manifest-contract manifest)
                      service-worker (get-in manifest [:background :service_worker])
@@ -157,7 +137,7 @@
 
    {:pattern #"^the built side panel HTML entry exists$"
     :handler (fn [world _example _captures]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (support/assert! (fs/exists? (dist-path world "side-panel.html"))
                                 "Built side panel HTML entry is missing."
                                 {:path "dist/side-panel.html"})
@@ -165,7 +145,7 @@
 
    {:pattern #"^the side panel displays <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (let [expected (support/require-example example project-key)
                      html (slurp (str (dist-path world "side-panel.html")))]
                  (support/assert! (str/includes? html expected)

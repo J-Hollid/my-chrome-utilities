@@ -24,12 +24,38 @@
     (throw (ex-info (format "Missing file: %s" path) {:path path})))
   (aps-json/read-json-file (str path)))
 
+(defn source-file [root path]
+  (slurp (str (fs/path root path))))
+
+(defn source-files [root]
+  (->> (file-seq (fs/file (fs/path root "src")))
+       (filter fs/regular-file?)
+       (map (fn [file]
+              [(str (fs/relativize root file)) (slurp (str file))]))
+       (into (sorted-map))))
+
+(defn pattern-findings [patterns files]
+  (vec
+   (for [{:keys [kind pattern]} patterns
+         path (sort (keys files))
+         :when (re-find pattern (get files path))]
+     {:kind kind :path path})))
+
 (defn repository-root []
   (fs/cwd))
 
 (defn assert! [condition message data]
   (when-not condition
     (throw (ex-info message data))))
+
+(defn ensure-build-passed! [world]
+  (let [result (:build-result world)]
+    (assert! result "Build command has not been run." {})
+    (assert! (zero? (:exit result))
+             "Build command failed."
+             {:exit (:exit result)
+              :out (:out result)
+              :err (:err result)})))
 
 (defn run-build-command [world]
   (let [result (process/shell build-shell-options "npm run build")]

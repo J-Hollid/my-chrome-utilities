@@ -1,39 +1,12 @@
 (ns acceptance.steps.command-registry
-  (:require [aps.json :as aps-json]
+  (:require [acceptance.steps.support :as support]
             [babashka.fs :as fs]
             [babashka.process :as process]
             [clojure.string :as str]))
 
-(def build-shell-options {:out :string :err :string :continue true})
+(def build-shell-options support/build-shell-options)
 
 (def command-fields #{"id" "title" "description" "category" "run"})
-
-(defn- example-value [example key]
-  (or (get example key)
-      (get example (keyword key))))
-
-(defn- require-example [example key]
-  (let [value (example-value example key)]
-    (when (str/blank? value)
-      (throw (ex-info (format "Missing example value: %s" key) {:key key})))
-    value))
-
-(defn- assert! [condition message data]
-  (when-not condition
-    (throw (ex-info message data))))
-
-(defn- repository-root []
-  (fs/cwd))
-
-(defn- source-file [root path]
-  (slurp (str (fs/path root path))))
-
-(defn- source-files [root]
-  (->> (file-seq (fs/file (fs/path root "src")))
-       (filter fs/regular-file?)
-       (map (fn [file]
-              [(str (fs/relativize root file)) (slurp (str file))]))
-       (into (sorted-map))))
 
 (defn defined-fields [source]
   (->> command-fields
@@ -65,11 +38,7 @@
     :pattern #"(?i)keybindings|keyboard shortcut|addEventListener\(['\"]keydown"}])
 
 (defn forbidden-command-ui-findings [files]
-  (vec
-   (for [{:keys [kind pattern]} forbidden-command-ui-patterns
-         path (sort (keys files))
-         :when (re-find pattern (get files path))]
-     {:kind kind :path path})))
+  (support/pattern-findings forbidden-command-ui-patterns files))
 
 (defn- run-command-with-node [command-id]
   (let [script (format "import { runCommandById } from './dist/commands.js'; runCommandById(%s, { record: (entry) => console.log(JSON.stringify(entry)) });"
@@ -80,127 +49,115 @@
 (defn- read-node-json [result]
   (let [path (fs/create-temp-file {:prefix "command-run" :suffix ".json"})]
     (spit (str path) (:out result))
-    (aps-json/read-json-file (str path))))
-
-(defn- run-build-command [world]
-  (let [result (process/shell build-shell-options "npm run build")]
-    (assoc world :build-result result)))
-
-(defn- ensure-build-passed! [world]
-  (let [result (:build-result world)]
-    (assert! result "Build command has not been run." {})
-    (assert! (zero? (:exit result))
-             "Build command failed."
-             {:exit (:exit result)
-              :out (:out result)
-              :err (:err result)})))
+    (support/read-json path)))
 
 (def handlers
   [{:pattern #"^the command registry contract is inspected$"
     :handler (fn [world _example _captures]
-               (let [root (or (:root world) (repository-root))]
+               (let [root (or (:root world) (support/repository-root))]
                  (assoc world
                         :root root
-                        :registry-source (source-file root "src/commands.ts")
-                        :rendering-source (source-file root "src/side-panel.ts"))))}
+                        :registry-source (support/source-file root "src/commands.ts")
+                        :rendering-source (support/source-file root "src/side-panel.ts"))))}
 
    {:pattern #"^each command defines <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)>$"
     :handler (fn [world example field-keys]
-               (let [expected (set (map #(require-example example %) field-keys))
+               (let [expected (set (map #(support/require-example example %) field-keys))
                      actual (defined-fields (:registry-source world))]
-                 (assert! (= expected actual)
-                          "Command fields do not match the registry contract."
-                          {:expected expected :actual actual})
+                 (support/assert! (= expected actual)
+                                  "Command fields do not match the registry contract."
+                                  {:expected expected :actual actual})
                  world))}
 
    {:pattern #"^the registry can list commands$"
     :handler (fn [world _example _captures]
-               (assert! (listable-registry? (:registry-source world))
-                        "Registry does not expose a command list."
-                        {})
+               (support/assert! (listable-registry? (:registry-source world))
+                                "Registry does not expose a command list."
+                                {})
                world)}
 
    {:pattern #"^command registry logic is separated from side panel rendering$"
     :handler (fn [world _example _captures]
-               (assert! (separate-from-rendering? (:registry-source world)
-                                                  (:rendering-source world))
-                        "Command logic is mixed into side panel rendering."
-                        {})
+               (support/assert! (separate-from-rendering? (:registry-source world)
+                                                          (:rendering-source world))
+                                "Command logic is mixed into side panel rendering."
+                                {})
                world)}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> is inspected$"
     :handler (fn [world example [command-key]]
-               (let [root (or (:root world) (repository-root))
-                     command-id (require-example example command-key)]
+               (let [root (or (:root world) (support/repository-root))
+                     command-id (support/require-example example command-key)]
                  (assoc world
                         :root root
                         :command-id command-id
-                        :registry-source (source-file root "src/commands.ts"))))}
+                        :registry-source (support/source-file root "src/commands.ts"))))}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> is registered$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)]
-                 (assert! (registered-command? (:registry-source world) command-id)
-                          "Command is not registered."
-                          {:command-id command-id})
+               (let [command-id (support/require-example example command-key)]
+                 (support/assert! (registered-command? (:registry-source world) command-id)
+                                  "Command is not registered."
+                                  {:command-id command-id})
                  world))}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> has a title, description, category, and run behavior$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)]
-                 (assert! (command-has-behavior? (:registry-source world) command-id)
-                          "Command does not have the required behavior contract."
-                          {:command-id command-id})
+               (let [command-id (support/require-example example command-key)]
+                 (support/assert! (command-has-behavior? (:registry-source world) command-id)
+                                  "Command does not have the required behavior contract."
+                                  {:command-id command-id})
                  world))}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> is run by id$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)
-                     world (run-build-command (assoc world :root (or (:root world) (repository-root))))]
-                 (ensure-build-passed! world)
+               (let [command-id (support/require-example example command-key)
+                     world (support/run-build-command
+                            (assoc world :root (or (:root world) (support/repository-root))))]
+                 (support/ensure-build-passed! world)
                  (let [result (run-command-with-node command-id)]
-                   (assert! (zero? (:exit result))
-                            "Command failed when run by id."
-                            {:exit (:exit result)
-                             :out (:out result)
-                             :err (:err result)})
+                   (support/assert! (zero? (:exit result))
+                                    "Command failed when run by id."
+                                    {:exit (:exit result)
+                                     :out (:out result)
+                                     :err (:err result)})
                    (assoc world
                           :command-id command-id
                           :command-run-record (read-node-json result)))))}
 
    {:pattern #"^visible app state or log records that command <([A-Za-z0-9_]+)> ran$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)
+               (let [command-id (support/require-example example command-key)
                      record (:command-run-record world)]
-                 (assert! (= command-id (:commandId record))
-                          "Command run record does not identify the command."
-                          {:expected command-id :actual (:commandId record)})
-                 (assert! (str/includes? (:message record) command-id)
-                          "Command run record does not expose visible command state."
-                          {:record record})
+                 (support/assert! (= command-id (:commandId record))
+                                  "Command run record does not identify the command."
+                                  {:expected command-id :actual (:commandId record)})
+                 (support/assert! (str/includes? (:message record) command-id)
+                                  "Command run record does not expose visible command state."
+                                  {:record record})
                  world))}
 
    {:pattern #"^command features are inspected$"
     :handler (fn [world _example _captures]
-               (let [root (or (:root world) (repository-root))]
+               (let [root (or (:root world) (support/repository-root))]
                  (assoc world
                         :root root
-                        :command-feature-files (source-files root))))}
+                        :command-feature-files (support/source-files root))))}
 
    {:pattern #"^no command palette is present$"
     :handler (fn [world _example _captures]
                (let [findings (filter #(= :command-palette (:kind %))
                                       (forbidden-command-ui-findings (:command-feature-files world)))]
-                 (assert! (empty? findings)
-                          "Command palette implementation was found."
-                          {:findings (vec findings)})
+                 (support/assert! (empty? findings)
+                                  "Command palette implementation was found."
+                                  {:findings (vec findings)})
                  world))}
 
    {:pattern #"^no user-configurable keybindings are present$"
     :handler (fn [world _example _captures]
                (let [findings (filter #(= :keybindings (:kind %))
                                       (forbidden-command-ui-findings (:command-feature-files world)))]
-                 (assert! (empty? findings)
-                          "User-configurable keybindings were found."
-                          {:findings (vec findings)})
+                 (support/assert! (empty? findings)
+                                  "User-configurable keybindings were found."
+                                  {:findings (vec findings)})
                  world))}])
