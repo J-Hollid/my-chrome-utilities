@@ -6,8 +6,6 @@
             [clojure.string :as str])
   (:import [java.nio.file Files]))
 
-(def command-options support/build-shell-options)
-
 (defn- read-json-string [text]
   (json/parse-string text true))
 
@@ -32,9 +30,9 @@
        (required-extension-files-present? files manifest)))
 
 (defn loadable-extension-build? [files]
-  (if-let [manifest (parse-manifest files)]
-    (boolean (loadable-manifest-files? files manifest))
-    false))
+  (boolean
+   (when-let [manifest (parse-manifest files)]
+     (loadable-manifest-files? files manifest))))
 
 (defn- dir-files [root dir]
   (->> (file-seq (fs/file (fs/path root dir)))
@@ -45,7 +43,7 @@
        (into {})))
 
 (defn- run-command [command]
-  (process/shell command-options command))
+  (process/shell support/build-shell-options command))
 
 (defn- ensure-command-succeeded! [result command]
   (support/assert! (zero? (:exit result))
@@ -136,6 +134,9 @@
 
 (defn forbidden-package-scope-findings [files]
   (support/pattern-findings forbidden-package-patterns files))
+
+(defn forbidden-package-scope-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-package-scope-findings files)))
 
 (defn- inspected-files [root]
   (cond-> {"package.json" (support/source-file root "package.json")
@@ -255,8 +256,9 @@
 
    {:pattern #"^Chrome Web Store packaging is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :store-packaging (:kind %))
-                                      (forbidden-package-scope-findings (:package-flow-files world)))]
+               (let [findings (forbidden-package-scope-findings-of-kind
+                               (:package-flow-files world)
+                               :store-packaging)]
                  (support/assert! (empty? findings)
                                   "Store packaging was found."
                                   {:findings (vec findings)})
@@ -264,8 +266,9 @@
 
    {:pattern #"^signing is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :signing (:kind %))
-                                      (forbidden-package-scope-findings (:package-flow-files world)))]
+               (let [findings (forbidden-package-scope-findings-of-kind
+                               (:package-flow-files world)
+                               :signing)]
                  (support/assert! (empty? findings)
                                   "Signing behavior was found."
                                   {:findings (vec findings)})
@@ -273,9 +276,14 @@
 
    {:pattern #"^auto-update behavior is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :auto-update (:kind %))
-                                      (forbidden-package-scope-findings (:package-flow-files world)))]
+               (let [findings (forbidden-package-scope-findings-of-kind
+                               (:package-flow-files world)
+                               :auto-update)]
                  (support/assert! (empty? findings)
                                   "Auto-update behavior was found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T21:12:49.892951768+02:00", :module-hash "-1777405898", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1593518491"} {:id "defn-/read-json-string", :kind "defn-", :line 9, :end-line nil, :hash "690457943"} {:id "defn-/parse-manifest", :kind "defn-", :line 12, :end-line nil, :hash "994706495"} {:id "defn-/mv3-manifest?", :kind "defn-", :line 18, :end-line nil, :hash "1774518718"} {:id "defn-/required-extension-paths", :kind "defn-", :line 21, :end-line nil, :hash "747792405"} {:id "defn-/required-extension-files-present?", :kind "defn-", :line 25, :end-line nil, :hash "-410150834"} {:id "defn-/loadable-manifest-files?", :kind "defn-", :line 28, :end-line nil, :hash "-1009365665"} {:id "defn/loadable-extension-build?", :kind "defn", :line 32, :end-line nil, :hash "1062306633"} {:id "defn-/dir-files", :kind "defn-", :line 37, :end-line nil, :hash "-1460515422"} {:id "defn-/run-command", :kind "defn-", :line 45, :end-line nil, :hash "-1681224082"} {:id "defn-/ensure-command-succeeded!", :kind "defn-", :line 48, :end-line nil, :hash "1259508497"} {:id "defn-/package-artifacts", :kind "defn-", :line 56, :end-line nil, :hash "779442048"} {:id "defn-/unsigned-byte", :kind "defn-", :line 65, :end-line nil, :hash "-997641724"} {:id "defn-/uint16-le", :kind "defn-", :line 68, :end-line nil, :hash "-1600799826"} {:id "defn-/uint32-le", :kind "defn-", :line 72, :end-line nil, :hash "506658415"} {:id "def/local-file-header-signature", :kind "def", :line 76, :end-line nil, :hash "1877106412"} {:id "defn-/zip-local-header-readable?", :kind "defn-", :line 78, :end-line nil, :hash "-130781360"} {:id "defn-/zip-local-header?", :kind "defn-", :line 81, :end-line nil, :hash "-1227548006"} {:id "defn-/zip-entry", :kind "defn-", :line 85, :end-line nil, :hash "-2133922594"} {:id "defn-/next-zip-entry", :kind "defn-", :line 95, :end-line nil, :hash "-1370731326"} {:id "defn-/zip-entries", :kind "defn-", :line 98, :end-line nil, :hash "-1709355234"} {:id "defn/zip-entry-names", :kind "defn", :line 103, :end-line nil, :hash "517448888"} {:id "defn-/readme-documents-copy?", :kind "defn-", :line 106, :end-line nil, :hash "1582992062"} {:id "defn/readme-documents-artifact-copy?", :kind "defn", :line 112, :end-line nil, :hash "1071943901"} {:id "defn/readme-documents-dist-copy?", :kind "defn", :line 115, :end-line nil, :hash "371019833"} {:id "defn/readme-documents-unpacked-load?", :kind "defn", :line 118, :end-line nil, :hash "1299327260"} {:id "defn/readme-documents-smoke-test?", :kind "defn", :line 122, :end-line nil, :hash "1565565512"} {:id "def/forbidden-package-patterns", :kind "def", :line 127, :end-line nil, :hash "-157648807"} {:id "defn/forbidden-package-scope-findings", :kind "defn", :line 135, :end-line nil, :hash "-427700473"} {:id "defn/forbidden-package-scope-findings-of-kind", :kind "defn", :line 138, :end-line nil, :hash "1979717122"} {:id "defn-/inspected-files", :kind "defn-", :line 141, :end-line nil, :hash "677397666"} {:id "def/handlers", :kind "def", :line 148, :end-line nil, :hash "1840866963"}]}
+;; clj-mutate-manifest-end

@@ -1,6 +1,20 @@
 (ns acceptance.package-flow-steps-test
   (:require [acceptance.steps.package-flow :as package-flow]
-            [clojure.test :refer [deftest is]]))
+            [babashka.fs :as fs]
+            [clojure.test :refer [deftest is]])
+  (:import [java.nio.file Files OpenOption]))
+
+(defn- temp-zip-with-bytes [bytes]
+  (let [path (fs/create-temp-file {:prefix "package-flow" :suffix ".zip"})]
+    (Files/write path bytes (make-array OpenOption 0))
+    path))
+
+(defn- local-header-only-bytes []
+  (doto (byte-array 30)
+    (aset-byte 0 (unchecked-byte 0x50))
+    (aset-byte 1 (unchecked-byte 0x4b))
+    (aset-byte 2 (unchecked-byte 0x03))
+    (aset-byte 3 (unchecked-byte 0x04))))
 
 (deftest validates-loadable-extension-build-files
   (is (package-flow/loadable-extension-build?
@@ -9,7 +23,14 @@
         "side-panel.html" "<main>my-chrome-utilities</main>"}))
   (is (not (package-flow/loadable-extension-build?
             {"manifest.json" "{\"manifest_version\":2}"
-             "background.js" ""}))))
+             "background.js" ""})))
+  (is (not (package-flow/loadable-extension-build?
+            {"manifest.json" "not-json"})))
+  (is (not (package-flow/loadable-extension-build? {}))))
+
+(deftest ignores-malformed-zip-data
+  (is (= [] (package-flow/zip-entry-names (temp-zip-with-bytes (byte-array 0)))))
+  (is (= [] (package-flow/zip-entry-names (temp-zip-with-bytes (local-header-only-bytes))))))
 
 (deftest recognizes-readme-portability-documentation
   (let [readme "Copy build/package/my-chrome-utilities.zip to another machine.
@@ -36,3 +57,20 @@ Smoke test:
           {"README.md" "Chrome Web Store package"
            "scripts/package.mjs" "signing key"
            "src/update.ts" "autoUpdate();"}))))
+
+(deftest filters-forbidden-package-flow-scope-by-kind
+  (let [files {"README.md" "Chrome Web Store package"
+               "scripts/package.mjs" "signing key"
+               "src/update.ts" "autoUpdate();"}]
+    (is (= [{:kind :store-packaging :path "README.md"}]
+           (vec (package-flow/forbidden-package-scope-findings-of-kind
+                 files
+                 :store-packaging))))
+    (is (= [{:kind :signing :path "scripts/package.mjs"}]
+           (vec (package-flow/forbidden-package-scope-findings-of-kind
+                 files
+                 :signing))))
+    (is (= [{:kind :auto-update :path "src/update.ts"}]
+           (vec (package-flow/forbidden-package-scope-findings-of-kind
+                 files
+                 :auto-update))))))
