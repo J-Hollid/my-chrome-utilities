@@ -13,5 +13,5 @@
                package-flow/handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T21:18:34.745394634+02:00", :module-hash "-1463953266", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1180779914"} {:id "def/handlers", :kind "def", :line 8, :end-line nil, :hash "628094739"}]}
+;; {:version 1, :tested-at "2026-07-08T21:27:31.796596121+02:00", :module-hash "-1463953266", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1180779914"} {:id "def/handlers", :kind "def", :line 8, :end-line nil, :hash "628094739"}]}
 ;; clj-mutate-manifest-end
