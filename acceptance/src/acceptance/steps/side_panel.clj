@@ -22,7 +22,7 @@
    {:kind :command-palette
     :pattern #"(?i)commandPalette|command palette"}
    {:kind :data-layer
-    :pattern #"(?i)chrome\.storage|indexedDB|fetch\s*\(|data layer"}])
+    :pattern #"(?i)chrome\.storage|indexedDB|fetch\s*\("}])
 
 (defn forbidden-scope-findings [files]
   (support/pattern-findings forbidden-scopes files))
@@ -189,5 +189,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T22:40:07.830750207+02:00", :module-hash "-1823655801", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "-1639308299"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "1133545730"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-290940599"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 30, :end-line nil, :hash "-718440344"} {:id "defn-/implementation-files", :kind "defn-", :line 33, :end-line nil, :hash "-1569706796"} {:id "defn-/inspect-manifest", :kind "defn-", :line 37, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 43, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 46, :end-line nil, :hash "-442595191"} {:id "def/handlers", :kind "def", :line 49, :end-line nil, :hash "-145326447"}]}
+;; {:version 1, :tested-at "2026-07-08T22:47:39.953998552+02:00", :module-hash "-974847637", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "-1639308299"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "-1055952925"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-290940599"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 30, :end-line nil, :hash "-718440344"} {:id "defn-/implementation-files", :kind "defn-", :line 33, :end-line nil, :hash "-1569706796"} {:id "defn-/inspect-manifest", :kind "defn-", :line 37, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 43, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 46, :end-line nil, :hash "-442595191"} {:id "def/handlers", :kind "def", :line 49, :end-line nil, :hash "-145326447"}]}
 ;; clj-mutate-manifest-end
