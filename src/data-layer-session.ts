@@ -5,6 +5,11 @@ export type DataLayerSessionStatus = "active" | "ended";
 export interface DataLayerEventEntry {
   type: string;
   url: string;
+  timestamp?: string;
+  observerPath?: string;
+  name?: string;
+  payload?: unknown;
+  rawValue?: unknown;
 }
 
 export interface DataLayerTestingSession {

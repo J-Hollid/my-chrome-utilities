@@ -2,6 +2,7 @@
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
+            [acceptance.steps.data-layer-observer :as data-layer-observer]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
@@ -236,4 +237,35 @@
                          (= started
                             (data-layer-session/restore-session
                              (data-layer-session/persisted-session started)))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-observer-records-generated-history-pushes
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               event-name path-segment-gen
+                               payload-label path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        base-state {:session-state
+                                    (data-layer-session/run-start-command
+                                     {}
+                                     (session-options 1 url "queue.history"))}
+                        state (-> base-state
+                                  (data-layer-observer/attach-observer
+                                   {:history-path "queue.history"
+                                    :page-url url})
+                                  (data-layer-observer/page-push event-name
+                                                                 payload-label))
+                        entry (data-layer-observer/last-observed-entry state)]
+                    (and (= 1 (:push-return state))
+                         (= [{:event event-name
+                              :payload {:label payload-label}}]
+                            (get-in state [:page-object :queue :history]))
+                         (= "observed" (:type entry))
+                         (= url (:url entry))
+                         (= "queue.history" (:observer-path entry))
+                         (= event-name (:name entry))
+                         (= payload-label (:payload entry))
+                         (= entry (last (get-in state [:session-state
+                                                       :session
+                                                       :timeline])))))))]
     (is (:pass? result) (pr-str result))))
