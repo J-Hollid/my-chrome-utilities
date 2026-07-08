@@ -48,6 +48,30 @@
        (str/includes? source "historyPathDisplay")
        (str/includes? source "textContent = path")))
 
+(defn history-path-text-entry-wired? [html source]
+  (let [html (or html "")
+        source (or source "")]
+    (and (str/includes? html "id=\"history-path\"")
+         (str/includes? source "historyPathInput")
+         (boolean (re-find #"addEventListener\((\"|')input" source))
+         (str/includes? source "setHistoryArrayPath(historyPathInput.value)")
+         (str/includes? source "renderHistoryPath(path)"))))
+
+(defn enter-history-array-path [world history-path]
+  (support/assert! (settings-allow-history-path-entry?
+                    (:side-panel-html world)
+                    history-path)
+                   "History path input is not available."
+                   {:history-path history-path})
+  (support/assert! (history-path-text-entry-wired?
+                    (:side-panel-html world)
+                    (:side-panel-source world))
+                   "History path text entry is not wired."
+                   {})
+  (assoc world
+         :history-path history-path
+         :history-path-field-value history-path))
+
 (defn history-path-persisted-locally? [source]
   (and (str/includes? source "HISTORY_PATH_STORAGE_KEY")
        (str/includes? source "localStorage.setItem")))
@@ -88,6 +112,30 @@
                                   "History path input is not available."
                                   {:history-path history-path})
                  (assoc world :history-path history-path)))}
+
+   {:pattern #"^the user enters history array path <([A-Za-z0-9_]+)> in the path field$"
+    :handler (fn [world example [history-path-key]]
+               (enter-history-array-path
+                world
+                (support/require-example example history-path-key)))}
+
+   {:pattern #"^the path field value is <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= expected (:history-path-field-value world))
+                                  "History path field value does not match."
+                                  {:expected expected
+                                   :actual (:history-path-field-value world)})
+                 world))}
+
+   {:pattern #"^the configured history array path is <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= expected (:history-path world))
+                                  "Configured history path does not match."
+                                  {:expected expected
+                                   :actual (:history-path world)})
+                 world))}
 
    {:pattern #"^the configured history array path is shown in the side panel$"
     :handler (fn [world _example _captures]
