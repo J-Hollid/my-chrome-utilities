@@ -3,8 +3,6 @@
             [babashka.fs :as fs]
             [clojure.string :as str]))
 
-(def build-shell-options support/build-shell-options)
-
 (defn manifest-contract [manifest]
   {:manifest-version (:manifest_version manifest)
    :extension-name (:name manifest)
@@ -28,6 +26,9 @@
 
 (defn forbidden-scope-findings [files]
   (support/pattern-findings forbidden-scopes files))
+
+(defn forbidden-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-scope-findings files)))
 
 (defn- implementation-files [root]
   (assoc (support/source-files root)
@@ -162,8 +163,8 @@
 
    {:pattern #"^no command registry is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :command-registry (:kind %))
-                                      (forbidden-scope-findings (:implementation-files world)))]
+               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+                                                           :command-registry)]
                  (support/assert! (empty? findings)
                                   "Command registry implementation was found."
                                   {:findings (vec findings)})
@@ -171,8 +172,8 @@
 
    {:pattern #"^no command palette is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :command-palette (:kind %))
-                                      (forbidden-scope-findings (:implementation-files world)))]
+               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+                                                           :command-palette)]
                  (support/assert! (empty? findings)
                                   "Command palette implementation was found."
                                   {:findings (vec findings)})
@@ -180,9 +181,13 @@
 
    {:pattern #"^no data layer functionality is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :data-layer (:kind %))
-                                      (forbidden-scope-findings (:implementation-files world)))]
+               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+                                                           :data-layer)]
                  (support/assert! (empty? findings)
                                   "Data layer implementation was found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T20:48:09.779421747+02:00", :module-hash "1855647506", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "-1639308299"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "12635772"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-395003359"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 34, :end-line nil, :hash "-718440344"} {:id "defn-/source-files", :kind "defn-", :line 37, :end-line nil, :hash "1691080705"} {:id "defn-/implementation-files", :kind "defn-", :line 44, :end-line nil, :hash "1100226319"} {:id "defn-/inspect-manifest", :kind "defn-", :line 48, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 54, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 57, :end-line nil, :hash "-442595191"} {:id "defn-/ensure-build-passed!", :kind "defn-", :line 60, :end-line nil, :hash "-1490812163"} {:id "def/handlers", :kind "def", :line 69, :end-line nil, :hash "-961300067"}]}
+;; clj-mutate-manifest-end

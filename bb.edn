@@ -10,13 +10,13 @@
              :requires ([clojure.test :as test]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
-                        [acceptance.project-skeleton-steps-test]
+                        [acceptance.steps-support-test]
                         [acceptance.side-panel-steps-test]
                         [acceptance.command-registry-steps-test]
                         [acceptance.palette-steps-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
-                                                'acceptance.project-skeleton-steps-test
+                                                'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
                                                 'acceptance.command-registry-steps-test
                                                 'acceptance.palette-steps-test)]
