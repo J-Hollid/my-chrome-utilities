@@ -1,6 +1,8 @@
 (ns acceptance.property-test
   (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.side-panel :as side-panel]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
@@ -31,6 +33,12 @@
      :background background
      :scenarios scenarios}))
 
+(def command-field-set-gen
+  (gen/fmap set
+            (gen/vector (gen/elements (vec command-registry/command-fields))
+                        0
+                        (count command-registry/command-fields))))
+
 (defn- check [property]
   (tc/quick-check 100 property))
 
@@ -50,6 +58,9 @@
                     (:name scenario)
                     (inc (:example-index execution)))
             (:name execution)))))
+
+(defn- command-source-for [fields]
+  (str/join "\n" (map #(str % ": value") fields)))
 
 (deftest expand-executions-preserves-scenario-example-shape
   (let [result (check
@@ -79,4 +90,12 @@
                          (= default-path (:default-path contract))
                          (= (set permissions) (:permissions contract))
                          (= content-scripts? (:content-scripts? contract))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest command-field-detection-round-trips-field-subsets
+  (let [result (check
+                (prop/for-all [fields command-field-set-gen]
+                  (= fields
+                     (command-registry/defined-fields
+                      (command-source-for fields)))))]
     (is (:pass? result) (pr-str result))))

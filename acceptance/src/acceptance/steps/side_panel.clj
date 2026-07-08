@@ -25,24 +25,13 @@
     :pattern #"(?i)chrome\.storage|localStorage|indexedDB|fetch\s*\(|data layer"}])
 
 (defn forbidden-scope-findings [files]
-  (vec
-   (for [{:keys [kind pattern]} forbidden-scopes
-         path (sort (keys files))
-         :when (re-find pattern (get files path))]
-     {:kind kind :path path})))
+  (support/pattern-findings forbidden-scopes files))
 
 (defn forbidden-findings-of-kind [files kind]
   (filter #(= kind (:kind %)) (forbidden-scope-findings files)))
 
-(defn- source-files [root]
-  (->> (file-seq (fs/file (fs/path root "src")))
-       (filter fs/regular-file?)
-       (map (fn [file]
-              [(str (fs/relativize root file)) (slurp (str file))]))
-       (into (sorted-map))))
-
 (defn- implementation-files [root]
-  (assoc (source-files root)
+  (assoc (support/source-files root)
          "manifest.json" (slurp (str (fs/path root "manifest.json")))))
 
 (defn- inspect-manifest [world]
@@ -56,15 +45,6 @@
 
 (defn- dist-path [world path]
   (fs/path (:root world) "dist" path))
-
-(defn- ensure-build-passed! [world]
-  (let [result (:build-result world)]
-    (support/assert! result "Build command has not been run." {})
-    (support/assert! (zero? (:exit result))
-                     "Build command failed."
-                     {:exit (:exit result)
-                      :out (:out result)
-                      :err (:err result)})))
 
 (def handlers
   [{:pattern #"^the extension manifest is inspected$"
@@ -137,7 +117,7 @@
 
    {:pattern #"^dist can be loaded unpacked in Chrome$"
     :handler (fn [world _example _captures]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (let [manifest (built-manifest world)
                      contract (manifest-contract manifest)
                      service-worker (get-in manifest [:background :service_worker])
@@ -158,7 +138,7 @@
 
    {:pattern #"^the built side panel HTML entry exists$"
     :handler (fn [world _example _captures]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (support/assert! (fs/exists? (dist-path world "side-panel.html"))
                                 "Built side panel HTML entry is missing."
                                 {:path "dist/side-panel.html"})
@@ -166,7 +146,7 @@
 
    {:pattern #"^the side panel displays <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
-               (ensure-build-passed! world)
+               (support/ensure-build-passed! world)
                (let [expected (support/require-example example project-key)
                      html (slurp (str (dist-path world "side-panel.html")))]
                  (support/assert! (str/includes? html expected)
@@ -209,5 +189,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T20:48:09.779421747+02:00", :module-hash "1855647506", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "-1639308299"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "12635772"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-395003359"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 34, :end-line nil, :hash "-718440344"} {:id "defn-/source-files", :kind "defn-", :line 37, :end-line nil, :hash "1691080705"} {:id "defn-/implementation-files", :kind "defn-", :line 44, :end-line nil, :hash "1100226319"} {:id "defn-/inspect-manifest", :kind "defn-", :line 48, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 54, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 57, :end-line nil, :hash "-442595191"} {:id "defn-/ensure-build-passed!", :kind "defn-", :line 60, :end-line nil, :hash "-1490812163"} {:id "def/handlers", :kind "def", :line 69, :end-line nil, :hash "-961300067"}]}
+;; {:version 1, :tested-at "2026-07-08T20:56:11.409247161+02:00", :module-hash "1060074176", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "-1639308299"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "12635772"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-290940599"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 30, :end-line nil, :hash "-718440344"} {:id "defn-/implementation-files", :kind "defn-", :line 33, :end-line nil, :hash "-1569706796"} {:id "defn-/inspect-manifest", :kind "defn-", :line 37, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 43, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 46, :end-line nil, :hash "-442595191"} {:id "def/handlers", :kind "def", :line 49, :end-line nil, :hash "-145326447"}]}
 ;; clj-mutate-manifest-end
