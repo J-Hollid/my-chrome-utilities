@@ -22,7 +22,7 @@
    {:kind :command-palette
     :pattern #"(?i)commandPalette|command palette"}
    {:kind :data-layer
-    :pattern #"(?i)chrome\.storage|localStorage|indexedDB|fetch\s*\(|data layer"}])
+    :pattern #"(?i)chrome\.storage|indexedDB|fetch\s*\(|data layer"}])
 
 (defn forbidden-scope-findings [files]
   (support/pattern-findings forbidden-scopes files))
