@@ -11,11 +11,13 @@
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
                         [acceptance.project-skeleton-steps-test]
-                        [acceptance.side-panel-steps-test])
+                        [acceptance.side-panel-steps-test]
+                        [acceptance.command-registry-steps-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
                                                 'acceptance.project-skeleton-steps-test
-                                                'acceptance.side-panel-steps-test)]
+                                                'acceptance.side-panel-steps-test
+                                                'acceptance.command-registry-steps-test)]
                      (when (pos? (+ (:fail result) (:error result)))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
