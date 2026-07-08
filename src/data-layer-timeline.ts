@@ -1,4 +1,4 @@
-import type { DataLayerEventEntry } from "./data-layer-session";
+import type { DataLayerEventEntry } from "./data-layer-session.js";
 
 export interface TimelineEntrySummary {
   name: string;
