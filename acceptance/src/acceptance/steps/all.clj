@@ -11,3 +11,7 @@
                command-registry/handlers
                palette/handlers
                package-flow/handlers)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T20:56:39.111937596+02:00", :module-hash "1128056340", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "863544390"} {:id "def/handlers", :kind "def", :line 6, :end-line nil, :hash "-1219293908"}]}
+;; clj-mutate-manifest-end

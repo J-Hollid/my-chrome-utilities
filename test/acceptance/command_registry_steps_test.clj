@@ -45,3 +45,15 @@
          (command-registry/forbidden-command-ui-findings
           {"src/palette.ts" "export function openCommandPalette() {}"
            "src/keys.ts" "window.addEventListener('keydown', () => {});"}))))
+
+(deftest filters-command-ui-findings-by-kind
+  (let [files {"src/palette.ts" "export function openCommandPalette() {}"
+               "src/keys.ts" "window.addEventListener('keydown', () => {});"}]
+    (is (= [{:kind :command-palette :path "src/palette.ts"}]
+           (vec (command-registry/forbidden-command-ui-findings-of-kind
+                 files
+                 :command-palette))))
+    (is (= [{:kind :keybindings :path "src/keys.ts"}]
+           (vec (command-registry/forbidden-command-ui-findings-of-kind
+                 files
+                 :keybindings))))))

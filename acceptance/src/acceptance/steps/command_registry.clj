@@ -4,8 +4,6 @@
             [babashka.process :as process]
             [clojure.string :as str]))
 
-(def build-shell-options support/build-shell-options)
-
 (def command-fields #{"id" "title" "description" "category" "run"})
 
 (defn defined-fields [source]
@@ -39,6 +37,9 @@
 
 (defn forbidden-command-ui-findings [files]
   (support/pattern-findings forbidden-command-ui-patterns files))
+
+(defn forbidden-command-ui-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-command-ui-findings files)))
 
 (defn- run-command-with-node [command-id]
   (let [script (format "import { runCommandById } from './dist/commands.js'; runCommandById(%s, { record: (entry) => console.log(JSON.stringify(entry)) });"
@@ -146,8 +147,9 @@
 
    {:pattern #"^no command palette is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :command-palette (:kind %))
-                                      (forbidden-command-ui-findings (:command-feature-files world)))]
+               (let [findings (forbidden-command-ui-findings-of-kind
+                               (:command-feature-files world)
+                               :command-palette)]
                  (support/assert! (empty? findings)
                                   "Command palette implementation was found."
                                   {:findings (vec findings)})
@@ -155,9 +157,14 @@
 
    {:pattern #"^no user-configurable keybindings are present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :keybindings (:kind %))
-                                      (forbidden-command-ui-findings (:command-feature-files world)))]
+               (let [findings (forbidden-command-ui-findings-of-kind
+                               (:command-feature-files world)
+                               :keybindings)]
                  (support/assert! (empty? findings)
                                   "User-configurable keybindings were found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T20:58:19.705849876+02:00", :module-hash "1927912763", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1038821804"} {:id "def/command-fields", :kind "def", :line 7, :end-line nil, :hash "690572886"} {:id "defn/defined-fields", :kind "defn", :line 9, :end-line nil, :hash "-1662172251"} {:id "defn/listable-registry?", :kind "defn", :line 15, :end-line nil, :hash "1777837196"} {:id "defn/registered-command?", :kind "defn", :line 18, :end-line nil, :hash "-2114637731"} {:id "defn/command-has-behavior?", :kind "defn", :line 21, :end-line nil, :hash "-1623888695"} {:id "defn/separate-from-rendering?", :kind "defn", :line 28, :end-line nil, :hash "-1396950643"} {:id "def/forbidden-command-ui-patterns", :kind "def", :line 32, :end-line nil, :hash "-2023843326"} {:id "defn/forbidden-command-ui-findings", :kind "defn", :line 38, :end-line nil, :hash "-1818592575"} {:id "defn/forbidden-command-ui-findings-of-kind", :kind "defn", :line 41, :end-line nil, :hash "611004771"} {:id "defn-/run-command-with-node", :kind "defn-", :line 44, :end-line nil, :hash "-711241429"} {:id "defn-/read-node-json", :kind "defn-", :line 50, :end-line nil, :hash "1086192520"} {:id "def/handlers", :kind "def", :line 55, :end-line nil, :hash "-1793282294"}]}
+;; clj-mutate-manifest-end
