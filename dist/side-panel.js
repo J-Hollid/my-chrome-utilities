@@ -1,9 +1,9 @@
-import { listCommands, runCommandById, } from "./commands";
-import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer";
-import { attachHistoryArrayObserver, } from "./data-layer-observer";
-import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery";
-import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session";
-import { timelineDetails, timelineSummary } from "./data-layer-timeline";
+import { listCommands, runCommandById, } from "./commands.js";
+import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
+import { attachHistoryArrayObserver, } from "./data-layer-observer.js";
+import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
+import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
+import { timelineDetails, timelineSummary } from "./data-layer-timeline.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");

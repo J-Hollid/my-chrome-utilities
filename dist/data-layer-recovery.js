@@ -1,4 +1,4 @@
-import { attachHistoryArrayObserver, } from "./data-layer-observer";
+import { attachHistoryArrayObserver, } from "./data-layer-observer.js";
 export function observerAttachmentStatus(sessionState, observerState) {
     const session = sessionState.session;
     if (!session || session.status !== "active") {

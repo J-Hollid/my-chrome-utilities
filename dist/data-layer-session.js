@@ -1,4 +1,4 @@
-import { getHistoryArrayPath } from "./data-layer";
+import { getHistoryArrayPath } from "./data-layer.js";
 export const DATA_LAYER_SESSION_STORAGE_KEY = "dataLayerTestingSession";
 export function sessionScope(state) {
     return state.session ? "active-tab journey" : undefined;

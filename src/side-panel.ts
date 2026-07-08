@@ -3,21 +3,21 @@ import {
   runCommandById,
   type AppCommand,
   type CommandRunRecord,
-} from "./commands";
+} from "./commands.js";
 import {
   getHistoryArrayPath,
   pathStatus,
   samplePageObject,
   setHistoryArrayPath,
-} from "./data-layer";
+} from "./data-layer.js";
 import {
   attachHistoryArrayObserver,
   type DataLayerHistoryObserverState,
-} from "./data-layer-observer";
+} from "./data-layer-observer.js";
 import {
   observerAttachmentStatus,
   restartObservation,
-} from "./data-layer-recovery";
+} from "./data-layer-recovery.js";
 import {
   captureEntry,
   DATA_LAYER_SESSION_STORAGE_KEY,
@@ -28,8 +28,8 @@ import {
   sessionScope,
   startDataLayerTestingSession,
   type DataLayerSessionState,
-} from "./data-layer-session";
-import { timelineDetails, timelineSummary } from "./data-layer-timeline";
+} from "./data-layer-session.js";
+import { timelineDetails, timelineSummary } from "./data-layer-timeline.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 

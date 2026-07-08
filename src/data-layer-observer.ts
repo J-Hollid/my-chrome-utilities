@@ -2,8 +2,8 @@ import {
   pathStatus,
   samplePageObject,
   type HistoryPathStatus,
-} from "./data-layer";
-import { captureEntry, type DataLayerSessionState } from "./data-layer-session";
+} from "./data-layer.js";
+import { captureEntry, type DataLayerSessionState } from "./data-layer-session.js";
 
 export interface ObservedDataLayerEntry {
   type: "observed";

@@ -1,5 +1,5 @@
-import { pathStatus, samplePageObject, } from "./data-layer";
-import { captureEntry } from "./data-layer-session";
+import { pathStatus, samplePageObject, } from "./data-layer.js";
+import { captureEntry } from "./data-layer-session.js";
 function pathParts(path) {
     return path
         .split(".")
