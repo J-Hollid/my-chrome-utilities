@@ -11,6 +11,10 @@ import {
   setHistoryArrayPath,
 } from "./data-layer";
 import {
+  attachHistoryArrayObserver,
+  type DataLayerHistoryObserverState,
+} from "./data-layer-observer";
+import {
   captureEntry,
   DATA_LAYER_SESSION_STORAGE_KEY,
   endDataLayerTestingSession,
@@ -45,11 +49,16 @@ const sessionHistoryPath = document.querySelector<HTMLElement>(
 );
 const sessionTimeline = document.querySelector<HTMLElement>("#session-timeline");
 const sessionWarning = document.querySelector<HTMLElement>("#session-warning");
+const observerStatus = document.querySelector<HTMLElement>("#observer-status");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
 let selectedIndex = 0;
 let dataLayerSessionState: DataLayerSessionState = restoreSession();
+let dataLayerObserverState: DataLayerHistoryObserverState = {
+  pageObject: samplePageObject(),
+  observedEntries: [],
+};
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -95,6 +104,13 @@ function renderSessionState(): void {
   }
 }
 
+function renderObserverState(): void {
+  if (observerStatus) {
+    observerStatus.textContent =
+      dataLayerObserverState.observer?.status ?? "inactive";
+  }
+}
+
 function recordCommandRun(entry: CommandRunRecord): void {
   if (entry.commandId === "data-layer.start-testing") {
     const sessionWasActive = dataLayerSessionState.session?.status === "active";
@@ -108,9 +124,17 @@ function recordCommandRun(entry: CommandRunRecord): void {
         type: "page",
         url: globalThis.location.href,
       });
+      dataLayerObserverState = attachHistoryArrayObserver(
+        dataLayerObserverState,
+        {
+          historyPath: getHistoryArrayPath(),
+          pageUrl: globalThis.location.href,
+        },
+      );
     }
     persistSession(dataLayerSessionState);
     renderSessionState();
+    renderObserverState();
   }
 
   if (entry.commandId === "data-layer.end-testing") {
@@ -221,11 +245,18 @@ filter?.addEventListener("keyup", (event: KeyboardEvent) => {
 });
 
 historyPathInput?.addEventListener("input", () => {
-  renderHistoryPath(setHistoryArrayPath(historyPathInput.value));
+  const path = setHistoryArrayPath(historyPathInput.value);
+  renderHistoryPath(path);
+  dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, {
+    historyPath: path,
+    pageUrl: globalThis.location.href,
+  });
+  renderObserverState();
 });
 
 renderHistoryPath(getHistoryArrayPath());
 renderSessionState();
+renderObserverState();
 
 export {
   DATA_LAYER_SESSION_STORAGE_KEY,
