@@ -12,21 +12,30 @@
        (map str/trim)
        (remove str/blank?)))
 
+(defn- resolve-path-step [current part]
+  (if (map? current)
+    (get current (keyword part))
+    ::not-found))
+
+(defn- resolve-next-path-value [current part]
+  (if (nil? current)
+    nil
+    (resolve-path-step current part)))
+
 (defn- resolve-path [page-object path]
-  (reduce (fn [current part]
-            (cond
-              (nil? current) nil
-              (map? current) (get current (keyword part))
-              :else ::not-found))
-          page-object
-          (path-parts path)))
+  (reduce resolve-next-path-value page-object (path-parts path)))
+
+(defn- missing-path-value? [value]
+  (or (nil? value) (= ::not-found value)))
+
+(defn- available-path-status [value]
+  (if (vector? value) "ready" "not an array"))
 
 (defn path-status [page-object path]
   (let [value (resolve-path page-object path)]
-    (cond
-      (or (nil? value) (= ::not-found value)) "path missing"
-      (vector? value) "ready"
-      :else "not an array")))
+    (if (missing-path-value? value)
+      "path missing"
+      (available-path-status value))))
 
 (defn settings-allow-history-path-entry? [html history-path]
   (and (seq history-path)
@@ -53,6 +62,9 @@
 
 (defn forbidden-data-layer-scope-findings [files]
   (support/pattern-findings forbidden-data-layer-patterns files))
+
+(defn forbidden-data-layer-scope-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-data-layer-scope-findings files)))
 
 (defn- inspect-settings [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -138,9 +150,9 @@
 
    {:pattern #"^config import is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :config-import (:kind %))
-                                      (forbidden-data-layer-scope-findings
-                                       (:data-layer-files world)))]
+               (let [findings (forbidden-data-layer-scope-findings-of-kind
+                               (:data-layer-files world)
+                               :config-import)]
                  (support/assert! (empty? findings)
                                   "Config import behavior was found."
                                   {:findings (vec findings)})
@@ -148,9 +160,9 @@
 
    {:pattern #"^config export is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :config-export (:kind %))
-                                      (forbidden-data-layer-scope-findings
-                                       (:data-layer-files world)))]
+               (let [findings (forbidden-data-layer-scope-findings-of-kind
+                               (:data-layer-files world)
+                               :config-export)]
                  (support/assert! (empty? findings)
                                   "Config export behavior was found."
                                   {:findings (vec findings)})
@@ -158,9 +170,9 @@
 
    {:pattern #"^validation schemas are not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :validation-schema (:kind %))
-                                      (forbidden-data-layer-scope-findings
-                                       (:data-layer-files world)))]
+               (let [findings (forbidden-data-layer-scope-findings-of-kind
+                               (:data-layer-files world)
+                               :validation-schema)]
                  (support/assert! (empty? findings)
                                   "Validation schema behavior was found."
                                   {:findings (vec findings)})
