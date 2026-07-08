@@ -1,5 +1,6 @@
 (ns acceptance.data-layer-observer-steps-test
   (:require [acceptance.steps.data-layer-observer :as observer]
+            [acceptance.steps.data-layer-session :as session]
             [clojure.test :refer [deftest is]]))
 
 (deftest records-observed-history-entry-with-metadata
@@ -49,8 +50,25 @@
          (get-in (observer/attach-observer {} {:history-path "queue.value"
                                                :page-url "https://example.test/"})
                  [:observer :status])))
+  (is (= 0
+         (get-in (observer/attach-observer {} {:history-path "queue.value"
+                                               :page-url "https://example.test/"})
+                 [:observer :active-count])))
   (is (nil? (:page-error (observer/attach-observer {} {:history-path "queue.value"
                                                        :page-url "https://example.test/"})))))
+
+(deftest captures-observed-entry-in-active-session
+  (let [session-state (session/run-start-command {}
+                                                 {:tab-id 1
+                                                  :url "https://example.test/"
+                                                  :history-path "queue.history"})
+        state (-> {:session-state session-state}
+                  (observer/attach-observer {:history-path "queue.history"
+                                             :page-url "https://example.test/p/"})
+                  (observer/page-push "signup" "signup-values"))
+        entry (observer/last-observed-entry state)]
+    (is (= entry
+           (last (get-in state [:session-state :session :timeline]))))))
 
 (deftest reports-disallowed-observer-capabilities
   (is (empty?
@@ -63,3 +81,20 @@
           {"src/object-observer.ts" "objectPushEventsWithEventFields();"
            "src/beacon.ts" "navigator.sendBeacon('/analytics');"
            "src/snapshot.ts" "captureObjectSnapshot(window.dataLayer);"}))))
+
+(deftest filters-disallowed-observer-capabilities-by-kind
+  (let [files {"src/object-observer.ts" "objectPushEventsWithEventFields();"
+               "src/beacon.ts" "navigator.sendBeacon('/analytics');"
+               "src/snapshot.ts" "captureObjectSnapshot(window.dataLayer);"}]
+    (is (= [{:kind :object-push-events :path "src/object-observer.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :object-push-events))))
+    (is (= [{:kind :analytics-beacons :path "src/beacon.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :analytics-beacons))))
+    (is (= [{:kind :object-snapshots :path "src/snapshot.ts"}]
+           (vec (observer/forbidden-observer-capability-findings-of-kind
+                 files
+                 :object-snapshots))))))
