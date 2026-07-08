@@ -1,6 +1,7 @@
 (ns acceptance.property-test
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -33,11 +34,17 @@
      :background background
      :scenarios scenarios}))
 
-(def command-field-set-gen
+(defn- set-of-elements-gen [values]
   (gen/fmap set
-            (gen/vector (gen/elements (vec command-registry/command-fields))
+            (gen/vector (gen/elements (vec values))
                         0
-                        (count command-registry/command-fields))))
+                        (count values))))
+
+(def command-field-set-gen
+  (set-of-elements-gen command-registry/command-fields))
+
+(def fuzzy-package-set-gen
+  (set-of-elements-gen palette/fuzzy-package-names))
 
 (defn- check [property]
   (tc/quick-check 100 property))
@@ -61,6 +68,31 @@
 
 (defn- command-source-for [fields]
   (str/join "\n" (map #(str % ": value") fields)))
+
+(defn- package-with-fuzzy-dependencies [packages]
+  {:dependencies (into {} (map (fn [package]
+                                 [(keyword package) "1.0.0"])
+                               packages))
+   :devDependencies {}})
+
+(defn- palette-scope-input [packages global-shortcut? keybinding-editor?]
+  {:package (package-with-fuzzy-dependencies packages)
+   :manifest (if global-shortcut?
+               {:commands {:open-palette {}}}
+               {})
+   :files (if keybinding-editor?
+            {"src/settings.ts" "shortcut editor"}
+            {"src/side-panel.ts" ""})})
+
+(defn- expected-palette-scope-findings [packages global-shortcut? keybinding-editor?]
+  (vec
+   (concat
+    (map (fn [_package] {:kind :fuzzy-package :path "package.json"})
+         (sort packages))
+    (when global-shortcut?
+      [{:kind :global-shortcut :path "manifest.json"}])
+    (when keybinding-editor?
+      [{:kind :keybinding-editor :path "src/settings.ts"}]))))
 
 (deftest expand-executions-preserves-scenario-example-shape
   (let [result (check
@@ -98,4 +130,18 @@
                   (= fields
                      (command-registry/defined-fields
                       (command-source-for fields)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest palette-scope-findings-compose-from-independent-signals
+  (let [result (check
+                (prop/for-all [packages fuzzy-package-set-gen
+                               global-shortcut? gen/boolean
+                               keybinding-editor? gen/boolean]
+                  (= (expected-palette-scope-findings packages
+                                                      global-shortcut?
+                                                      keybinding-editor?)
+                     (palette/forbidden-palette-scope-findings
+                      (palette-scope-input packages
+                                           global-shortcut?
+                                           keybinding-editor?)))))]
     (is (:pass? result) (pr-str result))))
