@@ -1,34 +1,7 @@
 (ns acceptance.steps.palette
-  (:require [aps.json :as aps-json]
+  (:require [acceptance.steps.support :as support]
             [babashka.fs :as fs]
             [clojure.string :as str]))
-
-(defn- example-value [example key]
-  (or (get example key)
-      (get example (keyword key))))
-
-(defn- require-example [example key]
-  (let [value (example-value example key)]
-    (when (str/blank? value)
-      (throw (ex-info (format "Missing example value: %s" key) {:key key})))
-    value))
-
-(defn- assert! [condition message data]
-  (when-not condition
-    (throw (ex-info message data))))
-
-(defn- repository-root []
-  (fs/cwd))
-
-(defn- read-json [path]
-  (aps-json/read-json-file (str path)))
-
-(defn- source-files [root]
-  (->> (file-seq (fs/file (fs/path root "src")))
-       (filter fs/regular-file?)
-       (map (fn [file]
-              [(str (fs/relativize root file)) (slurp (str file))]))
-       (into (sorted-map))))
 
 (defn visible-open-button? [html source]
   (and (str/includes? html "id=\"open-palette\"")
@@ -99,12 +72,20 @@
           :when (re-find #"(?i)keybinding|shortcut editor" source)]
       {:kind :keybinding-editor :path path}))))
 
+(defn forbidden-palette-scope-findings-of-kind [scope kind]
+  (filter #(= kind (:kind %)) (forbidden-palette-scope-findings scope)))
+
 (defn- inspect-side-panel [world]
-  (let [root (or (:root world) (repository-root))]
+  (let [root (or (:root world) (support/repository-root))]
     (assoc world
            :root root
-           :side-panel-html (slurp (str (fs/path root "side-panel.html")))
-           :side-panel-source (slurp (str (fs/path root "src" "side-panel.ts"))))))
+           :side-panel-html (support/source-file root "side-panel.html")
+           :side-panel-source (support/source-file root "src/side-panel.ts"))))
+
+(defn- palette-scope [world]
+  {:package (:package world)
+   :manifest (:manifest world)
+   :files (:implementation-files world)})
 
 (def handlers
   [{:pattern #"^the side panel is displayed$"
@@ -113,25 +94,25 @@
 
    {:pattern #"^a visible button opens the command palette$"
     :handler (fn [world _example _captures]
-               (assert! (visible-open-button? (:side-panel-html world)
-                                              (:side-panel-source world))
-                        "Visible palette button is not wired to open the palette."
-                        {})
+               (support/assert! (visible-open-button? (:side-panel-html world)
+                                                       (:side-panel-source world))
+                                "Visible palette button is not wired to open the palette."
+                                {})
                world)}
 
    {:pattern #"^shortcut <([A-Za-z0-9_]+)> is pressed inside the side panel$"
     :handler (fn [world example [shortcut-key]]
-               (assoc world :shortcut (require-example example shortcut-key)))}
+               (assoc world :shortcut (support/require-example example shortcut-key)))}
 
    {:pattern #"^the command palette opens$"
     :handler (fn [world _example _captures]
-               (assert! (palette-markup? (:side-panel-html world))
-                        "Palette markup is missing."
-                        {})
-               (assert! (opens-on-shortcut? (:side-panel-source world)
-                                            (:shortcut world))
-                        "Palette is not opened by the requested side-panel shortcut."
-                        {:shortcut (:shortcut world)})
+               (support/assert! (palette-markup? (:side-panel-html world))
+                                "Palette markup is missing."
+                                {})
+               (support/assert! (opens-on-shortcut? (:side-panel-source world)
+                                                    (:shortcut world))
+                                "Palette is not opened by the requested side-panel shortcut."
+                                {:shortcut (:shortcut world)})
                world)}
 
    {:pattern #"^the command palette is open$"
@@ -140,104 +121,102 @@
 
    {:pattern #"^registered commands are listed$"
     :handler (fn [world _example _captures]
-               (assert! (lists-registered-commands? (:side-panel-source world))
-                        "Registered commands are not rendered in the palette."
-                        {})
+               (support/assert! (lists-registered-commands? (:side-panel-source world))
+                                "Registered commands are not rendered in the palette."
+                                {})
                world)}
 
    {:pattern #"^the user types <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [filter-key]]
-               (assoc world :filter-text (require-example example filter-key)))}
+               (assoc world :filter-text (support/require-example example filter-key)))}
 
    {:pattern #"^only matching commands are shown$"
     :handler (fn [world _example _captures]
-               (assert! (filters-commands? (:side-panel-source world)
-                                           (:filter-text world))
-                        "Palette does not filter command results."
-                        {:filter-text (:filter-text world)})
+               (support/assert! (filters-commands? (:side-panel-source world)
+                                                   (:filter-text world))
+                                "Palette does not filter command results."
+                                {:filter-text (:filter-text world)})
                world)}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> is selected in the command palette$"
     :handler (fn [world example [command-key]]
                (-> world
                    inspect-side-panel
-                   (assoc :selected-command-id (require-example example command-key))))}
+                   (assoc :selected-command-id (support/require-example example command-key))))}
 
    {:pattern #"^key <([A-Za-z0-9_]+)> is pressed$"
     :handler (fn [world example [key-name]]
-               (assoc world :pressed-key (require-example example key-name)))}
+               (assoc world :pressed-key (support/require-example example key-name)))}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> runs$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)]
-                 (assert! (= command-id (:selected-command-id world))
-                          "Selected command does not match the command expected to run."
-                          {:expected command-id :actual (:selected-command-id world)})
-                 (assert! (runs-selected-command-on-key? (:side-panel-source world)
-                                                         (:pressed-key world))
-                          "Palette does not run the selected command for the requested key."
-                          {:key (:pressed-key world)})
+               (let [command-id (support/require-example example command-key)]
+                 (support/assert! (= command-id (:selected-command-id world))
+                                  "Selected command does not match the command expected to run."
+                                  {:expected command-id :actual (:selected-command-id world)})
+                 (support/assert! (runs-selected-command-on-key? (:side-panel-source world)
+                                                                 (:pressed-key world))
+                                  "Palette does not run the selected command for the requested key."
+                                  {:key (:pressed-key world)})
                  world))}
 
    {:pattern #"^visible command log records that command <([A-Za-z0-9_]+)> ran$"
     :handler (fn [world example [command-key]]
-               (let [command-id (require-example example command-key)]
-                 (assert! (and (re-find #"command-log" (:side-panel-source world))
-                               (re-find (re-pattern (java.util.regex.Pattern/quote command-id))
-                                        (slurp (str (fs/path (:root world) "src" "commands.ts")))))
-                          "Visible command log is not connected to the command run."
-                          {:command-id command-id})
+               (let [command-id (support/require-example example command-key)]
+                 (support/assert! (and (re-find #"command-log" (:side-panel-source world))
+                                       (re-find (re-pattern (java.util.regex.Pattern/quote command-id))
+                                                (support/source-file (:root world) "src/commands.ts")))
+                                  "Visible command log is not connected to the command run."
+                                  {:command-id command-id})
                  world))}
 
    {:pattern #"^the command palette closes$"
     :handler (fn [world _example _captures]
-               (assert! (closes-on-key? (:side-panel-source world)
-                                        (:pressed-key world))
-                        "Palette does not close for the requested key."
-                        {:key (:pressed-key world)})
+               (support/assert! (closes-on-key? (:side-panel-source world)
+                                                (:pressed-key world))
+                                "Palette does not close for the requested key."
+                                {:key (:pressed-key world)})
                world)}
 
    {:pattern #"^command palette implementation is inspected$"
     :handler (fn [world _example _captures]
-               (let [root (or (:root world) (repository-root))]
+               (let [root (or (:root world) (support/repository-root))]
                  (assoc world
                         :root root
-                        :package (read-json (fs/path root "package.json"))
-                        :manifest (read-json (fs/path root "manifest.json"))
-                        :implementation-files (source-files root))))}
+                        :package (support/read-json (fs/path root "package.json"))
+                        :manifest (support/read-json (fs/path root "manifest.json"))
+                        :implementation-files (support/source-files root))))}
 
    {:pattern #"^no fuzzy-search package dependency is declared$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :fuzzy-package (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
-                 (assert! (empty? findings)
-                          "Fuzzy-search dependency was found."
-                          {:findings (vec findings)})
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :fuzzy-package)]
+                 (support/assert! (empty? findings)
+                                  "Fuzzy-search dependency was found."
+                                  {:findings (vec findings)})
                  world))}
 
    {:pattern #"^no global shortcuts are declared$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :global-shortcut (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
-                 (assert! (empty? findings)
-                          "Global shortcut declaration was found."
-                          {:findings (vec findings)})
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :global-shortcut)]
+                 (support/assert! (empty? findings)
+                                  "Global shortcut declaration was found."
+                                  {:findings (vec findings)})
                  world))}
 
    {:pattern #"^no user keybinding editor is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :keybinding-editor (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
-                 (assert! (empty? findings)
-                          "User keybinding editor was found."
-                          {:findings (vec findings)})
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :keybinding-editor)]
+                 (support/assert! (empty? findings)
+                                  "User keybinding editor was found."
+                                  {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T21:02:42.560396598+02:00", :module-hash "-499215085", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "38193441"} {:id "defn/visible-open-button?", :kind "defn", :line 6, :end-line nil, :hash "-316165643"} {:id "defn/palette-markup?", :kind "defn", :line 14, :end-line nil, :hash "1302085553"} {:id "defn/opens-on-shortcut?", :kind "defn", :line 21, :end-line nil, :hash "-808115028"} {:id "defn/lists-registered-commands?", :kind "defn", :line 33, :end-line nil, :hash "-1679333293"} {:id "defn/filters-commands?", :kind "defn", :line 37, :end-line nil, :hash "-256055306"} {:id "defn/runs-selected-command-on-key?", :kind "defn", :line 43, :end-line nil, :hash "259571416"} {:id "defn/closes-on-key?", :kind "defn", :line 50, :end-line nil, :hash "-1867581278"} {:id "def/fuzzy-package-names", :kind "def", :line 56, :end-line nil, :hash "1698743278"} {:id "defn-/dependency-names", :kind "defn-", :line 58, :end-line nil, :hash "-1509705126"} {:id "defn/forbidden-palette-scope-findings", :kind "defn", :line 62, :end-line nil, :hash "646918192"} {:id "defn/forbidden-palette-scope-findings-of-kind", :kind "defn", :line 75, :end-line nil, :hash "-2111391609"} {:id "defn-/inspect-side-panel", :kind "defn-", :line 78, :end-line nil, :hash "-359607095"} {:id "defn-/palette-scope", :kind "defn-", :line 85, :end-line nil, :hash "-1191740757"} {:id "def/handlers", :kind "def", :line 90, :end-line nil, :hash "-404272015"}]}
+;; clj-mutate-manifest-end

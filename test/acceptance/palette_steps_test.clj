@@ -53,3 +53,20 @@
           {:package {:dependencies {:fuse.js "^7.0.0"}}
            :manifest {:commands {:open-palette {:suggested_key "Ctrl+K"}}}
            :files {"src/settings.ts" "export function openKeybindingEditor() {}"}}))))
+
+(deftest filters-disallowed-palette-scope-by-kind
+  (let [scope {:package {:dependencies {:fuse.js "^7.0.0"}}
+               :manifest {:commands {:open-palette {:suggested_key "Ctrl+K"}}}
+               :files {"src/settings.ts" "export function openKeybindingEditor() {}"}}]
+    (is (= [{:kind :fuzzy-package :path "package.json"}]
+           (vec (palette/forbidden-palette-scope-findings-of-kind
+                 scope
+                 :fuzzy-package))))
+    (is (= [{:kind :global-shortcut :path "manifest.json"}]
+           (vec (palette/forbidden-palette-scope-findings-of-kind
+                 scope
+                 :global-shortcut))))
+    (is (= [{:kind :keybinding-editor :path "src/settings.ts"}]
+           (vec (palette/forbidden-palette-scope-findings-of-kind
+                 scope
+                 :keybinding-editor))))))
