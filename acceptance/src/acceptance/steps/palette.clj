@@ -72,12 +72,20 @@
           :when (re-find #"(?i)keybinding|shortcut editor" source)]
       {:kind :keybinding-editor :path path}))))
 
+(defn forbidden-palette-scope-findings-of-kind [scope kind]
+  (filter #(= kind (:kind %)) (forbidden-palette-scope-findings scope)))
+
 (defn- inspect-side-panel [world]
   (let [root (or (:root world) (support/repository-root))]
     (assoc world
            :root root
            :side-panel-html (support/source-file root "side-panel.html")
            :side-panel-source (support/source-file root "src/side-panel.ts"))))
+
+(defn- palette-scope [world]
+  {:package (:package world)
+   :manifest (:manifest world)
+   :files (:implementation-files world)})
 
 (def handlers
   [{:pattern #"^the side panel is displayed$"
@@ -181,11 +189,9 @@
 
    {:pattern #"^no fuzzy-search package dependency is declared$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :fuzzy-package (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :fuzzy-package)]
                  (support/assert! (empty? findings)
                                   "Fuzzy-search dependency was found."
                                   {:findings (vec findings)})
@@ -193,11 +199,9 @@
 
    {:pattern #"^no global shortcuts are declared$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :global-shortcut (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :global-shortcut)]
                  (support/assert! (empty? findings)
                                   "Global shortcut declaration was found."
                                   {:findings (vec findings)})
@@ -205,12 +209,14 @@
 
    {:pattern #"^no user keybinding editor is present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :keybinding-editor (:kind %))
-                                      (forbidden-palette-scope-findings
-                                       {:package (:package world)
-                                        :manifest (:manifest world)
-                                        :files (:implementation-files world)}))]
+               (let [findings (forbidden-palette-scope-findings-of-kind
+                               (palette-scope world)
+                               :keybinding-editor)]
                  (support/assert! (empty? findings)
                                   "User keybinding editor was found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T21:02:42.560396598+02:00", :module-hash "-499215085", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "38193441"} {:id "defn/visible-open-button?", :kind "defn", :line 6, :end-line nil, :hash "-316165643"} {:id "defn/palette-markup?", :kind "defn", :line 14, :end-line nil, :hash "1302085553"} {:id "defn/opens-on-shortcut?", :kind "defn", :line 21, :end-line nil, :hash "-808115028"} {:id "defn/lists-registered-commands?", :kind "defn", :line 33, :end-line nil, :hash "-1679333293"} {:id "defn/filters-commands?", :kind "defn", :line 37, :end-line nil, :hash "-256055306"} {:id "defn/runs-selected-command-on-key?", :kind "defn", :line 43, :end-line nil, :hash "259571416"} {:id "defn/closes-on-key?", :kind "defn", :line 50, :end-line nil, :hash "-1867581278"} {:id "def/fuzzy-package-names", :kind "def", :line 56, :end-line nil, :hash "1698743278"} {:id "defn-/dependency-names", :kind "defn-", :line 58, :end-line nil, :hash "-1509705126"} {:id "defn/forbidden-palette-scope-findings", :kind "defn", :line 62, :end-line nil, :hash "646918192"} {:id "defn/forbidden-palette-scope-findings-of-kind", :kind "defn", :line 75, :end-line nil, :hash "-2111391609"} {:id "defn-/inspect-side-panel", :kind "defn-", :line 78, :end-line nil, :hash "-359607095"} {:id "defn-/palette-scope", :kind "defn-", :line 85, :end-line nil, :hash "-1191740757"} {:id "def/handlers", :kind "def", :line 90, :end-line nil, :hash "-404272015"}]}
+;; clj-mutate-manifest-end
