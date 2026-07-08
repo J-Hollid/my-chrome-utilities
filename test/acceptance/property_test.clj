@@ -1,5 +1,6 @@
 (ns acceptance.property-test
   (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.side-panel :as side-panel]
             [clojure.test :refer [deftest is]]
             [clojure.test.check :as tc]
             [clojure.test.check.generators :as gen]
@@ -58,4 +59,24 @@
                             (count executions))
                          (every? #(execution-shape-valid? background scenarios %)
                                  executions)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest manifest-contract-normalizes-side-panel-shape
+  (let [result (check
+                (prop/for-all [manifest-version gen/pos-int
+                               extension-name gen/string-alphanumeric
+                               default-path gen/string-alphanumeric
+                               permissions (gen/vector gen/string-alphanumeric 0 8)
+                               content-scripts? gen/boolean]
+                  (let [manifest (cond-> {:manifest_version manifest-version
+                                           :name extension-name
+                                           :side_panel {:default_path default-path}
+                                           :permissions permissions}
+                                   content-scripts? (assoc :content_scripts []))
+                        contract (side-panel/manifest-contract manifest)]
+                    (and (= manifest-version (:manifest-version contract))
+                         (= extension-name (:extension-name contract))
+                         (= default-path (:default-path contract))
+                         (= (set permissions) (:permissions contract))
+                         (= content-scripts? (:content-scripts? contract))))))]
     (is (:pass? result) (pr-str result))))
