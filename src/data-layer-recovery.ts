@@ -1,8 +1,8 @@
 import {
   attachHistoryArrayObserver,
   type DataLayerHistoryObserverState,
-} from "./data-layer-observer";
-import type { DataLayerSessionState } from "./data-layer-session";
+} from "./data-layer-observer.js";
+import type { DataLayerSessionState } from "./data-layer-session.js";
 
 export type ObserverAttachmentStatus = "attached" | "needs sync" | "inactive";
 
