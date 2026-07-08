@@ -4,11 +4,17 @@
             [clojure.string :as str]
             [aps.json :as aps-json]))
 
+(defn- example-value [example key]
+  (or (get example key)
+      (get example (keyword key))))
+
+(defn- require-example-value! [key value]
+  (when (str/blank? value)
+    (throw (ex-info (format "Missing example value: %s" key) {:key key}))))
+
 (defn- require-example [example key]
-  (let [value (or (get example key)
-                  (get example (keyword key)))]
-    (when (str/blank? value)
-      (throw (ex-info (format "Missing example value: %s" key) {:key key})))
+  (let [value (example-value example key)]
+    (require-example-value! key value)
     value))
 
 (defn- read-json [path]

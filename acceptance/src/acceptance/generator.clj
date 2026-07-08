@@ -50,15 +50,20 @@
      {:generated-file (str generated-file)
       :metadata-file (str metadata-file)})))
 
+(defn- print-usage-and-exit! []
+  (binding [*out* *err*]
+    (println "usage: acceptance-entrypoint-generator <json-ir> <generated-test-output>"))
+  (System/exit 2))
+
+(defn- generate-and-exit-on-error! [args]
+  (try
+    (apply generate! args)
+    (catch Exception e
+      (binding [*out* *err*]
+        (println (.getMessage e)))
+      (System/exit 1))))
+
 (defn -main [& args]
   (if (not= 2 (count args))
-    (do
-      (binding [*out* *err*]
-        (println "usage: acceptance-entrypoint-generator <json-ir> <generated-test-output>"))
-      (System/exit 2))
-    (try
-      (apply generate! args)
-      (catch Exception e
-        (binding [*out* *err*]
-          (println (.getMessage e)))
-        (System/exit 1)))))
+    (print-usage-and-exit!)
+    (generate-and-exit-on-error! args)))
