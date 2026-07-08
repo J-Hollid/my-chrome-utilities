@@ -58,19 +58,33 @@
 (def usage-message
   "usage: acceptance-entrypoint-generator <json-ir> <generated-test-output>")
 
+(defn- expected-arg-count? [args]
+  (= 2 (count args)))
+
+(defn- usage-result []
+  {:exit usage-exit-code :err usage-message})
+
+(defn- generation-result [args]
+  (try
+    (apply generate! args)
+    {:exit success-exit-code}
+    (catch Exception e
+      {:exit error-exit-code :err (.getMessage e)})))
+
 (defn main-result [args]
-  (if (not= 2 (count args))
-    {:exit usage-exit-code :err usage-message}
-    (try
-      (apply generate! args)
-      {:exit success-exit-code}
-      (catch Exception e
-        {:exit error-exit-code :err (.getMessage e)}))))
+  (if (expected-arg-count? args)
+    (generation-result args)
+    (usage-result)))
+
+(defn- err-lines [err]
+  (if err [err] []))
+
+(defn- exit-code [exit]
+  (if (zero? exit) nil exit))
 
 (defn main-effects [{:keys [exit err]}]
-  {:err-lines (cond-> []
-                err (conj err))
-   :exit-code (if (zero? exit) nil exit)})
+  {:err-lines (err-lines err)
+   :exit-code (exit-code exit)})
 
 (defn- apply-main-result! [result]
   (let [{:keys [err-lines exit-code]} (main-effects result)]
