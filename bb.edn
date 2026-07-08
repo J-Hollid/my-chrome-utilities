@@ -10,10 +10,12 @@
              :requires ([clojure.test :as test]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
-                        [acceptance.project-skeleton-steps-test])
+                        [acceptance.steps-support-test]
+                        [acceptance.side-panel-steps-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
-                                                'acceptance.project-skeleton-steps-test)]
+                                                'acceptance.steps-support-test
+                                                'acceptance.side-panel-steps-test)]
                      (when (pos? (+ (:fail result) (:error result)))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
@@ -25,11 +27,17 @@
   acceptance {:doc "Run the normal APS acceptance pipeline."
               :requires ([acceptance.generator :as generator]
                          [babashka.fs :as fs]
+                         [clojure.string :as str]
                          [babashka.process :as process])
-              :task (let [feature "features/project-skeleton.feature"
-                          ir "build/acceptance/ir/project-skeleton.json"
-                          dry "build/acceptance/dry/project-skeleton.json"
+              :task (let [features (->> (fs/list-dir "features")
+                                         (filter (fn [file]
+                                                   (and (fs/regular-file? file)
+                                                        (str/ends-with? (fs/file-name file) ".feature"))))
+                                         (sort-by (fn [file] (fs/file-name file))))
                           generated-dir "build/acceptance/generated"
+                          slug (fn [path]
+                                 (-> (fs/file-name (fs/strip-ext path))
+                                     (str/replace (re-pattern "[^A-Za-z0-9_-]+") "-")))
                           run! (fn [& args]
                                  (let [result (apply process/shell
                                                      {:out :inherit
@@ -38,12 +46,14 @@
                                                      args)]
                                    (when-not (zero? (:exit result))
                                      (System/exit (:exit result)))))]
-                      (fs/create-dirs (fs/parent ir))
-                      (fs/create-dirs (fs/parent dry))
-                      (run! "bb" "gherkin-parser" feature ir)
-                      (run! "bb" "gherkin-ir-dry-checker" ir dry)
-                      (let [{:keys [generated-file]} (generator/generate! ir generated-dir
-                                                                          {:feature-path feature})]
-                        (run! "bb" generated-file)))}
+                      (doseq [feature features
+                              :let [name (slug feature)
+                                    feature-path (str feature)
+                                    ir (str "build/acceptance/ir/" name ".json")]]
+                        (fs/create-dirs (fs/parent ir))
+                        (run! "bb" "gherkin-parser" feature-path ir)
+                        (let [{:keys [generated-file]} (generator/generate! ir generated-dir
+                                                                            {:feature-path feature-path})]
+                          (run! "bb" generated-file))))}
   test {:doc "Run unit, property, and acceptance tests."
         :depends [test:unit test:property acceptance]}}}
