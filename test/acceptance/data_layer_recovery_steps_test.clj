@@ -22,6 +22,12 @@
          (:observer-status (recovery/refresh-active-session {} "attached"))))
   (is (= "needs sync"
          (:observer-status (recovery/refresh-active-session {} "needs sync"))))
+  (is (true?
+       (:restart-observation-available?
+        (recovery/refresh-active-session {} "needs sync"))))
+  (is (false?
+       (:restart-observation-available?
+        (recovery/refresh-active-session {} "inactive"))))
   (is (= "attached"
          (:observer-status
           (recovery/restart-observation
