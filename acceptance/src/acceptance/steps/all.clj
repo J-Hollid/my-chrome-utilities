@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.project-skeleton :as project-skeleton]
@@ -9,5 +10,6 @@
   (vec (concat project-skeleton/handlers
                side-panel/handlers
                command-registry/handlers
+               data-layer/handlers
                palette/handlers
                package-flow/handlers)))
