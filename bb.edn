@@ -15,7 +15,8 @@
                         [acceptance.command-registry-steps-test]
                         [acceptance.palette-steps-test]
                         [acceptance.package-flow-steps-test]
-                        [acceptance.data-layer-steps-test])
+                        [acceptance.data-layer-steps-test]
+                        [acceptance.data-layer-session-steps-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
@@ -23,7 +24,8 @@
                                                 'acceptance.command-registry-steps-test
                                                 'acceptance.palette-steps-test
                                                 'acceptance.package-flow-steps-test
-                                                'acceptance.data-layer-steps-test)]
+                                                'acceptance.data-layer-steps-test
+                                                'acceptance.data-layer-session-steps-test)]
                      (when (pos? (+ (:fail result) (:error result)))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
