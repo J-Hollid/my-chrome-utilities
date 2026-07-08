@@ -4,6 +4,7 @@
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
             [acceptance.steps.data-layer-session :as data-layer-session]
+            [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
@@ -268,4 +269,42 @@
                          (= entry (last (get-in state [:session-state
                                                        :session
                                                        :timeline])))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-timeline-preserves-generated-entry-order-and-session-capture
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               first-event path-segment-gen
+                               second-event path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        state (-> {:session-state
+                                   (data-layer-session/run-start-command
+                                    {}
+                                    (session-options 1 url "queue.history"))}
+                                  (data-layer-timeline/record-observed-entry
+                                   {:event-name first-event
+                                    :page-url url
+                                    :history-path "queue.history"
+                                    :payload-label (str first-event "-values")
+                                    :raw-label (str first-event "-raw")})
+                                  (data-layer-timeline/record-observed-entry
+                                   {:event-name second-event
+                                    :page-url url
+                                    :history-path "queue.history"
+                                    :payload-label (str second-event "-values")
+                                    :raw-label (str second-event "-raw")}))
+                        visible (data-layer-timeline/visible-timeline-entries state)
+                        session-visible (data-layer-timeline/visible-timeline-entries
+                                         {:timeline-entries (get-in state
+                                                                    [:session-state
+                                                                     :session
+                                                                     :timeline])})
+                        expanded (data-layer-timeline/expanded-entry (last visible))]
+                    (and (= [first-event second-event] (map :name visible))
+                         (= second-event (:name expanded))
+                         (= url (:url expanded))
+                         (= "queue.history" (:observer-path expanded))
+                         (= (str second-event "-values") (:payload expanded))
+                         (= (str second-event "-raw") (:raw-value expanded))
+                         (= visible session-visible)))))]
     (is (:pass? result) (pr-str result))))

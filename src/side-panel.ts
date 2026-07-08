@@ -25,6 +25,7 @@ import {
   startDataLayerTestingSession,
   type DataLayerSessionState,
 } from "./data-layer-session";
+import { timelineDetails, timelineSummary } from "./data-layer-timeline";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -93,7 +94,30 @@ function renderSessionState(): void {
     sessionTimeline.replaceChildren(
       ...(session?.timeline ?? []).map((entry) => {
         const item = document.createElement("li");
-        item.textContent = `${entry.type}: ${entry.url}`;
+        const details = document.createElement("details");
+        const summary = document.createElement("summary");
+        const summaryData = timelineSummary(entry);
+        const detailData = timelineDetails(entry);
+        const definitionList = document.createElement("dl");
+
+        summary.textContent = [
+          summaryData.name,
+          summaryData.url,
+          summaryData.timestamp,
+          summaryData.observerPath,
+        ]
+          .filter((value) => value.length > 0)
+          .join(" | ");
+
+        appendDefinition(definitionList, "Event", detailData.name);
+        appendDefinition(definitionList, "URL", detailData.url);
+        appendDefinition(definitionList, "Time", detailData.timestamp);
+        appendDefinition(definitionList, "Path", detailData.observerPath);
+        appendDefinition(definitionList, "Payload", detailData.payload);
+        appendDefinition(definitionList, "Raw", detailData.rawValue);
+
+        details.append(summary, definitionList);
+        item.append(details);
         return item;
       }),
     );
@@ -102,6 +126,18 @@ function renderSessionState(): void {
   if (sessionWarning) {
     sessionWarning.textContent = dataLayerSessionState.warning ?? "";
   }
+}
+
+function appendDefinition(list: HTMLElement, label: string, value: string): void {
+  if (!value) {
+    return;
+  }
+
+  const term = document.createElement("dt");
+  const description = document.createElement("dd");
+  term.textContent = label;
+  description.textContent = value;
+  list.append(term, description);
 }
 
 function renderObserverState(): void {
