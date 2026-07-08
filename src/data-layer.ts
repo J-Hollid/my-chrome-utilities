@@ -55,7 +55,7 @@ export function samplePageObject(): unknown {
   return {
     queue: {
       history: [],
-      value: 1,
+      value: "scalar",
     },
     test: {
       test: [],

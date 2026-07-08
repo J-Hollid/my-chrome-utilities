@@ -26,7 +26,9 @@
   (is (= "path missing"
          (data-layer/path-status {:queue {:history []}} "missing.path")))
   (is (= "not an array"
-         (data-layer/path-status {:queue {:value 1}} "queue.value"))))
+         (data-layer/path-status {:queue {:value 1}} "queue.value")))
+  (is (= "path missing"
+         (data-layer/path-status {:queue 1} "queue.history"))))
 
 (deftest recognizes-settings-and-persistence-contract
   (is (data-layer/settings-allow-history-path-entry? settings-html "queue.history"))
@@ -48,3 +50,20 @@
           {"src/import.ts" "importConfig(file)"
            "src/export.ts" "exportConfig()"
            "src/schema.ts" "const validationSchema = z.object({});"}))))
+
+(deftest filters-disallowed-data-layer-scope-by-kind
+  (let [files {"src/import.ts" "importConfig(file)"
+               "src/export.ts" "exportConfig()"
+               "src/schema.ts" "const validationSchema = z.object({});"}]
+    (is (= [{:kind :config-import :path "src/import.ts"}]
+           (vec (data-layer/forbidden-data-layer-scope-findings-of-kind
+                 files
+                 :config-import))))
+    (is (= [{:kind :config-export :path "src/export.ts"}]
+           (vec (data-layer/forbidden-data-layer-scope-findings-of-kind
+                 files
+                 :config-export))))
+    (is (= [{:kind :validation-schema :path "src/schema.ts"}]
+           (vec (data-layer/forbidden-data-layer-scope-findings-of-kind
+                 files
+                 :validation-schema))))))

@@ -21,3 +21,7 @@
                data-layer-timeline/handlers
                palette/handlers
                package-flow/handlers)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T22:39:46.572674493+02:00", :module-hash "-1844839492", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "245841211"} {:id "def/handlers", :kind "def", :line 9, :end-line nil, :hash "-290578447"}]}
+;; clj-mutate-manifest-end
