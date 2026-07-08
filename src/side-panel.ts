@@ -4,6 +4,12 @@ import {
   type AppCommand,
   type CommandRunRecord,
 } from "./commands";
+import {
+  getHistoryArrayPath,
+  pathStatus,
+  samplePageObject,
+  setHistoryArrayPath,
+} from "./data-layer";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -15,6 +21,13 @@ const openButton = document.querySelector<HTMLButtonElement>("#open-palette");
 const palette = document.querySelector<HTMLElement>("#palette");
 const filter = document.querySelector<HTMLInputElement>("#palette-filter");
 const results = document.querySelector<HTMLElement>("#palette-results");
+const historyPathInput = document.querySelector<HTMLInputElement>("#history-path");
+const historyPathDisplay = document.querySelector<HTMLElement>(
+  "#history-path-display",
+);
+const historyPathStatus = document.querySelector<HTMLElement>(
+  "#history-path-status",
+);
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -22,6 +35,20 @@ let selectedIndex = 0;
 
 if (app) {
   app.textContent = PROJECT_NAME;
+}
+
+function renderHistoryPath(path: string): void {
+  if (historyPathInput) {
+    historyPathInput.value = path;
+  }
+
+  if (historyPathDisplay) {
+    historyPathDisplay.textContent = path;
+  }
+
+  if (historyPathStatus) {
+    historyPathStatus.textContent = pathStatus(samplePageObject(), path);
+  }
 }
 
 function recordCommandRun(entry: CommandRunRecord): void {
@@ -125,3 +152,9 @@ filter?.addEventListener("keyup", (event: KeyboardEvent) => {
     hidePalette();
   }
 });
+
+historyPathInput?.addEventListener("input", () => {
+  renderHistoryPath(setHistoryArrayPath(historyPathInput.value));
+});
+
+renderHistoryPath(getHistoryArrayPath());

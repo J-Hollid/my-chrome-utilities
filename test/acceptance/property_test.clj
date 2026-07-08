@@ -1,6 +1,7 @@
 (ns acceptance.property-test
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
@@ -46,6 +47,9 @@
 
 (def fuzzy-package-set-gen
   (set-of-elements-gen palette/fuzzy-package-names))
+
+(def path-segment-gen
+  (gen/not-empty gen/string-alphanumeric))
 
 (defn- check [property]
   (tc/quick-check 100 property))
@@ -100,6 +104,9 @@
                                    manifest-version)}
     background? (assoc "background.js" "")
     side-panel? (assoc "side-panel.html" "")))
+
+(defn- nested-page-object [root leaf value]
+  {(keyword root) {(keyword leaf) value}})
 
 (deftest expand-executions-preserves-scenario-example-shape
   (let [result (check
@@ -163,4 +170,27 @@
                       (extension-build-files manifest-version
                                              background?
                                              side-panel?)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-path-status-classifies-generated-paths
+  (let [result (check
+                (prop/for-all [root path-segment-gen
+                               leaf path-segment-gen]
+                  (let [path (str root "." leaf)]
+                    (and (= "ready"
+                            (data-layer/path-status
+                             (nested-page-object root leaf [])
+                             path))
+                         (= "not an array"
+                            (data-layer/path-status
+                             (nested-page-object root leaf 1)
+                             path))
+                         (= "path missing"
+                            (data-layer/path-status
+                             (nested-page-object root leaf [])
+                             (str root "." leaf "_missing")))
+                         (= "path missing"
+                            (data-layer/path-status
+                             {(keyword root) 1}
+                             path))))))]
     (is (:pass? result) (pr-str result))))
