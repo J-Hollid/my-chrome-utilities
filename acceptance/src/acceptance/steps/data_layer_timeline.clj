@@ -51,15 +51,29 @@
 (defn- first-visible-entry [world]
   (first (visible-timeline-entries world)))
 
+(defn- example-value-or [example key fallback]
+  (or (support/example-value example key) fallback))
+
+(defn- default-payload-label [event-name]
+  (str event-name "-values"))
+
+(defn- default-raw-label [event-name]
+  (str event-name "-raw"))
+
 (defn- example-entry-options [example]
   (let [event-name (support/require-example example "event_name")]
     {:event-name event-name
      :page-url (support/require-example example "page_url")
      :history-path (support/require-example example "history_path")
-     :payload-label (or (support/example-value example "payload_label")
-                        (str event-name "-values"))
-     :raw-label (or (support/example-value example "raw_label")
-                    (str event-name "-raw"))}))
+     :payload-label (example-value-or example
+                                      "payload_label"
+                                      (default-payload-label event-name))
+     :raw-label (example-value-or example
+                                  "raw_label"
+                                  (default-raw-label event-name))}))
+
+(defn forbidden-timeline-capability-findings-of-kind [files kind]
+  (filter #(= kind (:kind %)) (forbidden-timeline-capability-findings files)))
 
 (def handlers
   [{:pattern #"^observed event entries are recorded$"
@@ -181,9 +195,9 @@
 
    {:pattern #"^timeline filtering is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :timeline-filtering (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :timeline-filtering)]
                  (support/assert! (empty? findings)
                                   "Timeline filtering was found."
                                   {:findings (vec findings)})
@@ -191,9 +205,9 @@
 
    {:pattern #"^timeline search is not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :timeline-search (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :timeline-search)]
                  (support/assert! (empty? findings)
                                   "Timeline search was found."
                                   {:findings (vec findings)})
@@ -201,10 +215,14 @@
 
    {:pattern #"^validation results are not present$"
     :handler (fn [world _example _captures]
-               (let [findings (filter #(= :validation-results (:kind %))
-                                      (forbidden-timeline-capability-findings
-                                       (:timeline-files world)))]
+               (let [findings (forbidden-timeline-capability-findings-of-kind
+                               (:timeline-files world)
+                               :validation-results)]
                  (support/assert! (empty? findings)
                                   "Validation results were found."
                                   {:findings (vec findings)})
                  world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-08T23:05:12.292937146+02:00", :module-hash "-1399431562", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-560445802"} {:id "def/timeline-timestamp", :kind "def", :line 6, :end-line nil, :hash "415657292"} {:id "defn-/observed-entry", :kind "defn-", :line 8, :end-line nil, :hash "1690037188"} {:id "defn/record-observed-entry", :kind "defn", :line 17, :end-line nil, :hash "-1688208651"} {:id "defn/visible-timeline-entries", :kind "defn", :line 24, :end-line nil, :hash "-188878219"} {:id "defn/timeline-summary", :kind "defn", :line 29, :end-line nil, :hash "-712284424"} {:id "defn/expanded-entry", :kind "defn", :line 32, :end-line nil, :hash "602566461"} {:id "def/forbidden-timeline-capability-patterns", :kind "def", :line 35, :end-line nil, :hash "1179421373"} {:id "defn/forbidden-timeline-capability-findings", :kind "defn", :line 43, :end-line nil, :hash "181573916"} {:id "defn-/inspect-timeline-implementation", :kind "defn-", :line 46, :end-line nil, :hash "1306313689"} {:id "defn-/first-visible-entry", :kind "defn-", :line 51, :end-line nil, :hash "-2031728269"} {:id "defn-/example-value-or", :kind "defn-", :line 54, :end-line nil, :hash "-1940368029"} {:id "defn-/default-payload-label", :kind "defn-", :line 57, :end-line nil, :hash "1878071429"} {:id "defn-/default-raw-label", :kind "defn-", :line 60, :end-line nil, :hash "-953873882"} {:id "defn-/example-entry-options", :kind "defn-", :line 63, :end-line nil, :hash "2130457195"} {:id "defn/forbidden-timeline-capability-findings-of-kind", :kind "defn", :line 75, :end-line nil, :hash "661283922"} {:id "def/handlers", :kind "def", :line 78, :end-line nil, :hash "1073186936"}]}
+;; clj-mutate-manifest-end
