@@ -48,14 +48,34 @@
        (str/includes? source "historyPathDisplay")
        (str/includes? source "textContent = path")))
 
+(defn- history-path-input-present? [html]
+  (str/includes? html "id=\"history-path\""))
+
+(def history-path-input-source-snippets
+  ["historyPathInput"
+   "setHistoryArrayPath(historyPathInput.value)"
+   "renderHistoryPath(path)"])
+
+(defn- history-path-input-listener? [source]
+  (boolean (re-find #"addEventListener\((\"|')input" source)))
+
+(defn- history-path-input-source-snippets-present? [source]
+  (every? #(str/includes? source %) history-path-input-source-snippets))
+
+(defn- history-path-input-source-wired? [source]
+  (every? true?
+          [(history-path-input-source-snippets-present? source)
+           (history-path-input-listener? source)]))
+
+(defn- text-or-empty [value]
+  (or value ""))
+
 (defn history-path-text-entry-wired? [html source]
-  (let [html (or html "")
-        source (or source "")]
-    (and (str/includes? html "id=\"history-path\"")
-         (str/includes? source "historyPathInput")
-         (boolean (re-find #"addEventListener\((\"|')input" source))
-         (str/includes? source "setHistoryArrayPath(historyPathInput.value)")
-         (str/includes? source "renderHistoryPath(path)"))))
+  (let [html (text-or-empty html)
+        source (text-or-empty source)]
+    (every? true?
+            [(history-path-input-present? html)
+             (history-path-input-source-wired? source)])))
 
 (defn enter-history-array-path [world history-path]
   (support/assert! (settings-allow-history-path-entry?
