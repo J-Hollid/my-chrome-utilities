@@ -36,3 +36,14 @@
           {"src/commands.ts" "export const commandRegistry = new Map();"
            "src/palette.ts" "export function openCommandPalette() {}"
            "src/storage.ts" "chrome.storage.local.set({ key: 'value' });"}))))
+
+(deftest filters-forbidden-findings-by-kind
+  (let [files {"src/commands.ts" "export const commandRegistry = new Map();"
+               "src/palette.ts" "export function openCommandPalette() {}"
+               "src/storage.ts" "chrome.storage.local.set({ key: 'value' });"}]
+    (is (= [{:kind :command-registry :path "src/commands.ts"}]
+           (vec (side-panel/forbidden-findings-of-kind files :command-registry))))
+    (is (= [{:kind :command-palette :path "src/palette.ts"}]
+           (vec (side-panel/forbidden-findings-of-kind files :command-palette))))
+    (is (= [{:kind :data-layer :path "src/storage.ts"}]
+           (vec (side-panel/forbidden-findings-of-kind files :data-layer))))))

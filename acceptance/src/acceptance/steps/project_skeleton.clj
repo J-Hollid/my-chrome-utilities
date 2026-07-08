@@ -3,8 +3,6 @@
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
-(def build-shell-options support/build-shell-options)
-
 (defn- inspect-project [world]
   (let [root (support/repository-root)]
     (assoc world
@@ -121,5 +119,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T19:10:06.078831822+02:00", :module-hash "-2115355975", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1617865368"} {:id "defn-/example-value", :kind "defn-", :line 7, :end-line nil, :hash "-359888669"} {:id "defn-/require-example-value!", :kind "defn-", :line 11, :end-line nil, :hash "-749297685"} {:id "defn-/require-example", :kind "defn-", :line 15, :end-line nil, :hash "-2118979496"} {:id "defn-/read-json", :kind "defn-", :line 20, :end-line nil, :hash "-1400085445"} {:id "defn-/repository-root", :kind "defn-", :line 25, :end-line nil, :hash "-1385156089"} {:id "defn-/inspect-project", :kind "defn-", :line 28, :end-line nil, :hash "-1778670945"} {:id "defn-/assert!", :kind "defn-", :line 37, :end-line nil, :hash "628652658"} {:id "defn-/project-files", :kind "defn-", :line 41, :end-line nil, :hash "379177836"} {:id "def/build-shell-options", :kind "def", :line 48, :end-line nil, :hash "-930688589"} {:id "defn-/run-build-command", :kind "defn-", :line 50, :end-line nil, :hash "-87000506"} {:id "def/handlers", :kind "def", :line 54, :end-line nil, :hash "-1945174334"}]}
+;; {:version 1, :tested-at "2026-07-08T20:46:56.713535216+02:00", :module-hash "-957047346", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1748883287"} {:id "defn-/inspect-project", :kind "defn-", :line 6, :end-line nil, :hash "-2019852584"} {:id "defn-/project-files", :kind "defn-", :line 15, :end-line nil, :hash "379177836"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "902508673"}]}
 ;; clj-mutate-manifest-end

@@ -1,9 +1,9 @@
-(ns acceptance.project-skeleton-steps-test
-  (:require [acceptance.steps.project-skeleton :as steps]
+(ns acceptance.steps-support-test
+  (:require [acceptance.steps.support :as support]
             [clojure.test :refer [deftest is]]))
 
 (deftest build-command-captures-failed-process-output
   (is (= {:out :string
           :err :string
           :continue true}
-         steps/build-shell-options)))
+         support/build-shell-options)))
