@@ -1,4 +1,4 @@
-export type CommandCategory = "demo";
+export type CommandCategory = "demo" | "data-layer";
 
 export interface CommandRunRecord {
   commandId: string;
@@ -30,7 +30,37 @@ const sayHelloCommand: AppCommand = {
   },
 };
 
-const commands: readonly AppCommand[] = [sayHelloCommand];
+const startDataLayerTestingCommand: AppCommand = {
+  id: "data-layer.start-testing",
+  title: "Start data layer testing",
+  description: "Starts a data layer testing session for the active tab.",
+  category: "data-layer",
+  run(context: CommandRunContext): void {
+    context.record({
+      commandId: "data-layer.start-testing",
+      message: "data-layer.start-testing ran",
+    });
+  },
+};
+
+const endDataLayerTestingCommand: AppCommand = {
+  id: "data-layer.end-testing",
+  title: "End data layer testing",
+  description: "Ends the active data layer testing session.",
+  category: "data-layer",
+  run(context: CommandRunContext): void {
+    context.record({
+      commandId: "data-layer.end-testing",
+      message: "data-layer.end-testing ran",
+    });
+  },
+};
+
+const commands: readonly AppCommand[] = [
+  sayHelloCommand,
+  startDataLayerTestingCommand,
+  endDataLayerTestingCommand,
+];
 
 export function listCommands(): readonly AppCommand[] {
   return commands;

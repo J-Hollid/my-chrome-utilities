@@ -10,6 +10,17 @@ import {
   samplePageObject,
   setHistoryArrayPath,
 } from "./data-layer";
+import {
+  captureEntry,
+  DATA_LAYER_SESSION_STORAGE_KEY,
+  endDataLayerTestingSession,
+  navigateSession,
+  persistSession,
+  restoreSession,
+  sessionScope,
+  startDataLayerTestingSession,
+  type DataLayerSessionState,
+} from "./data-layer-session";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -28,10 +39,17 @@ const historyPathDisplay = document.querySelector<HTMLElement>(
 const historyPathStatus = document.querySelector<HTMLElement>(
   "#history-path-status",
 );
+const sessionStatus = document.querySelector<HTMLElement>("#session-status");
+const sessionHistoryPath = document.querySelector<HTMLElement>(
+  "#session-history-path",
+);
+const sessionTimeline = document.querySelector<HTMLElement>("#session-timeline");
+const sessionWarning = document.querySelector<HTMLElement>("#session-warning");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
 let selectedIndex = 0;
+let dataLayerSessionState: DataLayerSessionState = restoreSession();
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -51,7 +69,56 @@ function renderHistoryPath(path: string): void {
   }
 }
 
+function renderSessionState(): void {
+  const session = dataLayerSessionState.session;
+
+  if (sessionStatus) {
+    sessionStatus.textContent = session?.status ?? "inactive";
+  }
+
+  if (sessionHistoryPath) {
+    sessionHistoryPath.textContent = session?.historyPath ?? "";
+  }
+
+  if (sessionTimeline) {
+    sessionTimeline.replaceChildren(
+      ...(session?.timeline ?? []).map((entry) => {
+        const item = document.createElement("li");
+        item.textContent = `${entry.type}: ${entry.url}`;
+        return item;
+      }),
+    );
+  }
+
+  if (sessionWarning) {
+    sessionWarning.textContent = dataLayerSessionState.warning ?? "";
+  }
+}
+
 function recordCommandRun(entry: CommandRunRecord): void {
+  if (entry.commandId === "data-layer.start-testing") {
+    const sessionWasActive = dataLayerSessionState.session?.status === "active";
+    dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
+      tabId: 1,
+      url: globalThis.location.href,
+      historyPath: getHistoryArrayPath(),
+    });
+    if (!sessionWasActive) {
+      dataLayerSessionState = captureEntry(dataLayerSessionState, {
+        type: "page",
+        url: globalThis.location.href,
+      });
+    }
+    persistSession(dataLayerSessionState);
+    renderSessionState();
+  }
+
+  if (entry.commandId === "data-layer.end-testing") {
+    dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
+    persistSession(dataLayerSessionState);
+    renderSessionState();
+  }
+
   if (commandLog) {
     commandLog.textContent = entry.message;
   }
@@ -158,3 +225,10 @@ historyPathInput?.addEventListener("input", () => {
 });
 
 renderHistoryPath(getHistoryArrayPath());
+renderSessionState();
+
+export {
+  DATA_LAYER_SESSION_STORAGE_KEY,
+  navigateSession,
+  sessionScope,
+};

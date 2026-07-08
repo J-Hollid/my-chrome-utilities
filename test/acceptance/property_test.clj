@@ -2,6 +2,7 @@
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
+            [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
@@ -108,6 +109,11 @@
 (defn- nested-page-object [root leaf value]
   {(keyword root) {(keyword leaf) value}})
 
+(defn- session-options [tab-id url history-path]
+  {:tab-id tab-id
+   :url url
+   :history-path history-path})
+
 (deftest expand-executions-preserves-scenario-example-shape
   (let [result (check
                 (prop/for-all [{:keys [background scenarios] :as feature} feature-gen]
@@ -193,4 +199,41 @@
                             (data-layer/path-status
                              {(keyword root) 1}
                              path))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-session-lifecycle-preserves-active-session-invariants
+  (let [result (check
+                (prop/for-all [tab-id gen/pos-int
+                               route path-segment-gen
+                               history-root path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        history-path (str history-root ".history")
+                        started (data-layer-session/run-start-command
+                                 {}
+                                 (session-options tab-id url history-path))
+                        duplicate (data-layer-session/run-start-command
+                                   started
+                                   (session-options tab-id
+                                                    (str url "/next")
+                                                    "other.history"))
+                        ended (data-layer-session/end-session started)
+                        after-ended (data-layer-session/capture-entry
+                                     ended
+                                     {:type "page" :url (str url "/after")})]
+                    (and (data-layer-session/active-session? started)
+                         (= (str "tab-" tab-id)
+                            (get-in started [:session :id]))
+                         (= history-path
+                            (get-in started [:session :history-path]))
+                         (= [{:type "page" :url url}]
+                            (get-in started [:session :timeline]))
+                         (= (:session started) (:session duplicate))
+                         (= "active session already exists"
+                            (:warning duplicate))
+                         (= "ended" (get-in ended [:session :status]))
+                         (= (get-in ended [:session :timeline])
+                            (get-in after-ended [:session :timeline]))
+                         (= started
+                            (data-layer-session/restore-session
+                             (data-layer-session/persisted-session started)))))))]
     (is (:pass? result) (pr-str result))))
