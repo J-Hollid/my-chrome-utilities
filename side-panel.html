@@ -7,8 +7,13 @@
     <script type="module" src="side-panel.js"></script>
   </head>
   <body>
-    <main>
+    <main id="side-panel-root" tabindex="-1">
       <h1 id="app">my-chrome-utilities</h1>
+      <button id="open-palette" type="button">Commands</button>
+      <section id="palette" aria-label="Command palette" hidden>
+        <input id="palette-filter" type="search" aria-label="Filter commands" />
+        <ul id="palette-results"></ul>
+      </section>
       <section id="commands" aria-label="Commands"></section>
       <output id="command-log" aria-live="polite"></output>
     </main>
