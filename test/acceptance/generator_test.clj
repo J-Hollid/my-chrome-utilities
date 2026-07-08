@@ -23,6 +23,8 @@
           metadata (aps-json/read-json-file (:metadata-file second-result))]
       (is (= first-text (slurp (:generated-file second-result))))
       (is (str/includes? first-text "acceptance.runtime"))
+      (is (str/includes? first-text "acceptance.steps.all"))
+      (is (not (str/includes? first-text "acceptance.steps.project-skeleton :as steps")))
       (is (= 1 (:schema_version metadata)))
       (is (= "features/Demo.feature" (:feature_path metadata)))
       (is (= (str ir-path) (:ir_path metadata)))
