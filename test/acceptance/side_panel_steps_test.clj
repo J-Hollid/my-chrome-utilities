@@ -28,7 +28,8 @@
   (is (empty?
        (side-panel/forbidden-scope-findings
         {"src/background.ts" "chrome.action.onClicked.addListener((tab) => chrome.sidePanel.open({ tabId: tab.id }));"
-         "src/side-panel.ts" "document.querySelector('#app')!.textContent = 'my-chrome-utilities';"})))
+         "src/side-panel.ts" "document.querySelector('#app')!.textContent = 'my-chrome-utilities';"
+         "src/data-layer.ts" "localStorage.setItem(HISTORY_PATH_STORAGE_KEY, path);"})))
   (is (= [{:kind :command-registry :path "src/commands.ts"}
           {:kind :command-palette :path "src/palette.ts"}
           {:kind :data-layer :path "src/storage.ts"}]
