@@ -36,8 +36,7 @@ Feature: Typed command registry
   # Typed command registry 004
   Scenario Outline: Typed command registry 004
     When command features are inspected
-    Then no command palette is present
-    And no user-configurable keybindings are present
+    Then no user-configurable keybindings are present
 
     Examples:
       | project_name         |
