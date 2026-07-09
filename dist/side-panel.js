@@ -81,9 +81,7 @@ function renderTimelineEvent(event) {
     const details = document.createElement("details");
     const summary = document.createElement("summary");
     const definitionList = document.createElement("dl");
-    summary.textContent = [event.name, event.timestamp, event.observerPath]
-        .filter((value) => value.length > 0)
-        .join(" | ");
+    summary.textContent = timelineEventHeading(event);
     appendDefinition(definitionList, "Event", event.name);
     appendDefinition(definitionList, "URL", event.url);
     appendDefinition(definitionList, "Time", event.timestamp);
@@ -96,6 +94,11 @@ function renderTimelineEvent(event) {
     }
     item.append(details);
     return item;
+}
+function timelineEventHeading(event) {
+    return [event.name || event.timestamp, event.observerPath]
+        .filter((value) => value.length > 0)
+        .join(" | ");
 }
 function renderPayloadProperties(properties) {
     const list = document.createElement("ul");

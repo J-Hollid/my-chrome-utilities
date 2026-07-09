@@ -152,6 +152,27 @@
            (dispatch state
                      "payload properties match the canonical <event_name> payload")))))
 
+(deftest displays-tuple-event-name-and-payload-details
+  (let [state (timeline/record-observed-tuple
+               {}
+               {:event-name "pageview"
+                :history-path "event.history"
+                :timestamp "2026-07-09T20:00:00Z"
+                :payload-object "page_name, page_type, propertyx"})
+        rendered (timeline/render-observed-event state)]
+    (is (= "pageview | event.history" (:heading rendered)))
+    (is (= [{:name "page_name" :value "\"example page_name\""}
+            {:name "page_type" :value "\"homepage\""}
+            {:name "propertyx" :value "\"example property\""}]
+           (:detail-lines rendered)))
+    (is (false? (:raw-payload-object-visible? rendered)))))
+
+(deftest tuple-event-display-source-is-wired
+  (is (timeline/tuple-event-display-wired?
+       {"src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
+        "src/data-layer-timeline.ts" (slurp "src/data-layer-timeline.ts")
+        "src/side-panel.ts" (slurp "src/side-panel.ts")})))
+
 (deftest reports-disallowed-timeline-capabilities
   (is (empty?
        (timeline/forbidden-timeline-capability-findings

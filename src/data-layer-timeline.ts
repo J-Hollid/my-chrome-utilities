@@ -69,13 +69,23 @@ export function timelineSummary(
   };
 }
 
+export function displayPayloadValue(entry: DataLayerEventEntry): string {
+  return payloadProperties(entry).length > 0 ? "" : stringifyValue(entry.payload);
+}
+
+export function displayRawValue(entry: DataLayerEventEntry): string {
+  return payloadProperties(entry).length > 0
+    ? ""
+    : stringifyValue(entry.rawValue);
+}
+
 export function timelineDetails(
   entry: DataLayerEventEntry,
 ): TimelineEntryDetails {
   return {
     ...timelineSummary(entry),
-    payload: stringifyValue(entry.payload),
-    rawValue: stringifyValue(entry.rawValue),
+    payload: displayPayloadValue(entry),
+    rawValue: displayRawValue(entry),
   };
 }
 
