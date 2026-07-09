@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=77ad844e47aaa6b0f08f3dae1e185822a5abc17ac0a9394b8e71eb5a7e0f61d2
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T14:58:58.580625007Z","feature_name":"Data layer history path incremental entry","feature_path":"features/data-layer-history-path-incremental-entry.feature","background_hash":"71750cfab5800f33ad41c4fb360850821efe9aa6e09cbd891fa49db6dc5828a3","implementation_hash":"sha256:659b603e57b40dc01247b42f84011c34d611a22c26f35991851ff385fb553e01","scenarios":[{"index":0,"name":"Data layer history path incremental entry 001","scenario_hash":"a7d38bc0880d1033ee65594c74520dc6988139d2ffc80505e82fde040ceadb94","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-09T14:45:15.578915903Z"}]}
+# {"version":1,"tested_at":"2026-07-09T15:01:05.623533019Z","feature_name":"Data layer history path incremental entry","feature_path":"features/data-layer-history-path-incremental-entry.feature","background_hash":"71750cfab5800f33ad41c4fb360850821efe9aa6e09cbd891fa49db6dc5828a3","implementation_hash":"sha256:659b603e57b40dc01247b42f84011c34d611a22c26f35991851ff385fb553e01","scenarios":[{"index":0,"name":"Data layer history path incremental entry 001","scenario_hash":"a7d38bc0880d1033ee65594c74520dc6988139d2ffc80505e82fde040ceadb94","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-09T14:45:15.578915903Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer history path incremental entry
