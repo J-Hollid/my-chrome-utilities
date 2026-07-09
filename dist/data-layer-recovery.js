@@ -4,6 +4,9 @@ export function observerAttachmentStatus(sessionState, observerState) {
     if (!session || session.status !== "active") {
         return "inactive";
     }
+    if (observerState.pageAccessStatus === "page access unavailable") {
+        return "page access unavailable";
+    }
     return observerState.observer?.status === "ready" ? "attached" : "needs sync";
 }
 export function restartObservation(sessionState, observerState, options) {
@@ -17,6 +20,9 @@ export function restartObservation(sessionState, observerState, options) {
         ...(options.pageObject === undefined
             ? {}
             : { pageObject: options.pageObject }),
+        ...(options.pageAccessStatus === undefined
+            ? {}
+            : { pageAccessStatus: options.pageAccessStatus }),
     });
 }
 //# sourceMappingURL=data-layer-recovery.js.map

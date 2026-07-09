@@ -1,10 +1,15 @@
 import {
   attachHistoryArrayObserver,
   type DataLayerHistoryObserverState,
+  type HistoryArrayObserverAttachOptions,
 } from "./data-layer-observer.js";
 import type { DataLayerSessionState } from "./data-layer-session.js";
 
-export type ObserverAttachmentStatus = "attached" | "needs sync" | "inactive";
+export type ObserverAttachmentStatus =
+  | "attached"
+  | "needs sync"
+  | "inactive"
+  | "page access unavailable";
 
 export function observerAttachmentStatus(
   sessionState: DataLayerSessionState,
@@ -16,13 +21,17 @@ export function observerAttachmentStatus(
     return "inactive";
   }
 
+  if (observerState.pageAccessStatus === "page access unavailable") {
+    return "page access unavailable";
+  }
+
   return observerState.observer?.status === "ready" ? "attached" : "needs sync";
 }
 
 export function restartObservation(
   sessionState: DataLayerSessionState,
   observerState: DataLayerHistoryObserverState,
-  options: { pageUrl: string; pageObject?: unknown },
+  options: Omit<HistoryArrayObserverAttachOptions, "historyPath">,
 ): DataLayerHistoryObserverState {
   const session = sessionState.session;
 
@@ -36,5 +45,8 @@ export function restartObservation(
     ...(options.pageObject === undefined
       ? {}
       : { pageObject: options.pageObject }),
+    ...(options.pageAccessStatus === undefined
+      ? {}
+      : { pageAccessStatus: options.pageAccessStatus }),
   });
 }

@@ -5,6 +5,13 @@ import {
 } from "./data-layer.js";
 import { captureEntry, type DataLayerSessionState } from "./data-layer-session.js";
 
+export type PageAccessStatus =
+  | "page access available"
+  | "page access unavailable";
+export type DataLayerObserverStatus =
+  | HistoryPathStatus
+  | "page access unavailable";
+
 export interface ObservedDataLayerEntry {
   type: "observed";
   url: string;
@@ -16,15 +23,23 @@ export interface ObservedDataLayerEntry {
 }
 
 export interface DataLayerHistoryObserver {
-  status: HistoryPathStatus;
+  status: DataLayerObserverStatus;
   historyPath: string;
   pageUrl: string;
   activeCount: number;
 }
 
+export interface ActivePageReadResult {
+  historyPath: string;
+  pageUrl: string;
+  pageObject: unknown;
+}
+
 export interface DataLayerHistoryObserverState {
   observer?: DataLayerHistoryObserver;
   pageObject?: unknown;
+  pageAccessStatus?: PageAccessStatus;
+  activePageReadResult?: ActivePageReadResult;
   observedEntries?: ObservedDataLayerEntry[];
   pushReturn?: number;
   sessionState?: DataLayerSessionState;
@@ -34,6 +49,7 @@ export interface HistoryArrayObserverAttachOptions {
   historyPath: string;
   pageUrl: string;
   pageObject?: unknown;
+  pageAccessStatus?: PageAccessStatus;
 }
 
 function pathParts(path: string): string[] {
@@ -69,13 +85,36 @@ export function attachHistoryArrayObserver(
   state: DataLayerHistoryObserverState,
   options: HistoryArrayObserverAttachOptions,
 ): DataLayerHistoryObserverState {
+  if (options.pageAccessStatus === "page access unavailable") {
+    return {
+      ...state,
+      pageAccessStatus: options.pageAccessStatus,
+      observer: {
+        status: "page access unavailable",
+        historyPath: options.historyPath,
+        pageUrl: options.pageUrl,
+        activeCount: 0,
+      },
+    };
+  }
+
   const pageObject =
     options.pageObject ?? state.pageObject ?? samplePageObject();
   const status = pathStatus(pageObject, options.historyPath);
+  const activePageReadResult =
+    options.pageObject === undefined
+      ? undefined
+      : {
+          historyPath: options.historyPath,
+          pageUrl: options.pageUrl,
+          pageObject,
+        };
 
   return {
     ...state,
     pageObject,
+    pageAccessStatus: options.pageAccessStatus ?? "page access available",
+    ...(activePageReadResult ? { activePageReadResult } : {}),
     observer: {
       status,
       historyPath: options.historyPath,

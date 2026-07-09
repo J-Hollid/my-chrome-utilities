@@ -1,3 +1,5 @@
+const pageAccessAvailable = "page access available";
+const pageAccessUnavailable = "page access unavailable";
 async function activeTabContext() {
     try {
         const [tab] = await chrome.tabs.query({
@@ -53,21 +55,33 @@ async function activeTabPageObject(tabId, historyPath) {
                 return root;
             },
         });
-        return injection?.result ?? {};
+        if (injection === undefined) {
+            return { pageAccessStatus: pageAccessUnavailable };
+        }
+        return {
+            pageAccessStatus: pageAccessAvailable,
+            pageObject: injection.result ?? {},
+        };
     }
     catch {
-        return {};
+        return { pageAccessStatus: pageAccessUnavailable };
     }
 }
-function observerAttachOptions(historyPath, pageUrl, pageObject) {
-    const options = { historyPath, pageUrl };
-    return pageObject === undefined ? options : { ...options, pageObject };
+function observerAttachOptions(historyPath, pageUrl, readResult) {
+    const options = {
+        historyPath,
+        pageUrl,
+        pageAccessStatus: readResult.pageAccessStatus,
+    };
+    return readResult.pageAccessStatus === pageAccessAvailable
+        ? { ...options, pageObject: readResult.pageObject }
+        : options;
 }
 export async function activePageObservation(historyPath) {
     const activeTab = await activeTabContext();
-    const pageObject = activeTab.tabId === undefined
-        ? {}
+    const readResult = activeTab.tabId === undefined
+        ? { pageAccessStatus: pageAccessUnavailable }
         : await activeTabPageObject(activeTab.tabId, historyPath);
-    return observerAttachOptions(historyPath, activeTab.pageUrl, pageObject);
+    return observerAttachOptions(historyPath, activeTab.pageUrl, readResult);
 }
 //# sourceMappingURL=active-page-observation.js.map

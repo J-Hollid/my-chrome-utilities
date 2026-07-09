@@ -327,6 +327,41 @@
                                         [:observer :active-count]))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-observer-distinguishes-generated-page-read-results
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               event-name path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        history-path (str root "." leaf)
+                        readable-state (-> {:history-path history-path}
+                                           (data-layer-observer/define-active-page-window-with-entry
+                                            {:page-url url
+                                             :history-path history-path
+                                             :event-name event-name})
+                                           (data-layer-observer/read-active-page-history-path
+                                            history-path))
+                        unreadable-state (-> {:history-path history-path}
+                                             (data-layer-observer/define-unreadable-active-page
+                                              {:page-url url})
+                                             data-layer-observer/start-active-page-observation)]
+                    (and (data-layer-observer/active-page-read-succeeded?
+                          readable-state)
+                         (data-layer-observer/active-page-read-result-includes-path?
+                          readable-state
+                          history-path)
+                         (data-layer-observer/active-page-read-result-not-empty?
+                          readable-state)
+                         (= "ready" (get-in readable-state [:observer :status]))
+                         (= "page access unavailable"
+                            (:page-access-status unreadable-state))
+                         (not= "path missing"
+                               (get-in unreadable-state [:observer :status]))
+                         (data-layer-observer/no-empty-page-object-used-as-successful-read?
+                          unreadable-state)))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-timeline-preserves-generated-entry-order-and-session-capture
   (let [result (check
                 (prop/for-all [route path-segment-gen
