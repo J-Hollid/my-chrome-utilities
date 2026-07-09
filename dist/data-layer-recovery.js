@@ -14,6 +14,9 @@ export function restartObservation(sessionState, observerState, options) {
     return attachHistoryArrayObserver(observerState, {
         historyPath: session.historyPath,
         pageUrl: options.pageUrl,
+        ...(options.pageObject === undefined
+            ? {}
+            : { pageObject: options.pageObject }),
     });
 }
 //# sourceMappingURL=data-layer-recovery.js.map

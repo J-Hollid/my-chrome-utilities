@@ -57,6 +57,35 @@
   (is (nil? (:page-error (observer/attach-observer {} {:history-path "queue.value"
                                                        :page-url "https://example.test/"})))))
 
+(deftest observes-active-page-window-object
+  (let [page-object {:test_obj {:history []}}
+        state (observer/attach-observer {} {:history-path "test_obj.history"
+                                            :page-url "https://example.test/p/"
+                                            :page-object page-object})]
+    (is (= "ready" (get-in state [:observer :status])))
+    (is (= page-object (:page-object state)))))
+
+(deftest reports-missing-path-from-active-page-window-object
+  (let [state (observer/attach-observer {} {:history-path "queue.history"
+                                            :page-url "https://example.test/p/"
+                                            :page-object {}})]
+    (is (= "path missing" (get-in state [:observer :status])))
+    (is (= 0 (get-in state [:observer :active-count])))))
+
+(deftest preserves-page-owned-history-array-contents
+  (let [state (-> {}
+                  (observer/attach-observer {:history-path "test_obj.history"
+                                             :page-url "https://example.test/p/"
+                                             :page-object {:test_obj {:history []}}})
+                  (observer/page-push "signup" "signup-values"))]
+    (is (= [{:event "signup" :payload {:label "signup-values"}}]
+           (get-in state [:page-object :test_obj :history])))))
+
+(deftest side-panel-source-uses-active-page-window-observation
+  (is (observer/active-page-window-observation-wired?
+       {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "manifest.json" (slurp "manifest.json")})))
+
 (deftest captures-observed-entry-in-active-session
   (let [session-state (session/run-start-command {}
                                                  {:tab-id 1

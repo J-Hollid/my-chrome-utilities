@@ -98,36 +98,97 @@ function renderObserverState() {
         observerStatus.textContent = observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState);
     }
 }
-async function activeTabPageUrl() {
+async function activeTabContext() {
     try {
         const [tab] = await chrome.tabs.query({
             active: true,
             currentWindow: true,
         });
-        return tab?.url ?? globalThis.location.href;
+        const pageUrl = tab?.url ?? globalThis.location.href;
+        if (tab?.id === undefined) {
+            return { pageUrl };
+        }
+        return { tabId: tab.id, pageUrl };
     }
     catch {
-        return globalThis.location.href;
+        return { pageUrl: globalThis.location.href };
     }
+}
+async function activeTabPageUrl() {
+    return (await activeTabContext()).pageUrl;
+}
+async function activeTabPageObject(tabId, historyPath) {
+    try {
+        const [injection] = await chrome.scripting.executeScript({
+            target: { tabId },
+            world: "MAIN",
+            args: [historyPath],
+            func: (path) => {
+                const parts = path
+                    .split(".")
+                    .map((part) => part.trim())
+                    .filter((part) => part.length > 0);
+                if (parts.length === 0) {
+                    return {};
+                }
+                let current = globalThis;
+                const root = {};
+                let output = root;
+                for (let index = 0; index < parts.length; index += 1) {
+                    const part = parts[index];
+                    if (!part ||
+                        current === null ||
+                        typeof current !== "object" ||
+                        !(part in current)) {
+                        return {};
+                    }
+                    const value = current[part];
+                    if (index === parts.length - 1) {
+                        output[part] = Array.isArray(value) ? [...value] : value;
+                    }
+                    else {
+                        const child = {};
+                        output[part] = child;
+                        output = child;
+                        current = value;
+                    }
+                }
+                return root;
+            },
+        });
+        return injection?.result ?? {};
+    }
+    catch {
+        return {};
+    }
+}
+function observerAttachOptions(historyPath, pageUrl, pageObject) {
+    const options = { historyPath, pageUrl };
+    return pageObject === undefined ? options : { ...options, pageObject };
+}
+async function activePageObservation(historyPath) {
+    const activeTab = await activeTabContext();
+    const pageObject = activeTab.tabId === undefined
+        ? {}
+        : await activeTabPageObject(activeTab.tabId, historyPath);
+    return observerAttachOptions(historyPath, activeTab.pageUrl, pageObject);
 }
 async function recordDataLayerCommandRun(entry) {
     if (entry.commandId === "data-layer.start-testing") {
         const sessionWasActive = dataLayerSessionState.session?.status === "active";
-        const pageUrl = await activeTabPageUrl();
+        const historyPath = getHistoryArrayPath();
+        const observation = await activePageObservation(historyPath);
         dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
             tabId: 1,
-            url: pageUrl,
-            historyPath: getHistoryArrayPath(),
+            url: observation.pageUrl,
+            historyPath,
         });
         if (!sessionWasActive) {
             dataLayerSessionState = captureEntry(dataLayerSessionState, {
                 type: "page",
-                url: pageUrl,
+                url: observation.pageUrl,
             });
-            dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, {
-                historyPath: getHistoryArrayPath(),
-                pageUrl,
-            });
+            dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
         }
         persistSession(dataLayerSessionState);
         renderSessionState();
@@ -224,19 +285,14 @@ filter?.addEventListener("keyup", (event) => {
 historyPathInput?.addEventListener("input", () => {
     const path = setHistoryArrayPath(historyPathInput.value);
     renderHistoryPath(path);
-    void activeTabPageUrl().then((pageUrl) => {
-        dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, {
-            historyPath: path,
-            pageUrl,
-        });
+    void activePageObservation(path).then((observation) => {
+        dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
         renderObserverState();
     });
 });
 restartObservationButton?.addEventListener("click", () => {
-    void activeTabPageUrl().then((pageUrl) => {
-        dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, {
-            pageUrl,
-        });
+    void activePageObservation(getHistoryArrayPath()).then((observation) => {
+        dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, observation);
         renderObserverState();
     });
 });

@@ -43,8 +43,8 @@
    :page-url page-url
    :active-count (observer-active-count status)})
 
-(defn attach-observer [state {:keys [history-path page-url]}]
-  (let [page-object (state-page-object state)
+(defn attach-observer [state {:keys [history-path page-url page-object]}]
+  (let [page-object (or page-object (state-page-object state))
         status (data-layer/path-status page-object history-path)]
     (assoc state
            :page-object page-object
@@ -103,6 +103,44 @@
 (defn- observed-entry-count-for-url [state url]
   (count (filter #(= url (:url %)) (:observed-entries state))))
 
+(defn- page-object-with-history-path [history-path]
+  (assoc-in {} (path-parts history-path) []))
+
+(defn define-active-page-window [state {:keys [page-url history-path]}]
+  (let [page-object (page-object-with-history-path history-path)]
+    (assoc state
+           :active-page-window {:page-url page-url
+                                :page-object page-object}
+           :page-object page-object)))
+
+(defn define-active-page-window-without-path [state {:keys [page-url]}]
+  (let [page-object {}]
+    (assoc state
+           :active-page-window {:page-url page-url
+                                :page-object page-object}
+           :page-object page-object)))
+
+(defn start-active-page-observation [state]
+  (let [{:keys [page-url page-object]} (:active-page-window state)]
+    (attach-observer state
+                     {:history-path (:history-path state)
+                      :page-url page-url
+                      :page-object page-object})))
+
+(defn page-owned-history-entry? [state event-name]
+  (boolean
+   (some #(= event-name (:event %))
+         (path-value (:page-object state) (:history-path state)))))
+
+(defn active-page-window-observation-wired? [files]
+  (let [side-panel-source (get files "src/side-panel.ts" "")
+        manifest-source (get files "manifest.json" "")]
+    (and (str/includes? manifest-source "\"scripting\"")
+         (str/includes? side-panel-source "activeTabPageObject")
+         (str/includes? side-panel-source "chrome.scripting.executeScript")
+         (str/includes? side-panel-source "world: \"MAIN\"")
+         (str/includes? side-panel-source "pageObject"))))
+
 (def handlers
   [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key event-name-key payload-label-key]]
@@ -113,6 +151,72 @@
                      (attach-observer {:history-path (:history-path world)
                                        :page-url page-url})
                      (page-push event-name payload-label))))}
+
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key history-path-key]]
+               (define-active-page-window
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> does not define history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key _history-path-key]]
+               (define-active-page-window-without-path
+                world
+                {:page-url (support/require-example example page-url-key)}))}
+
+   {:pattern #"^observation starts for the active website page$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
+                            "manifest.json" (support/source-file root "manifest.json")}]
+                 (support/assert! (active-page-window-observation-wired? files)
+                                  "Active page window observation is not wired."
+                                  {})
+                 (start-active-page-observation world)))}
+
+   {:pattern #"^observer status <([A-Za-z0-9_]+)> is shown for history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [status-key history-path-key]]
+               (let [expected-status (support/require-example example status-key)
+                     expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= expected-status (get-in world [:observer :status]))
+                                       (= expected-path (get-in world [:observer :history-path])))
+                                  "Observer status or path does not match."
+                                  {:expected-status expected-status
+                                   :expected-path expected-path
+                                   :observer (:observer world)})
+                 world))}
+
+   {:pattern #"^the observer resolves <([A-Za-z0-9_]+)> from the active website page window$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= "ready" (get-in world [:observer :status]))
+                                       (= expected-path (get-in world [:observer :history-path]))
+                                       (= (get-in world [:active-page-window :page-object])
+                                          (:page-object world)))
+                                  "Observer did not resolve from the active page window."
+                                  {:observer (:observer world)
+                                   :active-page-window (:active-page-window world)})
+                 world))}
+
+   {:pattern #"^no observer is active for history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= expected-path (get-in world [:observer :history-path]))
+                                       (zero? (get-in world [:observer :active-count])))
+                                  "Observer is active for an unobservable page path."
+                                  {:expected-path expected-path
+                                   :observer (:observer world)})
+                 world))}
+
+   {:pattern #"^the page-owned history array contains entry <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key]]
+               (let [event-name (support/require-example example event-name-key)]
+                 (support/assert! (page-owned-history-entry? world event-name)
+                                  "Page-owned history array does not contain entry."
+                                  {:event-name event-name
+                                   :page-object (:page-object world)})
+                 world))}
 
    {:pattern #"^the extension records a new observed event entry$"
     :handler (fn [world _example _captures]
