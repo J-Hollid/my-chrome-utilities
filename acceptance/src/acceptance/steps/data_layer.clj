@@ -87,7 +87,7 @@
            "setHistoryArrayPath(typedPath)"
            "renderHistoryPath(path, typedPath)"]))
 
-(defn enter-history-array-path [world history-path]
+(defn- assert-history-path-entry-wired! [world history-path]
   (support/assert! (settings-allow-history-path-entry?
                     (:side-panel-html world)
                     history-path)
@@ -97,23 +97,17 @@
                     (:side-panel-html world)
                     (:side-panel-source world))
                    "History path text entry is not wired."
-                   {})
+                   {}))
+
+(defn enter-history-array-path [world history-path]
+  (assert-history-path-entry-wired! world history-path)
   (assoc world
          :history-path history-path
          :history-path-field-value history-path))
 
 (defn type-history-array-path-sequence
   [world first-text intermediate-text history-path]
-  (support/assert! (settings-allow-history-path-entry?
-                    (:side-panel-html world)
-                    history-path)
-                   "History path input is not available."
-                   {:history-path history-path})
-  (support/assert! (history-path-text-entry-wired?
-                    (:side-panel-html world)
-                    (:side-panel-source world))
-                   "History path text entry is not wired."
-                   {})
+  (assert-history-path-entry-wired! world history-path)
   (support/assert! (history-path-incremental-entry-wired?
                     (:side-panel-source world))
                    "History path incremental entry is not wired."
