@@ -1,5 +1,6 @@
 (ns acceptance.data-layer-timeline-steps-test
-  (:require [acceptance.steps.data-layer-session :as session]
+  (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.data-layer-session :as session]
             [acceptance.steps.data-layer-timeline :as timeline]
             [clojure.test :refer [deftest is]]))
 
@@ -64,6 +65,92 @@
         entry (first (timeline/visible-timeline-entries state))]
     (is (= entry
            (last (get-in state [:session-state :session :timeline]))))))
+
+(deftest nests-observed-events-under-page-loads
+  (let [state (timeline/record-pageloads-with-events
+               {}
+               {:first-page-url "https://www.example.com/"
+                :second-page-url "https://www.example.com/prodpage"
+                :first-page-events "pageview, scroll"
+                :second-page-events "pageview, add to cart"
+                :history-path "event.history"})
+        nested (timeline/nested-timeline state)]
+    (is (= ["https://www.example.com/"
+            "https://www.example.com/prodpage"]
+           (map :url nested)))
+    (is (= ["pageview" "scroll"]
+           (map :name (:events (first nested)))))
+    (is (= ["pageview" "add to cart"]
+           (map :name (:events (second nested)))))
+    (is (every? #(= "event.history" (:observer-path %))
+                (mapcat :events nested)))))
+
+(deftest nests-late-observed-events-under-their-matching-page
+  (let [state {:timeline-entries
+               [{:type "page" :url "https://www.example.com/"}
+                {:type "page" :url "https://www.example.com/prodpage"}
+                {:type "observed"
+                 :name "late-scroll"
+                 :url "https://www.example.com/"
+                 :observer-path "event.history"
+                 :payload {}
+                 :raw-value {}}]}
+        nested (timeline/nested-timeline state)]
+    (is (= ["late-scroll"] (map :name (:events (first nested)))))
+    (is (empty? (:events (second nested))))))
+
+(deftest canonical-nested-timeline-assertions-dispatch
+  (let [state (timeline/record-pageloads-with-events
+               {}
+               {:first-page-url "https://www.example.com/"
+                :second-page-url "https://www.example.com/prodpage"
+                :first-page-events "pageview, scroll"
+                :second-page-events "pageview, add to cart"
+                :history-path "event.history"})
+        world (assoc state :nested-timeline (timeline/nested-timeline state))
+        dispatch (fn [state text]
+                   (runtime/execute-step! state
+                                          {}
+                                          {:keyword "Then" :text text}
+                                          timeline/handlers))]
+    (is (timeline/nested-timeline-pageload-order-matches?
+         (:nested-timeline world)))
+    (is (timeline/nested-timeline-event-groups-match?
+         (:nested-timeline world)))
+    (is (timeline/nested-timeline-observer-paths-match?
+         (:nested-timeline world)))
+    (is (= world
+           (-> world
+               (dispatch "the nested timeline uses the canonical pageload order")
+               (dispatch "the nested timeline uses canonical observed event groups")
+               (dispatch "nested observed events use the canonical observer path"))))))
+
+(deftest expands-observed-event-payload-properties
+  (let [state (timeline/record-observed-event-with-payload
+               {}
+               {:event-name "pageview"
+                :payload-properties
+                "page_name: \"example page_name\", page_type: \"homepage\", propertyx: \"example property\""})
+        nested (timeline/nested-event-details state "pageview")]
+    (is (= [{:name "page_name" :value "\"example page_name\""}
+            {:name "page_type" :value "\"homepage\""}
+            {:name "propertyx" :value "\"example property\""}]
+           (:payload-properties nested)))))
+
+(deftest canonical-payload-property-assertion-dispatches
+  (let [state (timeline/record-observed-event-with-payload
+               {}
+               {:event-name "scroll"
+                :payload-properties "scroll_percentage: \"75\""})
+        dispatch (fn [state text]
+                   (runtime/execute-step! state
+                                          {"event_name" "scroll"}
+                                          {:keyword "Then" :text text}
+                                          timeline/handlers))]
+    (is (timeline/canonical-payload-properties-match? state "scroll"))
+    (is (= state
+           (dispatch state
+                     "payload properties match the canonical <event_name> payload")))))
 
 (deftest reports-disallowed-timeline-capabilities
   (is (empty?
