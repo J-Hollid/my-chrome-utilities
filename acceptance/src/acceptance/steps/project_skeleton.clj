@@ -71,12 +71,15 @@
                                   {:source-entry (str source-entry)})
                  world))}
 
-   {:pattern #"^generated dependency and build outputs are ignored$"
+   {:pattern #"^generated dependency and transient outputs are ignored$"
     :handler (fn [world _example _captures]
-               (doseq [ignored ["node_modules/" "dist/" "build/" "coverage/"]]
+               (doseq [ignored ["node_modules/" "build/" "coverage/"]]
                  (support/assert! (str/includes? (:gitignore world) ignored)
-                                  "Expected generated output to be ignored."
+                                  "Expected generated dependency or transient output to be ignored."
                                   {:missing ignored}))
+               (support/assert! (not (str/includes? (:gitignore world) "dist/"))
+                                "Expected dist output to remain trackable for testing transfer."
+                                {})
                world)}
 
    {:pattern #"^the project build command is run$"
@@ -119,5 +122,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T20:46:56.713535216+02:00", :module-hash "-957047346", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1748883287"} {:id "defn-/inspect-project", :kind "defn-", :line 6, :end-line nil, :hash "-2019852584"} {:id "defn-/project-files", :kind "defn-", :line 15, :end-line nil, :hash "379177836"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "902508673"}]}
+;; {:version 1, :tested-at "2026-07-09T12:23:27.708036294+02:00", :module-hash "1719291146", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1748883287"} {:id "defn-/inspect-project", :kind "defn-", :line 6, :end-line nil, :hash "-2019852584"} {:id "defn-/project-files", :kind "defn-", :line 15, :end-line nil, :hash "379177836"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "-1306218894"}]}
 ;; clj-mutate-manifest-end
