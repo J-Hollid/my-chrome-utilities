@@ -116,6 +116,28 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 }
 
+function expandedTimelinePageIndexes(): Set<number> {
+  const expandedIndexes = new Set<number>();
+
+  if (!sessionTimeline) {
+    return expandedIndexes;
+  }
+
+  const pages = Array.from(
+    sessionTimeline.querySelectorAll<HTMLDetailsElement>(
+      ":scope > li > details",
+    ),
+  );
+
+  pages.forEach((page, index) => {
+    if (page.open) {
+      expandedIndexes.add(index);
+    }
+  });
+
+  return expandedIndexes;
+}
+
 function renderSessionState(): void {
   const session = dataLayerSessionState.session;
 
@@ -128,8 +150,11 @@ function renderSessionState(): void {
   }
 
   if (sessionTimeline) {
+    const expandedPageIndexes = expandedTimelinePageIndexes();
     sessionTimeline.replaceChildren(
-      ...nestedTimeline(session?.timeline ?? []).map(renderTimelinePage),
+      ...nestedTimeline(session?.timeline ?? []).map((page, index) =>
+        renderTimelinePage(page, expandedPageIndexes.has(index)),
+      ),
     );
   }
 
@@ -138,12 +163,16 @@ function renderSessionState(): void {
   }
 }
 
-function renderTimelinePage(page: NestedTimelinePage): HTMLLIElement {
+function renderTimelinePage(
+  page: NestedTimelinePage,
+  expanded = false,
+): HTMLLIElement {
   const item = document.createElement("li");
   const details = document.createElement("details");
   const summary = document.createElement("summary");
   const eventList = document.createElement("ul");
 
+  details.open = expanded;
   summary.textContent = page.url;
   eventList.append(...page.events.map(renderTimelineEvent));
   details.append(summary, eventList);
