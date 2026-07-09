@@ -164,6 +164,29 @@ function renderObserverState(): void {
   }
 }
 
+function updateSessionFromObserverState(): void {
+  dataLayerSessionState =
+    dataLayerObserverState.sessionState ?? dataLayerSessionState;
+}
+
+function persistAndRenderSessionState(): void {
+  persistSession(dataLayerSessionState);
+  renderSessionState();
+}
+
+function persistAndRenderObservationState(): void {
+  persistAndRenderSessionState();
+  renderObserverState();
+}
+
+function restartLiveHistoryCaptureIfActive(
+  observation: ActivePageObservationResult,
+): void {
+  if (dataLayerSessionState.session?.status === "active") {
+    void startLiveHistoryCapture(observation);
+  }
+}
+
 function stopLiveHistoryCapture(): void {
   stopLiveHistoryPushCapture();
   stopLiveHistoryPushCapture = () => {};
@@ -183,11 +206,8 @@ async function startLiveHistoryCapture(
           rawValue,
           timestamp,
         );
-        dataLayerSessionState =
-          dataLayerObserverState.sessionState ?? dataLayerSessionState;
-        persistSession(dataLayerSessionState);
-        renderSessionState();
-        renderObserverState();
+        updateSessionFromObserverState();
+        persistAndRenderObservationState();
       },
     });
   } catch {
@@ -214,13 +234,10 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
         { ...dataLayerObserverState, sessionState: dataLayerSessionState },
         observation,
       );
-      dataLayerSessionState =
-        dataLayerObserverState.sessionState ?? dataLayerSessionState;
+      updateSessionFromObserverState();
       await startLiveHistoryCapture(observation);
     }
-    persistSession(dataLayerSessionState);
-    renderSessionState();
-    renderObserverState();
+    persistAndRenderObservationState();
   }
 
   if (entry.commandId === "data-layer.end-testing") {
@@ -344,13 +361,9 @@ historyPathInput?.addEventListener("input", () => {
       dataLayerObserverState,
       observation,
     );
-    dataLayerSessionState =
-      dataLayerObserverState.sessionState ?? dataLayerSessionState;
-    persistSession(dataLayerSessionState);
-    renderSessionState();
-    if (dataLayerSessionState.session?.status === "active") {
-      void startLiveHistoryCapture(observation);
-    }
+    updateSessionFromObserverState();
+    persistAndRenderSessionState();
+    restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
   });
 });
@@ -362,13 +375,9 @@ restartObservationButton?.addEventListener("click", () => {
       dataLayerObserverState,
       observation,
     );
-    dataLayerSessionState =
-      dataLayerObserverState.sessionState ?? dataLayerSessionState;
-    persistSession(dataLayerSessionState);
-    renderSessionState();
-    if (dataLayerSessionState.session?.status === "active") {
-      void startLiveHistoryCapture(observation);
-    }
+    updateSessionFromObserverState();
+    persistAndRenderSessionState();
+    restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
   });
 });
