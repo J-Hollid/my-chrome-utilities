@@ -87,6 +87,29 @@
         "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
         "manifest.json" (slurp "manifest.json")})))
 
+(deftest reads-non-empty-active-page-history-result
+  (let [state (-> {}
+                  (assoc :history-path "test_obj.history")
+                  (observer/define-active-page-window-with-entry
+                   {:page-url "https://example.test/p/"
+                    :history-path "test_obj.history"
+                    :event-name "signup"})
+                  (observer/read-active-page-history-path "test_obj.history"))]
+    (is (observer/active-page-read-succeeded? state))
+    (is (observer/active-page-read-result-includes-path? state "test_obj.history"))
+    (is (observer/active-page-read-result-not-empty? state))
+    (is (= "ready" (get-in state [:observer :status])))))
+
+(deftest reports-active-page-access-unavailable
+  (let [state (-> {}
+                  (assoc :history-path "test_obj.history")
+                  (observer/define-unreadable-active-page
+                   {:page-url "https://example.test/p/"})
+                  observer/start-active-page-observation)]
+    (is (= "page access unavailable" (:page-access-status state)))
+    (is (not= "path missing" (get-in state [:observer :status])))
+    (is (observer/no-empty-page-object-used-as-successful-read? state))))
+
 (deftest captures-observed-entry-in-active-session
   (let [session-state (session/run-start-command {}
                                                  {:tab-id 1

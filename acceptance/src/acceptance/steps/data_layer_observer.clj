@@ -5,6 +5,8 @@
             [clojure.string :as str]))
 
 (def observer-timestamp "2026-07-08T00:00:00Z")
+(def page-access-available "page access available")
+(def page-access-unavailable "page access unavailable")
 
 (defn- path-parts [path]
   (->> (str/split path #"\.")
@@ -110,6 +112,20 @@
   (let [page-object (page-object-with-history-path history-path)]
     (assoc state
            :active-page-window {:page-url page-url
+                                :page-access-status page-access-available
+                                :page-object page-object}
+           :page-object page-object)))
+
+(defn define-active-page-window-with-entry
+  [state {:keys [page-url history-path event-name]}]
+  (let [page-object (update-in (page-object-with-history-path history-path)
+                               (path-parts history-path)
+                               conj
+                               (history-entry event-name
+                                              (str event-name "-payload")))]
+    (assoc state
+           :active-page-window {:page-url page-url
+                                :page-access-status page-access-available
                                 :page-object page-object}
            :page-object page-object)))
 
@@ -117,15 +133,60 @@
   (let [page-object {}]
     (assoc state
            :active-page-window {:page-url page-url
+                                :page-access-status page-access-available
                                 :page-object page-object}
            :page-object page-object)))
 
+(defn define-unreadable-active-page [state {:keys [page-url]}]
+  (assoc state
+         :active-page-window {:page-url page-url
+                              :page-access-status page-access-unavailable}))
+
+(defn- page-access-unavailable? [active-page-window]
+  (= page-access-unavailable (:page-access-status active-page-window)))
+
+(defn- unavailable-observer-state [history-path page-url]
+  {:status page-access-unavailable
+   :history-path history-path
+   :page-url page-url
+   :active-count 0})
+
+(defn read-active-page-history-path [state history-path]
+  (let [{:keys [page-url page-object] :as active-page-window} (:active-page-window state)]
+    (if (page-access-unavailable? active-page-window)
+      (assoc state
+             :page-access-status page-access-unavailable
+             :active-page-read-result nil
+             :observer (unavailable-observer-state history-path page-url))
+      (let [read-result {:history-path history-path
+                         :page-url page-url
+                         :page-object page-object}]
+        (-> state
+            (assoc :page-access-status page-access-available
+                   :active-page-read-result read-result
+                   :page-object page-object)
+            (attach-observer {:history-path history-path
+                              :page-url page-url
+                              :page-object page-object}))))))
+
 (defn start-active-page-observation [state]
-  (let [{:keys [page-url page-object]} (:active-page-window state)]
-    (attach-observer state
-                     {:history-path (:history-path state)
-                      :page-url page-url
-                      :page-object page-object})))
+  (read-active-page-history-path state (:history-path state)))
+
+(defn active-page-read-succeeded? [state]
+  (= page-access-available (:page-access-status state)))
+
+(defn active-page-read-result-includes-path? [state history-path]
+  (some? (path-value (get-in state [:active-page-read-result :page-object])
+                     history-path)))
+
+(defn active-page-read-result-not-empty? [state]
+  (let [{:keys [history-path page-object]} (:active-page-read-result state)
+        value (path-value page-object history-path)]
+    (and (sequential? value) (seq value) true)))
+
+(defn no-empty-page-object-used-as-successful-read? [state]
+  (not (and (= page-access-available (:page-access-status state))
+            (= {} (get-in state [:active-page-read-result :page-object])))))
 
 (defn page-owned-history-entry? [state event-name]
   (boolean
@@ -141,7 +202,9 @@
          (str/includes? active-page-source "activeTabPageObject")
          (str/includes? active-page-source "chrome.scripting.executeScript")
          (str/includes? active-page-source "world: \"MAIN\"")
-         (str/includes? active-page-source "pageObject"))))
+         (str/includes? active-page-source "pageObject")
+         (str/includes? active-page-source "pageAccessStatus")
+         (str/includes? active-page-source page-access-unavailable))))
 
 (def handlers
   [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
@@ -161,11 +224,31 @@
                 {:page-url (support/require-example example page-url-key)
                  :history-path (support/require-example example history-path-key)}))}
 
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)> with existing entry <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key history-path-key event-name-key]]
+               (define-active-page-window-with-entry
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)
+                 :event-name (support/require-example example event-name-key)}))}
+
    {:pattern #"^active website page <([A-Za-z0-9_]+)> does not define history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key _history-path-key]]
                (define-active-page-window-without-path
                 world
                 {:page-url (support/require-example example page-url-key)}))}
+
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> cannot be read by the extension$"
+    :handler (fn [world example [page-url-key]]
+               (define-unreadable-active-page
+                world
+                {:page-url (support/require-example example page-url-key)}))}
+
+   {:pattern #"^the extension reads history array path <([A-Za-z0-9_]+)> from the active website page$"
+    :handler (fn [world example [history-path-key]]
+               (read-active-page-history-path
+                world
+                (support/require-example example history-path-key)))}
 
    {:pattern #"^observation starts for the active website page$"
     :handler (fn [world _example _captures]
@@ -177,6 +260,58 @@
                                   "Active page window observation is not wired."
                                   {})
                  (start-active-page-observation world)))}
+
+   {:pattern #"^the active page read succeeds$"
+    :handler (fn [world _example _captures]
+               (support/assert! (active-page-read-succeeded? world)
+                                "Active page read did not succeed."
+                                {:page-access-status (:page-access-status world)})
+               world)}
+
+   {:pattern #"^the active page read result includes history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [history-path (support/require-example example history-path-key)]
+                 (support/assert! (active-page-read-result-includes-path?
+                                   world
+                                   history-path)
+                                  "Active page read result does not include history path."
+                                  {:history-path history-path
+                                   :active-page-read-result (:active-page-read-result world)})
+                 world))}
+
+   {:pattern #"^the active page read result is not empty$"
+    :handler (fn [world _example _captures]
+               (support/assert! (active-page-read-result-not-empty? world)
+                                "Active page read result was empty."
+                                {:active-page-read-result (:active-page-read-result world)})
+               world)}
+
+   {:pattern #"^page access status <([A-Za-z0-9_]+)> is shown$"
+    :handler (fn [world example [page-access-status-key]]
+               (let [expected (support/require-example example page-access-status-key)]
+                 (support/assert! (= expected (:page-access-status world))
+                                  "Page access status does not match."
+                                  {:expected expected
+                                   :actual (:page-access-status world)})
+                 world))}
+
+   {:pattern #"^observer status is not <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [path-status-key]]
+               (let [unexpected (support/require-example example path-status-key)]
+                 (support/assert! (not= unexpected (get-in world [:observer :status]))
+                                  "Observer reported the wrong path status for page access failure."
+                                  {:unexpected unexpected
+                                   :observer (:observer world)})
+                 world))}
+
+   {:pattern #"^no empty page object is used as a successful page read$"
+    :handler (fn [world _example _captures]
+               (support/assert! (no-empty-page-object-used-as-successful-read?
+                                 world)
+                                "Empty page object was treated as a successful page read."
+                                {:page-access-status (:page-access-status world)
+                                 :active-page-read-result (:active-page-read-result world)})
+               world)}
 
    {:pattern #"^observer status <([A-Za-z0-9_]+)> is shown for history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [status-key history-path-key]]
