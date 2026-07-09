@@ -209,7 +209,6 @@ function refreshObservationAfterPageLoad(tabId, pageUrl, pageLoadSequence) {
         pageUrl,
         attempt: 0,
         pageEntryCaptured: false,
-        pageLoadSequence,
     });
 }
 async function runObservationRefresh(request) {

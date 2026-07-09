@@ -91,7 +91,6 @@ interface ObservationRefreshRequest {
   pageUrl: string;
   attempt: number;
   pageEntryCaptured: boolean;
-  pageLoadSequence: number;
 }
 
 if (app) {
@@ -318,7 +317,6 @@ function refreshObservationAfterPageLoad(
     pageUrl,
     attempt: 0,
     pageEntryCaptured: false,
-    pageLoadSequence,
   });
 }
 
