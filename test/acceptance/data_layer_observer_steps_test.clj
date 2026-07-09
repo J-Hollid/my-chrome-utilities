@@ -165,6 +165,28 @@
         "src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
         "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))
 
+(deftest refreshes-observation-after-pageload-without-manual-restart
+  (let [state (-> {}
+                  (assoc :history-path "event.history")
+                  (observer/attach-observation-on-page "https://www.example.com/")
+                  (observer/navigate-with-delayed-history-path
+                   {:page-url "https://www.example.com/product"
+                    :history-path "event.history"})
+                  (observer/page-push-after-ready "pageview" "event.history"))
+        entries (filter #(and (= "https://www.example.com/product" (:url %))
+                              (= "pageview" (:name %)))
+                        (:observed-entries state))]
+    (is (observer/automatic-pageload-observation-refresh? state))
+    (is (false? (:manual-observation-restart-required? state)))
+    (is (= "event.history" (:waited-for-history-path state)))
+    (is (= 1 (count entries)))))
+
+(deftest side-panel-source-refreshes-observation-after-pageload
+  (is (observer/pageload-observation-refresh-wired?
+       {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
+        "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))
+
 (deftest reports-disallowed-observer-capabilities
   (is (empty?
        (observer/forbidden-observer-capability-findings

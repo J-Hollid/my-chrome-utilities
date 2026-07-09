@@ -252,6 +252,61 @@
          (str/includes? live-observation-source "CustomEvent")
          (str/includes? live-observation-source ".push"))))
 
+(defn pageload-observation-refresh-wired? [files]
+  (let [side-panel-source (get files "src/side-panel.ts" "")
+        active-page-source (get files "src/active-page-observation.ts" "")
+        live-observation-source (get files "src/data-layer-live-observation.ts" "")]
+    (and (str/includes? side-panel-source "chrome.tabs.onUpdated.addListener")
+         (str/includes? side-panel-source "scheduleObservationRefresh")
+         (str/includes? side-panel-source "refreshObservationAfterPageLoad")
+         (str/includes? side-panel-source "restartObservation")
+         (str/includes? side-panel-source "startLiveHistoryCapture")
+         (str/includes? side-panel-source "navigateSession")
+         (str/includes? active-page-source "tabPageObservation")
+         (str/includes? live-observation-source "startLiveHistoryPushCapture"))))
+
+(defn attach-observation-on-page [state page-url]
+  (-> state
+      (define-active-page-window {:page-url page-url
+                                  :history-path (:history-path state)})
+      (read-active-page-history-path (:history-path state))
+      (update :session-state session/navigate-session page-url)))
+
+(defn- prepare-pageload-refresh [state page-url history-path]
+  (-> state
+      (update :session-state session/navigate-session page-url)
+      (update :session-state session/capture-entry {:type "page"
+                                                    :url page-url})
+      (assoc :pageload-observation-refresh :automatic
+             :manual-observation-restart-required? false
+             :waited-for-history-path history-path)))
+
+(defn navigate-with-delayed-history-path [state {:keys [page-url history-path]}]
+  (-> state
+      (prepare-pageload-refresh page-url history-path)
+      (define-active-page-window-without-path {:page-url page-url})
+      (read-active-page-history-path history-path)
+      (define-active-page-window {:page-url page-url
+                                  :history-path history-path})
+      (read-active-page-history-path history-path)))
+
+(defn reload-with-delayed-history-path [state {:keys [page-url history-path]}]
+  (navigate-with-delayed-history-path state {:page-url page-url
+                                             :history-path history-path}))
+
+(defn automatic-pageload-observation-refresh? [state]
+  (and (= :automatic (:pageload-observation-refresh state))
+       (= "ready" (get-in state [:observer :status]))
+       (= 1 (get-in state [:observer :active-count]))))
+
+(defn page-push-after-ready [state event-name history-path]
+  (let [before-count (count (:observed-entries state))
+        next-state (page-push state event-name (str event-name "-payload"))
+        after-count (count (:observed-entries next-state))]
+    (assoc next-state
+           :ready-push-history-path history-path
+           :ready-push-captured-once? (= 1 (- after-count before-count)))))
+
 (defn session-timeline [state]
   (get-in state [:session-state :session :timeline]))
 
@@ -640,6 +695,12 @@
                                 {:history-path (:history-path world)
                                  :page-url (support/require-example example start-url-key)}))}
 
+   {:pattern #"^observation is attached on page <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key]]
+               (attach-observation-on-page
+                world
+                (support/require-example example page-url-key)))}
+
    {:pattern #"^the active tab navigates to page <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [next-url-key]]
                (let [next-url (support/require-example example next-url-key)]
@@ -647,6 +708,75 @@
                      (update :session-state session/navigate-session next-url)
                      (reinstall-observer {:history-path (:history-path world)
                                           :page-url next-url}))))}
+
+   {:pattern #"^the active tab navigates to page <([A-Za-z0-9_]+)> where history array path <([A-Za-z0-9_]+)> becomes ready after pageload$"
+    :handler (fn [world example [next-url-key history-path-key]]
+               (navigate-with-delayed-history-path
+                world
+                {:page-url (support/require-example example next-url-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^page <([A-Za-z0-9_]+)> reloads and history array path <([A-Za-z0-9_]+)> is missing until after pageload$"
+    :handler (fn [world example [page-url-key history-path-key]]
+               (reload-with-delayed-history-path
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^observation refreshes automatically for page <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key]]
+               (let [expected-page-url (support/require-example example page-url-key)
+                     root (support/repository-root)
+                     files (support/source-file-map root
+                                                    ["src/side-panel.ts"
+                                                     "src/active-page-observation.ts"
+                                                     "src/data-layer-live-observation.ts"])]
+                 (support/assert! (pageload-observation-refresh-wired? files)
+                                  "Pageload observation refresh is not wired."
+                                  {})
+                 (support/assert! (and (automatic-pageload-observation-refresh? world)
+                                       (= expected-page-url (get-in world [:observer :page-url])))
+                                  "Observation did not refresh automatically for the pageload."
+                                  {:observer (:observer world)
+                                   :expected-page-url expected-page-url})
+                 world))}
+
+   {:pattern #"^no manual observation restart is required$"
+    :handler (fn [world _example _captures]
+               (support/assert! (false? (:manual-observation-restart-required? world))
+                                "Manual observation restart was required."
+                                {:manual-observation-restart-required?
+                                 (:manual-observation-restart-required? world)})
+               world)}
+
+   {:pattern #"^observation waits for history array path <([A-Za-z0-9_]+)> to become ready$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= expected (:waited-for-history-path world))
+                                  "Observation did not wait for the history path."
+                                  {:expected expected
+                                   :waited-for-history-path
+                                   (:waited-for-history-path world)})
+                 world))}
+
+   {:pattern #"^entry <([A-Za-z0-9_]+)> pushed after history array path <([A-Za-z0-9_]+)> is ready is captured once with URL <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key history-path-key page-url-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     history-path (support/require-example example history-path-key)
+                     page-url (support/require-example example page-url-key)
+                     after-push (page-push-after-ready world event-name history-path)
+                     matching-entries (filter #(and (= event-name (:name %))
+                                                    (= history-path (:observer-path %))
+                                                    (= page-url (:url %)))
+                                              (:observed-entries after-push))]
+                 (support/assert! (and (:ready-push-captured-once? after-push)
+                                       (= 1 (count matching-entries)))
+                                  "Entry pushed after pageload readiness was not captured exactly once."
+                                  {:observed-entries (:observed-entries after-push)
+                                   :event-name event-name
+                                   :history-path history-path
+                                   :page-url page-url})
+                 after-push))}
 
    {:pattern #"^the observer is reinstalled for history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [history-path-key]]
