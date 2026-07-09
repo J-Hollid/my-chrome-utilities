@@ -430,6 +430,62 @@
                           unreadable-state)))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-observer-refreshes-generated-pageloads-once
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               next-route path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               event-name path-segment-gen
+                               reload? gen/boolean]
+                  (let [start-url (str "https://example.test/" route)
+                        refreshed-url (if reload?
+                                        start-url
+                                        (str "https://example.test/"
+                                             next-route))
+                        history-path (str root "." leaf)
+                        refresh-page (if reload?
+                                       data-layer-observer/reload-with-delayed-history-path
+                                       data-layer-observer/navigate-with-delayed-history-path)
+                        state (-> {:history-path history-path
+                                   :session-state
+                                   (data-layer-session/run-start-command
+                                    {}
+                                    (session-options 1
+                                                     start-url
+                                                     history-path))}
+                                  (data-layer-observer/attach-observation-on-page
+                                   start-url)
+                                  (refresh-page {:page-url refreshed-url
+                                                 :history-path history-path})
+                                  (data-layer-observer/page-push-after-ready
+                                   event-name
+                                   history-path))
+                        matching-entries (filter
+                                          #(and (= event-name (:name %))
+                                                (= history-path
+                                                   (:observer-path %))
+                                                (= refreshed-url (:url %)))
+                                          (:observed-entries state))
+                        page-urls (mapv :url
+                                        (filter #(= "page" (:type %))
+                                                (data-layer-observer/session-timeline
+                                                 state)))]
+                    (and (data-layer-observer/automatic-pageload-observation-refresh?
+                          state)
+                         (false? (:manual-observation-restart-required? state))
+                         (= history-path (:waited-for-history-path state))
+                         (:ready-push-captured-once? state)
+                         (= history-path (:ready-push-history-path state))
+                         (= [start-url refreshed-url] page-urls)
+                         (= 1 (count matching-entries))
+                         (data-layer-observer/observed-entry-matches?
+                          (data-layer-observer/last-observed-entry state)
+                          {:page-url refreshed-url
+                           :history-path history-path
+                           :payload-label (str event-name "-payload")})))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-timeline-preserves-generated-entry-order-and-session-capture
   (let [result (check
                 (prop/for-all [route path-segment-gen
