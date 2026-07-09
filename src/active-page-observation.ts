@@ -121,15 +121,29 @@ export async function activePageObservation(
   historyPath: string,
 ): Promise<ActivePageObservationResult> {
   const activeTab = await activeTabContext();
-  const readResult: ActivePageReadResult =
-    activeTab.tabId === undefined
-      ? { pageAccessStatus: pageAccessUnavailable }
-      : await activeTabPageObject(activeTab.tabId, historyPath);
 
+  if (activeTab.tabId === undefined) {
+    return observerAttachOptions(
+      historyPath,
+      activeTab.pageUrl,
+      { pageAccessStatus: pageAccessUnavailable },
+      activeTab.tabId,
+    );
+  }
+
+  return tabPageObservation(activeTab.tabId, activeTab.pageUrl, historyPath);
+}
+
+export async function tabPageObservation(
+  tabId: number,
+  pageUrl: string,
+  historyPath: string,
+): Promise<ActivePageObservationResult> {
+  const readResult = await activeTabPageObject(tabId, historyPath);
   return observerAttachOptions(
     historyPath,
-    activeTab.pageUrl,
+    pageUrl,
     readResult,
-    activeTab.tabId,
+    tabId,
   );
 }

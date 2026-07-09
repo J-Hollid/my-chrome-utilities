@@ -1,5 +1,5 @@
 import { listCommands, runCommandById, } from "./commands.js";
-import { activePageObservation } from "./active-page-observation.js";
+import { activePageObservation, tabPageObservation, } from "./active-page-observation.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, } from "./data-layer-observer.js";
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
@@ -7,6 +7,8 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
 import { nestedTimeline } from "./data-layer-timeline.js";
 const PROJECT_NAME = "my-chrome-utilities";
+const OBSERVATION_REFRESH_RETRY_DELAY_MS = 500;
+const OBSERVATION_REFRESH_MAX_ATTEMPTS = 10;
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
 const commandList = document.querySelector("#commands");
@@ -33,6 +35,10 @@ let dataLayerObserverState = {
     observedEntries: [],
 };
 let stopLiveHistoryPushCapture = () => { };
+let observationRefreshTimeoutId;
+let observationRefreshToken = 0;
+let observedPageLoadSequence = 0;
+let scheduledObservationRefreshSequence;
 if (app) {
     app.textContent = PROJECT_NAME;
 }
@@ -155,13 +161,94 @@ async function startLiveHistoryCapture(observation) {
         stopLiveHistoryPushCapture = () => { };
     }
 }
+function clearScheduledObservationRefresh() {
+    if (observationRefreshTimeoutId !== undefined) {
+        globalThis.clearTimeout(observationRefreshTimeoutId);
+        observationRefreshTimeoutId = undefined;
+    }
+}
+function activeSessionTabMatches(tabId) {
+    const session = dataLayerSessionState.session;
+    return session?.status === "active" && session.tabId === tabId;
+}
+function capturePageEntryForRefresh(request) {
+    if (request.pageEntryCaptured) {
+        return request;
+    }
+    dataLayerSessionState = navigateSession(dataLayerSessionState, request.pageUrl);
+    dataLayerSessionState = captureEntry(dataLayerSessionState, {
+        type: "page",
+        url: request.pageUrl,
+    });
+    persistAndRenderSessionState();
+    return {
+        ...request,
+        pageEntryCaptured: true,
+    };
+}
+function scheduleObservationRefresh(request) {
+    clearScheduledObservationRefresh();
+    const delay = request.attempt === 0 ? 0 : OBSERVATION_REFRESH_RETRY_DELAY_MS;
+    observationRefreshTimeoutId = globalThis.setTimeout(() => {
+        observationRefreshTimeoutId = undefined;
+        void runObservationRefresh(request);
+    }, delay);
+}
+function refreshObservationAfterPageLoad(tabId, pageUrl, pageLoadSequence) {
+    if (!activeSessionTabMatches(tabId)) {
+        return;
+    }
+    if (scheduledObservationRefreshSequence === pageLoadSequence) {
+        return;
+    }
+    scheduledObservationRefreshSequence = pageLoadSequence;
+    observationRefreshToken += 1;
+    scheduleObservationRefresh({
+        token: observationRefreshToken,
+        tabId,
+        pageUrl,
+        attempt: 0,
+        pageEntryCaptured: false,
+        pageLoadSequence,
+    });
+}
+async function runObservationRefresh(request) {
+    if (request.token !== observationRefreshToken ||
+        !activeSessionTabMatches(request.tabId)) {
+        return;
+    }
+    const session = dataLayerSessionState.session;
+    if (!session) {
+        return;
+    }
+    const nextRequest = capturePageEntryForRefresh(request);
+    const observation = await tabPageObservation(nextRequest.tabId, nextRequest.pageUrl, session.historyPath);
+    if (nextRequest.token !== observationRefreshToken ||
+        !activeSessionTabMatches(nextRequest.tabId)) {
+        return;
+    }
+    dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, observation);
+    updateSessionFromObserverState();
+    persistAndRenderObservationState();
+    if (dataLayerObserverState.observer?.status === "ready") {
+        await startLiveHistoryCapture(observation);
+        return;
+    }
+    if (observation.pageAccessStatus !== "page access unavailable" &&
+        nextRequest.attempt + 1 < OBSERVATION_REFRESH_MAX_ATTEMPTS) {
+        scheduleObservationRefresh({
+            ...nextRequest,
+            attempt: nextRequest.attempt + 1,
+        });
+    }
+}
 async function recordDataLayerCommandRun(entry) {
     if (entry.commandId === "data-layer.start-testing") {
         const sessionWasActive = dataLayerSessionState.session?.status === "active";
         const historyPath = getHistoryArrayPath();
         const observation = await activePageObservation(historyPath);
         dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
-            tabId: 1,
+            tabId: observation.tabId ?? 1,
             url: observation.pageUrl,
             historyPath,
         });
@@ -286,6 +373,31 @@ restartObservationButton?.addEventListener("click", () => {
         renderObserverState();
     });
 });
+if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (!activeSessionTabMatches(tabId)) {
+            return;
+        }
+        if (changeInfo.status === "loading" || changeInfo.url !== undefined) {
+            observedPageLoadSequence += 1;
+            scheduledObservationRefreshSequence = undefined;
+            observationRefreshToken += 1;
+            clearScheduledObservationRefresh();
+            stopLiveHistoryCapture();
+            if (changeInfo.url !== undefined) {
+                dataLayerSessionState = navigateSession(dataLayerSessionState, changeInfo.url);
+                persistAndRenderSessionState();
+            }
+        }
+        if (changeInfo.status === "complete") {
+            const pageUrl = tab.url ??
+                changeInfo.url ??
+                dataLayerSessionState.session?.currentUrl ??
+                globalThis.location.href;
+            refreshObservationAfterPageLoad(tabId, pageUrl, observedPageLoadSequence);
+        }
+    });
+}
 renderHistoryPath(getHistoryArrayPath());
 renderSessionState();
 renderObserverState();
