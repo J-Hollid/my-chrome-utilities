@@ -538,6 +538,7 @@
                   (let [first-url (str "https://example.test/" route)
                         second-url (str "https://example.test/" next-route)
                         history-path "queue.history"
+                        payload-event-name (str "payload-event:" payload-event)
                         nested-state (data-layer-timeline/record-pageloads-with-events
                                       {}
                                       {:first-page-url first-url
@@ -552,13 +553,13 @@
                         nested (data-layer-timeline/nested-timeline nested-state)
                         payload-state (data-layer-timeline/record-observed-event-with-payload
                                        nested-state
-                                       {:event-name payload-event
+                                       {:event-name payload-event-name
                                         :payload-properties (format "%s: \"%s\""
                                                                     payload-name
                                                                     payload-value)})
                         details (data-layer-timeline/nested-event-details
                                  payload-state
-                                 payload-event)]
+                                 payload-event-name)]
                     (and (= [first-url second-url] (mapv :url nested))
                          (= [[first-event first-extra-event]
                              [second-event second-extra-event]]
