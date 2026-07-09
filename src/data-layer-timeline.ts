@@ -79,6 +79,14 @@ export function displayRawValue(entry: DataLayerEventEntry): string {
     : stringifyValue(entry.rawValue);
 }
 
+export function timelineEventHeading(
+  event: Pick<TimelineEntrySummary, "name" | "timestamp" | "observerPath">,
+): string {
+  return [event.name || event.timestamp, event.observerPath]
+    .filter((value) => value.length > 0)
+    .join(" | ");
+}
+
 export function timelineDetails(
   entry: DataLayerEventEntry,
 ): TimelineEntryDetails {

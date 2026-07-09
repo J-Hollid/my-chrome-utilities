@@ -167,6 +167,22 @@
            (:detail-lines rendered)))
     (is (false? (:raw-payload-object-visible? rendered)))))
 
+(deftest canonical-tuple-event-assertions-dispatch
+  (let [state (timeline/record-observed-tuple
+               {}
+               {:event-name "pageview"
+                :history-path "event.history"
+                :timestamp "2026-07-09T20:00:00Z"
+                :payload-object "page_name, page_type, propertyx"})
+        dispatch (fn [text]
+                   (runtime/execute-step! state
+                                          {}
+                                          {:keyword "And" :text text}
+                                          timeline/handlers))]
+    (is (= state (dispatch "the tuple event uses the canonical event name")))
+    (is (= state (dispatch "the tuple event uses the canonical observer path")))
+    (is (= state (dispatch "the tuple event uses the canonical timestamp")))))
+
 (deftest tuple-event-display-source-is-wired
   (is (timeline/tuple-event-display-wired?
        {"src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")

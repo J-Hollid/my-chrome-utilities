@@ -51,6 +51,7 @@ import {
 } from "./data-layer-session.js";
 import {
   nestedTimeline,
+  timelineEventHeading,
   type NestedTimelineEvent,
   type NestedTimelinePage,
   type TimelinePayloadProperty,
@@ -200,12 +201,6 @@ function renderTimelineEvent(event: NestedTimelineEvent): HTMLLIElement {
   }
   item.append(details);
   return item;
-}
-
-function timelineEventHeading(event: NestedTimelineEvent): string {
-  return [event.name || event.timestamp, event.observerPath]
-    .filter((value) => value.length > 0)
-    .join(" | ");
 }
 
 function renderPayloadProperties(
