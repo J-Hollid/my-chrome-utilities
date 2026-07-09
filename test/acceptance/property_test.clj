@@ -468,6 +468,52 @@
                          (= visible session-visible)))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-timeline-nests-generated-pages-events-and-payloads
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               next-route path-segment-gen
+                               first-event path-segment-gen
+                               first-extra-event path-segment-gen
+                               second-event path-segment-gen
+                               second-extra-event path-segment-gen
+                               payload-event path-segment-gen
+                               payload-name path-segment-gen
+                               payload-value path-segment-gen]
+                  (let [first-url (str "https://example.test/" route)
+                        second-url (str "https://example.test/" next-route)
+                        history-path "queue.history"
+                        nested-state (data-layer-timeline/record-pageloads-with-events
+                                      {}
+                                      {:first-page-url first-url
+                                       :second-page-url second-url
+                                       :first-page-events (str first-event
+                                                               ", "
+                                                               first-extra-event)
+                                       :second-page-events (str second-event
+                                                                ", "
+                                                                second-extra-event)
+                                       :history-path history-path})
+                        nested (data-layer-timeline/nested-timeline nested-state)
+                        payload-state (data-layer-timeline/record-observed-event-with-payload
+                                       nested-state
+                                       {:event-name payload-event
+                                        :payload-properties (format "%s: \"%s\""
+                                                                    payload-name
+                                                                    payload-value)})
+                        details (data-layer-timeline/nested-event-details
+                                 payload-state
+                                 payload-event)]
+                    (and (= [first-url second-url] (mapv :url nested))
+                         (= [[first-event first-extra-event]
+                             [second-event second-extra-event]]
+                            (mapv #(mapv :name (:events %)) nested))
+                         (every? #(= history-path (:observer-path %))
+                                 (mapcat :events nested))
+                         (= [{:name payload-name
+                              :value (format "\"%s\"" payload-value)}]
+                            (:payload-properties details))))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-recovery-preserves-session-history-after-navigation
   (let [result (check
                 (prop/for-all [route path-segment-gen
