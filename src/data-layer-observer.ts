@@ -30,6 +30,12 @@ export interface DataLayerHistoryObserverState {
   sessionState?: DataLayerSessionState;
 }
 
+export interface HistoryArrayObserverAttachOptions {
+  historyPath: string;
+  pageUrl: string;
+  pageObject?: unknown;
+}
+
 function pathParts(path: string): string[] {
   return path
     .split(".")
@@ -61,7 +67,7 @@ function observedPayload(rawPayload: unknown): unknown {
 
 export function attachHistoryArrayObserver(
   state: DataLayerHistoryObserverState,
-  options: { historyPath: string; pageUrl: string; pageObject?: unknown },
+  options: HistoryArrayObserverAttachOptions,
 ): DataLayerHistoryObserverState {
   const pageObject =
     options.pageObject ?? state.pageObject ?? samplePageObject();

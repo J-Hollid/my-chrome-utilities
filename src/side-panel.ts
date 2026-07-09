@@ -4,6 +4,7 @@ import {
   type AppCommand,
   type CommandRunRecord,
 } from "./commands.js";
+import { activePageObservation } from "./active-page-observation.js";
 import {
   getHistoryArrayPath,
   pathStatus,
@@ -156,39 +157,24 @@ function renderObserverState(): void {
   }
 }
 
-async function activeTabPageUrl(): Promise<string> {
-  try {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    return tab?.url ?? globalThis.location.href;
-  } catch {
-    return globalThis.location.href;
-  }
-}
-
 async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void> {
   if (entry.commandId === "data-layer.start-testing") {
     const sessionWasActive = dataLayerSessionState.session?.status === "active";
-    const pageUrl = await activeTabPageUrl();
+    const historyPath = getHistoryArrayPath();
+    const observation = await activePageObservation(historyPath);
     dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
       tabId: 1,
-      url: pageUrl,
-      historyPath: getHistoryArrayPath(),
+      url: observation.pageUrl,
+      historyPath,
     });
     if (!sessionWasActive) {
       dataLayerSessionState = captureEntry(dataLayerSessionState, {
         type: "page",
-        url: pageUrl,
+        url: observation.pageUrl,
       });
       dataLayerObserverState = attachHistoryArrayObserver(
         dataLayerObserverState,
-        {
-          historyPath: getHistoryArrayPath(),
-          pageUrl,
-        },
+        observation,
       );
     }
     persistSession(dataLayerSessionState);
@@ -310,23 +296,21 @@ filter?.addEventListener("keyup", (event: KeyboardEvent) => {
 historyPathInput?.addEventListener("input", () => {
   const path = setHistoryArrayPath(historyPathInput.value);
   renderHistoryPath(path);
-  void activeTabPageUrl().then((pageUrl) => {
-    dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, {
-      historyPath: path,
-      pageUrl,
-    });
+  void activePageObservation(path).then((observation) => {
+    dataLayerObserverState = attachHistoryArrayObserver(
+      dataLayerObserverState,
+      observation,
+    );
     renderObserverState();
   });
 });
 
 restartObservationButton?.addEventListener("click", () => {
-  void activeTabPageUrl().then((pageUrl) => {
+  void activePageObservation(getHistoryArrayPath()).then((observation) => {
     dataLayerObserverState = restartObservation(
       dataLayerSessionState,
       dataLayerObserverState,
-      {
-        pageUrl,
-      },
+      observation,
     );
     renderObserverState();
   });

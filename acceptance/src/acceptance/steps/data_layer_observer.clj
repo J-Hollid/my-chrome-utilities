@@ -43,8 +43,8 @@
    :page-url page-url
    :active-count (observer-active-count status)})
 
-(defn attach-observer [state {:keys [history-path page-url]}]
-  (let [page-object (state-page-object state)
+(defn attach-observer [state {:keys [history-path page-url page-object]}]
+  (let [page-object (or page-object (state-page-object state))
         status (data-layer/path-status page-object history-path)]
     (assoc state
            :page-object page-object
@@ -103,6 +103,46 @@
 (defn- observed-entry-count-for-url [state url]
   (count (filter #(= url (:url %)) (:observed-entries state))))
 
+(defn- page-object-with-history-path [history-path]
+  (assoc-in {} (path-parts history-path) []))
+
+(defn define-active-page-window [state {:keys [page-url history-path]}]
+  (let [page-object (page-object-with-history-path history-path)]
+    (assoc state
+           :active-page-window {:page-url page-url
+                                :page-object page-object}
+           :page-object page-object)))
+
+(defn define-active-page-window-without-path [state {:keys [page-url]}]
+  (let [page-object {}]
+    (assoc state
+           :active-page-window {:page-url page-url
+                                :page-object page-object}
+           :page-object page-object)))
+
+(defn start-active-page-observation [state]
+  (let [{:keys [page-url page-object]} (:active-page-window state)]
+    (attach-observer state
+                     {:history-path (:history-path state)
+                      :page-url page-url
+                      :page-object page-object})))
+
+(defn page-owned-history-entry? [state event-name]
+  (boolean
+   (some #(= event-name (:event %))
+         (path-value (:page-object state) (:history-path state)))))
+
+(defn active-page-window-observation-wired? [files]
+  (let [side-panel-source (get files "src/side-panel.ts" "")
+        active-page-source (get files "src/active-page-observation.ts" "")
+        manifest-source (get files "manifest.json" "")]
+    (and (str/includes? manifest-source "\"scripting\"")
+         (str/includes? side-panel-source "activePageObservation")
+         (str/includes? active-page-source "activeTabPageObject")
+         (str/includes? active-page-source "chrome.scripting.executeScript")
+         (str/includes? active-page-source "world: \"MAIN\"")
+         (str/includes? active-page-source "pageObject"))))
+
 (def handlers
   [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key event-name-key payload-label-key]]
@@ -113,6 +153,73 @@
                      (attach-observer {:history-path (:history-path world)
                                        :page-url page-url})
                      (page-push event-name payload-label))))}
+
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key history-path-key]]
+               (define-active-page-window
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^active website page <([A-Za-z0-9_]+)> does not define history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key _history-path-key]]
+               (define-active-page-window-without-path
+                world
+                {:page-url (support/require-example example page-url-key)}))}
+
+   {:pattern #"^observation starts for the active website page$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
+                            "src/active-page-observation.ts" (support/source-file root "src/active-page-observation.ts")
+                            "manifest.json" (support/source-file root "manifest.json")}]
+                 (support/assert! (active-page-window-observation-wired? files)
+                                  "Active page window observation is not wired."
+                                  {})
+                 (start-active-page-observation world)))}
+
+   {:pattern #"^observer status <([A-Za-z0-9_]+)> is shown for history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [status-key history-path-key]]
+               (let [expected-status (support/require-example example status-key)
+                     expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= expected-status (get-in world [:observer :status]))
+                                       (= expected-path (get-in world [:observer :history-path])))
+                                  "Observer status or path does not match."
+                                  {:expected-status expected-status
+                                   :expected-path expected-path
+                                   :observer (:observer world)})
+                 world))}
+
+   {:pattern #"^the observer resolves <([A-Za-z0-9_]+)> from the active website page window$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= "ready" (get-in world [:observer :status]))
+                                       (= expected-path (get-in world [:observer :history-path]))
+                                       (= (get-in world [:active-page-window :page-object])
+                                          (:page-object world)))
+                                  "Observer did not resolve from the active page window."
+                                  {:observer (:observer world)
+                                   :active-page-window (:active-page-window world)})
+                 world))}
+
+   {:pattern #"^no observer is active for history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected-path (support/require-example example history-path-key)]
+                 (support/assert! (and (= expected-path (get-in world [:observer :history-path]))
+                                       (zero? (get-in world [:observer :active-count])))
+                                  "Observer is active for an unobservable page path."
+                                  {:expected-path expected-path
+                                   :observer (:observer world)})
+                 world))}
+
+   {:pattern #"^the page-owned history array contains entry <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key]]
+               (let [event-name (support/require-example example event-name-key)]
+                 (support/assert! (page-owned-history-entry? world event-name)
+                                  "Page-owned history array does not contain entry."
+                                  {:event-name event-name
+                                   :page-object (:page-object world)})
+                 world))}
 
    {:pattern #"^the extension records a new observed event entry$"
     :handler (fn [world _example _captures]
@@ -325,5 +432,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T22:59:15.264981833+02:00", :module-hash "-1104607354", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1269664543"} {:id "def/observer-timestamp", :kind "def", :line 7, :end-line nil, :hash "-543117546"} {:id "defn-/path-parts", :kind "defn-", :line 9, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 15, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 18, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 21, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 24, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 28, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 37, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 40, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 46, :end-line nil, :hash "2100631144"} {:id "defn/reinstall-observer", :kind "defn", :line 53, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 56, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 59, :end-line nil, :hash "1791613681"} {:id "defn-/observed-push-state", :kind "defn-", :line 64, :end-line nil, :hash "841120218"} {:id "defn/page-push", :kind "defn", :line 75, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 82, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 85, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 93, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 96, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 99, :end-line nil, :hash "1403940418"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 103, :end-line nil, :hash "838017073"} {:id "def/handlers", :kind "def", :line 106, :end-line nil, :hash "79991701"}]}
+;; {:version 1, :tested-at "2026-07-09T11:26:56.692492854+02:00", :module-hash "1910886054", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1269664543"} {:id "def/observer-timestamp", :kind "def", :line 7, :end-line nil, :hash "-543117546"} {:id "defn-/path-parts", :kind "defn-", :line 9, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 15, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 18, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 21, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 24, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 28, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 37, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 40, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 46, :end-line nil, :hash "237785604"} {:id "defn/reinstall-observer", :kind "defn", :line 53, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 56, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 59, :end-line nil, :hash "1791613681"} {:id "defn-/observed-push-state", :kind "defn-", :line 64, :end-line nil, :hash "841120218"} {:id "defn/page-push", :kind "defn", :line 75, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 82, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 85, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 93, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 96, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 99, :end-line nil, :hash "1403940418"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 103, :end-line nil, :hash "838017073"} {:id "defn-/page-object-with-history-path", :kind "defn-", :line 106, :end-line nil, :hash "1438825497"} {:id "defn/define-active-page-window", :kind "defn", :line 109, :end-line nil, :hash "1608657820"} {:id "defn/define-active-page-window-without-path", :kind "defn", :line 116, :end-line nil, :hash "-1493100436"} {:id "defn/start-active-page-observation", :kind "defn", :line 123, :end-line nil, :hash "1706436428"} {:id "defn/page-owned-history-entry?", :kind "defn", :line 130, :end-line nil, :hash "-2036718304"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 135, :end-line nil, :hash "24528890"} {:id "def/handlers", :kind "def", :line 146, :end-line nil, :hash "-551141381"}]}
 ;; clj-mutate-manifest-end

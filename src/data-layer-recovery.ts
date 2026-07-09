@@ -22,7 +22,7 @@ export function observerAttachmentStatus(
 export function restartObservation(
   sessionState: DataLayerSessionState,
   observerState: DataLayerHistoryObserverState,
-  options: { pageUrl: string },
+  options: { pageUrl: string; pageObject?: unknown },
 ): DataLayerHistoryObserverState {
   const session = sessionState.session;
 
@@ -33,5 +33,8 @@ export function restartObservation(
   return attachHistoryArrayObserver(observerState, {
     historyPath: session.historyPath,
     pageUrl: options.pageUrl,
+    ...(options.pageObject === undefined
+      ? {}
+      : { pageObject: options.pageObject }),
   });
 }
