@@ -1,5 +1,6 @@
 (ns acceptance.data-layer-steps-test
   (:require [acceptance.steps.data-layer :as data-layer]
+            [acceptance.runtime :as runtime]
             [clojure.test :refer [deftest is]]))
 
 (def settings-html
@@ -47,6 +48,46 @@
                "some.deep.object.history")]
     (is (= "some.deep.object.history" (:history-path-field-value state)))
     (is (= "some.deep.object.history" (:history-path state)))))
+
+(deftest preserves-incremental-history-path-text-entry
+  (let [state (data-layer/type-history-array-path-sequence
+               {:side-panel-html settings-html
+                :side-panel-source (str "const typedPath = historyPathInput.value; "
+                                        "const path = setHistoryArrayPath(typedPath); "
+                                        "renderHistoryPath(path, typedPath); "
+                                        "historyPathInput.addEventListener('input', () => {});")}
+               "event"
+               "event."
+               "event.history")]
+    (is (= "event." (:intermediate-history-path-field-value state)))
+    (is (= "event.history" (:history-path-field-value state)))
+    (is (= "event.history" (:history-path state)))))
+
+(deftest canonical-incremental-history-path-checks-dispatch
+  (let [base-state (data-layer/type-history-array-path-sequence
+                    {:side-panel-html settings-html
+                     :side-panel-source (str "const typedPath = historyPathInput.value; "
+                                             "const path = setHistoryArrayPath(typedPath); "
+                                             "renderHistoryPath(path, typedPath); "
+                                             "historyPathInput.addEventListener('input', () => {});")}
+                    "event"
+                    "event."
+                    "event.history")
+        dispatch (fn [state text]
+                   (runtime/execute-step! state
+                                          {}
+                                          {:keyword "Then" :text text}
+                                          data-layer/handlers))]
+    (is (data-layer/history-path-first-text-matches? base-state "event"))
+    (is (data-layer/history-path-intermediate-text-matches? base-state "event."))
+    (is (data-layer/history-path-field-and-configured-path-match?
+         base-state
+         "event.history"))
+    (is (= base-state
+           (-> base-state
+               (dispatch "the path field records the canonical first text")
+               (dispatch "the path field preserves the canonical intermediate text")
+               (dispatch "the completed path field and configured history array path use the canonical history path"))))))
 
 (deftest reports-disallowed-data-layer-scope
   (is (empty?

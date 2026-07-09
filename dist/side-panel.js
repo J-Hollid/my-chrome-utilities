@@ -36,9 +36,9 @@ let stopLiveHistoryPushCapture = () => { };
 if (app) {
     app.textContent = PROJECT_NAME;
 }
-function renderHistoryPath(path) {
+function renderHistoryPath(path, fieldValue = path) {
     if (historyPathInput) {
-        historyPathInput.value = path;
+        historyPathInput.value = fieldValue;
     }
     if (historyPathDisplay) {
         historyPathDisplay.textContent = path;
@@ -239,8 +239,9 @@ filter?.addEventListener("keyup", (event) => {
     }
 });
 historyPathInput?.addEventListener("input", () => {
-    const path = setHistoryArrayPath(historyPathInput.value);
-    renderHistoryPath(path);
+    const typedPath = historyPathInput.value;
+    const path = setHistoryArrayPath(typedPath);
+    renderHistoryPath(path, typedPath);
     void activePageObservation(path).then((observation) => {
         dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
         dataLayerSessionState =
