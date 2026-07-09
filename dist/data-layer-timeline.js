@@ -40,6 +40,11 @@ export function displayRawValue(entry) {
         ? ""
         : stringifyValue(entry.rawValue);
 }
+export function timelineEventHeading(event) {
+    return [event.name || event.timestamp, event.observerPath]
+        .filter((value) => value.length > 0)
+        .join(" | ");
+}
 export function timelineDetails(entry) {
     return {
         ...timelineSummary(entry),
