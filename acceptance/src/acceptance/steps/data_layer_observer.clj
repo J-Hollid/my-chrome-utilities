@@ -7,6 +7,11 @@
 (def observer-timestamp "2026-07-08T00:00:00Z")
 (def page-access-available "page access available")
 (def page-access-unavailable "page access unavailable")
+(def canonical-live-page-url "https://www.example.com/")
+(def canonical-live-history-path "dataLayerHistory")
+(def canonical-live-event-name "signup")
+(def canonical-live-values-payload "signup-values")
+(def canonical-live-queued-payload "signup-payload")
 
 (defn- path-parts [path]
   (->> (str/split path #"\.")
@@ -103,8 +108,10 @@
   (filter #(= kind (:kind %)) (forbidden-observer-capability-findings files)))
 
 (defn- inspect-observer-implementation [root]
-  {"src/data-layer-observer.ts" (support/source-file root "src/data-layer-observer.ts")
-   "src/side-panel.ts" (support/source-file root "src/side-panel.ts")})
+  (support/source-file-map root
+                           ["src/data-layer-observer.ts"
+                            "src/data-layer-live-observation.ts"
+                            "src/side-panel.ts"]))
 
 (defn- observed-entry-count-for-url [state url]
   (count (filter #(= url (:url %)) (:observed-entries state))))
@@ -232,12 +239,18 @@
 
 (defn live-history-push-capture-wired? [files]
   (let [side-panel-source (get files "src/side-panel.ts" "")
-        observer-source (get files "src/data-layer-observer.ts" "")]
+        observer-source (get files "src/data-layer-observer.ts" "")
+        live-observation-source (get files "src/data-layer-live-observation.ts" "")]
     (and (str/includes? side-panel-source "activePageObservation")
          (str/includes? side-panel-source "attachHistoryArrayObserver")
-         (str/includes? side-panel-source "sessionState")
+         (str/includes? side-panel-source "startLiveHistoryPushCapture")
+         (str/includes? side-panel-source "appendObservedHistoryEntry")
          (str/includes? observer-source "appendObservedHistoryEntry")
-         (str/includes? observer-source "captureExistingHistoryEntries"))))
+         (str/includes? observer-source "captureExistingHistoryEntries")
+         (str/includes? live-observation-source "chrome.scripting.executeScript")
+         (str/includes? live-observation-source "chrome.runtime.onMessage.addListener")
+         (str/includes? live-observation-source "CustomEvent")
+         (str/includes? live-observation-source ".push"))))
 
 (defn session-timeline [state]
   (get-in state [:session-state :session :timeline]))
@@ -256,6 +269,9 @@
   (and (= page-url (:url entry))
        (= history-path (:observer-path entry))
        (= payload-label (:payload entry))))
+
+(defn- last-observed-entry-value-matches? [state key expected]
+  (= expected (get (last-observed-entry state) key)))
 
 (def handlers
   [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
@@ -287,8 +303,10 @@
    {:pattern #"^data layer testing is started from the side panel for the active website page$"
     :handler (fn [world _example _captures]
                (let [root (support/repository-root)
-                     files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
-                            "src/data-layer-observer.ts" (support/source-file root "src/data-layer-observer.ts")}]
+                     files (support/source-file-map root
+                                                    ["src/side-panel.ts"
+                                                     "src/data-layer-observer.ts"
+                                                     "src/data-layer-live-observation.ts"])]
                  (support/assert! (live-history-push-capture-wired? files)
                                   "Live history push capture is not wired."
                                   {})
@@ -323,6 +341,56 @@
                                   {:expected expected
                                    :entry entry})
                  world))}
+
+   {:pattern #"^the live capture entry uses the canonical page URL$"
+    :handler (fn [world _example _captures]
+               (support/assert! (last-observed-entry-value-matches?
+                                 world
+                                 :url
+                                 canonical-live-page-url)
+                                "Live capture entry URL does not match the canonical page."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^the live capture entry uses the canonical history path$"
+    :handler (fn [world _example _captures]
+               (support/assert! (last-observed-entry-value-matches?
+                                 world
+                                 :observer-path
+                                 canonical-live-history-path)
+                                "Live capture entry path does not match the canonical history path."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^the live capture entry records signup event$"
+    :handler (fn [world _example _captures]
+               (support/assert! (last-observed-entry-value-matches?
+                                 world
+                                 :name
+                                 canonical-live-event-name)
+                                "Live capture entry event does not match signup."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^the live capture entry records signup values payload$"
+    :handler (fn [world _example _captures]
+               (support/assert! (last-observed-entry-value-matches?
+                                 world
+                                 :payload
+                                 canonical-live-values-payload)
+                                "Live capture entry payload does not match signup values."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^the live capture entry records queued signup payload$"
+    :handler (fn [world _example _captures]
+               (support/assert! (last-observed-entry-value-matches?
+                                 world
+                                 :payload
+                                 canonical-live-queued-payload)
+                                "Live capture entry payload does not match queued signup."
+                                {:entry (last-observed-entry world)})
+               world)}
 
    {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key history-path-key]]
@@ -674,5 +742,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-09T12:22:58.014467256+02:00", :module-hash "-625192239", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1269664543"} {:id "def/observer-timestamp", :kind "def", :line 7, :end-line nil, :hash "-543117546"} {:id "def/page-access-available", :kind "def", :line 8, :end-line nil, :hash "1021205454"} {:id "def/page-access-unavailable", :kind "def", :line 9, :end-line nil, :hash "-159061251"} {:id "defn-/path-parts", :kind "defn-", :line 11, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 17, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 20, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 23, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 26, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 30, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 39, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 42, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 48, :end-line nil, :hash "237785604"} {:id "defn/reinstall-observer", :kind "defn", :line 55, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 58, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 61, :end-line nil, :hash "1791613681"} {:id "defn-/observed-push-state", :kind "defn-", :line 66, :end-line nil, :hash "841120218"} {:id "defn/page-push", :kind "defn", :line 77, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 84, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 87, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 95, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 98, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 101, :end-line nil, :hash "1403940418"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 105, :end-line nil, :hash "838017073"} {:id "defn-/page-object-with-history-path", :kind "defn-", :line 108, :end-line nil, :hash "1438825497"} {:id "defn/define-active-page-window", :kind "defn", :line 111, :end-line nil, :hash "722482812"} {:id "defn/define-active-page-window-with-entry", :kind "defn", :line 119, :end-line nil, :hash "-147838202"} {:id "defn/define-active-page-window-without-path", :kind "defn", :line 132, :end-line nil, :hash "-2094256586"} {:id "defn/define-unreadable-active-page", :kind "defn", :line 140, :end-line nil, :hash "1997682987"} {:id "defn-/page-access-unavailable?", :kind "defn-", :line 145, :end-line nil, :hash "-574890056"} {:id "defn-/unavailable-observer-state", :kind "defn-", :line 148, :end-line nil, :hash "-730784785"} {:id "defn/read-active-page-history-path", :kind "defn", :line 154, :end-line nil, :hash "987951799"} {:id "defn/start-active-page-observation", :kind "defn", :line 172, :end-line nil, :hash "449929788"} {:id "defn/active-page-read-succeeded?", :kind "defn", :line 175, :end-line nil, :hash "-661864035"} {:id "defn/active-page-read-result-includes-path?", :kind "defn", :line 178, :end-line nil, :hash "220393329"} {:id "defn/active-page-read-result-not-empty?", :kind "defn", :line 182, :end-line nil, :hash "1552896192"} {:id "defn/no-empty-page-object-used-as-successful-read?", :kind "defn", :line 187, :end-line nil, :hash "-2119558816"} {:id "defn/page-owned-history-entry?", :kind "defn", :line 191, :end-line nil, :hash "-2036718304"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 196, :end-line nil, :hash "-1966966963"} {:id "def/handlers", :kind "def", :line 209, :end-line nil, :hash "265915070"}]}
+;; {:version 1, :tested-at "2026-07-09T16:35:59.786678517+02:00", :module-hash "-1105738953", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1269664543"} {:id "def/observer-timestamp", :kind "def", :line 7, :end-line nil, :hash "-543117546"} {:id "def/page-access-available", :kind "def", :line 8, :end-line nil, :hash "1021205454"} {:id "def/page-access-unavailable", :kind "def", :line 9, :end-line nil, :hash "-159061251"} {:id "def/canonical-live-page-url", :kind "def", :line 10, :end-line nil, :hash "-1001705326"} {:id "def/canonical-live-history-path", :kind "def", :line 11, :end-line nil, :hash "430921171"} {:id "def/canonical-live-event-name", :kind "def", :line 12, :end-line nil, :hash "-278301589"} {:id "def/canonical-live-values-payload", :kind "def", :line 13, :end-line nil, :hash "-336993088"} {:id "def/canonical-live-queued-payload", :kind "def", :line 14, :end-line nil, :hash "1581810357"} {:id "defn-/path-parts", :kind "defn-", :line 16, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 22, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 25, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 28, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 31, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 35, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 44, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 47, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 53, :end-line nil, :hash "237785604"} {:id "defn/reinstall-observer", :kind "defn", :line 60, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 63, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 66, :end-line nil, :hash "1791613681"} {:id "defn-/record-observed-entry", :kind "defn-", :line 71, :end-line nil, :hash "-15442940"} {:id "defn-/observed-push-state", :kind "defn-", :line 77, :end-line nil, :hash "314008729"} {:id "defn/page-push", :kind "defn", :line 86, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 93, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 96, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 104, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 107, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 110, :end-line nil, :hash "-1647754979"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 116, :end-line nil, :hash "838017073"} {:id "defn-/page-object-with-history-path", :kind "defn-", :line 119, :end-line nil, :hash "1438825497"} {:id "defn/define-active-page-window", :kind "defn", :line 122, :end-line nil, :hash "722482812"} {:id "defn/define-active-page-window-with-entry", :kind "defn", :line 130, :end-line nil, :hash "248890880"} {:id "defn/define-active-page-window-without-path", :kind "defn", :line 144, :end-line nil, :hash "-2094256586"} {:id "defn/define-unreadable-active-page", :kind "defn", :line 152, :end-line nil, :hash "1997682987"} {:id "defn-/page-access-unavailable?", :kind "defn-", :line 157, :end-line nil, :hash "-574890056"} {:id "defn-/unavailable-observer-state", :kind "defn-", :line 160, :end-line nil, :hash "-730784785"} {:id "defn/read-active-page-history-path", :kind "defn", :line 166, :end-line nil, :hash "987951799"} {:id "defn/start-active-page-observation", :kind "defn", :line 184, :end-line nil, :hash "449929788"} {:id "defn-/capture-queued-history-entries", :kind "defn-", :line 187, :end-line nil, :hash "-1560026941"} {:id "defn/start-side-panel-live-capture", :kind "defn", :line 194, :end-line nil, :hash "1139164755"} {:id "defn/active-page-read-succeeded?", :kind "defn", :line 206, :end-line nil, :hash "-661864035"} {:id "defn/active-page-read-result-includes-path?", :kind "defn", :line 209, :end-line nil, :hash "220393329"} {:id "defn/active-page-read-result-not-empty?", :kind "defn", :line 213, :end-line nil, :hash "1552896192"} {:id "defn/no-empty-page-object-used-as-successful-read?", :kind "defn", :line 218, :end-line nil, :hash "-2119558816"} {:id "defn/page-owned-history-entry?", :kind "defn", :line 222, :end-line nil, :hash "-2036718304"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 227, :end-line nil, :hash "-1966966963"} {:id "defn/live-history-push-capture-wired?", :kind "defn", :line 240, :end-line nil, :hash "-1057385612"} {:id "defn/session-timeline", :kind "defn", :line 255, :end-line nil, :hash "1127872695"} {:id "defn-/observed-event-entry?", :kind "defn-", :line 258, :end-line nil, :hash "-1210141698"} {:id "defn/session-timeline-shows-page-and-observed?", :kind "defn", :line 262, :end-line nil, :hash "176239236"} {:id "defn/observed-entry-matches?", :kind "defn", :line 268, :end-line nil, :hash "525932857"} {:id "defn-/last-observed-entry-value-matches?", :kind "defn-", :line 273, :end-line nil, :hash "52313770"} {:id "def/handlers", :kind "def", :line 276, :end-line nil, :hash "-1003096194"}]}
 ;; clj-mutate-manifest-end

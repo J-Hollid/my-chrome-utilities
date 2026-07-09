@@ -216,7 +216,7 @@ export function reinstallHistoryArrayObserver(
 
 export function appendObservedHistoryEntry(
   state: DataLayerHistoryObserverState,
-  rawValue: { event: string; payload: unknown },
+  rawValue: unknown,
   timestamp = new Date().toISOString(),
 ): DataLayerHistoryObserverState {
   const observer = state.observer;
