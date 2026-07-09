@@ -115,6 +115,28 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 }
 
+function expandedTimelinePageUrls(): Set<string> {
+  const expandedUrls = new Set<string>();
+
+  if (!sessionTimeline) {
+    return expandedUrls;
+  }
+
+  const summaries = Array.from(
+    sessionTimeline.querySelectorAll(":scope > li > details[open] > summary"),
+  );
+
+  for (const summary of summaries) {
+    const url = summary.textContent;
+
+    if (url) {
+      expandedUrls.add(url);
+    }
+  }
+
+  return expandedUrls;
+}
+
 function renderSessionState(): void {
   const session = dataLayerSessionState.session;
 
@@ -127,8 +149,11 @@ function renderSessionState(): void {
   }
 
   if (sessionTimeline) {
+    const expandedPageUrls = expandedTimelinePageUrls();
     sessionTimeline.replaceChildren(
-      ...nestedTimeline(session?.timeline ?? []).map(renderTimelinePage),
+      ...nestedTimeline(session?.timeline ?? []).map((page) =>
+        renderTimelinePage(page, expandedPageUrls.has(page.url)),
+      ),
     );
   }
 
@@ -137,12 +162,16 @@ function renderSessionState(): void {
   }
 }
 
-function renderTimelinePage(page: NestedTimelinePage): HTMLLIElement {
+function renderTimelinePage(
+  page: NestedTimelinePage,
+  expanded = false,
+): HTMLLIElement {
   const item = document.createElement("li");
   const details = document.createElement("details");
   const summary = document.createElement("summary");
   const eventList = document.createElement("ul");
 
+  details.open = expanded;
   summary.textContent = page.url;
   eventList.append(...page.events.map(renderTimelineEvent));
   details.append(summary, eventList);
