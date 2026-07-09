@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=bfa81d81fc04a90507317f09778fb0233a52c497f8c63ce8866171418ca8f5f6
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T10:23:58.932075731Z","feature_name":"Data layer history path text entry","feature_path":"features/data-layer-history-path-text-entry.feature","background_hash":"fd7ebacbadc15551b8070613222c77f8c6313a80e688b998d1c274b10a624d71","implementation_hash":"sha256:1614a76c4090c8e810d1e86e99733ad3b188df6ca90f51c056f43c09160f8e09","scenarios":[{"index":0,"name":"Data layer history path text entry 001","scenario_hash":"5d52542582d19dfdec72189018b2d0e523092280ceeb5fb6783c23550732f39b","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-08T22:24:05.668392918Z"}]}
+# {"version":1,"tested_at":"2026-07-09T14:36:23.547357101Z","feature_name":"Data layer history path text entry","feature_path":"features/data-layer-history-path-text-entry.feature","background_hash":"fd7ebacbadc15551b8070613222c77f8c6313a80e688b998d1c274b10a624d71","implementation_hash":"sha256:1b81b3f7cff636428985f2ad3cb45c68ebf7989df98cdde52f41fffedfd40f38","scenarios":[{"index":0,"name":"Data layer history path text entry 001","scenario_hash":"5d52542582d19dfdec72189018b2d0e523092280ceeb5fb6783c23550732f39b","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-08T22:24:05.668392918Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer history path text entry

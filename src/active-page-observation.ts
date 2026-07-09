@@ -8,6 +8,11 @@ interface ActiveTabContext {
   pageUrl: string;
 }
 
+export interface ActivePageObservationResult
+  extends HistoryArrayObserverAttachOptions {
+  tabId?: number;
+}
+
 type ActivePageReadResult =
   | { pageAccessStatus: typeof pageAccessAvailable; pageObject: unknown }
   | { pageAccessStatus: typeof pageAccessUnavailable };
@@ -98,11 +103,13 @@ function observerAttachOptions(
   historyPath: string,
   pageUrl: string,
   readResult: ActivePageReadResult,
-): HistoryArrayObserverAttachOptions {
-  const options: HistoryArrayObserverAttachOptions = {
+  tabId?: number,
+): ActivePageObservationResult {
+  const options: ActivePageObservationResult = {
     historyPath,
     pageUrl,
     pageAccessStatus: readResult.pageAccessStatus,
+    ...(tabId === undefined ? {} : { tabId }),
   };
 
   return readResult.pageAccessStatus === pageAccessAvailable
@@ -112,12 +119,17 @@ function observerAttachOptions(
 
 export async function activePageObservation(
   historyPath: string,
-): Promise<HistoryArrayObserverAttachOptions> {
+): Promise<ActivePageObservationResult> {
   const activeTab = await activeTabContext();
   const readResult: ActivePageReadResult =
     activeTab.tabId === undefined
       ? { pageAccessStatus: pageAccessUnavailable }
       : await activeTabPageObject(activeTab.tabId, historyPath);
 
-  return observerAttachOptions(historyPath, activeTab.pageUrl, readResult);
+  return observerAttachOptions(
+    historyPath,
+    activeTab.pageUrl,
+    readResult,
+    activeTab.tabId,
+  );
 }
