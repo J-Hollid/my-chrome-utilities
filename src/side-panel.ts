@@ -116,26 +116,26 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 }
 
-function expandedTimelinePageUrls(): Set<string> {
-  const expandedUrls = new Set<string>();
+function expandedTimelinePageIndexes(): Set<number> {
+  const expandedIndexes = new Set<number>();
 
   if (!sessionTimeline) {
-    return expandedUrls;
+    return expandedIndexes;
   }
 
-  const summaries = Array.from(
-    sessionTimeline.querySelectorAll(":scope > li > details[open] > summary"),
+  const pages = Array.from(
+    sessionTimeline.querySelectorAll<HTMLDetailsElement>(
+      ":scope > li > details",
+    ),
   );
 
-  for (const summary of summaries) {
-    const url = summary.textContent;
-
-    if (url) {
-      expandedUrls.add(url);
+  pages.forEach((page, index) => {
+    if (page.open) {
+      expandedIndexes.add(index);
     }
-  }
+  });
 
-  return expandedUrls;
+  return expandedIndexes;
 }
 
 function renderSessionState(): void {
@@ -150,10 +150,10 @@ function renderSessionState(): void {
   }
 
   if (sessionTimeline) {
-    const expandedPageUrls = expandedTimelinePageUrls();
+    const expandedPageIndexes = expandedTimelinePageIndexes();
     sessionTimeline.replaceChildren(
-      ...nestedTimeline(session?.timeline ?? []).map((page) =>
-        renderTimelinePage(page, expandedPageUrls.has(page.url)),
+      ...nestedTimeline(session?.timeline ?? []).map((page, index) =>
+        renderTimelinePage(page, expandedPageIndexes.has(index)),
       ),
     );
   }

@@ -197,8 +197,35 @@
                    {:page-url page-url
                     :event-name "scroll"})
                   timeline/render-timeline-expanded-state)]
+    (is (= #{0} (get-in state
+                        [:rendered-expanded-timeline
+                         :expanded-page-indexes])))
     (is (timeline/pageload-expanded? state page-url))
     (is (timeline/event-visible-without-reexpanding? state page-url "scroll"))))
+
+(deftest keeps-duplicate-url-pageload-state-separated
+  (let [page-url "https://www.example.com/repeated"
+        state (-> {}
+                  (timeline/expand-pageload page-url)
+                  (timeline/record-event-for-pageload
+                   {:page-url page-url
+                    :event-name "first-scroll"})
+                  (timeline/record-collapsed-pageload page-url)
+                  (timeline/record-event-for-pageload
+                   {:page-url page-url
+                    :event-name "second-scroll"})
+                  timeline/render-timeline-expanded-state)]
+    (is (= #{0} (get-in state
+                        [:rendered-expanded-timeline
+                         :expanded-page-indexes])))
+    (is (timeline/event-visible-without-reexpanding?
+         state
+         page-url
+         "first-scroll"))
+    (is (not (timeline/event-visible-without-reexpanding?
+              state
+              page-url
+              "second-scroll")))))
 
 (deftest side-panel-source-preserves-expanded-timeline-state
   (is (timeline/timeline-expanded-state-wired?

@@ -614,34 +614,67 @@
                                           expanded-route)
                         collapsed-url (str "https://example.test/collapsed/"
                                            collapsed-route)
+                        repeated-url (str "https://example.test/repeated/"
+                                          expanded-route)
+                        first-event-name (str "first-" first-event)
+                        second-event-name (str "second-" second-event)
+                        collapsed-event-name (str "collapsed-"
+                                                  collapsed-event)
                         state (-> {}
                                   (data-layer-timeline/expand-pageload
                                    expanded-url)
                                   (data-layer-timeline/record-event-for-pageload
                                    {:page-url expanded-url
-                                    :event-name first-event})
+                                    :event-name first-event-name})
                                   (data-layer-timeline/record-event-for-pageload
                                    {:page-url expanded-url
-                                    :event-name second-event})
+                                    :event-name second-event-name})
                                   (data-layer-timeline/record-event-for-pageload
                                    {:page-url collapsed-url
-                                    :event-name collapsed-event})
+                                    :event-name collapsed-event-name})
                                   data-layer-timeline/render-timeline-expanded-state)
-                        expanded-pageloads (get-in state
-                                                   [:rendered-expanded-timeline
-                                                    :expanded-pageloads])]
-                    (and (= #{expanded-url} expanded-pageloads)
+                        duplicate-state (-> {}
+                                            (data-layer-timeline/expand-pageload
+                                             repeated-url)
+                                            (data-layer-timeline/record-event-for-pageload
+                                             {:page-url repeated-url
+                                              :event-name first-event-name})
+                                            (data-layer-timeline/record-collapsed-pageload
+                                             repeated-url)
+                                            (data-layer-timeline/record-event-for-pageload
+                                             {:page-url repeated-url
+                                              :event-name collapsed-event-name})
+                                            data-layer-timeline/render-timeline-expanded-state)
+                        expanded-page-indexes
+                        (get-in state
+                                [:rendered-expanded-timeline
+                                 :expanded-page-indexes])
+                        duplicate-expanded-page-indexes
+                        (get-in duplicate-state
+                                [:rendered-expanded-timeline
+                                 :expanded-page-indexes])]
+                    (and (= #{0} expanded-page-indexes)
                          (data-layer-timeline/event-visible-without-reexpanding?
                           state
                           expanded-url
-                          first-event)
+                          first-event-name)
                          (data-layer-timeline/event-visible-without-reexpanding?
                           state
                           expanded-url
-                          second-event)
+                          second-event-name)
                          (not (data-layer-timeline/pageload-expanded?
                                state
-                               collapsed-url))))))]
+                               collapsed-url))
+                         (= #{0} duplicate-expanded-page-indexes)
+                         (data-layer-timeline/event-visible-without-reexpanding?
+                          duplicate-state
+                          repeated-url
+                          first-event-name)
+                         (not
+                          (data-layer-timeline/event-visible-without-reexpanding?
+                           duplicate-state
+                           repeated-url
+                           collapsed-event-name))))))]
     (is (:pass? result) (pr-str result))))
 
 (deftest data-layer-recovery-preserves-session-history-after-navigation
