@@ -18,6 +18,8 @@
 (def canonical-tuple-event-name "pageview")
 (def canonical-tuple-history-path "event.history")
 (def canonical-tuple-timestamp "2026-07-09T20:00:00Z")
+(def canonical-expanded-page-url canonical-first-page-url)
+(def canonical-expanded-event-name "scroll")
 (def canonical-tuple-payload-values
   {"page_name" "\"example page_name\""
    "page_type" "\"homepage\""
@@ -197,9 +199,12 @@
                                        (some? (:raw-value entry)))}))
 
 (defn expand-pageload [state page-url]
-  (-> state
-      (append-timeline-entry (page-entry page-url))
-      (update :expanded-pageloads (fnil conj #{}) page-url)))
+  (let [next-state (append-timeline-entry state (page-entry page-url))
+        page-index (dec (count (nested-timeline next-state)))]
+    (update next-state :expanded-pageload-indexes (fnil conj #{}) page-index)))
+
+(defn record-collapsed-pageload [state page-url]
+  (append-timeline-entry state (page-entry page-url)))
 
 (defn record-event-for-pageload [state {:keys [page-url event-name]}]
   (append-timeline-entry
@@ -209,21 +214,32 @@
 (defn render-timeline-expanded-state [state]
   (assoc state
          :rendered-expanded-timeline
-         {:expanded-pageloads (:expanded-pageloads state)
+         {:expanded-page-indexes (:expanded-pageload-indexes state)
           :nested-timeline (nested-timeline state)}))
 
 (defn pageload-expanded? [state page-url]
-  (contains? (get-in state [:rendered-expanded-timeline :expanded-pageloads]
-                     #{})
-             page-url))
+  (let [timeline (get-in state [:rendered-expanded-timeline :nested-timeline])
+        expanded-indexes (get-in state
+                                 [:rendered-expanded-timeline
+                                  :expanded-page-indexes]
+                                 #{})]
+    (boolean
+     (some (fn [page-index]
+             (= page-url (:url (nth timeline page-index nil))))
+           expanded-indexes))))
 
 (defn event-visible-without-reexpanding? [state page-url event-name]
-  (and (pageload-expanded? state page-url)
-       (boolean
-        (some #(= event-name (:name %))
-              (->> (get-in state [:rendered-expanded-timeline :nested-timeline])
-                   (filter #(= page-url (:url %)))
-                   (mapcat :events))))))
+  (let [timeline (get-in state [:rendered-expanded-timeline :nested-timeline])
+        expanded-indexes (get-in state
+                                 [:rendered-expanded-timeline
+                                  :expanded-page-indexes]
+                                 #{})]
+    (boolean
+     (some (fn [page-index]
+             (let [page (nth timeline page-index nil)]
+               (and (= page-url (:url page))
+                    (some #(= event-name (:name %)) (:events page)))))
+           expanded-indexes))))
 
 (def forbidden-timeline-capability-patterns
   [{:kind :timeline-filtering
@@ -291,10 +307,12 @@
 
 (defn timeline-expanded-state-wired? [files]
   (let [side-panel-source (get files "src/side-panel.ts" "")]
-    (and (str/includes? side-panel-source "expandedTimelinePageUrls")
+    (and (str/includes? side-panel-source "expandedTimelinePageIndexes")
+         (str/includes? side-panel-source "querySelectorAll<HTMLDetailsElement>")
          (str/includes? side-panel-source "details.open = expanded")
-         (str/includes? side-panel-source "renderTimelinePage(page,")
-         (str/includes? side-panel-source "expandedPageUrls.has(page.url)"))))
+         (str/includes? side-panel-source ".map((page, index) =>")
+         (str/includes? side-panel-source "expandedPageIndexes.has(index)")
+         (not (str/includes? side-panel-source "expandedPageUrls")))))
 
 (defn- property-item [text]
   (let [[name value] (first (seq (parse-payload-properties text)))]
@@ -584,6 +602,15 @@
                 world
                 (support/require-example example page-url-key)))}
 
+   {:pattern #"^the expanded pageload uses the canonical page URL$"
+    :handler (fn [world _example _captures]
+               (let [page-url (get-in (nested-timeline world) [0 :url])]
+                 (support/assert! (= canonical-expanded-page-url page-url)
+                                  "Expanded pageload URL does not match the canonical URL."
+                                  {:expected canonical-expanded-page-url
+                                   :actual page-url})
+                 world))}
+
    {:pattern #"^observed event <([A-Za-z0-9_]+)> is recorded for pageload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [event-name-key page-url-key]]
                (render-timeline-expanded-state
@@ -591,6 +618,21 @@
                  world
                  {:event-name (support/require-example example event-name-key)
                   :page-url (support/require-example example page-url-key)})))}
+
+   {:pattern #"^the expanded-state event uses the canonical event name$"
+    :handler (fn [world _example _captures]
+               (let [event-name (get-in world
+                                        [:rendered-expanded-timeline
+                                         :nested-timeline
+                                         0
+                                         :events
+                                         0
+                                         :name])]
+                 (support/assert! (= canonical-expanded-event-name event-name)
+                                  "Expanded-state event name does not match the canonical event."
+                                  {:expected canonical-expanded-event-name
+                                   :actual event-name})
+                 world))}
 
    {:pattern #"^pageload <([A-Za-z0-9_]+)> remains expanded$"
     :handler (fn [world example [page-url-key]]
@@ -716,5 +758,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-09T23:31:36.470722127+02:00", :module-hash "1498909603", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-560445802"} {:id "def/timeline-timestamp", :kind "def", :line 6, :end-line nil, :hash "415657292"} {:id "def/canonical-first-page-url", :kind "def", :line 7, :end-line nil, :hash "892300575"} {:id "def/canonical-second-page-url", :kind "def", :line 8, :end-line nil, :hash "-854550659"} {:id "def/canonical-history-path", :kind "def", :line 9, :end-line nil, :hash "-1465520940"} {:id "def/canonical-event-groups", :kind "def", :line 10, :end-line nil, :hash "-1186297732"} {:id "def/canonical-payload-properties", :kind "def", :line 12, :end-line nil, :hash "-1279650964"} {:id "def/canonical-tuple-event-name", :kind "def", :line 18, :end-line nil, :hash "1033985506"} {:id "def/canonical-tuple-history-path", :kind "def", :line 19, :end-line nil, :hash "330325512"} {:id "def/canonical-tuple-timestamp", :kind "def", :line 20, :end-line nil, :hash "-1600040237"} {:id "def/canonical-tuple-payload-values", :kind "def", :line 21, :end-line nil, :hash "1497266995"} {:id "defn-/observed-entry", :kind "defn-", :line 26, :end-line nil, :hash "1690037188"} {:id "defn/record-observed-entry", :kind "defn", :line 35, :end-line nil, :hash "-1688208651"} {:id "defn/visible-timeline-entries", :kind "defn", :line 42, :end-line nil, :hash "-188878219"} {:id "defn/timeline-summary", :kind "defn", :line 47, :end-line nil, :hash "-712284424"} {:id "defn/expanded-entry", :kind "defn", :line 50, :end-line nil, :hash "602566461"} {:id "defn-/page-entry", :kind "defn-", :line 53, :end-line nil, :hash "975036707"} {:id "defn-/comma-list", :kind "defn-", :line 56, :end-line nil, :hash "-1449797332"} {:id "defn/parse-payload-properties", :kind "defn", :line 62, :end-line nil, :hash "519534170"} {:id "defn-/observed-event-entry", :kind "defn-", :line 69, :end-line nil, :hash "-1241889608"} {:id "defn-/append-timeline-entry", :kind "defn-", :line 78, :end-line nil, :hash "-1434428876"} {:id "defn-/record-events-for-page", :kind "defn-", :line 84, :end-line nil, :hash "-2026777991"} {:id "defn/record-pageloads-with-events", :kind "defn", :line 92, :end-line nil, :hash "-1198529879"} {:id "defn/record-observed-event-with-payload", :kind "defn", :line 98, :end-line nil, :hash "1577056021"} {:id "defn-/tuple-payload-object", :kind "defn-", :line 104, :end-line nil, :hash "298147558"} {:id "defn/record-observed-tuple", :kind "defn", :line 113, :end-line nil, :hash "-1059715210"} {:id "defn-/timeline-entries", :kind "defn-", :line 126, :end-line nil, :hash "-1795253343"} {:id "defn-/add-page-to-timeline", :kind "defn-", :line 131, :end-line nil, :hash "-2141246556"} {:id "defn-/latest-page-index", :kind "defn-", :line 134, :end-line nil, :hash "714616854"} {:id "defn-/add-event-to-matching-page", :kind "defn-", :line 141, :end-line nil, :hash "832033178"} {:id "defn-/add-entry-to-nested-timeline", :kind "defn-", :line 151, :end-line nil, :hash "1389420386"} {:id "defn/nested-timeline", :kind "defn", :line 157, :end-line nil, :hash "184350641"} {:id "defn/payload-property-items", :kind "defn", :line 160, :end-line nil, :hash "-1695777806"} {:id "defn/nested-event-details", :kind "defn", :line 169, :end-line nil, :hash "-550024329"} {:id "defn/nested-timeline-pageload-order-matches?", :kind "defn", :line 175, :end-line nil, :hash "1626274005"} {:id "defn/nested-timeline-event-groups-match?", :kind "defn", :line 179, :end-line nil, :hash "-1429788433"} {:id "defn/nested-timeline-observer-paths-match?", :kind "defn", :line 183, :end-line nil, :hash "-1609152257"} {:id "defn/canonical-payload-properties-match?", :kind "defn", :line 187, :end-line nil, :hash "699292404"} {:id "defn/render-observed-event", :kind "defn", :line 191, :end-line nil, :hash "-1715193246"} {:id "def/forbidden-timeline-capability-patterns", :kind "def", :line 199, :end-line nil, :hash "1179421373"} {:id "defn/forbidden-timeline-capability-findings", :kind "defn", :line 207, :end-line nil, :hash "181573916"} {:id "defn-/inspect-timeline-implementation", :kind "defn-", :line 210, :end-line nil, :hash "-1945393687"} {:id "defn-/first-visible-entry", :kind "defn-", :line 216, :end-line nil, :hash "-2031728269"} {:id "defn-/example-value-or", :kind "defn-", :line 219, :end-line nil, :hash "-1940368029"} {:id "defn-/default-payload-label", :kind "defn-", :line 222, :end-line nil, :hash "1878071429"} {:id "defn-/default-raw-label", :kind "defn-", :line 225, :end-line nil, :hash "-953873882"} {:id "defn-/example-entry-options", :kind "defn-", :line 228, :end-line nil, :hash "2130457195"} {:id "defn/forbidden-timeline-capability-findings-of-kind", :kind "defn", :line 240, :end-line nil, :hash "661283922"} {:id "defn/nested-timeline-wired?", :kind "defn", :line 243, :end-line nil, :hash "1463466039"} {:id "defn/tuple-event-display-wired?", :kind "defn", :line 251, :end-line nil, :hash "-1962455690"} {:id "defn-/property-item", :kind "defn-", :line 263, :end-line nil, :hash "1550456326"} {:id "def/handlers", :kind "def", :line 267, :end-line nil, :hash "-4624437"}]}
+;; {:version 1, :tested-at "2026-07-09T23:41:29.555774894+02:00", :module-hash "-1331441771", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-560445802"} {:id "def/timeline-timestamp", :kind "def", :line 6, :end-line nil, :hash "415657292"} {:id "def/canonical-first-page-url", :kind "def", :line 7, :end-line nil, :hash "892300575"} {:id "def/canonical-second-page-url", :kind "def", :line 8, :end-line nil, :hash "-854550659"} {:id "def/canonical-history-path", :kind "def", :line 9, :end-line nil, :hash "-1465520940"} {:id "def/canonical-event-groups", :kind "def", :line 10, :end-line nil, :hash "-1186297732"} {:id "def/canonical-payload-properties", :kind "def", :line 12, :end-line nil, :hash "-1279650964"} {:id "def/canonical-tuple-event-name", :kind "def", :line 18, :end-line nil, :hash "1033985506"} {:id "def/canonical-tuple-history-path", :kind "def", :line 19, :end-line nil, :hash "330325512"} {:id "def/canonical-tuple-timestamp", :kind "def", :line 20, :end-line nil, :hash "-1600040237"} {:id "def/canonical-expanded-page-url", :kind "def", :line 21, :end-line nil, :hash "-1460760503"} {:id "def/canonical-expanded-event-name", :kind "def", :line 22, :end-line nil, :hash "-935563380"} {:id "def/canonical-tuple-payload-values", :kind "def", :line 23, :end-line nil, :hash "1497266995"} {:id "defn-/observed-entry", :kind "defn-", :line 28, :end-line nil, :hash "1690037188"} {:id "defn/record-observed-entry", :kind "defn", :line 37, :end-line nil, :hash "-1688208651"} {:id "defn/visible-timeline-entries", :kind "defn", :line 44, :end-line nil, :hash "-188878219"} {:id "defn/timeline-summary", :kind "defn", :line 49, :end-line nil, :hash "-712284424"} {:id "defn/expanded-entry", :kind "defn", :line 52, :end-line nil, :hash "602566461"} {:id "defn-/page-entry", :kind "defn-", :line 55, :end-line nil, :hash "975036707"} {:id "defn-/comma-list", :kind "defn-", :line 58, :end-line nil, :hash "-1449797332"} {:id "defn/parse-payload-properties", :kind "defn", :line 64, :end-line nil, :hash "519534170"} {:id "defn-/observed-event-entry", :kind "defn-", :line 71, :end-line nil, :hash "-1241889608"} {:id "defn-/append-timeline-entry", :kind "defn-", :line 80, :end-line nil, :hash "-1434428876"} {:id "defn-/record-events-for-page", :kind "defn-", :line 86, :end-line nil, :hash "-2026777991"} {:id "defn/record-pageloads-with-events", :kind "defn", :line 94, :end-line nil, :hash "-1198529879"} {:id "defn/record-observed-event-with-payload", :kind "defn", :line 100, :end-line nil, :hash "1577056021"} {:id "defn-/tuple-payload-object", :kind "defn-", :line 106, :end-line nil, :hash "298147558"} {:id "defn/record-observed-tuple", :kind "defn", :line 115, :end-line nil, :hash "-1059715210"} {:id "defn-/timeline-entries", :kind "defn-", :line 128, :end-line nil, :hash "-1795253343"} {:id "defn-/add-page-to-timeline", :kind "defn-", :line 133, :end-line nil, :hash "-2141246556"} {:id "defn-/latest-page-index", :kind "defn-", :line 136, :end-line nil, :hash "714616854"} {:id "defn-/add-event-to-matching-page", :kind "defn-", :line 143, :end-line nil, :hash "832033178"} {:id "defn-/add-entry-to-nested-timeline", :kind "defn-", :line 153, :end-line nil, :hash "1389420386"} {:id "defn/nested-timeline", :kind "defn", :line 159, :end-line nil, :hash "184350641"} {:id "defn/payload-property-items", :kind "defn", :line 162, :end-line nil, :hash "-1695777806"} {:id "defn/nested-event-details", :kind "defn", :line 171, :end-line nil, :hash "-550024329"} {:id "defn/nested-timeline-pageload-order-matches?", :kind "defn", :line 177, :end-line nil, :hash "1626274005"} {:id "defn/nested-timeline-event-groups-match?", :kind "defn", :line 181, :end-line nil, :hash "-1429788433"} {:id "defn/nested-timeline-observer-paths-match?", :kind "defn", :line 185, :end-line nil, :hash "-1609152257"} {:id "defn/canonical-payload-properties-match?", :kind "defn", :line 189, :end-line nil, :hash "-264172335"} {:id "defn/render-observed-event", :kind "defn", :line 193, :end-line nil, :hash "-1715193246"} {:id "defn/expand-pageload", :kind "defn", :line 201, :end-line nil, :hash "1118200052"} {:id "defn/record-collapsed-pageload", :kind "defn", :line 206, :end-line nil, :hash "1572303210"} {:id "defn/record-event-for-pageload", :kind "defn", :line 209, :end-line nil, :hash "1940684709"} {:id "defn/render-timeline-expanded-state", :kind "defn", :line 214, :end-line nil, :hash "-1045715902"} {:id "defn/pageload-expanded?", :kind "defn", :line 220, :end-line nil, :hash "1211539265"} {:id "defn/event-visible-without-reexpanding?", :kind "defn", :line 231, :end-line nil, :hash "997325431"} {:id "def/forbidden-timeline-capability-patterns", :kind "def", :line 244, :end-line nil, :hash "1179421373"} {:id "defn/forbidden-timeline-capability-findings", :kind "defn", :line 252, :end-line nil, :hash "181573916"} {:id "defn-/inspect-timeline-implementation", :kind "defn-", :line 255, :end-line nil, :hash "-1945393687"} {:id "defn-/first-visible-entry", :kind "defn-", :line 261, :end-line nil, :hash "-2031728269"} {:id "defn-/example-value-or", :kind "defn-", :line 264, :end-line nil, :hash "-1940368029"} {:id "defn-/default-payload-label", :kind "defn-", :line 267, :end-line nil, :hash "1878071429"} {:id "defn-/default-raw-label", :kind "defn-", :line 270, :end-line nil, :hash "-953873882"} {:id "defn-/example-entry-options", :kind "defn-", :line 273, :end-line nil, :hash "2130457195"} {:id "defn/forbidden-timeline-capability-findings-of-kind", :kind "defn", :line 285, :end-line nil, :hash "661283922"} {:id "defn/nested-timeline-wired?", :kind "defn", :line 288, :end-line nil, :hash "1463466039"} {:id "defn/tuple-event-display-wired?", :kind "defn", :line 296, :end-line nil, :hash "-1962455690"} {:id "defn/timeline-expanded-state-wired?", :kind "defn", :line 308, :end-line nil, :hash "372220421"} {:id "defn-/property-item", :kind "defn-", :line 317, :end-line nil, :hash "1550456326"} {:id "def/handlers", :kind "def", :line 321, :end-line nil, :hash "620594187"}]}
 ;; clj-mutate-manifest-end
