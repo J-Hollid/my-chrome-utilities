@@ -23,11 +23,32 @@ function observedPayload(rawPayload) {
     return rawPayload;
 }
 export function attachHistoryArrayObserver(state, options) {
+    if (options.pageAccessStatus === "page access unavailable") {
+        return {
+            ...state,
+            pageAccessStatus: options.pageAccessStatus,
+            observer: {
+                status: "page access unavailable",
+                historyPath: options.historyPath,
+                pageUrl: options.pageUrl,
+                activeCount: 0,
+            },
+        };
+    }
     const pageObject = options.pageObject ?? state.pageObject ?? samplePageObject();
     const status = pathStatus(pageObject, options.historyPath);
+    const activePageReadResult = options.pageObject === undefined
+        ? undefined
+        : {
+            historyPath: options.historyPath,
+            pageUrl: options.pageUrl,
+            pageObject,
+        };
     return {
         ...state,
         pageObject,
+        pageAccessStatus: options.pageAccessStatus ?? "page access available",
+        ...(activePageReadResult ? { activePageReadResult } : {}),
         observer: {
             status,
             historyPath: options.historyPath,

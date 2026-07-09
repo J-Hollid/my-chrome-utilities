@@ -1,9 +1,16 @@
 import type { HistoryArrayObserverAttachOptions } from "./data-layer-observer.js";
 
+const pageAccessAvailable = "page access available";
+const pageAccessUnavailable = "page access unavailable";
+
 interface ActiveTabContext {
   tabId?: number;
   pageUrl: string;
 }
+
+type ActivePageReadResult =
+  | { pageAccessStatus: typeof pageAccessAvailable; pageObject: unknown }
+  | { pageAccessStatus: typeof pageAccessUnavailable };
 
 async function activeTabContext(): Promise<ActiveTabContext> {
   try {
@@ -26,7 +33,7 @@ async function activeTabContext(): Promise<ActiveTabContext> {
 async function activeTabPageObject(
   tabId: number,
   historyPath: string,
-): Promise<unknown> {
+): Promise<ActivePageReadResult> {
   try {
     const [injection] = await chrome.scripting.executeScript({
       target: { tabId },
@@ -74,30 +81,43 @@ async function activeTabPageObject(
       },
     });
 
-    return injection?.result ?? {};
+    if (injection === undefined) {
+      return { pageAccessStatus: pageAccessUnavailable };
+    }
+
+    return {
+      pageAccessStatus: pageAccessAvailable,
+      pageObject: injection.result ?? {},
+    };
   } catch {
-    return {};
+    return { pageAccessStatus: pageAccessUnavailable };
   }
 }
 
 function observerAttachOptions(
   historyPath: string,
   pageUrl: string,
-  pageObject: unknown | undefined,
+  readResult: ActivePageReadResult,
 ): HistoryArrayObserverAttachOptions {
-  const options: HistoryArrayObserverAttachOptions = { historyPath, pageUrl };
+  const options: HistoryArrayObserverAttachOptions = {
+    historyPath,
+    pageUrl,
+    pageAccessStatus: readResult.pageAccessStatus,
+  };
 
-  return pageObject === undefined ? options : { ...options, pageObject };
+  return readResult.pageAccessStatus === pageAccessAvailable
+    ? { ...options, pageObject: readResult.pageObject }
+    : options;
 }
 
 export async function activePageObservation(
   historyPath: string,
 ): Promise<HistoryArrayObserverAttachOptions> {
   const activeTab = await activeTabContext();
-  const pageObject =
+  const readResult: ActivePageReadResult =
     activeTab.tabId === undefined
-      ? {}
+      ? { pageAccessStatus: pageAccessUnavailable }
       : await activeTabPageObject(activeTab.tabId, historyPath);
 
-  return observerAttachOptions(historyPath, activeTab.pageUrl, pageObject);
+  return observerAttachOptions(historyPath, activeTab.pageUrl, readResult);
 }
