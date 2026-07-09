@@ -35,7 +35,7 @@ import {
   startDataLayerTestingSession,
   type DataLayerSessionState,
 } from "./data-layer-session.js";
-import { timelineDetails, timelineSummary } from "./data-layer-timeline.js";
+import { nestedTimeline } from "./data-layer-timeline.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
@@ -107,31 +107,51 @@ function renderSessionState(): void {
 
   if (sessionTimeline) {
     sessionTimeline.replaceChildren(
-      ...(session?.timeline ?? []).map((entry) => {
+      ...nestedTimeline(session?.timeline ?? []).map((page) => {
         const item = document.createElement("li");
         const details = document.createElement("details");
         const summary = document.createElement("summary");
-        const summaryData = timelineSummary(entry);
-        const detailData = timelineDetails(entry);
-        const definitionList = document.createElement("dl");
+        const eventList = document.createElement("ul");
 
-        summary.textContent = [
-          summaryData.name,
-          summaryData.url,
-          summaryData.timestamp,
-          summaryData.observerPath,
-        ]
-          .filter((value) => value.length > 0)
-          .join(" | ");
+        summary.textContent = page.url;
 
-        appendDefinition(definitionList, "Event", detailData.name);
-        appendDefinition(definitionList, "URL", detailData.url);
-        appendDefinition(definitionList, "Time", detailData.timestamp);
-        appendDefinition(definitionList, "Path", detailData.observerPath);
-        appendDefinition(definitionList, "Payload", detailData.payload);
-        appendDefinition(definitionList, "Raw", detailData.rawValue);
+        for (const event of page.events) {
+          const eventItem = document.createElement("li");
+          const eventDetails = document.createElement("details");
+          const eventSummary = document.createElement("summary");
+          const definitionList = document.createElement("dl");
+          const payloadProperties = document.createElement("ul");
 
-        details.append(summary, definitionList);
+          eventSummary.textContent = [
+            event.name,
+            event.timestamp,
+            event.observerPath,
+          ]
+            .filter((value) => value.length > 0)
+            .join(" | ");
+
+          appendDefinition(definitionList, "Event", event.name);
+          appendDefinition(definitionList, "URL", event.url);
+          appendDefinition(definitionList, "Time", event.timestamp);
+          appendDefinition(definitionList, "Path", event.observerPath);
+          appendDefinition(definitionList, "Payload", event.payload);
+          appendDefinition(definitionList, "Raw", event.rawValue);
+
+          for (const property of event.payloadProperties) {
+            const propertyItem = document.createElement("li");
+            propertyItem.textContent = `${property.name}: ${property.value}`;
+            payloadProperties.append(propertyItem);
+          }
+
+          eventDetails.append(eventSummary, definitionList);
+          if (event.payloadProperties.length > 0) {
+            eventDetails.append(payloadProperties);
+          }
+          eventItem.append(eventDetails);
+          eventList.append(eventItem);
+        }
+
+        details.append(summary, eventList);
         item.append(details);
         return item;
       }),

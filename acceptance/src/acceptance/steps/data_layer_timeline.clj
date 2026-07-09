@@ -32,6 +32,88 @@
 (defn expanded-entry [entry]
   (select-keys entry [:name :url :observer-path :payload :raw-value]))
 
+(defn- page-entry [page-url]
+  {:type "page" :url page-url})
+
+(defn- comma-list [text]
+  (->> (str/split text #",")
+       (map str/trim)
+       (remove str/blank?)
+       vec))
+
+(defn parse-payload-properties [text]
+  (->> (comma-list text)
+       (map (fn [property]
+              (let [[name value] (str/split property #":\s*" 2)]
+                [(str/trim name) (str/trim (or value ""))])))
+       (into (array-map))))
+
+(defn- observed-event-entry [page-url history-path event-name payload]
+  {:type "observed"
+   :name event-name
+   :url page-url
+   :timestamp timeline-timestamp
+   :observer-path history-path
+   :payload payload
+   :raw-value {:event event-name :payload payload}})
+
+(defn- append-timeline-entry [state entry]
+  (let [next-state (update state :timeline-entries (fnil conj []) entry)]
+    (if (:session-state next-state)
+      (update next-state :session-state session/capture-entry entry)
+      next-state)))
+
+(defn- record-events-for-page [state page-url history-path events]
+  (reduce (fn [next-state event-name]
+            (append-timeline-entry
+             next-state
+             (observed-event-entry page-url history-path event-name {})))
+          (append-timeline-entry state (page-entry page-url))
+          events))
+
+(defn record-pageloads-with-events
+  [state {:keys [first-page-url second-page-url first-page-events second-page-events history-path]}]
+  (-> state
+      (record-events-for-page first-page-url history-path (comma-list first-page-events))
+      (record-events-for-page second-page-url history-path (comma-list second-page-events))))
+
+(defn record-observed-event-with-payload
+  [state {:keys [event-name payload-properties]}]
+  (append-timeline-entry
+   state
+   (observed-event-entry "" "" event-name (parse-payload-properties payload-properties))))
+
+(defn- add-event-to-last-page [pages entry]
+  (if (seq pages)
+    (update pages (dec (count pages)) update :events conj entry)
+    [{:url (:url entry) :events [entry]}]))
+
+(defn nested-timeline [state]
+  (reduce (fn [pages entry]
+            (case (:type entry)
+              "page" (conj pages {:url (:url entry) :events []})
+              "observed" (add-event-to-last-page pages entry)
+              pages))
+          []
+          (or (:timeline-entries state)
+              (get-in state [:session-state :session :timeline])
+              [])))
+
+(defn payload-property-items [entry]
+  (let [payload (:payload entry)]
+    (if (map? payload)
+      (mapv (fn [[name value]]
+              {:name (str name)
+               :value (str value)})
+            payload)
+      [])))
+
+(defn nested-event-details [state event-name]
+  (when-let [entry (first (filter #(= event-name (:name %))
+                                  (mapcat :events (nested-timeline state))))]
+    {:name event-name
+     :payload-properties (payload-property-items entry)}))
+
 (def forbidden-timeline-capability-patterns
   [{:kind :timeline-filtering
     :pattern #"(?i)timelineFilter|timeline filter"}
@@ -75,6 +157,14 @@
 
 (defn forbidden-timeline-capability-findings-of-kind [files kind]
   (filter #(= kind (:kind %)) (forbidden-timeline-capability-findings files)))
+
+(defn nested-timeline-wired? [files]
+  (let [timeline-source (get files "src/data-layer-timeline.ts" "")
+        side-panel-source (get files "src/side-panel.ts" "")]
+    (and (str/includes? timeline-source "nestedTimeline")
+         (str/includes? timeline-source "payloadProperties")
+         (str/includes? side-panel-source "nestedTimeline")
+         (str/includes? side-panel-source "payloadProperties"))))
 
 (def handlers
   [{:pattern #"^observed event entries are recorded$"
@@ -142,6 +232,92 @@
                                   {:event-name event-name
                                    :entries (visible-timeline-entries next-world)})
                  next-world))}
+
+   {:pattern #"^captured pageloads <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> contain observed events <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> from <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [first-page-url-key second-page-url-key first-page-events-key second-page-events-key history-path-key]]
+               (record-pageloads-with-events
+                world
+                {:first-page-url (support/require-example example first-page-url-key)
+                 :second-page-url (support/require-example example second-page-url-key)
+                 :first-page-events (support/require-example example first-page-events-key)
+                 :second-page-events (support/require-example example second-page-events-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^the side panel renders the nested data layer timeline$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files (inspect-timeline-implementation root)]
+                 (support/assert! (nested-timeline-wired? files)
+                                  "Nested data layer timeline is not wired."
+                                  {})
+                 (assoc world :nested-timeline (nested-timeline world))))}
+
+   {:pattern #"^pageloads <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> are top-level items in capture order$"
+    :handler (fn [world example [first-page-url-key second-page-url-key]]
+               (let [expected [(support/require-example example first-page-url-key)
+                               (support/require-example example second-page-url-key)]
+                     actual (mapv :url (:nested-timeline world))]
+                 (support/assert! (= expected actual)
+                                  "Pageloads are not top-level timeline items in capture order."
+                                  {:expected expected :actual actual})
+                 world))}
+
+   {:pattern #"^observed events <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> are second-level items under their pageloads with observer path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [first-page-events-key second-page-events-key history-path-key]]
+               (let [expected [(comma-list (support/require-example example first-page-events-key))
+                               (comma-list (support/require-example example second-page-events-key))]
+                     expected-path (support/require-example example history-path-key)
+                     groups (:nested-timeline world)
+                     actual (mapv #(mapv :name (:events %)) groups)
+                     paths (map :observer-path (mapcat :events groups))]
+                 (support/assert! (= expected actual)
+                                  "Observed events are not nested under pageloads."
+                                  {:expected expected :actual actual})
+                 (support/assert! (every? #(= expected-path %) paths)
+                                  "Observed event path does not match."
+                                  {:expected expected-path :actual paths})
+                 world))}
+
+   {:pattern #"^observed event <([A-Za-z0-9_]+)> carries raw payload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key payload-properties-key]]
+               (record-observed-event-with-payload
+                world
+                {:event-name (support/require-example example event-name-key)
+                 :payload-properties (support/require-example example payload-properties-key)}))}
+
+   {:pattern #"^the side panel displays nested event details$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files (inspect-timeline-implementation root)]
+                 (support/assert! (nested-timeline-wired? files)
+                                  "Nested data layer event details are not wired."
+                                  {})
+                 world))}
+
+   {:pattern #"^payload properties <([A-Za-z0-9_]+)> are third-level items under observed event <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [payload-properties-key event-name-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     expected (mapv (fn [[name value]]
+                                      {:name name :value value})
+                                    (parse-payload-properties
+                                     (support/require-example example payload-properties-key)))
+                     actual (:payload-properties (nested-event-details world event-name))]
+                 (support/assert! (= expected actual)
+                                  "Payload properties are not nested under the observed event."
+                                  {:expected expected :actual actual})
+                 world))}
+
+   {:pattern #"^scalar payload values are displayed as quoted values$"
+    :handler (fn [world _example _captures]
+               (let [values (map :value
+                                 (:payload-properties
+                                  (nested-event-details
+                                   world
+                                   (get-in (first (visible-timeline-entries world)) [:name]))))]
+                 (support/assert! (every? #(re-matches #"\".*\"" %) values)
+                                  "Scalar payload values are not displayed as quoted values."
+                                  {:values values})
+                 world))}
 
    {:pattern #"^the timeline entry is expanded$"
     :handler (fn [world _example _captures]
