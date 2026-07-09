@@ -242,11 +242,14 @@
 (defn session-timeline [state]
   (get-in state [:session-state :session :timeline]))
 
+(defn- observed-event-entry? [event-name entry]
+  (and (= "observed" (:type entry))
+       (= event-name (:name entry))))
+
 (defn session-timeline-shows-page-and-observed? [state page-url event-name]
   (let [timeline (session-timeline state)]
     (and (= {:type "page" :url page-url} (first timeline))
-         (some #(and (= "observed" (:type %))
-                     (= event-name (:name %)))
+         (some #(observed-event-entry? event-name %)
                (rest timeline)))))
 
 (defn observed-entry-matches? [entry {:keys [page-url history-path payload-label]}]

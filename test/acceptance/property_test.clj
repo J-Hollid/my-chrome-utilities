@@ -291,6 +291,48 @@
                                                        :timeline])))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-observer-live-capture-conserves-generated-session-events
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               queued-event path-segment-gen
+                               queued-payload path-segment-gen
+                               pushed-event path-segment-gen
+                               pushed-payload path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        history-path (str root "." leaf)
+                        state (-> {:history-path history-path}
+                                  (data-layer-observer/define-active-page-window-with-entry
+                                   {:page-url url
+                                    :history-path history-path
+                                    :event-name queued-event
+                                    :payload-label queued-payload})
+                                  data-layer-observer/start-side-panel-live-capture
+                                  (data-layer-observer/page-push pushed-event
+                                                                 pushed-payload))
+                        timeline (data-layer-observer/session-timeline state)
+                        observed (filter #(= "observed" (:type %)) timeline)
+                        last-entry (data-layer-observer/last-observed-entry state)]
+                    (and (= {:type "page" :url url} (first timeline))
+                         (= [queued-event pushed-event] (map :name observed))
+                         (every? #(= url (:url %)) observed)
+                         (every? #(= history-path (:observer-path %)) observed)
+                         (data-layer-observer/session-timeline-shows-page-and-observed?
+                          state
+                          url
+                          queued-event)
+                         (data-layer-observer/session-timeline-shows-page-and-observed?
+                          state
+                          url
+                          pushed-event)
+                         (data-layer-observer/observed-entry-matches?
+                          last-entry
+                          {:page-url url
+                           :history-path history-path
+                           :payload-label pushed-payload})))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-observer-resolves-generated-active-page-window-paths
   (let [result (check
                 (prop/for-all [route path-segment-gen
