@@ -1,5 +1,6 @@
 (ns acceptance.data-layer-observer-steps-test
-  (:require [acceptance.steps.data-layer-observer :as observer]
+  (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.data-layer-observer :as observer]
             [acceptance.steps.data-layer-session :as session]
             [clojure.test :refer [deftest is]]))
 
@@ -181,10 +182,73 @@
     (is (= "event.history" (:waited-for-history-path state)))
     (is (= 1 (count entries)))))
 
+(defn- execute-observer-step [world text]
+  (runtime/execute-step! world
+                         {}
+                         {:keyword "And"
+                          :text text}
+                         observer/handlers))
+
+(defn- active-pageload-session-state []
+  {:history-path "event.history"
+   :session-state (session/run-start-command {}
+                                             {:tab-id "active-tab"
+                                              :url "https://www.example.com/"
+                                              :history-path "event.history"})})
+
+(deftest canonical-pageload-refresh-steps-match-navigation-refresh
+  (let [state (-> (active-pageload-session-state)
+                  (observer/attach-observation-on-page "https://www.example.com/")
+                  (observer/navigate-with-delayed-history-path
+                   {:page-url "https://www.example.com/product"
+                    :history-path "event.history"})
+                  (observer/page-push-after-ready "pageview" "event.history"))]
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh starts from the canonical page URL")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh uses the canonical product page URL")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh uses the canonical history path")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh captures the canonical event")))))
+
+(deftest canonical-pageload-refresh-steps-match-reload-refresh
+  (let [state (-> (active-pageload-session-state)
+                  (observer/attach-observation-on-page "https://www.example.com/")
+                  (observer/reload-with-delayed-history-path
+                   {:page-url "https://www.example.com/"
+                    :history-path "event.history"})
+                  (observer/page-push-after-ready "pageview" "event.history"))]
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh starts from the canonical page URL")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh uses the canonical reload page URL")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh uses the canonical history path")))
+    (is (= state
+           (execute-observer-step
+            state
+            "the pageload refresh captures the canonical event")))))
+
 (deftest side-panel-source-refreshes-observation-after-pageload
   (is (observer/pageload-observation-refresh-wired?
        {"src/side-panel.ts" (slurp "src/side-panel.ts")
         "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
+        "src/data-layer-observation-refresh.ts" (slurp "src/data-layer-observation-refresh.ts")
         "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))
 
 (deftest reports-disallowed-observer-capabilities

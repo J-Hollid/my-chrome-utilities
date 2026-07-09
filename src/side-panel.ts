@@ -20,6 +20,17 @@ import {
   type DataLayerHistoryObserverState,
 } from "./data-layer-observer.js";
 import {
+  beginObservedPageLoad,
+  initialObservationRefreshState,
+  markObservationRefreshPageEntryCaptured,
+  nextObservationRefreshAttempt,
+  observationRefreshDelay,
+  observationRefreshRequestForPageLoad,
+  observationRefreshRequestIsCurrent,
+  shouldRetryObservationRefresh,
+  type ObservationRefreshRequest,
+} from "./data-layer-observation-refresh.js";
+import {
   startLiveHistoryPushCapture,
   type StopLiveHistoryPushCapture,
 } from "./data-layer-live-observation.js";
@@ -47,8 +58,6 @@ import {
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
-const OBSERVATION_REFRESH_RETRY_DELAY_MS = 500;
-const OBSERVATION_REFRESH_MAX_ATTEMPTS = 10;
 
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
@@ -86,17 +95,7 @@ let dataLayerObserverState: DataLayerHistoryObserverState = {
 };
 let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
 let observationRefreshTimeoutId: number | undefined;
-let observationRefreshToken = 0;
-let observedPageLoadSequence = 0;
-let scheduledObservationRefreshSequence: number | undefined;
-
-interface ObservationRefreshRequest {
-  token: number;
-  tabId: number;
-  pageUrl: string;
-  attempt: number;
-  pageEntryCaptured: boolean;
-}
+let observationRefreshState = initialObservationRefreshState;
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -291,16 +290,12 @@ function capturePageEntryForRefresh(
   });
   persistAndRenderSessionState();
 
-  return {
-    ...request,
-    pageEntryCaptured: true,
-  };
+  return markObservationRefreshPageEntryCaptured(request);
 }
 
 function scheduleObservationRefresh(request: ObservationRefreshRequest): void {
   clearScheduledObservationRefresh();
-  const delay =
-    request.attempt === 0 ? 0 : OBSERVATION_REFRESH_RETRY_DELAY_MS;
+  const delay = observationRefreshDelay(request.attempt);
 
   observationRefreshTimeoutId = globalThis.setTimeout(() => {
     observationRefreshTimeoutId = undefined;
@@ -317,26 +312,25 @@ function refreshObservationAfterPageLoad(
     return;
   }
 
-  if (scheduledObservationRefreshSequence === pageLoadSequence) {
-    return;
-  }
-
-  scheduledObservationRefreshSequence = pageLoadSequence;
-  observationRefreshToken += 1;
-  scheduleObservationRefresh({
-    token: observationRefreshToken,
+  const schedule = observationRefreshRequestForPageLoad(
+    observationRefreshState,
     tabId,
     pageUrl,
-    attempt: 0,
-    pageEntryCaptured: false,
-  });
+    pageLoadSequence,
+  );
+
+  observationRefreshState = schedule.state;
+
+  if (schedule.request) {
+    scheduleObservationRefresh(schedule.request);
+  }
 }
 
 async function runObservationRefresh(
   request: ObservationRefreshRequest,
 ): Promise<void> {
   if (
-    request.token !== observationRefreshToken ||
+    !observationRefreshRequestIsCurrent(observationRefreshState, request) ||
     !activeSessionTabMatches(request.tabId)
   ) {
     return;
@@ -356,7 +350,7 @@ async function runObservationRefresh(
   );
 
   if (
-    nextRequest.token !== observationRefreshToken ||
+    !observationRefreshRequestIsCurrent(observationRefreshState, nextRequest) ||
     !activeSessionTabMatches(nextRequest.tabId)
   ) {
     return;
@@ -376,13 +370,12 @@ async function runObservationRefresh(
   }
 
   if (
-    observation.pageAccessStatus !== "page access unavailable" &&
-    nextRequest.attempt + 1 < OBSERVATION_REFRESH_MAX_ATTEMPTS
+    shouldRetryObservationRefresh(
+      observation.pageAccessStatus,
+      nextRequest.attempt,
+    )
   ) {
-    scheduleObservationRefresh({
-      ...nextRequest,
-      attempt: nextRequest.attempt + 1,
-    });
+    scheduleObservationRefresh(nextObservationRefreshAttempt(nextRequest));
   }
 }
 
@@ -560,9 +553,7 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
     }
 
     if (changeInfo.status === "loading" || changeInfo.url !== undefined) {
-      observedPageLoadSequence += 1;
-      scheduledObservationRefreshSequence = undefined;
-      observationRefreshToken += 1;
+      observationRefreshState = beginObservedPageLoad(observationRefreshState);
       clearScheduledObservationRefresh();
       stopLiveHistoryCapture();
 
@@ -585,7 +576,7 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
       refreshObservationAfterPageLoad(
         tabId,
         pageUrl,
-        observedPageLoadSequence,
+        observationRefreshState.observedPageLoadSequence,
       );
     }
   });
