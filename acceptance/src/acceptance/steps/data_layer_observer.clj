@@ -63,16 +63,20 @@
     (update state :session-state session/capture-entry entry)
     state))
 
+(defn- record-observed-entry [state observer raw-value]
+  (let [entry (observed-entry observer raw-value)]
+    (-> state
+        (update :observed-entries (fnil conj []) entry)
+        (capture-observed-entry-in-session entry))))
+
 (defn- observed-push-state [state observer raw-value]
   (let [parts (path-parts (:history-path observer))
         page-object (update-in (:page-object state) parts conj raw-value)
-        push-return (count (get-in page-object parts))
-        entry (observed-entry observer raw-value)]
+        push-return (count (get-in page-object parts))]
     (-> state
         (assoc :page-object page-object
                :push-return push-return)
-        (update :observed-entries (fnil conj []) entry)
-        (capture-observed-entry-in-session entry))))
+        (record-observed-entry observer raw-value))))
 
 (defn page-push [state event-name payload-label]
   (let [raw-value (history-entry event-name payload-label)
@@ -117,12 +121,13 @@
            :page-object page-object)))
 
 (defn define-active-page-window-with-entry
-  [state {:keys [page-url history-path event-name]}]
+  [state {:keys [page-url history-path event-name payload-label]}]
   (let [page-object (update-in (page-object-with-history-path history-path)
                                (path-parts history-path)
                                conj
                                (history-entry event-name
-                                              (str event-name "-payload")))]
+                                              (or payload-label
+                                                  (str event-name "-payload"))))]
     (assoc state
            :active-page-window {:page-url page-url
                                 :page-access-status page-access-available
@@ -172,6 +177,25 @@
 (defn start-active-page-observation [state]
   (read-active-page-history-path state (:history-path state)))
 
+(defn- capture-queued-history-entries [state]
+  (let [observer (:observer state)
+        entries (path-value (:page-object state) (:history-path observer))]
+    (if (and (observer-ready? observer) (sequential? entries))
+      (reduce #(record-observed-entry %1 observer %2) state entries)
+      state)))
+
+(defn start-side-panel-live-capture [state]
+  (let [active-page (:active-page-window state)]
+    (-> state
+        (assoc :session-state
+               (session/run-start-command
+                (:session-state state)
+                {:tab-id "active-tab"
+                 :url (:page-url active-page)
+                 :history-path (:history-path state)}))
+        (read-active-page-history-path (:history-path state))
+        capture-queued-history-entries)))
+
 (defn active-page-read-succeeded? [state]
   (= page-access-available (:page-access-status state)))
 
@@ -206,6 +230,30 @@
          (str/includes? active-page-source "pageAccessStatus")
          (str/includes? active-page-source page-access-unavailable))))
 
+(defn live-history-push-capture-wired? [files]
+  (let [side-panel-source (get files "src/side-panel.ts" "")
+        observer-source (get files "src/data-layer-observer.ts" "")]
+    (and (str/includes? side-panel-source "activePageObservation")
+         (str/includes? side-panel-source "attachHistoryArrayObserver")
+         (str/includes? side-panel-source "sessionState")
+         (str/includes? observer-source "appendObservedHistoryEntry")
+         (str/includes? observer-source "captureExistingHistoryEntries"))))
+
+(defn session-timeline [state]
+  (get-in state [:session-state :session :timeline]))
+
+(defn session-timeline-shows-page-and-observed? [state page-url event-name]
+  (let [timeline (session-timeline state)]
+    (and (= {:type "page" :url page-url} (first timeline))
+         (some #(and (= "observed" (:type %))
+                     (= event-name (:name %)))
+               (rest timeline)))))
+
+(defn observed-entry-matches? [entry {:keys [page-url history-path payload-label]}]
+  (and (= page-url (:url entry))
+       (= history-path (:observer-path entry))
+       (= payload-label (:payload entry))))
+
 (def handlers
   [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key event-name-key payload-label-key]]
@@ -216,6 +264,62 @@
                      (attach-observer {:history-path (:history-path world)
                                        :page-url page-url})
                      (page-push event-name payload-label))))}
+
+   {:pattern #"^page <([A-Za-z0-9_]+)> has no queued data layer entries at <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key history-path-key]]
+               (define-active-page-window
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^before testing starts, page <([A-Za-z0-9_]+)> has queued data layer entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)> at <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key event-name-key payload-label-key history-path-key]]
+               (define-active-page-window-with-entry
+                world
+                {:page-url (support/require-example example page-url-key)
+                 :history-path (support/require-example example history-path-key)
+                 :event-name (support/require-example example event-name-key)
+                 :payload-label (support/require-example example payload-label-key)}))}
+
+   {:pattern #"^data layer testing is started from the side panel for the active website page$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
+                            "src/data-layer-observer.ts" (support/source-file root "src/data-layer-observer.ts")}]
+                 (support/assert! (live-history-push-capture-wired? files)
+                                  "Live history push capture is not wired."
+                                  {})
+                 (start-side-panel-live-capture world)))}
+
+   {:pattern #"^the active website page pushes history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key payload-label-key]]
+               (page-push world
+                          (support/require-example example event-name-key)
+                          (support/require-example example payload-label-key)))}
+
+   {:pattern #"^the side panel session timeline shows initial page entry <([A-Za-z0-9_]+)> and observed event <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key event-name-key]]
+               (let [page-url (support/require-example example page-url-key)
+                     event-name (support/require-example example event-name-key)]
+                 (support/assert! (session-timeline-shows-page-and-observed?
+                                   world
+                                   page-url
+                                   event-name)
+                                  "Session timeline does not show the initial page and observed event."
+                                  {:timeline (session-timeline world)})
+                 world))}
+
+   {:pattern #"^the observed event entry matches page URL <([A-Za-z0-9_]+)>, observer path <([A-Za-z0-9_]+)>, and payload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [page-url-key history-path-key payload-label-key]]
+               (let [expected {:page-url (support/require-example example page-url-key)
+                               :history-path (support/require-example example history-path-key)
+                               :payload-label (support/require-example example payload-label-key)}
+                     entry (last-observed-entry world)]
+                 (support/assert! (observed-entry-matches? entry expected)
+                                  "Observed event entry does not match."
+                                  {:expected expected
+                                   :entry entry})
+                 world))}
 
    {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key history-path-key]]

@@ -114,7 +114,9 @@ async function recordDataLayerCommandRun(entry) {
                 type: "page",
                 url: observation.pageUrl,
             });
-            dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
+            dataLayerObserverState = attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, observation);
+            dataLayerSessionState =
+                dataLayerObserverState.sessionState ?? dataLayerSessionState;
         }
         persistSession(dataLayerSessionState);
         renderSessionState();
@@ -213,12 +215,20 @@ historyPathInput?.addEventListener("input", () => {
     renderHistoryPath(path);
     void activePageObservation(path).then((observation) => {
         dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
+        dataLayerSessionState =
+            dataLayerObserverState.sessionState ?? dataLayerSessionState;
+        persistSession(dataLayerSessionState);
+        renderSessionState();
         renderObserverState();
     });
 });
 restartObservationButton?.addEventListener("click", () => {
     void activePageObservation(getHistoryArrayPath()).then((observation) => {
         dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        dataLayerSessionState =
+            dataLayerObserverState.sessionState ?? dataLayerSessionState;
+        persistSession(dataLayerSessionState);
+        renderSessionState();
         renderObserverState();
     });
 });

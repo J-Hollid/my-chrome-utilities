@@ -14,7 +14,7 @@ export function restartObservation(sessionState, observerState, options) {
     if (!session || session.status !== "active") {
         return observerState;
     }
-    return attachHistoryArrayObserver(observerState, {
+    return attachHistoryArrayObserver({ ...observerState, sessionState }, {
         historyPath: session.historyPath,
         pageUrl: options.pageUrl,
         ...(options.pageObject === undefined

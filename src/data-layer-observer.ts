@@ -81,6 +81,79 @@ function observedPayload(rawPayload: unknown): unknown {
   return rawPayload;
 }
 
+function historyEntryName(rawValue: unknown): string {
+  if (
+    rawValue !== null &&
+    typeof rawValue === "object" &&
+    "event" in rawValue
+  ) {
+    const event = (rawValue as { event: unknown }).event;
+    return typeof event === "string" ? event : String(event ?? "");
+  }
+
+  return "";
+}
+
+function historyEntryPayload(rawValue: unknown): unknown {
+  if (
+    rawValue !== null &&
+    typeof rawValue === "object" &&
+    "payload" in rawValue
+  ) {
+    return (rawValue as { payload: unknown }).payload;
+  }
+
+  return undefined;
+}
+
+function observedEntry(
+  observer: DataLayerHistoryObserver,
+  rawValue: unknown,
+  timestamp = new Date().toISOString(),
+): ObservedDataLayerEntry {
+  return {
+    type: "observed",
+    url: observer.pageUrl,
+    timestamp,
+    observerPath: observer.historyPath,
+    name: historyEntryName(rawValue),
+    payload: observedPayload(historyEntryPayload(rawValue)),
+    rawValue,
+  };
+}
+
+function captureObservedEntry(
+  state: DataLayerHistoryObserverState,
+  entry: ObservedDataLayerEntry,
+): DataLayerHistoryObserverState {
+  const sessionState = state.sessionState
+    ? captureEntry(state.sessionState, entry)
+    : undefined;
+
+  return {
+    ...state,
+    observedEntries: [...(state.observedEntries ?? []), entry],
+    ...(sessionState ? { sessionState } : {}),
+  };
+}
+
+function captureExistingHistoryEntries(
+  state: DataLayerHistoryObserverState,
+  observer: DataLayerHistoryObserver,
+): DataLayerHistoryObserverState {
+  const historyArray = valueAtPath(state.pageObject, observer.historyPath);
+
+  if (!Array.isArray(historyArray)) {
+    return state;
+  }
+
+  return historyArray.reduce<DataLayerHistoryObserverState>(
+    (nextState, rawValue) =>
+      captureObservedEntry(nextState, observedEntry(observer, rawValue)),
+    state,
+  );
+}
+
 export function attachHistoryArrayObserver(
   state: DataLayerHistoryObserverState,
   options: HistoryArrayObserverAttachOptions,
@@ -109,19 +182,23 @@ export function attachHistoryArrayObserver(
           pageUrl: options.pageUrl,
           pageObject,
         };
-
-  return {
+  const observer: DataLayerHistoryObserver = {
+    status,
+    historyPath: options.historyPath,
+    pageUrl: options.pageUrl,
+    activeCount: status === "ready" ? 1 : 0,
+  };
+  const nextState: DataLayerHistoryObserverState = {
     ...state,
     pageObject,
     pageAccessStatus: options.pageAccessStatus ?? "page access available",
     ...(activePageReadResult ? { activePageReadResult } : {}),
-    observer: {
-      status,
-      historyPath: options.historyPath,
-      pageUrl: options.pageUrl,
-      activeCount: status === "ready" ? 1 : 0,
-    },
+    observer,
   };
+
+  return status === "ready"
+    ? captureExistingHistoryEntries(nextState, observer)
+    : nextState;
 }
 
 export function reinstallHistoryArrayObserver(
@@ -155,23 +232,9 @@ export function appendObservedHistoryEntry(
   }
 
   const pushReturn = historyArray.push(rawValue);
-  const entry: ObservedDataLayerEntry = {
-    type: "observed",
-    url: observer.pageUrl,
-    timestamp,
-    observerPath: observer.historyPath,
-    name: rawValue.event,
-    payload: observedPayload(rawValue.payload),
-    rawValue,
-  };
-  const sessionState = state.sessionState
-    ? captureEntry(state.sessionState, entry)
-    : undefined;
 
   return {
-    ...state,
-    observedEntries: [...(state.observedEntries ?? []), entry],
+    ...captureObservedEntry(state, observedEntry(observer, rawValue, timestamp)),
     pushReturn,
-    ...(sessionState ? { sessionState } : {}),
   };
 }
