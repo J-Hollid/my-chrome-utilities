@@ -603,6 +603,47 @@
                          (false? (:raw-payload-object-visible? rendered))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-timeline-preserves-generated-expanded-page-state
+  (let [result (check
+                (prop/for-all [expanded-route path-segment-gen
+                               collapsed-route path-segment-gen
+                               first-event path-segment-gen
+                               second-event path-segment-gen
+                               collapsed-event path-segment-gen]
+                  (let [expanded-url (str "https://example.test/expanded/"
+                                          expanded-route)
+                        collapsed-url (str "https://example.test/collapsed/"
+                                           collapsed-route)
+                        state (-> {}
+                                  (data-layer-timeline/expand-pageload
+                                   expanded-url)
+                                  (data-layer-timeline/record-event-for-pageload
+                                   {:page-url expanded-url
+                                    :event-name first-event})
+                                  (data-layer-timeline/record-event-for-pageload
+                                   {:page-url expanded-url
+                                    :event-name second-event})
+                                  (data-layer-timeline/record-event-for-pageload
+                                   {:page-url collapsed-url
+                                    :event-name collapsed-event})
+                                  data-layer-timeline/render-timeline-expanded-state)
+                        expanded-pageloads (get-in state
+                                                   [:rendered-expanded-timeline
+                                                    :expanded-pageloads])]
+                    (and (= #{expanded-url} expanded-pageloads)
+                         (data-layer-timeline/event-visible-without-reexpanding?
+                          state
+                          expanded-url
+                          first-event)
+                         (data-layer-timeline/event-visible-without-reexpanding?
+                          state
+                          expanded-url
+                          second-event)
+                         (not (data-layer-timeline/pageload-expanded?
+                               state
+                               collapsed-url))))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-recovery-preserves-session-history-after-navigation
   (let [result (check
                 (prop/for-all [route path-segment-gen
