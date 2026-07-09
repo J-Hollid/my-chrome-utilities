@@ -291,6 +291,42 @@
                                                        :timeline])))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-observer-resolves-generated-active-page-window-paths
+  (let [result (check
+                (prop/for-all [route path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               event-name path-segment-gen
+                               payload-label path-segment-gen]
+                  (let [url (str "https://example.test/" route)
+                        history-path (str root "." leaf)
+                        ready-state (-> {:history-path history-path}
+                                        (data-layer-observer/define-active-page-window
+                                         {:page-url url
+                                          :history-path history-path})
+                                        data-layer-observer/start-active-page-observation
+                                        (data-layer-observer/page-push event-name
+                                                                       payload-label))
+                        missing-state (-> {:history-path history-path}
+                                          (data-layer-observer/define-active-page-window-without-path
+                                           {:page-url url})
+                                          data-layer-observer/start-active-page-observation)
+                        entry (data-layer-observer/last-observed-entry ready-state)]
+                    (and (= "ready" (get-in ready-state [:observer :status]))
+                         (= 1 (:push-return ready-state))
+                         (= url (:url entry))
+                         (= history-path (:observer-path entry))
+                         (= event-name (:name entry))
+                         (= payload-label (:payload entry))
+                         (data-layer-observer/page-owned-history-entry?
+                          ready-state
+                          event-name)
+                         (= "path missing"
+                            (get-in missing-state [:observer :status]))
+                         (zero? (get-in missing-state
+                                        [:observer :active-count]))))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-timeline-preserves-generated-entry-order-and-session-capture
   (let [result (check
                 (prop/for-all [route path-segment-gen

@@ -43,4 +43,5 @@
 
 (deftest side-panel-source-uses-active-tab-page-context
   (is (page-context/side-panel-uses-active-tab-page-context?
-       (slurp "src/side-panel.ts"))))
+       {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")})))

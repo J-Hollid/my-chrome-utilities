@@ -12,6 +12,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "sourceMap": true,
+    "inlineSources": true,
     "declaration": false,
     "skipLibCheck": false
   },
