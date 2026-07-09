@@ -15,6 +15,10 @@
                {:name "propertyx" :value "\"example property\""}]
    "scroll" [{:name "scroll_percentage" :value "\"75\""}]
    "add to cart" [{:name "product_name" :value "\"example product\""}]})
+(def canonical-tuple-payload-values
+  {"page_name" "\"example page_name\""
+   "page_type" "\"homepage\""
+   "propertyx" "\"example property\""})
 
 (defn- observed-entry [{:keys [event-name page-url history-path payload-label raw-label]}]
   {:type "observed"
@@ -94,6 +98,28 @@
    state
    (observed-event-entry "" "" event-name (parse-payload-properties payload-properties))))
 
+(defn- tuple-payload-object [payload-object]
+  (->> (comma-list payload-object)
+       (map (fn [property-name]
+              [property-name
+               (get canonical-tuple-payload-values
+                    property-name
+                    (str "\"example " property-name "\""))]))
+       (into (array-map))))
+
+(defn record-observed-tuple
+  [state {:keys [event-name history-path timestamp payload-object]}]
+  (let [payload (tuple-payload-object payload-object)]
+    (append-timeline-entry
+     state
+     {:type "observed"
+      :name event-name
+      :url ""
+      :timestamp timestamp
+      :observer-path history-path
+      :payload payload
+      :raw-value [event-name payload]})))
+
 (defn- timeline-entries [state]
   (or (:timeline-entries state)
       (get-in state [:session-state :session :timeline])
@@ -159,6 +185,14 @@
   (= (get canonical-payload-properties event-name ::missing)
      (:payload-properties (nested-event-details state event-name))))
 
+(defn render-observed-event [state]
+  (let [entry (first (visible-timeline-entries state))
+        detail-lines (payload-property-items entry)]
+    {:heading (str (:name entry) " | " (:observer-path entry))
+     :detail-lines detail-lines
+     :raw-payload-object-visible? (and (empty? detail-lines)
+                                       (some? (:raw-value entry)))}))
+
 (def forbidden-timeline-capability-patterns
   [{:kind :timeline-filtering
     :pattern #"(?i)timelineFilter|timeline filter"}
@@ -210,6 +244,21 @@
          (str/includes? timeline-source "payloadProperties")
          (str/includes? side-panel-source "nestedTimeline")
          (str/includes? side-panel-source "payloadProperties"))))
+
+(defn tuple-event-display-wired? [files]
+  (let [observer-source (get files "src/data-layer-observer.ts" "")
+        timeline-source (get files "src/data-layer-timeline.ts" "")
+        side-panel-source (get files "src/side-panel.ts" "")]
+    (and (str/includes? observer-source "Array.isArray(rawValue)")
+         (str/includes? observer-source "tupleHistoryEntryPayload")
+         (str/includes? timeline-source "displayPayloadValue")
+         (str/includes? timeline-source "displayRawValue")
+         (str/includes? side-panel-source "timelineEventHeading")
+         (str/includes? side-panel-source "appendDefinition(definitionList, \"Raw\", event.rawValue)"))))
+
+(defn- property-item [text]
+  (let [[name value] (first (seq (parse-payload-properties text)))]
+    {:name name :value value}))
 
 (def handlers
   [{:pattern #"^observed event entries are recorded$"
@@ -399,6 +448,66 @@
                                             (nested-event-details world
                                                                   event-name))})
                  world))}
+
+   {:pattern #"^observed data layer tuple \[<([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>\] is captured at <([A-Za-z0-9_]+)> from <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key payload-object-key timestamp-key history-path-key]]
+               (record-observed-tuple
+                world
+                {:event-name (support/require-example example event-name-key)
+                 :payload-object (support/require-example example payload-object-key)
+                 :timestamp (support/require-example example timestamp-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^the side panel renders the observed event$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files (support/source-file-map root
+                                                    ["src/data-layer-observer.ts"
+                                                     "src/data-layer-timeline.ts"
+                                                     "src/side-panel.ts"])]
+                 (support/assert! (tuple-event-display-wired? files)
+                                  "Tuple event display is not wired."
+                                  {})
+                 (assoc world :rendered-observed-event
+                        (render-observed-event world))))}
+
+   {:pattern #"^the observed event heading uses <([A-Za-z0-9_]+)> instead of <([A-Za-z0-9_]+)> before observer path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key timestamp-key history-path-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     timestamp (support/require-example example timestamp-key)
+                     history-path (support/require-example example history-path-key)
+                     heading (get-in world [:rendered-observed-event :heading])]
+                 (support/assert! (= (str event-name " | " history-path)
+                                     heading)
+                                  "Observed event heading does not use event name before observer path."
+                                  {:expected (str event-name " | " history-path)
+                                   :actual heading})
+                 (support/assert! (not (str/includes? heading timestamp))
+                                  "Observed event heading still shows timestamp before observer path."
+                                  {:timestamp timestamp
+                                   :heading heading})
+                 world))}
+
+   {:pattern #"^payload properties <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> are displayed as separate event detail lines$"
+    :handler (fn [world example [first-property-key second-property-key third-property-key]]
+               (let [expected [(property-item (support/require-example example first-property-key))
+                               (property-item (support/require-example example second-property-key))
+                               (property-item (support/require-example example third-property-key))]
+                     actual (get-in world [:rendered-observed-event :detail-lines])]
+                 (support/assert! (= expected actual)
+                                  "Tuple payload properties are not displayed as separate detail lines."
+                                  {:expected expected
+                                   :actual actual})
+                 world))}
+
+   {:pattern #"^raw payload object display is not shown for the observed event$"
+    :handler (fn [world _example _captures]
+               (support/assert! (false? (get-in world [:rendered-observed-event
+                                                       :raw-payload-object-visible?]))
+                                "Raw payload object display is visible."
+                                {:rendered-observed-event
+                                 (:rendered-observed-event world)})
+               world)}
 
    {:pattern #"^scalar payload values are displayed as quoted values$"
     :handler (fn [world _example _captures]

@@ -81,7 +81,27 @@ function observedPayload(rawPayload: unknown): unknown {
   return rawPayload;
 }
 
+function tupleHistoryEntryName(rawValue: unknown): string | undefined {
+  if (!Array.isArray(rawValue)) {
+    return undefined;
+  }
+
+  const eventName = rawValue[0];
+
+  return typeof eventName === "string" ? eventName : undefined;
+}
+
+function tupleHistoryEntryPayload(rawValue: unknown): unknown {
+  return Array.isArray(rawValue) ? rawValue[1] : undefined;
+}
+
 function historyEntryName(rawValue: unknown): string {
+  const tupleName = tupleHistoryEntryName(rawValue);
+
+  if (tupleName !== undefined) {
+    return tupleName;
+  }
+
   if (
     rawValue !== null &&
     typeof rawValue === "object" &&
@@ -95,6 +115,12 @@ function historyEntryName(rawValue: unknown): string {
 }
 
 function historyEntryPayload(rawValue: unknown): unknown {
+  const tuplePayload = tupleHistoryEntryPayload(rawValue);
+
+  if (tuplePayload !== undefined) {
+    return tuplePayload;
+  }
+
   if (
     rawValue !== null &&
     typeof rawValue === "object" &&
