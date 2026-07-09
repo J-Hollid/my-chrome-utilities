@@ -173,6 +173,21 @@
         "src/data-layer-timeline.ts" (slurp "src/data-layer-timeline.ts")
         "src/side-panel.ts" (slurp "src/side-panel.ts")})))
 
+(deftest preserves-expanded-pageload-when-event-is-recorded
+  (let [page-url "https://www.example.com/"
+        state (-> {}
+                  (timeline/expand-pageload page-url)
+                  (timeline/record-event-for-pageload
+                   {:page-url page-url
+                    :event-name "scroll"})
+                  timeline/render-timeline-expanded-state)]
+    (is (timeline/pageload-expanded? state page-url))
+    (is (timeline/event-visible-without-reexpanding? state page-url "scroll"))))
+
+(deftest side-panel-source-preserves-expanded-timeline-state
+  (is (timeline/timeline-expanded-state-wired?
+       {"src/side-panel.ts" (slurp "src/side-panel.ts")})))
+
 (deftest reports-disallowed-timeline-capabilities
   (is (empty?
        (timeline/forbidden-timeline-capability-findings

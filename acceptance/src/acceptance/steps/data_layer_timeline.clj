@@ -193,6 +193,35 @@
      :raw-payload-object-visible? (and (empty? detail-lines)
                                        (some? (:raw-value entry)))}))
 
+(defn expand-pageload [state page-url]
+  (-> state
+      (append-timeline-entry (page-entry page-url))
+      (update :expanded-pageloads (fnil conj #{}) page-url)))
+
+(defn record-event-for-pageload [state {:keys [page-url event-name]}]
+  (append-timeline-entry
+   state
+   (observed-event-entry page-url canonical-history-path event-name {})))
+
+(defn render-timeline-expanded-state [state]
+  (assoc state
+         :rendered-expanded-timeline
+         {:expanded-pageloads (:expanded-pageloads state)
+          :nested-timeline (nested-timeline state)}))
+
+(defn pageload-expanded? [state page-url]
+  (contains? (get-in state [:rendered-expanded-timeline :expanded-pageloads]
+                     #{})
+             page-url))
+
+(defn event-visible-without-reexpanding? [state page-url event-name]
+  (and (pageload-expanded? state page-url)
+       (boolean
+        (some #(= event-name (:name %))
+              (->> (get-in state [:rendered-expanded-timeline :nested-timeline])
+                   (filter #(= page-url (:url %)))
+                   (mapcat :events))))))
+
 (def forbidden-timeline-capability-patterns
   [{:kind :timeline-filtering
     :pattern #"(?i)timelineFilter|timeline filter"}
@@ -255,6 +284,13 @@
          (str/includes? timeline-source "displayRawValue")
          (str/includes? side-panel-source "timelineEventHeading")
          (str/includes? side-panel-source "appendDefinition(definitionList, \"Raw\", event.rawValue)"))))
+
+(defn timeline-expanded-state-wired? [files]
+  (let [side-panel-source (get files "src/side-panel.ts" "")]
+    (and (str/includes? side-panel-source "expandedTimelinePageUrls")
+         (str/includes? side-panel-source "details.open = expanded")
+         (str/includes? side-panel-source "renderTimelinePage(page,")
+         (str/includes? side-panel-source "expandedPageUrls.has(page.url)"))))
 
 (defn- property-item [text]
   (let [[name value] (first (seq (parse-payload-properties text)))]
@@ -508,6 +544,50 @@
                                 {:rendered-observed-event
                                  (:rendered-observed-event world)})
                world)}
+
+   {:pattern #"^pageload <([A-Za-z0-9_]+)> is expanded in the side panel timeline$"
+    :handler (fn [world example [page-url-key]]
+               (expand-pageload
+                world
+                (support/require-example example page-url-key)))}
+
+   {:pattern #"^observed event <([A-Za-z0-9_]+)> is recorded for pageload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key page-url-key]]
+               (render-timeline-expanded-state
+                (record-event-for-pageload
+                 world
+                 {:event-name (support/require-example example event-name-key)
+                  :page-url (support/require-example example page-url-key)})))}
+
+   {:pattern #"^pageload <([A-Za-z0-9_]+)> remains expanded$"
+    :handler (fn [world example [page-url-key]]
+               (let [page-url (support/require-example example page-url-key)
+                     root (support/repository-root)
+                     files (support/source-file-map root ["src/side-panel.ts"])]
+                 (support/assert! (timeline-expanded-state-wired? files)
+                                  "Timeline expanded state is not wired."
+                                  {})
+                 (support/assert! (pageload-expanded? world page-url)
+                                  "Pageload did not remain expanded."
+                                  {:page-url page-url
+                                   :rendered-expanded-timeline
+                                   (:rendered-expanded-timeline world)})
+                 world))}
+
+   {:pattern #"^observed event <([A-Za-z0-9_]+)> is visible without re-expanding pageload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key page-url-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     page-url (support/require-example example page-url-key)]
+                 (support/assert! (event-visible-without-reexpanding?
+                                   world
+                                   page-url
+                                   event-name)
+                                  "Observed event is not visible under the already-expanded pageload."
+                                  {:event-name event-name
+                                   :page-url page-url
+                                   :rendered-expanded-timeline
+                                   (:rendered-expanded-timeline world)})
+                 world))}
 
    {:pattern #"^scalar payload values are displayed as quoted values$"
     :handler (fn [world _example _captures]

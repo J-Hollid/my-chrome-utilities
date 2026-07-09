@@ -50,6 +50,20 @@ function renderHistoryPath(path, fieldValue = path) {
         historyPathStatus.textContent = pathStatus(samplePageObject(), path);
     }
 }
+function expandedTimelinePageUrls() {
+    const expandedUrls = new Set();
+    if (!sessionTimeline) {
+        return expandedUrls;
+    }
+    const summaries = Array.from(sessionTimeline.querySelectorAll(":scope > li > details[open] > summary"));
+    for (const summary of summaries) {
+        const url = summary.textContent;
+        if (url) {
+            expandedUrls.add(url);
+        }
+    }
+    return expandedUrls;
+}
 function renderSessionState() {
     const session = dataLayerSessionState.session;
     if (sessionStatus) {
@@ -59,17 +73,19 @@ function renderSessionState() {
         sessionHistoryPath.textContent = session?.historyPath ?? "";
     }
     if (sessionTimeline) {
-        sessionTimeline.replaceChildren(...nestedTimeline(session?.timeline ?? []).map(renderTimelinePage));
+        const expandedPageUrls = expandedTimelinePageUrls();
+        sessionTimeline.replaceChildren(...nestedTimeline(session?.timeline ?? []).map((page) => renderTimelinePage(page, expandedPageUrls.has(page.url))));
     }
     if (sessionWarning) {
         sessionWarning.textContent = dataLayerSessionState.warning ?? "";
     }
 }
-function renderTimelinePage(page) {
+function renderTimelinePage(page, expanded = false) {
     const item = document.createElement("li");
     const details = document.createElement("details");
     const summary = document.createElement("summary");
     const eventList = document.createElement("ul");
+    details.open = expanded;
     summary.textContent = page.url;
     eventList.append(...page.events.map(renderTimelineEvent));
     details.append(summary, eventList);
