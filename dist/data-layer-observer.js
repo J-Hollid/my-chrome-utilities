@@ -22,7 +22,21 @@ function observedPayload(rawPayload) {
     }
     return rawPayload;
 }
+function tupleHistoryEntryName(rawValue) {
+    if (!Array.isArray(rawValue)) {
+        return undefined;
+    }
+    const eventName = rawValue[0];
+    return typeof eventName === "string" ? eventName : undefined;
+}
+function tupleHistoryEntryPayload(rawValue) {
+    return Array.isArray(rawValue) ? rawValue[1] : undefined;
+}
 function historyEntryName(rawValue) {
+    const tupleName = tupleHistoryEntryName(rawValue);
+    if (tupleName !== undefined) {
+        return tupleName;
+    }
     if (rawValue !== null &&
         typeof rawValue === "object" &&
         "event" in rawValue) {
@@ -32,6 +46,10 @@ function historyEntryName(rawValue) {
     return "";
 }
 function historyEntryPayload(rawValue) {
+    const tuplePayload = tupleHistoryEntryPayload(rawValue);
+    if (tuplePayload !== undefined) {
+        return tuplePayload;
+    }
     if (rawValue !== null &&
         typeof rawValue === "object" &&
         "payload" in rawValue) {

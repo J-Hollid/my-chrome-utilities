@@ -15,6 +15,13 @@
                {:name "propertyx" :value "\"example property\""}]
    "scroll" [{:name "scroll_percentage" :value "\"75\""}]
    "add to cart" [{:name "product_name" :value "\"example product\""}]})
+(def canonical-tuple-event-name "pageview")
+(def canonical-tuple-history-path "event.history")
+(def canonical-tuple-timestamp "2026-07-09T20:00:00Z")
+(def canonical-tuple-payload-values
+  {"page_name" "\"example page_name\""
+   "page_type" "\"homepage\""
+   "propertyx" "\"example property\""})
 
 (defn- observed-entry [{:keys [event-name page-url history-path payload-label raw-label]}]
   {:type "observed"
@@ -94,6 +101,28 @@
    state
    (observed-event-entry "" "" event-name (parse-payload-properties payload-properties))))
 
+(defn- tuple-payload-object [payload-object]
+  (->> (comma-list payload-object)
+       (map (fn [property-name]
+              [property-name
+               (get canonical-tuple-payload-values
+                    property-name
+                    (str "\"example " property-name "\""))]))
+       (into (array-map))))
+
+(defn record-observed-tuple
+  [state {:keys [event-name history-path timestamp payload-object]}]
+  (let [payload (tuple-payload-object payload-object)]
+    (append-timeline-entry
+     state
+     {:type "observed"
+      :name event-name
+      :url ""
+      :timestamp timestamp
+      :observer-path history-path
+      :payload payload
+      :raw-value [event-name payload]})))
+
 (defn- timeline-entries [state]
   (or (:timeline-entries state)
       (get-in state [:session-state :session :timeline])
@@ -159,6 +188,14 @@
   (= (get canonical-payload-properties event-name ::missing)
      (:payload-properties (nested-event-details state event-name))))
 
+(defn render-observed-event [state]
+  (let [entry (first (visible-timeline-entries state))
+        detail-lines (payload-property-items entry)]
+    {:heading (str (:name entry) " | " (:observer-path entry))
+     :detail-lines detail-lines
+     :raw-payload-object-visible? (and (empty? detail-lines)
+                                       (some? (:raw-value entry)))}))
+
 (def forbidden-timeline-capability-patterns
   [{:kind :timeline-filtering
     :pattern #"(?i)timelineFilter|timeline filter"}
@@ -210,6 +247,22 @@
          (str/includes? timeline-source "payloadProperties")
          (str/includes? side-panel-source "nestedTimeline")
          (str/includes? side-panel-source "payloadProperties"))))
+
+(defn tuple-event-display-wired? [files]
+  (let [observer-source (get files "src/data-layer-observer.ts" "")
+        timeline-source (get files "src/data-layer-timeline.ts" "")
+        side-panel-source (get files "src/side-panel.ts" "")]
+    (and (str/includes? observer-source "Array.isArray(rawValue)")
+         (str/includes? observer-source "tupleHistoryEntryPayload")
+         (str/includes? timeline-source "displayPayloadValue")
+         (str/includes? timeline-source "displayRawValue")
+         (str/includes? timeline-source "timelineEventHeading")
+         (str/includes? side-panel-source "timelineEventHeading")
+         (str/includes? side-panel-source "appendDefinition(definitionList, \"Raw\", event.rawValue)"))))
+
+(defn- property-item [text]
+  (let [[name value] (first (seq (parse-payload-properties text)))]
+    {:name name :value value}))
 
 (def handlers
   [{:pattern #"^observed event entries are recorded$"
@@ -400,6 +453,95 @@
                                                                   event-name))})
                  world))}
 
+   {:pattern #"^observed data layer tuple \[<([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>\] is captured at <([A-Za-z0-9_]+)> from <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key payload-object-key timestamp-key history-path-key]]
+               (record-observed-tuple
+                world
+                {:event-name (support/require-example example event-name-key)
+                 :payload-object (support/require-example example payload-object-key)
+                 :timestamp (support/require-example example timestamp-key)
+                 :history-path (support/require-example example history-path-key)}))}
+
+   {:pattern #"^the tuple event uses the canonical event name$"
+    :handler (fn [world _example _captures]
+               (let [entry (first (visible-timeline-entries world))]
+                 (support/assert! (= canonical-tuple-event-name (:name entry))
+                                  "Tuple event name does not match the canonical event."
+                                  {:expected canonical-tuple-event-name
+                                   :entry entry})
+                 world))}
+
+   {:pattern #"^the tuple event uses the canonical observer path$"
+    :handler (fn [world _example _captures]
+               (let [entry (first (visible-timeline-entries world))]
+                 (support/assert! (= canonical-tuple-history-path
+                                     (:observer-path entry))
+                                  "Tuple event observer path does not match the canonical path."
+                                  {:expected canonical-tuple-history-path
+                                   :entry entry})
+                 world))}
+
+   {:pattern #"^the tuple event uses the canonical timestamp$"
+    :handler (fn [world _example _captures]
+               (let [entry (first (visible-timeline-entries world))]
+                 (support/assert! (= canonical-tuple-timestamp
+                                     (:timestamp entry))
+                                  "Tuple event timestamp does not match the canonical timestamp."
+                                  {:expected canonical-tuple-timestamp
+                                   :entry entry})
+                 world))}
+
+   {:pattern #"^the side panel renders the observed event$"
+    :handler (fn [world _example _captures]
+               (let [root (support/repository-root)
+                     files (support/source-file-map root
+                                                    ["src/data-layer-observer.ts"
+                                                     "src/data-layer-timeline.ts"
+                                                     "src/side-panel.ts"])]
+                 (support/assert! (tuple-event-display-wired? files)
+                                  "Tuple event display is not wired."
+                                  {})
+                 (assoc world :rendered-observed-event
+                        (render-observed-event world))))}
+
+   {:pattern #"^the observed event heading uses <([A-Za-z0-9_]+)> instead of <([A-Za-z0-9_]+)> before observer path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key timestamp-key history-path-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     timestamp (support/require-example example timestamp-key)
+                     history-path (support/require-example example history-path-key)
+                     heading (get-in world [:rendered-observed-event :heading])]
+                 (support/assert! (= (str event-name " | " history-path)
+                                     heading)
+                                  "Observed event heading does not use event name before observer path."
+                                  {:expected (str event-name " | " history-path)
+                                   :actual heading})
+                 (support/assert! (not (str/includes? heading timestamp))
+                                  "Observed event heading still shows timestamp before observer path."
+                                  {:timestamp timestamp
+                                   :heading heading})
+                 world))}
+
+   {:pattern #"^payload properties <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> are displayed as separate event detail lines$"
+    :handler (fn [world example [first-property-key second-property-key third-property-key]]
+               (let [expected [(property-item (support/require-example example first-property-key))
+                               (property-item (support/require-example example second-property-key))
+                               (property-item (support/require-example example third-property-key))]
+                     actual (get-in world [:rendered-observed-event :detail-lines])]
+                 (support/assert! (= expected actual)
+                                  "Tuple payload properties are not displayed as separate detail lines."
+                                  {:expected expected
+                                   :actual actual})
+                 world))}
+
+   {:pattern #"^raw payload object display is not shown for the observed event$"
+    :handler (fn [world _example _captures]
+               (support/assert! (false? (get-in world [:rendered-observed-event
+                                                       :raw-payload-object-visible?]))
+                                "Raw payload object display is visible."
+                                {:rendered-observed-event
+                                 (:rendered-observed-event world)})
+               world)}
+
    {:pattern #"^scalar payload values are displayed as quoted values$"
     :handler (fn [world _example _captures]
                (let [values (map :value
@@ -494,5 +636,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-09T22:57:03.087988176+02:00", :module-hash "-1868472994", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-560445802"} {:id "def/timeline-timestamp", :kind "def", :line 6, :end-line nil, :hash "415657292"} {:id "def/canonical-first-page-url", :kind "def", :line 7, :end-line nil, :hash "892300575"} {:id "def/canonical-second-page-url", :kind "def", :line 8, :end-line nil, :hash "-854550659"} {:id "def/canonical-history-path", :kind "def", :line 9, :end-line nil, :hash "-1465520940"} {:id "def/canonical-event-groups", :kind "def", :line 10, :end-line nil, :hash "-1186297732"} {:id "def/canonical-payload-properties", :kind "def", :line 12, :end-line nil, :hash "-1279650964"} {:id "defn-/observed-entry", :kind "defn-", :line 19, :end-line nil, :hash "1690037188"} {:id "defn/record-observed-entry", :kind "defn", :line 28, :end-line nil, :hash "-1688208651"} {:id "defn/visible-timeline-entries", :kind "defn", :line 35, :end-line nil, :hash "-188878219"} {:id "defn/timeline-summary", :kind "defn", :line 40, :end-line nil, :hash "-712284424"} {:id "defn/expanded-entry", :kind "defn", :line 43, :end-line nil, :hash "602566461"} {:id "defn-/page-entry", :kind "defn-", :line 46, :end-line nil, :hash "975036707"} {:id "defn-/comma-list", :kind "defn-", :line 49, :end-line nil, :hash "-1449797332"} {:id "defn/parse-payload-properties", :kind "defn", :line 55, :end-line nil, :hash "519534170"} {:id "defn-/observed-event-entry", :kind "defn-", :line 62, :end-line nil, :hash "-1241889608"} {:id "defn-/append-timeline-entry", :kind "defn-", :line 71, :end-line nil, :hash "-1434428876"} {:id "defn-/record-events-for-page", :kind "defn-", :line 77, :end-line nil, :hash "-2026777991"} {:id "defn/record-pageloads-with-events", :kind "defn", :line 85, :end-line nil, :hash "-1198529879"} {:id "defn/record-observed-event-with-payload", :kind "defn", :line 91, :end-line nil, :hash "1577056021"} {:id "defn-/timeline-entries", :kind "defn-", :line 97, :end-line nil, :hash "-1795253343"} {:id "defn-/add-page-to-timeline", :kind "defn-", :line 102, :end-line nil, :hash "-2141246556"} {:id "defn-/latest-page-index", :kind "defn-", :line 105, :end-line nil, :hash "714616854"} {:id "defn-/add-event-to-matching-page", :kind "defn-", :line 112, :end-line nil, :hash "832033178"} {:id "defn-/add-entry-to-nested-timeline", :kind "defn-", :line 122, :end-line nil, :hash "1389420386"} {:id "defn/nested-timeline", :kind "defn", :line 128, :end-line nil, :hash "184350641"} {:id "defn/payload-property-items", :kind "defn", :line 131, :end-line nil, :hash "-1695777806"} {:id "defn/nested-event-details", :kind "defn", :line 140, :end-line nil, :hash "-550024329"} {:id "defn/nested-timeline-pageload-order-matches?", :kind "defn", :line 146, :end-line nil, :hash "1626274005"} {:id "defn/nested-timeline-event-groups-match?", :kind "defn", :line 150, :end-line nil, :hash "-1429788433"} {:id "defn/nested-timeline-observer-paths-match?", :kind "defn", :line 154, :end-line nil, :hash "-1609152257"} {:id "defn/canonical-payload-properties-match?", :kind "defn", :line 158, :end-line nil, :hash "1314292081"} {:id "def/forbidden-timeline-capability-patterns", :kind "def", :line 162, :end-line nil, :hash "1179421373"} {:id "defn/forbidden-timeline-capability-findings", :kind "defn", :line 170, :end-line nil, :hash "181573916"} {:id "defn-/inspect-timeline-implementation", :kind "defn-", :line 173, :end-line nil, :hash "-1945393687"} {:id "defn-/first-visible-entry", :kind "defn-", :line 179, :end-line nil, :hash "-2031728269"} {:id "defn-/example-value-or", :kind "defn-", :line 182, :end-line nil, :hash "-1940368029"} {:id "defn-/default-payload-label", :kind "defn-", :line 185, :end-line nil, :hash "1878071429"} {:id "defn-/default-raw-label", :kind "defn-", :line 188, :end-line nil, :hash "-953873882"} {:id "defn-/example-entry-options", :kind "defn-", :line 191, :end-line nil, :hash "2130457195"} {:id "defn/forbidden-timeline-capability-findings-of-kind", :kind "defn", :line 203, :end-line nil, :hash "661283922"} {:id "defn/nested-timeline-wired?", :kind "defn", :line 206, :end-line nil, :hash "1463466039"} {:id "def/handlers", :kind "def", :line 214, :end-line nil, :hash "1330941882"}]}
+;; {:version 1, :tested-at "2026-07-09T23:31:36.470722127+02:00", :module-hash "1498909603", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-560445802"} {:id "def/timeline-timestamp", :kind "def", :line 6, :end-line nil, :hash "415657292"} {:id "def/canonical-first-page-url", :kind "def", :line 7, :end-line nil, :hash "892300575"} {:id "def/canonical-second-page-url", :kind "def", :line 8, :end-line nil, :hash "-854550659"} {:id "def/canonical-history-path", :kind "def", :line 9, :end-line nil, :hash "-1465520940"} {:id "def/canonical-event-groups", :kind "def", :line 10, :end-line nil, :hash "-1186297732"} {:id "def/canonical-payload-properties", :kind "def", :line 12, :end-line nil, :hash "-1279650964"} {:id "def/canonical-tuple-event-name", :kind "def", :line 18, :end-line nil, :hash "1033985506"} {:id "def/canonical-tuple-history-path", :kind "def", :line 19, :end-line nil, :hash "330325512"} {:id "def/canonical-tuple-timestamp", :kind "def", :line 20, :end-line nil, :hash "-1600040237"} {:id "def/canonical-tuple-payload-values", :kind "def", :line 21, :end-line nil, :hash "1497266995"} {:id "defn-/observed-entry", :kind "defn-", :line 26, :end-line nil, :hash "1690037188"} {:id "defn/record-observed-entry", :kind "defn", :line 35, :end-line nil, :hash "-1688208651"} {:id "defn/visible-timeline-entries", :kind "defn", :line 42, :end-line nil, :hash "-188878219"} {:id "defn/timeline-summary", :kind "defn", :line 47, :end-line nil, :hash "-712284424"} {:id "defn/expanded-entry", :kind "defn", :line 50, :end-line nil, :hash "602566461"} {:id "defn-/page-entry", :kind "defn-", :line 53, :end-line nil, :hash "975036707"} {:id "defn-/comma-list", :kind "defn-", :line 56, :end-line nil, :hash "-1449797332"} {:id "defn/parse-payload-properties", :kind "defn", :line 62, :end-line nil, :hash "519534170"} {:id "defn-/observed-event-entry", :kind "defn-", :line 69, :end-line nil, :hash "-1241889608"} {:id "defn-/append-timeline-entry", :kind "defn-", :line 78, :end-line nil, :hash "-1434428876"} {:id "defn-/record-events-for-page", :kind "defn-", :line 84, :end-line nil, :hash "-2026777991"} {:id "defn/record-pageloads-with-events", :kind "defn", :line 92, :end-line nil, :hash "-1198529879"} {:id "defn/record-observed-event-with-payload", :kind "defn", :line 98, :end-line nil, :hash "1577056021"} {:id "defn-/tuple-payload-object", :kind "defn-", :line 104, :end-line nil, :hash "298147558"} {:id "defn/record-observed-tuple", :kind "defn", :line 113, :end-line nil, :hash "-1059715210"} {:id "defn-/timeline-entries", :kind "defn-", :line 126, :end-line nil, :hash "-1795253343"} {:id "defn-/add-page-to-timeline", :kind "defn-", :line 131, :end-line nil, :hash "-2141246556"} {:id "defn-/latest-page-index", :kind "defn-", :line 134, :end-line nil, :hash "714616854"} {:id "defn-/add-event-to-matching-page", :kind "defn-", :line 141, :end-line nil, :hash "832033178"} {:id "defn-/add-entry-to-nested-timeline", :kind "defn-", :line 151, :end-line nil, :hash "1389420386"} {:id "defn/nested-timeline", :kind "defn", :line 157, :end-line nil, :hash "184350641"} {:id "defn/payload-property-items", :kind "defn", :line 160, :end-line nil, :hash "-1695777806"} {:id "defn/nested-event-details", :kind "defn", :line 169, :end-line nil, :hash "-550024329"} {:id "defn/nested-timeline-pageload-order-matches?", :kind "defn", :line 175, :end-line nil, :hash "1626274005"} {:id "defn/nested-timeline-event-groups-match?", :kind "defn", :line 179, :end-line nil, :hash "-1429788433"} {:id "defn/nested-timeline-observer-paths-match?", :kind "defn", :line 183, :end-line nil, :hash "-1609152257"} {:id "defn/canonical-payload-properties-match?", :kind "defn", :line 187, :end-line nil, :hash "699292404"} {:id "defn/render-observed-event", :kind "defn", :line 191, :end-line nil, :hash "-1715193246"} {:id "def/forbidden-timeline-capability-patterns", :kind "def", :line 199, :end-line nil, :hash "1179421373"} {:id "defn/forbidden-timeline-capability-findings", :kind "defn", :line 207, :end-line nil, :hash "181573916"} {:id "defn-/inspect-timeline-implementation", :kind "defn-", :line 210, :end-line nil, :hash "-1945393687"} {:id "defn-/first-visible-entry", :kind "defn-", :line 216, :end-line nil, :hash "-2031728269"} {:id "defn-/example-value-or", :kind "defn-", :line 219, :end-line nil, :hash "-1940368029"} {:id "defn-/default-payload-label", :kind "defn-", :line 222, :end-line nil, :hash "1878071429"} {:id "defn-/default-raw-label", :kind "defn-", :line 225, :end-line nil, :hash "-953873882"} {:id "defn-/example-entry-options", :kind "defn-", :line 228, :end-line nil, :hash "2130457195"} {:id "defn/forbidden-timeline-capability-findings-of-kind", :kind "defn", :line 240, :end-line nil, :hash "661283922"} {:id "defn/nested-timeline-wired?", :kind "defn", :line 243, :end-line nil, :hash "1463466039"} {:id "defn/tuple-event-display-wired?", :kind "defn", :line 251, :end-line nil, :hash "-1962455690"} {:id "defn-/property-item", :kind "defn-", :line 263, :end-line nil, :hash "1550456326"} {:id "def/handlers", :kind "def", :line 267, :end-line nil, :hash "-4624437"}]}
 ;; clj-mutate-manifest-end

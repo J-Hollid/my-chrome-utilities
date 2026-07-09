@@ -6,7 +6,7 @@ import { beginObservedPageLoad, initialObservationRefreshState, markObservationR
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
-import { nestedTimeline, } from "./data-layer-timeline.js";
+import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -81,9 +81,7 @@ function renderTimelineEvent(event) {
     const details = document.createElement("details");
     const summary = document.createElement("summary");
     const definitionList = document.createElement("dl");
-    summary.textContent = [event.name, event.timestamp, event.observerPath]
-        .filter((value) => value.length > 0)
-        .join(" | ");
+    summary.textContent = timelineEventHeading(event);
     appendDefinition(definitionList, "Event", event.name);
     appendDefinition(definitionList, "URL", event.url);
     appendDefinition(definitionList, "Time", event.timestamp);

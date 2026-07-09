@@ -51,6 +51,7 @@ import {
 } from "./data-layer-session.js";
 import {
   nestedTimeline,
+  timelineEventHeading,
   type NestedTimelineEvent,
   type NestedTimelinePage,
   type TimelinePayloadProperty,
@@ -156,9 +157,7 @@ function renderTimelineEvent(event: NestedTimelineEvent): HTMLLIElement {
   const summary = document.createElement("summary");
   const definitionList = document.createElement("dl");
 
-  summary.textContent = [event.name, event.timestamp, event.observerPath]
-    .filter((value) => value.length > 0)
-    .join(" | ");
+  summary.textContent = timelineEventHeading(event);
 
   appendDefinition(definitionList, "Event", event.name);
   appendDefinition(definitionList, "URL", event.url);
