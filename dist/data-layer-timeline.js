@@ -32,11 +32,24 @@ export function timelineSummary(entry) {
         observerPath: entry.observerPath ?? "",
     };
 }
+export function displayPayloadValue(entry) {
+    return payloadProperties(entry).length > 0 ? "" : stringifyValue(entry.payload);
+}
+export function displayRawValue(entry) {
+    return payloadProperties(entry).length > 0
+        ? ""
+        : stringifyValue(entry.rawValue);
+}
+export function timelineEventHeading(event) {
+    return [event.name || event.timestamp, event.observerPath]
+        .filter((value) => value.length > 0)
+        .join(" | ");
+}
 export function timelineDetails(entry) {
     return {
         ...timelineSummary(entry),
-        payload: stringifyValue(entry.payload),
-        rawValue: stringifyValue(entry.rawValue),
+        payload: displayPayloadValue(entry),
+        rawValue: displayRawValue(entry),
     };
 }
 export function payloadProperties(entry) {

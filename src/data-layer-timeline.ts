@@ -69,13 +69,31 @@ export function timelineSummary(
   };
 }
 
+export function displayPayloadValue(entry: DataLayerEventEntry): string {
+  return payloadProperties(entry).length > 0 ? "" : stringifyValue(entry.payload);
+}
+
+export function displayRawValue(entry: DataLayerEventEntry): string {
+  return payloadProperties(entry).length > 0
+    ? ""
+    : stringifyValue(entry.rawValue);
+}
+
+export function timelineEventHeading(
+  event: Pick<TimelineEntrySummary, "name" | "timestamp" | "observerPath">,
+): string {
+  return [event.name || event.timestamp, event.observerPath]
+    .filter((value) => value.length > 0)
+    .join(" | ");
+}
+
 export function timelineDetails(
   entry: DataLayerEventEntry,
 ): TimelineEntryDetails {
   return {
     ...timelineSummary(entry),
-    payload: stringifyValue(entry.payload),
-    rawValue: stringifyValue(entry.rawValue),
+    payload: displayPayloadValue(entry),
+    rawValue: displayRawValue(entry),
   };
 }
 

@@ -538,6 +538,7 @@
                   (let [first-url (str "https://example.test/" route)
                         second-url (str "https://example.test/" next-route)
                         history-path "queue.history"
+                        payload-event-name (str "payload-event:" payload-event)
                         nested-state (data-layer-timeline/record-pageloads-with-events
                                       {}
                                       {:first-page-url first-url
@@ -552,13 +553,13 @@
                         nested (data-layer-timeline/nested-timeline nested-state)
                         payload-state (data-layer-timeline/record-observed-event-with-payload
                                        nested-state
-                                       {:event-name payload-event
+                                       {:event-name payload-event-name
                                         :payload-properties (format "%s: \"%s\""
                                                                     payload-name
                                                                     payload-value)})
                         details (data-layer-timeline/nested-event-details
                                  payload-state
-                                 payload-event)]
+                                 payload-event-name)]
                     (and (= [first-url second-url] (mapv :url nested))
                          (= [[first-event first-extra-event]
                              [second-event second-extra-event]]
@@ -568,6 +569,38 @@
                          (= [{:name payload-name
                               :value (format "\"%s\"" payload-value)}]
                             (:payload-properties details))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest data-layer-timeline-renders-generated-tuple-payload-properties
+  (let [result (check
+                (prop/for-all [event-name path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               first-name path-segment-gen
+                               second-name path-segment-gen
+                               third-name path-segment-gen]
+                  (let [history-path (str root "." leaf)
+                        properties [(str "first_" first-name)
+                                    (str "second_" second-name)
+                                    (str "third_" third-name)]
+                        state (data-layer-timeline/record-observed-tuple
+                               {}
+                               {:event-name event-name
+                                :history-path history-path
+                                :timestamp "2026-07-09T20:00:00Z"
+                                :payload-object (str/join ", " properties)})
+                        rendered (data-layer-timeline/render-observed-event state)
+                        expected-detail-lines (mapv
+                                               (fn [property]
+                                                 {:name property
+                                                  :value (str "\"example "
+                                                              property
+                                                              "\"")})
+                                               properties)]
+                    (and (= (str event-name " | " history-path)
+                            (:heading rendered))
+                         (= expected-detail-lines (:detail-lines rendered))
+                         (false? (:raw-payload-object-visible? rendered))))))]
     (is (:pass? result) (pr-str result))))
 
 (deftest data-layer-recovery-preserves-session-history-after-navigation
