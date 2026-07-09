@@ -48,6 +48,20 @@
     (is (= "some.deep.object.history" (:history-path-field-value state)))
     (is (= "some.deep.object.history" (:history-path state)))))
 
+(deftest preserves-incremental-history-path-text-entry
+  (let [state (data-layer/type-history-array-path-sequence
+               {:side-panel-html settings-html
+                :side-panel-source (str "const typedPath = historyPathInput.value; "
+                                        "const path = setHistoryArrayPath(typedPath); "
+                                        "renderHistoryPath(path, typedPath); "
+                                        "historyPathInput.addEventListener('input', () => {});")}
+               "event"
+               "event."
+               "event.history")]
+    (is (= "event." (:intermediate-history-path-field-value state)))
+    (is (= "event.history" (:history-path-field-value state)))
+    (is (= "event.history" (:history-path state)))))
+
 (deftest reports-disallowed-data-layer-scope
   (is (empty?
        (data-layer/forbidden-data-layer-scope-findings

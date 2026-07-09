@@ -73,9 +73,9 @@ if (app) {
   app.textContent = PROJECT_NAME;
 }
 
-function renderHistoryPath(path: string): void {
+function renderHistoryPath(path: string, fieldValue = path): void {
   if (historyPathInput) {
-    historyPathInput.value = path;
+    historyPathInput.value = fieldValue;
   }
 
   if (historyPathDisplay) {
@@ -296,8 +296,9 @@ filter?.addEventListener("keyup", (event: KeyboardEvent) => {
 });
 
 historyPathInput?.addEventListener("input", () => {
-  const path = setHistoryArrayPath(historyPathInput.value);
-  renderHistoryPath(path);
+  const typedPath = historyPathInput.value;
+  const path = setHistoryArrayPath(typedPath);
+  renderHistoryPath(path, typedPath);
   void activePageObservation(path).then((observation) => {
     dataLayerObserverState = attachHistoryArrayObserver(
       dataLayerObserverState,
