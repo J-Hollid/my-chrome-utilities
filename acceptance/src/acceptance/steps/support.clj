@@ -27,6 +27,12 @@
 (defn source-file [root path]
   (slurp (str (fs/path root path))))
 
+(defn source-file-map [root paths]
+  (into {}
+        (map (fn [path]
+               [path (source-file root path)])
+             paths)))
+
 (defn source-files [root]
   (->> (file-seq (fs/file (fs/path root "src")))
        (filter fs/regular-file?)
@@ -62,5 +68,5 @@
     (assoc world :build-result result)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T20:56:26.245236892+02:00", :module-hash "596094486", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-316380013"} {:id "def/build-shell-options", :kind "def", :line 7, :end-line nil, :hash "-930688589"} {:id "defn/example-value", :kind "defn", :line 9, :end-line nil, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 13, :end-line nil, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 17, :end-line nil, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 22, :end-line nil, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 27, :end-line nil, :hash "-1939833971"} {:id "defn/source-files", :kind "defn", :line 30, :end-line nil, :hash "-888013632"} {:id "defn/pattern-findings", :kind "defn", :line 37, :end-line nil, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 44, :end-line nil, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 47, :end-line nil, :hash "866058476"} {:id "defn/ensure-build-passed!", :kind "defn", :line 51, :end-line nil, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 60, :end-line nil, :hash "378996986"}]}
+;; {:version 1, :tested-at "2026-07-09T16:35:49.717372527+02:00", :module-hash "562166196", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-316380013"} {:id "def/build-shell-options", :kind "def", :line 7, :end-line nil, :hash "-930688589"} {:id "defn/example-value", :kind "defn", :line 9, :end-line nil, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 13, :end-line nil, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 17, :end-line nil, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 22, :end-line nil, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 27, :end-line nil, :hash "-1939833971"} {:id "defn/source-file-map", :kind "defn", :line 30, :end-line nil, :hash "-254262717"} {:id "defn/source-files", :kind "defn", :line 36, :end-line nil, :hash "-888013632"} {:id "defn/pattern-findings", :kind "defn", :line 43, :end-line nil, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 50, :end-line nil, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 53, :end-line nil, :hash "866058476"} {:id "defn/ensure-build-passed!", :kind "defn", :line 57, :end-line nil, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 66, :end-line nil, :hash "378996986"}]}
 ;; clj-mutate-manifest-end

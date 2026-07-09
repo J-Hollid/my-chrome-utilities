@@ -123,6 +123,48 @@
     (is (= entry
            (last (get-in state [:session-state :session :timeline]))))))
 
+(deftest starts-live-capture-for-active-page-pushes
+  (let [state (-> {}
+                  (assoc :history-path "dataLayerHistory")
+                  (observer/define-active-page-window
+                   {:page-url "https://www.example.com/"
+                    :history-path "dataLayerHistory"})
+                  observer/start-side-panel-live-capture
+                  (observer/page-push "signup" "signup-values"))
+        timeline (get-in state [:session-state :session :timeline])
+        entry (observer/last-observed-entry state)]
+    (is (= [{:type "page" :url "https://www.example.com/"}
+            entry]
+           timeline))
+    (is (= "https://www.example.com/" (:url entry)))
+    (is (= "dataLayerHistory" (:observer-path entry)))
+    (is (= "signup-values" (:payload entry)))))
+
+(deftest captures-queued-active-page-entry-when-live-capture-starts
+  (let [state (-> {}
+                  (assoc :history-path "dataLayerHistory")
+                  (observer/define-active-page-window-with-entry
+                   {:page-url "https://www.example.com/"
+                    :history-path "dataLayerHistory"
+                    :event-name "signup"
+                    :payload-label "signup-payload"})
+                  observer/start-side-panel-live-capture)
+        timeline (get-in state [:session-state :session :timeline])
+        entry (observer/last-observed-entry state)]
+    (is (= [{:type "page" :url "https://www.example.com/"}
+            entry]
+           timeline))
+    (is (= "signup" (:name entry)))
+    (is (= "https://www.example.com/" (:url entry)))
+    (is (= "dataLayerHistory" (:observer-path entry)))
+    (is (= "signup-payload" (:payload entry)))))
+
+(deftest side-panel-source-uses-live-history-push-capture
+  (is (observer/live-history-push-capture-wired?
+       {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
+        "src/data-layer-live-observation.ts" (slurp "src/data-layer-live-observation.ts")})))
+
 (deftest reports-disallowed-observer-capabilities
   (is (empty?
        (observer/forbidden-observer-capability-findings

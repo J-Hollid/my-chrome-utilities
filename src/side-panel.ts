@@ -12,9 +12,14 @@ import {
   setHistoryArrayPath,
 } from "./data-layer.js";
 import {
+  appendObservedHistoryEntry,
   attachHistoryArrayObserver,
   type DataLayerHistoryObserverState,
 } from "./data-layer-observer.js";
+import {
+  startLiveHistoryPushCapture,
+  type StopLiveHistoryPushCapture,
+} from "./data-layer-live-observation.js";
 import {
   observerAttachmentStatus,
   restartObservation,
@@ -31,6 +36,7 @@ import {
   type DataLayerSessionState,
 } from "./data-layer-session.js";
 import { timelineDetails, timelineSummary } from "./data-layer-timeline.js";
+import type { ActivePageObservationResult } from "./active-page-observation.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -68,6 +74,7 @@ let dataLayerObserverState: DataLayerHistoryObserverState = {
   pageObject: samplePageObject(),
   observedEntries: [],
 };
+let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -157,6 +164,37 @@ function renderObserverState(): void {
   }
 }
 
+function stopLiveHistoryCapture(): void {
+  stopLiveHistoryPushCapture();
+  stopLiveHistoryPushCapture = () => {};
+}
+
+async function startLiveHistoryCapture(
+  observation: ActivePageObservationResult,
+): Promise<void> {
+  stopLiveHistoryCapture();
+  try {
+    stopLiveHistoryPushCapture = await startLiveHistoryPushCapture({
+      ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }),
+      historyPath: observation.historyPath,
+      onEntry: ({ rawValue, timestamp }) => {
+        dataLayerObserverState = appendObservedHistoryEntry(
+          dataLayerObserverState,
+          rawValue,
+          timestamp,
+        );
+        dataLayerSessionState =
+          dataLayerObserverState.sessionState ?? dataLayerSessionState;
+        persistSession(dataLayerSessionState);
+        renderSessionState();
+        renderObserverState();
+      },
+    });
+  } catch {
+    stopLiveHistoryPushCapture = () => {};
+  }
+}
+
 async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void> {
   if (entry.commandId === "data-layer.start-testing") {
     const sessionWasActive = dataLayerSessionState.session?.status === "active";
@@ -173,9 +211,12 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
         url: observation.pageUrl,
       });
       dataLayerObserverState = attachHistoryArrayObserver(
-        dataLayerObserverState,
+        { ...dataLayerObserverState, sessionState: dataLayerSessionState },
         observation,
       );
+      dataLayerSessionState =
+        dataLayerObserverState.sessionState ?? dataLayerSessionState;
+      await startLiveHistoryCapture(observation);
     }
     persistSession(dataLayerSessionState);
     renderSessionState();
@@ -183,6 +224,7 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
   }
 
   if (entry.commandId === "data-layer.end-testing") {
+    stopLiveHistoryCapture();
     dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
     persistSession(dataLayerSessionState);
     renderSessionState();
@@ -301,6 +343,13 @@ historyPathInput?.addEventListener("input", () => {
       dataLayerObserverState,
       observation,
     );
+    dataLayerSessionState =
+      dataLayerObserverState.sessionState ?? dataLayerSessionState;
+    persistSession(dataLayerSessionState);
+    renderSessionState();
+    if (dataLayerSessionState.session?.status === "active") {
+      void startLiveHistoryCapture(observation);
+    }
     renderObserverState();
   });
 });
@@ -312,6 +361,13 @@ restartObservationButton?.addEventListener("click", () => {
       dataLayerObserverState,
       observation,
     );
+    dataLayerSessionState =
+      dataLayerObserverState.sessionState ?? dataLayerSessionState;
+    persistSession(dataLayerSessionState);
+    renderSessionState();
+    if (dataLayerSessionState.session?.status === "active") {
+      void startLiveHistoryCapture(observation);
+    }
     renderObserverState();
   });
 });
