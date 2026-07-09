@@ -39,14 +39,17 @@ export function restartObservation(
     return observerState;
   }
 
-  return attachHistoryArrayObserver(observerState, {
-    historyPath: session.historyPath,
-    pageUrl: options.pageUrl,
-    ...(options.pageObject === undefined
-      ? {}
-      : { pageObject: options.pageObject }),
-    ...(options.pageAccessStatus === undefined
-      ? {}
-      : { pageAccessStatus: options.pageAccessStatus }),
-  });
+  return attachHistoryArrayObserver(
+    { ...observerState, sessionState },
+    {
+      historyPath: session.historyPath,
+      pageUrl: options.pageUrl,
+      ...(options.pageObject === undefined
+        ? {}
+        : { pageObject: options.pageObject }),
+      ...(options.pageAccessStatus === undefined
+        ? {}
+        : { pageAccessStatus: options.pageAccessStatus }),
+    },
+  );
 }

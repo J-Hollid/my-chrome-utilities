@@ -173,9 +173,11 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
         url: observation.pageUrl,
       });
       dataLayerObserverState = attachHistoryArrayObserver(
-        dataLayerObserverState,
+        { ...dataLayerObserverState, sessionState: dataLayerSessionState },
         observation,
       );
+      dataLayerSessionState =
+        dataLayerObserverState.sessionState ?? dataLayerSessionState;
     }
     persistSession(dataLayerSessionState);
     renderSessionState();
@@ -301,6 +303,10 @@ historyPathInput?.addEventListener("input", () => {
       dataLayerObserverState,
       observation,
     );
+    dataLayerSessionState =
+      dataLayerObserverState.sessionState ?? dataLayerSessionState;
+    persistSession(dataLayerSessionState);
+    renderSessionState();
     renderObserverState();
   });
 });
@@ -312,6 +318,10 @@ restartObservationButton?.addEventListener("click", () => {
       dataLayerObserverState,
       observation,
     );
+    dataLayerSessionState =
+      dataLayerObserverState.sessionState ?? dataLayerSessionState;
+    persistSession(dataLayerSessionState);
+    renderSessionState();
     renderObserverState();
   });
 });

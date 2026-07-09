@@ -22,6 +22,51 @@ function observedPayload(rawPayload) {
     }
     return rawPayload;
 }
+function historyEntryName(rawValue) {
+    if (rawValue !== null &&
+        typeof rawValue === "object" &&
+        "event" in rawValue) {
+        const event = rawValue.event;
+        return typeof event === "string" ? event : String(event ?? "");
+    }
+    return "";
+}
+function historyEntryPayload(rawValue) {
+    if (rawValue !== null &&
+        typeof rawValue === "object" &&
+        "payload" in rawValue) {
+        return rawValue.payload;
+    }
+    return undefined;
+}
+function observedEntry(observer, rawValue, timestamp = new Date().toISOString()) {
+    return {
+        type: "observed",
+        url: observer.pageUrl,
+        timestamp,
+        observerPath: observer.historyPath,
+        name: historyEntryName(rawValue),
+        payload: observedPayload(historyEntryPayload(rawValue)),
+        rawValue,
+    };
+}
+function captureObservedEntry(state, entry) {
+    const sessionState = state.sessionState
+        ? captureEntry(state.sessionState, entry)
+        : undefined;
+    return {
+        ...state,
+        observedEntries: [...(state.observedEntries ?? []), entry],
+        ...(sessionState ? { sessionState } : {}),
+    };
+}
+function captureExistingHistoryEntries(state, observer) {
+    const historyArray = valueAtPath(state.pageObject, observer.historyPath);
+    if (!Array.isArray(historyArray)) {
+        return state;
+    }
+    return historyArray.reduce((nextState, rawValue) => captureObservedEntry(nextState, observedEntry(observer, rawValue)), state);
+}
 export function attachHistoryArrayObserver(state, options) {
     if (options.pageAccessStatus === "page access unavailable") {
         return {
@@ -44,18 +89,22 @@ export function attachHistoryArrayObserver(state, options) {
             pageUrl: options.pageUrl,
             pageObject,
         };
-    return {
+    const observer = {
+        status,
+        historyPath: options.historyPath,
+        pageUrl: options.pageUrl,
+        activeCount: status === "ready" ? 1 : 0,
+    };
+    const nextState = {
         ...state,
         pageObject,
         pageAccessStatus: options.pageAccessStatus ?? "page access available",
         ...(activePageReadResult ? { activePageReadResult } : {}),
-        observer: {
-            status,
-            historyPath: options.historyPath,
-            pageUrl: options.pageUrl,
-            activeCount: status === "ready" ? 1 : 0,
-        },
+        observer,
     };
+    return status === "ready"
+        ? captureExistingHistoryEntries(nextState, observer)
+        : nextState;
 }
 export function reinstallHistoryArrayObserver(state, options) {
     return attachHistoryArrayObserver({
@@ -73,23 +122,9 @@ export function appendObservedHistoryEntry(state, rawValue, timestamp = new Date
         return state;
     }
     const pushReturn = historyArray.push(rawValue);
-    const entry = {
-        type: "observed",
-        url: observer.pageUrl,
-        timestamp,
-        observerPath: observer.historyPath,
-        name: rawValue.event,
-        payload: observedPayload(rawValue.payload),
-        rawValue,
-    };
-    const sessionState = state.sessionState
-        ? captureEntry(state.sessionState, entry)
-        : undefined;
     return {
-        ...state,
-        observedEntries: [...(state.observedEntries ?? []), entry],
+        ...captureObservedEntry(state, observedEntry(observer, rawValue, timestamp)),
         pushReturn,
-        ...(sessionState ? { sessionState } : {}),
     };
 }
 //# sourceMappingURL=data-layer-observer.js.map
