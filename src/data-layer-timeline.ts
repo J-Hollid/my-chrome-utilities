@@ -12,6 +12,20 @@ export interface TimelineEntryDetails extends TimelineEntrySummary {
   rawValue: string;
 }
 
+export interface TimelinePayloadProperty {
+  name: string;
+  value: string;
+}
+
+export interface NestedTimelineEvent extends TimelineEntryDetails {
+  payloadProperties: TimelinePayloadProperty[];
+}
+
+export interface NestedTimelinePage {
+  url: string;
+  events: NestedTimelineEvent[];
+}
+
 function stringifyValue(value: unknown): string {
   if (value === undefined || value === null) {
     return "";
@@ -26,6 +40,22 @@ function stringifyValue(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+function stringifyScalarValue(value: unknown): string {
+  if (value !== null && typeof value === "object") {
+    return stringifyValue(value);
+  }
+
+  return JSON.stringify(String(value ?? ""));
+}
+
+function objectEntries(value: unknown): [string, unknown][] {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.entries(value as Record<string, unknown>);
 }
 
 export function timelineSummary(
@@ -47,4 +77,73 @@ export function timelineDetails(
     payload: stringifyValue(entry.payload),
     rawValue: stringifyValue(entry.rawValue),
   };
+}
+
+export function payloadProperties(
+  entry: DataLayerEventEntry,
+): TimelinePayloadProperty[] {
+  return objectEntries(entry.payload).map(([name, value]) => ({
+    name,
+    value: stringifyScalarValue(value),
+  }));
+}
+
+function nestedEvent(entry: DataLayerEventEntry): NestedTimelineEvent {
+  return {
+    ...timelineDetails(entry),
+    payloadProperties: payloadProperties(entry),
+  };
+}
+
+function pageGroup(url: string): NestedTimelinePage {
+  return { url, events: [] };
+}
+
+function findLatestPageIndex(
+  pages: readonly NestedTimelinePage[],
+  url: string,
+): number {
+  for (let index = pages.length - 1; index >= 0; index -= 1) {
+    if (pages[index]?.url === url) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function appendObservedEvent(
+  pages: NestedTimelinePage[],
+  entry: DataLayerEventEntry,
+): NestedTimelinePage[] {
+  const pageIndex = findLatestPageIndex(pages, entry.url);
+  const nextPages = pageIndex === -1 ? [...pages, pageGroup(entry.url)] : pages;
+  const targetIndex = pageIndex === -1 ? nextPages.length - 1 : pageIndex;
+  const targetPage = nextPages[targetIndex];
+
+  if (!targetPage) {
+    return nextPages;
+  }
+
+  return nextPages.map((page, index) =>
+    index === targetIndex
+      ? { ...page, events: [...page.events, nestedEvent(entry)] }
+      : page,
+  );
+}
+
+export function nestedTimeline(
+  entries: readonly DataLayerEventEntry[],
+): NestedTimelinePage[] {
+  return entries.reduce<NestedTimelinePage[]>((pages, entry) => {
+    if (entry.type === "page") {
+      return [...pages, pageGroup(entry.url)];
+    }
+
+    if (entry.type === "observed") {
+      return appendObservedEvent(pages, entry);
+    }
+
+    return pages;
+  }, []);
 }

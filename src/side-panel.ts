@@ -35,7 +35,12 @@ import {
   startDataLayerTestingSession,
   type DataLayerSessionState,
 } from "./data-layer-session.js";
-import { timelineDetails, timelineSummary } from "./data-layer-timeline.js";
+import {
+  nestedTimeline,
+  type NestedTimelineEvent,
+  type NestedTimelinePage,
+  type TimelinePayloadProperty,
+} from "./data-layer-timeline.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
@@ -107,40 +112,67 @@ function renderSessionState(): void {
 
   if (sessionTimeline) {
     sessionTimeline.replaceChildren(
-      ...(session?.timeline ?? []).map((entry) => {
-        const item = document.createElement("li");
-        const details = document.createElement("details");
-        const summary = document.createElement("summary");
-        const summaryData = timelineSummary(entry);
-        const detailData = timelineDetails(entry);
-        const definitionList = document.createElement("dl");
-
-        summary.textContent = [
-          summaryData.name,
-          summaryData.url,
-          summaryData.timestamp,
-          summaryData.observerPath,
-        ]
-          .filter((value) => value.length > 0)
-          .join(" | ");
-
-        appendDefinition(definitionList, "Event", detailData.name);
-        appendDefinition(definitionList, "URL", detailData.url);
-        appendDefinition(definitionList, "Time", detailData.timestamp);
-        appendDefinition(definitionList, "Path", detailData.observerPath);
-        appendDefinition(definitionList, "Payload", detailData.payload);
-        appendDefinition(definitionList, "Raw", detailData.rawValue);
-
-        details.append(summary, definitionList);
-        item.append(details);
-        return item;
-      }),
+      ...nestedTimeline(session?.timeline ?? []).map(renderTimelinePage),
     );
   }
 
   if (sessionWarning) {
     sessionWarning.textContent = dataLayerSessionState.warning ?? "";
   }
+}
+
+function renderTimelinePage(page: NestedTimelinePage): HTMLLIElement {
+  const item = document.createElement("li");
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  const eventList = document.createElement("ul");
+
+  summary.textContent = page.url;
+  eventList.append(...page.events.map(renderTimelineEvent));
+  details.append(summary, eventList);
+  item.append(details);
+  return item;
+}
+
+function renderTimelineEvent(event: NestedTimelineEvent): HTMLLIElement {
+  const item = document.createElement("li");
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  const definitionList = document.createElement("dl");
+
+  summary.textContent = [event.name, event.timestamp, event.observerPath]
+    .filter((value) => value.length > 0)
+    .join(" | ");
+
+  appendDefinition(definitionList, "Event", event.name);
+  appendDefinition(definitionList, "URL", event.url);
+  appendDefinition(definitionList, "Time", event.timestamp);
+  appendDefinition(definitionList, "Path", event.observerPath);
+  appendDefinition(definitionList, "Payload", event.payload);
+  appendDefinition(definitionList, "Raw", event.rawValue);
+
+  details.append(summary, definitionList);
+  if (event.payloadProperties.length > 0) {
+    details.append(renderPayloadProperties(event.payloadProperties));
+  }
+  item.append(details);
+  return item;
+}
+
+function renderPayloadProperties(
+  properties: readonly TimelinePayloadProperty[],
+): HTMLUListElement {
+  const list = document.createElement("ul");
+  list.append(...properties.map(renderPayloadProperty));
+  return list;
+}
+
+function renderPayloadProperty(
+  property: TimelinePayloadProperty,
+): HTMLLIElement {
+  const item = document.createElement("li");
+  item.textContent = `${property.name}: ${property.value}`;
+  return item;
 }
 
 function appendDefinition(list: HTMLElement, label: string, value: string): void {
