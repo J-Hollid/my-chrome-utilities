@@ -67,11 +67,12 @@ async function activeTabPageObject(tabId, historyPath) {
         return { pageAccessStatus: pageAccessUnavailable };
     }
 }
-function observerAttachOptions(historyPath, pageUrl, readResult) {
+function observerAttachOptions(historyPath, pageUrl, readResult, tabId) {
     const options = {
         historyPath,
         pageUrl,
         pageAccessStatus: readResult.pageAccessStatus,
+        ...(tabId === undefined ? {} : { tabId }),
     };
     return readResult.pageAccessStatus === pageAccessAvailable
         ? { ...options, pageObject: readResult.pageObject }
@@ -82,6 +83,6 @@ export async function activePageObservation(historyPath) {
     const readResult = activeTab.tabId === undefined
         ? { pageAccessStatus: pageAccessUnavailable }
         : await activeTabPageObject(activeTab.tabId, historyPath);
-    return observerAttachOptions(historyPath, activeTab.pageUrl, readResult);
+    return observerAttachOptions(historyPath, activeTab.pageUrl, readResult, activeTab.tabId);
 }
 //# sourceMappingURL=active-page-observation.js.map
