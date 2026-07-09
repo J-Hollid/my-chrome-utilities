@@ -571,6 +571,38 @@
                             (:payload-properties details))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest data-layer-timeline-renders-generated-tuple-payload-properties
+  (let [result (check
+                (prop/for-all [event-name path-segment-gen
+                               root path-segment-gen
+                               leaf path-segment-gen
+                               first-name path-segment-gen
+                               second-name path-segment-gen
+                               third-name path-segment-gen]
+                  (let [history-path (str root "." leaf)
+                        properties [(str "first_" first-name)
+                                    (str "second_" second-name)
+                                    (str "third_" third-name)]
+                        state (data-layer-timeline/record-observed-tuple
+                               {}
+                               {:event-name event-name
+                                :history-path history-path
+                                :timestamp "2026-07-09T20:00:00Z"
+                                :payload-object (str/join ", " properties)})
+                        rendered (data-layer-timeline/render-observed-event state)
+                        expected-detail-lines (mapv
+                                               (fn [property]
+                                                 {:name property
+                                                  :value (str "\"example "
+                                                              property
+                                                              "\"")})
+                                               properties)]
+                    (and (= (str event-name " | " history-path)
+                            (:heading rendered))
+                         (= expected-detail-lines (:detail-lines rendered))
+                         (false? (:raw-payload-object-visible? rendered))))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest data-layer-recovery-preserves-session-history-after-navigation
   (let [result (check
                 (prop/for-all [route path-segment-gen
