@@ -88,16 +88,22 @@
     (update pages (dec (count pages)) update :events conj entry)
     [{:url (:url entry) :events [entry]}]))
 
+(defn- timeline-entries [state]
+  (or (:timeline-entries state)
+      (get-in state [:session-state :session :timeline])
+      []))
+
+(defn- add-page-to-timeline [pages entry]
+  (conj pages {:url (:url entry) :events []}))
+
+(defn- add-entry-to-nested-timeline [pages entry]
+  (case (:type entry)
+    "page" (add-page-to-timeline pages entry)
+    "observed" (add-event-to-last-page pages entry)
+    pages))
+
 (defn nested-timeline [state]
-  (reduce (fn [pages entry]
-            (case (:type entry)
-              "page" (conj pages {:url (:url entry) :events []})
-              "observed" (add-event-to-last-page pages entry)
-              pages))
-          []
-          (or (:timeline-entries state)
-              (get-in state [:session-state :session :timeline])
-              [])))
+  (reduce add-entry-to-nested-timeline [] (timeline-entries state)))
 
 (defn payload-property-items [entry]
   (let [payload (:payload entry)]
