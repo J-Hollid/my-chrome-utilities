@@ -84,6 +84,7 @@
 (deftest side-panel-source-uses-active-page-window-observation
   (is (observer/active-page-window-observation-wired?
        {"src/side-panel.ts" (slurp "src/side-panel.ts")
+        "src/active-page-observation.ts" (slurp "src/active-page-observation.ts")
         "manifest.json" (slurp "manifest.json")})))
 
 (deftest captures-observed-entry-in-active-session
