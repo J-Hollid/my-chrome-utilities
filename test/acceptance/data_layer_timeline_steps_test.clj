@@ -65,6 +65,37 @@
     (is (= entry
            (last (get-in state [:session-state :session :timeline]))))))
 
+(deftest nests-observed-events-under-page-loads
+  (let [state (timeline/record-pageloads-with-events
+               {}
+               {:first-page-url "https://www.example.com/"
+                :second-page-url "https://www.example.com/prodpage"
+                :first-page-events "pageview, scroll"
+                :second-page-events "pageview, add to cart"
+                :history-path "event.history"})
+        nested (timeline/nested-timeline state)]
+    (is (= ["https://www.example.com/"
+            "https://www.example.com/prodpage"]
+           (map :url nested)))
+    (is (= ["pageview" "scroll"]
+           (map :name (:events (first nested)))))
+    (is (= ["pageview" "add to cart"]
+           (map :name (:events (second nested)))))
+    (is (every? #(= "event.history" (:observer-path %))
+                (mapcat :events nested)))))
+
+(deftest expands-observed-event-payload-properties
+  (let [state (timeline/record-observed-event-with-payload
+               {}
+               {:event-name "pageview"
+                :payload-properties
+                "page_name: \"example page_name\", page_type: \"homepage\", propertyx: \"example property\""})
+        nested (timeline/nested-event-details state "pageview")]
+    (is (= [{:name "page_name" :value "\"example page_name\""}
+            {:name "page_type" :value "\"homepage\""}
+            {:name "propertyx" :value "\"example property\""}]
+           (:payload-properties nested)))))
+
 (deftest reports-disallowed-timeline-capabilities
   (is (empty?
        (timeline/forbidden-timeline-capability-findings
