@@ -7,6 +7,8 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
+            [acceptance.steps.live-observer :as live-observer]
+            [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.project-skeleton :as project-skeleton]
@@ -22,11 +24,13 @@
                data-layer-page-context/handlers
                data-layer-recovery/handlers
                data-layer-session/handlers
+               live-observer/handlers
                data-layer-timeline/handlers
                hotkey-keymap/handlers
                workspace-editor/handlers
                palette/handlers
-               package-flow/handlers)))
+               package-flow/handlers
+               observability-library/handlers)))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-10T12:29:53.943126754+02:00", :module-hash "330337676", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1980205214"} {:id "def/handlers", :kind "def", :line 16, :end-line nil, :hash "1405333538"}]}

@@ -39,7 +39,7 @@
 
 (defn separate-from-rendering? [registry-source rendering-source]
   (and (every? #(contains? (defined-fields registry-source) %) command-fields)
-       (not (re-find #"\b(id|title|description|category|run)\s*:" rendering-source))))
+       (not (re-find #"\bid\s*:\s*['\"][^'\"]+['\"][\s\S]{0,240}\brun\s*\(" rendering-source))))
 
 (def forbidden-command-ui-patterns
   [{:kind :command-palette

@@ -70,6 +70,25 @@ import {
   type TimelinePayloadProperty,
 } from "./data-layer-timeline.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
+import {
+  createLiveObserverState,
+  dataLayerViewForNavigationKey,
+  dataLayerViews,
+  pauseCapture,
+  recordLiveEvent,
+  resumeCapture,
+  selectLiveEvent,
+  updateLiveSourceStatus,
+  type DataLayerView,
+  type LiveObserverState,
+} from "./data-layer-live-observer.js";
+import {
+  findLiveObserverElements,
+  renderDataLayerView,
+  renderLiveInspector,
+  renderLiveObserverState,
+  renderLiveSessionMessage,
+} from "./data-layer-live-observer-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -111,6 +130,13 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
+const liveObserverElements = findLiveObserverElements();
+const {
+  viewList: dataLayerViewList,
+  backToEventsButton,
+  pauseCaptureButton,
+  resumeCaptureButton,
+} = liveObserverElements;
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -126,6 +152,10 @@ let dataLayerObserverState: DataLayerHistoryObserverState = {
 let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
 let observationRefreshTimeoutId: number | undefined;
 let observationRefreshState = initialObservationRefreshState;
+let liveObserverState: LiveObserverState = createLiveObserverState({
+  pageUrl: globalThis.location.href,
+  sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
+});
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -143,6 +173,28 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   if (historyPathStatus) {
     historyPathStatus.textContent = pathStatus(samplePageObject(), path);
   }
+}
+
+function showDataLayerView(view: DataLayerView, focus = false): void {
+  liveObserverState = { ...liveObserverState, view };
+  localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
+  renderDataLayerView(liveObserverElements, view, focus);
+}
+
+function renderLiveObserver(): void {
+  renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+}
+
+function openLiveInspector(eventId: string): void {
+  const split = globalThis.innerWidth >= 800;
+  liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
+  const event = liveObserverState.events.find(({ id }) => id === eventId);
+  if (event) renderLiveInspector(liveObserverElements, event);
+  renderLiveObserver();
+}
+
+function setLiveSessionMessage(message: string): void {
+  renderLiveSessionMessage(liveObserverElements, message);
 }
 
 function expandedTimelinePageIndexes(): Set<number> {
@@ -313,6 +365,14 @@ async function startLiveHistoryCapture(
         );
         updateSessionFromObserverState();
         persistAndRenderObservationState();
+        const record = rawValue as { event?: unknown };
+        liveObserverState = recordLiveEvent(liveObserverState, {
+          id: `live-${liveObserverState.events.length + 1}`,
+          name: typeof record.event === "string" ? record.event : "observed event",
+          sourceId: "event-history",
+          captureTime: timestamp,
+        });
+        renderLiveObserver();
       },
     });
   } catch {
@@ -475,11 +535,19 @@ function recordCommandRun(entry: CommandRunRecord): void {
   if (commandLog) {
     commandLog.textContent = entry.message;
   }
+
+  if (entry.commandId === "data-layer.start-testing") {
+    setLiveSessionMessage("Data Layer observation started");
+  }
+  if (entry.commandId === "data-layer.end-testing") {
+    setLiveSessionMessage("Data Layer observation stopped");
+  }
 }
 
 const commandRunContext = {
   record: recordCommandRun,
   showWorkspace,
+  showDataLayerView: showDataLayerView,
 };
 
 function setKeymapStatus(message: string): void {
@@ -775,6 +843,38 @@ openButton?.addEventListener("click", showPalette);
 workspaceTabsController.bind();
 hotkeyEditor.bind();
 
+dataLayerViewList?.addEventListener("click", (event) => {
+  const button = (event.target as Element).closest<HTMLButtonElement>("[role=tab]");
+  const view = button?.textContent as DataLayerView | null;
+  if (view && dataLayerViews.includes(view)) showDataLayerView(view, true);
+});
+
+dataLayerViewList?.addEventListener("keydown", (event) => {
+  const next = dataLayerViewForNavigationKey(liveObserverState.view, event.key);
+  if (next) {
+    event.preventDefault();
+    showDataLayerView(next, true);
+  }
+});
+
+pauseCaptureButton?.addEventListener("click", () => {
+  liveObserverState = pauseCapture(liveObserverState);
+  setLiveSessionMessage("Capture paused");
+  renderLiveObserver();
+});
+
+resumeCaptureButton?.addEventListener("click", () => {
+  liveObserverState = resumeCapture(liveObserverState);
+  setLiveSessionMessage("Capture resumed");
+  renderLiveObserver();
+});
+
+backToEventsButton?.addEventListener("click", () => {
+  const { inspectorEventId: _inspectorEventId, ...withoutInspector } = liveObserverState;
+  liveObserverState = { ...withoutInspector, listVisible: true };
+  renderLiveObserver();
+});
+
 createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
 updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
 loadKeymapButton?.addEventListener("click", () => {
@@ -888,6 +988,8 @@ renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());
 hotkeyEditor.render();
+showDataLayerView("Live");
+renderLiveObserver();
 activateHotkeyFocus();
 
 export {

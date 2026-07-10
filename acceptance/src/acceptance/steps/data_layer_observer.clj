@@ -347,7 +347,39 @@
   (= expected (get (last-observed-entry state) key)))
 
 (def handlers
-  [{:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
+  [{:pattern #"^the configured history array receives object entry <([A-Za-z0-9_]+)> with event field <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [_object-label-key event-name-key]]
+               (let [event-name (support/require-example example event-name-key)
+                     history-path (support/require-example example "history_path")]
+                 (-> world
+                     (attach-observer {:history-path history-path
+                                       :page-url "https://example.test/"
+                                       :page-object (assoc-in (state-page-object world)
+                                                              (path-parts history-path)
+                                                              [])})
+                     (page-push event-name (str event-name "-values")))))}
+
+   {:pattern #"^the object entry is observed$"
+    :handler (fn [world _example _captures] world)}
+
+   {:pattern #"^event <([A-Za-z0-9_]+)> is captured with object payload <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [event-name-key payload-label-key]]
+               (support/assert! (and (= (support/require-example example event-name-key)
+                                       (:name (last-observed-entry world)))
+                                    (= (support/require-example example payload-label-key)
+                                       (:payload (last-observed-entry world))))
+                                "Object event was not captured with its payload."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^the complete object entry is retained as raw input$"
+    :handler (fn [world _example _captures]
+               (support/assert! (map? (:raw-value (last-observed-entry world)))
+                                "Object raw input was not retained."
+                                {:entry (last-observed-entry world)})
+               world)}
+
+   {:pattern #"^page <([A-Za-z0-9_]+)> appends history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key event-name-key payload-label-key]]
                (let [page-url (support/require-example example page-url-key)
                      event-name (support/require-example example event-name-key)

@@ -1,4 +1,5 @@
 import type { WorkspaceTabId } from "./workspace-tabs.js";
+import type { DataLayerView } from "./data-layer-live-observer.js";
 
 export type CommandCategory = "demo" | "data-layer" | "navigation";
 
@@ -10,6 +11,7 @@ export interface CommandRunRecord {
 export interface CommandRunContext {
   record(entry: CommandRunRecord): void;
   showWorkspace?(tab: WorkspaceTabId): void;
+  showDataLayerView?(view: DataLayerView): void;
 }
 
 export interface AppCommand {
@@ -59,6 +61,37 @@ const endDataLayerTestingCommand: AppCommand = {
   },
 };
 
+const saveDataLayerSessionCommand: AppCommand = {
+  id: "data-layer.save-session",
+  title: "Save data layer session",
+  description: "Saves the active data layer testing session.",
+  category: "data-layer",
+  run(context: CommandRunContext): void {
+    context.record({
+      commandId: "data-layer.save-session",
+      message: "data-layer.save-session ran",
+    });
+  },
+};
+
+function dataLayerViewCommand(
+  id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
+  title: string,
+): AppCommand {
+  const view = title.replace("Show ", "") as DataLayerView;
+  return {
+    id,
+    title,
+    description: `Shows the ${title.replace("Show ", "")} Data Layer view.`,
+    category: "data-layer",
+    run(context: CommandRunContext): void {
+      context.showWorkspace?.("data-layer");
+      context.showDataLayerView?.(view);
+      context.record({ commandId: id, message: `${id} ran` });
+    },
+  };
+}
+
 function workspaceNavigationCommand(
   id: "navigation.show-data-layer" | "navigation.show-hotkeys",
   title: string,
@@ -80,6 +113,11 @@ const commands: readonly AppCommand[] = [
   sayHelloCommand,
   startDataLayerTestingCommand,
   endDataLayerTestingCommand,
+  saveDataLayerSessionCommand,
+  dataLayerViewCommand("data-layer.show-live", "Show Live"),
+  dataLayerViewCommand("data-layer.show-library", "Show Library"),
+  dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
+  dataLayerViewCommand("data-layer.show-schemas", "Show Schemas"),
   workspaceNavigationCommand(
     "navigation.show-data-layer",
     "Show Data Layer",

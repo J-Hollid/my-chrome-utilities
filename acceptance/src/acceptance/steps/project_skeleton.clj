@@ -22,9 +22,13 @@
 (def handlers
   [{:pattern #"^a repository for project <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
-               (assoc world
-                      :root (support/repository-root)
-                      :project-name (support/require-example example project-key)))}
+               (let [root (support/repository-root)
+                     project-name (support/require-example example project-key)
+                     package (support/read-json (fs/path root "package.json"))]
+                 (support/assert! (= project-name (:name package))
+                                  "Repository package does not match the requested project."
+                                  {:expected project-name :actual (:name package)})
+                 (assoc world :root root :project-name project-name)))}
 
    {:pattern #"^the project skeleton is inspected$"
     :handler (fn [world _example _captures]
@@ -122,5 +126,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-09T12:23:27.708036294+02:00", :module-hash "1719291146", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1748883287"} {:id "defn-/inspect-project", :kind "defn-", :line 6, :end-line nil, :hash "-2019852584"} {:id "defn-/project-files", :kind "defn-", :line 15, :end-line nil, :hash "379177836"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "-1306218894"}]}
+;; {:version 1, :tested-at "2026-07-10T14:26:57.013277619+02:00", :module-hash "524088161", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1748883287"} {:id "defn-/inspect-project", :kind "defn-", :line 6, :end-line nil, :hash "-2019852584"} {:id "defn-/project-files", :kind "defn-", :line 15, :end-line nil, :hash "379177836"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "1046769852"}]}
 ;; clj-mutate-manifest-end

@@ -8,6 +8,7 @@
   acceptance-entrypoint-generator acceptance.generator/-main
   test:unit {:doc "Run focused unit tests."
              :requires ([clojure.test :as test]
+                        [babashka.process :as process]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
                         [acceptance.steps-support-test]
@@ -22,7 +23,10 @@
                         [acceptance.data-layer-timeline-steps-test]
                         [acceptance.data-layer-recovery-steps-test]
                         [acceptance.data-layer-page-context-steps-test]
-                        [acceptance.workspace-editor-steps-test])
+                        [acceptance.workspace-editor-steps-test]
+                        [acceptance.observability-library-steps-test]
+                        [acceptance.live-observer-steps-test]
+                        [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
@@ -37,8 +41,21 @@
                                                 'acceptance.data-layer-timeline-steps-test
                                                 'acceptance.data-layer-recovery-steps-test
                                                 'acceptance.data-layer-page-context-steps-test
-                                                'acceptance.workspace-editor-steps-test)]
-                     (when (pos? (+ (:fail result) (:error result)))
+                                                'acceptance.workspace-editor-steps-test
+                                                'acceptance.observability-library-steps-test
+                                                'acceptance.live-observer-steps-test
+                                                'acceptance.gherkin-mutation-metadata-test)
+                         source-result (process/shell {:out :inherit
+                                                      :err :inherit
+                                                      :continue true}
+                                                      "npm" "run" "test:unit:source-foundation")
+                         live-result (process/shell {:out :inherit
+                                                     :err :inherit
+                                                     :continue true}
+                                                    "npm" "run" "test:unit:live-observer")]
+                     (when (or (pos? (+ (:fail result) (:error result)))
+                               (not (zero? (:exit source-result)))
+                               (not (zero? (:exit live-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]
@@ -54,9 +71,17 @@
                              (System/exit 1))))}
   test:hardening {:doc "Run mutation hardening tests."
                   :requires ([clojure.test :as test]
+                             [hardening.data-layer-timeline-hardening-test]
                              [hardening.hotkey-keymap-hardening-test]
+                             [hardening.live-observer-hardening-test]
+                             [hardening.observability-source-foundation-hardening-test]
+                             [hardening.project-skeleton-hardening-test]
                              [hardening.workspace-editor-hardening-test])
-                  :task (let [result (test/run-tests 'hardening.hotkey-keymap-hardening-test
+                  :task (let [result (test/run-tests 'hardening.data-layer-timeline-hardening-test
+                                                     'hardening.hotkey-keymap-hardening-test
+                                                     'hardening.live-observer-hardening-test
+                                                     'hardening.observability-source-foundation-hardening-test
+                                                     'hardening.project-skeleton-hardening-test
                                                      'hardening.workspace-editor-hardening-test)]
                           (when (pos? (+ (:fail result) (:error result)))
                             (System/exit 1)))}
