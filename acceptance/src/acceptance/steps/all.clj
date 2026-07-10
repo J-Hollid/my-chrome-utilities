@@ -29,5 +29,5 @@
                package-flow/handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T10:46:37.154199123+02:00", :module-hash "1782303505", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1685907125"} {:id "def/handlers", :kind "def", :line 15, :end-line nil, :hash "412763792"}]}
+;; {:version 1, :tested-at "2026-07-10T12:29:53.943126754+02:00", :module-hash "330337676", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1980205214"} {:id "def/handlers", :kind "def", :line 16, :end-line nil, :hash "1405333538"}]}
 ;; clj-mutate-manifest-end

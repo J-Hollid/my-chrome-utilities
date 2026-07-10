@@ -1,14 +1,15 @@
 (ns acceptance.steps.workspace-editor
-  (:require [acceptance.steps.hotkey-keymap :as keymap]
-            [acceptance.steps.support :as support]
-            [babashka.fs :as fs]
+  (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (defn- inspect [world]
   (let [root (or (:root world) (support/repository-root))]
     (assoc world :root root
            :html (support/source-file root "side-panel.html")
-           :source (support/source-file root "src/side-panel.ts")
+           :source (str/join "\n" (map #(support/source-file root %)
+                                        ["src/side-panel.ts"
+                                         "src/workspace-tabs-ui.ts"
+                                         "src/hotkey-editor.ts"]))
            :commands (support/source-file root "src/commands.ts"))))
 
 (defn tabs-wired? [html source]
@@ -66,7 +67,7 @@
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> is exposed as selected$"
     :handler (fn [world example [tab-key]] (support/assert! (= (command-id example tab-key) (:active-tab world)) "Unexpected workspace tab is selected." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> remains active after the side panel reloads$"
-    :handler (fn [world example [tab-key]] (support/assert! (and (= (command-id example tab-key) (:active-tab world)) (str/includes? (:source world) "localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY")) "Workspace tab is not persisted." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (and (= (command-id example tab-key) (:active-tab world)) (str/includes? (:source world) "storage.setItem(WORKSPACE_TAB_STORAGE_KEY")) "Workspace tab is not persisted." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> has keyboard focus$"
     :handler (fn [world example [tab-key]] (assoc world :active-tab (command-id example tab-key)))}
    {:pattern #"^tab navigation key <([A-Za-z0-9_]+)> is pressed$"
@@ -92,7 +93,7 @@
    {:pattern #"^the hotkey editor is displayed$"
     :handler (fn [world _ _] (require-wiring world editor-wired? "Hotkey editor is not wired."))}
    {:pattern #"^every registered command is listed with its title, command id, and current key sequence$"
-    :handler (fn [world _ _] (support/assert! (str/includes? (:source world) "activeHotkeyKeymap.bindings[command.id]") "Editor does not list command bindings." {}) world)}
+    :handler (fn [world _ _] (support/assert! (str/includes? (:source world) "keymap.bindings[command.id]") "Editor does not list command bindings." {}) world)}
    {:pattern #"^commands are grouped under user-facing workspace or navigation labels$"
     :handler (fn [world _ _] (support/assert! (support/includes-all? (:source world) ["Workspace" "Navigation" "editorGroupLabel"]) "Editor command groups are missing." {}) world)}
    {:pattern #"^each command provides visible controls to change or clear its key sequence$"
@@ -143,3 +144,7 @@
     :handler (fn [world example [sequence-key]] (support/assert! (= (command-id example sequence-key) (:pending-sequence world)) "Pending hotkey change is not shown." {}) world)}
    {:pattern #"^the user cancels the pending hotkey change$"
     :handler (fn [world _ _] (dissoc world :pending-sequence))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-10T12:33:50.452380065+02:00", :module-hash "-1493155185", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1978799929"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-115564348"} {:id "defn/tabs-wired?", :kind "defn", :line 15, :end-line nil, :hash "-1561432839"} {:id "defn/editor-wired?", :kind "defn", :line 23, :end-line nil, :hash "-1153408800"} {:id "defn-/require-wiring", :kind "defn-", :line 30, :end-line nil, :hash "-148584365"} {:id "defn-/command-id", :kind "defn-", :line 35, :end-line nil, :hash "-316749086"} {:id "defn-/sequence", :kind "defn-", :line 36, :end-line nil, :hash "-1899006383"} {:id "def/handlers", :kind "def", :line 38, :end-line nil, :hash "-304905103"}]}
+;; clj-mutate-manifest-end

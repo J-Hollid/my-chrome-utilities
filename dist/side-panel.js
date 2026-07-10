@@ -1,6 +1,7 @@
 import { listCommands, runCommandById, } from "./commands.js";
-import { advanceHotkeySequence, blankHotkeyKeymap, changeHotkeyBinding, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
-import { isWorkspaceTabId, WORKSPACE_TAB_STORAGE_KEY, workspaceTabForNavigationKey, workspaceTabs, } from "./workspace-tabs.js";
+import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
+import { createHotkeyEditor } from "./hotkey-editor.js";
+import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { activePageObservation, tabPageObservation, } from "./active-page-observation.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, } from "./data-layer-observer.js";
@@ -41,7 +42,6 @@ let visibleCommands = allCommands;
 let selectedIndex = 0;
 let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence = [];
-let activeWorkspaceTab = loadWorkspaceTab();
 let dataLayerSessionState = restoreSession();
 let dataLayerObserverState = {
     pageObject: samplePageObject(),
@@ -301,95 +301,21 @@ function setKeymapWarning(message) {
         keymapWarning.textContent = message;
     }
 }
-function loadWorkspaceTab() {
-    const stored = localStorage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-    return isWorkspaceTabId(stored) ? stored : "data-layer";
-}
+const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, localStorage);
+const hotkeyEditor = createHotkeyEditor({
+    commands: allCommands,
+    container: hotkeyEditorCommands,
+    filter: hotkeyEditorFilter,
+    getKeymap: () => activeHotkeyKeymap,
+    setKeymap: (keymap) => {
+        activeHotkeyKeymap = keymap;
+        storeHotkeyKeymap(keymap);
+    },
+    setStatus: setKeymapStatus,
+    setWarning: setKeymapWarning,
+});
 function showWorkspace(tab, focus = false) {
-    activeWorkspaceTab = tab;
-    localStorage.setItem(WORKSPACE_TAB_STORAGE_KEY, tab);
-    for (const workspaceTab of workspaceTabs) {
-        const button = document.querySelector(`#workspace-tab-${workspaceTab.id}`);
-        const panel = document.querySelector(`#workspace-panel-${workspaceTab.id}`);
-        const selected = workspaceTab.id === tab;
-        if (button) {
-            button.setAttribute("aria-selected", String(selected));
-            button.tabIndex = selected ? 0 : -1;
-            if (focus)
-                button.focus();
-        }
-        if (panel)
-            panel.hidden = !selected;
-    }
-}
-function editorGroupLabel(command) {
-    if (command.category === "navigation")
-        return "Navigation";
-    if (command.category === "data-layer")
-        return "Workspace";
-    return "General";
-}
-function renderHotkeyEditor() {
-    if (!hotkeyEditorCommands)
-        return;
-    const query = hotkeyEditorFilter?.value.trim().toLowerCase() ?? "";
-    const matching = allCommands.filter((command) => `${command.title} ${command.id} ${activeHotkeyKeymap.bindings[command.id] ?? ""}`
-        .toLowerCase().includes(query));
-    hotkeyEditorCommands.replaceChildren();
-    const groups = new Map();
-    for (const command of matching) {
-        const label = editorGroupLabel(command);
-        groups.set(label, [...(groups.get(label) ?? []), command]);
-    }
-    for (const [label, commands] of groups) {
-        const section = document.createElement("section");
-        const heading = document.createElement("h3");
-        const list = document.createElement("ul");
-        heading.textContent = label;
-        for (const command of commands) {
-            const item = document.createElement("li");
-            const title = document.createElement("strong");
-            const id = document.createElement("code");
-            const input = document.createElement("input");
-            const save = document.createElement("button");
-            const clear = document.createElement("button");
-            title.textContent = command.title;
-            id.textContent = command.id;
-            input.type = "text";
-            input.value = activeHotkeyKeymap.bindings[command.id] ?? "";
-            input.placeholder = "Unassigned";
-            input.dataset.commandId = command.id;
-            input.addEventListener("input", () => setKeymapStatus(`Pending hotkey change: ${input.value}`));
-            input.addEventListener("keydown", (event) => {
-                if (event.key === "Escape") {
-                    input.value = activeHotkeyKeymap.bindings[command.id] ?? "";
-                    setKeymapStatus("");
-                }
-            });
-            save.type = "button";
-            save.textContent = "Save";
-            save.addEventListener("click", () => commitHotkeyChange(command, input.value));
-            clear.type = "button";
-            clear.textContent = "Clear";
-            clear.addEventListener("click", () => commitHotkeyChange(command, ""));
-            item.append(title, document.createTextNode(" "), id, input, save, clear);
-            list.append(item);
-        }
-        section.append(heading, list);
-        hotkeyEditorCommands.append(section);
-    }
-}
-function commitHotkeyChange(command, sequence) {
-    const change = changeHotkeyBinding(activeHotkeyKeymap, command.id, sequence);
-    if (!change.keymap) {
-        setKeymapWarning(`Conflict: ${change.sequence} is assigned to ${change.conflictingCommandId}; ${command.id} was not changed.`);
-        return;
-    }
-    activeHotkeyKeymap = change.keymap;
-    storeHotkeyKeymap(activeHotkeyKeymap);
-    setKeymapWarning("");
-    setKeymapStatus(change.sequence ? `Hotkey updated: ${command.id}` : `Hotkey cleared: ${command.id}`);
-    renderHotkeyEditor();
+    workspaceTabsController.show(tab, focus);
 }
 function activateHotkeyFocus() {
     if (!panelRoot) {
@@ -460,6 +386,7 @@ function loadHotkeyKeymap(value) {
     }
     activeHotkeyKeymap = validation.keymap;
     storeHotkeyKeymap(activeHotkeyKeymap);
+    hotkeyEditor.render();
     clearPendingHotkeySequence();
     setKeymapWarning("");
     setKeymapStatus("Keymap loaded");
@@ -469,6 +396,7 @@ function loadHotkeyKeymap(value) {
 function createHotkeyKeymapFile() {
     activeHotkeyKeymap = blankHotkeyKeymap(allCommands);
     downloadHotkeyKeymapFile(activeHotkeyKeymap);
+    hotkeyEditor.render();
     setKeymapWarning("");
     setKeymapStatus("Blank keymap created");
 }
@@ -476,6 +404,7 @@ function updateHotkeyKeymapFile() {
     const summary = updateHotkeyKeymap(activeHotkeyKeymap, allCommands);
     activeHotkeyKeymap = summary.keymap;
     downloadHotkeyKeymapFile(activeHotkeyKeymap);
+    hotkeyEditor.render();
     setKeymapWarning("");
     updateKeymapStatus(summary.added, summary.removed);
 }
@@ -586,20 +515,8 @@ if (commandList) {
     }
 }
 openButton?.addEventListener("click", showPalette);
-workspaceTabList?.addEventListener("click", (event) => {
-    const button = event.target.closest("[role=tab]");
-    const tab = button?.id.replace("workspace-tab-", "") ?? null;
-    if (isWorkspaceTabId(tab))
-        showWorkspace(tab, true);
-});
-workspaceTabList?.addEventListener("keydown", (event) => {
-    const next = workspaceTabForNavigationKey(activeWorkspaceTab, event.key);
-    if (next) {
-        event.preventDefault();
-        showWorkspace(next, true);
-    }
-});
-hotkeyEditorFilter?.addEventListener("input", renderHotkeyEditor);
+workspaceTabsController.bind();
+hotkeyEditor.bind();
 createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
 updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
 loadKeymapButton?.addEventListener("click", () => {
@@ -682,8 +599,8 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
 renderHistoryPath(getHistoryArrayPath());
 renderSessionState();
 renderObserverState();
-showWorkspace(activeWorkspaceTab);
-renderHotkeyEditor();
+showWorkspace(workspaceTabsController.activeTab());
+hotkeyEditor.render();
 activateHotkeyFocus();
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };
 //# sourceMappingURL=side-panel.js.map
