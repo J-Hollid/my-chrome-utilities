@@ -70,6 +70,9 @@
        (every? data-layer-secondary-views hidden-views)
        (not (some #{active} hidden-views))))
 
+(defn hidden-panel-css-wins? [css]
+  (str/includes? css "[role=tabpanel][hidden] { display:none !important; }"))
+
 (defn- require-layout [world]
   (let [world (inspect world)]
     (support/assert! (navigation-structure? (:html world) (:css world))
@@ -408,6 +411,47 @@
                                      (str/includes? (:source world) "panel.hidden = !selected"))
                                 "Hidden Data Layer panels remain in layout or focus order." {})
                world)}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> panel has its normal layout styling$"
+    :handler (fn [world example [view-key]]
+               (let [world (inspect world)
+                     view (example-value example view-key)]
+                 (support/assert! (contains? data-layer-secondary-views view)
+                                  "Unknown normal-layout panel." {:view view})
+                 (assoc world :hidden-data-layer-view view :normal-layout? true)))}
+
+   {:pattern #"^Data Layer tab <([A-Za-z0-9_]+)> is selected in a browser$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (and (:normal-layout? world)
+                                       (contains? data-layer-secondary-views view)
+                                       (not= view (:hidden-data-layer-view world)))
+                                  "Browser selection does not hide the requested panel."
+                                  {:selected view :hidden (:hidden-data-layer-view world)})
+                 (assoc world :active-data-layer-view view :browser-view? true :computed-panels? true)))}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> panel has computed display none$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (and (:computed-panels? world)
+                                       (= view (:hidden-data-layer-view world))
+                                       (hidden-panel-css-wins? (:css world)))
+                                  "Hidden panel does not have computed display none." {:view view})
+                 world))}
+
+   {:pattern #"^its layout styling does not override its hidden state$"
+    :handler (fn [world _example _captures]
+               (support/assert! (hidden-panel-css-wins? (:css world))
+                                "Panel layout styling overrides hidden state." {})
+               world)}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> content is neither painted nor focusable$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (and (= view (:hidden-data-layer-view world))
+                                       (hidden-panel-css-wins? (:css world)))
+                                  "Hidden panel content remains painted or focusable." {:view view})
+                 world))}
 
    {:pattern #"^Data Layer Live is active in context <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [context-key]]
