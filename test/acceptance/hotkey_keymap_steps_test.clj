@@ -31,6 +31,7 @@
    function downloadHotkeyKeymapFile() {}
    function duplicateSequences() {}
    function clearPendingHotkeySequence() {}
+   function updateKeymapStatus(added, removed) { setKeymapStatus(`Keymap updated: added ${added.length}, removed ${removed.length}`); }
    function shouldIgnoreHotkeyTarget(target) { return target instanceof HTMLInputElement || target.id === 'history-path'; }
    function handleHotkeyKeydown(event) { advanceHotkeySequence(event); runCommandById('demo.say-hello', {}); }
    localStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, '{}');
@@ -66,6 +67,37 @@
            :bindings {"data-layer.start-testing" "C-c s"
                       "demo.removed" "C-x z"}}
           ["data-layer.start-testing" "data-layer.end-testing"]))))
+
+(deftest reports-exact-visible-keymap-update-status
+  (is (= "Keymap updated: added 1, removed 0"
+         (hotkey-keymap/keymap-update-status
+          {:added ["data-layer.end-testing"]
+           :removed []})))
+  (is (= "Keymap updated: added 0, removed 1"
+         (hotkey-keymap/keymap-update-status
+          {:added []
+           :removed ["demo.obsolete"]}))))
+
+(deftest acceptance-steps-report-exact-visible-keymap-update-status
+  (let [given-text "an existing keymap has <missing_count> missing registered command ids and <obsolete_count> obsolete command ids"
+        status-text "the visible keymap update status is Keymap updated: added <missing_count>, removed <obsolete_count>"
+        run-scenario (fn [missing-count obsolete-count]
+                       (let [example {"missing_count" missing-count
+                                      "obsolete_count" obsolete-count}
+                             dispatch (fn [world text]
+                                        (runtime/execute-step! world
+                                                               example
+                                                               {:keyword "And" :text text}
+                                                               hotkey-keymap/handlers))
+                             initial (dispatch {:root "."} given-text)
+                             updated (dispatch initial "the user updates the hotkey keymap file")]
+                         (is (= (str "Keymap updated: added " missing-count
+                                     ", removed " obsolete-count)
+                                (hotkey-keymap/keymap-update-status
+                                 (:keymap-update-summary updated))))
+                         (is (= updated (dispatch updated status-text)))))]
+    (run-scenario "1" "0")
+    (run-scenario "0" "1")))
 
 (deftest detects-sequences
   (let [keymap {:schemaVersion 1
