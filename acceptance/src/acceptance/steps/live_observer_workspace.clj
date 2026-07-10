@@ -239,6 +239,7 @@
                world)}
 
    {:pattern #"^command <([A-Za-z0-9_]+)> is available in the command palette and for hotkey assignment$"
+    :applies? (fn [world] (contains? world :commands-source))
     :handler (fn [world example [command-key]]
                (support/assert! (str/includes? (:commands-source world) (live/value example command-key))
                                 "Data Layer navigation command is unavailable." {})
@@ -315,5 +316,5 @@
                  next-world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:44:13.051030446+02:00", :module-hash "1355524208", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1461050477"} {:id "def/views", :kind "def", :line 6, :end-line nil, :hash "-938680975"} {:id "def/session-actions", :kind "def", :line 7, :end-line nil, :hash "198331199"} {:id "def/navigation-commands", :kind "def", :line 8, :end-line nil, :hash "-1397872888"} {:id "def/navigation", :kind "def", :line 13, :end-line nil, :hash "-728837813"} {:id "def/control-messages", :kind "def", :line 18, :end-line nil, :hash "-961276734"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "-1611151392"}]}
+;; {:version 1, :tested-at "2026-07-10T15:41:15.877472753+02:00", :module-hash "-1672581386", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1461050477"} {:id "def/views", :kind "def", :line 6, :end-line nil, :hash "-938680975"} {:id "def/session-actions", :kind "def", :line 7, :end-line nil, :hash "198331199"} {:id "def/navigation-commands", :kind "def", :line 8, :end-line nil, :hash "-1397872888"} {:id "def/navigation", :kind "def", :line 13, :end-line nil, :hash "-728837813"} {:id "def/control-messages", :kind "def", :line 18, :end-line nil, :hash "-961276734"} {:id "def/handlers", :kind "def", :line 22, :end-line nil, :hash "1462404211"}]}
 ;; clj-mutate-manifest-end

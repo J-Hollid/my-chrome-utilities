@@ -143,5 +143,5 @@
                     :handler (fn [world example _] (transition step world example))}) templates))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T15:11:37.237601249+02:00", :module-hash "117075700", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1766907959"} {:id "def/templates", :kind "def", :line 5, :end-line nil, :hash "65127469"} {:id "defn-/name!", :kind "defn-", :line 30, :end-line nil, :hash "1476283729"} {:id "defn-/open-editor", :kind "defn-", :line 34, :end-line nil, :hash "-1046023692"} {:id "defn-/transition", :kind "defn-", :line 39, :end-line nil, :hash "-420976978"} {:id "def/handlers", :kind "def", :line 139, :end-line nil, :hash "698096313"}]}
+;; {:version 1, :tested-at "2026-07-10T15:32:36.527491147+02:00", :module-hash "117075700", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1766907959"} {:id "def/templates", :kind "def", :line 5, :end-line nil, :hash "65127469"} {:id "defn-/name!", :kind "defn-", :line 30, :end-line nil, :hash "1476283729"} {:id "defn-/open-editor", :kind "defn-", :line 34, :end-line nil, :hash "-1046023692"} {:id "defn-/transition", :kind "defn-", :line 39, :end-line nil, :hash "-420976978"} {:id "def/handlers", :kind "def", :line 139, :end-line nil, :hash "698096313"}]}
 ;; clj-mutate-manifest-end

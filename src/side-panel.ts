@@ -123,6 +123,11 @@ import {
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
+  findSequenceReplayElements,
+  renderSequenceReplay,
+  setSequenceReplayResult,
+} from "./data-layer-sequence-replay-ui.js";
+import {
   findEventLibraryEditorElements,
   renderEventLibraryEditor,
   setEventLibraryResult,
@@ -169,17 +174,13 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
-const dataLayerViewList = document.querySelector<HTMLElement>("#data-layer-views");
-const liveSessionSummary = document.querySelector<HTMLElement>("#live-session-summary");
-const livePageUrl = document.querySelector<HTMLElement>("#live-page-url");
-const liveSessionMessage = document.querySelector<HTMLElement>("#live-session-message");
-const liveSourceStatuses = document.querySelector<HTMLElement>("#live-source-statuses");
-const liveEventFeed = document.querySelector<HTMLElement>("#live-event-feed");
-const liveEventList = document.querySelector<HTMLElement>("#live-event-list");
-const liveEventInspector = document.querySelector<HTMLElement>("#live-event-inspector");
-const backToEventsButton = document.querySelector<HTMLButtonElement>("#back-to-events");
-const pauseCaptureButton = document.querySelector<HTMLButtonElement>("#pause-capture");
-const resumeCaptureButton = document.querySelector<HTMLButtonElement>("#resume-capture");
+const liveObserverElements = findLiveObserverElements();
+const {
+  viewList: dataLayerViewList,
+  backToEventsButton,
+  pauseCaptureButton,
+  resumeCaptureButton,
+} = liveObserverElements;
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const savedSessionSearch = document.querySelector<HTMLInputElement>("#saved-session-search");
 const importSavedSessionButton = document.querySelector<HTMLButtonElement>("#import-saved-session");
@@ -189,7 +190,6 @@ const savedSessionCount = document.querySelector<HTMLElement>("#saved-session-co
 const savedSessionConfirmation = document.querySelector<HTMLElement>("#saved-session-confirmation");
 const cancelSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
-const liveObserverElements = findLiveObserverElements();
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const {
   search: eventTemplateSearch,
@@ -207,8 +207,7 @@ const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-sc
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
-const sequenceList = document.querySelector<HTMLElement>("#sequence-list");
-const sequenceRunResult = document.querySelector<HTMLElement>("#sequence-run-result");
+const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -256,63 +255,23 @@ function renderHistoryPath(path: string, fieldValue = path): void {
 function showDataLayerView(view: DataLayerView, focus = false): void {
   liveObserverState = { ...liveObserverState, view };
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-  for (const candidate of dataLayerViews) {
-    const button = document.querySelector<HTMLButtonElement>(
-      `#data-layer-view-${candidate.toLowerCase()}`,
-    );
-    const panel = document.querySelector<HTMLElement>(
-      `#data-layer-panel-${candidate.toLowerCase()}`,
-    );
-    const selected = candidate === view;
-    if (button) {
-      button.setAttribute("aria-selected", String(selected));
-      button.tabIndex = selected ? 0 : -1;
-      if (focus) button.focus();
-    }
-    if (panel) panel.hidden = !selected;
-  }
+  renderDataLayerView(liveObserverElements, view, focus);
 }
 
 function renderLiveObserver(): void {
-  if (liveSessionSummary) {
-    liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
-  }
-  if (livePageUrl) livePageUrl.textContent = liveObserverState.pageUrl;
-  if (liveSourceStatuses) {
-    liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
-      const item = document.createElement("li");
-      item.textContent = `${source.name}: ${source.status}`;
-      return item;
-    }));
-  }
-  if (liveEventFeed) {
-    liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
-      button.addEventListener("click", () => openLiveInspector(event.id));
-      item.append(button);
-      return item;
-    }));
-  }
-  if (liveEventList) liveEventList.hidden = !liveObserverState.listVisible;
-  if (liveEventInspector) liveEventInspector.hidden = !liveObserverState.inspectorEventId;
-  if (backToEventsButton) backToEventsButton.hidden = liveObserverState.listVisible;
+  renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
 }
 
 function openLiveInspector(eventId: string): void {
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
-  if (liveEventInspector && event) {
-    liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
-  }
+  if (event) renderLiveInspector(liveObserverElements, event);
   renderLiveObserver();
 }
 
 function setLiveSessionMessage(message: string): void {
-  if (liveSessionMessage) liveSessionMessage.textContent = message;
+  renderLiveSessionMessage(liveObserverElements, message);
 }
 
 function renderEventTemplateLibrary(): void {
@@ -354,17 +313,46 @@ function persistEventTemplateLibrary(): void {
   localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 
-function renderSequences(): void { if (!sequenceList) return; sequenceList.replaceChildren(...replaySequences.map((sequence) => { const item = document.createElement("li"); const run = document.createElement("button"); run.type = "button"; run.textContent = "Run all"; item.textContent = `${sequence.name}: ${sequence.steps.length} ordered steps. `; run.addEventListener("click", () => { const templates: ReplayTemplate[] = eventTemplates.map((template) => ({ id: template.id, name: template.name, version: template.version, sourceId: template.sourceId, destination: template.destination, payload: template.payload })); const adapters = liveObserverState.sources.map((source) => ({ id: source.id, name: source.name, kind: "Data Layer", destination: "event.history", enabled: true, status: source.status, capabilities: ["push"] as const })); const ready = readiness(sequence, templates, adapters); if (!ready.runnable) { if (sequenceRunResult) sequenceRunResult.textContent = `Not runnable: ${ready.blocked.join(", ")}`; return; } const record = runSequence(sequence, templates, adapters, liveObserverState.pageUrl, "Run all"); if (sequenceRunResult) sequenceRunResult.textContent = `${record.result}: ${record.steps.length} steps.`; }); item.append(run); return item; })); }
-
-function renderDraftProperties(value: unknown, path = ""): HTMLLIElement[] {
-  if (value === null || typeof value !== "object") {
-    const item = document.createElement("li");
-    item.textContent = `${path || "/"}: ${String(value)} (${typeof value})`;
-    return [item];
-  }
-  return Object.entries(value).flatMap(([key, child]) => renderDraftProperties(child, `${path}/${key}`));
+function renderSequences(): void {
+  renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
+    const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      version: template.version,
+      sourceId: template.sourceId,
+      destination: template.destination,
+      payload: template.payload,
+    }));
+    const adapters = liveObserverState.sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: "Data Layer",
+      destination: "event.history",
+      enabled: true,
+      status: source.status,
+      capabilities: ["push"] as const,
+    }));
+    const ready = readiness(sequence, templates, adapters);
+    if (!ready.runnable) {
+      setSequenceReplayResult(
+        sequenceReplayElements,
+        `Not runnable: ${ready.blocked.join(", ")}`,
+      );
+      return;
+    }
+    const record = runSequence(
+      sequence,
+      templates,
+      adapters,
+      liveObserverState.pageUrl,
+      "Run all",
+    );
+    setSequenceReplayResult(
+      sequenceReplayElements,
+      `${record.result}: ${record.steps.length} steps.`,
+    );
+  });
 }
-
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements,

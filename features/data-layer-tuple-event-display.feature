@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=a40fce66f549fbd8146c8bfd03fa759908fe657d197c97d324c5473b1f9cdb9a
+# mutation-stamp: sha256=3abe7b63cec2d9f5f701c7915aa9bfce937dd9134c6b871c241a5e9627fb1387
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T21:32:02.124789538Z","feature_name":"Data layer tuple event display","feature_path":"features/data-layer-tuple-event-display.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:83c03c78af432c3e3f28f0343b0300eb60df05978e5d4e5984bb16497ac1b636","scenarios":[{"index":0,"name":"Data layer tuple event display 001","scenario_hash":"3e5603a77a50c33fc653aad664c7a7758253d5ecc7165ce471379a95b2ee3801","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-09T21:31:47.438424075Z"}]}
+# {"version":1,"tested_at":"2026-07-10T13:46:16.193147575Z","feature_name":"Data layer tuple event display","feature_path":"features/data-layer-tuple-event-display.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:tuple-event-display-semantic-v2","scenarios":[{"index":0,"name":"Data layer tuple event display 001","scenario_hash":"3ad9134f3f05665f952464460b2077e17194b8eeba1faf960e8f4d8cde7ad310","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T13:46:16.193147575Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer tuple event display

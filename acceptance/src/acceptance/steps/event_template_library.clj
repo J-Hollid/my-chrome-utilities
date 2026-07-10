@@ -210,5 +210,5 @@
         templates))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T15:11:25.280708787+02:00", :module-hash "1830541463", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "509625456"} {:id "def/templates", :kind "def", :line 6, :end-line nil, :hash "-332883156"} {:id "defn-/canonical-name!", :kind "defn-", :line 38, :end-line nil, :hash "609916801"} {:id "defn-/transition", :kind "defn-", :line 43, :end-line nil, :hash "-790951710"} {:id "def/handlers", :kind "def", :line 204, :end-line nil, :hash "-927812437"}]}
+;; {:version 1, :tested-at "2026-07-10T15:32:35.6694957+02:00", :module-hash "1830541463", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "509625456"} {:id "def/templates", :kind "def", :line 6, :end-line nil, :hash "-332883156"} {:id "defn-/canonical-name!", :kind "defn-", :line 38, :end-line nil, :hash "609916801"} {:id "defn-/transition", :kind "defn-", :line 43, :end-line nil, :hash "-790951710"} {:id "def/handlers", :kind "def", :line 204, :end-line nil, :hash "-927812437"}]}
 ;; clj-mutate-manifest-end

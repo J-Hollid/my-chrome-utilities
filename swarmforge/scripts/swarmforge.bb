@@ -6,6 +6,7 @@
             [clojure.string :as str]))
 
 (def session-prefix "swarmforge")
+(def dashboard-session "swarmforge-dashboard")
 (def agent-window "swarm")
 (def red "\u001b[0;31m")
 (def green "\u001b[0;32m")
@@ -313,6 +314,32 @@
   (sh "tmux" "-S" (:tmux-socket ctx) "rename-window" "-t" (str session ":" agent-window) title)
   (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t" (str session ":" title) "allow-rename" "off"))
 
+(defn dashboard-command [ctx session]
+  ;; Each dashboard pane is an independent tmux client for its role session.
+  ;; Clearing TMUX permits that client to run inside the dashboard's tmux pane.
+  (str "TMUX= tmux -S " (sq (:tmux-socket ctx))
+       " attach-session -t " (sq session)))
+
+(defn create-dashboard-session! [ctx]
+  (sh "tmux" "-S" (:tmux-socket ctx) "new-session" "-d" "-s" dashboard-session "-n" "Agents")
+  (sh "tmux" "-S" (:tmux-socket ctx) "set-option" "-t" dashboard-session "mouse" "on")
+  (let [first-pane (sh-out "tmux" "-S" (:tmux-socket ctx) "list-panes" "-t"
+                           (str dashboard-session ":Agents") "-F" "#{pane_id}")]
+    (doseq [[index row] (map-indexed vector (:roles ctx))]
+      (let [pane (if (zero? index)
+                   first-pane
+                   (sh-out "tmux" "-S" (:tmux-socket ctx) "split-window" "-h" "-P" "-F" "#{pane_id}"
+                           "-t" (str dashboard-session ":Agents")))]
+        (sh "tmux" "-S" (:tmux-socket ctx) "select-pane" "-t" pane "-T" (:display-name row))
+        (sh "tmux" "-S" (:tmux-socket ctx) "send-keys" "-t" pane
+            (dashboard-command ctx (:session row)) "Enter")))
+    (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t"
+        (str dashboard-session ":Agents") "pane-border-status" "top")
+    (sh "tmux" "-S" (:tmux-socket ctx) "set-window-option" "-t"
+        (str dashboard-session ":Agents") "pane-border-format" " #{pane_title} ")
+    (sh "tmux" "-S" (:tmux-socket ctx) "select-layout" "-t"
+        (str dashboard-session ":Agents") "tiled")))
+
 (defn write-agent-instruction-file! [role prompt-file]
   (spit (str prompt-file)
         (str "Read swarmforge/constitution.prompt, then read every file it refers to recursively, and obey all of those instructions.\n"
@@ -361,6 +388,7 @@
            " " (sq (:tmux-socket ctx))
            " " (sq (str (:window-ids-file ctx)))
            (apply str (map #(str " " (sq (:session %))) (:roles ctx)))
+           " " (sq dashboard-session)
            " >/dev/null 2>&1 &!; exit $exit_code"))))
 
 (defn launch-role! [ctx index row]
@@ -386,14 +414,29 @@
         state (str/trim (:out result))]
     (#{"running" "degraded"} state)))
 
+(defn wsl? []
+  (boolean (re-find #"(?i)microsoft|wsl"
+                    (str (System/getenv "WSL_DISTRO_NAME") " "
+                         (sh-out "uname" "-r")))))
+
+(defn systemd-inhibit-usable? []
+  ;; systemd can be present in WSL or containers without permitting inhibition.
+  (sh-ok? "systemd-inhibit"
+          "--what=sleep:idle"
+          "--who=SwarmForge"
+          "--why=Checking SwarmForge sleep prevention"
+          "true"))
+
 (defn sleep-inhibitor-prefix []
   (when-not (= "0" (System/getenv "SWARMFORGE_PREVENT_SLEEP"))
     (case (uname)
       "Darwin" (when (command-exists? "caffeinate")
                  ["caffeinate" "-dims"])
-      "Linux" (when (and (command-exists? "systemd-inhibit")
+      "Linux" (when (and (not (wsl?))
+                         (command-exists? "systemd-inhibit")
                          (command-exists? "systemctl")
-                         (linux-systemd-running?))
+                         (linux-systemd-running?)
+                         (systemd-inhibit-usable?))
                 ["systemd-inhibit"
                  "--what=sleep:idle"
                  "--who=SwarmForge"
@@ -464,8 +507,8 @@
                           :err :out})
         (println (str yellow (terminal-call-out ctx "terminal_backend_label") " surfaces are not trackable; window watchdog is disabled for this backend." reset))))
     (do
-      (println (str yellow "No terminal backend found; attaching current shell to '" (-> ctx :roles first :session) "' instead." reset))
-      (sh "tmux" "-S" (:tmux-socket ctx) "attach-session" "-t" (-> ctx :roles first :session)))))
+      (println (str yellow "No terminal backend found; attaching current shell to the SwarmForge dashboard. Click a pane to work with that agent." reset))
+      (sh "tmux" "-S" (:tmux-socket ctx) "attach-session" "-t" dashboard-session))))
 
 (defn context [working-dir]
   (let [working-dir (fs/absolutize (fs/path working-dir))
@@ -532,6 +575,9 @@
       (prepare-handoff-dirs! ctx)
       (let [ctx (assoc ctx :terminal-backend (detect-terminal-backend))]
         (stop-handoff-daemon! ctx)
+        (when (sh-ok? "tmux" "-S" (:tmux-socket ctx) "has-session" "-t" dashboard-session)
+          (println (str yellow "Existing SwarmForge dashboard found. Killing it..." reset))
+          (sh "tmux" "-S" (:tmux-socket ctx) "kill-session" "-t" dashboard-session))
         (doseq [row (:roles ctx)]
           (when (sh-ok? "tmux" "-S" (:tmux-socket ctx) "has-session" "-t" (:session row))
             (println (str yellow "Existing SwarmForge session found: " (:session row) ". Killing it..." reset))
@@ -543,6 +589,7 @@
         (println (str green "Launching SwarmForge tmux sessions..." reset))
         (doseq [row (:roles ctx)]
           (create-role-session! ctx (:session row) (:display-name row)))
+        (create-dashboard-session! ctx)
         (write-tmux-env-file! ctx)
         (sync-worktree-scripts! ctx)
         (start-handoff-daemon! ctx)
@@ -556,6 +603,7 @@
         (println (str green bold "SwarmForge is ready." reset))
         (println "Working directory:" (str (:working-dir ctx)))
         (println "Sessions:")
+        (println (str "  Dashboard: " dashboard-session " (all agents)"))
         (doseq [row (:roles ctx)]
           (println (str "  " (:display-name row) ": " (:session row))))
         (println)

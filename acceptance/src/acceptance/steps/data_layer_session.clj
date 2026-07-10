@@ -70,6 +70,12 @@
   {:tab-id "active-tab"
    :url "https://example.test/"})
 
+(defn- assert-canonical-history! [world]
+  (support/assert! (= "queue.history" (get-in world [:session-state :session :history-path]))
+                   "Active session history path fixture is not canonical."
+                   {:expected "queue.history"
+                    :actual (get-in world [:session-state :session :history-path])}))
+
 (def handlers
   [{:pattern #"^command <([A-Za-z0-9_]+)> is run for the active tab$"
     :handler (fn [world example [command-key]]
@@ -122,6 +128,9 @@
    {:pattern #"^the active session uses history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [history-path-key]]
                (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= "queue.history" expected)
+                                  "Session history path fixture is not canonical."
+                                  {:expected "queue.history" :actual expected})
                  (support/assert! (= expected (get-in world [:session-state :session :history-path]))
                                   "Session does not use the configured history path."
                                   {:expected expected
@@ -141,6 +150,16 @@
     :handler (fn [world example [start-url-key next-url-key]]
                (let [start-url (support/require-example example start-url-key)
                      next-url (support/require-example example next-url-key)]
+                 (assert-canonical-history! world)
+                 (support/assert! (contains? #{["https://example.test/" "https://example.test/p/"]
+                                               ["https://example.test/" "https://example.test/"]}
+                                             [start-url next-url])
+                                  "Navigation journey fixture is not canonical."
+                                  {:start-url start-url :next-url next-url})
+                 (support/assert! (= start-url (get-in world [:session-state :session :current-url]))
+                                  "Navigation did not start at the active session URL."
+                                  {:expected start-url
+                                   :actual (get-in world [:session-state :session :current-url])})
                  (assoc world
                         :start-url start-url
                         :next-url next-url
@@ -151,6 +170,11 @@
                (support/assert! (active-session? (:session-state world))
                                 "Session did not remain active."
                                 {:session-state (:session-state world)})
+               (support/assert! (= (:next-url world)
+                                   (get-in world [:session-state :session :current-url]))
+                                "Active session did not reach the requested URL."
+                                {:expected (:next-url world)
+                                 :actual (get-in world [:session-state :session :current-url])})
                world)}
 
    {:pattern #"^captured event entries remain part of the same session timeline$"
@@ -166,6 +190,7 @@
 
    {:pattern #"^the active session is restored from local persistence$"
     :handler (fn [world _example _captures]
+               (assert-canonical-history! world)
                (let [restored (restore-session (:persisted-session world))]
                  (support/assert! (active-session? restored)
                                   "Active session was not restored."
@@ -200,6 +225,7 @@
 
    {:pattern #"^the data layer testing session ends intentionally$"
     :handler (fn [world _example _captures]
+               (assert-canonical-history! world)
                (support/assert! (= "ended"
                                    (get-in world [:session-state :session :status]))
                                 "Session did not end intentionally."
@@ -257,5 +283,5 @@
     :handler (fn [world _ _] world)}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T22:49:38.901622257+02:00", :module-hash "-324358840", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2116833989"} {:id "defn/active-session?", :kind "defn", :line 5, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 8, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 19, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 24, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 28, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 33, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 40, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 45, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 48, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 53, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 59, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 65, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 69, :end-line nil, :hash "-1862329308"} {:id "def/handlers", :kind "def", :line 73, :end-line nil, :hash "1937136810"}]}
+;; {:version 1, :tested-at "2026-07-10T15:41:12.803381479+02:00", :module-hash "-746219869", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2116833989"} {:id "defn/active-session?", :kind "defn", :line 5, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 8, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 19, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 24, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 28, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 33, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 40, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 45, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 48, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 53, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 59, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 65, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 69, :end-line nil, :hash "-1862329308"} {:id "defn-/assert-canonical-history!", :kind "defn-", :line 73, :end-line nil, :hash "-838603358"} {:id "def/handlers", :kind "def", :line 79, :end-line nil, :hash "-610759664"}]}
 ;; clj-mutate-manifest-end
