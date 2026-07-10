@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=6094d5350b0ac0e1b3a688bf60a607874c78b5734e8bf7e5f40738172dc556d3
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-10T23:55:22.391370759Z","feature_name":"Data Layer Live inspector actions","feature_path":"features/data-layer-live-inspector-actions.feature","background_hash":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","implementation_hash":"sha256:live-inspector-interaction-regressions-v1","scenarios":[{"index":0,"name":"Data Layer Live inspector actions 001","scenario_hash":"fae3db42312af84517ddf93552f8b5d24cb5611d00bd372f5a8535d3d0c596d9","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:55:22.391370759Z"},{"index":1,"name":"Data Layer Live inspector actions 002","scenario_hash":"7f17e806cd9a232c724abb1cd0fb5b22ff7af44411298b1cd04b50e1fd02a240","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:55:22.391370759Z"},{"index":2,"name":"Data Layer Live inspector actions 003","scenario_hash":"17a391f6997164392bb13140954fe9dfb34685da71ecda9b956222663f36c748","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:55:22.391370759Z"},{"index":3,"name":"Data Layer Live inspector actions 004","scenario_hash":"1f91ddef46dbcbd6431ea16940cf70b93ebfe757b5c097775b705b3e7a00a5d3","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:55:22.391370759Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data Layer Live inspector actions
 
   # Data Layer Live inspector actions 001
