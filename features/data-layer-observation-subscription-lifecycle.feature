@@ -38,7 +38,7 @@ Feature: Data layer observation subscription lifecycle
   # Data layer observation subscription lifecycle 003
   Scenario Outline: Data layer observation subscription lifecycle 003
     Given event <event_name> was captured on page <first_page>
-    When the active tab navigates to new page <page_url> with a new history array containing <event_name>
+    When the selected target tab navigates to new page <page_url> with a new history array containing <event_name>
     Then the new page's existing history is imported once
     And both occurrences of <event_name> remain distinct and retain their page URLs
     And exactly one active subscription observes <history_path> on <page_url>

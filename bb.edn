@@ -28,6 +28,7 @@
                         [acceptance.operator-interface-steps-test]
                         [acceptance.live-observer-steps-test]
                         [acceptance.live-event-presentation-steps-test]
+                        [acceptance.observation-targets-steps-test]
                         [acceptance.event-library-editor-steps-test]
                         [acceptance.schema-verification-steps-test]
                         [acceptance.saved-sessions-steps-test]
@@ -51,6 +52,7 @@
                                                 'acceptance.operator-interface-steps-test
                                                 'acceptance.live-observer-steps-test
                                                 'acceptance.live-event-presentation-steps-test
+                                                'acceptance.observation-targets-steps-test
                                                 'acceptance.event-library-editor-steps-test
                                                 'acceptance.schema-verification-steps-test
                                                 'acceptance.saved-sessions-steps-test
@@ -67,6 +69,10 @@
                                                              :err :inherit
                                                              :continue true}
                                                             "npm" "run" "test:unit:live-event-presentation")
+                         target-result (process/shell {:out :inherit
+                                                       :err :inherit
+                                                       :continue true}
+                                                      "npm" "run" "test:unit:observation-targets")
                          editor-result (process/shell {:out :inherit
                                                        :err :inherit
                                                        :continue true}
@@ -87,6 +93,7 @@
                                (not (zero? (:exit source-result)))
                                (not (zero? (:exit live-result)))
                                (not (zero? (:exit presentation-result)))
+                               (not (zero? (:exit target-result)))
                                (not (zero? (:exit editor-result)))
                                (not (zero? (:exit schema-result)))
                                (not (zero? (:exit sequence-result)))

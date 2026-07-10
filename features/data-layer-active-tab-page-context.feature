@@ -12,7 +12,7 @@ Feature: Data layer active tab page context
 
   # Data layer active tab page context 001
   Scenario Outline: Data layer active tab page context 001
-    Given the active browser tab URL is <page_url>
+    Given the selected observation target URL is <page_url>
     When command <command_id> is run from the side panel
     Then the data layer testing session current URL is <page_url>
     And no timeline entry uses URL <side_panel_url>
@@ -24,7 +24,7 @@ Feature: Data layer active tab page context
   # Data layer active tab page context 002
   Scenario Outline: Data layer active tab page context 002
     Given a data layer testing session is active
-    And the active browser tab URL is <page_url>
+    And the selected observation target URL is <page_url>
     When page <page_url> appends history entry <event_name> with payload <payload_label>
     Then the extension records a new observed event entry
     And the observed event entry URL is <page_url>
@@ -38,7 +38,7 @@ Feature: Data layer active tab page context
   # Data layer active tab page context 003
   Scenario Outline: Data layer active tab page context 003
     Given a data layer testing session is active
-    When the active tab navigates from <start_url> to page <page_url>
+    When the selected target tab navigates from <start_url> to page <page_url>
     And page <page_url> appends history entry <event_name> with payload <payload_label>
     Then the extension records entry <event_name> with URL <page_url>
     And no timeline entry uses URL <side_panel_url>

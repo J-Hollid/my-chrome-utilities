@@ -28,6 +28,9 @@ export interface DataLayerTestingSession {
   historyPath: string;
   startUrl: string;
   currentUrl: string;
+  windowId?: number;
+  targetTitle?: string;
+  targetOrigin?: string;
   timeline: DataLayerEventEntry[];
 }
 
@@ -44,7 +47,14 @@ export function sessionScope(state: DataLayerSessionState): string | undefined {
 
 export function startDataLayerTestingSession(
   state: DataLayerSessionState,
-  options: { tabId: number; url: string; historyPath?: string },
+  options: {
+    tabId: number;
+    url: string;
+    historyPath?: string;
+    windowId?: number;
+    targetTitle?: string;
+    targetOrigin?: string;
+  },
 ): DataLayerSessionState {
   if (state.session?.status === "active") {
     return {
@@ -61,6 +71,9 @@ export function startDataLayerTestingSession(
       historyPath: options.historyPath ?? getHistoryArrayPath(),
       startUrl: options.url,
       currentUrl: options.url,
+      ...(options.windowId === undefined ? {} : { windowId: options.windowId }),
+      ...(options.targetTitle === undefined ? {} : { targetTitle: options.targetTitle }),
+      ...(options.targetOrigin === undefined ? {} : { targetOrigin: options.targetOrigin }),
       timeline: [],
     },
   };

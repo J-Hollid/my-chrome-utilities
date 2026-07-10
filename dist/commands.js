@@ -46,6 +46,19 @@ const saveDataLayerSessionCommand = {
         });
     },
 };
+function observationTargetCommand(id, title, action) {
+    return {
+        id,
+        title,
+        description: `${action} in the Data Layer Live view.`,
+        category: "data-layer",
+        run(context) {
+            context.showWorkspace?.("data-layer");
+            context.showDataLayerView?.("Live");
+            context.record({ commandId: id, message: action });
+        },
+    };
+}
 function dataLayerViewCommand(id, title) {
     const view = title.replace("Show ", "");
     return {
@@ -77,6 +90,9 @@ const commands = [
     startDataLayerTestingCommand,
     endDataLayerTestingCommand,
     saveDataLayerSessionCommand,
+    observationTargetCommand("data-layer.choose-observation-target", "Choose target", "Choose target"),
+    observationTargetCommand("data-layer.attach-selected-target", "Attach selected target", "Attach selected target"),
+    observationTargetCommand("data-layer.detach-observation-target", "Detach target", "Detach target"),
     dataLayerViewCommand("data-layer.show-live", "Show Live"),
     dataLayerViewCommand("data-layer.show-library", "Show Library"),
     dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),

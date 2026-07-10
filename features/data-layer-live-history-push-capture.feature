@@ -14,8 +14,8 @@ Feature: Data layer live history push capture
   # Data layer live history push capture 001
   Scenario Outline: Data layer live history push capture 001
     Given page <page_url> has no queued data layer entries at <history_path>
-    And data layer testing is started from the side panel for the active website page
-    When the active website page pushes history entry <event_name> with payload <payload_label>
+    And data layer testing is started from the side panel for the selected target page
+    When the selected target page pushes history entry <event_name> with payload <payload_label>
     Then the side panel session timeline shows initial page entry <page_url> and observed event <event_name>
     And the observed event entry matches page URL <page_url>, observer path <history_path>, and payload <payload_label>
     And the live capture entry uses the canonical page URL
@@ -30,7 +30,7 @@ Feature: Data layer live history push capture
   # Data layer live history push capture 002
   Scenario Outline: Data layer live history push capture 002
     Given before testing starts, page <page_url> has queued data layer entry <event_name> with payload <payload_label> at <history_path>
-    When data layer testing is started from the side panel for the active website page
+    When data layer testing is started from the side panel for the selected target page
     Then the side panel session timeline shows initial page entry <page_url> and observed event <event_name>
     And the observed event entry matches page URL <page_url>, observer path <history_path>, and payload <payload_label>
     And the live capture entry uses the canonical page URL
