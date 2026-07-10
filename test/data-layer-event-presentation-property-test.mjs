@@ -21,10 +21,22 @@ for (let sample = 0; sample < 100; sample += 1) {
     `event-${index}`,
     { sample, index },
   ]);
-  const events = importExistingHistory(context, inputs, "2026-01-01T00:00:00Z");
+  const firstOrdinal = sample + 1;
+  const events = importExistingHistory(
+    context,
+    inputs,
+    "2026-01-01T00:00:00Z",
+    firstOrdinal,
+  );
 
   assert.deepEqual(events.map((event) => event.name), inputs.map(([name]) => name));
   assert.equal(new Set(events.map((event) => event.id)).size, inputs.length);
+  assert.deepEqual(
+    events.map((event) => event.id),
+    inputs.map((_, index) =>
+      `${context.sessionId}:${context.sourceId}:${context.pageUrl}:${firstOrdinal + index}`,
+    ),
+  );
   inputs[0][1].sample = -1;
   assert.equal(events[0].payload.sample, sample);
 
@@ -47,6 +59,13 @@ for (let sample = 0; sample < 100; sample += 1) {
     Array.from({ length: inputs.length + 1 }, (_, index) =>
       importedOnce(subscription, context.pageUrl, context.destination, index),
     ).every(Boolean),
+  );
+  const alternatePath = `${context.destination}:${sample}`;
+  subscription = markImported(subscription, context.pageUrl, alternatePath, 1);
+  assert.equal(importedOnce(subscription, context.pageUrl, alternatePath, 0), true);
+  assert.equal(
+    importedOnce(subscription, `${context.pageUrl}:${sample}`, context.destination, 0),
+    false,
   );
   assert.equal(stopSubscription(subscription).activeCount, 0);
 }
