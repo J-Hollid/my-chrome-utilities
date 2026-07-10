@@ -113,6 +113,7 @@ import {
   type EditableEventTemplate,
   type PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -187,6 +188,13 @@ const saveTemplateCopyButton = document.querySelector<HTMLButtonElement>("#save-
 const pushTemplateDraftButton = document.querySelector<HTMLButtonElement>("#push-template-draft");
 const discardTemplateDraftButton = document.querySelector<HTMLButtonElement>("#discard-template-draft");
 const eventTemplateResult = document.querySelector<HTMLElement>("#event-template-result");
+const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
+const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
+const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
+const schemaCount = document.querySelector<HTMLElement>("#schema-count");
+const schemaList = document.querySelector<HTMLElement>("#schema-list");
+const schemaResult = document.querySelector<HTMLElement>("#schema-result");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -210,6 +218,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let schemas: SchemaDefinition[] = [];
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -324,6 +333,19 @@ function renderEventTemplateLibrary(): void {
   if (eventTemplateJson && propertyEditorState) eventTemplateJson.value = propertyEditorState.jsonDraft;
   if (eventTemplateValidation) eventTemplateValidation.textContent = propertyEditorState?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
   if (eventTemplateProperties) eventTemplateProperties.replaceChildren(...(propertyEditorState ? renderDraftProperties(propertyEditorState.draft) : []));
+}
+
+function renderSchemas(): void {
+  const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+  if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
+  if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
+    item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+    revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = [...schemas.filter(({ id }) => id !== schema.id), next]; renderSchemas(); });
+    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; renderSchemas(); });
+    remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); renderSchemas(); }); item.append(revise, duplicate, remove); return item;
+  }));
 }
 
 function persistEventTemplateLibrary(): void {
@@ -1170,6 +1192,10 @@ saveLiveSessionButton?.addEventListener("click", () => {
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+schemaSearch?.addEventListener("input", renderSchemas);
+createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult) schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
+exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
 saveLatestTemplateButton?.addEventListener("click", () => {
   const event = liveObserverState.events.at(-1);
@@ -1386,6 +1412,7 @@ showDataLayerView("Live");
 renderLiveObserver();
 renderSavedSessions();
 renderEventTemplateLibrary();
+renderSchemas();
 activateHotkeyFocus();
 
 export {
