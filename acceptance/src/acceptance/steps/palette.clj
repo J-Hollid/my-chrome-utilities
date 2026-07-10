@@ -34,6 +34,11 @@
   (and (str/includes? source "listCommands()")
        (str/includes? source "palette-results")))
 
+(defn palette-backed-by-registry? [source]
+  (and (str/includes? source "listCommands()")
+       (str/includes? source "runCommandById")
+       (not (re-find #"\bid\s*:\s*\"[^\"]+\"" source))))
+
 (defn filters-commands? [source filter-text]
   (and (seq filter-text)
        (str/includes? source "filterCommands")
@@ -151,13 +156,18 @@
    {:pattern #"^command <([A-Za-z0-9_]+)> runs$"
     :handler (fn [world example [command-key]]
                (let [command-id (support/require-example example command-key)]
-                 (support/assert! (= command-id (:selected-command-id world))
-                                  "Selected command does not match the command expected to run."
-                                  {:expected command-id :actual (:selected-command-id world)})
-                 (support/assert! (runs-selected-command-on-key? (:side-panel-source world)
-                                                                 (:pressed-key world))
-                                  "Palette does not run the selected command for the requested key."
-                                  {:key (:pressed-key world)})
+                 (if (contains? world :last-command-id)
+                   (support/assert! (= command-id (:last-command-id world))
+                                    "Hotkey keymap did not run the expected command."
+                                    {:expected command-id :actual (:last-command-id world)})
+                   (do
+                     (support/assert! (= command-id (:selected-command-id world))
+                                      "Selected command does not match the command expected to run."
+                                      {:expected command-id :actual (:selected-command-id world)})
+                     (support/assert! (runs-selected-command-on-key? (:side-panel-source world)
+                                                                     (:pressed-key world))
+                                      "Palette does not run the selected command for the requested key."
+                                      {:key (:pressed-key world)})))
                  world))}
 
    {:pattern #"^visible command log records that command <([A-Za-z0-9_]+)> ran$"
@@ -215,6 +225,14 @@
                  (support/assert! (empty? findings)
                                   "User keybinding editor was found."
                                   {:findings (vec findings)})
+                 world))}
+
+   {:pattern #"^command palette commands are backed by the command registry$"
+    :handler (fn [world _example _captures]
+               (let [world (inspect-side-panel world)]
+                 (support/assert! (palette-backed-by-registry? (:side-panel-source world))
+                                  "Command palette commands are not backed by the command registry."
+                                  {})
                  world))}])
 
 ;; clj-mutate-manifest-begin

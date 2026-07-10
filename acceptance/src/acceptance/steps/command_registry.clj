@@ -25,6 +25,18 @@
         (re-find #"export\s+function\s+runCommandById\s*\(" source)
         (re-find #"record\s*\(" source))))
 
+(defn stable-keymap-identifiers? [source]
+  (boolean
+   (and (re-find #"\bid\s*:\s*\"[a-z0-9-]+\.[a-z0-9-]+\"" source)
+        (re-find #"export\s+function\s+findCommand\s*\(" source)
+        (re-find #"command\.id\s*={3}\s*id" source))))
+
+(defn command-id-execution? [source]
+  (boolean
+   (and (re-find #"export\s+function\s+runCommandById\s*\(" source)
+        (re-find #"findCommand\s*\(\s*id\s*\)" source)
+        (re-find #"command\.run\s*\(\s*context\s*\)" source))))
+
 (defn separate-from-rendering? [registry-source rendering-source]
   (and (every? #(contains? (defined-fields registry-source) %) command-fields)
        (not (re-find #"\b(id|title|description|category|run)\s*:" rendering-source))))
@@ -163,6 +175,24 @@
                  (support/assert! (empty? findings)
                                   "User-configurable keybindings were found."
                                   {:findings (vec findings)})
+                 world))}
+
+   {:pattern #"^registered command ids are stable keymap identifiers$"
+    :handler (fn [world _example _captures]
+               (let [root (or (:root world) (support/repository-root))
+                     source (support/source-file root "src/commands.ts")]
+                 (support/assert! (stable-keymap-identifiers? source)
+                                  "Command ids are not stable keymap identifiers."
+                                  {})
+                 world))}
+
+   {:pattern #"^command execution remains available through command ids$"
+    :handler (fn [world _example _captures]
+               (let [root (or (:root world) (support/repository-root))
+                     source (support/source-file root "src/commands.ts")]
+                 (support/assert! (command-id-execution? source)
+                                  "Command execution is not available through command ids."
+                                  {})
                  world))}])
 
 ;; clj-mutate-manifest-begin

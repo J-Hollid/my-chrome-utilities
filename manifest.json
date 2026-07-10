@@ -13,5 +13,13 @@
   "side_panel": {
     "default_path": "side-panel.html"
   },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+1"
+      },
+      "description": "Open side panel hotkeys"
+    }
+  },
   "permissions": ["sidePanel", "activeTab", "scripting"]
 }
