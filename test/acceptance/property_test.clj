@@ -182,6 +182,17 @@
                          (= [obsolete-id] (:removed summary))))))]
     (is (:pass? result) (pr-str result))))
 
+(deftest hotkey-keymap-update-status-reports-generated-counts
+  (let [result (check
+                (prop/for-all [added-count (gen/choose 0 100)
+                               removed-count (gen/choose 0 100)]
+                  (= (str "Keymap updated: added " added-count
+                          ", removed " removed-count)
+                     (hotkey-keymap/keymap-update-status
+                      {:added (vec (range added-count))
+                       :removed (vec (range removed-count))}))))]
+    (is (:pass? result) (pr-str result))))
+
 (deftest hotkey-keymap-resolves-generated-sequences-with-focus-guard
   (let [result (check
                 (prop/for-all [command-name path-segment-gen
