@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=e5320516d76b65451329b6b1a1b948bfed9797790d00e7735d288af1bcd1dbc5
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-10T23:15:51.914679941Z","feature_name":"Data layer tuple event display","feature_path":"features/data-layer-tuple-event-display.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:live-event-inspector-ux-v1","scenarios":[{"index":0,"name":"Data layer tuple event display 001","scenario_hash":"a9615767270be254731eac71e354460b9b625a389b4d7b0f0d21ccd9236e86a9","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:15:51.914679941Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer tuple event display
 
   Background:
