@@ -3,7 +3,20 @@ import {
   samplePageObject,
   type HistoryPathStatus,
 } from "./data-layer.js";
-import { captureEntry, type DataLayerSessionState } from "./data-layer-session.js";
+import {
+  captureSourceEvent,
+  type DataLayerSessionState,
+} from "./data-layer-session.js";
+import {
+  canonicalCapturedEvent,
+  importedOnce,
+  markImported,
+  nextSubscription,
+  stopSubscription,
+  type CaptureContext,
+  type SubscriptionState,
+} from "./data-layer-event-presentation.js";
+import type { SourceEvent } from "./data-layer-source.js";
 
 export type PageAccessStatus =
   | "page access available"
@@ -20,6 +33,7 @@ export interface ObservedDataLayerEntry {
   name: string;
   payload: unknown;
   rawValue: unknown;
+  event: SourceEvent;
 }
 
 export interface DataLayerHistoryObserver {
@@ -43,6 +57,8 @@ export interface DataLayerHistoryObserverState {
   observedEntries?: ObservedDataLayerEntry[];
   pushReturn?: number;
   sessionState?: DataLayerSessionState;
+  sourceEvents?: SourceEvent[];
+  subscription?: SubscriptionState;
 }
 
 export interface HistoryArrayObserverAttachOptions {
@@ -50,6 +66,7 @@ export interface HistoryArrayObserverAttachOptions {
   pageUrl: string;
   pageObject?: unknown;
   pageAccessStatus?: PageAccessStatus;
+  requestId?: string;
 }
 
 function pathParts(path: string): string[] {
@@ -69,82 +86,40 @@ function valueAtPath(pageObject: unknown, path: string): unknown {
   }, pageObject);
 }
 
-function observedPayload(rawPayload: unknown): unknown {
-  if (
-    rawPayload !== null &&
-    typeof rawPayload === "object" &&
-    "label" in rawPayload
-  ) {
-    return (rawPayload as { label: unknown }).label;
-  }
-
-  return rawPayload;
-}
-
-function tupleHistoryEntryName(rawValue: unknown): string | undefined {
-  if (!Array.isArray(rawValue)) {
-    return undefined;
-  }
-
-  const eventName = rawValue[0];
-
-  return typeof eventName === "string" ? eventName : undefined;
-}
-
-function tupleHistoryEntryPayload(rawValue: unknown): unknown {
-  return Array.isArray(rawValue) ? rawValue[1] : undefined;
-}
-
-function historyEntryName(rawValue: unknown): string {
-  const tupleName = tupleHistoryEntryName(rawValue);
-
-  if (tupleName !== undefined) {
-    return tupleName;
-  }
-
-  if (
-    rawValue !== null &&
-    typeof rawValue === "object" &&
-    "event" in rawValue
-  ) {
-    const event = (rawValue as { event: unknown }).event;
-    return typeof event === "string" ? event : String(event ?? "");
-  }
-
-  return "";
-}
-
-function historyEntryPayload(rawValue: unknown): unknown {
-  const tuplePayload = tupleHistoryEntryPayload(rawValue);
-
-  if (tuplePayload !== undefined) {
-    return tuplePayload;
-  }
-
-  if (
-    rawValue !== null &&
-    typeof rawValue === "object" &&
-    "payload" in rawValue
-  ) {
-    return (rawValue as { payload: unknown }).payload;
-  }
-
-  return undefined;
+function captureContext(
+  state: DataLayerHistoryObserverState,
+  observer: DataLayerHistoryObserver,
+): CaptureContext {
+  return {
+    sessionId: state.sessionState?.session?.id ?? `page:${observer.pageUrl}`,
+    sourceId: "event-history",
+    sourceKind: "Data Layer",
+    pageUrl: observer.pageUrl,
+    destination: observer.historyPath,
+  };
 }
 
 function observedEntry(
+  state: DataLayerHistoryObserverState,
   observer: DataLayerHistoryObserver,
   rawValue: unknown,
   timestamp = new Date().toISOString(),
 ): ObservedDataLayerEntry {
+  const event = canonicalCapturedEvent(
+    captureContext(state, observer),
+    rawValue,
+    timestamp,
+    (state.sourceEvents?.length ?? 0) + 1,
+  );
   return {
     type: "observed",
-    url: observer.pageUrl,
-    timestamp,
+    url: event.pageUrl,
+    timestamp: event.captureTime,
     observerPath: observer.historyPath,
-    name: historyEntryName(rawValue),
-    payload: observedPayload(historyEntryPayload(rawValue)),
-    rawValue,
+    name: event.name,
+    payload: event.payload,
+    rawValue: event.rawInput,
+    event,
   };
 }
 
@@ -153,12 +128,13 @@ function captureObservedEntry(
   entry: ObservedDataLayerEntry,
 ): DataLayerHistoryObserverState {
   const sessionState = state.sessionState
-    ? captureEntry(state.sessionState, entry)
+    ? captureSourceEvent(state.sessionState, entry.event, entry.observerPath)
     : undefined;
 
   return {
     ...state,
     observedEntries: [...(state.observedEntries ?? []), entry],
+    sourceEvents: [...(state.sourceEvents ?? []), entry.event],
     ...(sessionState ? { sessionState } : {}),
   };
 }
@@ -173,11 +149,31 @@ function captureExistingHistoryEntries(
     return state;
   }
 
-  return historyArray.reduce<DataLayerHistoryObserverState>(
-    (nextState, rawValue) =>
-      captureObservedEntry(nextState, observedEntry(observer, rawValue)),
+  const captureTime = new Date().toISOString();
+  const captured = historyArray.reduce<DataLayerHistoryObserverState>(
+    (nextState, rawValue, index) =>
+      importedOnce(
+        nextState.subscription ?? { imported: new Set(), activeCount: 0 },
+        observer.pageUrl,
+        observer.historyPath,
+        index,
+      )
+        ? nextState
+        : captureObservedEntry(
+            nextState,
+            observedEntry(nextState, observer, rawValue, captureTime),
+          ),
     state,
   );
+  return {
+    ...captured,
+    subscription: markImported(
+      captured.subscription ?? { imported: new Set(), activeCount: 0 },
+      observer.pageUrl,
+      observer.historyPath,
+      historyArray.length,
+    ),
+  };
 }
 
 export function attachHistoryArrayObserver(
@@ -194,6 +190,9 @@ export function attachHistoryArrayObserver(
         pageUrl: options.pageUrl,
         activeCount: 0,
       },
+      subscription: stopSubscription(
+        state.subscription ?? { imported: new Set(), activeCount: 0 },
+      ),
     };
   }
 
@@ -220,6 +219,12 @@ export function attachHistoryArrayObserver(
     pageAccessStatus: options.pageAccessStatus ?? "page access available",
     ...(activePageReadResult ? { activePageReadResult } : {}),
     observer,
+    subscription: nextSubscription(
+      state.subscription ?? { imported: new Set(), activeCount: 0 },
+      options.pageUrl,
+      options.historyPath,
+      options.requestId ?? `${options.pageUrl}:${options.historyPath}`,
+    ),
   };
 
   return status === "ready"
@@ -258,9 +263,32 @@ export function appendObservedHistoryEntry(
   }
 
   const pushReturn = historyArray.push(rawValue);
+  const captured = captureObservedEntry(
+    state,
+    observedEntry(state, observer, rawValue, timestamp),
+  );
 
   return {
-    ...captureObservedEntry(state, observedEntry(observer, rawValue, timestamp)),
+    ...captured,
     pushReturn,
+    subscription: markImported(
+      captured.subscription ?? { imported: new Set(), activeCount: 0 },
+      observer.pageUrl,
+      observer.historyPath,
+      historyArray.length,
+    ),
+  };
+}
+
+export function stopHistoryArrayObserver(
+  state: DataLayerHistoryObserverState,
+): DataLayerHistoryObserverState {
+  const observer = state.observer;
+  return {
+    ...state,
+    ...(observer ? { observer: { ...observer, activeCount: 0 } } : {}),
+    subscription: stopSubscription(
+      state.subscription ?? { imported: new Set(), activeCount: 0 },
+    ),
   };
 }

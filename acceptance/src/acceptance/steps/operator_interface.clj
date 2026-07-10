@@ -26,33 +26,19 @@
          (str/includes? build "side-panel.css"))))
 
 (def operator-step-specs
-  (->> feature-files
-       (mapcat #(str/split-lines (slurp %)))
-       (keep (fn [line]
-               (when-let [[_ keyword text]
-                          (re-matches #"\s*(Given|When|Then|And) (.+)" line)]
-                 {:keyword keyword :text text})))
-       (remove #(= "a repository for project <project_name>" (:text %)))
-       (reduce (fn [specs spec]
-                 (assoc specs (:text spec) spec))
-               (sorted-map))
-       vals
-       vec))
+  (support/feature-step-specs
+   feature-files
+   #{"a repository for project <project_name>"}))
 
 (defn- observe [world text example]
-  (let [action (or (:operator-action world)
-                   {:text "shared operator action" :example example})]
-    (update world :operator-observations (fnil conj [])
-            {:text text :example example :action action})))
-
-(defn- capture-keys [captures]
-  (->> captures
-       (filter string?)
-       (filter #(re-matches #"<[^>]+>" %))
-       (mapv #(subs % 1 (dec (count %))))))
+  (support/record-semantic-observation
+   world :operator-action :operator-observations
+   "shared operator action" text example))
 
 (defn- transition [world example captures {:keys [keyword text]}]
-  (let [example (operator-support/validate-example! example (capture-keys captures))
+  (let [example (operator-support/validate-example!
+                 example
+                 (support/capture-placeholder-keys captures))
         world (update world :operator-history (fnil conj []) text)]
     (case keyword
       "Given" (update world :operator-context (fnil conj []) {:text text :example example})
@@ -64,11 +50,7 @@
                      example))))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :handler (fn [world example captures]
-                      (transition world example captures spec))})
-        operator-step-specs))
+  (support/semantic-handlers operator-step-specs transition))
 
 (def priority-handler-texts #{"the command palette closes"})
 (def priority-handlers
@@ -82,5 +64,5 @@
            handlers))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T16:48:11.325503327+02:00", :module-hash "-264087205", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "1037810283"} {:id "defn/operator-shell-wired?", :kind "defn", :line 17, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 28, :end-line nil, :hash "-514290538"} {:id "defn-/observe", :kind "defn-", :line 42, :end-line nil, :hash "-1547468211"} {:id "defn-/capture-keys", :kind "defn-", :line 48, :end-line nil, :hash "-1443482679"} {:id "defn-/transition", :kind "defn-", :line 54, :end-line nil, :hash "-988090444"} {:id "def/handlers", :kind "def", :line 66, :end-line nil, :hash "215204806"} {:id "def/priority-handler-texts", :kind "def", :line 73, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 74, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 79, :end-line nil, :hash "1875904922"}]}
+;; {:version 1, :tested-at "2026-07-10T17:43:01.784804562+02:00", :module-hash "255705919", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "1037810283"} {:id "defn/operator-shell-wired?", :kind "defn", :line 17, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 28, :end-line nil, :hash "-359605785"} {:id "defn-/observe", :kind "defn-", :line 33, :end-line nil, :hash "-943567860"} {:id "defn-/transition", :kind "defn-", :line 38, :end-line nil, :hash "908273079"} {:id "def/handlers", :kind "def", :line 52, :end-line nil, :hash "-454832"} {:id "def/priority-handler-texts", :kind "def", :line 55, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 56, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 61, :end-line nil, :hash "1875904922"}]}
 ;; clj-mutate-manifest-end

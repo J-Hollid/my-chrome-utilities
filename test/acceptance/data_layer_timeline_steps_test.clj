@@ -166,9 +166,10 @@
     (is (= state (dispatch "the tuple event uses the canonical timestamp")))))
 
 (deftest tuple-event-display-source-is-wired
-  (is (timeline/tuple-event-display-wired?
-       {"src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
-        "src/data-layer-timeline.ts" (slurp "src/data-layer-timeline.ts")
+    (is (timeline/tuple-event-display-wired?
+         {"src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")
+          "src/data-layer-event-presentation.ts" (slurp "src/data-layer-event-presentation.ts")
+          "src/data-layer-timeline.ts" (slurp "src/data-layer-timeline.ts")
         "src/side-panel.ts" (slurp "src/side-panel.ts")})))
 
 (deftest preserves-expanded-pageload-when-event-is-recorded

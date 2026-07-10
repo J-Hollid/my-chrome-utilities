@@ -46,6 +46,16 @@ export function captureEntry(state, entry) {
         },
     };
 }
+export function captureSourceEvent(state, event, destination) {
+    return captureEntry(state, {
+        ...event,
+        type: "observed",
+        url: event.pageUrl,
+        timestamp: event.captureTime,
+        observerPath: destination,
+        rawValue: event.rawInput,
+    });
+}
 export function endDataLayerTestingSession(state) {
     if (!state.session) {
         return state;

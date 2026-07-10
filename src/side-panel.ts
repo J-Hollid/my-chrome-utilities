@@ -30,6 +30,7 @@ import {
 import {
   appendObservedHistoryEntry,
   attachHistoryArrayObserver,
+  stopHistoryArrayObserver,
   type DataLayerHistoryObserverState,
 } from "./data-layer-observer.js";
 import {
@@ -219,8 +220,11 @@ let dataLayerSessionState: DataLayerSessionState = restoreSession();
 let dataLayerObserverState: DataLayerHistoryObserverState = {
   pageObject: samplePageObject(),
   observedEntries: [],
+  sourceEvents: [],
 };
 let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
+let liveHistoryCaptureGeneration = 0;
+let presentedSourceEventCount = 0;
 let observationRefreshTimeoutId: number | undefined;
 let observationRefreshState = initialObservationRefreshState;
 let liveObserverState: LiveObserverState = createLiveObserverState({
@@ -612,6 +616,24 @@ function renderObserverState(): void {
 function updateSessionFromObserverState(): void {
   dataLayerSessionState =
     dataLayerObserverState.sessionState ?? dataLayerSessionState;
+  syncCapturedEventsToLive();
+}
+
+function syncCapturedEventsToLive(): void {
+  const events = dataLayerObserverState.sourceEvents ?? [];
+  const pendingEvents = events.slice(presentedSourceEventCount);
+  presentedSourceEventCount = events.length;
+  for (const event of pendingEvents) {
+    const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
+    liveObserverState = recordLiveEvent(liveObserverState, {
+      ...event,
+      sourceName: source?.name ?? event.sourceId,
+      ...(dataLayerObserverState.observer
+        ? { destination: dataLayerObserverState.observer.historyPath }
+        : {}),
+    });
+  }
+  if (pendingEvents.length > 0) renderLiveObserver();
 }
 
 function persistAndRenderSessionState(): void {
@@ -632,17 +654,24 @@ function restartLiveHistoryCaptureIfActive(
   }
 }
 
-function stopLiveHistoryCapture(): void {
+function cancelLiveHistoryCaptureRuntime(): void {
+  liveHistoryCaptureGeneration += 1;
   stopLiveHistoryPushCapture();
   stopLiveHistoryPushCapture = () => {};
+}
+
+function stopLiveHistoryCapture(): void {
+  cancelLiveHistoryCaptureRuntime();
+  dataLayerObserverState = stopHistoryArrayObserver(dataLayerObserverState);
 }
 
 async function startLiveHistoryCapture(
   observation: ActivePageObservationResult,
 ): Promise<void> {
-  stopLiveHistoryCapture();
+  cancelLiveHistoryCaptureRuntime();
+  const captureGeneration = liveHistoryCaptureGeneration;
   try {
-    stopLiveHistoryPushCapture = await startLiveHistoryPushCapture({
+    const stopCapture = await startLiveHistoryPushCapture({
       ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }),
       historyPath: observation.historyPath,
       onEntry: ({ rawValue, timestamp }) => {
@@ -653,18 +682,17 @@ async function startLiveHistoryCapture(
         );
         updateSessionFromObserverState();
         persistAndRenderObservationState();
-        const record = rawValue as { event?: unknown };
-        liveObserverState = recordLiveEvent(liveObserverState, {
-          id: `live-${liveObserverState.events.length + 1}`,
-          name: typeof record.event === "string" ? record.event : "observed event",
-          sourceId: "event-history",
-          captureTime: timestamp,
-        });
-        renderLiveObserver();
       },
     });
+    if (captureGeneration !== liveHistoryCaptureGeneration) {
+      stopCapture();
+      return;
+    }
+    stopLiveHistoryPushCapture = stopCapture;
   } catch {
-    stopLiveHistoryPushCapture = () => {};
+    if (captureGeneration === liveHistoryCaptureGeneration) {
+      stopLiveHistoryPushCapture = () => {};
+    }
   }
 }
 
@@ -800,9 +828,15 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
         url: observation.pageUrl,
       });
       dataLayerObserverState = attachHistoryArrayObserver(
-        { ...dataLayerObserverState, sessionState: dataLayerSessionState },
+        {
+          pageObject: dataLayerObserverState.pageObject,
+          sessionState: dataLayerSessionState,
+          observedEntries: [],
+          sourceEvents: [],
+        },
         observation,
       );
+      presentedSourceEventCount = 0;
       updateSessionFromObserverState();
       await startLiveHistoryCapture(observation);
     }
@@ -1166,13 +1200,16 @@ saveLiveSessionButton?.addEventListener("click", () => {
     events: liveObserverState.events.map((event, index) => ({
       id: event.id,
       sourceId: event.sourceId,
-      sourceName: event.sourceId,
+      sourceName: event.sourceName ?? event.sourceId,
       name: event.name,
-      payload: {},
-      rawInput: event,
-      pageUrl: liveObserverState.pageUrl,
+      payload: event.payload,
+      rawInput: event.rawInput ?? event,
+      pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
       captureOrder: index + 1,
-      provenance: { source: "live-observer", capturedAt: event.captureTime },
+      provenance: event.provenance ?? {
+        source: "live-observer",
+        capturedAt: event.captureTime,
+      },
     })),
     provenance: { source: "live-observer", capturedAt: new Date().toISOString() },
   };
@@ -1203,16 +1240,16 @@ saveLatestTemplateButton?.addEventListener("click", () => {
   const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
   const template = createEditableTemplate({
     id: event.id,
-    sessionId: `live:${liveObserverState.pageUrl}`,
+    sessionId: event.sessionId ?? `live:${liveObserverState.pageUrl}`,
     sourceId: event.sourceId,
-    sourceKind: "page",
+    sourceKind: event.sourceKind ?? "page",
     name: event.name,
     captureTime: event.captureTime,
-    pageUrl: liveObserverState.pageUrl,
-    payload: {},
-    rawInput: event,
-    validation: "Not checked",
-    provenance: `captured:${event.sourceId}`,
+    pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
+    payload: event.payload,
+    rawInput: event.rawInput ?? event,
+    validation: event.validation ?? "Not checked",
+    provenance: event.provenance ?? `captured:${event.sourceId}`,
   }, {
     name: event.name,
     destination: "event.history",

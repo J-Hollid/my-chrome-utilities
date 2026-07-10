@@ -16,10 +16,7 @@ export interface LiveSource {
 
 export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureTime"> &
   Partial<
-    Pick<
-      SourceEvent,
-      "sourceKind" | "pageUrl" | "validation" | "payload" | "rawInput"
-    >
+    Omit<SourceEvent, "id" | "name" | "sourceId" | "captureTime">
   > & {
     sourceName?: string;
     destination?: string;

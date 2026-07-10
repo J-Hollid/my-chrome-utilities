@@ -1,5 +1,5 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
-import { compactCaptureTime } from "./data-layer-event-presentation.js";
+import { compactCaptureTime, conciseValuePreview, } from "./data-layer-event-presentation.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -42,6 +42,7 @@ function eventRow(event, openEvent) {
         compactCaptureTime(event.captureTime),
         event.sourceKind,
         event.validation,
+        conciseValuePreview(event.payload ?? event.rawInput),
     ]
         .filter(Boolean)
         .join(" | ");
@@ -81,7 +82,11 @@ export function renderLiveInspector(elements, event) {
         event.destination ? `destination ${event.destination}` : undefined,
         `captured ${event.captureTime}`,
         event.pageUrl ? `page ${event.pageUrl}` : undefined,
-        "Fields, Raw, Validation",
+        `Payload ${JSON.stringify(event.payload)}`,
+        `Raw input ${JSON.stringify(event.rawInput)}`,
+        `Validation ${event.validation ?? "Not checked"}`,
+        event.provenance ? `Provenance ${event.provenance}` : undefined,
+        "Actions Copy, Save to Library, Validate",
     ]
         .filter(Boolean)
         .join("; ");

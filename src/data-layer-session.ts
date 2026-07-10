@@ -1,4 +1,5 @@
 import { getHistoryArrayPath } from "./data-layer.js";
+import type { SourceEvent } from "./data-layer-source.js";
 
 export type DataLayerSessionStatus = "active" | "ended";
 
@@ -10,6 +11,14 @@ export interface DataLayerEventEntry {
   name?: string;
   payload?: unknown;
   rawValue?: unknown;
+  id?: string;
+  sessionId?: string;
+  sourceId?: string;
+  sourceKind?: string;
+  pageUrl?: string;
+  rawInput?: unknown;
+  validation?: string;
+  provenance?: string;
 }
 
 export interface DataLayerTestingSession {
@@ -89,6 +98,21 @@ export function captureEntry(
       timeline: [...state.session.timeline, entry],
     },
   };
+}
+
+export function captureSourceEvent(
+  state: DataLayerSessionState,
+  event: SourceEvent,
+  destination: string,
+): DataLayerSessionState {
+  return captureEntry(state, {
+    ...event,
+    type: "observed",
+    url: event.pageUrl,
+    timestamp: event.captureTime,
+    observerPath: destination,
+    rawValue: event.rawInput,
+  });
 }
 
 export function endDataLayerTestingSession(

@@ -4,7 +4,7 @@ import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { activePageObservation, tabPageObservation, } from "./active-page-observation.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
-import { appendObservedHistoryEntry, attachHistoryArrayObserver, } from "./data-layer-observer.js";
+import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
@@ -75,8 +75,11 @@ let dataLayerSessionState = restoreSession();
 let dataLayerObserverState = {
     pageObject: samplePageObject(),
     observedEntries: [],
+    sourceEvents: [],
 };
 let stopLiveHistoryPushCapture = () => { };
+let liveHistoryCaptureGeneration = 0;
+let presentedSourceEventCount = 0;
 let observationRefreshTimeoutId;
 let observationRefreshState = initialObservationRefreshState;
 let liveObserverState = createLiveObserverState({
@@ -415,6 +418,24 @@ function renderObserverState() {
 function updateSessionFromObserverState() {
     dataLayerSessionState =
         dataLayerObserverState.sessionState ?? dataLayerSessionState;
+    syncCapturedEventsToLive();
+}
+function syncCapturedEventsToLive() {
+    const events = dataLayerObserverState.sourceEvents ?? [];
+    const pendingEvents = events.slice(presentedSourceEventCount);
+    presentedSourceEventCount = events.length;
+    for (const event of pendingEvents) {
+        const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
+        liveObserverState = recordLiveEvent(liveObserverState, {
+            ...event,
+            sourceName: source?.name ?? event.sourceId,
+            ...(dataLayerObserverState.observer
+                ? { destination: dataLayerObserverState.observer.historyPath }
+                : {}),
+        });
+    }
+    if (pendingEvents.length > 0)
+        renderLiveObserver();
 }
 function persistAndRenderSessionState() {
     persistSession(dataLayerSessionState);
@@ -429,33 +450,38 @@ function restartLiveHistoryCaptureIfActive(observation) {
         void startLiveHistoryCapture(observation);
     }
 }
-function stopLiveHistoryCapture() {
+function cancelLiveHistoryCaptureRuntime() {
+    liveHistoryCaptureGeneration += 1;
     stopLiveHistoryPushCapture();
     stopLiveHistoryPushCapture = () => { };
 }
+function stopLiveHistoryCapture() {
+    cancelLiveHistoryCaptureRuntime();
+    dataLayerObserverState = stopHistoryArrayObserver(dataLayerObserverState);
+}
 async function startLiveHistoryCapture(observation) {
-    stopLiveHistoryCapture();
+    cancelLiveHistoryCaptureRuntime();
+    const captureGeneration = liveHistoryCaptureGeneration;
     try {
-        stopLiveHistoryPushCapture = await startLiveHistoryPushCapture({
+        const stopCapture = await startLiveHistoryPushCapture({
             ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }),
             historyPath: observation.historyPath,
             onEntry: ({ rawValue, timestamp }) => {
                 dataLayerObserverState = appendObservedHistoryEntry(dataLayerObserverState, rawValue, timestamp);
                 updateSessionFromObserverState();
                 persistAndRenderObservationState();
-                const record = rawValue;
-                liveObserverState = recordLiveEvent(liveObserverState, {
-                    id: `live-${liveObserverState.events.length + 1}`,
-                    name: typeof record.event === "string" ? record.event : "observed event",
-                    sourceId: "event-history",
-                    captureTime: timestamp,
-                });
-                renderLiveObserver();
             },
         });
+        if (captureGeneration !== liveHistoryCaptureGeneration) {
+            stopCapture();
+            return;
+        }
+        stopLiveHistoryPushCapture = stopCapture;
     }
     catch {
-        stopLiveHistoryPushCapture = () => { };
+        if (captureGeneration === liveHistoryCaptureGeneration) {
+            stopLiveHistoryPushCapture = () => { };
+        }
     }
 }
 function clearScheduledObservationRefresh() {
@@ -539,7 +565,13 @@ async function recordDataLayerCommandRun(entry) {
                 type: "page",
                 url: observation.pageUrl,
             });
-            dataLayerObserverState = attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, observation);
+            dataLayerObserverState = attachHistoryArrayObserver({
+                pageObject: dataLayerObserverState.pageObject,
+                sessionState: dataLayerSessionState,
+                observedEntries: [],
+                sourceEvents: [],
+            }, observation);
+            presentedSourceEventCount = 0;
             updateSessionFromObserverState();
             await startLiveHistoryCapture(observation);
         }
@@ -827,13 +859,16 @@ saveLiveSessionButton?.addEventListener("click", () => {
         events: liveObserverState.events.map((event, index) => ({
             id: event.id,
             sourceId: event.sourceId,
-            sourceName: event.sourceId,
+            sourceName: event.sourceName ?? event.sourceId,
             name: event.name,
-            payload: {},
-            rawInput: event,
-            pageUrl: liveObserverState.pageUrl,
+            payload: event.payload,
+            rawInput: event.rawInput ?? event,
+            pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
             captureOrder: index + 1,
-            provenance: { source: "live-observer", capturedAt: event.captureTime },
+            provenance: event.provenance ?? {
+                source: "live-observer",
+                capturedAt: event.captureTime,
+            },
         })),
         provenance: { source: "live-observer", capturedAt: new Date().toISOString() },
     };
@@ -866,16 +901,16 @@ saveLatestTemplateButton?.addEventListener("click", () => {
     const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
     const template = createEditableTemplate({
         id: event.id,
-        sessionId: `live:${liveObserverState.pageUrl}`,
+        sessionId: event.sessionId ?? `live:${liveObserverState.pageUrl}`,
         sourceId: event.sourceId,
-        sourceKind: "page",
+        sourceKind: event.sourceKind ?? "page",
         name: event.name,
         captureTime: event.captureTime,
-        pageUrl: liveObserverState.pageUrl,
-        payload: {},
-        rawInput: event,
-        validation: "Not checked",
-        provenance: `captured:${event.sourceId}`,
+        pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
+        payload: event.payload,
+        rawInput: event.rawInput ?? event,
+        validation: event.validation ?? "Not checked",
+        provenance: event.provenance ?? `captured:${event.sourceId}`,
     }, {
         name: event.name,
         destination: "event.history",

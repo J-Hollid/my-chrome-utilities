@@ -68,14 +68,12 @@
    "workspace_name" #{"Data Layer" "Hotkeys"}})
 
 (defn validate-example! [example keys]
-  (doseq [key keys]
-    (let [value (support/require-example example key)
-          allowed (get canonical-example-values key)]
-      (support/assert! (and allowed (contains? allowed value))
-                       "Operator-interface example is outside its canonical domain."
-                       {:key key :value value :allowed allowed})))
-  example)
+  (support/validate-example-domain!
+   canonical-example-values
+   example
+   keys
+   "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T16:47:47.086711923+02:00", :module-hash "1857485520", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-151510957"} {:id "defn/validate-example!", :kind "defn", :line 70, :end-line nil, :hash "-372208470"}]}
+;; {:version 1, :tested-at "2026-07-10T17:43:07.645557717+02:00", :module-hash "204975880", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-151510957"} {:id "defn/validate-example!", :kind "defn", :line 70, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end

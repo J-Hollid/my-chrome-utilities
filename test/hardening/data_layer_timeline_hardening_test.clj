@@ -32,3 +32,30 @@
            "build/acceptance/ir/data-layer-timeline-expanded-state.json"
            "build/acceptance/ir/data-layer-tuple-event-display.json"]
           steps/handlers))))
+
+(deftest hardens-chronological-timeline-claims
+  (let [entry-options {:event-name "pageview"
+                       :page-url "https://example.test/"
+                       :history-path "event.history"}
+        world (-> {}
+                  (timeline/record-observed-entry
+                   (assoc entry-options :event-name "account-created"))
+                  (timeline/record-observed-entry entry-options))
+        example {"event_name" "pageview"
+                 "page_url" "https://example.test/"
+                 "history_path" "event.history"}]
+    (is (map?
+         (support/dispatch timeline/handlers world example
+                           "the side panel shows them in capture order")))
+    (is (map?
+         (support/dispatch timeline/handlers world example
+                           "each timeline entry shows event name <event_name>")))
+    (is (map?
+         (support/dispatch timeline/handlers world example
+                           "each timeline entry shows page URL <page_url>")))
+    (is (map?
+         (support/dispatch timeline/handlers world example
+                           "each timeline entry shows observer path <history_path>")))
+    (is (map?
+         (support/dispatch timeline/handlers {} example
+                           "timeline entry <event_name> is visible")))))

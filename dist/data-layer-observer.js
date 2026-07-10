@@ -1,5 +1,6 @@
 import { pathStatus, samplePageObject, } from "./data-layer.js";
-import { captureEntry } from "./data-layer-session.js";
+import { captureSourceEvent, } from "./data-layer-session.js";
+import { canonicalCapturedEvent, importedOnce, markImported, nextSubscription, stopSubscription, } from "./data-layer-event-presentation.js";
 function pathParts(path) {
     return path
         .split(".")
@@ -14,67 +15,36 @@ function valueAtPath(pageObject, path) {
         return current[part];
     }, pageObject);
 }
-function observedPayload(rawPayload) {
-    if (rawPayload !== null &&
-        typeof rawPayload === "object" &&
-        "label" in rawPayload) {
-        return rawPayload.label;
-    }
-    return rawPayload;
+function captureContext(state, observer) {
+    return {
+        sessionId: state.sessionState?.session?.id ?? `page:${observer.pageUrl}`,
+        sourceId: "event-history",
+        sourceKind: "Data Layer",
+        pageUrl: observer.pageUrl,
+        destination: observer.historyPath,
+    };
 }
-function tupleHistoryEntryName(rawValue) {
-    if (!Array.isArray(rawValue)) {
-        return undefined;
-    }
-    const eventName = rawValue[0];
-    return typeof eventName === "string" ? eventName : undefined;
-}
-function tupleHistoryEntryPayload(rawValue) {
-    return Array.isArray(rawValue) ? rawValue[1] : undefined;
-}
-function historyEntryName(rawValue) {
-    const tupleName = tupleHistoryEntryName(rawValue);
-    if (tupleName !== undefined) {
-        return tupleName;
-    }
-    if (rawValue !== null &&
-        typeof rawValue === "object" &&
-        "event" in rawValue) {
-        const event = rawValue.event;
-        return typeof event === "string" ? event : String(event ?? "");
-    }
-    return "";
-}
-function historyEntryPayload(rawValue) {
-    const tuplePayload = tupleHistoryEntryPayload(rawValue);
-    if (tuplePayload !== undefined) {
-        return tuplePayload;
-    }
-    if (rawValue !== null &&
-        typeof rawValue === "object" &&
-        "payload" in rawValue) {
-        return rawValue.payload;
-    }
-    return undefined;
-}
-function observedEntry(observer, rawValue, timestamp = new Date().toISOString()) {
+function observedEntry(state, observer, rawValue, timestamp = new Date().toISOString()) {
+    const event = canonicalCapturedEvent(captureContext(state, observer), rawValue, timestamp, (state.sourceEvents?.length ?? 0) + 1);
     return {
         type: "observed",
-        url: observer.pageUrl,
-        timestamp,
+        url: event.pageUrl,
+        timestamp: event.captureTime,
         observerPath: observer.historyPath,
-        name: historyEntryName(rawValue),
-        payload: observedPayload(historyEntryPayload(rawValue)),
-        rawValue,
+        name: event.name,
+        payload: event.payload,
+        rawValue: event.rawInput,
+        event,
     };
 }
 function captureObservedEntry(state, entry) {
     const sessionState = state.sessionState
-        ? captureEntry(state.sessionState, entry)
+        ? captureSourceEvent(state.sessionState, entry.event, entry.observerPath)
         : undefined;
     return {
         ...state,
         observedEntries: [...(state.observedEntries ?? []), entry],
+        sourceEvents: [...(state.sourceEvents ?? []), entry.event],
         ...(sessionState ? { sessionState } : {}),
     };
 }
@@ -83,7 +53,14 @@ function captureExistingHistoryEntries(state, observer) {
     if (!Array.isArray(historyArray)) {
         return state;
     }
-    return historyArray.reduce((nextState, rawValue) => captureObservedEntry(nextState, observedEntry(observer, rawValue)), state);
+    const captureTime = new Date().toISOString();
+    const captured = historyArray.reduce((nextState, rawValue, index) => importedOnce(nextState.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, index)
+        ? nextState
+        : captureObservedEntry(nextState, observedEntry(nextState, observer, rawValue, captureTime)), state);
+    return {
+        ...captured,
+        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, historyArray.length),
+    };
 }
 export function attachHistoryArrayObserver(state, options) {
     if (options.pageAccessStatus === "page access unavailable") {
@@ -96,6 +73,7 @@ export function attachHistoryArrayObserver(state, options) {
                 pageUrl: options.pageUrl,
                 activeCount: 0,
             },
+            subscription: stopSubscription(state.subscription ?? { imported: new Set(), activeCount: 0 }),
         };
     }
     const pageObject = options.pageObject ?? state.pageObject ?? samplePageObject();
@@ -119,6 +97,7 @@ export function attachHistoryArrayObserver(state, options) {
         pageAccessStatus: options.pageAccessStatus ?? "page access available",
         ...(activePageReadResult ? { activePageReadResult } : {}),
         observer,
+        subscription: nextSubscription(state.subscription ?? { imported: new Set(), activeCount: 0 }, options.pageUrl, options.historyPath, options.requestId ?? `${options.pageUrl}:${options.historyPath}`),
     };
     return status === "ready"
         ? captureExistingHistoryEntries(nextState, observer)
@@ -140,9 +119,19 @@ export function appendObservedHistoryEntry(state, rawValue, timestamp = new Date
         return state;
     }
     const pushReturn = historyArray.push(rawValue);
+    const captured = captureObservedEntry(state, observedEntry(state, observer, rawValue, timestamp));
     return {
-        ...captureObservedEntry(state, observedEntry(observer, rawValue, timestamp)),
+        ...captured,
         pushReturn,
+        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, historyArray.length),
+    };
+}
+export function stopHistoryArrayObserver(state) {
+    const observer = state.observer;
+    return {
+        ...state,
+        ...(observer ? { observer: { ...observer, activeCount: 0 } } : {}),
+        subscription: stopSubscription(state.subscription ?? { imported: new Set(), activeCount: 0 }),
     };
 }
 //# sourceMappingURL=data-layer-observer.js.map
