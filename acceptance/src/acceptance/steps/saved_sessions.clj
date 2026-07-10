@@ -1,6 +1,5 @@
 (ns acceptance.steps.saved-sessions
-  (:require [acceptance.steps.support :as support]
-            [clojure.string :as str]))
+  (:require [acceptance.steps.support :as support]))
 
 (def saved-session-step-templates
   ["a completed data layer testing session contains captured events"
@@ -34,12 +33,6 @@
    "the user requests deletion again and confirms it"
    "saved session <session_name> is removed from the Sessions view"])
 
-(defn- template-pattern [template]
-  (let [parts (str/split template #"<[A-Za-z0-9_]+>" -1)
-        captures (repeat (dec (count parts)) "(<[^>]+>)")]
-    (re-pattern (str "^" (apply str (interleave (map java.util.regex.Pattern/quote parts)
-                                                  (concat captures [""]))) "$"))))
-
 (defn saved-sessions-wired? [html source]
   (support/includes-all? (str html source)
                          ["data-layer-panel-sessions" "saved-session-search"
@@ -52,7 +45,7 @@
                           "requestSavedSessionDeletion" "confirmSavedSessionDeletion"]))
 
 (defn saved-session-step-covered? [text]
-  (some #(re-matches (template-pattern %) text) saved-session-step-templates))
+  (some #(re-matches (support/template-pattern %) text) saved-session-step-templates))
 
 (defn- inspect [world]
   (let [root (or (:root world) (support/repository-root))
@@ -243,7 +236,7 @@
 
 (def handlers
   (mapv (fn [template]
-          {:pattern (template-pattern template)
+          {:pattern (support/template-pattern template)
            :applies? (when (= template "the user searches for <query>")
                        (fn [world] (contains? world :sessions)))
            :handler (fn [world example _captures]
@@ -251,5 +244,5 @@
         saved-session-step-templates))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:56:11.459853176+02:00", :module-hash "478321306", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1459061664"} {:id "def/saved-session-step-templates", :kind "def", :line 5, :end-line nil, :hash "1009794076"} {:id "defn-/template-pattern", :kind "defn-", :line 37, :end-line nil, :hash "1527216068"} {:id "defn/saved-sessions-wired?", :kind "defn", :line 43, :end-line nil, :hash "2048093371"} {:id "defn/saved-session-step-covered?", :kind "defn", :line 54, :end-line nil, :hash "975002399"} {:id "defn-/inspect", :kind "defn-", :line 57, :end-line nil, :hash "-498473813"} {:id "defn-/value", :kind "defn-", :line 67, :end-line nil, :hash "1331618860"} {:id "defn-/event", :kind "defn-", :line 70, :end-line nil, :hash "1148909128"} {:id "defn-/saved-session", :kind "defn-", :line 75, :end-line nil, :hash "-130519237"} {:id "defn-/canonical-name!", :kind "defn-", :line 80, :end-line nil, :hash "828133435"} {:id "defn-/transition", :kind "defn-", :line 86, :end-line nil, :hash "1778896175"} {:id "def/handlers", :kind "def", :line 244, :end-line nil, :hash "-420917044"}]}
+;; {:version 1, :tested-at "2026-07-10T15:13:03.054272443+02:00", :module-hash "-55785066", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1830872400"} {:id "def/saved-session-step-templates", :kind "def", :line 4, :end-line nil, :hash "1009794076"} {:id "defn/saved-sessions-wired?", :kind "defn", :line 36, :end-line nil, :hash "2048093371"} {:id "defn/saved-session-step-covered?", :kind "defn", :line 47, :end-line nil, :hash "-708968225"} {:id "defn-/inspect", :kind "defn-", :line 50, :end-line nil, :hash "-498473813"} {:id "defn-/value", :kind "defn-", :line 60, :end-line nil, :hash "1331618860"} {:id "defn-/event", :kind "defn-", :line 63, :end-line nil, :hash "1148909128"} {:id "defn-/saved-session", :kind "defn-", :line 68, :end-line nil, :hash "-130519237"} {:id "defn-/canonical-name!", :kind "defn-", :line 73, :end-line nil, :hash "828133435"} {:id "defn-/transition", :kind "defn-", :line 79, :end-line nil, :hash "1778896175"} {:id "def/handlers", :kind "def", :line 237, :end-line nil, :hash "-1591896391"}]}
 ;; clj-mutate-manifest-end
