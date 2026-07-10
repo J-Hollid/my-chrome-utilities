@@ -3,6 +3,7 @@ import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KE
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { activePageObservation, tabPageObservation, } from "./active-page-observation.js";
+import { attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, registerObservationTarget, selectObservationTarget, selectedObservationTarget, targetAccessExplanation, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
@@ -36,6 +37,20 @@ const sessionTimeline = document.querySelector("#session-timeline");
 const sessionWarning = document.querySelector("#session-warning");
 const observerStatus = document.querySelector("#observer-status");
 const restartObservationButton = document.querySelector("#restart-observation");
+const observationTargetStateOutput = document.querySelector("#observation-target-state");
+const observationTargetResult = document.querySelector("#observation-target-result");
+const chooseObservationTargetButton = document.querySelector("#choose-observation-target");
+const browseObservationTargetsButton = document.querySelector("#browse-observation-targets");
+const attachSelectedTargetButton = document.querySelector("#attach-selected-target");
+const detachObservationTargetButton = document.querySelector("#detach-observation-target");
+const observationTargetPicker = document.querySelector("#observation-target-picker");
+const observationTargetSearch = document.querySelector("#observation-target-search");
+const observationTargetCount = document.querySelector("#observation-target-count");
+const observationTargetList = document.querySelector("#observation-target-list");
+const detachTargetConfirmation = document.querySelector("#detach-observation-target-confirmation");
+const detachTargetMessage = document.querySelector("#detach-observation-target-message");
+const cancelDetachTargetButton = document.querySelector("#cancel-detach-observation-target");
+const confirmDetachTargetButton = document.querySelector("#confirm-detach-observation-target");
 const createKeymapButton = document.querySelector("#create-keymap");
 const updateKeymapButton = document.querySelector("#update-keymap");
 const loadKeymapButton = document.querySelector("#load-keymap");
@@ -92,6 +107,7 @@ let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMP
 let propertyEditorState;
 let schemas = [];
 let replaySequences = [];
+let observationTargetState = createObservationTargetState();
 if (app) {
     app.textContent = PROJECT_NAME;
 }
@@ -105,6 +121,188 @@ function renderHistoryPath(path, fieldValue = path) {
     if (historyPathStatus) {
         historyPathStatus.textContent = pathStatus(samplePageObject(), path);
     }
+}
+function setObservationTargetResult(result) {
+    if (observationTargetResult)
+        observationTargetResult.textContent = result;
+}
+function renderObservationTargetContext() {
+    const target = selectedObservationTarget(observationTargetState);
+    const attached = observationTargetState.targets.find(({ id }) => id === observationTargetState.attachedTargetId);
+    if (observationTargetStateOutput) {
+        observationTargetStateOutput.textContent = attached
+            ? `Attached — ${attached.title} — ${attached.pageUrl} — ${getHistoryArrayPath()}`
+            : target
+                ? `${observationTargetState.sessionState} — ${target.title} — ${target.accessState}`
+                : "Detached — Choose target";
+    }
+}
+function targetFromTab(tab) {
+    if (tab.id === undefined || tab.windowId === undefined || !tab.url)
+        return undefined;
+    return createObservationTarget({
+        tabId: tab.id,
+        windowId: tab.windowId,
+        pageUrl: tab.url,
+        title: tab.title || tab.url,
+        activeTab: tab.active,
+        currentWindow: tab.active,
+    });
+}
+function registerTargetTabs(tabs) {
+    for (const tab of tabs) {
+        const target = targetFromTab(tab);
+        if (target)
+            observationTargetState = registerObservationTarget(observationTargetState, target);
+    }
+    renderObservationTargetPicker();
+    renderObservationTargetContext();
+}
+async function discoverCurrentObservationTarget() {
+    if (typeof chrome === "undefined" || !chrome.tabs?.query) {
+        setObservationTargetResult("Selection required");
+        return;
+    }
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    registerTargetTabs(tabs);
+    const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
+    if (target) {
+        observationTargetState = selectObservationTarget(observationTargetState, target.id);
+        setObservationTargetResult(`Selected ${target.title}`);
+    }
+    else {
+        setObservationTargetResult("Selection required");
+    }
+    renderObservationTargetPicker();
+    renderObservationTargetContext();
+}
+async function browseObservationTargets() {
+    if (typeof chrome === "undefined" || !chrome.tabs?.query || !chrome.permissions) {
+        setObservationTargetResult("Browse all tabs is unavailable");
+        return;
+    }
+    const allowed = await chrome.permissions.contains({ permissions: ["tabs"] });
+    const granted = allowed || await chrome.permissions.request({ permissions: ["tabs"] });
+    if (!granted) {
+        setObservationTargetResult("Registered targets remain available");
+        return;
+    }
+    registerTargetTabs(await chrome.tabs.query({}));
+    setObservationTargetResult(`${observationTargetState.targets.length} eligible targets`);
+}
+function renderObservationTargetPicker() {
+    const visible = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
+    if (observationTargetCount)
+        observationTargetCount.textContent = `${visible.length} matching targets`;
+    if (!observationTargetList)
+        return;
+    observationTargetList.replaceChildren(...visible.map((target) => {
+        const row = document.createElement("li");
+        row.className = "observation-target-row";
+        const details = document.createElement("p");
+        const url = new URL(target.pageUrl);
+        details.textContent = `${target.title} — ${url.hostname}${url.pathname} — window ${target.windowId}${target.activeTab ? " — active tab" : ""} — ${target.accessState}: ${targetAccessExplanation(target.accessState, target.pageUrl)}`;
+        const action = document.createElement("button");
+        action.type = "button";
+        action.dataset.targetId = target.id;
+        action.textContent = target.accessState === "Ready" ? "Select" : target.accessState === "Permission required" ? "Request access" : "Unavailable";
+        action.disabled = target.accessState === "Restricted" || target.accessState === "Closed";
+        action.addEventListener("click", () => {
+            if (target.accessState === "Permission required") {
+                void requestSelectedTargetAccess(target);
+                return;
+            }
+            observationTargetState = selectObservationTarget(observationTargetState, target.id);
+            setObservationTargetResult(`Selected ${target.title}`);
+            renderObservationTargetPicker();
+            renderObservationTargetContext();
+        });
+        row.append(details, action);
+        return row;
+    }));
+}
+async function requestSelectedTargetAccess(target) {
+    if (typeof chrome === "undefined" || !chrome.permissions)
+        return;
+    const granted = await chrome.permissions.request({ origins: [`${target.origin}/*`] });
+    if (!granted) {
+        setObservationTargetResult("Permission required");
+        return;
+    }
+    observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Ready");
+    setObservationTargetResult(`Access granted for ${target.origin}`);
+    renderObservationTargetPicker();
+    renderObservationTargetContext();
+}
+async function attachSelectedTarget() {
+    const decision = attachSelectedObservationTarget(observationTargetState);
+    if (decision.result !== "Attached") {
+        setObservationTargetResult(decision.result);
+        return;
+    }
+    const target = selectedObservationTarget(decision.state);
+    if (!target)
+        return;
+    const sessionWasActive = dataLayerSessionState.session?.status === "active";
+    if (sessionWasActive) {
+        setObservationTargetResult("End current session before attaching selected target");
+        return;
+    }
+    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath());
+    if (observation.pageAccessStatus !== "page access available") {
+        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
+        setObservationTargetResult("Permission required");
+        renderObservationTargetContext();
+        return;
+    }
+    observationTargetState = decision.state;
+    dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
+        tabId: target.tabId,
+        windowId: target.windowId,
+        url: target.pageUrl,
+        targetTitle: target.title,
+        targetOrigin: target.origin,
+        historyPath: getHistoryArrayPath(),
+    });
+    dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: target.pageUrl });
+    dataLayerObserverState = attachHistoryArrayObserver({
+        pageObject: dataLayerObserverState.pageObject,
+        sessionState: dataLayerSessionState,
+        observedEntries: [],
+        sourceEvents: [],
+    }, observation);
+    presentedSourceEventCount = 0;
+    updateSessionFromObserverState();
+    await startLiveHistoryCapture(observation);
+    persistAndRenderObservationState();
+    setObservationTargetResult(`Attached to ${target.title}`);
+    renderObservationTargetContext();
+}
+function beginDetachSelectedTarget() {
+    const target = observationTargetState.targets.find(({ id }) => id === observationTargetState.attachedTargetId);
+    if (!target) {
+        setObservationTargetResult("No target is attached");
+        return;
+    }
+    if (detachTargetMessage)
+        detachTargetMessage.textContent = `Detach ${target.title} from the active testing session?`;
+    if (detachTargetConfirmation)
+        detachTargetConfirmation.hidden = false;
+    cancelDetachTargetButton?.focus();
+}
+function confirmDetachSelectedTarget() {
+    stopLiveHistoryCapture();
+    dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
+    persistAndRenderSessionState();
+    observationTargetState = {
+        ...observationTargetState,
+        attachedTargetId: undefined,
+        sessionState: "Detached",
+    };
+    if (detachTargetConfirmation)
+        detachTargetConfirmation.hidden = true;
+    setObservationTargetResult("Target detached");
+    renderObservationTargetContext();
 }
 function showDataLayerView(view, focus = false) {
     liveObserverState = { ...liveObserverState, view };
@@ -552,36 +750,31 @@ async function runObservationRefresh(request) {
 }
 async function recordDataLayerCommandRun(entry) {
     if (entry.commandId === "data-layer.start-testing") {
-        const sessionWasActive = dataLayerSessionState.session?.status === "active";
-        const historyPath = getHistoryArrayPath();
-        const observation = await activePageObservation(historyPath);
-        dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
-            tabId: observation.tabId ?? 1,
-            url: observation.pageUrl,
-            historyPath,
-        });
-        if (!sessionWasActive) {
-            dataLayerSessionState = captureEntry(dataLayerSessionState, {
-                type: "page",
-                url: observation.pageUrl,
-            });
-            dataLayerObserverState = attachHistoryArrayObserver({
-                pageObject: dataLayerObserverState.pageObject,
-                sessionState: dataLayerSessionState,
-                observedEntries: [],
-                sourceEvents: [],
-            }, observation);
-            presentedSourceEventCount = 0;
-            updateSessionFromObserverState();
-            await startLiveHistoryCapture(observation);
-        }
-        persistAndRenderObservationState();
+        await attachSelectedTarget();
     }
     if (entry.commandId === "data-layer.end-testing") {
         stopLiveHistoryCapture();
         dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
         persistSession(dataLayerSessionState);
         renderSessionState();
+        observationTargetState = {
+            ...observationTargetState,
+            attachedTargetId: undefined,
+            sessionState: "Detached",
+        };
+        renderObservationTargetContext();
+    }
+    if (entry.commandId === "data-layer.choose-observation-target") {
+        if (observationTargetPicker)
+            observationTargetPicker.hidden = false;
+        await discoverCurrentObservationTarget();
+        observationTargetSearch?.focus();
+    }
+    if (entry.commandId === "data-layer.attach-selected-target") {
+        await attachSelectedTarget();
+    }
+    if (entry.commandId === "data-layer.detach-observation-target") {
+        beginDetachSelectedTarget();
     }
 }
 function recordCommandRun(entry) {
@@ -1038,6 +1231,62 @@ restartObservationButton?.addEventListener("click", () => {
         renderObserverState();
     });
 });
+chooseObservationTargetButton?.addEventListener("click", () => {
+    if (observationTargetPicker)
+        observationTargetPicker.hidden = false;
+    void discoverCurrentObservationTarget().then(() => observationTargetSearch?.focus());
+});
+browseObservationTargetsButton?.addEventListener("click", () => {
+    if (observationTargetPicker)
+        observationTargetPicker.hidden = false;
+    void browseObservationTargets();
+});
+attachSelectedTargetButton?.addEventListener("click", () => {
+    void attachSelectedTarget();
+});
+detachObservationTargetButton?.addEventListener("click", beginDetachSelectedTarget);
+cancelDetachTargetButton?.addEventListener("click", () => {
+    if (detachTargetConfirmation)
+        detachTargetConfirmation.hidden = true;
+    detachObservationTargetButton?.focus();
+});
+confirmDetachTargetButton?.addEventListener("click", confirmDetachSelectedTarget);
+observationTargetSearch?.addEventListener("input", renderObservationTargetPicker);
+observationTargetSearch?.addEventListener("keydown", (event) => {
+    const actions = Array.from(observationTargetList?.querySelectorAll("button:not(:disabled)") ?? []);
+    if (event.key === "Escape") {
+        event.preventDefault();
+        if (observationTargetPicker)
+            observationTargetPicker.hidden = true;
+        chooseObservationTargetButton?.focus();
+    }
+    if (event.key === "ArrowDown" && actions[0]) {
+        event.preventDefault();
+        actions[0].focus();
+    }
+});
+observationTargetList?.addEventListener("keydown", (event) => {
+    const actions = Array.from(observationTargetList.querySelectorAll("button:not(:disabled)"));
+    const position = actions.indexOf(document.activeElement);
+    if (position < 0)
+        return;
+    const next = actions[position + 1];
+    const previous = actions[position - 1];
+    if (event.key === "ArrowDown" && next) {
+        event.preventDefault();
+        next.focus();
+    }
+    if (event.key === "ArrowUp" && previous) {
+        event.preventDefault();
+        previous.focus();
+    }
+    if (event.key === "Escape") {
+        event.preventDefault();
+        if (observationTargetPicker)
+            observationTargetPicker.hidden = true;
+        chooseObservationTargetButton?.focus();
+    }
+});
 document.addEventListener("keydown", handleHotkeyKeydown, true);
 if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message) => {
@@ -1048,6 +1297,19 @@ if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
 }
 if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.url !== undefined) {
+            const current = observationTargetState.targets.find((target) => target.tabId === tabId);
+            if (current) {
+                const updated = createObservationTarget({
+                    ...current,
+                    pageUrl: changeInfo.url,
+                    title: tab.title || current.title,
+                });
+                observationTargetState = registerObservationTarget(observationTargetState, updated);
+                renderObservationTargetPicker();
+                renderObservationTargetContext();
+            }
+        }
         if (!activeSessionTabMatches(tabId)) {
             return;
         }
@@ -1069,7 +1331,23 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
         }
     });
 }
+if (typeof chrome !== "undefined" && chrome.tabs?.onRemoved) {
+    chrome.tabs.onRemoved.addListener((tabId) => {
+        const target = observationTargetState.targets.find((candidate) => candidate.tabId === tabId);
+        if (!target)
+            return;
+        observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Closed");
+        if (dataLayerSessionState.session?.tabId === tabId) {
+            stopLiveHistoryCapture();
+            setObservationTargetResult("Target unavailable — Save session, End session, or Choose target");
+            persistAndRenderObservationState();
+        }
+        renderObservationTargetPicker();
+        renderObservationTargetContext();
+    });
+}
 renderHistoryPath(getHistoryArrayPath());
+renderObservationTargetContext();
 renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());

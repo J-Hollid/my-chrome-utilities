@@ -17,7 +17,7 @@ Feature: Data layer live operator layout
     Then it shows state <session_state>, <event_count> events, and <source_count> sources before the event feed
     And primary actions <primary_actions> are visible without opening another region
     And less frequent session actions remain reachable from the same context
-    And the active page is shown once as session context rather than repeated as an event heading
+    And the selected target page is shown once as session context rather than repeated as an event heading
 
     Examples:
       | project_name         | session_state | event_count | source_count | primary_actions |

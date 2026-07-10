@@ -23,9 +23,9 @@ Feature: Data layer session recovery
 
   # Data layer session recovery 002
   Scenario Outline: Data layer session recovery 002
-    When the active tab refreshes during a data layer testing session
+    When the selected target tab refreshes during a data layer testing session
     Then observer attachment status <status> is shown
-    And the user can restart observation for the active tab
+    And the user can restart observation for the selected target tab
 
     Examples:
       | project_name         | status     |

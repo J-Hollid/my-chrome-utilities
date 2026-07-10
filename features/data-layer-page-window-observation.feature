@@ -12,10 +12,10 @@ Feature: Data layer page window observation
 
   # Data layer page window observation 001
   Scenario Outline: Data layer page window observation 001
-    Given active website page <page_url> defines history array path <history_path>
-    When observation starts for the active website page
+    Given selected target page <page_url> defines history array path <history_path>
+    When observation starts for the selected target page
     Then observer status <status> is shown for history array path <history_path>
-    And the observer resolves <history_path> from the active website page window
+    And the observer resolves <history_path> from the selected target page window
 
     Examples:
       | project_name         | history_path     | page_url                | status |
@@ -23,8 +23,8 @@ Feature: Data layer page window observation
 
   # Data layer page window observation 002
   Scenario Outline: Data layer page window observation 002
-    Given active website page <page_url> does not define history array path <history_path>
-    When observation starts for the active website page
+    Given selected target page <page_url> does not define history array path <history_path>
+    When observation starts for the selected target page
     Then observer status <status> is shown for history array path <history_path>
     And no observer is active for history array path <history_path>
 
@@ -34,7 +34,7 @@ Feature: Data layer page window observation
 
   # Data layer page window observation 003
   Scenario Outline: Data layer page window observation 003
-    Given active website page <page_url> defines history array path <history_path>
+    Given selected target page <page_url> defines history array path <history_path>
     When page <page_url> appends history entry <event_name> with payload <payload_label>
     Then the extension records a new observed event entry
     And the observed event entry URL is <page_url>

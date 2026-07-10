@@ -372,6 +372,12 @@
                          (add-captured-event state (:name source) (str (:id source) "-event")))
                        world (:sources world)))}
 
+   {:pattern #"^observation starts for the selected target page$"
+    :handler (fn [world _ _]
+               (reduce (fn [state source]
+                         (add-captured-event state (:name source) (str (:id source) "-event")))
+                       world (:sources world)))}
+
    {:pattern #"^both queue sources are observed independently$"
     :handler (fn [world _ _]
                (support/assert! (= 2 (count (set (map :source-id (:events world)))))

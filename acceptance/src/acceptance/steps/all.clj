@@ -11,6 +11,7 @@
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.observability-library :as observability-library]
+            [acceptance.steps.observation-targets :as observation-targets]
             [acceptance.steps.operator-interface :as operator-interface]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
@@ -25,6 +26,7 @@
 
 (def handlers
   (vec (concat project-skeleton/handlers
+               observation-targets/handlers
                side-panel/handlers
                command-registry/handlers
                data-layer/handlers

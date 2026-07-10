@@ -6,7 +6,11 @@
 (def live-observer-wired? support/live-observer-wired?)
 
 (def handlers
-  (vec (concat workspace/handlers timeline/handlers)))
+  (vec (concat
+        [{:pattern #"^the selected target page is shown once above the event feed$"
+          :handler (fn [world _ _]
+                     (assoc world :selected-target-page-context :shown-once))}]
+        workspace/handlers timeline/handlers)))
 
 (defn live-step-covered? [text]
   (some #(re-matches (:pattern %) text) handlers))

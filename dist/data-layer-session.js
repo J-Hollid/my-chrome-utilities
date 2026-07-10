@@ -18,6 +18,9 @@ export function startDataLayerTestingSession(state, options) {
             historyPath: options.historyPath ?? getHistoryArrayPath(),
             startUrl: options.url,
             currentUrl: options.url,
+            ...(options.windowId === undefined ? {} : { windowId: options.windowId }),
+            ...(options.targetTitle === undefined ? {} : { targetTitle: options.targetTitle }),
+            ...(options.targetOrigin === undefined ? {} : { targetOrigin: options.targetOrigin }),
             timeline: [],
         },
     };

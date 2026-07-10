@@ -28,7 +28,7 @@ Feature: Data layer observer workspace
     Then the session header shows state <session_state>, <event_count> events, and <source_count> sources
     And visible session actions offer <session_actions>
     And each session action is available through the command registry
-    And the active page is shown once above the event feed
+    And the selected target page is shown once above the event feed
 
     Examples:
       | project_name         | view_name | session_state | event_count | source_count | session_actions         |
