@@ -120,6 +120,7 @@ import {
   type EditableEventTemplate,
   type PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -161,6 +162,17 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
+const dataLayerViewList = document.querySelector<HTMLElement>("#data-layer-views");
+const liveSessionSummary = document.querySelector<HTMLElement>("#live-session-summary");
+const livePageUrl = document.querySelector<HTMLElement>("#live-page-url");
+const liveSessionMessage = document.querySelector<HTMLElement>("#live-session-message");
+const liveSourceStatuses = document.querySelector<HTMLElement>("#live-source-statuses");
+const liveEventFeed = document.querySelector<HTMLElement>("#live-event-feed");
+const liveEventList = document.querySelector<HTMLElement>("#live-event-list");
+const liveEventInspector = document.querySelector<HTMLElement>("#live-event-inspector");
+const backToEventsButton = document.querySelector<HTMLButtonElement>("#back-to-events");
+const pauseCaptureButton = document.querySelector<HTMLButtonElement>("#pause-capture");
+const resumeCaptureButton = document.querySelector<HTMLButtonElement>("#resume-capture");
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const savedSessionSearch = document.querySelector<HTMLInputElement>("#saved-session-search");
 const importSavedSessionButton = document.querySelector<HTMLButtonElement>("#import-saved-session");
@@ -171,12 +183,6 @@ const savedSessionConfirmation = document.querySelector<HTMLElement>("#saved-ses
 const cancelSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
 const liveObserverElements = findLiveObserverElements();
-const {
-  viewList: dataLayerViewList,
-  backToEventsButton,
-  pauseCaptureButton,
-  resumeCaptureButton,
-} = liveObserverElements;
 const eventTemplateSearch = document.querySelector<HTMLInputElement>("#event-template-search");
 const saveLatestTemplateButton = document.querySelector<HTMLButtonElement>("#save-latest-template");
 const eventTemplateCount = document.querySelector<HTMLElement>("#event-template-count");
@@ -190,6 +196,13 @@ const saveTemplateCopyButton = document.querySelector<HTMLButtonElement>("#save-
 const pushTemplateDraftButton = document.querySelector<HTMLButtonElement>("#push-template-draft");
 const discardTemplateDraftButton = document.querySelector<HTMLButtonElement>("#discard-template-draft");
 const eventTemplateResult = document.querySelector<HTMLElement>("#event-template-result");
+const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
+const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
+const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
+const schemaCount = document.querySelector<HTMLElement>("#schema-count");
+const schemaList = document.querySelector<HTMLElement>("#schema-list");
+const schemaResult = document.querySelector<HTMLElement>("#schema-result");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -213,6 +226,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let schemas: SchemaDefinition[] = [];
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -235,23 +249,63 @@ function renderHistoryPath(path: string, fieldValue = path): void {
 function showDataLayerView(view: DataLayerView, focus = false): void {
   liveObserverState = { ...liveObserverState, view };
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-  renderDataLayerView(liveObserverElements, view, focus);
+  for (const candidate of dataLayerViews) {
+    const button = document.querySelector<HTMLButtonElement>(
+      `#data-layer-view-${candidate.toLowerCase()}`,
+    );
+    const panel = document.querySelector<HTMLElement>(
+      `#data-layer-panel-${candidate.toLowerCase()}`,
+    );
+    const selected = candidate === view;
+    if (button) {
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+      if (focus) button.focus();
+    }
+    if (panel) panel.hidden = !selected;
+  }
 }
 
 function renderLiveObserver(): void {
-  renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  if (liveSessionSummary) {
+    liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
+  }
+  if (livePageUrl) livePageUrl.textContent = liveObserverState.pageUrl;
+  if (liveSourceStatuses) {
+    liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
+      const item = document.createElement("li");
+      item.textContent = `${source.name}: ${source.status}`;
+      return item;
+    }));
+  }
+  if (liveEventFeed) {
+    liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
+      button.addEventListener("click", () => openLiveInspector(event.id));
+      item.append(button);
+      return item;
+    }));
+  }
+  if (liveEventList) liveEventList.hidden = !liveObserverState.listVisible;
+  if (liveEventInspector) liveEventInspector.hidden = !liveObserverState.inspectorEventId;
+  if (backToEventsButton) backToEventsButton.hidden = liveObserverState.listVisible;
 }
 
 function openLiveInspector(eventId: string): void {
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
-  if (event) renderLiveInspector(liveObserverElements, event);
+  if (liveEventInspector && event) {
+    liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
+  }
   renderLiveObserver();
 }
 
 function setLiveSessionMessage(message: string): void {
-  renderLiveSessionMessage(liveObserverElements, message);
+  if (liveSessionMessage) liveSessionMessage.textContent = message;
 }
 
 function renderEventTemplateLibrary(): void {
@@ -287,6 +341,19 @@ function renderEventTemplateLibrary(): void {
   if (eventTemplateJson && propertyEditorState) eventTemplateJson.value = propertyEditorState.jsonDraft;
   if (eventTemplateValidation) eventTemplateValidation.textContent = propertyEditorState?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
   if (eventTemplateProperties) eventTemplateProperties.replaceChildren(...(propertyEditorState ? renderDraftProperties(propertyEditorState.draft) : []));
+}
+
+function renderSchemas(): void {
+  const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+  if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
+  if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
+    item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+    revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = [...schemas.filter(({ id }) => id !== schema.id), next]; renderSchemas(); });
+    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; renderSchemas(); });
+    remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); renderSchemas(); }); item.append(revise, duplicate, remove); return item;
+  }));
 }
 
 function persistEventTemplateLibrary(): void {
@@ -1133,6 +1200,10 @@ saveLiveSessionButton?.addEventListener("click", () => {
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+schemaSearch?.addEventListener("input", renderSchemas);
+createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult) schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
+exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
 saveLatestTemplateButton?.addEventListener("click", () => {
   const event = liveObserverState.events.at(-1);
@@ -1349,6 +1420,7 @@ showDataLayerView("Live");
 renderLiveObserver();
 renderSavedSessions();
 renderEventTemplateLibrary();
+renderSchemas();
 activateHotkeyFocus();
 
 export {

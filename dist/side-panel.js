@@ -12,8 +12,9 @@ import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSessio
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, } from "./data-layer-live-observer-ui.js";
+import { findLiveObserverElements, } from "./data-layer-live-observer-ui.js";
 import { createEditableTemplate, discardDraft, executeDraftPush, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas } from "./data-layer-schema-verification.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -41,6 +42,17 @@ const keymapWarning = document.querySelector("#keymap-warning");
 const workspaceTabList = document.querySelector("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector("#hotkey-editor-commands");
+const dataLayerViewList = document.querySelector("#data-layer-views");
+const liveSessionSummary = document.querySelector("#live-session-summary");
+const livePageUrl = document.querySelector("#live-page-url");
+const liveSessionMessage = document.querySelector("#live-session-message");
+const liveSourceStatuses = document.querySelector("#live-source-statuses");
+const liveEventFeed = document.querySelector("#live-event-feed");
+const liveEventList = document.querySelector("#live-event-list");
+const liveEventInspector = document.querySelector("#live-event-inspector");
+const backToEventsButton = document.querySelector("#back-to-events");
+const pauseCaptureButton = document.querySelector("#pause-capture");
+const resumeCaptureButton = document.querySelector("#resume-capture");
 const saveLiveSessionButton = document.querySelector("#save-live-session");
 const savedSessionSearch = document.querySelector("#saved-session-search");
 const importSavedSessionButton = document.querySelector("#import-saved-session");
@@ -51,7 +63,6 @@ const savedSessionConfirmation = document.querySelector("#saved-session-confirma
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const liveObserverElements = findLiveObserverElements();
-const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, } = liveObserverElements;
 const eventTemplateSearch = document.querySelector("#event-template-search");
 const saveLatestTemplateButton = document.querySelector("#save-latest-template");
 const eventTemplateCount = document.querySelector("#event-template-count");
@@ -65,6 +76,13 @@ const saveTemplateCopyButton = document.querySelector("#save-template-copy");
 const pushTemplateDraftButton = document.querySelector("#push-template-draft");
 const discardTemplateDraftButton = document.querySelector("#discard-template-draft");
 const eventTemplateResult = document.querySelector("#event-template-result");
+const schemaSearch = document.querySelector("#schema-search");
+const createSchemaButton = document.querySelector("#create-schema");
+const importSchemaButton = document.querySelector("#import-schema");
+const exportSchemaButton = document.querySelector("#export-schema");
+const schemaCount = document.querySelector("#schema-count");
+const schemaList = document.querySelector("#schema-list");
+const schemaResult = document.querySelector("#schema-result");
 const allCommands = [...listCommands()];
 let visibleCommands = allCommands;
 let selectedIndex = 0;
@@ -86,6 +104,7 @@ let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let schemas = [];
 if (app) {
     app.textContent = PROJECT_NAME;
 }
@@ -103,21 +122,63 @@ function renderHistoryPath(path, fieldValue = path) {
 function showDataLayerView(view, focus = false) {
     liveObserverState = { ...liveObserverState, view };
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-    renderDataLayerView(liveObserverElements, view, focus);
+    for (const candidate of dataLayerViews) {
+        const button = document.querySelector(`#data-layer-view-${candidate.toLowerCase()}`);
+        const panel = document.querySelector(`#data-layer-panel-${candidate.toLowerCase()}`);
+        const selected = candidate === view;
+        if (button) {
+            button.setAttribute("aria-selected", String(selected));
+            button.tabIndex = selected ? 0 : -1;
+            if (focus)
+                button.focus();
+        }
+        if (panel)
+            panel.hidden = !selected;
+    }
 }
 function renderLiveObserver() {
-    renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    if (liveSessionSummary) {
+        liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
+    }
+    if (livePageUrl)
+        livePageUrl.textContent = liveObserverState.pageUrl;
+    if (liveSourceStatuses) {
+        liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
+            const item = document.createElement("li");
+            item.textContent = `${source.name}: ${source.status}`;
+            return item;
+        }));
+    }
+    if (liveEventFeed) {
+        liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
+            const item = document.createElement("li");
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
+            button.addEventListener("click", () => openLiveInspector(event.id));
+            item.append(button);
+            return item;
+        }));
+    }
+    if (liveEventList)
+        liveEventList.hidden = !liveObserverState.listVisible;
+    if (liveEventInspector)
+        liveEventInspector.hidden = !liveObserverState.inspectorEventId;
+    if (backToEventsButton)
+        backToEventsButton.hidden = liveObserverState.listVisible;
 }
 function openLiveInspector(eventId) {
     const split = globalThis.innerWidth >= 800;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
-    if (event)
-        renderLiveInspector(liveObserverElements, event);
+    if (liveEventInspector && event) {
+        liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
+    }
     renderLiveObserver();
 }
 function setLiveSessionMessage(message) {
-    renderLiveSessionMessage(liveObserverElements, message);
+    if (liveSessionMessage)
+        liveSessionMessage.textContent = message;
 }
 function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
@@ -157,6 +218,28 @@ function renderEventTemplateLibrary() {
         eventTemplateValidation.textContent = propertyEditorState?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
     if (eventTemplateProperties)
         eventTemplateProperties.replaceChildren(...(propertyEditorState ? renderDraftProperties(propertyEditorState.draft) : []));
+}
+function renderSchemas() {
+    const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+    if (schemaCount)
+        schemaCount.textContent = `${visible.length} schemas`;
+    if (schemaList)
+        schemaList.replaceChildren(...visible.map((schema) => {
+            const item = document.createElement("li");
+            const revise = document.createElement("button");
+            const duplicate = document.createElement("button");
+            const remove = document.createElement("button");
+            item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+            revise.type = duplicate.type = remove.type = "button";
+            revise.textContent = "Edit as new version";
+            duplicate.textContent = "Duplicate";
+            remove.textContent = "Delete";
+            revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = [...schemas.filter(({ id }) => id !== schema.id), next]; renderSchemas(); });
+            duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; renderSchemas(); });
+            remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); renderSchemas(); });
+            item.append(revise, duplicate, remove);
+            return item;
+        }));
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -821,6 +904,20 @@ saveLiveSessionButton?.addEventListener("click", () => {
 });
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+schemaSearch?.addEventListener("input", renderSchemas);
+createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult)
+    schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized)
+    return; try {
+    schemas = [...schemas, importSchema(serialized)];
+    renderSchemas();
+}
+catch {
+    if (schemaResult)
+        schemaResult.textContent = "Schema import must contain valid JSON.";
+} });
+exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult)
+    schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 saveLatestTemplateButton?.addEventListener("click", () => {
     const event = liveObserverState.events.at(-1);
     if (!event) {
@@ -1014,6 +1111,7 @@ showDataLayerView("Live");
 renderLiveObserver();
 renderSavedSessions();
 renderEventTemplateLibrary();
+renderSchemas();
 activateHotkeyFocus();
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };
 //# sourceMappingURL=side-panel.js.map
