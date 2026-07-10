@@ -9,7 +9,8 @@
            :html (support/source-file root "side-panel.html")
            :css (support/source-file root "side-panel.css")
            :source (str/join "\n" [(support/source-file root "src/side-panel.ts")
-                                     (support/source-file root "src/command-palette-ui.ts")])
+                                     (support/source-file root "src/command-palette-ui.ts")
+                                     (support/source-file root "src/data-layer-live-observer-ui.ts")])
            :palette-source (support/source-file root "src/command-palette.ts")
            :commands (support/source-file root "src/commands.ts"))))
 
@@ -52,6 +53,15 @@
                 "id=\"detach-observation-target\""])
        (str/includes? source "function renderLiveContextActions()")
        (str/includes? source "startTestingButton?.addEventListener")))
+
+(def data-layer-secondary-views #{"Live" "Library" "Sessions" "Schemas"})
+
+(defn data-layer-view-separation? [html source]
+  (and (str/includes? html "id=\"data-layer-views\" role=\"tablist\"")
+       (every? #(str/includes? html (str "id=\"data-layer-panel-" (str/lower-case %) "\""))
+               data-layer-secondary-views)
+       (str/includes? source "for (const candidate of dataLayerViews)")
+       (str/includes? source "panel.hidden = !selected")))
 
 (defn- require-layout [world]
   (let [world (inspect world)]
@@ -286,6 +296,49 @@
    {:pattern #"^the Data Layer secondary navigation strip is absent$"
     :handler (fn [world _example _captures]
                (support/assert! (= "Hotkeys" (:active-section world)) "Data Layer navigation is visible while Hotkeys is active." {}) world)}
+
+   {:pattern #"^the Data Layer section is displayed$"
+    :handler (fn [world _example _captures]
+               (let [world (inspect world)]
+                 (support/assert! (data-layer-view-separation? (:html world) (:source world))
+                                  "Data Layer secondary panels are not separated." {})
+                 (assoc world :active-data-layer-view "Live")))}
+
+   {:pattern #"^Data Layer tab <([A-Za-z0-9_]+)> is activated$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (contains? data-layer-secondary-views view)
+                                  "Unknown Data Layer tab." {:view view})
+                 (assoc world :active-data-layer-view view)))}
+
+   {:pattern #"^exactly the <([A-Za-z0-9_]+)> tab is selected$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (= view (:active-data-layer-view world))
+                                  "Wrong Data Layer tab is selected." {:view view})
+                 world))}
+
+   {:pattern #"^only the <([A-Za-z0-9_]+)> panel is visible in Data Layer content$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (= view (:active-data-layer-view world))
+                                  "Wrong Data Layer panel is visible." {:view view})
+                 world))}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> panels are hidden$"
+    :handler (fn [world example [first-key second-key]]
+               (let [active (:active-data-layer-view world)
+                     hidden [(example-value example first-key) (example-value example second-key)]]
+                 (support/assert! (and (every? data-layer-secondary-views hidden)
+                                       (every? #(not= active %) hidden))
+                                  "An inactive Data Layer panel is visible." {:active active :hidden hidden})
+                 world))}
+
+   {:pattern #"^the Data Layer content is not a combined Library, Sessions, and Schemas view$"
+    :handler (fn [world _example _captures]
+               (support/assert! (contains? data-layer-secondary-views (:active-data-layer-view world))
+                                "Data Layer content combines secondary views." {})
+               world)}
 
    {:pattern #"^Data Layer Live is active in context <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [context-key]]
