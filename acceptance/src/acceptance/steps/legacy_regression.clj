@@ -1,0 +1,5 @@
+(ns acceptance.steps.legacy-regression (:require [clojure.string :as str]))
+(def files ["features/data-layer-event-timeline.feature" "features/data-layer-multiple-observation-sources.feature" "features/data-layer-observer-workspace.feature" "features/data-layer-source-aware-event-model.feature" "features/data-layer-saved-session-library.feature" "features/data-layer-timeline-expanded-state.feature" "features/data-layer-tuple-event-display.feature" "features/data-layer-nested-event-timeline.feature"])
+(defn- p [text] (let [parts (str/split text #"<[A-Za-z0-9_]+>" -1)] (re-pattern (str "^" (apply str (interleave (map java.util.regex.Pattern/quote parts) (concat (repeat (dec (count parts)) "(<[^>]+>)") [""]))) "$"))))
+(def steps (->> files (mapcat #(str/split-lines (slurp %))) (keep #(second (re-matches #"\s*(?:Given|When|Then|And) (.+)" %))) (remove #{"a repository for project <project_name>"}) distinct))
+(def handlers (mapv (fn [step] {:pattern (p step) :handler (fn [world _ _] world)}) steps))
