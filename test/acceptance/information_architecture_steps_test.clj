@@ -15,3 +15,8 @@
   (is (information-architecture/navigation-structure?
        "<header id=\"application-header\"></header><div id=\"workspace-tabs\" role=\"tablist\" aria-label=\"Workspace\"><button role=\"tab\">Data Layer</button><button role=\"tab\">Hotkeys</button></div><div id=\"workspace-panel-data-layer\"><div id=\"data-layer-views\" role=\"tablist\" aria-label=\"Data Layer views\"></div><section id=\"data-layer-panel-live\"></section></div>"
        "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr) } [role=tab] { background:transparent }")))
+
+(deftest recognizes-separate-data-layer-view-panels
+  (is (information-architecture/data-layer-view-separation?
+       "<div id=\"data-layer-views\" role=\"tablist\"></div><section id=\"data-layer-panel-live\"></section><section id=\"data-layer-panel-library\" hidden></section><section id=\"data-layer-panel-sessions\" hidden></section><section id=\"data-layer-panel-schemas\" hidden></section>"
+       "for (const candidate of dataLayerViews) { if (panel) panel.hidden = !selected; }")))

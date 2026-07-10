@@ -9,7 +9,8 @@
            :html (support/source-file root "side-panel.html")
            :css (support/source-file root "side-panel.css")
            :source (str/join "\n" [(support/source-file root "src/side-panel.ts")
-                                     (support/source-file root "src/command-palette-ui.ts")])
+                                     (support/source-file root "src/command-palette-ui.ts")
+                                     (support/source-file root "src/data-layer-live-observer-ui.ts")])
            :palette-source (support/source-file root "src/command-palette.ts")
            :commands (support/source-file root "src/commands.ts"))))
 
@@ -52,6 +53,15 @@
                 "id=\"detach-observation-target\""])
        (str/includes? source "function renderLiveContextActions()")
        (str/includes? source "startTestingButton?.addEventListener")))
+
+(def data-layer-secondary-views #{"Live" "Library" "Sessions" "Schemas"})
+
+(defn data-layer-view-separation? [html source]
+  (and (str/includes? html "id=\"data-layer-views\" role=\"tablist\"")
+       (every? #(str/includes? html (str "id=\"data-layer-panel-" (str/lower-case %) "\""))
+               data-layer-secondary-views)
+       (str/includes? source "for (const candidate of dataLayerViews)")
+       (str/includes? source "panel.hidden = !selected")))
 
 (defn- require-layout [world]
   (let [world (inspect world)]
@@ -287,6 +297,49 @@
     :handler (fn [world _example _captures]
                (support/assert! (= "Hotkeys" (:active-section world)) "Data Layer navigation is visible while Hotkeys is active." {}) world)}
 
+   {:pattern #"^the Data Layer section is displayed$"
+    :handler (fn [world _example _captures]
+               (let [world (inspect world)]
+                 (support/assert! (data-layer-view-separation? (:html world) (:source world))
+                                  "Data Layer secondary panels are not separated." {})
+                 (assoc world :active-data-layer-view "Live")))}
+
+   {:pattern #"^Data Layer tab <([A-Za-z0-9_]+)> is activated$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (contains? data-layer-secondary-views view)
+                                  "Unknown Data Layer tab." {:view view})
+                 (assoc world :active-data-layer-view view)))}
+
+   {:pattern #"^exactly the <([A-Za-z0-9_]+)> tab is selected$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (= view (:active-data-layer-view world))
+                                  "Wrong Data Layer tab is selected." {:view view})
+                 world))}
+
+   {:pattern #"^only the <([A-Za-z0-9_]+)> panel is visible in Data Layer content$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (= view (:active-data-layer-view world))
+                                  "Wrong Data Layer panel is visible." {:view view})
+                 world))}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> panels are hidden$"
+    :handler (fn [world example [first-key second-key]]
+               (let [active (:active-data-layer-view world)
+                     hidden [(example-value example first-key) (example-value example second-key)]]
+                 (support/assert! (and (every? data-layer-secondary-views hidden)
+                                       (every? #(not= active %) hidden))
+                                  "An inactive Data Layer panel is visible." {:active active :hidden hidden})
+                 world))}
+
+   {:pattern #"^the Data Layer content is not a combined Library, Sessions, and Schemas view$"
+    :handler (fn [world _example _captures]
+               (support/assert! (contains? data-layer-secondary-views (:active-data-layer-view world))
+                                "Data Layer content combines secondary views." {})
+               world)}
+
    {:pattern #"^Data Layer Live is active in context <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [context-key]]
                (assoc (inspect world) :active-section "Data Layer" :active-view "Live" :live-context (example-value example context-key)))}
@@ -321,5 +374,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T21:28:36.958496978+02:00", :module-hash "-1196127481", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1853401062"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-2097234562"} {:id "defn-/example-value", :kind "defn-", :line 16, :end-line nil, :hash "-1416813660"} {:id "defn/palette-dialog?", :kind "defn", :line 19, :end-line nil, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 28, :end-line nil, :hash "-963751556"} {:id "defn/navigation-structure?", :kind "defn", :line 33, :end-line nil, :hash "514241598"} {:id "defn/contextual-actions?", :kind "defn", :line 45, :end-line nil, :hash "-645291225"} {:id "defn-/require-layout", :kind "defn-", :line 56, :end-line nil, :hash "-319387143"} {:id "def/handlers", :kind "def", :line 62, :end-line nil, :hash "840541346"}]}
+;; {:version 1, :tested-at "2026-07-10T23:16:40.244225031+02:00", :module-hash "-742273372", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1853401062"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "1653053363"} {:id "defn-/example-value", :kind "defn-", :line 17, :end-line nil, :hash "-1416813660"} {:id "defn/palette-dialog?", :kind "defn", :line 20, :end-line nil, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 29, :end-line nil, :hash "-963751556"} {:id "defn/navigation-structure?", :kind "defn", :line 34, :end-line nil, :hash "514241598"} {:id "defn/contextual-actions?", :kind "defn", :line 46, :end-line nil, :hash "-645291225"} {:id "def/data-layer-secondary-views", :kind "def", :line 57, :end-line nil, :hash "-1480012677"} {:id "defn/data-layer-view-separation?", :kind "defn", :line 59, :end-line nil, :hash "-1906053387"} {:id "defn-/require-layout", :kind "defn-", :line 66, :end-line nil, :hash "-319387143"} {:id "def/handlers", :kind "def", :line 72, :end-line nil, :hash "1965644716"}]}
 ;; clj-mutate-manifest-end
