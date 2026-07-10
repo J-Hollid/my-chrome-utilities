@@ -1,5 +1,7 @@
 (ns acceptance.steps.live-observer
-  (:require [acceptance.steps.support :as support]
+  (:require [babashka.fs :as fs]
+            [babashka.process :as process]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (def live-step-templates
@@ -101,6 +103,28 @@
 (defn live-step-covered? [text]
   (some #(re-matches (template-pattern %) text) live-step-templates))
 
+(def ^:private live-observer-semantics-script
+  (str "const live = await import(process.argv[1]);"
+       "let state = live.createLiveObserverState({pageUrl: 'https://example.test/checkout', sources: [{id: 'history', name: 'Event history', status: 'Connected'}]});"
+       "state = live.recordLiveEvent(state, {id: 'one', name: 'pageview', sourceId: 'history', captureTime: '2026-07-10T10:00:00Z'});"
+       "const paused = live.recordLiveEvent(live.pauseCapture(state), {id: 'two', name: 'purchase', sourceId: 'history', captureTime: '2026-07-10T10:00:01Z'});"
+       "const resumed = live.recordLiveEvent(live.resumeCapture(paused), {id: 'two', name: 'purchase', sourceId: 'history', captureTime: '2026-07-10T10:00:01Z'});"
+       "const stacked = live.selectLiveEvent(resumed, 'two', 'stacked');"
+       "const split = live.selectLiveEvent(resumed, 'two', 'split');"
+       "if (paused.status !== 'Paused' || paused.events.length !== 1 || resumed.status !== 'Live' || resumed.events.length !== 2 || stacked.listVisible || !split.listVisible) process.exit(1);"))
+
+(defonce ^:private semantic-results (atom {}))
+
+(defn live-observer-semantics? [root]
+  (if-let [result (get @semantic-results root)]
+    (:passed? result)
+    (let [result (process/shell {:out :string :err :string :continue true}
+                                "node" "--input-type=module" "--eval" live-observer-semantics-script
+                                (str (fs/path root "dist/data-layer-live-observer.js")))
+          checked {:passed? (zero? (:exit result)) :result result}]
+      (swap! semantic-results assoc root checked)
+      (:passed? checked))))
+
 (defn- inspect [world]
   (let [root (or (:root world) (support/repository-root))
         html (support/source-file root "side-panel.html")
@@ -108,6 +132,9 @@
                     (support/source-file root "src/data-layer-live-observer.ts"))]
     (support/assert! (live-observer-wired? html source)
                      "Live observer UI and domain wiring is incomplete."
+                     {})
+    (support/assert! (live-observer-semantics? root)
+                     "Live observer state transitions are incomplete."
                      {})
     (assoc world :root root :live-html html :live-source source)))
 
