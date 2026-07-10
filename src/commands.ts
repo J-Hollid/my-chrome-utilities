@@ -1,4 +1,5 @@
 import type { WorkspaceTabId } from "./workspace-tabs.js";
+import type { DataLayerView } from "./data-layer-live-observer.js";
 
 export type CommandCategory = "demo" | "data-layer" | "navigation";
 
@@ -10,6 +11,7 @@ export interface CommandRunRecord {
 export interface CommandRunContext {
   record(entry: CommandRunRecord): void;
   showWorkspace?(tab: WorkspaceTabId): void;
+  showDataLayerView?(view: DataLayerView): void;
 }
 
 export interface AppCommand {
@@ -63,6 +65,7 @@ function dataLayerViewCommand(
   id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
   title: string,
 ): AppCommand {
+  const view = title.replace("Show ", "") as DataLayerView;
   return {
     id,
     title,
@@ -70,6 +73,7 @@ function dataLayerViewCommand(
     category: "data-layer",
     run(context: CommandRunContext): void {
       context.showWorkspace?.("data-layer");
+      context.showDataLayerView?.(view);
       context.record({ commandId: id, message: `${id} ran` });
     },
   };

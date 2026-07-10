@@ -39,7 +39,7 @@
 (defn palette-backed-by-registry? [source]
   (and (str/includes? source "listCommands()")
        (str/includes? source "runCommandById")
-       (not (re-find #"\bid\s*:\s*\"[^\"]+\"" source))))
+       (not (re-find #"\bid\s*:\s*\"[^\"]+\"[\s\S]{0,240}\brun\s*\(" source))))
 
 (defn filters-commands? [source filter-text]
   (and (seq filter-text)

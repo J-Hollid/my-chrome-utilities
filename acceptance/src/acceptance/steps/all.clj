@@ -7,6 +7,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
+            [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
@@ -23,6 +24,7 @@
                data-layer-page-context/handlers
                data-layer-recovery/handlers
                data-layer-session/handlers
+               live-observer/handlers
                data-layer-timeline/handlers
                hotkey-keymap/handlers
                workspace-editor/handlers

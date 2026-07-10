@@ -35,6 +35,7 @@ const endDataLayerTestingCommand = {
     },
 };
 function dataLayerViewCommand(id, title) {
+    const view = title.replace("Show ", "");
     return {
         id,
         title,
@@ -42,6 +43,7 @@ function dataLayerViewCommand(id, title) {
         category: "data-layer",
         run(context) {
             context.showWorkspace?.("data-layer");
+            context.showDataLayerView?.(view);
             context.record({ commandId: id, message: `${id} ran` });
         },
     };

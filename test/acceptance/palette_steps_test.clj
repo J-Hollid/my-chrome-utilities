@@ -39,6 +39,9 @@
 (deftest recognizes-listing-and-filtering
   (is (palette/lists-registered-commands? palette-source))
   (is (palette/palette-backed-by-registry? palette-source))
+  (is (palette/palette-backed-by-registry?
+       (str palette-source
+            " const source = { id: \"event-history\", name: \"Event history\" };")))
   (is (palette/filters-commands? palette-source "hello")))
 
 (deftest canonical-filter-query-dispatches
