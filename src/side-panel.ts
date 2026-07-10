@@ -127,6 +127,12 @@ import {
   setEventLibraryValidation,
 } from "./data-layer-event-library-editor-ui.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
+import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
+import {
+  findSequenceReplayElements,
+  renderSequenceReplay,
+  setSequenceReplayResult,
+} from "./data-layer-sequence-replay-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -201,6 +207,7 @@ const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-sc
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
+const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -225,6 +232,7 @@ let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
 let schemas: SchemaDefinition[] = [];
+let replaySequences: ReplaySequence[] = [];
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -305,6 +313,46 @@ function persistEventTemplateLibrary(): void {
   localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 
+function renderSequences(): void {
+  renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
+    const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      version: template.version,
+      sourceId: template.sourceId,
+      destination: template.destination,
+      payload: template.payload,
+    }));
+    const adapters = liveObserverState.sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: "Data Layer",
+      destination: "event.history",
+      enabled: true,
+      status: source.status,
+      capabilities: ["push"] as const,
+    }));
+    const ready = readiness(sequence, templates, adapters);
+    if (!ready.runnable) {
+      setSequenceReplayResult(
+        sequenceReplayElements,
+        `Not runnable: ${ready.blocked.join(", ")}`,
+      );
+      return;
+    }
+    const record = runSequence(
+      sequence,
+      templates,
+      adapters,
+      liveObserverState.pageUrl,
+      "Run all",
+    );
+    setSequenceReplayResult(
+      sequenceReplayElements,
+      `${record.result}: ${record.steps.length} steps.`,
+    );
+  });
+}
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements,
@@ -341,7 +389,7 @@ function renderSavedSessions(): void {
       const rename = document.createElement("button");
       const exportButton = document.createElement("button");
       const resumeCapture = document.createElement("button");
-      const createSequence = document.createElement("button");
+      const createSequenceButton = document.createElement("button");
       const remove = document.createElement("button");
       open.type = "button";
       open.textContent = `Open ${session.name}`;
@@ -384,12 +432,13 @@ function renderSavedSessions(): void {
         renderLiveObserver();
         showDataLayerView("Live");
       });
-      createSequence.type = "button";
-      createSequence.textContent = "Create sequence";
-      createSequence.addEventListener("click", () => {
-        if (savedSessionConfirmation) {
-          savedSessionConfirmation.textContent = `Create sequence from ${session.name} is ready for the sequence editor.`;
-        }
+      createSequenceButton.type = "button";
+      createSequenceButton.textContent = "Create sequence";
+      createSequenceButton.addEventListener("click", () => {
+        const templates: ReplayTemplate[] = eventTemplates.filter((template) => session.events.some((event) => `template:${event.id}` === template.id)).map((template) => ({ id: template.id, name: template.name, version: template.version, sourceId: template.sourceId, destination: template.destination, payload: template.payload }));
+        replaySequences = [...replaySequences, createSequence(`sequence:${session.id}`, `${session.name} sequence`, session.id, templates)];
+        renderSequences();
+        if (savedSessionConfirmation) savedSessionConfirmation.textContent = `Created sequence from ${session.name}; saved session remains unchanged.`;
       });
       remove.type = "button";
       remove.textContent = "Delete";
@@ -401,7 +450,7 @@ function renderSavedSessions(): void {
       });
       const summary = savedSessionSummary(session);
       item.textContent = `${session.name}: ${summary.captureDate}, ${summary.pageScope}, ${summary.duration}, ${summary.sourceCount} sources, ${summary.eventCount} events, ${summary.validationSummary}. `;
-      item.append(open, rename, exportButton, resumeCapture, createSequence, remove);
+      item.append(open, rename, exportButton, resumeCapture, createSequenceButton, remove);
       return item;
     }));
   }
@@ -1362,6 +1411,7 @@ renderLiveObserver();
 renderSavedSessions();
 renderEventTemplateLibrary();
 renderSchemas();
+renderSequences();
 activateHotkeyFocus();
 
 export {
