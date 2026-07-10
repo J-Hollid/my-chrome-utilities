@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=33079643dae32b5287edee2eaec55513977947947a294208c5183ea234ede5af
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-10T19:27:09.732723305Z","feature_name":"Side panel command palette dialog","feature_path":"features/side-panel-command-palette-dialog.feature","background_hash":"58f5ca2e659834cf5ceeeff5c23f58ddd57c1cad685e99603ccb14acbe8dc2c1","implementation_hash":"sha256:side-panel-information-architecture-v2","scenarios":[{"index":1,"name":"Side panel command palette dialog 002","scenario_hash":"8399d2f5b586ce902ea7c0374df202c16f6dd6374b066f0a2796289677c0a088","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T19:27:09.732723305Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Side panel command palette dialog
 
   Background:

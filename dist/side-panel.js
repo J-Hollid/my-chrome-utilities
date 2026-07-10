@@ -1,5 +1,5 @@
 import { listCommands, runCommandById, } from "./commands.js";
-import { filterPaletteCommands, selectedPaletteIndexForKey, } from "./command-palette.js";
+import { createCommandPaletteController } from "./command-palette-ui.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
@@ -26,10 +26,6 @@ const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
-const openButton = document.querySelector("#open-palette");
-const palette = document.querySelector("#palette");
-const filter = document.querySelector("#palette-filter");
-const results = document.querySelector("#palette-results");
 const startTestingButton = document.querySelector("#start-data-layer-testing");
 const endTestingButton = document.querySelector("#end-data-layer-testing");
 const historyPathInput = document.querySelector("#history-path");
@@ -74,9 +70,6 @@ const schemaList = document.querySelector("#schema-list");
 const schemaResult = document.querySelector("#schema-result");
 const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
-let visibleCommands = allCommands;
-let selectedIndex = 0;
-let lastPaletteFocus = null;
 let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence = [];
 let dataLayerSessionState = restoreSession();
@@ -868,6 +861,12 @@ const commandRunContext = {
     showWorkspace,
     showDataLayerView: showDataLayerView,
 };
+const commandPalette = createCommandPaletteController({
+    root: panelRoot,
+    sidePanelContent,
+    commands: allCommands,
+    runCommand: (command) => runCommandById(command.id, commandRunContext),
+});
 function setKeymapStatus(message) {
     if (keymapStatus) {
         keymapStatus.textContent = message;
@@ -1035,58 +1034,6 @@ function isFocusHotkeysMessage(message) {
         "type" in message &&
         message.type === "focus-app-hotkeys");
 }
-function renderPalette(commands, selection = 0) {
-    if (!results) {
-        return;
-    }
-    visibleCommands = commands;
-    selectedIndex = commands.length === 0
-        ? 0
-        : Math.min(Math.max(selection, 0), commands.length - 1);
-    results.replaceChildren();
-    for (const [index, command] of commands.entries()) {
-        const item = document.createElement("li");
-        item.id = `palette-result-${index}`;
-        item.setAttribute("role", "option");
-        item.textContent = command.title;
-        item.dataset.commandId = command.id;
-        item.dataset.selected = index === selectedIndex ? "true" : "false";
-        item.setAttribute("aria-selected", String(index === selectedIndex));
-        results.append(item);
-    }
-}
-function filterCommands(text) {
-    return filterPaletteCommands(allCommands, text);
-}
-function showPalette() {
-    if (!palette) {
-        return;
-    }
-    lastPaletteFocus = document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    sidePanelContent?.setAttribute("inert", "");
-    palette.hidden = false;
-    renderPalette(filterCommands(filter?.value ?? ""));
-    filter?.focus();
-}
-function hidePalette() {
-    if (palette) {
-        palette.hidden = true;
-    }
-    sidePanelContent?.removeAttribute("inert");
-    lastPaletteFocus?.focus();
-    lastPaletteFocus = null;
-}
-function runSelectedCommand() {
-    const command = visibleCommands[selectedIndex];
-    if (!command) {
-        return;
-    }
-    runCommandById(command.id, commandRunContext);
-    hidePalette();
-}
-openButton?.addEventListener("click", showPalette);
 startTestingButton?.addEventListener("click", () => {
     runCommandById("data-layer.start-testing", commandRunContext);
 });
@@ -1095,6 +1042,7 @@ endTestingButton?.addEventListener("click", () => {
 });
 workspaceTabsController.bind();
 hotkeyEditor.bind();
+commandPalette.bind();
 dataLayerViewList?.addEventListener("click", (event) => {
     const button = event.target.closest("[role=tab]");
     const view = button?.textContent;
@@ -1265,47 +1213,6 @@ loadKeymapButton?.addEventListener("click", () => {
 });
 keymapFileInput?.addEventListener("change", () => {
     void loadHotkeyKeymapFile();
-});
-panelRoot?.addEventListener("keyup", (event) => {
-    if (event.ctrlKey && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        showPalette();
-    }
-});
-filter?.addEventListener("input", () => {
-    renderPalette(filterCommands(filter.value));
-});
-filter?.addEventListener("keydown", (event) => {
-    const nextIndex = selectedPaletteIndexForKey(event.key, selectedIndex, visibleCommands.length);
-    if (nextIndex !== undefined) {
-        event.preventDefault();
-        renderPalette(visibleCommands, nextIndex);
-        return;
-    }
-    if (event.key === "Enter") {
-        event.preventDefault();
-        runSelectedCommand();
-    }
-    if (event.key === "Escape") {
-        event.preventDefault();
-        hidePalette();
-    }
-});
-results?.addEventListener("click", (event) => {
-    const item = event.target.closest("[data-command-id]");
-    if (!item)
-        return;
-    const index = Array.from(results.children).indexOf(item);
-    if (index < 0)
-        return;
-    selectedIndex = index;
-    runSelectedCommand();
-});
-palette?.addEventListener("keydown", (event) => {
-    if (event.key === "Tab") {
-        event.preventDefault();
-        filter?.focus();
-    }
 });
 historyPathInput?.addEventListener("input", () => {
     const typedPath = historyPathInput.value;

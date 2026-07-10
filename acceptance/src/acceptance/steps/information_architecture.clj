@@ -8,7 +8,8 @@
            :root root
            :html (support/source-file root "side-panel.html")
            :css (support/source-file root "side-panel.css")
-           :source (support/source-file root "src/side-panel.ts")
+           :source (str/join "\n" [(support/source-file root "src/side-panel.ts")
+                                     (support/source-file root "src/command-palette-ui.ts")])
            :palette-source (support/source-file root "src/command-palette.ts")
            :commands (support/source-file root "src/commands.ts"))))
 
@@ -174,9 +175,15 @@
    {:pattern #"^<([A-Za-z0-9_]+)>$"
     :applies? #(and (contains? % :selected-result?) (contains? % :palette-input))
     :handler (fn [world example [outcome-key]]
-               (let [input (:palette-input world) outcome (example-value example outcome-key)]
-                 (support/assert! (= (= input "Escape") (= outcome "no command executes"))
-                                  "Palette outcome does not match its close input." {:input input :outcome outcome})
+               (let [input (:palette-input world)
+                     outcome (example-value example outcome-key)
+                     expected-outcomes
+                     {"keyboard navigation to another result followed by Enter"
+                      "the selected command executes"
+                      "Escape" "no command executes"}]
+                 (support/assert! (= (get expected-outcomes input) outcome)
+                                  "Palette outcome does not match its close input."
+                                  {:input input :outcome outcome})
                  (assoc world :execution-outcome outcome)))}
 
    {:pattern #"^the command palette closes$"
@@ -298,4 +305,21 @@
     :handler (fn [world _example _captures] (require-layout world))}
    {:pattern #"^only actions relevant to <([A-Za-z0-9_]+)> are displayed in the Live view$"
     :handler (fn [world example [context-key]]
-               (support/assert! (= (example-value example context-key) (:live-context world)) "Live context actions are not scoped." {}) world)}])
+               (let [context (example-value example context-key)
+                     expected-actions
+                     {"no active testing session" "Start testing"
+                      "active testing session" "End testing"
+                      "no selected target" "Choose target"
+                      "selected detached target" "Attach target"
+                      "selected attached target" "Detach target"}]
+                 (support/assert! (and (= context (:live-context world))
+                                       (= (get expected-actions context)
+                                          (:contextual-action world)))
+                                  "Live context actions are not scoped."
+                                  {:context context
+                                   :action (:contextual-action world)})
+                 world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-10T21:28:36.958496978+02:00", :module-hash "-1196127481", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1853401062"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-2097234562"} {:id "defn-/example-value", :kind "defn-", :line 16, :end-line nil, :hash "-1416813660"} {:id "defn/palette-dialog?", :kind "defn", :line 19, :end-line nil, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 28, :end-line nil, :hash "-963751556"} {:id "defn/navigation-structure?", :kind "defn", :line 33, :end-line nil, :hash "514241598"} {:id "defn/contextual-actions?", :kind "defn", :line 45, :end-line nil, :hash "-645291225"} {:id "defn-/require-layout", :kind "defn-", :line 56, :end-line nil, :hash "-319387143"} {:id "def/handlers", :kind "def", :line 62, :end-line nil, :hash "840541346"}]}
+;; clj-mutate-manifest-end
