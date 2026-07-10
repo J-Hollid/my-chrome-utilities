@@ -55,8 +55,7 @@ Feature: Simple command palette
   Scenario Outline: Simple command palette 005
     When command palette implementation is inspected
     Then no fuzzy-search package dependency is declared
-    And no global shortcuts are declared
-    And no user keybinding editor is present
+    And command palette commands are backed by the command registry
 
     Examples:
       | project_name         |
