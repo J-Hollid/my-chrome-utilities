@@ -26,3 +26,7 @@
        "Library" ["Live" "Sessions" "Schemas"]))
   (is (not (information-architecture/distinct-hidden-data-layer-views?
             "Library" ["Live" "Library" "Schemas"]))))
+
+(deftest recognizes-hidden-panel-css-precedence
+  (is (information-architecture/hidden-panel-css-wins?
+       "#data-layer-panel-library { display:grid; } [role=tabpanel][hidden] { display:none !important; }")))
