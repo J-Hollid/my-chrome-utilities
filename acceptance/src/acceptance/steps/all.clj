@@ -14,6 +14,7 @@
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
             [acceptance.steps.schema-verification :as schema-verification]
+            [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.workspace-editor :as workspace-editor]))
@@ -34,6 +35,7 @@
                workspace-editor/handlers
                saved-sessions/handlers
                schema-verification/handlers
+               sequence-replay/handlers
                palette/handlers
                package-flow/handlers
                observability-library/handlers)))
