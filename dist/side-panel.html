@@ -9,13 +9,11 @@
   </head>
   <body>
     <main id="side-panel-root" tabindex="-1">
-      <h1 id="app">my-chrome-utilities</h1>
-      <button id="open-palette" type="button">Commands</button>
-      <section id="palette" aria-label="Command palette" hidden>
-        <input id="palette-filter" type="search" aria-label="Filter commands" />
-        <ul id="palette-results"></ul>
-      </section>
-      <section id="commands" aria-label="Commands"></section>
+      <div id="side-panel-content">
+      <header id="application-header">
+        <h1 id="app">my-chrome-utilities</h1>
+        <button id="open-palette" type="button" aria-haspopup="dialog" aria-controls="palette">Commands</button>
+      </header>
       <div id="workspace-tabs" role="tablist" aria-label="Workspace">
         <button id="workspace-tab-data-layer" type="button" role="tab" aria-controls="workspace-panel-data-layer" aria-selected="true">Data Layer</button>
         <button id="workspace-tab-hotkeys" type="button" role="tab" aria-controls="workspace-panel-hotkeys" aria-selected="false" tabindex="-1">Hotkeys</button>
@@ -34,6 +32,13 @@
           <output id="live-session-summary" aria-live="polite">Live: 0 events, 1 source</output>
           <output id="observation-target-state" aria-live="polite">Detached — Choose target</output>
           <output id="live-page-url"></output>
+          <section id="live-context-actions" aria-label="Live actions">
+          <button id="start-data-layer-testing" type="button">Start testing</button>
+          <button id="end-data-layer-testing" type="button" hidden>End testing</button>
+          <button id="choose-observation-target" type="button">Choose target</button>
+          <button id="attach-selected-target" type="button" hidden>Attach target</button>
+          <button id="detach-observation-target" type="button" hidden>Detach target</button>
+          </section>
           <button id="pause-capture" type="button">Pause capture</button>
           <button id="resume-capture" type="button">Resume capture</button>
           <button id="stop-capture" type="button">Stop</button>
@@ -88,10 +93,7 @@
       </section>
       <section id="data-layer-settings" aria-label="Data layer testing settings">
         <section id="observation-target-controls" aria-label="Observation target controls">
-          <button id="choose-observation-target" type="button">Choose target</button>
           <button id="browse-observation-targets" type="button">Browse all tabs</button>
-          <button id="attach-selected-target" type="button">Attach selected target</button>
-          <button id="detach-observation-target" type="button">Detach target</button>
           <output id="observation-target-result" aria-live="polite"></output>
           <section id="observation-target-picker" aria-label="Observation target picker" hidden>
             <label for="observation-target-search">Search targets</label>
@@ -144,6 +146,11 @@
       </details>
       </section>
       <output id="command-log" aria-live="polite"></output>
+      </div>
+      <section id="palette" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+        <input id="palette-filter" type="search" aria-label="Filter commands" aria-controls="palette-results" />
+        <ul id="palette-results" role="listbox" aria-label="Matching commands"></ul>
+      </section>
     </main>
   </body>
 </html>

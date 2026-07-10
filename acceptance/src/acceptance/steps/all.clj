@@ -8,6 +8,7 @@
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
+            [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.observability-library :as observability-library]
@@ -30,6 +31,7 @@
                observation-targets/handlers
                side-panel/handlers
                command-registry/handlers
+               information-architecture/handlers
                data-layer/handlers
                data-layer-observer/handlers
                data-layer-page-context/handlers
