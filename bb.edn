@@ -42,10 +42,16 @@
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]
-                            [acceptance.property-test])
+                            [acceptance.property-test]
+                            [babashka.process :as process])
                  :task (let [result (test/run-tests 'acceptance.property-test)]
-                         (when (pos? (+ (:fail result) (:error result)))
-                           (System/exit 1)))}
+                         (let [property-result (process/shell {:out :inherit
+                                                               :err :inherit
+                                                               :continue true}
+                                                              "npm" "run" "test:property:workspace-tabs")]
+                         (when (or (pos? (+ (:fail result) (:error result)))
+                                   (not (zero? (:exit property-result))))
+                           (System/exit 1))))}
   acceptance {:doc "Run the normal APS acceptance pipeline."
               :requires ([acceptance.generator :as generator]
                          [babashka.fs :as fs]
