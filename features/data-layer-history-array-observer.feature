@@ -62,11 +62,12 @@ Feature: Data layer history array observer
 
   # Data layer history array observer 005
   Scenario Outline: Data layer history array observer 005
-    When data layer observer capabilities are inspected
-    Then object push events with event fields are not observed
-    And analytics beacons are not observed
-    And object snapshots are not captured
+    Given the configured history array receives object entry <object_label> with event field <event_name>
+    When the object entry is observed
+    Then event <event_name> is captured with object payload <payload_label>
+    And the complete object entry is retained as raw input
+    And the original page push behavior is preserved
 
     Examples:
-      | project_name         | history_path  |
-      | my-chrome-utilities | queue.history |
+      | project_name         | history_path  | object_label    | event_name | payload_label   |
+      | my-chrome-utilities | window.dataLayer | purchase-object | purchase   | purchase-values |

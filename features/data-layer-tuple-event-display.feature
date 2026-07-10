@@ -18,9 +18,10 @@ Feature: Data layer tuple event display
     And the tuple event uses the canonical observer path
     And the tuple event uses the canonical timestamp
     When the side panel renders the observed event
-    Then the observed event heading uses <event_name> instead of <timestamp> before observer path <history_path>
-    And payload properties <first_property>, <second_property>, and <third_property> are displayed as separate event detail lines
-    And raw payload object display is not shown for the observed event
+    Then the event row shows <event_name> with a distinct source label for <history_path>
+    And compact time is derived from <timestamp> without replacing the event name
+    And payload properties <first_property>, <second_property>, and <third_property> are available in the Fields inspector
+    And the complete tuple is available separately in the Raw inspector
 
     Examples:
       | project_name         | event_name | history_path  | timestamp            | payload_object                                                       | first_property                  | second_property       | third_property                  |
