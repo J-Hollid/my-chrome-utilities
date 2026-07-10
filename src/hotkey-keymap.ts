@@ -30,6 +30,12 @@ export interface HotkeyKeymapValidation {
   keymap?: HotkeyKeymap;
 }
 
+export interface HotkeyBindingChange {
+  keymap?: HotkeyKeymap;
+  sequence: string;
+  conflictingCommandId?: string;
+}
+
 export interface KeyboardEventLike {
   key: string;
   ctrlKey?: boolean;
@@ -109,6 +115,31 @@ export function updateHotkeyKeymap(
       .filter((commandId) => !registeredIds.has(commandId))
       .sort(),
   };
+}
+
+export function changeHotkeyBinding(
+  keymap: HotkeyKeymap,
+  commandId: string,
+  sequence: string,
+): HotkeyBindingChange {
+  const normalized = normalizeKeySequence(sequence);
+  const next: HotkeyKeymap = {
+    ...keymap,
+    bindings: { ...keymap.bindings, [commandId]: normalized },
+  };
+  const conflict = duplicateSequences(next).find((duplicate) =>
+    duplicate.commandIds.includes(commandId),
+  );
+
+  if (conflict) {
+    const conflictingCommandId = conflict.commandIds.find((id) => id !== commandId);
+    return {
+      sequence: normalized,
+      ...(conflictingCommandId ? { conflictingCommandId } : {}),
+    };
+  }
+
+  return { keymap: next, sequence: normalized };
 }
 
 export function duplicateSequences(

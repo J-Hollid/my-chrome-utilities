@@ -15,12 +15,36 @@
         <ul id="palette-results"></ul>
       </section>
       <section id="commands" aria-label="Commands"></section>
+      <div id="workspace-tabs" role="tablist" aria-label="Workspace">
+        <button id="workspace-tab-data-layer" type="button" role="tab" aria-controls="workspace-panel-data-layer" aria-selected="true">Data Layer</button>
+        <button id="workspace-tab-hotkeys" type="button" role="tab" aria-controls="workspace-panel-hotkeys" aria-selected="false" tabindex="-1">Hotkeys</button>
+      </div>
+      <section id="workspace-panel-data-layer" role="tabpanel" aria-labelledby="workspace-tab-data-layer">
+      <h2>Data Layer</h2>
       <section id="data-layer-settings" aria-label="Data layer testing settings">
         <label for="history-path">History array path</label>
         <input id="history-path" type="text" value="queue.history" />
         <output id="history-path-display">queue.history</output>
         <output id="history-path-status" aria-live="polite">ready</output>
       </section>
+      <section id="data-layer-session" aria-label="Data layer testing session">
+        <output id="session-status" aria-live="polite">inactive</output>
+        <output id="session-history-path"></output>
+        <output id="observer-status" aria-live="polite">inactive</output>
+        <button id="restart-observation" type="button">Restart observation</button>
+        <output id="session-warning" aria-live="polite"></output>
+        <ul id="session-timeline"></ul>
+      </section>
+      </section>
+      <section id="workspace-panel-hotkeys" role="tabpanel" aria-labelledby="workspace-tab-hotkeys" hidden>
+      <h2>Hotkeys</h2>
+      <section id="hotkey-editor" aria-label="Hotkey editor">
+        <label for="hotkey-editor-filter">Search hotkeys</label>
+        <input id="hotkey-editor-filter" type="search" />
+        <div id="hotkey-editor-commands"></div>
+      </section>
+      <details id="keymap-files">
+        <summary>Keymap files</summary>
       <section id="hotkey-keymap" aria-label="Hotkey keymap">
         <button id="create-keymap" type="button">Create keymap</button>
         <button id="update-keymap" type="button">Update keymap</button>
@@ -34,13 +58,7 @@
         <output id="keymap-status" aria-live="polite"></output>
         <output id="keymap-warning" aria-live="assertive"></output>
       </section>
-      <section id="data-layer-session" aria-label="Data layer testing session">
-        <output id="session-status" aria-live="polite">inactive</output>
-        <output id="session-history-path"></output>
-        <output id="observer-status" aria-live="polite">inactive</output>
-        <button id="restart-observation" type="button">Restart observation</button>
-        <output id="session-warning" aria-live="polite"></output>
-        <ul id="session-timeline"></ul>
+      </details>
       </section>
       <output id="command-log" aria-live="polite"></output>
     </main>
