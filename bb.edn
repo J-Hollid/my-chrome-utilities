@@ -26,6 +26,7 @@
                         [acceptance.workspace-editor-steps-test]
                         [acceptance.observability-library-steps-test]
                         [acceptance.live-observer-steps-test]
+                        [acceptance.saved-sessions-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
@@ -44,6 +45,7 @@
                                                 'acceptance.workspace-editor-steps-test
                                                 'acceptance.observability-library-steps-test
                                                 'acceptance.live-observer-steps-test
+                                                'acceptance.saved-sessions-steps-test
                                                 'acceptance.gherkin-mutation-metadata-test)
                          source-result (process/shell {:out :inherit
                                                       :err :inherit
@@ -52,10 +54,15 @@
                          live-result (process/shell {:out :inherit
                                                      :err :inherit
                                                      :continue true}
-                                                    "npm" "run" "test:unit:live-observer")]
+                                                    "npm" "run" "test:unit:live-observer")
+                         saved-result (process/shell {:out :inherit
+                                                      :err :inherit
+                                                      :continue true}
+                                                     "npm" "run" "test:unit:saved-sessions")]
                      (when (or (pos? (+ (:fail result) (:error result)))
                                (not (zero? (:exit source-result)))
-                               (not (zero? (:exit live-result))))
+                               (not (zero? (:exit live-result)))
+                               (not (zero? (:exit saved-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]

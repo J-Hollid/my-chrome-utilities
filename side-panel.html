@@ -47,7 +47,18 @@
         <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
       </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden><h3>Library</h3></section>
-      <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden><h3>Sessions</h3></section>
+      <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
+        <h3>Sessions</h3>
+        <label for="saved-session-search">Search sessions</label>
+        <input id="saved-session-search" type="search" />
+        <button id="import-saved-session" type="button">Import session</button>
+        <input id="saved-session-file" type="file" accept="application/json,.json" hidden />
+        <output id="saved-session-count" aria-live="polite"></output>
+        <ul id="saved-session-list"></ul>
+        <output id="saved-session-confirmation" aria-live="assertive"></output>
+        <button id="cancel-saved-session-delete" type="button" hidden>Cancel deletion</button>
+        <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
+      </section>
       <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden><h3>Schemas</h3></section>
       <section id="data-layer-settings" aria-label="Data layer testing settings">
         <label for="history-path">History array path</label>

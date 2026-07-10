@@ -11,6 +11,7 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -49,6 +50,15 @@ const liveEventInspector = document.querySelector("#live-event-inspector");
 const backToEventsButton = document.querySelector("#back-to-events");
 const pauseCaptureButton = document.querySelector("#pause-capture");
 const resumeCaptureButton = document.querySelector("#resume-capture");
+const saveLiveSessionButton = document.querySelector("#save-live-session");
+const savedSessionSearch = document.querySelector("#saved-session-search");
+const importSavedSessionButton = document.querySelector("#import-saved-session");
+const savedSessionFileInput = document.querySelector("#saved-session-file");
+const savedSessionList = document.querySelector("#saved-session-list");
+const savedSessionCount = document.querySelector("#saved-session-count");
+const savedSessionConfirmation = document.querySelector("#saved-session-confirmation");
+const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
+const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const allCommands = [...listCommands()];
 let visibleCommands = allCommands;
 let selectedIndex = 0;
@@ -66,6 +76,8 @@ let liveObserverState = createLiveObserverState({
     pageUrl: globalThis.location.href,
     sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
+let savedSessionLibrary = createSavedSessionLibrary();
+let archivedSavedSession;
 if (app) {
     app.textContent = PROJECT_NAME;
 }
@@ -140,6 +152,117 @@ function openLiveInspector(eventId) {
 function setLiveSessionMessage(message) {
     if (liveSessionMessage)
         liveSessionMessage.textContent = message;
+}
+function renderSavedSessions() {
+    const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
+    if (savedSessionCount)
+        savedSessionCount.textContent = `${sessions.length} saved sessions`;
+    if (savedSessionList) {
+        savedSessionList.replaceChildren(...sessions.map((session) => {
+            const item = document.createElement("li");
+            const open = document.createElement("button");
+            const rename = document.createElement("button");
+            const exportButton = document.createElement("button");
+            const resumeCapture = document.createElement("button");
+            const createSequence = document.createElement("button");
+            const remove = document.createElement("button");
+            open.type = "button";
+            open.textContent = `Open ${session.name}`;
+            open.addEventListener("click", () => {
+                archivedSavedSession = openSavedSession(savedSessionLibrary, session.id);
+                if (savedSessionConfirmation) {
+                    savedSessionConfirmation.textContent = `Archived session: ${session.name}. Live observer is not running.`;
+                }
+                showDataLayerView("Sessions");
+            });
+            rename.type = "button";
+            rename.textContent = "Rename";
+            rename.addEventListener("click", () => {
+                const name = globalThis.prompt("Saved session name", session.name);
+                if (name?.trim()) {
+                    savedSessionLibrary = renameSavedSession(savedSessionLibrary, session.id, name.trim());
+                    renderSavedSessions();
+                }
+            });
+            exportButton.type = "button";
+            exportButton.textContent = "Export";
+            exportButton.addEventListener("click", () => {
+                downloadSavedSessionFile(session);
+                if (savedSessionConfirmation)
+                    savedSessionConfirmation.textContent = `Exported saved session ${session.name}.`;
+            });
+            resumeCapture.type = "button";
+            resumeCapture.textContent = "Resume capture";
+            resumeCapture.addEventListener("click", () => {
+                const archived = openSavedSession(savedSessionLibrary, session.id);
+                const resumed = resumeSavedSession(archived, globalThis.location.href);
+                archivedSavedSession = archived;
+                liveObserverState = {
+                    ...liveObserverState,
+                    view: "Live",
+                    status: "Live",
+                    pageUrl: resumed.activeSession.pageUrl,
+                    events: [],
+                };
+                setLiveSessionMessage(`Capture resumed from ${session.name}; new session linked to archive.`);
+                renderLiveObserver();
+                showDataLayerView("Live");
+            });
+            createSequence.type = "button";
+            createSequence.textContent = "Create sequence";
+            createSequence.addEventListener("click", () => {
+                if (savedSessionConfirmation) {
+                    savedSessionConfirmation.textContent = `Create sequence from ${session.name} is ready for the sequence editor.`;
+                }
+            });
+            remove.type = "button";
+            remove.textContent = "Delete";
+            remove.addEventListener("click", () => {
+                savedSessionLibrary = requestSavedSessionDeletion(savedSessionLibrary, session.id);
+                if (savedSessionConfirmation)
+                    savedSessionConfirmation.textContent = `Delete saved session ${session.name}?`;
+                if (cancelSavedSessionDeleteButton)
+                    cancelSavedSessionDeleteButton.hidden = false;
+                if (confirmSavedSessionDeleteButton)
+                    confirmSavedSessionDeleteButton.hidden = false;
+            });
+            const summary = savedSessionSummary(session);
+            item.textContent = `${session.name}: ${summary.captureDate}, ${summary.pageScope}, ${summary.duration}, ${summary.sourceCount} sources, ${summary.eventCount} events, ${summary.validationSummary}. `;
+            item.append(open, rename, exportButton, resumeCapture, createSequence, remove);
+            return item;
+        }));
+    }
+}
+function savedSessionFileName(name) {
+    return `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "saved-session"}.json`;
+}
+function downloadSavedSessionFile(session) {
+    const blob = new Blob([`${exportSavedSession(session)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = savedSessionFileName(session.name);
+    link.click();
+    URL.revokeObjectURL(url);
+}
+async function loadSavedSessionFile() {
+    const file = savedSessionFileInput?.files?.[0];
+    if (!file)
+        return;
+    try {
+        savedSessionLibrary = importSavedSession(savedSessionLibrary, await file.text());
+        if (savedSessionConfirmation)
+            savedSessionConfirmation.textContent = "Saved session imported as an immutable archive.";
+        renderSavedSessions();
+    }
+    catch {
+        if (savedSessionConfirmation)
+            savedSessionConfirmation.textContent = "Saved session file must contain valid JSON.";
+    }
+    finally {
+        if (savedSessionFileInput)
+            savedSessionFileInput.value = "";
+    }
 }
 function expandedTimelinePageIndexes() {
     const expandedIndexes = new Set();
@@ -632,6 +755,52 @@ resumeCaptureButton?.addEventListener("click", () => {
     setLiveSessionMessage("Capture resumed");
     renderLiveObserver();
 });
+saveLiveSessionButton?.addEventListener("click", () => {
+    const completed = {
+        id: `live-${Date.now()}`,
+        pageScope: liveObserverState.pageUrl,
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+        events: liveObserverState.events.map((event, index) => ({
+            id: event.id,
+            sourceId: event.sourceId,
+            sourceName: event.sourceId,
+            name: event.name,
+            payload: {},
+            rawInput: event,
+            pageUrl: liveObserverState.pageUrl,
+            captureOrder: index + 1,
+            provenance: { source: "live-observer", capturedAt: event.captureTime },
+        })),
+        provenance: { source: "live-observer", capturedAt: new Date().toISOString() },
+    };
+    savedSessionLibrary = saveCompletedSession(savedSessionLibrary, completed, `Session ${savedSessionLibrary.sessions.length + 1}`);
+    renderSavedSessions();
+    setLiveSessionMessage("Saved session created");
+});
+savedSessionSearch?.addEventListener("input", renderSavedSessions);
+importSavedSessionButton?.addEventListener("click", () => savedSessionFileInput?.click());
+savedSessionFileInput?.addEventListener("change", () => {
+    void loadSavedSessionFile();
+});
+cancelSavedSessionDeleteButton?.addEventListener("click", () => {
+    savedSessionLibrary = cancelSavedSessionDeletion(savedSessionLibrary);
+    if (savedSessionConfirmation)
+        savedSessionConfirmation.textContent = "";
+    cancelSavedSessionDeleteButton.hidden = true;
+    if (confirmSavedSessionDeleteButton)
+        confirmSavedSessionDeleteButton.hidden = true;
+    renderSavedSessions();
+});
+confirmSavedSessionDeleteButton?.addEventListener("click", () => {
+    savedSessionLibrary = confirmSavedSessionDeletion(savedSessionLibrary);
+    if (savedSessionConfirmation)
+        savedSessionConfirmation.textContent = "Saved session deleted.";
+    confirmSavedSessionDeleteButton.hidden = true;
+    if (cancelSavedSessionDeleteButton)
+        cancelSavedSessionDeleteButton.hidden = true;
+    renderSavedSessions();
+});
 backToEventsButton?.addEventListener("click", () => {
     const { inspectorEventId: _inspectorEventId, ...withoutInspector } = liveObserverState;
     liveObserverState = { ...withoutInspector, listVisible: true };
@@ -723,6 +892,7 @@ showWorkspace(workspaceTabsController.activeTab());
 hotkeyEditor.render();
 showDataLayerView("Live");
 renderLiveObserver();
+renderSavedSessions();
 activateHotkeyFocus();
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };
 //# sourceMappingURL=side-panel.js.map
