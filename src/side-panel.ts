@@ -5,6 +5,10 @@ import {
   type CommandRunRecord,
 } from "./commands.js";
 import {
+  filterPaletteCommands,
+  selectedPaletteIndexForKey,
+} from "./command-palette.js";
+import {
   advanceHotkeySequence,
   blankHotkeyKeymap,
   duplicateSequences,
@@ -166,12 +170,14 @@ const PROJECT_NAME = "my-chrome-utilities";
 
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
-const commandList = document.querySelector<HTMLElement>("#commands");
+const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
 const openButton = document.querySelector<HTMLButtonElement>("#open-palette");
 const palette = document.querySelector<HTMLElement>("#palette");
 const filter = document.querySelector<HTMLInputElement>("#palette-filter");
 const results = document.querySelector<HTMLElement>("#palette-results");
+const startTestingButton = document.querySelector<HTMLButtonElement>("#start-data-layer-testing");
+const endTestingButton = document.querySelector<HTMLButtonElement>("#end-data-layer-testing");
 const historyPathInput = document.querySelector<HTMLInputElement>("#history-path");
 const historyPathDisplay = document.querySelector<HTMLElement>(
   "#history-path-display",
@@ -251,6 +257,7 @@ const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
 let selectedIndex = 0;
+let lastPaletteFocus: HTMLElement | null = null;
 let activeHotkeyKeymap: HotkeyKeymap =
   loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence: string[] = [];
@@ -321,6 +328,19 @@ function renderObservationTargetContext(): void {
     observationTargetState,
     getHistoryArrayPath(),
   );
+  renderLiveContextActions();
+}
+
+function renderLiveContextActions(): void {
+  const activeSession = dataLayerSessionState.session?.status === "active";
+  const selectedTarget = selectedObservationTarget(observationTargetState);
+  const attachedTarget = attachedObservationTarget(observationTargetState);
+
+  if (startTestingButton) startTestingButton.hidden = activeSession;
+  if (endTestingButton) endTestingButton.hidden = !activeSession;
+  if (chooseObservationTargetButton) chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
+  if (attachSelectedTargetButton) attachSelectedTargetButton.hidden = activeSession || !selectedTarget;
+  if (detachObservationTargetButton) detachObservationTargetButton.hidden = !attachedTarget;
 }
 
 function targetFromTab(
@@ -864,6 +884,8 @@ function renderSessionState(): void {
   if (sessionWarning) {
     sessionWarning.textContent = dataLayerSessionState.warning ?? "";
   }
+
+  renderLiveContextActions();
 }
 
 function renderTimelinePage(
@@ -1421,36 +1443,31 @@ function isFocusHotkeysMessage(message: unknown): message is { type: string } {
   );
 }
 
-function renderPalette(commands: readonly AppCommand[]): void {
+function renderPalette(commands: readonly AppCommand[], selection = 0): void {
   if (!results) {
     return;
   }
 
   visibleCommands = commands;
-  selectedIndex = 0;
+  selectedIndex = commands.length === 0
+    ? 0
+    : Math.min(Math.max(selection, 0), commands.length - 1);
   results.replaceChildren();
 
   for (const [index, command] of commands.entries()) {
     const item = document.createElement("li");
+    item.id = `palette-result-${index}`;
+    item.setAttribute("role", "option");
     item.textContent = command.title;
     item.dataset.commandId = command.id;
     item.dataset.selected = index === selectedIndex ? "true" : "false";
+    item.setAttribute("aria-selected", String(index === selectedIndex));
     results.append(item);
   }
 }
 
 function filterCommands(text: string): readonly AppCommand[] {
-  const normalized = text.trim().toLowerCase();
-
-  if (!normalized) {
-    return allCommands;
-  }
-
-  return allCommands.filter((command) =>
-    `${command.title} ${command.description} ${command.category}`
-      .toLowerCase()
-      .includes(normalized),
-  );
+  return filterPaletteCommands(allCommands, text);
 }
 
 function showPalette(): void {
@@ -1458,6 +1475,10 @@ function showPalette(): void {
     return;
   }
 
+  lastPaletteFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
+  sidePanelContent?.setAttribute("inert", "");
   palette.hidden = false;
   renderPalette(filterCommands(filter?.value ?? ""));
   filter?.focus();
@@ -1467,6 +1488,9 @@ function hidePalette(): void {
   if (palette) {
     palette.hidden = true;
   }
+  sidePanelContent?.removeAttribute("inert");
+  lastPaletteFocus?.focus();
+  lastPaletteFocus = null;
 }
 
 function runSelectedCommand(): void {
@@ -1480,19 +1504,13 @@ function runSelectedCommand(): void {
   hidePalette();
 }
 
-if (commandList) {
-  for (const command of allCommands) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = command.title;
-    button.addEventListener("click", () => {
-      runCommandById(command.id, commandRunContext);
-    });
-    commandList.append(button);
-  }
-}
-
 openButton?.addEventListener("click", showPalette);
+startTestingButton?.addEventListener("click", () => {
+  runCommandById("data-layer.start-testing", commandRunContext);
+});
+endTestingButton?.addEventListener("click", () => {
+  runCommandById("data-layer.end-testing", commandRunContext);
+});
 
 workspaceTabsController.bind();
 hotkeyEditor.bind();
@@ -1686,7 +1704,18 @@ filter?.addEventListener("input", () => {
   renderPalette(filterCommands(filter.value));
 });
 
-filter?.addEventListener("keyup", (event: KeyboardEvent) => {
+filter?.addEventListener("keydown", (event: KeyboardEvent) => {
+  const nextIndex = selectedPaletteIndexForKey(
+    event.key,
+    selectedIndex,
+    visibleCommands.length,
+  );
+  if (nextIndex !== undefined) {
+    event.preventDefault();
+    renderPalette(visibleCommands, nextIndex);
+    return;
+  }
+
   if (event.key === "Enter") {
     event.preventDefault();
     runSelectedCommand();
@@ -1695,6 +1724,22 @@ filter?.addEventListener("keyup", (event: KeyboardEvent) => {
   if (event.key === "Escape") {
     event.preventDefault();
     hidePalette();
+  }
+});
+
+results?.addEventListener("click", (event) => {
+  const item = (event.target as Element).closest<HTMLElement>("[data-command-id]");
+  if (!item) return;
+  const index = Array.from(results.children).indexOf(item);
+  if (index < 0) return;
+  selectedIndex = index;
+  runSelectedCommand();
+});
+
+palette?.addEventListener("keydown", (event: KeyboardEvent) => {
+  if (event.key === "Tab") {
+    event.preventDefault();
+    filter?.focus();
   }
 });
 

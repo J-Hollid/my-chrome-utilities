@@ -29,7 +29,8 @@
                         [acceptance.live-observer-steps-test]
                         [acceptance.live-event-presentation-steps-test]
                         [acceptance.observation-targets-steps-test]
-                        [acceptance.event-library-editor-steps-test]
+                            [acceptance.event-library-editor-steps-test]
+                            [acceptance.information-architecture-steps-test]
                         [acceptance.schema-verification-steps-test]
                         [acceptance.saved-sessions-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
@@ -54,6 +55,7 @@
                                                 'acceptance.live-event-presentation-steps-test
                                                 'acceptance.observation-targets-steps-test
                                                 'acceptance.event-library-editor-steps-test
+                                                'acceptance.information-architecture-steps-test
                                                 'acceptance.schema-verification-steps-test
                                                 'acceptance.saved-sessions-steps-test
                                                 'acceptance.gherkin-mutation-metadata-test)
@@ -88,7 +90,11 @@
                          saved-result (process/shell {:out :inherit
                                                       :err :inherit
                                                       :continue true}
-                                                     "npm" "run" "test:unit:saved-sessions")]
+                                                     "npm" "run" "test:unit:saved-sessions")
+                         palette-result (process/shell {:out :inherit
+                                                        :err :inherit
+                                                        :continue true}
+                                                       "npm" "run" "test:unit:command-palette")]
                      (when (or (pos? (+ (:fail result) (:error result)))
                                (not (zero? (:exit source-result)))
                                (not (zero? (:exit live-result)))
@@ -97,7 +103,8 @@
                                (not (zero? (:exit editor-result)))
                                (not (zero? (:exit schema-result)))
                                (not (zero? (:exit sequence-result)))
-                               (not (zero? (:exit saved-result))))
+                               (not (zero? (:exit saved-result)))
+                               (not (zero? (:exit palette-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]

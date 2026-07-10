@@ -1,0 +1,17 @@
+(ns acceptance.information-architecture-steps-test
+  (:require [acceptance.steps.information-architecture :as information-architecture]
+            [clojure.test :refer [deftest is]]))
+
+(deftest recognizes-modal-command-palette-boundary
+  (is (information-architecture/palette-dialog?
+       "<section id=\"palette\" role=\"dialog\" aria-modal=\"true\"><input id=\"palette-filter\" /><ul id=\"palette-results\" role=\"listbox\"></ul></section>"
+       "#palette { position:fixed } #palette[hidden] { display:none }"
+       "sidePanelContent?.setAttribute(\"inert\", \"\"); filter?.focus()"))
+  (is (information-architecture/no-permanent-command-buttons?
+       "<button id=\"open-palette\">Commands</button>"
+       "function showPalette() {}")))
+
+(deftest recognizes-separated-information-architecture
+  (is (information-architecture/navigation-structure?
+       "<header id=\"application-header\"></header><div id=\"workspace-tabs\" role=\"tablist\" aria-label=\"Workspace\"><button role=\"tab\">Data Layer</button><button role=\"tab\">Hotkeys</button></div><div id=\"workspace-panel-data-layer\"><div id=\"data-layer-views\" role=\"tablist\" aria-label=\"Data Layer views\"></div><section id=\"data-layer-panel-live\"></section></div>"
+       "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr) } [role=tab] { background:transparent }")))
