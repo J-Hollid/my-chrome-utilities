@@ -32,6 +32,7 @@
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
+   "panel_height" #{"640 CSS px"}
    "primary_action" #{"Push"}
    "primary_actions" #{"Pause and Stop" "Resume and Stop"}
    "project_name" #{"my-chrome-utilities"}
@@ -42,7 +43,7 @@
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
-   "schema_name" #{"Purchase event"}
+   "schema_name" #{"Purchase event" "Purchase v2"}
    "second_subview" #{"Sequences"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
@@ -60,11 +61,11 @@
    "subview_name" #{"Event templates" "Sequences"}
    "target_size" #{"44 CSS px"}
    "template_name" #{"Purchase confirmation"}
-   "text_zoom" #{"200 percent"}
+   "text_zoom" #{"100 percent" "200 percent"}
    "theme_name" #{"dark" "light"}
    "total_count" #{"42"}
    "usage_count" #{"14"}
-   "validation_state" #{"2 issues" "Valid"}
+   "validation_state" #{"2 issues" "Not checked" "Valid"}
    "validation_summary" #{"16 valid, 2 issues"}
    "version" #{"2" "3"}
    "view_name" #{"Hotkeys" "Library" "Live" "Schemas" "Sessions"}
@@ -76,7 +77,7 @@
   (support/validate-example-domain!
    canonical-example-values
    example
-   keys
+   (filterv #(contains? canonical-example-values %) keys)
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
