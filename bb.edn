@@ -67,6 +67,10 @@
                                                        :err :inherit
                                                        :continue true}
                                                       "npm" "run" "test:unit:schema-verification")
+                         sequence-result (process/shell {:out :inherit
+                                                         :err :inherit
+                                                         :continue true}
+                                                        "npm" "run" "test:unit:sequence-replay")
                          saved-result (process/shell {:out :inherit
                                                       :err :inherit
                                                       :continue true}
@@ -76,6 +80,7 @@
                                (not (zero? (:exit live-result)))
                                (not (zero? (:exit editor-result)))
                                (not (zero? (:exit schema-result)))
+                               (not (zero? (:exit sequence-result)))
                                (not (zero? (:exit saved-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
@@ -100,6 +105,7 @@
                              [hardening.project-skeleton-hardening-test]
                              [hardening.saved-sessions-hardening-test]
                              [hardening.schema-verification-hardening-test]
+                             [hardening.session-boundaries-hardening-test]
                              [hardening.sequence-replay-hardening-test]
                              [hardening.workspace-editor-hardening-test])
                   :task (let [result (test/run-tests 'hardening.data-layer-timeline-hardening-test
@@ -110,10 +116,20 @@
                                                      'hardening.project-skeleton-hardening-test
                                                      'hardening.saved-sessions-hardening-test
                                                      'hardening.schema-verification-hardening-test
+                                                     'hardening.session-boundaries-hardening-test
                                                      'hardening.sequence-replay-hardening-test
                                                      'hardening.workspace-editor-hardening-test)]
                           (when (pos? (+ (:fail result) (:error result)))
                             (System/exit 1)))}
+  test:mutation:timeline {:doc "Run focused timeline unit and mutation-hardening tests."
+                          :requires ([clojure.test :as test]
+                                     [acceptance.data-layer-timeline-steps-test]
+                                     [hardening.data-layer-timeline-hardening-test])
+                          :task (let [result (test/run-tests
+                                             'acceptance.data-layer-timeline-steps-test
+                                             'hardening.data-layer-timeline-hardening-test)]
+                                  (when (pos? (+ (:fail result) (:error result)))
+                                    (System/exit 1)))}
   acceptance {:doc "Run the normal APS acceptance pipeline."
               :requires ([acceptance.generator :as generator]
                          [babashka.fs :as fs]
