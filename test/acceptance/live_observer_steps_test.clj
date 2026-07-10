@@ -8,6 +8,10 @@
        "data-layer-views data-layer-view-live data-layer-panel-live live-session-summary live-source-statuses live-event-feed live-event-inspector pause-capture resume-capture"
        "dataLayerViewForNavigationKey recordLiveEvent selectLiveEvent renderLiveObserver")))
 
+(deftest pauses-and-resumes-through-semantic-handlers
+  (is (live-observer/live-step-covered? "the user pauses capture"))
+  (is (live-observer/live-step-covered? "subsequent source events are appended to the same session")))
+
 (def live-features
   ["features/data-layer-observer-workspace.feature"
    "features/data-layer-event-timeline.feature"])

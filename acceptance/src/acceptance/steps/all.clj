@@ -13,6 +13,7 @@
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
+            [acceptance.steps.schema-verification :as schema-verification]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.workspace-editor :as workspace-editor]))
@@ -32,6 +33,7 @@
                hotkey-keymap/handlers
                workspace-editor/handlers
                saved-sessions/handlers
+               schema-verification/handlers
                palette/handlers
                package-flow/handlers
                observability-library/handlers)))

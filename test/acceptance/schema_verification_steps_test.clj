@@ -1,0 +1,3 @@
+(ns acceptance.schema-verification-steps-test (:require [acceptance.steps.schema-verification :as schema] [clojure.string :as str] [clojure.test :refer [deftest is testing]]))
+(deftest verifies-schema-semantics (is (schema/schema-verification-semantics? ".")))
+(deftest every-schema-step-has-a-specific-handler (doseq [step (->> (str/split-lines (slurp "features/data-layer-schema-verification.feature")) (keep #(second (re-matches #"\s*(?:Given|When|Then|And) (.+)" %))) (remove #{"a repository for project <project_name>"}))] (testing step (is (schema/schema-step-covered? step)))))
