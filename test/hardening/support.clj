@@ -1,5 +1,6 @@
 (ns hardening.support
-  (:require [acceptance.runtime :as runtime]))
+  (:require [acceptance.runtime :as runtime]
+            [aps.json :as aps-json]))
 
 (defn dispatch
   ([handlers world text]
@@ -9,3 +10,9 @@
                           example
                           {:keyword "Then" :text text}
                           handlers)))
+
+(defn run-features [paths handlers]
+  (mapv (fn [path]
+          (:status
+           (runtime/run-feature! (aps-json/read-json-file path) handlers)))
+        paths))

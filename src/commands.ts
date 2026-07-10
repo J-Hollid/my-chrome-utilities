@@ -61,6 +61,19 @@ const endDataLayerTestingCommand: AppCommand = {
   },
 };
 
+const saveDataLayerSessionCommand: AppCommand = {
+  id: "data-layer.save-session",
+  title: "Save data layer session",
+  description: "Saves the active data layer testing session.",
+  category: "data-layer",
+  run(context: CommandRunContext): void {
+    context.record({
+      commandId: "data-layer.save-session",
+      message: "data-layer.save-session ran",
+    });
+  },
+};
+
 function dataLayerViewCommand(
   id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
   title: string,
@@ -100,6 +113,7 @@ const commands: readonly AppCommand[] = [
   sayHelloCommand,
   startDataLayerTestingCommand,
   endDataLayerTestingCommand,
+  saveDataLayerSessionCommand,
   dataLayerViewCommand("data-layer.show-live", "Show Live"),
   dataLayerViewCommand("data-layer.show-library", "Show Library"),
   dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
