@@ -1,12 +1,14 @@
-# mutation-stamp: sha256=fbd68f1744eaf3caa83f24f26e9e4edc32a26dd0a0cb72c02438f68c87eab84f
+# mutation-stamp: sha256=d1205dd9844dbc7ee97b8b1200f8e459faafbfbc05b8ab108e85de23657eb2f1
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T20:35:43.142036734Z","feature_name":"Simple command palette","feature_path":"features/simple-command-palette.feature","background_hash":"7010dbc38239bc7043db7168e3ce76337d3bc72582407db6296288f1ba4d4743","implementation_hash":"sha256:57736879a16bce5351ce2d26e0a1d4952472742e1eb9f67020cc8fc91efac3c1","scenarios":[{"index":0,"name":"Simple command palette 001","scenario_hash":"e70fac64e07b91a4896653c14ebe2be30e5ef4a4c9a571184e5a6628a409a24f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:22.553481589Z"},{"index":1,"name":"Simple command palette 002","scenario_hash":"24ab5ac9bdf0bd0e036a29f4b6c8b2da606c416f78e999302a57f2e0c03b9509","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:22.553481589Z"},{"index":2,"name":"Simple command palette 003","scenario_hash":"267b23f788780401b7d44e8171ab27514301eebe8120a36f96726986f4d3ca8e","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:22.553481589Z"},{"index":3,"name":"Simple command palette 004","scenario_hash":"d10b658a65682bd6a15262515ddf40e661fe6919c834120676d6ad3f4f4dc5cb","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:22.553481589Z"},{"index":4,"name":"Simple command palette 005","scenario_hash":"a639afe6d9871d73a9f50fd8d52db051e253364bf874c1f78506dfb430fc39c6","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:22.553481589Z"}]}
+# {"version":1,"tested_at":"2026-07-10T08:56:42.454378665Z","feature_name":"Simple command palette","feature_path":"features/simple-command-palette.feature","background_hash":"226bb5e22a9a96c00cb0a883dbd213ae0d7a3a032163f94e519d113dc2da25a5","implementation_hash":"sha256:57736879a16bce5351ce2d26e0a1d4952472742e1eb9f67020cc8fc91efac3c1","scenarios":[{"index":1,"name":"Simple command palette 002","scenario_hash":"e943423833b70500533182c3c54e7649bc7690a104cd08bea62040cfd170b3e2","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:55:22.792416429Z"},{"index":0,"name":"Simple command palette 001","scenario_hash":"e70fac64e07b91a4896653c14ebe2be30e5ef4a4c9a571184e5a6628a409a24f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:53:47.270919051Z"},{"index":2,"name":"Simple command palette 003","scenario_hash":"267b23f788780401b7d44e8171ab27514301eebe8120a36f96726986f4d3ca8e","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:53:47.270919051Z"},{"index":3,"name":"Simple command palette 004","scenario_hash":"d10b658a65682bd6a15262515ddf40e661fe6919c834120676d6ad3f4f4dc5cb","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:53:47.270919051Z"},{"index":4,"name":"Simple command palette 005","scenario_hash":"ee0f155379f217219a7a69e0ae8ae2c23b11044b159c315693d7ad5c7b722a4a","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:53:47.270919051Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Simple command palette
 
   Background:
     Given a repository for project <project_name>
+    And the project skeleton is inspected
+    And package metadata identifies the project as <project_name>
 
   # Simple command palette 001
   Scenario Outline: Simple command palette 001
@@ -25,6 +27,7 @@ Feature: Simple command palette
     Then registered commands are listed
     When the user types <filter_text>
     Then only matching commands are shown
+    And the command filter uses the canonical hello query
 
     Examples:
       | project_name         | filter_text |
@@ -55,8 +58,7 @@ Feature: Simple command palette
   Scenario Outline: Simple command palette 005
     When command palette implementation is inspected
     Then no fuzzy-search package dependency is declared
-    And no global shortcuts are declared
-    And no user keybinding editor is present
+    And command palette commands are backed by the command registry
 
     Examples:
       | project_name         |

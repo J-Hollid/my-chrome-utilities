@@ -25,6 +25,18 @@
         (re-find #"export\s+function\s+runCommandById\s*\(" source)
         (re-find #"record\s*\(" source))))
 
+(defn stable-keymap-identifiers? [source]
+  (support/matches-all? source
+                        [#"\bid\s*:\s*\"[a-z0-9-]+\.[a-z0-9-]+\""
+                         #"export\s+function\s+findCommand\s*\("
+                         #"command\.id\s*={3}\s*id"]))
+
+(defn command-id-execution? [source]
+  (support/matches-all? source
+                        [#"export\s+function\s+runCommandById\s*\("
+                         #"findCommand\s*\(\s*id\s*\)"
+                         #"command\.run\s*\(\s*context\s*\)"]))
+
 (defn separate-from-rendering? [registry-source rendering-source]
   (and (every? #(contains? (defined-fields registry-source) %) command-fields)
        (not (re-find #"\b(id|title|description|category|run)\s*:" rendering-source))))
@@ -163,8 +175,26 @@
                  (support/assert! (empty? findings)
                                   "User-configurable keybindings were found."
                                   {:findings (vec findings)})
+                 world))}
+
+   {:pattern #"^registered command ids are stable keymap identifiers$"
+    :handler (fn [world _example _captures]
+               (let [root (or (:root world) (support/repository-root))
+                     source (support/source-file root "src/commands.ts")]
+                 (support/assert! (stable-keymap-identifiers? source)
+                                  "Command ids are not stable keymap identifiers."
+                                  {})
+                 world))}
+
+   {:pattern #"^command execution remains available through command ids$"
+    :handler (fn [world _example _captures]
+               (let [root (or (:root world) (support/repository-root))
+                     source (support/source-file root "src/commands.ts")]
+                 (support/assert! (command-id-execution? source)
+                                  "Command execution is not available through command ids."
+                                  {})
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T20:58:19.705849876+02:00", :module-hash "1927912763", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1038821804"} {:id "def/command-fields", :kind "def", :line 7, :end-line nil, :hash "690572886"} {:id "defn/defined-fields", :kind "defn", :line 9, :end-line nil, :hash "-1662172251"} {:id "defn/listable-registry?", :kind "defn", :line 15, :end-line nil, :hash "1777837196"} {:id "defn/registered-command?", :kind "defn", :line 18, :end-line nil, :hash "-2114637731"} {:id "defn/command-has-behavior?", :kind "defn", :line 21, :end-line nil, :hash "-1623888695"} {:id "defn/separate-from-rendering?", :kind "defn", :line 28, :end-line nil, :hash "-1396950643"} {:id "def/forbidden-command-ui-patterns", :kind "def", :line 32, :end-line nil, :hash "-2023843326"} {:id "defn/forbidden-command-ui-findings", :kind "defn", :line 38, :end-line nil, :hash "-1818592575"} {:id "defn/forbidden-command-ui-findings-of-kind", :kind "defn", :line 41, :end-line nil, :hash "611004771"} {:id "defn-/run-command-with-node", :kind "defn-", :line 44, :end-line nil, :hash "-711241429"} {:id "defn-/read-node-json", :kind "defn-", :line 50, :end-line nil, :hash "1086192520"} {:id "def/handlers", :kind "def", :line 55, :end-line nil, :hash "-1793282294"}]}
+;; {:version 1, :tested-at "2026-07-10T10:46:22.429955914+02:00", :module-hash "-1701701477", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1038821804"} {:id "def/command-fields", :kind "def", :line 7, :end-line nil, :hash "690572886"} {:id "defn/defined-fields", :kind "defn", :line 9, :end-line nil, :hash "-1662172251"} {:id "defn/listable-registry?", :kind "defn", :line 15, :end-line nil, :hash "1777837196"} {:id "defn/registered-command?", :kind "defn", :line 18, :end-line nil, :hash "-2114637731"} {:id "defn/command-has-behavior?", :kind "defn", :line 21, :end-line nil, :hash "-1623888695"} {:id "defn/stable-keymap-identifiers?", :kind "defn", :line 28, :end-line nil, :hash "-5260036"} {:id "defn/command-id-execution?", :kind "defn", :line 34, :end-line nil, :hash "769830812"} {:id "defn/separate-from-rendering?", :kind "defn", :line 40, :end-line nil, :hash "-1396950643"} {:id "def/forbidden-command-ui-patterns", :kind "def", :line 44, :end-line nil, :hash "-2023843326"} {:id "defn/forbidden-command-ui-findings", :kind "defn", :line 50, :end-line nil, :hash "-1818592575"} {:id "defn/forbidden-command-ui-findings-of-kind", :kind "defn", :line 53, :end-line nil, :hash "611004771"} {:id "defn-/run-command-with-node", :kind "defn-", :line 56, :end-line nil, :hash "-711241429"} {:id "defn-/read-node-json", :kind "defn-", :line 62, :end-line nil, :hash "1086192520"} {:id "def/handlers", :kind "def", :line 67, :end-line nil, :hash "414809372"}]}
 ;; clj-mutate-manifest-end

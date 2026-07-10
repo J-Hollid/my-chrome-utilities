@@ -1,12 +1,14 @@
-# mutation-stamp: sha256=e03b05436fa908aef9e73366e6234947a4a699d6509f7e0ae75010a721a89ebb
+# mutation-stamp: sha256=e853c23eab9839486a625a9a5b06c1d65fba6daff0ffee79fb90dd7849c076c5
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T20:35:43.203366497Z","feature_name":"Typed command registry","feature_path":"features/typed-command-registry.feature","background_hash":"7010dbc38239bc7043db7168e3ce76337d3bc72582407db6296288f1ba4d4743","implementation_hash":"sha256:37ff2573340cc9c8f16d95f9eccd311610696efe4a235443bd69c3551b0e5ec3","scenarios":[{"index":3,"name":"Typed command registry 004","scenario_hash":"6633deecc8ccb1e61acc3c1f479a69d27c83f4a180780e71d8e861386b1eb545","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-08T19:03:27.783045736Z"},{"index":0,"name":"Typed command registry 001","scenario_hash":"be7ea690298860c247ef4ffd487ccdfd954714dcba972175b120c8d742e564d1","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-08T18:57:17.598761653Z"},{"index":1,"name":"Typed command registry 002","scenario_hash":"c353af844828a26fe1971416daf9975d86a20dad24581e9151d0b26f28f5431c","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-08T18:57:17.598761653Z"},{"index":2,"name":"Typed command registry 003","scenario_hash":"8f8c1290cb428cd45f15855a0376ce601f7f4dec620980f68d45b0ce6e506540","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-08T18:57:17.598761653Z"}]}
+# {"version":1,"tested_at":"2026-07-10T08:56:42.517269326Z","feature_name":"Typed command registry","feature_path":"features/typed-command-registry.feature","background_hash":"226bb5e22a9a96c00cb0a883dbd213ae0d7a3a032163f94e519d113dc2da25a5","implementation_hash":"sha256:37ff2573340cc9c8f16d95f9eccd311610696efe4a235443bd69c3551b0e5ec3","scenarios":[{"index":0,"name":"Typed command registry 001","scenario_hash":"be7ea690298860c247ef4ffd487ccdfd954714dcba972175b120c8d742e564d1","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:56:19.430795216Z"},{"index":1,"name":"Typed command registry 002","scenario_hash":"c353af844828a26fe1971416daf9975d86a20dad24581e9151d0b26f28f5431c","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:56:19.430795216Z"},{"index":2,"name":"Typed command registry 003","scenario_hash":"8f8c1290cb428cd45f15855a0376ce601f7f4dec620980f68d45b0ce6e506540","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:56:19.430795216Z"},{"index":3,"name":"Typed command registry 004","scenario_hash":"9d30e2b246cd60b6e7e4ab0ab8e9d92bcfa5de5552f5aa8e11a877a5cf92f2cf","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-10T08:56:19.430795216Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Typed command registry
 
   Background:
     Given a repository for project <project_name>
+    And the project skeleton is inspected
+    And package metadata identifies the project as <project_name>
 
   # Typed command registry 001
   Scenario Outline: Typed command registry 001
@@ -41,7 +43,8 @@ Feature: Typed command registry
   # Typed command registry 004
   Scenario Outline: Typed command registry 004
     When command features are inspected
-    Then no user-configurable keybindings are present
+    Then registered command ids are stable keymap identifiers
+    And command execution remains available through command ids
 
     Examples:
       | project_name         |

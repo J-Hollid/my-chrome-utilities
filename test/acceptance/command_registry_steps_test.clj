@@ -23,7 +23,14 @@
 (deftest detects-command-registration-and-run-behavior
   (is (command-registry/registered-command? command-source "demo.say-hello"))
   (is (command-registry/command-has-behavior? command-source "demo.say-hello"))
-  (is (not (command-registry/registered-command? command-source "demo.missing"))))
+  (is (not (command-registry/registered-command? command-source "demo.missing")))
+  (is (command-registry/stable-keymap-identifiers?
+       (str command-source
+            " export function findCommand(id) { return commands.find((command) => command.id === id); }")))
+  (is (command-registry/command-id-execution?
+       (str command-source
+            " export function findCommand(id) { return commands.find((command) => command.id === id); }
+              export function runCommandById(id, context) { const command = findCommand(id); command.run(context); }"))))
 
 (deftest keeps-registry-separated-from-rendering
   (is (command-registry/separate-from-rendering?

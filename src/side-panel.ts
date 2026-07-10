@@ -5,6 +5,16 @@ import {
   type CommandRunRecord,
 } from "./commands.js";
 import {
+  advanceHotkeySequence,
+  blankHotkeyKeymap,
+  duplicateSequences,
+  HOTKEY_KEYMAP_STORAGE_KEY,
+  keyTokenFromKeyboardEvent,
+  updateHotkeyKeymap,
+  validateHotkeyKeymap,
+  type HotkeyKeymap,
+} from "./hotkey-keymap.js";
+import {
   activePageObservation,
   tabPageObservation,
 } from "./active-page-observation.js";
@@ -85,10 +95,23 @@ const observerStatus = document.querySelector<HTMLElement>("#observer-status");
 const restartObservationButton = document.querySelector<HTMLButtonElement>(
   "#restart-observation",
 );
+const createKeymapButton =
+  document.querySelector<HTMLButtonElement>("#create-keymap");
+const updateKeymapButton =
+  document.querySelector<HTMLButtonElement>("#update-keymap");
+const loadKeymapButton =
+  document.querySelector<HTMLButtonElement>("#load-keymap");
+const keymapFileInput =
+  document.querySelector<HTMLInputElement>("#keymap-file");
+const keymapStatus = document.querySelector<HTMLElement>("#keymap-status");
+const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
 let selectedIndex = 0;
+let activeHotkeyKeymap: HotkeyKeymap =
+  loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
+let pendingHotkeySequence: string[] = [];
 let dataLayerSessionState: DataLayerSessionState = restoreSession();
 let dataLayerObserverState: DataLayerHistoryObserverState = {
   pageObject: samplePageObject(),
@@ -448,6 +471,198 @@ function recordCommandRun(entry: CommandRunRecord): void {
   }
 }
 
+function setKeymapStatus(message: string): void {
+  if (keymapStatus) {
+    keymapStatus.textContent = message;
+  }
+}
+
+function setKeymapWarning(message: string): void {
+  if (keymapWarning) {
+    keymapWarning.textContent = message;
+  }
+}
+
+function activateHotkeyFocus(): void {
+  if (!panelRoot) {
+    return;
+  }
+
+  panelRoot.focus();
+  panelRoot.dataset.hotkeyFocus = "active";
+}
+
+function hotkeyFocusActive(): boolean {
+  return panelRoot?.dataset.hotkeyFocus === "active";
+}
+
+function clearPendingHotkeySequence(): void {
+  pendingHotkeySequence = [];
+}
+
+function keymapFileName(): string {
+  return `${PROJECT_NAME}-hotkey-keymap.json`;
+}
+
+function downloadHotkeyKeymapFile(keymap: HotkeyKeymap): void {
+  const blob = new Blob([`${JSON.stringify(keymap, null, 2)}\n`], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = keymapFileName();
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function updateKeymapStatus(
+  added: readonly string[],
+  removed: readonly string[],
+): void {
+  setKeymapStatus(
+    `Keymap updated: added ${added.length}, removed ${removed.length}`,
+  );
+}
+
+function shouldIgnoreHotkeyTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function storeHotkeyKeymap(keymap: HotkeyKeymap): void {
+  localStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
+}
+
+function loadStoredHotkeyKeymap(): HotkeyKeymap | undefined {
+  const stored = localStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
+
+  if (!stored) {
+    return undefined;
+  }
+
+  try {
+    const validation = validateHotkeyKeymap(JSON.parse(stored), allCommands);
+    return validation.valid ? validation.keymap : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function loadHotkeyKeymap(value: unknown): boolean {
+  const validation = validateHotkeyKeymap(value, allCommands);
+  const duplicates = validation.keymap
+    ? duplicateSequences(validation.keymap)
+    : validation.duplicateSequences;
+
+  if (!validation.valid || !validation.keymap) {
+    const duplicateSequence = duplicates[0]?.sequence;
+    setKeymapWarning(
+      duplicateSequence
+        ? `Duplicate key sequence: ${duplicateSequence}`
+        : (validation.error ?? "Invalid hotkey keymap."),
+    );
+    return false;
+  }
+
+  activeHotkeyKeymap = validation.keymap;
+  storeHotkeyKeymap(activeHotkeyKeymap);
+  clearPendingHotkeySequence();
+  setKeymapWarning("");
+  setKeymapStatus("Keymap loaded");
+  activateHotkeyFocus();
+  return true;
+}
+
+function createHotkeyKeymapFile(): void {
+  activeHotkeyKeymap = blankHotkeyKeymap(allCommands);
+  downloadHotkeyKeymapFile(activeHotkeyKeymap);
+  setKeymapWarning("");
+  setKeymapStatus("Blank keymap created");
+}
+
+function updateHotkeyKeymapFile(): void {
+  const summary = updateHotkeyKeymap(activeHotkeyKeymap, allCommands);
+
+  activeHotkeyKeymap = summary.keymap;
+  downloadHotkeyKeymapFile(activeHotkeyKeymap);
+  setKeymapWarning("");
+  updateKeymapStatus(summary.added, summary.removed);
+}
+
+async function loadHotkeyKeymapFile(): Promise<void> {
+  const file = keymapFileInput?.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    loadHotkeyKeymap(JSON.parse(await file.text()));
+  } catch {
+    setKeymapWarning("Keymap file must contain valid JSON.");
+  } finally {
+    if (keymapFileInput) {
+      keymapFileInput.value = "";
+    }
+  }
+}
+
+function handleHotkeyKeydown(event: KeyboardEvent): void {
+  if (!hotkeyFocusActive() || shouldIgnoreHotkeyTarget(event.target)) {
+    return;
+  }
+
+  if (event.key === "Escape" && pendingHotkeySequence.length > 0) {
+    event.preventDefault();
+    clearPendingHotkeySequence();
+    return;
+  }
+
+  const hadPendingSequence = pendingHotkeySequence.length > 0;
+  const advance = advanceHotkeySequence(
+    activeHotkeyKeymap,
+    pendingHotkeySequence,
+    keyTokenFromKeyboardEvent(event),
+  );
+
+  if (advance.status === "pending") {
+    event.preventDefault();
+    pendingHotkeySequence = advance.pending;
+    return;
+  }
+
+  if (advance.status === "matched" && advance.commandId) {
+    event.preventDefault();
+    clearPendingHotkeySequence();
+    runCommandById(advance.commandId, { record: recordCommandRun });
+    return;
+  }
+
+  clearPendingHotkeySequence();
+  if (hadPendingSequence) {
+    event.preventDefault();
+  }
+}
+
+function isFocusHotkeysMessage(message: unknown): message is { type: string } {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    "type" in message &&
+    message.type === "focus-app-hotkeys"
+  );
+}
+
 function renderPalette(commands: readonly AppCommand[]): void {
   if (!results) {
     return;
@@ -521,6 +736,15 @@ if (commandList) {
 
 openButton?.addEventListener("click", showPalette);
 
+createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
+updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
+loadKeymapButton?.addEventListener("click", () => {
+  keymapFileInput?.click();
+});
+keymapFileInput?.addEventListener("change", () => {
+  void loadHotkeyKeymapFile();
+});
+
 panelRoot?.addEventListener("keyup", (event: KeyboardEvent) => {
   if (event.ctrlKey && event.key.toLowerCase() === "k") {
     event.preventDefault();
@@ -574,6 +798,16 @@ restartObservationButton?.addEventListener("click", () => {
   });
 });
 
+document.addEventListener("keydown", handleHotkeyKeydown, true);
+
+if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((message: unknown) => {
+    if (isFocusHotkeysMessage(message)) {
+      activateHotkeyFocus();
+    }
+  });
+}
+
 if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (!activeSessionTabMatches(tabId)) {
@@ -613,9 +847,11 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
 renderHistoryPath(getHistoryArrayPath());
 renderSessionState();
 renderObserverState();
+activateHotkeyFocus();
 
 export {
   DATA_LAYER_SESSION_STORAGE_KEY,
+  HOTKEY_KEYMAP_STORAGE_KEY,
   navigateSession,
   sessionScope,
 };

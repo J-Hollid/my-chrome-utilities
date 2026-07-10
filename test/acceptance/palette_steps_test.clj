@@ -1,5 +1,6 @@
 (ns acceptance.palette-steps-test
   (:require [acceptance.steps.palette :as palette]
+            [acceptance.runtime :as runtime]
             [clojure.test :refer [deftest is]]))
 
 (def palette-html
@@ -37,7 +38,18 @@
 
 (deftest recognizes-listing-and-filtering
   (is (palette/lists-registered-commands? palette-source))
+  (is (palette/palette-backed-by-registry? palette-source))
   (is (palette/filters-commands? palette-source "hello")))
+
+(deftest canonical-filter-query-dispatches
+  (let [state {:filter-text palette/canonical-filter-text}
+        result (runtime/execute-step!
+                state
+                {}
+                {:keyword "And"
+                 :text "the command filter uses the canonical hello query"}
+                palette/handlers)]
+    (is (= state result))))
 
 (deftest reports-disallowed-palette-scope
   (is (empty?

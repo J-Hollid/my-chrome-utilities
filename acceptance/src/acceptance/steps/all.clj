@@ -6,6 +6,7 @@
             [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
+            [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.project-skeleton :as project-skeleton]
@@ -21,9 +22,10 @@
                data-layer-recovery/handlers
                data-layer-session/handlers
                data-layer-timeline/handlers
+               hotkey-keymap/handlers
                palette/handlers
                package-flow/handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T22:47:15.756122576+02:00", :module-hash "-409437904", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "63114136"} {:id "def/handlers", :kind "def", :line 10, :end-line nil, :hash "-1961368094"}]}
+;; {:version 1, :tested-at "2026-07-10T10:46:37.154199123+02:00", :module-hash "1782303505", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1685907125"} {:id "def/handlers", :kind "def", :line 15, :end-line nil, :hash "412763792"}]}
 ;; clj-mutate-manifest-end
