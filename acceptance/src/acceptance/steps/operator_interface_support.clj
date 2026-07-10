@@ -18,13 +18,17 @@
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
    "event_count" #{"18" "42"}
-   "event_name" #{"page_view" "purchase"}
+   "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
+   "middle_event" #{"banner"}
+   "latest_event" #{"purchase"}
+   "new_event" #{"checkout"}
+   "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
@@ -41,6 +45,7 @@
    "schema_name" #{"Purchase event"}
    "second_subview" #{"Sequences"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
+   "selected_event" #{"banner"}
    "sequence" #{"C-c s"}
    "sequence_name" #{"Purchase journey"}
    "session_action" #{"Create sequence" "Export"}
@@ -48,7 +53,7 @@
    "session_name" #{"Checkout journey"}
    "session_state" #{"Live" "Paused"}
    "source_count" #{"3"}
-   "source_name" #{"Adobe beacons" "GA4 collect" "event.history"}
+   "source_name" #{"Adobe beacons" "Event history" "GA4 collect" "event.history"}
    "source_status" #{"Connected" "Disconnected"}
    "state_name" #{"invalid" "restarted" "selected"}
    "step_count" #{"4"}
