@@ -7,6 +7,7 @@
             [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
+            [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.side-panel :as side-panel]
@@ -154,6 +155,85 @@
                   (= fields
                      (command-registry/defined-fields
                       (command-source-for fields)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest hotkey-keymap-update-preserves-generated-command-bindings
+  (let [result (check
+                (prop/for-all [existing-name path-segment-gen
+                               added-name path-segment-gen
+                               obsolete-name path-segment-gen
+                               first-key path-segment-gen
+                               second-key path-segment-gen]
+                  (let [existing-id (str "existing." existing-name)
+                        added-id (str "added." added-name)
+                        obsolete-id (str "obsolete." obsolete-name)
+                        sequence (str first-key " " second-key)
+                        summary (hotkey-keymap/update-keymap
+                                 {:schemaVersion 1
+                                  :bindings {existing-id sequence
+                                             obsolete-id "C-x z"}}
+                                 [existing-id added-id])
+                        bindings (get-in summary [:keymap :bindings])]
+                    (and (= 1 (get-in summary [:keymap :schemaVersion]))
+                         (= sequence (get bindings existing-id))
+                         (= "" (get bindings added-id))
+                         (not (contains? bindings obsolete-id))
+                         (= [added-id] (:added summary))
+                         (= [obsolete-id] (:removed summary))))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest hotkey-keymap-resolves-generated-sequences-with-focus-guard
+  (let [result (check
+                (prop/for-all [command-name path-segment-gen
+                               first-key path-segment-gen
+                               second-key path-segment-gen]
+                  (let [command-id (str "command." command-name)
+                        binding (str first-key "   " second-key)
+                        pressed (str " " first-key " " second-key " ")
+                        keymap {:schemaVersion 1
+                                :bindings {command-id binding}}]
+                    (and (= command-id
+                            (hotkey-keymap/command-for-sequence keymap pressed))
+                         (= command-id
+                            (hotkey-keymap/runnable-command-for-sequence
+                             keymap
+                             nil
+                             pressed))
+                         (nil? (hotkey-keymap/runnable-command-for-sequence
+                                nil
+                                nil
+                                pressed))
+                         (nil? (hotkey-keymap/runnable-command-for-sequence
+                                keymap
+                                "history-path"
+                                pressed))
+                         (hotkey-keymap/sequence-prefix? keymap first-key)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest hotkey-keymap-detects-generated-duplicate-normalized-sequences
+  (let [result (check
+                (prop/for-all [first-name path-segment-gen
+                               second-name path-segment-gen
+                               unique-name path-segment-gen
+                               first-key path-segment-gen
+                               second-key path-segment-gen]
+                  (let [first-id (str "first." first-name)
+                        second-id (str "second." second-name)
+                        unique-id (str "unique." unique-name)
+                        duplicate (str first-key " " second-key)
+                        keymap {:schemaVersion 1
+                                :bindings {first-id duplicate
+                                           second-id (str " " first-key
+                                                          "   "
+                                                          second-key
+                                                          " ")
+                                           unique-id (str "C-x "
+                                                          unique-name)}}
+                        expected-sequence (hotkey-keymap/normalize-sequence
+                                           duplicate)]
+                    (= [{:sequence expected-sequence
+                         :command-ids (vec (sort [first-id second-id]))}]
+                       (hotkey-keymap/duplicate-sequences keymap)))))]
     (is (:pass? result) (pr-str result))))
 
 (deftest palette-scope-findings-compose-from-independent-signals

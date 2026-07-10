@@ -11,10 +11,10 @@
    :content-scripts? (contains? manifest :content_scripts)})
 
 (defn opens-side-panel-for-active-tab? [source]
-  (boolean
-   (and (re-find #"chrome\.action\.onClicked\.addListener" source)
-        (re-find #"chrome\.sidePanel\.open" source)
-        (re-find #"tabId\s*:\s*tab\.id" source))))
+  (support/matches-all? source
+                        [#"chrome\.action\.onClicked\.addListener"
+                         #"chrome\.sidePanel\.open"
+                         #"tabId\s*:\s*tab\.id"]))
 
 (def forbidden-scopes
   [{:kind :command-registry

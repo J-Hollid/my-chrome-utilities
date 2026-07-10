@@ -40,6 +40,12 @@
               [(str (fs/relativize root file)) (slurp (str file))]))
        (into (sorted-map))))
 
+(defn includes-all? [source snippets]
+  (every? #(str/includes? source %) snippets))
+
+(defn matches-all? [source patterns]
+  (every? #(re-find % source) patterns))
+
 (defn pattern-findings [patterns files]
   (vec
    (for [{:keys [kind pattern]} patterns

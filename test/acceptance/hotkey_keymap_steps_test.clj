@@ -73,8 +73,16 @@
                            "demo.say-hello" ""}}]
     (is (= "data-layer.start-testing"
            (hotkey-keymap/command-for-sequence keymap " C-c   s ")))
+    (is (= "data-layer.start-testing"
+           (hotkey-keymap/runnable-command-for-sequence keymap nil " C-c   s ")))
     (is (hotkey-keymap/sequence-prefix? keymap "C-c"))
-    (is (nil? (hotkey-keymap/command-for-sequence keymap "C-c x")))))
+    (is (nil? (hotkey-keymap/command-for-sequence keymap "C-c x")))
+    (is (nil? (hotkey-keymap/runnable-command-for-sequence keymap nil "C-c x")))
+    (is (nil? (hotkey-keymap/runnable-command-for-sequence nil nil "C-c s")))
+    (is (nil? (hotkey-keymap/runnable-command-for-sequence
+               keymap
+               "history-path"
+               "C-c s")))))
 
 (deftest rejects-duplicate-sequences
   (is (= [{:sequence "C-c d"

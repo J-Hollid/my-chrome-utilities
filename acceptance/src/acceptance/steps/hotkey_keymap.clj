@@ -44,6 +44,10 @@
               (name command-id)))
           (:bindings keymap))))
 
+(defn runnable-command-for-sequence [keymap focused-input sequence]
+  (when (and keymap (not focused-input))
+    (command-for-sequence keymap sequence)))
+
 (defn sequence-prefix? [keymap prefix]
   (let [wanted (str (normalize-sequence prefix) " ")]
     (boolean
@@ -85,43 +89,50 @@
          (:commands manifest))))
 
 (defn background-global-shortcut? [source]
-  (and (str/includes? source "chrome.commands.onCommand.addListener")
-       (str/includes? source "open-side-panel")
-       (str/includes? source "chrome.tabs.query")
-       (str/includes? source "chrome.sidePanel.open")
-       (str/includes? source "focus-app-hotkeys")
-       (str/includes? source "chrome.runtime.sendMessage")))
+  (support/includes-all? source
+                         ["chrome.commands.onCommand.addListener"
+                          "open-side-panel"
+                          "chrome.tabs.query"
+                          "chrome.sidePanel.open"
+                          "focus-app-hotkeys"
+                          "chrome.runtime.sendMessage"]))
 
 (defn app-hotkey-focus-wired? [source]
-  (and (str/includes? source "activateHotkeyFocus")
-       (str/includes? source "panelRoot.focus()")
-       (str/includes? source "dataset.hotkeyFocus")
-       (str/includes? source "focus-app-hotkeys")
-       (str/includes? source "chrome.runtime.onMessage")))
+  (support/includes-all? source
+                         ["activateHotkeyFocus"
+                          "panelRoot.focus()"
+                          "dataset.hotkeyFocus"
+                          "focus-app-hotkeys"
+                          "chrome.runtime.onMessage"]))
 
 (defn stored-keymap-wired? [source]
-  (and (str/includes? source "HOTKEY_KEYMAP_STORAGE_KEY")
-       (str/includes? source "localStorage.setItem")
-       (str/includes? source "localStorage.getItem")))
+  (support/includes-all? source
+                         ["HOTKEY_KEYMAP_STORAGE_KEY"
+                          "localStorage.setItem"
+                          "localStorage.getItem"]))
 
 (defn sequence-run-wired? [source]
-  (and (str/includes? source "handleHotkeyKeydown")
-       (str/includes? source "advanceHotkeySequence")
-       (str/includes? source "runCommandById")))
+  (support/includes-all? source
+                         ["handleHotkeyKeydown"
+                          "advanceHotkeySequence"
+                          "runCommandById"]))
 
 (defn text-input-guard-wired? [source]
-  (and (str/includes? source "shouldIgnoreHotkeyTarget")
-       (str/includes? source "HTMLInputElement")
-       (str/includes? source "history-path")))
+  (support/includes-all? source
+                         ["shouldIgnoreHotkeyTarget"
+                          "HTMLInputElement"
+                          "history-path"]))
 
 (defn duplicate-rejection-wired? [source]
-  (and (str/includes? source "duplicateSequences")
-       (str/includes? source "keymapWarning")))
+  (support/includes-all? source
+                         ["duplicateSequences"
+                          "keymapWarning"]))
 
 (defn cancel-pending-wired? [source]
-  (and (str/includes? source "Escape")
-       (str/includes? source "pendingHotkeySequence")
-       (str/includes? source "clearPendingHotkeySequence")))
+  (support/includes-all? source
+                         ["Escape"
+                          "pendingHotkeySequence"
+                          "clearPendingHotkeySequence"]))
 
 (defn- inspect-keymap [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -165,8 +176,9 @@
 (defn- press-key-sequence [world sequence]
   (let [world (inspect-keymap world)
         keymap (:active-keymap world)
-        command-id (when (and keymap (not (:focused-input world)))
-                     (command-for-sequence keymap sequence))]
+        command-id (runnable-command-for-sequence keymap
+                                                  (:focused-input world)
+                                                  sequence)]
     (support/assert! (sequence-run-wired? (:side-panel-source world))
                      "Side panel does not route key sequences to command ids."
                      {:sequence sequence})

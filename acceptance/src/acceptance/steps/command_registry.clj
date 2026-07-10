@@ -26,16 +26,16 @@
         (re-find #"record\s*\(" source))))
 
 (defn stable-keymap-identifiers? [source]
-  (boolean
-   (and (re-find #"\bid\s*:\s*\"[a-z0-9-]+\.[a-z0-9-]+\"" source)
-        (re-find #"export\s+function\s+findCommand\s*\(" source)
-        (re-find #"command\.id\s*={3}\s*id" source))))
+  (support/matches-all? source
+                        [#"\bid\s*:\s*\"[a-z0-9-]+\.[a-z0-9-]+\""
+                         #"export\s+function\s+findCommand\s*\("
+                         #"command\.id\s*={3}\s*id"]))
 
 (defn command-id-execution? [source]
-  (boolean
-   (and (re-find #"export\s+function\s+runCommandById\s*\(" source)
-        (re-find #"findCommand\s*\(\s*id\s*\)" source)
-        (re-find #"command\.run\s*\(\s*context\s*\)" source))))
+  (support/matches-all? source
+                        [#"export\s+function\s+runCommandById\s*\("
+                         #"findCommand\s*\(\s*id\s*\)"
+                         #"command\.run\s*\(\s*context\s*\)"]))
 
 (defn separate-from-rendering? [registry-source rendering-source]
   (and (every? #(contains? (defined-fields registry-source) %) command-fields)
