@@ -15,7 +15,7 @@ Feature: Data layer pageload observation refresh
   # Data layer pageload observation refresh 001
   Scenario Outline: Data layer pageload observation refresh 001
     Given observation is attached on page <page_url>
-    When the active tab navigates to page <refreshed_page_url> where history array path <history_path> becomes ready after pageload
+    When the selected target tab navigates to page <refreshed_page_url> where history array path <history_path> becomes ready after pageload
     Then observation refreshes automatically for page <refreshed_page_url>
     And the pageload refresh starts from the canonical page URL
     And the pageload refresh uses the canonical product page URL

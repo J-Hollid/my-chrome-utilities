@@ -12,11 +12,11 @@ Feature: Data layer active page read result
 
   # Data layer active page read result 001
   Scenario Outline: Data layer active page read result 001
-    Given active website page <page_url> defines history array path <history_path> with existing entry <event_name>
-    When the extension reads history array path <history_path> from the active website page
-    Then the active page read succeeds
-    And the active page read result includes history array path <history_path>
-    And the active page read result is not empty
+    Given selected target page <page_url> defines history array path <history_path> with existing entry <event_name>
+    When the extension reads history array path <history_path> from the selected target page
+    Then the target page read succeeds
+    And the target page read result includes history array path <history_path>
+    And the target page read result is not empty
     And observer status <status> is shown for history array path <history_path>
 
     Examples:
@@ -25,8 +25,8 @@ Feature: Data layer active page read result
 
   # Data layer active page read result 002
   Scenario Outline: Data layer active page read result 002
-    Given active website page <page_url> cannot be read by the extension
-    When observation starts for the active website page
+    Given selected target page <page_url> cannot be read by the extension
+    When observation starts for the selected target page
     Then page access status <page_access_status> is shown
     And observer status is not <path_status>
     And no empty page object is used as a successful page read

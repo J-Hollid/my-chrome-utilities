@@ -11,9 +11,9 @@ Feature: Data layer testing session
 
   # Data layer testing session 001
   Scenario Outline: Data layer testing session 001
-    When command <command_id> is run for the active tab
-    Then a data layer testing session starts for the active tab
-    And the session scope is the active tab journey
+    When command <command_id> is run for the selected observation target
+    Then a data layer testing session starts for the selected target tab
+    And the session scope is the selected target tab journey
     And the side panel shows the session as active
     And the active session uses history array path <history_path>
 
@@ -24,7 +24,7 @@ Feature: Data layer testing session
   # Data layer testing session 002
   Scenario Outline: Data layer testing session 002
     Given a data layer testing session is active
-    When the active tab navigates or reloads from <start_url> to <next_url>
+    When the selected target tab navigates or reloads from <start_url> to <next_url>
     Then the same data layer testing session remains active
     And captured event entries remain part of the same session timeline
 
@@ -47,7 +47,7 @@ Feature: Data layer testing session
   # Data layer testing session 004
   Scenario Outline: Data layer testing session 004
     Given a data layer testing session is active
-    When command <command_id> is run for the active tab
+    When command <command_id> is run again for the selected observation target
     Then an active session warning is shown
     And the existing data layer testing session remains unchanged
 
@@ -58,7 +58,7 @@ Feature: Data layer testing session
   # Data layer testing session 005
   Scenario Outline: Data layer testing session 005
     Given a data layer testing session is active
-    When command <command_id> is run for the active tab
+    When command <command_id> is run for the active testing session
     Then the data layer testing session ends intentionally
     And no new page entries are captured for that ended session
 

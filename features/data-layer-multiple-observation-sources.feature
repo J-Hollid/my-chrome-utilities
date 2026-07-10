@@ -12,7 +12,7 @@ Feature: Data layer multiple observation sources
   # Data layer multiple observation sources 001
   Scenario Outline: Data layer multiple observation sources 001
     Given Data Layer queue sources <first_source> at <first_path> and <second_source> at <second_path> are configured
-    When observation starts for the active page
+    When observation starts for the selected target page
     Then both queue sources are observed independently
     And captured events identify either <first_source> or <second_source>
     And each source shows its own attachment status

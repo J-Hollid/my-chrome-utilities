@@ -40,7 +40,7 @@ Feature: Data layer history array observer
   # Data layer history array observer 003
   Scenario Outline: Data layer history array observer 003
     Given the observer is attached on page <start_url>
-    When the active tab navigates to page <next_url>
+    When the selected target tab navigates to page <next_url>
     Then the observer is reinstalled for history array path <history_path>
     And exactly one observer is active for the page
     And entries added after navigation are captured once with URL <next_url>
