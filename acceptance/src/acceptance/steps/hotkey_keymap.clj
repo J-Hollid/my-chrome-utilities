@@ -39,6 +39,9 @@
      :added (vec (remove existing-ids command-ids))
      :removed (vec (sort (remove registered-ids existing-ids)))}))
 
+(defn keymap-update-status [{:keys [added removed]}]
+  (str "Keymap updated: added " (count added) ", removed " (count removed)))
+
 (defn normalize-sequence [sequence]
   (str/replace (str/trim sequence) #"\s+" " "))
 
@@ -138,6 +141,12 @@
                          ["Escape"
                           "pendingHotkeySequence"
                           "clearPendingHotkeySequence"]))
+
+(defn keymap-update-status-wired? [source]
+  (support/includes-all? source
+                         ["function updateKeymapStatus"
+                          "setKeymapStatus("
+                          "`Keymap updated: added ${added.length}, removed ${removed.length}`"]))
 
 (defn- inspect-keymap [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -320,6 +329,30 @@
                      (assoc-in [:existing-keymap :bindings obsolete-id] "C-x z")
                      (assoc :obsolete-command-id obsolete-id))))}
 
+   {:pattern #"^an existing keymap has <([A-Za-z0-9_]+)> missing registered command ids and <([A-Za-z0-9_]+)> obsolete command ids$"
+    :handler (fn [world example [missing-count-key obsolete-count-key]]
+               (let [world (inspect-keymap world)
+                     missing-count (parse-long (support/require-example example missing-count-key))
+                     obsolete-count (parse-long (support/require-example example obsolete-count-key))
+                     ids (command-ids world)]
+                 (support/assert! (and (some? missing-count)
+                                       (some? obsolete-count)
+                                       (<= 0 missing-count (count ids))
+                                       (not (neg? obsolete-count)))
+                                  "Keymap update counts must be non-negative and cannot omit more commands than are registered."
+                                  {:missing-count missing-count
+                                   :obsolete-count obsolete-count
+                                   :registered-count (count ids)})
+                 (let [existing-bindings (concat (map (fn [command-id] [command-id ""])
+                                                     (drop missing-count ids))
+                                                (map (fn [index]
+                                                       [(str "demo.obsolete-" (inc index)) ""])
+                                                     (range obsolete-count)))]
+                   (assoc world
+                          :existing-keymap
+                          {:schemaVersion schema-version
+                           :bindings (into {} existing-bindings)}))))}
+
    {:pattern #"^the user updates the hotkey keymap file$"
     :handler (fn [world _example _captures]
                (let [world (inspect-keymap world)
@@ -367,6 +400,21 @@
                  (support/assert! (and (seq added) (seq removed))
                                   "Keymap update summary does not report added and removed commands."
                                   {:added added :removed removed})
+                 world))}
+
+   {:pattern #"^the visible keymap update status is Keymap updated: added <([A-Za-z0-9_]+)>, removed <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [added-count-key removed-count-key]]
+               (let [expected (str "Keymap updated: added "
+                                   (support/require-example example added-count-key)
+                                   ", removed "
+                                   (support/require-example example removed-count-key))
+                     actual (keymap-update-status (:keymap-update-summary world))]
+                 (support/assert! (keymap-update-status-wired? (:side-panel-source world))
+                                  "Side panel does not display the keymap update status."
+                                  {})
+                 (support/assert! (= expected actual)
+                                  "Visible keymap update status does not report the exact added and removed counts."
+                                  {:expected expected :actual actual})
                  world))}
 
    {:pattern #"^the keymap update preserves the canonical start binding$"
