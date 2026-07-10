@@ -1,5 +1,5 @@
 import { filterPaletteCommands, selectedPaletteIndexForKey, } from "./command-palette.js";
-export function createCommandPaletteController({ root, sidePanelContent, commands, runCommand, }) {
+export function createPaletteController({ root, sidePanelContent, commands, runCommand, }) {
     const openButton = document.querySelector("#open-palette");
     const palette = document.querySelector("#palette");
     const filter = document.querySelector("#palette-filter");

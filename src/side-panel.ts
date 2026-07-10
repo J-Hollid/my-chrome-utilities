@@ -3,7 +3,7 @@ import {
   runCommandById,
   type CommandRunRecord,
 } from "./commands.js";
-import { createCommandPaletteController } from "./command-palette-ui.js";
+import { createPaletteController } from "./command-palette-ui.js";
 import {
   advanceHotkeySequence,
   blankHotkeyKeymap,
@@ -1214,7 +1214,7 @@ const commandRunContext = {
   showDataLayerView: showDataLayerView,
 };
 
-const commandPalette = createCommandPaletteController({
+const paletteController = createPaletteController({
   root: panelRoot,
   sidePanelContent,
   commands: allCommands,
@@ -1447,7 +1447,7 @@ endTestingButton?.addEventListener("click", () => {
 
 workspaceTabsController.bind();
 hotkeyEditor.bind();
-commandPalette.bind();
+paletteController.bind();
 
 dataLayerViewList?.addEventListener("click", (event) => {
   const button = (event.target as Element).closest<HTMLButtonElement>("[role=tab]");

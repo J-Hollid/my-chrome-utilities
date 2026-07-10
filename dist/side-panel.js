@@ -1,5 +1,5 @@
 import { listCommands, runCommandById, } from "./commands.js";
-import { createCommandPaletteController } from "./command-palette-ui.js";
+import { createPaletteController } from "./command-palette-ui.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
@@ -861,7 +861,7 @@ const commandRunContext = {
     showWorkspace,
     showDataLayerView: showDataLayerView,
 };
-const commandPalette = createCommandPaletteController({
+const paletteController = createPaletteController({
     root: panelRoot,
     sidePanelContent,
     commands: allCommands,
@@ -1042,7 +1042,7 @@ endTestingButton?.addEventListener("click", () => {
 });
 workspaceTabsController.bind();
 hotkeyEditor.bind();
-commandPalette.bind();
+paletteController.bind();
 dataLayerViewList?.addEventListener("click", (event) => {
     const button = event.target.closest("[role=tab]");
     const view = button?.textContent;
