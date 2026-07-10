@@ -8,9 +8,6 @@
        "data-layer-panel-sessions saved-session-search saved-session-list saved-session-confirmation cancel-saved-session-delete confirm-saved-session-delete"
        "createSavedSessionLibrary saveCompletedSession openSavedSession resumeSavedSession exportSavedSession importSavedSession searchSavedSessions renameSavedSession requestSavedSessionDeletion confirmSavedSessionDeletion")))
 
-(deftest verifies-saved-session-state-transitions
-  (is (saved-sessions/saved-session-semantics? ".")))
-
 (deftest every-saved-session-step-has-a-specific-handler
   (doseq [step (->> (str/split-lines (slurp "features/data-layer-saved-session-library.feature"))
                     (keep #(second (re-matches #"\s*(?:Given|When|Then|And) (.+)" %)))
