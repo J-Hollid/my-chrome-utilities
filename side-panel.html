@@ -46,7 +46,26 @@
         </section>
         <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
       </section>
-      <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden><h3>Library</h3></section>
+      <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
+        <h3>Library</h3>
+        <label for="event-template-search">Search templates</label>
+        <input id="event-template-search" type="search" />
+        <button id="save-latest-template" type="button">Save latest event to Library</button>
+        <output id="event-template-count" aria-live="polite"></output>
+        <ul id="event-template-list"></ul>
+        <section id="event-property-editor" aria-label="Event property editor" hidden>
+          <h4>Event property editor</h4>
+          <label for="event-template-json">JSON draft</label>
+          <ul id="event-template-properties" aria-label="Draft properties"></ul>
+          <textarea id="event-template-json" rows="10"></textarea>
+          <output id="event-template-validation" aria-live="assertive"></output>
+          <button id="save-template-revision" type="button">Save revision</button>
+          <button id="save-template-copy" type="button">Save as copy</button>
+          <button id="push-template-draft" type="button">Push draft</button>
+          <button id="discard-template-draft" type="button">Discard draft</button>
+        </section>
+        <output id="event-template-result" aria-live="polite"></output>
+      </section>
       <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
         <h3>Sessions</h3>
         <label for="saved-session-search">Search sessions</label>
