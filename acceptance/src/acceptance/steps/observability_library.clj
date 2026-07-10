@@ -516,12 +516,5 @@
    (some (fn [{:keys [pattern]}] (re-matches pattern text))
          source-foundation-handlers)))
 
-(def pending-batch-handler
-  {:pattern #".*"
-   :handler (fn [world _example _captures]
-              ;; Only later queued batches may reach this temporary fallback.
-              ;; Source-foundation steps are all matched above and covered separately.
-              (inspect-library world))})
-
 (def handlers
-  (conj (vec source-foundation-handlers) pending-batch-handler))
+  source-foundation-handlers)
