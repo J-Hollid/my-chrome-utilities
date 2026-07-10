@@ -70,6 +70,18 @@ import {
   type TimelinePayloadProperty,
 } from "./data-layer-timeline.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
+import {
+  createLiveObserverState,
+  dataLayerViewForNavigationKey,
+  dataLayerViews,
+  pauseCapture,
+  recordLiveEvent,
+  resumeCapture,
+  selectLiveEvent,
+  updateLiveSourceStatus,
+  type DataLayerView,
+  type LiveObserverState,
+} from "./data-layer-live-observer.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -111,6 +123,17 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
+const dataLayerViewList = document.querySelector<HTMLElement>("#data-layer-views");
+const liveSessionSummary = document.querySelector<HTMLElement>("#live-session-summary");
+const livePageUrl = document.querySelector<HTMLElement>("#live-page-url");
+const liveSessionMessage = document.querySelector<HTMLElement>("#live-session-message");
+const liveSourceStatuses = document.querySelector<HTMLElement>("#live-source-statuses");
+const liveEventFeed = document.querySelector<HTMLElement>("#live-event-feed");
+const liveEventList = document.querySelector<HTMLElement>("#live-event-list");
+const liveEventInspector = document.querySelector<HTMLElement>("#live-event-inspector");
+const backToEventsButton = document.querySelector<HTMLButtonElement>("#back-to-events");
+const pauseCaptureButton = document.querySelector<HTMLButtonElement>("#pause-capture");
+const resumeCaptureButton = document.querySelector<HTMLButtonElement>("#resume-capture");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -126,6 +149,10 @@ let dataLayerObserverState: DataLayerHistoryObserverState = {
 let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
 let observationRefreshTimeoutId: number | undefined;
 let observationRefreshState = initialObservationRefreshState;
+let liveObserverState: LiveObserverState = createLiveObserverState({
+  pageUrl: globalThis.location.href,
+  sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
+});
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -143,6 +170,68 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   if (historyPathStatus) {
     historyPathStatus.textContent = pathStatus(samplePageObject(), path);
   }
+}
+
+function showDataLayerView(view: DataLayerView, focus = false): void {
+  liveObserverState = { ...liveObserverState, view };
+  localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
+  for (const candidate of dataLayerViews) {
+    const button = document.querySelector<HTMLButtonElement>(
+      `#data-layer-view-${candidate.toLowerCase()}`,
+    );
+    const panel = document.querySelector<HTMLElement>(
+      `#data-layer-panel-${candidate.toLowerCase()}`,
+    );
+    const selected = candidate === view;
+    if (button) {
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+      if (focus) button.focus();
+    }
+    if (panel) panel.hidden = !selected;
+  }
+}
+
+function renderLiveObserver(): void {
+  if (liveSessionSummary) {
+    liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
+  }
+  if (livePageUrl) livePageUrl.textContent = liveObserverState.pageUrl;
+  if (liveSourceStatuses) {
+    liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
+      const item = document.createElement("li");
+      item.textContent = `${source.name}: ${source.status}`;
+      return item;
+    }));
+  }
+  if (liveEventFeed) {
+    liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
+      button.addEventListener("click", () => openLiveInspector(event.id));
+      item.append(button);
+      return item;
+    }));
+  }
+  if (liveEventList) liveEventList.hidden = !liveObserverState.listVisible;
+  if (liveEventInspector) liveEventInspector.hidden = !liveObserverState.inspectorEventId;
+  if (backToEventsButton) backToEventsButton.hidden = liveObserverState.listVisible;
+}
+
+function openLiveInspector(eventId: string): void {
+  const split = globalThis.innerWidth >= 800;
+  liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
+  const event = liveObserverState.events.find(({ id }) => id === eventId);
+  if (liveEventInspector && event) {
+    liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
+  }
+  renderLiveObserver();
+}
+
+function setLiveSessionMessage(message: string): void {
+  if (liveSessionMessage) liveSessionMessage.textContent = message;
 }
 
 function expandedTimelinePageIndexes(): Set<number> {
@@ -313,6 +402,14 @@ async function startLiveHistoryCapture(
         );
         updateSessionFromObserverState();
         persistAndRenderObservationState();
+        const record = rawValue as { event?: unknown };
+        liveObserverState = recordLiveEvent(liveObserverState, {
+          id: `live-${liveObserverState.events.length + 1}`,
+          name: typeof record.event === "string" ? record.event : "observed event",
+          sourceId: "event-history",
+          captureTime: timestamp,
+        });
+        renderLiveObserver();
       },
     });
   } catch {
@@ -475,11 +572,19 @@ function recordCommandRun(entry: CommandRunRecord): void {
   if (commandLog) {
     commandLog.textContent = entry.message;
   }
+
+  if (entry.commandId === "data-layer.start-testing") {
+    setLiveSessionMessage("Data Layer observation started");
+  }
+  if (entry.commandId === "data-layer.end-testing") {
+    setLiveSessionMessage("Data Layer observation stopped");
+  }
 }
 
 const commandRunContext = {
   record: recordCommandRun,
   showWorkspace,
+  showDataLayerView: showDataLayerView,
 };
 
 function setKeymapStatus(message: string): void {
@@ -775,6 +880,38 @@ openButton?.addEventListener("click", showPalette);
 workspaceTabsController.bind();
 hotkeyEditor.bind();
 
+dataLayerViewList?.addEventListener("click", (event) => {
+  const button = (event.target as Element).closest<HTMLButtonElement>("[role=tab]");
+  const view = button?.textContent as DataLayerView | null;
+  if (view && dataLayerViews.includes(view)) showDataLayerView(view, true);
+});
+
+dataLayerViewList?.addEventListener("keydown", (event) => {
+  const next = dataLayerViewForNavigationKey(liveObserverState.view, event.key);
+  if (next) {
+    event.preventDefault();
+    showDataLayerView(next, true);
+  }
+});
+
+pauseCaptureButton?.addEventListener("click", () => {
+  liveObserverState = pauseCapture(liveObserverState);
+  setLiveSessionMessage("Capture paused");
+  renderLiveObserver();
+});
+
+resumeCaptureButton?.addEventListener("click", () => {
+  liveObserverState = resumeCapture(liveObserverState);
+  setLiveSessionMessage("Capture resumed");
+  renderLiveObserver();
+});
+
+backToEventsButton?.addEventListener("click", () => {
+  const { inspectorEventId: _inspectorEventId, ...withoutInspector } = liveObserverState;
+  liveObserverState = { ...withoutInspector, listVisible: true };
+  renderLiveObserver();
+});
+
 createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
 updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
 loadKeymapButton?.addEventListener("click", () => {
@@ -888,6 +1025,8 @@ renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());
 hotkeyEditor.render();
+showDataLayerView("Live");
+renderLiveObserver();
 activateHotkeyFocus();
 
 export {

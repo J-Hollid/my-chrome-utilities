@@ -37,6 +37,10 @@
        command-source
        "import { listCommands } from './commands';
         document.querySelector('#commands');"))
+  (is (command-registry/separate-from-rendering?
+       command-source
+       "const source = { id: 'event-history', name: 'Event history' };
+        document.querySelector('#commands');"))
   (is (not (command-registry/separate-from-rendering?
             command-source
             "const commands = [{ id: 'inline', run() {} }];
