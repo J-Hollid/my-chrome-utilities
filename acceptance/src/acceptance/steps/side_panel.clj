@@ -30,9 +30,9 @@
 (defn forbidden-findings-of-kind [files kind]
   (filter #(= kind (:kind %)) (forbidden-scope-findings files)))
 
-(defn- implementation-files [root]
-  (assoc (support/source-files root)
-         "manifest.json" (slurp (str (fs/path root "manifest.json")))))
+(defn- delivery-boundary-files [root]
+  {"manifest.json" (slurp (str (fs/path root "manifest.json")))
+   "src/background.ts" (support/source-file root "src/background.ts")})
 
 (defn- inspect-manifest [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -159,35 +159,35 @@
                (let [root (or (:root world) (support/repository-root))]
                  (assoc world
                         :root root
-                        :implementation-files (implementation-files root))))}
+                        :delivery-boundary-files (delivery-boundary-files root))))}
 
-   {:pattern #"^no command registry is present$"
+   {:pattern #"^no command registry is present in manifest or background delivery boundaries$"
     :handler (fn [world _example _captures]
-               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+               (let [findings (forbidden-findings-of-kind (:delivery-boundary-files world)
                                                            :command-registry)]
                  (support/assert! (empty? findings)
-                                  "Command registry implementation was found."
+                                  "Command registry leaked into a delivery boundary."
                                   {:findings (vec findings)})
                  world))}
 
-   {:pattern #"^no command palette is present$"
+   {:pattern #"^no command palette is present in manifest or background delivery boundaries$"
     :handler (fn [world _example _captures]
-               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+               (let [findings (forbidden-findings-of-kind (:delivery-boundary-files world)
                                                            :command-palette)]
                  (support/assert! (empty? findings)
-                                  "Command palette implementation was found."
+                                  "Command palette leaked into a delivery boundary."
                                   {:findings (vec findings)})
                  world))}
 
-   {:pattern #"^no data layer functionality is present$"
+   {:pattern #"^no data layer functionality is present in manifest or background delivery boundaries$"
     :handler (fn [world _example _captures]
-               (let [findings (forbidden-findings-of-kind (:implementation-files world)
+               (let [findings (forbidden-findings-of-kind (:delivery-boundary-files world)
                                                            :data-layer)]
                  (support/assert! (empty? findings)
-                                  "Data layer implementation was found."
+                                  "Data layer functionality leaked into a delivery boundary."
                                   {:findings (vec findings)})
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T10:46:32.512396018+02:00", :module-hash "-475407622", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "484925139"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "-1055952925"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-290940599"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 30, :end-line nil, :hash "-718440344"} {:id "defn-/implementation-files", :kind "defn-", :line 33, :end-line nil, :hash "-1569706796"} {:id "defn-/inspect-manifest", :kind "defn-", :line 37, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 43, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 46, :end-line nil, :hash "-442595191"} {:id "def/handlers", :kind "def", :line 49, :end-line nil, :hash "-145326447"}]}
+;; {:version 1, :tested-at "2026-07-10T21:51:54.711435623+02:00", :module-hash "-1155574289", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1416017815"} {:id "defn/manifest-contract", :kind "defn", :line 6, :end-line nil, :hash "1603023069"} {:id "defn/opens-side-panel-for-active-tab?", :kind "defn", :line 13, :end-line nil, :hash "484925139"} {:id "def/forbidden-scopes", :kind "def", :line 19, :end-line nil, :hash "-1055952925"} {:id "defn/forbidden-scope-findings", :kind "defn", :line 27, :end-line nil, :hash "-290940599"} {:id "defn/forbidden-findings-of-kind", :kind "defn", :line 30, :end-line nil, :hash "-718440344"} {:id "defn-/delivery-boundary-files", :kind "defn-", :line 33, :end-line nil, :hash "1526449103"} {:id "defn-/inspect-manifest", :kind "defn-", :line 37, :end-line nil, :hash "195912726"} {:id "defn-/built-manifest", :kind "defn-", :line 43, :end-line nil, :hash "-1145936804"} {:id "defn-/dist-path", :kind "defn-", :line 46, :end-line nil, :hash "-442595191"} {:id "def/handlers", :kind "def", :line 49, :end-line nil, :hash "-614252090"}]}
 ;; clj-mutate-manifest-end
