@@ -89,9 +89,8 @@
            :side-panel-html (support/source-file root "side-panel.html")
            :side-panel-source (str/join "\n"
                                        [(support/source-file root "src/side-panel.ts")
-                                        [(support/source-file root "src/side-panel.ts")
-                                         (support/source-file root "src/command-palette-ui.ts")
-                                         (support/source-file root "src/command-palette.ts")]))))
+                                        (support/source-file root "src/command-palette-ui.ts")
+                                        (support/source-file root "src/command-palette.ts")]))))
 
 (defn- palette-scope [world]
   {:package (:package world)
