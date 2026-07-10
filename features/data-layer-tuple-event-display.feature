@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=3abe7b63cec2d9f5f701c7915aa9bfce937dd9134c6b871c241a5e9627fb1387
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T13:46:16.193147575Z","feature_name":"Data layer tuple event display","feature_path":"features/data-layer-tuple-event-display.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:tuple-event-display-semantic-v2","scenarios":[{"index":0,"name":"Data layer tuple event display 001","scenario_hash":"3ad9134f3f05665f952464460b2077e17194b8eeba1faf960e8f4d8cde7ad310","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T13:46:16.193147575Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer tuple event display
 
   Background:
@@ -18,10 +13,10 @@ Feature: Data layer tuple event display
     And the tuple event uses the canonical observer path
     And the tuple event uses the canonical timestamp
     When the side panel renders the observed event
-    Then the event row shows <event_name> with a distinct source label for <history_path>
-    And compact time is derived from <timestamp> without replacing the event name
-    And payload properties <first_property>, <second_property>, and <third_property> are available in the Fields inspector
-    And the complete tuple is available separately in the Raw inspector
+    Then the visible event row shows only <event_name> with a distinct source label for <history_path>
+    And capture time <timestamp> remains available in the inspector without adding visible event-row text
+    And payload properties <first_property>, <second_property>, and <third_property> are available in the Payload section
+    And the complete tuple is available through a collapsed Raw input disclosure without duplicating payload by default
 
     Examples:
       | project_name         | event_name | history_path  | timestamp            | payload_object                                                       | first_property                  | second_property       | third_property                  |

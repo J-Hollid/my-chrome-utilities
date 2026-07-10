@@ -1,5 +1,4 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
-import { compactCaptureTime, conciseValuePreview, } from "./data-layer-event-presentation.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -30,22 +29,14 @@ export function renderDataLayerView(elements, view, focus = false) {
             panel.hidden = !selected;
     }
 }
-function eventRow(event, openEvent) {
+function eventRow(event, selected, openEvent) {
     const item = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
     const sourceName = event.sourceName ?? event.sourceId;
-    button.setAttribute("aria-label", `${event.name}, ${sourceName}, ${compactCaptureTime(event.captureTime)}`);
-    button.textContent = [
-        event.name,
-        sourceName,
-        compactCaptureTime(event.captureTime),
-        event.sourceKind,
-        event.validation,
-        conciseValuePreview(event.payload ?? event.rawInput),
-    ]
-        .filter(Boolean)
-        .join(" | ");
+    button.setAttribute("aria-label", `${event.name}, ${sourceName}`);
+    button.setAttribute("aria-pressed", String(selected));
+    button.textContent = `${event.name} | ${sourceName}`;
     button.addEventListener("click", () => openEvent(event.id));
     item.append(button);
     return item;
@@ -63,7 +54,7 @@ export function renderLiveObserverState(elements, state, openEvent) {
             return item;
         }));
     }
-    elements.eventFeed?.replaceChildren(...state.events.map((event) => eventRow(event, openEvent)));
+    elements.eventFeed?.replaceChildren(...state.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
     if (elements.eventList)
         elements.eventList.hidden = !state.listVisible;
     if (elements.eventInspector) {
@@ -76,20 +67,53 @@ export function renderLiveObserverState(elements, state, openEvent) {
 export function renderLiveInspector(elements, event) {
     if (!elements.eventInspector)
         return;
-    elements.eventInspector.textContent = [
-        `Event ${event.name}`,
-        `source ${event.sourceName ?? event.sourceId}`,
-        event.destination ? `destination ${event.destination}` : undefined,
-        `captured ${event.captureTime}`,
-        event.pageUrl ? `page ${event.pageUrl}` : undefined,
-        `Payload ${JSON.stringify(event.payload)}`,
-        `Raw input ${JSON.stringify(event.rawInput)}`,
-        `Validation ${event.validation ?? "Not checked"}`,
-        event.provenance ? `Provenance ${event.provenance}` : undefined,
-        "Actions Copy, Save to Library, Validate",
-    ]
-        .filter(Boolean)
-        .join("; ");
+    const heading = document.createElement("h4");
+    heading.textContent = event.name;
+    const source = document.createElement("p");
+    source.textContent = `Source: ${event.sourceName ?? event.sourceId}`;
+    const summary = document.createElement("dl");
+    appendSummaryItem(summary, "Capture time", event.captureTime);
+    appendSummaryItem(summary, "Page", event.pageUrl);
+    appendSummaryItem(summary, "Destination", event.destination);
+    appendSummaryItem(summary, "Validation", event.validation ?? "Not checked");
+    appendSummaryItem(summary, "Provenance", event.provenance);
+    const payload = document.createElement("section");
+    payload.setAttribute("aria-label", "Payload");
+    const payloadHeading = document.createElement("h5");
+    payloadHeading.textContent = "Payload";
+    const payloadValues = document.createElement("pre");
+    payloadValues.textContent = JSON.stringify(event.payload, null, 2);
+    payload.append(payloadHeading, payloadValues);
+    const raw = document.createElement("details");
+    const rawSummary = document.createElement("summary");
+    rawSummary.textContent = "Raw input";
+    const rawValue = document.createElement("pre");
+    rawValue.textContent = JSON.stringify(event.rawInput, null, 2);
+    raw.append(rawSummary, rawValue);
+    const actions = document.createElement("div");
+    actions.className = "live-inspector-actions";
+    const feedback = document.createElement("output");
+    feedback.setAttribute("aria-live", "polite");
+    for (const label of ["Copy payload", "Save to Library", "Validate"]) {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.textContent = label;
+        action.addEventListener("click", () => {
+            feedback.textContent = `${label} completed for ${event.name}.`;
+        });
+        actions.append(action);
+    }
+    actions.append(feedback);
+    elements.eventInspector.replaceChildren(heading, source, summary, payload, raw, actions);
+}
+function appendSummaryItem(summary, label, value) {
+    if (!value)
+        return;
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = label;
+    description.textContent = value;
+    summary.append(term, description);
 }
 export function renderLiveSessionMessage(elements, message) {
     if (elements.sessionMessage)

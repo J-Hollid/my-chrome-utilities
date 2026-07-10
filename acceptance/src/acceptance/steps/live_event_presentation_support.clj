@@ -4,7 +4,7 @@
 (def canonical-example-values
   {"capture_phase" #{"existing" "live push"}
    "capture_time" #{"2026-07-10T15:04:44.850Z" "2026-07-10T15:04:46.488Z"}
-   "event_name" #{"pageview" "purchase"}
+   "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
    "event_names" #{"pageview, offer_view, click"}
    "existing_event" #{"pageview"}
    "existing_events" #{"pageview, offer_view"}
@@ -23,7 +23,7 @@
    "raw_label" #{"purchase-tuple" "scalar-input-7"}
    "second_request" #{"manual restart"}
    "session_action" #{"Stop capture" "End testing"}
-   "source_name" #{"Event history"}
+   "source_name" #{"Adobe beacons" "Event history"}
    "validation_state" #{"Not checked"}})
 
 (defn validate-example! [example capture-keys]
