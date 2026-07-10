@@ -8,6 +8,7 @@
   acceptance-entrypoint-generator acceptance.generator/-main
   test:unit {:doc "Run focused unit tests."
              :requires ([clojure.test :as test]
+                        [babashka.process :as process]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
                         [acceptance.steps-support-test]
@@ -41,8 +42,13 @@
                                                 'acceptance.data-layer-page-context-steps-test
                                                 'acceptance.workspace-editor-steps-test
                                                 'acceptance.observability-library-steps-test
-                                                'acceptance.gherkin-mutation-metadata-test)]
-                     (when (pos? (+ (:fail result) (:error result)))
+                                                'acceptance.gherkin-mutation-metadata-test)
+                         source-result (process/shell {:out :inherit
+                                                       :err :inherit
+                                                       :continue true}
+                                                      "npm" "run" "test:unit:source-foundation")]
+                     (when (or (pos? (+ (:fail result) (:error result)))
+                               (not (zero? (:exit source-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]

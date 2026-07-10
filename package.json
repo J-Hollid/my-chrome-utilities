@@ -9,6 +9,7 @@
     "build": "npm run typecheck && node scripts/build.mjs",
     "package": "npm run build && node scripts/package.mjs",
     "test:unit": "bb test:unit",
+    "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs",
     "test:property:browser-core": "npm run build && node test/workspace-tabs-property-test.mjs && node test/hotkey-binding-property-test.mjs && node test/data-layer-observability-property-test.mjs",
     "acceptance": "bb acceptance",
     "test": "bb test"
