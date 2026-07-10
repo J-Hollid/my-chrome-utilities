@@ -6,6 +6,7 @@
             [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
+            [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.project-skeleton :as project-skeleton]
@@ -21,6 +22,7 @@
                data-layer-recovery/handlers
                data-layer-session/handlers
                data-layer-timeline/handlers
+               hotkey-keymap/handlers
                palette/handlers
                package-flow/handlers)))
 

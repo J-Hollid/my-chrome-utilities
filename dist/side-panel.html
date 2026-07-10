@@ -21,6 +21,19 @@
         <output id="history-path-display">queue.history</output>
         <output id="history-path-status" aria-live="polite">ready</output>
       </section>
+      <section id="hotkey-keymap" aria-label="Hotkey keymap">
+        <button id="create-keymap" type="button">Create keymap</button>
+        <button id="update-keymap" type="button">Update keymap</button>
+        <button id="load-keymap" type="button">Load keymap</button>
+        <input
+          id="keymap-file"
+          type="file"
+          accept="application/json,.json"
+          hidden
+        />
+        <output id="keymap-status" aria-live="polite"></output>
+        <output id="keymap-warning" aria-live="assertive"></output>
+      </section>
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-status" aria-live="polite">inactive</output>
         <output id="session-history-path"></output>

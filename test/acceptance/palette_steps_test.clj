@@ -37,6 +37,7 @@
 
 (deftest recognizes-listing-and-filtering
   (is (palette/lists-registered-commands? palette-source))
+  (is (palette/palette-backed-by-registry? palette-source))
   (is (palette/filters-commands? palette-source "hello")))
 
 (deftest reports-disallowed-palette-scope
