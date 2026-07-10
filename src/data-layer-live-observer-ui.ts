@@ -4,6 +4,7 @@ import {
   type LiveEvent,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
+import { compactCaptureTime } from "./data-layer-event-presentation.js";
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
@@ -63,12 +64,13 @@ function eventRow(event: LiveEvent, openEvent: (eventId: string) => void): HTMLL
   const item = document.createElement("li");
   const button = document.createElement("button");
   button.type = "button";
-  button.setAttribute("aria-label", `Open ${event.name} event`);
+  const sourceName = event.sourceName ?? event.sourceId;
+  button.setAttribute("aria-label", `${event.name}, ${sourceName}, ${compactCaptureTime(event.captureTime)}`);
   button.textContent = [
-    event.captureTime,
-    event.sourceKind,
-    event.sourceName ?? event.sourceId,
     event.name,
+    sourceName,
+    compactCaptureTime(event.captureTime),
+    event.sourceKind,
     event.validation,
   ]
     .filter(Boolean)

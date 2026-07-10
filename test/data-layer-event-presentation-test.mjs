@@ -1,0 +1,6 @@
+import assert from "node:assert/strict";
+import { canonicalCapturedEvent, compactCaptureTime, importExistingHistory, importedOnce, markImported, nextSubscription, requestIsCurrent, stopSubscription } from "../dist/data-layer-event-presentation.js";
+const context={sessionId:"session-1",sourceId:"event-history",sourceKind:"Data Layer",pageUrl:"https://example.test/",destination:"event.history"};
+const imported=importExistingHistory(context, [["pageview",{a:1}], ["offer_view",{a:2}], 7], "2026-07-10T15:04:44.850Z");
+assert.deepEqual(imported.map(({name})=>name),["pageview","offer_view","Unknown event"]); assert.equal(new Set(imported.map(({id})=>id)).size,3); assert.equal(imported[2].sourceTime,undefined); assert.equal(canonicalCapturedEvent(context,{event:"purchase",value:1},"now",4).name,"purchase");
+let subscription=nextSubscription({imported:new Set(),activeCount:0},context.pageUrl,"event.history","first"); subscription=nextSubscription(subscription,context.pageUrl,"event.history","second"); assert.equal(requestIsCurrent(subscription,"first"),false); subscription=markImported(subscription,context.pageUrl,"event.history",2); assert.equal(importedOnce(subscription,context.pageUrl,"event.history",1),true); assert.equal(stopSubscription(subscription).activeCount,0); assert.equal(compactCaptureTime("2026-07-10T15:04:44.850Z"),"15:04:44");

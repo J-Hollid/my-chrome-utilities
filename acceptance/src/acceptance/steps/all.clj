@@ -9,6 +9,7 @@
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.live-observer :as live-observer]
+            [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.operator-interface :as operator-interface]
             [acceptance.steps.package-flow :as package-flow]
@@ -32,6 +33,7 @@
                data-layer-recovery/handlers
                data-layer-session/handlers
                live-observer/handlers
+               live-event-presentation/handlers
                data-layer-timeline/handlers
                timeline-presentations/handlers
                event-library-editor/handlers
