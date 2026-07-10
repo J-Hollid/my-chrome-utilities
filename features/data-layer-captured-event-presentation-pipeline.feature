@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=a59a5478f39fef7f33f306b73dfcba49d47cf169d58b4011e862b1b2be1464a8
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T15:52:40.556907565Z","feature_name":"Data layer captured event presentation pipeline","feature_path":"features/data-layer-captured-event-presentation-pipeline.feature","background_hash":"88f28310d769435a5603ddc33bebf028b0341d8db86fd18ba24ab4a5914dbe8a","implementation_hash":"sha256:live-event-presentation-semantic-v4","scenarios":[{"index":0,"name":"Data layer captured event presentation pipeline 001","scenario_hash":"a9978d84f47c8901e34f9093aaf11949e3a4dca8885b70fbcfacdcbb3388c346","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T15:43:37.209955929Z"},{"index":1,"name":"Data layer captured event presentation pipeline 002","scenario_hash":"1670037d75a79475d82ba47c03f839cc0ae3d091f71c8371fb00cf76edc66cd8","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-10T15:43:37.209955929Z"},{"index":2,"name":"Data layer captured event presentation pipeline 003","scenario_hash":"2b0d4faeee047c64f5af6a744556d14722566c470bbc9e4709c693f933087f7b","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T15:43:37.209955929Z"},{"index":3,"name":"Data layer captured event presentation pipeline 004","scenario_hash":"dd327491b5648a90b36f28be488254de40d46b8b1138a80bf142ca062bad2a0d","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-10T15:43:37.209955929Z"},{"index":4,"name":"Data layer captured event presentation pipeline 005","scenario_hash":"8717f4eaa5471caf119cc2d16b9e532473f046dc2e4c9b47f7db4ff0dca118c3","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T15:43:37.209955929Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer captured event presentation pipeline
 
   Background:
@@ -44,9 +39,9 @@ Feature: Data layer captured event presentation pipeline
     Given canonical event <event_name> from <source_name> has capture time <capture_time>, validation state <validation_state>, and key property <property_preview>
     When the event is displayed in the Live feed
     Then <event_name> is the event row's primary label
-    And the row shows <source_name>, compact capture time, <validation_state>, and <property_preview>
-    And the row does not use a raw ISO timestamp as its primary label
-    And its accessible name identifies <event_name>, <source_name>, and the capture time without repeating the word event
+    And the visible event button shows <source_name> without capture time, <validation_state>, or <property_preview>
+    And capture time, <validation_state>, and <property_preview> remain available in the event inspector
+    And its accessible name identifies <event_name> and <source_name> without serializing the event payload
 
     Examples:
       | project_name         | page_url                 | source_name   | history_path  | event_name | capture_time             | validation_state | property_preview     |
@@ -56,12 +51,12 @@ Feature: Data layer captured event presentation pipeline
   Scenario Outline: Data layer captured event presentation pipeline 004
     Given canonical event <event_name> retains payload <payload_label>, raw input <raw_label>, validation state <validation_state>, and provenance <provenance>
     When the user opens the event from the Live feed
-    Then the inspector shows event <event_name>, <source_name>, exact capture time, page <page_url>, and destination <history_path>
-    And Payload shows <payload_label>
-    And Raw input shows <raw_label>
-    And Validation shows <validation_state>
-    And Provenance shows <provenance>
-    And actions offer Copy, Save to Library, and Validate when supported by the source adapter
+    Then the inspector header shows event <event_name> and source <source_name>
+    And labelled Summary metadata shows exact capture time, page <page_url>, destination <history_path>, validation <validation_state>, and provenance <provenance>
+    And the expanded Payload section shows <payload_label> as structured properties
+    And Raw input <raw_label> is available through a collapsed disclosure rather than duplicated beside Payload
+    And supported actions expose operable Copy payload, Save to Library, and Validate controls
+    And each action reports its result next to the controls
 
     Examples:
       | project_name         | page_url                 | source_name   | history_path  | event_name | payload_label   | raw_label     | validation_state | provenance             |
@@ -72,8 +67,8 @@ Feature: Data layer captured event presentation pipeline
     Given source <source_name> captures unsupported raw input <raw_label> without an event name
     When the input is displayed in the Live feed
     Then it is retained as a distinct event with explicit label <fallback_label>
-    And the row shows <source_name>, compact capture time, and a concise raw-input preview
-    And opening the row reveals complete raw input <raw_label>
+    And the visible event button contains only <fallback_label> and <source_name>
+    And opening the row makes complete raw input <raw_label> available through a collapsed disclosure
     And the interface does not imply that <fallback_label> was supplied by the page
 
     Examples:

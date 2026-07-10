@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=6406b0aa302132e6547aa01c1a8ced09cf19f98ec237312c1be7fe318df930c7
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T17:24:38.705503008Z","feature_name":"Data layer live operator layout","feature_path":"features/data-layer-live-operator-layout.feature","background_hash":"943f0ca383aa9d62dbc07900def5a21947650222fb7339a72c22ee12c675f99f","implementation_hash":"sha256:architect-semantic-review-v7","scenarios":[{"index":0,"name":"Data layer live operator layout 001","scenario_hash":"2d3238a22ba1337e52790cde54afcad734337fcfd92765525fc126aa779c4519","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:24:38.705503008Z"},{"index":1,"name":"Data layer live operator layout 002","scenario_hash":"024531ec5e8216c9ab3c96cb70fd3f2ba7960da658e9a8c4a05277713c9a79cc","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:24.702339584Z"},{"index":2,"name":"Data layer live operator layout 003","scenario_hash":"ba00b9b6d295d4f3014c7434cb7cb9ab54c38071e24294a148e4724538b41c2d","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:24.702339584Z"},{"index":3,"name":"Data layer live operator layout 004","scenario_hash":"b9c70e19985d35b73660ea81f8d285073fbb82be352cd608f9ec31ded99ec25b","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:24.702339584Z"},{"index":4,"name":"Data layer live operator layout 005","scenario_hash":"bee659ade6a8766bca5887bc898e9dc8cf6f9d5d246fcbe7bb102f59bf21c2fd","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:24.702339584Z"},{"index":5,"name":"Data layer live operator layout 006","scenario_hash":"ed7d95bfbf8d168ed7f62a944894d24685e7d488383dc5bb61acc80e0b9a5b00","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:24.702339584Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer live operator layout
 
   Background:
@@ -53,26 +48,31 @@ Feature: Data layer live operator layout
 
   # Data layer live operator layout 004
   Scenario Outline: Data layer live operator layout 004
-    Given captured event <event_name> came from source <source_name> with validation state <validation_state>
+    Given captured event <event_name> came from source <source_name>
     When the event is shown in the feed
     Then <event_name> is the row's primary label
-    And the row shows <source_name>, capture time, <validation_state>, and a concise payload preview
-    And source identity and validation state are communicated with text in addition to any icon or color
-    And secondary metadata does not displace <event_name>
+    And the visible event button contains only <event_name> and <source_name>
+    And capture time, destination, validation, and payload are available from the inspector rather than repeated in the visible event button
+    And the event button's accessible name identifies <event_name> and <source_name> without serializing payload data
 
     Examples:
-      | project_name         | event_name | source_name    | validation_state |
-      | my-chrome-utilities | purchase   | event.history  | Valid            |
-      | my-chrome-utilities | page_view  | Adobe beacons  | 2 issues         |
+      | project_name         | event_name | source_name   |
+      | my-chrome-utilities | purchase   | Event history |
+      | my-chrome-utilities | page_view  | Adobe beacons |
 
   # Data layer live operator layout 005
   Scenario Outline: Data layer live operator layout 005
     Given captured event <event_name> is selected
     When its inspector is displayed
-    Then the inspector identifies the event and its source before detailed content
-    And detail groups offer Summary, Payload, Raw input, Validation, and Provenance when available
-    And formatted property paths and values remain selectable and readable
-    And event action <event_action> remains available while inspecting long payloads
+    Then an inspector header identifies <event_name> and its source before detailed content
+    And the corresponding event row exposes a selected state
+    And labelled Summary metadata presents capture time, page, destination, validation, and provenance without a semicolon-delimited text block
+    And the Payload section presents formatted property paths and selectable values
+    And Raw input is collapsed by default and can be disclosed on demand without duplicating payload in the default presentation
+    And Copy payload, Save to Library, and Validate are interactive controls rather than action names in text
+    And an action unsupported for the selected event is absent or disabled with an explanation
+    And the action controls remain reachable while a long payload is inspected
+    And activating event action <event_action> produces visible success or failure feedback without closing the inspector
 
     Examples:
       | project_name         | event_name | event_action    |
@@ -90,3 +90,27 @@ Feature: Data layer live operator layout
     Examples:
       | project_name         | source_name   |
       | my-chrome-utilities | event.history |
+
+  # Data layer live operator layout 007
+  Scenario Outline: Data layer live operator layout 007
+    Given events <oldest_event>, <middle_event>, and <latest_event> were captured in that order
+    When the Live event feed is displayed
+    Then visible event rows are ordered <latest_event>, <middle_event>, and <oldest_event>
+    And equal capture times are ordered by reverse capture sequence without dropping an event
+
+    Examples:
+      | project_name         | oldest_event | middle_event | latest_event |
+      | my-chrome-utilities | pageview     | banner       | purchase     |
+
+  # Data layer live operator layout 008
+  Scenario Outline: Data layer live operator layout 008
+    Given event <selected_event> is selected in the inspector
+    When event <new_event> is captured
+    Then <new_event> is prepended to the feed
+    And event <selected_event> remains selected in the inspector
+    And keyboard focus and the user's feed scroll position remain unchanged
+    And when the feed is scrolled away from the top a new-events control makes <new_event> reachable without jumping the feed
+
+    Examples:
+      | project_name         | selected_event | new_event |
+      | my-chrome-utilities | banner         | checkout  |
