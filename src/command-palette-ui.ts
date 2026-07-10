@@ -4,24 +4,24 @@ import {
   selectedPaletteIndexForKey,
 } from "./command-palette.js";
 
-export interface CommandPaletteController {
+export interface PaletteController {
   bind(): void;
   show(): void;
 }
 
-export interface CommandPaletteOptions {
+export interface PaletteOptions {
   root: HTMLElement | null;
   sidePanelContent: HTMLElement | null;
   commands: readonly AppCommand[];
   runCommand(command: AppCommand): void;
 }
 
-export function createCommandPaletteController({
+export function createPaletteController({
   root,
   sidePanelContent,
   commands,
   runCommand,
-}: CommandPaletteOptions): CommandPaletteController {
+}: PaletteOptions): PaletteController {
   const openButton = document.querySelector<HTMLButtonElement>("#open-palette");
   const palette = document.querySelector<HTMLElement>("#palette");
   const filter = document.querySelector<HTMLInputElement>("#palette-filter");
