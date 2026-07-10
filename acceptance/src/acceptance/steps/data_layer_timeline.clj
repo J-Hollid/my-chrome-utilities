@@ -392,6 +392,47 @@
                  :second-page-events (support/require-example example second-page-events-key)
                  :history-path (support/require-example example history-path-key)}))}
 
+   {:pattern #"^the default live event feed is displayed$"
+    :handler (fn [world _example _captures]
+               (assoc world :event-feed-view :chronological :visible-event-feed (visible-timeline-entries world)))}
+
+   {:pattern #"^events remain in chronological capture order across page boundaries$"
+    :handler (fn [world _example _captures]
+               (let [timestamps (map :timestamp (:visible-event-feed world))]
+                 (support/assert! (= (sort timestamps) timestamps)
+                                  "Live event feed is not in chronological capture order." {:timestamps timestamps})
+                 world))}
+
+   {:pattern #"^page URLs <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> appear as journey separators$"
+    :handler (fn [world example [first-page-key second-page-key]]
+               (let [urls (set (map :url (:visible-event-feed world)))]
+                 (support/assert! (every? urls [(support/require-example example first-page-key)
+                                                (support/require-example example second-page-key)])
+                                  "Page URLs are missing from the journey feed." {:urls urls})
+                 world))}
+
+   {:pattern #"^events are not hidden inside collapsed page groups by default$"
+    :handler (fn [world _example _captures]
+               (support/assert! (seq (:visible-event-feed world)) "Default feed hides captured events." {}) world)}
+
+   {:pattern #"^the user groups the event feed by page$"
+    :handler (fn [world _example _captures] (assoc world :event-feed-view :grouped :page-groups (nested-timeline world)))}
+
+   {:pattern #"^page groups <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> are shown in capture order$"
+    :handler (fn [world example [first-page-key second-page-key]]
+               (support/assert! (= [(support/require-example example first-page-key) (support/require-example example second-page-key)]
+                                  (mapv :url (:page-groups world))) "Page groups are not in capture order." {}) world)}
+
+   {:pattern #"^events <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> appear under their associated page groups$"
+    :handler (fn [world example [first-events-key second-events-key]]
+               (support/assert! (= [(comma-list (support/require-example example first-events-key))
+                                  (comma-list (support/require-example example second-events-key))]
+                                 (mapv #(mapv :name (:events %)) (:page-groups world)))
+                                "Grouped events do not match their page." {}) world)}
+
+   {:pattern #"^switching back to chronological view preserves event selection and filters$"
+    :handler (fn [world _example _captures] (assoc world :event-feed-view :chronological))}
+
    {:pattern #"^the side panel renders the nested data layer timeline$"
     :handler (fn [world _example _captures]
                (let [root (support/repository-root)
