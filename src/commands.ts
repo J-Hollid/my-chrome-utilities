@@ -59,6 +59,22 @@ const endDataLayerTestingCommand: AppCommand = {
   },
 };
 
+function dataLayerViewCommand(
+  id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
+  title: string,
+): AppCommand {
+  return {
+    id,
+    title,
+    description: `Shows the ${title.replace("Show ", "")} Data Layer view.`,
+    category: "data-layer",
+    run(context: CommandRunContext): void {
+      context.showWorkspace?.("data-layer");
+      context.record({ commandId: id, message: `${id} ran` });
+    },
+  };
+}
+
 function workspaceNavigationCommand(
   id: "navigation.show-data-layer" | "navigation.show-hotkeys",
   title: string,
@@ -80,6 +96,10 @@ const commands: readonly AppCommand[] = [
   sayHelloCommand,
   startDataLayerTestingCommand,
   endDataLayerTestingCommand,
+  dataLayerViewCommand("data-layer.show-live", "Show Live"),
+  dataLayerViewCommand("data-layer.show-library", "Show Library"),
+  dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
+  dataLayerViewCommand("data-layer.show-schemas", "Show Schemas"),
   workspaceNavigationCommand(
     "navigation.show-data-layer",
     "Show Data Layer",

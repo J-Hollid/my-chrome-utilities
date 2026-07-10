@@ -34,6 +34,18 @@ const endDataLayerTestingCommand = {
         });
     },
 };
+function dataLayerViewCommand(id, title) {
+    return {
+        id,
+        title,
+        description: `Shows the ${title.replace("Show ", "")} Data Layer view.`,
+        category: "data-layer",
+        run(context) {
+            context.showWorkspace?.("data-layer");
+            context.record({ commandId: id, message: `${id} ran` });
+        },
+    };
+}
 function workspaceNavigationCommand(id, title, tab) {
     return {
         id,
@@ -50,6 +62,10 @@ const commands = [
     sayHelloCommand,
     startDataLayerTestingCommand,
     endDataLayerTestingCommand,
+    dataLayerViewCommand("data-layer.show-live", "Show Live"),
+    dataLayerViewCommand("data-layer.show-library", "Show Library"),
+    dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
+    dataLayerViewCommand("data-layer.show-schemas", "Show Schemas"),
     workspaceNavigationCommand("navigation.show-data-layer", "Show Data Layer", "data-layer"),
     workspaceNavigationCommand("navigation.show-hotkeys", "Show Hotkeys", "hotkeys"),
 ];

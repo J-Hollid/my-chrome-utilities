@@ -274,7 +274,7 @@
   (let [event-name (support/require-example example "event_name")]
     {:event-name event-name
      :page-url (support/require-example example "page_url")
-     :history-path (support/require-example example "history_path")
+     :history-path (example-value-or example "history_path" "event.history")
      :payload-label (example-value-or example
                                       "payload_label"
                                       (default-payload-label event-name))
