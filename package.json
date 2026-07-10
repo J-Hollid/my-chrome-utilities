@@ -13,6 +13,7 @@
     "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs",
     "test:unit:event-library-editor": "npm run build && node test/data-layer-event-library-editor-test.mjs",
     "test:unit:schema-verification": "npm run build && node test/data-layer-schema-verification-test.mjs",
+    "test:unit:sequence-replay": "npm run build && node test/data-layer-sequence-replay-test.mjs",
     "test:unit:saved-sessions": "npm run build && node test/data-layer-saved-sessions-test.mjs",
     "test:property:browser-core": "npm run build && node test/workspace-tabs-property-test.mjs && node test/hotkey-binding-property-test.mjs && node test/data-layer-observability-property-test.mjs && node test/data-layer-schema-verification-property-test.mjs",
     "acceptance": "bb acceptance",
