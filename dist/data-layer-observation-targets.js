@@ -45,6 +45,16 @@ export function createObservationTarget(target) {
 export function createObservationTargetState(targets = []) {
     return { targets: [...targets], sessionState: "Detached" };
 }
+export function restoreAttachedObservationTarget(target) {
+    const restored = { ...target, priorSession: true };
+    return {
+        targets: [restored],
+        selectedTargetId: restored.id,
+        attachedTargetId: restored.id,
+        recentTargetId: restored.id,
+        sessionState: "Attached",
+    };
+}
 export function selectedObservationTarget(state) {
     return state.targets.find(({ id }) => id === state.selectedTargetId);
 }
@@ -60,6 +70,20 @@ export function registerObservationTarget(state, target) {
             : [...state.targets, target],
     };
 }
+export function refreshDiscoveredObservationTargets(state, discovered) {
+    const retainedIds = new Set([
+        state.selectedTargetId,
+        state.attachedTargetId,
+        state.recentTargetId,
+    ].filter((id) => id !== undefined));
+    const retained = state.targets.filter((target) => target.priorSession || retainedIds.has(target.id));
+    return {
+        ...state,
+        targets: [...discovered, ...retained].reduce((targets, target) => targets.some(({ id }) => id === target.id)
+            ? targets
+            : [...targets, target], []),
+    };
+}
 export function selectObservationTarget(state, targetId) {
     if (!state.targets.some(({ id }) => id === targetId))
         return state;
@@ -67,11 +91,18 @@ export function selectObservationTarget(state, targetId) {
 }
 export function orderedObservationTargets(state) {
     const selected = selectedObservationTarget(state);
-    const active = state.targets.find(({ activeTab }) => activeTab);
+    const active = state.targets.find(({ activeTab, currentWindow }) => activeTab && currentWindow);
     const recent = state.targets.find(({ id }) => id === state.recentTargetId);
-    const first = [selected, active, recent].filter((target) => target !== undefined);
-    const firstIds = new Set(first.map(({ id }) => id));
-    return [...first, ...state.targets.filter(({ id }) => !firstIds.has(id))];
+    const candidates = [
+        selected,
+        active,
+        recent,
+        ...state.targets.filter(({ currentWindow }) => currentWindow),
+        ...state.targets,
+    ];
+    return candidates.reduce((ordered, target) => target && !ordered.some(({ id }) => id === target.id)
+        ? [...ordered, target]
+        : ordered, []);
 }
 export function findObservationTargets(state, query) {
     const needle = query.trim().toLowerCase();
@@ -123,7 +154,12 @@ export function updateObservationTargetAccess(state, targetId, accessState) {
             ? { ...target, accessState }
             : target),
         ...(wasAttached && accessState !== "Ready"
-            ? { attachedTargetId: undefined, sessionState: accessState === "Closed" ? "Target unavailable" : "Detached" }
+            ? {
+                attachedTargetId: undefined,
+                sessionState: accessState === "Closed"
+                    ? "Target unavailable"
+                    : "Permission required",
+            }
             : {}),
     };
 }

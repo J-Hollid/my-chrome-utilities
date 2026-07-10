@@ -26,6 +26,7 @@
 
 (def handlers
   (vec (concat project-skeleton/handlers
+               observation-targets/priority-handlers
                observation-targets/handlers
                side-panel/handlers
                command-registry/handlers
@@ -52,5 +53,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T12:29:53.943126754+02:00", :module-hash "330337676", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1980205214"} {:id "def/handlers", :kind "def", :line 16, :end-line nil, :hash "1405333538"}]}
+;; {:version 1, :tested-at "2026-07-10T19:13:57.030672628+02:00", :module-hash "1438408943", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1696852699"} {:id "def/handlers", :kind "def", :line 27, :end-line nil, :hash "-1852049754"}]}
 ;; clj-mutate-manifest-end

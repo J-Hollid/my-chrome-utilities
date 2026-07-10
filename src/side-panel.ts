@@ -18,22 +18,36 @@ import { createHotkeyEditor } from "./hotkey-editor.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import {
-  activePageObservation,
   tabPageObservation,
 } from "./active-page-observation.js";
 import {
+  attachedObservationTarget,
   attachSelectedObservationTarget,
   createObservationTarget,
   createObservationTargetState,
+  detachObservationTarget,
   findObservationTargets,
+  navigateObservationTarget,
+  refreshDiscoveredObservationTargets,
   registerObservationTarget,
+  restoreAttachedObservationTarget,
   selectObservationTarget,
   selectedObservationTarget,
-  targetAccessExplanation,
   updateObservationTargetAccess,
   type ObservationTarget,
   type ObservationTargetState,
 } from "./data-layer-observation-targets.js";
+import {
+  closeDetachTargetConfirmation,
+  findObservationTargetElements,
+  handleObservationTargetListKeydown,
+  handleObservationTargetSearchKeydown,
+  renderObservationTargetContext as renderObservationTargetContextUi,
+  renderObservationTargetPicker as renderObservationTargetPickerUi,
+  setObservationTargetResult as setObservationTargetResultUi,
+  showDetachTargetConfirmation,
+  showObservationTargetPicker,
+} from "./data-layer-observation-targets-ui.js";
 import {
   getHistoryArrayPath,
   pathStatus,
@@ -175,20 +189,17 @@ const observerStatus = document.querySelector<HTMLElement>("#observer-status");
 const restartObservationButton = document.querySelector<HTMLButtonElement>(
   "#restart-observation",
 );
-const observationTargetStateOutput = document.querySelector<HTMLElement>("#observation-target-state");
-const observationTargetResult = document.querySelector<HTMLElement>("#observation-target-result");
-const chooseObservationTargetButton = document.querySelector<HTMLButtonElement>("#choose-observation-target");
-const browseObservationTargetsButton = document.querySelector<HTMLButtonElement>("#browse-observation-targets");
-const attachSelectedTargetButton = document.querySelector<HTMLButtonElement>("#attach-selected-target");
-const detachObservationTargetButton = document.querySelector<HTMLButtonElement>("#detach-observation-target");
-const observationTargetPicker = document.querySelector<HTMLElement>("#observation-target-picker");
-const observationTargetSearch = document.querySelector<HTMLInputElement>("#observation-target-search");
-const observationTargetCount = document.querySelector<HTMLElement>("#observation-target-count");
-const observationTargetList = document.querySelector<HTMLElement>("#observation-target-list");
-const detachTargetConfirmation = document.querySelector<HTMLElement>("#detach-observation-target-confirmation");
-const detachTargetMessage = document.querySelector<HTMLElement>("#detach-observation-target-message");
-const cancelDetachTargetButton = document.querySelector<HTMLButtonElement>("#cancel-detach-observation-target");
-const confirmDetachTargetButton = document.querySelector<HTMLButtonElement>("#confirm-detach-observation-target");
+const observationTargetElements = findObservationTargetElements();
+const {
+  chooseButton: chooseObservationTargetButton,
+  browseButton: browseObservationTargetsButton,
+  attachButton: attachSelectedTargetButton,
+  detachButton: detachObservationTargetButton,
+  search: observationTargetSearch,
+  list: observationTargetList,
+  cancelDetachButton: cancelDetachTargetButton,
+  confirmDetachButton: confirmDetachTargetButton,
+} = observationTargetElements;
 const createKeymapButton =
   document.querySelector<HTMLButtonElement>("#create-keymap");
 const updateKeymapButton =
@@ -264,7 +275,8 @@ let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localS
 let propertyEditorState: PropertyEditorState | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
-let observationTargetState: ObservationTargetState = createObservationTargetState();
+let observationTargetState: ObservationTargetState = restoredObservationTargetState();
+let pendingObservationTargetSwitchId: string | undefined;
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -284,25 +296,37 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 }
 
+function restoredObservationTargetState(): ObservationTargetState {
+  const session = dataLayerSessionState.session;
+  if (session?.status !== "active" || session.windowId === undefined) {
+    return createObservationTargetState();
+  }
+  return restoreAttachedObservationTarget(createObservationTarget({
+    tabId: session.tabId,
+    windowId: session.windowId,
+    pageUrl: session.currentUrl,
+    title: session.targetTitle ?? session.currentUrl,
+    ...(session.targetOrigin ? { origin: session.targetOrigin } : {}),
+    priorSession: true,
+  }));
+}
+
 function setObservationTargetResult(result: string): void {
-  if (observationTargetResult) observationTargetResult.textContent = result;
+  setObservationTargetResultUi(observationTargetElements, result);
 }
 
 function renderObservationTargetContext(): void {
-  const target = selectedObservationTarget(observationTargetState);
-  const attached = observationTargetState.targets.find(
-    ({ id }) => id === observationTargetState.attachedTargetId,
+  renderObservationTargetContextUi(
+    observationTargetElements,
+    observationTargetState,
+    getHistoryArrayPath(),
   );
-  if (observationTargetStateOutput) {
-    observationTargetStateOutput.textContent = attached
-      ? `Attached — ${attached.title} — ${attached.pageUrl} — ${getHistoryArrayPath()}`
-      : target
-        ? `${observationTargetState.sessionState} — ${target.title} — ${target.accessState}`
-        : "Detached — Choose target";
-  }
 }
 
-function targetFromTab(tab: chrome.tabs.Tab): ObservationTarget | undefined {
+function targetFromTab(
+  tab: chrome.tabs.Tab,
+  currentWindow = false,
+): ObservationTarget | undefined {
   if (tab.id === undefined || tab.windowId === undefined || !tab.url) return undefined;
   return createObservationTarget({
     tabId: tab.id,
@@ -310,14 +334,27 @@ function targetFromTab(tab: chrome.tabs.Tab): ObservationTarget | undefined {
     pageUrl: tab.url,
     title: tab.title || tab.url,
     activeTab: tab.active,
-    currentWindow: tab.active,
+    currentWindow,
   });
 }
 
-function registerTargetTabs(tabs: readonly chrome.tabs.Tab[]): void {
-  for (const tab of tabs) {
-    const target = targetFromTab(tab);
-    if (target) observationTargetState = registerObservationTarget(observationTargetState, target);
+function registerTargetTabs(
+  tabs: readonly chrome.tabs.Tab[],
+  options: { currentWindowId?: number; replaceDiscovery?: boolean } = {},
+): void {
+  const targets = tabs.flatMap((tab) => {
+    const target = targetFromTab(tab, tab.windowId === options.currentWindowId);
+    return target ? [target] : [];
+  });
+  if (options.replaceDiscovery) {
+    observationTargetState = refreshDiscoveredObservationTargets(
+      observationTargetState,
+      targets,
+    );
+  } else {
+    for (const target of targets) {
+      observationTargetState = registerObservationTarget(observationTargetState, target);
+    }
   }
   renderObservationTargetPicker();
   renderObservationTargetContext();
@@ -329,8 +366,8 @@ async function discoverCurrentObservationTarget(): Promise<void> {
     return;
   }
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  registerTargetTabs(tabs);
-  const target = tabs[0] ? targetFromTab(tabs[0]) : undefined;
+  const target = tabs[0] ? targetFromTab(tabs[0], true) : undefined;
+  registerTargetTabs(tabs, target ? { currentWindowId: target.windowId } : {});
   if (target) {
     observationTargetState = selectObservationTarget(observationTargetState, target.id);
     setObservationTargetResult(`Selected ${target.title}`);
@@ -352,38 +389,25 @@ async function browseObservationTargets(): Promise<void> {
     setObservationTargetResult("Registered targets remain available");
     return;
   }
-  registerTargetTabs(await chrome.tabs.query({}));
+  const currentWindow = await chrome.windows?.getCurrent?.();
+  registerTargetTabs(await chrome.tabs.query({}), {
+    ...(currentWindow?.id === undefined ? {} : { currentWindowId: currentWindow.id }),
+    replaceDiscovery: true,
+  });
   setObservationTargetResult(`${observationTargetState.targets.length} eligible targets`);
 }
 
 function renderObservationTargetPicker(): void {
   const visible = findObservationTargets(observationTargetState, observationTargetSearch?.value ?? "");
-  if (observationTargetCount) observationTargetCount.textContent = `${visible.length} matching targets`;
-  if (!observationTargetList) return;
-  observationTargetList.replaceChildren(...visible.map((target) => {
-    const row = document.createElement("li");
-    row.className = "observation-target-row";
-    const details = document.createElement("p");
-    const url = new URL(target.pageUrl);
-    details.textContent = `${target.title} — ${url.hostname}${url.pathname} — window ${target.windowId}${target.activeTab ? " — active tab" : ""} — ${target.accessState}: ${targetAccessExplanation(target.accessState, target.pageUrl)}`;
-    const action = document.createElement("button");
-    action.type = "button";
-    action.dataset.targetId = target.id;
-    action.textContent = target.accessState === "Ready" ? "Select" : target.accessState === "Permission required" ? "Request access" : "Unavailable";
-    action.disabled = target.accessState === "Restricted" || target.accessState === "Closed";
-    action.addEventListener("click", () => {
-      if (target.accessState === "Permission required") {
-        void requestSelectedTargetAccess(target);
-        return;
-      }
+  renderObservationTargetPickerUi(observationTargetElements, visible, {
+    select: (target) => {
       observationTargetState = selectObservationTarget(observationTargetState, target.id);
       setObservationTargetResult(`Selected ${target.title}`);
       renderObservationTargetPicker();
       renderObservationTargetContext();
-    });
-    row.append(details, action);
-    return row;
-  }));
+    },
+    requestAccess: (target) => void requestSelectedTargetAccess(target),
+  });
 }
 
 async function requestSelectedTargetAccess(target: ObservationTarget): Promise<void> {
@@ -399,8 +423,94 @@ async function requestSelectedTargetAccess(target: ObservationTarget): Promise<v
   renderObservationTargetContext();
 }
 
+async function recoverAttachedObservationTarget(): Promise<void> {
+  const target = attachedObservationTarget(observationTargetState);
+  if (!target || typeof chrome === "undefined" || !chrome.tabs?.get) return;
+  try {
+    const tab = await chrome.tabs.get(target.tabId);
+    const recovered = targetFromTab(tab, target.currentWindow) ?? target;
+    observationTargetState = restoreAttachedObservationTarget({
+      ...recovered,
+      priorSession: true,
+    });
+    const session = dataLayerSessionState.session;
+    if (session?.status === "active") {
+      const observation = await tabPageObservation(
+        recovered.tabId,
+        recovered.pageUrl,
+        session.historyPath,
+      );
+      if (observation.pageAccessStatus === "page access available") {
+        dataLayerObserverState = attachHistoryArrayObserver(
+          {
+            ...dataLayerObserverState,
+            sessionState: dataLayerSessionState,
+          },
+          { ...observation, importExisting: false },
+        );
+        updateSessionFromObserverState();
+        await startLiveHistoryCapture(observation);
+        persistAndRenderObservationState();
+        setObservationTargetResult(`Recovered ${recovered.title}`);
+      } else {
+        observationTargetState = updateObservationTargetAccess(
+          observationTargetState,
+          recovered.id,
+          "Permission required",
+        );
+        setObservationTargetResult("Permission required — Request access");
+      }
+    }
+  } catch {
+    observationTargetState = updateObservationTargetAccess(
+      observationTargetState,
+      target.id,
+      "Closed",
+    );
+    stopLiveHistoryCapture();
+    setObservationTargetResult("Target unavailable — Choose target");
+  }
+  renderObservationTargetPicker();
+  renderObservationTargetContext();
+}
+
+function revokeObservationTargetOrigins(origins: readonly string[]): void {
+  const affected = observationTargetState.targets.filter((target) =>
+    origins.some((originPattern) => originPattern.startsWith(target.origin)));
+  for (const target of affected) {
+    const attached = observationTargetState.attachedTargetId === target.id;
+    observationTargetState = updateObservationTargetAccess(
+      observationTargetState,
+      target.id,
+      "Permission required",
+    );
+    if (attached) {
+      stopLiveHistoryCapture();
+      setObservationTargetResult("Permission required — Request access");
+    }
+  }
+  if (affected.length > 0) {
+    renderObservationTargetPicker();
+    renderObservationTargetContext();
+  }
+}
+
 async function attachSelectedTarget(): Promise<void> {
   const decision = attachSelectedObservationTarget(observationTargetState);
+  if (decision.result === "End current session before attaching selected target") {
+    const current = attachedObservationTarget(observationTargetState);
+    const next = selectedObservationTarget(observationTargetState);
+    if (current && next) {
+      pendingObservationTargetSwitchId = next.id;
+      showDetachTargetConfirmation(
+        observationTargetElements,
+        `Keep ${current.title}, or end its session and attach to ${next.title}?`,
+        { cancel: "Keep current session", confirm: "End and attach" },
+      );
+    }
+    setObservationTargetResult(decision.result);
+    return;
+  }
   if (decision.result !== "Attached") {
     setObservationTargetResult(decision.result);
     return;
@@ -444,26 +554,34 @@ async function attachSelectedTarget(): Promise<void> {
 }
 
 function beginDetachSelectedTarget(): void {
-  const target = observationTargetState.targets.find(({ id }) => id === observationTargetState.attachedTargetId);
+  const target = attachedObservationTarget(observationTargetState);
   if (!target) {
     setObservationTargetResult("No target is attached");
     return;
   }
-  if (detachTargetMessage) detachTargetMessage.textContent = `Detach ${target.title} from the active testing session?`;
-  if (detachTargetConfirmation) detachTargetConfirmation.hidden = false;
-  cancelDetachTargetButton?.focus();
+  pendingObservationTargetSwitchId = undefined;
+  showDetachTargetConfirmation(
+    observationTargetElements,
+    `Detach ${target.title} from the active testing session?`,
+  );
 }
 
-function confirmDetachSelectedTarget(): void {
+async function confirmDetachSelectedTarget(): Promise<void> {
+  const switchTargetId = pendingObservationTargetSwitchId;
+  pendingObservationTargetSwitchId = undefined;
   stopLiveHistoryCapture();
   dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
   persistAndRenderSessionState();
-  observationTargetState = {
-    ...observationTargetState,
-    attachedTargetId: undefined,
-    sessionState: "Detached",
-  };
-  if (detachTargetConfirmation) detachTargetConfirmation.hidden = true;
+  observationTargetState = detachObservationTarget(observationTargetState);
+  closeDetachTargetConfirmation(observationTargetElements);
+  if (switchTargetId) {
+    observationTargetState = selectObservationTarget(
+      observationTargetState,
+      switchTargetId,
+    );
+    await attachSelectedTarget();
+    return;
+  }
   setObservationTargetResult("Target detached");
   renderObservationTargetContext();
 }
@@ -866,6 +984,18 @@ function restartLiveHistoryCaptureIfActive(
   }
 }
 
+async function currentTargetObservation(
+  historyPath: string,
+): Promise<ActivePageObservationResult | undefined> {
+  const target = attachedObservationTarget(observationTargetState)
+    ?? selectedObservationTarget(observationTargetState);
+  if (!target) {
+    setObservationTargetResult("Selection required");
+    return undefined;
+  }
+  return tabPageObservation(target.tabId, target.pageUrl, historyPath);
+}
+
 function cancelLiveHistoryCaptureRuntime(): void {
   liveHistoryCaptureGeneration += 1;
   stopLiveHistoryPushCapture();
@@ -1034,16 +1164,12 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
     dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
     persistSession(dataLayerSessionState);
     renderSessionState();
-    observationTargetState = {
-      ...observationTargetState,
-      attachedTargetId: undefined,
-      sessionState: "Detached",
-    };
+    observationTargetState = detachObservationTarget(observationTargetState);
     renderObservationTargetContext();
   }
 
   if (entry.commandId === "data-layer.choose-observation-target") {
-    if (observationTargetPicker) observationTargetPicker.hidden = false;
+    showObservationTargetPicker(observationTargetElements);
     await discoverCurrentObservationTarget();
     observationTargetSearch?.focus();
   }
@@ -1576,7 +1702,8 @@ historyPathInput?.addEventListener("input", () => {
   const typedPath = historyPathInput.value;
   const path = setHistoryArrayPath(typedPath);
   renderHistoryPath(path, typedPath);
-  void activePageObservation(path).then((observation) => {
+  void currentTargetObservation(path).then((observation) => {
+    if (!observation) return;
     dataLayerObserverState = attachHistoryArrayObserver(
       dataLayerObserverState,
       observation,
@@ -1589,7 +1716,8 @@ historyPathInput?.addEventListener("input", () => {
 });
 
 restartObservationButton?.addEventListener("click", () => {
-  void activePageObservation(getHistoryArrayPath()).then((observation) => {
+  void currentTargetObservation(getHistoryArrayPath()).then((observation) => {
+    if (!observation) return;
     dataLayerObserverState = restartObservation(
       dataLayerSessionState,
       dataLayerObserverState,
@@ -1603,11 +1731,11 @@ restartObservationButton?.addEventListener("click", () => {
 });
 
 chooseObservationTargetButton?.addEventListener("click", () => {
-  if (observationTargetPicker) observationTargetPicker.hidden = false;
+  showObservationTargetPicker(observationTargetElements);
   void discoverCurrentObservationTarget().then(() => observationTargetSearch?.focus());
 });
 browseObservationTargetsButton?.addEventListener("click", () => {
-  if (observationTargetPicker) observationTargetPicker.hidden = false;
+  showObservationTargetPicker(observationTargetElements);
   void browseObservationTargets();
 });
 attachSelectedTargetButton?.addEventListener("click", () => {
@@ -1615,41 +1743,17 @@ attachSelectedTargetButton?.addEventListener("click", () => {
 });
 detachObservationTargetButton?.addEventListener("click", beginDetachSelectedTarget);
 cancelDetachTargetButton?.addEventListener("click", () => {
-  if (detachTargetConfirmation) detachTargetConfirmation.hidden = true;
-  detachObservationTargetButton?.focus();
+  pendingObservationTargetSwitchId = undefined;
+  closeDetachTargetConfirmation(observationTargetElements);
 });
-confirmDetachTargetButton?.addEventListener("click", confirmDetachSelectedTarget);
+confirmDetachTargetButton?.addEventListener("click", () => {
+  void confirmDetachSelectedTarget();
+});
 observationTargetSearch?.addEventListener("input", renderObservationTargetPicker);
-observationTargetSearch?.addEventListener("keydown", (event) => {
-  const actions = Array.from(observationTargetList?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
-  if (event.key === "Escape") {
-    event.preventDefault();
-    if (observationTargetPicker) observationTargetPicker.hidden = true;
-    chooseObservationTargetButton?.focus();
-  }
-  if (event.key === "ArrowDown" && actions[0]) {
-    event.preventDefault();
-    actions[0].focus();
-  }
-});
-observationTargetList?.addEventListener("keydown", (event) => {
-  const actions = Array.from(observationTargetList.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
-  const position = actions.indexOf(document.activeElement as HTMLButtonElement);
-  if (position < 0) return;
-  const next = actions[position + 1];
-  const previous = actions[position - 1];
-  if (event.key === "ArrowDown" && next) {
-    event.preventDefault(); next.focus();
-  }
-  if (event.key === "ArrowUp" && previous) {
-    event.preventDefault(); previous.focus();
-  }
-  if (event.key === "Escape") {
-    event.preventDefault();
-    if (observationTargetPicker) observationTargetPicker.hidden = true;
-    chooseObservationTargetButton?.focus();
-  }
-});
+observationTargetSearch?.addEventListener("keydown", (event) =>
+  handleObservationTargetSearchKeydown(observationTargetElements, event));
+observationTargetList?.addEventListener("keydown", (event) =>
+  handleObservationTargetListKeydown(observationTargetElements, event));
 
 document.addEventListener("keydown", handleHotkeyKeydown, true);
 
@@ -1666,12 +1770,20 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
     if (changeInfo.url !== undefined) {
       const current = observationTargetState.targets.find((target) => target.tabId === tabId);
       if (current) {
-        const updated = createObservationTarget({
-          ...current,
-          pageUrl: changeInfo.url,
-          title: tab.title || current.title,
-        });
-        observationTargetState = registerObservationTarget(observationTargetState, updated);
+        observationTargetState = navigateObservationTarget(
+          observationTargetState,
+          tabId,
+          changeInfo.url,
+        );
+        const updated = observationTargetState.targets.find(
+          (target) => target.tabId === tabId,
+        );
+        if (updated && tab.title) {
+          observationTargetState = registerObservationTarget(
+            observationTargetState,
+            { ...updated, title: tab.title },
+          );
+        }
         renderObservationTargetPicker();
         renderObservationTargetContext();
       }
@@ -1725,8 +1837,15 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onRemoved) {
   });
 }
 
+if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
+  chrome.permissions.onRemoved.addListener((permissions) => {
+    revokeObservationTargetOrigins(permissions.origins ?? []);
+  });
+}
+
 renderHistoryPath(getHistoryArrayPath());
 renderObservationTargetContext();
+void recoverAttachedObservationTarget();
 renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());

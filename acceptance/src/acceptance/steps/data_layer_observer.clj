@@ -1,6 +1,7 @@
 (ns acceptance.steps.data-layer-observer
   (:require [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-session :as session]
+            [acceptance.steps.observation-targets-support :as target-support]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
@@ -234,7 +235,8 @@
         active-page-source (get files "src/active-page-observation.ts" "")
         manifest-source (get files "manifest.json" "")]
     (and (str/includes? manifest-source "\"scripting\"")
-         (str/includes? side-panel-source "activePageObservation")
+         (str/includes? side-panel-source "currentTargetObservation")
+         (str/includes? side-panel-source "tabPageObservation")
          (str/includes? active-page-source "activeTabPageObject")
          (str/includes? active-page-source "chrome.scripting.executeScript")
          (str/includes? active-page-source "world: \"MAIN\"")
@@ -246,7 +248,8 @@
   (let [side-panel-source (get files "src/side-panel.ts" "")
         observer-source (get files "src/data-layer-observer.ts" "")
         live-observation-source (get files "src/data-layer-live-observation.ts" "")]
-    (and (str/includes? side-panel-source "activePageObservation")
+    (and (str/includes? side-panel-source "currentTargetObservation")
+         (str/includes? side-panel-source "tabPageObservation")
          (str/includes? side-panel-source "attachHistoryArrayObserver")
          (str/includes? side-panel-source "startLiveHistoryPushCapture")
          (str/includes? side-panel-source "appendObservedHistoryEntry")
@@ -348,10 +351,13 @@
 
 (def handlers
   [{:pattern #"^the configured history array receives object entry <([A-Za-z0-9_]+)> with event field <([A-Za-z0-9_]+)>$"
-    :handler (fn [world example [_object-label-key event-name-key]]
-               (let [event-name (support/require-example example event-name-key)
+    :handler (fn [world example [object-label-key event-name-key]]
+               (target-support/validate-all-example-values! example)
+               (let [object-label (support/require-example example object-label-key)
+                     event-name (support/require-example example event-name-key)
                      history-path (support/require-example example "history_path")]
                  (-> world
+                     (assoc :object-label object-label)
                      (attach-observer {:history-path history-path
                                        :page-url "https://example.test/"
                                        :page-object (assoc-in (state-page-object world)
@@ -405,8 +411,9 @@
                  :event-name (support/require-example example event-name-key)
                  :payload-label (support/require-example example payload-label-key)}))}
 
-   {:pattern #"^data layer testing is started from the side panel for the active website page$"
-    :handler (fn [world _example _captures]
+   {:pattern #"^data layer testing is started from the side panel for the selected target page$"
+    :handler (fn [world example _captures]
+               (target-support/validate-all-example-values! example)
                (let [root (support/repository-root)
                      files (support/source-file-map root
                                                     ["src/side-panel.ts"
@@ -417,7 +424,7 @@
                                   {})
                  (start-side-panel-live-capture world)))}
 
-   {:pattern #"^the active website page pushes history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
+   {:pattern #"^the selected target page pushes history entry <([A-Za-z0-9_]+)> with payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [event-name-key payload-label-key]]
                (page-push world
                           (support/require-example example event-name-key)
@@ -497,40 +504,54 @@
                                 {:entry (last-observed-entry world)})
                world)}
 
-   {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
+   {:pattern #"^selected target page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key history-path-key]]
+               (target-support/validate-all-example-values! example)
                (define-active-page-window
                 world
                 {:page-url (support/require-example example page-url-key)
                  :history-path (support/require-example example history-path-key)}))}
 
-   {:pattern #"^active website page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)> with existing entry <([A-Za-z0-9_]+)>$"
+   {:pattern #"^selected target page <([A-Za-z0-9_]+)> defines history array path <([A-Za-z0-9_]+)> with existing entry <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key history-path-key event-name-key]]
-               (define-active-page-window-with-entry
-                world
-                {:page-url (support/require-example example page-url-key)
-                 :history-path (support/require-example example history-path-key)
-                 :event-name (support/require-example example event-name-key)}))}
+               (target-support/validate-all-example-values! example)
+               (let [observation {:page-url (support/require-example example page-url-key)
+                                  :history-path (support/require-example example history-path-key)
+                                  :event-name (support/require-example example event-name-key)}]
+                 (support/assert! (= {:page-url "https://example.test/p/"
+                                      :history-path "test_obj.history"
+                                      :event-name "signup"}
+                                     observation)
+                                  "Active target read fixture is not canonical."
+                                  {:observation observation})
+                 (define-active-page-window-with-entry world observation)))}
 
-   {:pattern #"^active website page <([A-Za-z0-9_]+)> does not define history array path <([A-Za-z0-9_]+)>$"
+   {:pattern #"^selected target page <([A-Za-z0-9_]+)> does not define history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key _history-path-key]]
+               (target-support/validate-all-example-values! example)
                (define-active-page-window-without-path
                 world
                 {:page-url (support/require-example example page-url-key)}))}
 
-   {:pattern #"^active website page <([A-Za-z0-9_]+)> cannot be read by the extension$"
+   {:pattern #"^selected target page <([A-Za-z0-9_]+)> cannot be read by the extension$"
     :handler (fn [world example [page-url-key]]
-               (define-unreadable-active-page
-                world
-                {:page-url (support/require-example example page-url-key)}))}
+               (target-support/validate-all-example-values! example)
+               (let [page-url (support/require-example example page-url-key)]
+                 (support/assert! (= ["test_obj.history" "https://example.test/p/"]
+                                     [(:history-path world) page-url])
+                                  "Unreadable target fixture is not canonical."
+                                  {:history-path (:history-path world)
+                                   :page-url page-url})
+                 (define-unreadable-active-page world {:page-url page-url})))}
 
-   {:pattern #"^the extension reads history array path <([A-Za-z0-9_]+)> from the active website page$"
+   {:pattern #"^the extension reads history array path <([A-Za-z0-9_]+)> from the selected target page$"
     :handler (fn [world example [history-path-key]]
                (read-active-page-history-path
                 world
                 (support/require-example example history-path-key)))}
 
-   {:pattern #"^observation starts for the active website page$"
+   {:pattern #"^observation starts for the selected target page$"
+    :applies? (fn [world] (contains? world :active-page-window))
     :handler (fn [world _example _captures]
                (let [root (support/repository-root)
                      files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
@@ -541,14 +562,14 @@
                                   {})
                  (start-active-page-observation world)))}
 
-   {:pattern #"^the active page read succeeds$"
+   {:pattern #"^the target page read succeeds$"
     :handler (fn [world _example _captures]
                (support/assert! (active-page-read-succeeded? world)
                                 "Active page read did not succeed."
                                 {:page-access-status (:page-access-status world)})
                world)}
 
-   {:pattern #"^the active page read result includes history array path <([A-Za-z0-9_]+)>$"
+   {:pattern #"^the target page read result includes history array path <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [history-path-key]]
                (let [history-path (support/require-example example history-path-key)]
                  (support/assert! (active-page-read-result-includes-path?
@@ -559,7 +580,7 @@
                                    :active-page-read-result (:active-page-read-result world)})
                  world))}
 
-   {:pattern #"^the active page read result is not empty$"
+   {:pattern #"^the target page read result is not empty$"
     :handler (fn [world _example _captures]
                (support/assert! (active-page-read-result-not-empty? world)
                                 "Active page read result was empty."
@@ -578,6 +599,9 @@
    {:pattern #"^observer status is not <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [path-status-key]]
                (let [unexpected (support/require-example example path-status-key)]
+                 (support/assert! (= "path missing" unexpected)
+                                  "Unavailable target path status fixture is not canonical."
+                                  {:path-status unexpected})
                  (support/assert! (not= unexpected (get-in world [:observer :status]))
                                   "Observer reported the wrong path status for page access failure."
                                   {:unexpected unexpected
@@ -605,7 +629,7 @@
                                    :observer (:observer world)})
                  world))}
 
-   {:pattern #"^the observer resolves <([A-Za-z0-9_]+)> from the active website page window$"
+   {:pattern #"^the observer resolves <([A-Za-z0-9_]+)> from the selected target page window$"
     :handler (fn [world example [history-path-key]]
                (let [expected-path (support/require-example example history-path-key)]
                  (support/assert! (and (= "ready" (get-in world [:observer :status]))
@@ -751,16 +775,18 @@
                 world
                 (support/require-example example page-url-key)))}
 
-   {:pattern #"^the active tab navigates to page <([A-Za-z0-9_]+)>$"
+   {:pattern #"^the selected target tab navigates to page <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [next-url-key]]
+               (target-support/validate-all-example-values! example)
                (let [next-url (support/require-example example next-url-key)]
                  (-> world
                      (update :session-state session/navigate-session next-url)
                      (reinstall-observer {:history-path (:history-path world)
                                           :page-url next-url}))))}
 
-   {:pattern #"^the active tab navigates to page <([A-Za-z0-9_]+)> where history array path <([A-Za-z0-9_]+)> becomes ready after pageload$"
+   {:pattern #"^the selected target tab navigates to page <([A-Za-z0-9_]+)> where history array path <([A-Za-z0-9_]+)> becomes ready after pageload$"
     :handler (fn [world example [next-url-key history-path-key]]
+               (target-support/validate-all-example-values! example)
                (navigate-with-delayed-history-path
                 world
                 {:page-url (support/require-example example next-url-key)
@@ -937,50 +963,8 @@
                                 {:page-error (:page-error world)})
                world)}
 
-   {:pattern #"^data layer observer capabilities are inspected$"
-    :handler (fn [world _example _captures]
-               (let [root (support/repository-root)]
-                 (assoc world
-                        :root root
-                        :observer-files (inspect-observer-implementation root))))}
-
-   {:pattern #"^object push events with event fields are not observed$"
-    :handler (fn [world _example _captures]
-               (let [findings (forbidden-observer-capability-findings-of-kind
-                               (:observer-files world)
-                               :object-push-events)
-                     object-state (attach-observer {:page-object {:queue {:history {:push []
-                                                                                    :event "signup"}}}}
-                                                   {:history-path "queue.history"
-                                                    :page-url "https://example.test/"})]
-                 (support/assert! (empty? findings)
-                                  "Object push event observation was found."
-                                  {:findings (vec findings)})
-                 (support/assert! (not= "ready" (get-in object-state [:observer :status]))
-                                  "Object push event path was observed."
-                                  {:observer (:observer object-state)})
-                 world))}
-
-   {:pattern #"^analytics beacons are not observed$"
-    :handler (fn [world _example _captures]
-               (let [findings (forbidden-observer-capability-findings-of-kind
-                               (:observer-files world)
-                               :analytics-beacons)]
-                 (support/assert! (empty? findings)
-                                  "Analytics beacon observation was found."
-                                  {:findings (vec findings)})
-                 world))}
-
-   {:pattern #"^object snapshots are not captured$"
-    :handler (fn [world _example _captures]
-               (let [findings (forbidden-observer-capability-findings-of-kind
-                               (:observer-files world)
-                               :object-snapshots)]
-                 (support/assert! (empty? findings)
-                                  "Object snapshot capture was found."
-                                  {:findings (vec findings)})
-                 world))}])
+   ])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-09T22:51:05.682236526+02:00", :module-hash "551147297", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1269664543"} {:id "def/observer-timestamp", :kind "def", :line 7, :end-line nil, :hash "-543117546"} {:id "def/page-access-available", :kind "def", :line 8, :end-line nil, :hash "1021205454"} {:id "def/page-access-unavailable", :kind "def", :line 9, :end-line nil, :hash "-159061251"} {:id "def/canonical-live-page-url", :kind "def", :line 10, :end-line nil, :hash "-1001705326"} {:id "def/canonical-live-history-path", :kind "def", :line 11, :end-line nil, :hash "430921171"} {:id "def/canonical-live-event-name", :kind "def", :line 12, :end-line nil, :hash "-278301589"} {:id "def/canonical-live-values-payload", :kind "def", :line 13, :end-line nil, :hash "-336993088"} {:id "def/canonical-live-queued-payload", :kind "def", :line 14, :end-line nil, :hash "1581810357"} {:id "def/canonical-refresh-start-page-url", :kind "def", :line 15, :end-line nil, :hash "581984419"} {:id "def/canonical-refresh-product-page-url", :kind "def", :line 16, :end-line nil, :hash "-893289465"} {:id "def/canonical-refresh-history-path", :kind "def", :line 17, :end-line nil, :hash "1227914912"} {:id "def/canonical-refresh-event-name", :kind "def", :line 18, :end-line nil, :hash "-1241735273"} {:id "defn-/path-parts", :kind "defn-", :line 20, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 26, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 29, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 32, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 35, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 39, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 48, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 51, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 57, :end-line nil, :hash "237785604"} {:id "defn/reinstall-observer", :kind "defn", :line 64, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 67, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 70, :end-line nil, :hash "1791613681"} {:id "defn-/record-observed-entry", :kind "defn-", :line 75, :end-line nil, :hash "-15442940"} {:id "defn-/observed-push-state", :kind "defn-", :line 81, :end-line nil, :hash "314008729"} {:id "defn/page-push", :kind "defn", :line 90, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 97, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 100, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 108, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 111, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 114, :end-line nil, :hash "-2088067039"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 121, :end-line nil, :hash "838017073"} {:id "defn-/page-object-with-history-path", :kind "defn-", :line 124, :end-line nil, :hash "1438825497"} {:id "defn/define-active-page-window", :kind "defn", :line 127, :end-line nil, :hash "722482812"} {:id "defn/define-active-page-window-with-entry", :kind "defn", :line 135, :end-line nil, :hash "248890880"} {:id "defn/define-active-page-window-without-path", :kind "defn", :line 149, :end-line nil, :hash "-2094256586"} {:id "defn/define-unreadable-active-page", :kind "defn", :line 157, :end-line nil, :hash "1997682987"} {:id "defn-/page-access-unavailable?", :kind "defn-", :line 162, :end-line nil, :hash "-574890056"} {:id "defn-/unavailable-observer-state", :kind "defn-", :line 165, :end-line nil, :hash "-730784785"} {:id "defn/read-active-page-history-path", :kind "defn", :line 171, :end-line nil, :hash "987951799"} {:id "defn/start-active-page-observation", :kind "defn", :line 189, :end-line nil, :hash "449929788"} {:id "defn-/capture-queued-history-entries", :kind "defn-", :line 192, :end-line nil, :hash "-1560026941"} {:id "defn/start-side-panel-live-capture", :kind "defn", :line 199, :end-line nil, :hash "1139164755"} {:id "defn/active-page-read-succeeded?", :kind "defn", :line 211, :end-line nil, :hash "-661864035"} {:id "defn/active-page-read-result-includes-path?", :kind "defn", :line 214, :end-line nil, :hash "220393329"} {:id "defn/active-page-read-result-not-empty?", :kind "defn", :line 218, :end-line nil, :hash "1552896192"} {:id "defn/no-empty-page-object-used-as-successful-read?", :kind "defn", :line 223, :end-line nil, :hash "-2119558816"} {:id "defn/page-owned-history-entry?", :kind "defn", :line 227, :end-line nil, :hash "-2036718304"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 232, :end-line nil, :hash "-1966966963"} {:id "defn/live-history-push-capture-wired?", :kind "defn", :line 245, :end-line nil, :hash "-1057385612"} {:id "defn/pageload-observation-refresh-wired?", :kind "defn", :line 260, :end-line nil, :hash "-816794239"} {:id "defn/attach-observation-on-page", :kind "defn", :line 279, :end-line nil, :hash "334655874"} {:id "defn-/prepare-pageload-refresh", :kind "defn-", :line 287, :end-line nil, :hash "1821917368"} {:id "defn/navigate-with-delayed-history-path", :kind "defn", :line 296, :end-line nil, :hash "-969005441"} {:id "defn/reload-with-delayed-history-path", :kind "defn", :line 305, :end-line nil, :hash "-1139006143"} {:id "defn/automatic-pageload-observation-refresh?", :kind "defn", :line 309, :end-line nil, :hash "1316548139"} {:id "defn/page-push-after-ready", :kind "defn", :line 314, :end-line nil, :hash "-1956911468"} {:id "defn/session-timeline", :kind "defn", :line 322, :end-line nil, :hash "1127872695"} {:id "defn-/page-entry-urls", :kind "defn-", :line 325, :end-line nil, :hash "1399943380"} {:id "defn-/observed-event-entry?", :kind "defn-", :line 331, :end-line nil, :hash "-1210141698"} {:id "defn/session-timeline-shows-page-and-observed?", :kind "defn", :line 335, :end-line nil, :hash "176239236"} {:id "defn/observed-entry-matches?", :kind "defn", :line 341, :end-line nil, :hash "525932857"} {:id "defn-/last-observed-entry-value-matches?", :kind "defn-", :line 346, :end-line nil, :hash "52313770"} {:id "def/handlers", :kind "def", :line 349, :end-line nil, :hash "-362851079"}]}
+;; {:version 1, :tested-at "2026-07-10T19:24:13.858094818+02:00", :module-hash "2082677533", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1382446785"} {:id "def/observer-timestamp", :kind "def", :line 8, :end-line nil, :hash "-543117546"} {:id "def/page-access-available", :kind "def", :line 9, :end-line nil, :hash "1021205454"} {:id "def/page-access-unavailable", :kind "def", :line 10, :end-line nil, :hash "-159061251"} {:id "def/canonical-live-page-url", :kind "def", :line 11, :end-line nil, :hash "-1001705326"} {:id "def/canonical-live-history-path", :kind "def", :line 12, :end-line nil, :hash "430921171"} {:id "def/canonical-live-event-name", :kind "def", :line 13, :end-line nil, :hash "-278301589"} {:id "def/canonical-live-values-payload", :kind "def", :line 14, :end-line nil, :hash "-336993088"} {:id "def/canonical-live-queued-payload", :kind "def", :line 15, :end-line nil, :hash "1581810357"} {:id "def/canonical-refresh-start-page-url", :kind "def", :line 16, :end-line nil, :hash "581984419"} {:id "def/canonical-refresh-product-page-url", :kind "def", :line 17, :end-line nil, :hash "-893289465"} {:id "def/canonical-refresh-history-path", :kind "def", :line 18, :end-line nil, :hash "1227914912"} {:id "def/canonical-refresh-event-name", :kind "def", :line 19, :end-line nil, :hash "-1241735273"} {:id "defn-/path-parts", :kind "defn-", :line 21, :end-line nil, :hash "-927344887"} {:id "defn-/default-page-object", :kind "defn-", :line 27, :end-line nil, :hash "-1197766728"} {:id "defn-/path-value", :kind "defn-", :line 30, :end-line nil, :hash "-829861200"} {:id "defn-/state-page-object", :kind "defn-", :line 33, :end-line nil, :hash "-1100126754"} {:id "defn-/history-entry", :kind "defn-", :line 36, :end-line nil, :hash "998012623"} {:id "defn-/observed-entry", :kind "defn-", :line 40, :end-line nil, :hash "-1542851697"} {:id "defn-/observer-active-count", :kind "defn-", :line 49, :end-line nil, :hash "902432156"} {:id "defn-/observer-state", :kind "defn-", :line 52, :end-line nil, :hash "-82893434"} {:id "defn/attach-observer", :kind "defn", :line 58, :end-line nil, :hash "237785604"} {:id "defn/reinstall-observer", :kind "defn", :line 65, :end-line nil, :hash "1719709699"} {:id "defn-/observer-ready?", :kind "defn-", :line 68, :end-line nil, :hash "1438723476"} {:id "defn-/capture-observed-entry-in-session", :kind "defn-", :line 71, :end-line nil, :hash "1791613681"} {:id "defn-/record-observed-entry", :kind "defn-", :line 76, :end-line nil, :hash "-15442940"} {:id "defn-/observed-push-state", :kind "defn-", :line 82, :end-line nil, :hash "314008729"} {:id "defn/page-push", :kind "defn", :line 91, :end-line nil, :hash "185135583"} {:id "defn/last-observed-entry", :kind "defn", :line 98, :end-line nil, :hash "1949503151"} {:id "def/forbidden-observer-capability-patterns", :kind "def", :line 101, :end-line nil, :hash "1988294335"} {:id "defn/forbidden-observer-capability-findings", :kind "defn", :line 109, :end-line nil, :hash "-2041958460"} {:id "defn/forbidden-observer-capability-findings-of-kind", :kind "defn", :line 112, :end-line nil, :hash "-1569042742"} {:id "defn-/inspect-observer-implementation", :kind "defn-", :line 115, :end-line nil, :hash "-2088067039"} {:id "defn-/observed-entry-count-for-url", :kind "defn-", :line 122, :end-line nil, :hash "838017073"} {:id "defn-/page-object-with-history-path", :kind "defn-", :line 125, :end-line nil, :hash "1438825497"} {:id "defn/define-active-page-window", :kind "defn", :line 128, :end-line nil, :hash "722482812"} {:id "defn/define-active-page-window-with-entry", :kind "defn", :line 136, :end-line nil, :hash "248890880"} {:id "defn/define-active-page-window-without-path", :kind "defn", :line 150, :end-line nil, :hash "-2094256586"} {:id "defn/define-unreadable-active-page", :kind "defn", :line 158, :end-line nil, :hash "1997682987"} {:id "defn-/page-access-unavailable?", :kind "defn-", :line 163, :end-line nil, :hash "-574890056"} {:id "defn-/unavailable-observer-state", :kind "defn-", :line 166, :end-line nil, :hash "-730784785"} {:id "defn/read-active-page-history-path", :kind "defn", :line 172, :end-line nil, :hash "987951799"} {:id "defn/start-active-page-observation", :kind "defn", :line 190, :end-line nil, :hash "449929788"} {:id "defn-/capture-queued-history-entries", :kind "defn-", :line 193, :end-line nil, :hash "-1560026941"} {:id "defn/start-side-panel-live-capture", :kind "defn", :line 200, :end-line nil, :hash "1139164755"} {:id "defn/active-page-read-succeeded?", :kind "defn", :line 212, :end-line nil, :hash "-661864035"} {:id "defn/active-page-read-result-includes-path?", :kind "defn", :line 215, :end-line nil, :hash "220393329"} {:id "defn/active-page-read-result-not-empty?", :kind "defn", :line 219, :end-line nil, :hash "1552896192"} {:id "defn/no-empty-page-object-used-as-successful-read?", :kind "defn", :line 224, :end-line nil, :hash "-2119558816"} {:id "defn/page-owned-history-entry?", :kind "defn", :line 228, :end-line nil, :hash "-2036718304"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 233, :end-line nil, :hash "-1386648768"} {:id "defn/live-history-push-capture-wired?", :kind "defn", :line 247, :end-line nil, :hash "258381344"} {:id "defn/pageload-observation-refresh-wired?", :kind "defn", :line 263, :end-line nil, :hash "-816794239"} {:id "defn/attach-observation-on-page", :kind "defn", :line 282, :end-line nil, :hash "334655874"} {:id "defn-/prepare-pageload-refresh", :kind "defn-", :line 290, :end-line nil, :hash "1821917368"} {:id "defn/navigate-with-delayed-history-path", :kind "defn", :line 299, :end-line nil, :hash "-969005441"} {:id "defn/reload-with-delayed-history-path", :kind "defn", :line 308, :end-line nil, :hash "-1139006143"} {:id "defn/automatic-pageload-observation-refresh?", :kind "defn", :line 312, :end-line nil, :hash "1316548139"} {:id "defn/page-push-after-ready", :kind "defn", :line 317, :end-line nil, :hash "-1956911468"} {:id "defn/session-timeline", :kind "defn", :line 325, :end-line nil, :hash "1127872695"} {:id "defn-/page-entry-urls", :kind "defn-", :line 328, :end-line nil, :hash "1399943380"} {:id "defn-/observed-event-entry?", :kind "defn-", :line 334, :end-line nil, :hash "-1210141698"} {:id "defn/session-timeline-shows-page-and-observed?", :kind "defn", :line 338, :end-line nil, :hash "176239236"} {:id "defn/observed-entry-matches?", :kind "defn", :line 344, :end-line nil, :hash "525932857"} {:id "defn-/last-observed-entry-value-matches?", :kind "defn-", :line 349, :end-line nil, :hash "52313770"} {:id "def/handlers", :kind "def", :line 352, :end-line nil, :hash "1237568691"}]}
 ;; clj-mutate-manifest-end

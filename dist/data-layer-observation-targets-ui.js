@@ -1,0 +1,145 @@
+import { attachedObservationTarget, selectedObservationTarget, targetAccessExplanation, } from "./data-layer-observation-targets.js";
+export function findObservationTargetElements(root = document) {
+    return {
+        state: root.querySelector("#observation-target-state"),
+        result: root.querySelector("#observation-target-result"),
+        chooseButton: root.querySelector("#choose-observation-target"),
+        browseButton: root.querySelector("#browse-observation-targets"),
+        attachButton: root.querySelector("#attach-selected-target"),
+        detachButton: root.querySelector("#detach-observation-target"),
+        picker: root.querySelector("#observation-target-picker"),
+        search: root.querySelector("#observation-target-search"),
+        count: root.querySelector("#observation-target-count"),
+        list: root.querySelector("#observation-target-list"),
+        detachConfirmation: root.querySelector("#detach-observation-target-confirmation"),
+        detachMessage: root.querySelector("#detach-observation-target-message"),
+        cancelDetachButton: root.querySelector("#cancel-detach-observation-target"),
+        confirmDetachButton: root.querySelector("#confirm-detach-observation-target"),
+    };
+}
+export function setObservationTargetResult(elements, result) {
+    if (elements.result)
+        elements.result.textContent = result;
+}
+export function renderObservationTargetContext(elements, state, historyPath) {
+    if (!elements.state)
+        return;
+    const attached = attachedObservationTarget(state);
+    const selected = selectedObservationTarget(state);
+    elements.state.textContent = attached
+        ? `Attached — ${attached.title} — ${attached.pageUrl} — ${historyPath}`
+        : selected
+            ? `${state.sessionState} — ${selected.title} — ${selected.accessState}`
+            : "Detached — Choose target";
+}
+function targetLocation(target) {
+    try {
+        const url = new URL(target.pageUrl);
+        return `${url.hostname}${url.pathname}`;
+    }
+    catch {
+        return target.pageUrl;
+    }
+}
+function targetRow(target, actions) {
+    const row = document.createElement("li");
+    row.className = "observation-target-row";
+    const details = document.createElement("p");
+    details.textContent = [
+        target.title,
+        targetLocation(target),
+        `window ${target.windowId}`,
+        target.currentWindow ? "current window" : undefined,
+        target.activeTab ? "active tab" : undefined,
+        target.priorSession ? "recent target" : undefined,
+        `${target.accessState}: ${targetAccessExplanation(target.accessState, target.pageUrl)}`,
+    ].filter(Boolean).join(" — ");
+    const action = document.createElement("button");
+    action.type = "button";
+    action.dataset.targetId = target.id;
+    action.textContent = target.accessState === "Ready"
+        ? "Select"
+        : target.accessState === "Permission required"
+            ? "Request access"
+            : "Unavailable";
+    action.disabled = target.accessState === "Restricted" || target.accessState === "Closed";
+    action.addEventListener("click", () => {
+        if (target.accessState === "Permission required") {
+            actions.requestAccess(target);
+            return;
+        }
+        actions.select(target);
+    });
+    row.append(details, action);
+    return row;
+}
+export function renderObservationTargetPicker(elements, targets, actions) {
+    if (elements.count)
+        elements.count.textContent = `${targets.length} matching targets`;
+    elements.list?.replaceChildren(...targets.map((target) => targetRow(target, actions)));
+}
+export function showObservationTargetPicker(elements) {
+    if (elements.picker)
+        elements.picker.hidden = false;
+}
+export function closeObservationTargetPicker(elements) {
+    if (elements.picker)
+        elements.picker.hidden = true;
+    elements.chooseButton?.focus();
+}
+export function showDetachTargetConfirmation(elements, message, labels = {
+    cancel: "Cancel",
+    confirm: "Detach target",
+}) {
+    if (elements.detachMessage) {
+        elements.detachMessage.textContent = message;
+    }
+    if (elements.cancelDetachButton)
+        elements.cancelDetachButton.textContent = labels.cancel;
+    if (elements.confirmDetachButton)
+        elements.confirmDetachButton.textContent = labels.confirm;
+    if (elements.detachConfirmation)
+        elements.detachConfirmation.hidden = false;
+    elements.cancelDetachButton?.focus();
+}
+export function closeDetachTargetConfirmation(elements) {
+    if (elements.detachConfirmation)
+        elements.detachConfirmation.hidden = true;
+    elements.detachButton?.focus();
+}
+function targetActions(elements) {
+    return Array.from(elements.list?.querySelectorAll("button:not(:disabled)") ?? []);
+}
+export function handleObservationTargetSearchKeydown(elements, event) {
+    if (event.key === "Escape") {
+        event.preventDefault();
+        closeObservationTargetPicker(elements);
+        return;
+    }
+    const first = targetActions(elements)[0];
+    if (event.key === "ArrowDown" && first) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+export function handleObservationTargetListKeydown(elements, event) {
+    const actions = targetActions(elements);
+    const position = actions.indexOf(document.activeElement);
+    if (event.key === "Escape") {
+        event.preventDefault();
+        closeObservationTargetPicker(elements);
+        return;
+    }
+    if (position < 0)
+        return;
+    const target = event.key === "ArrowDown"
+        ? actions[position + 1]
+        : event.key === "ArrowUp"
+            ? actions[position - 1]
+            : undefined;
+    if (target) {
+        event.preventDefault();
+        target.focus();
+    }
+}
+//# sourceMappingURL=data-layer-observation-targets-ui.js.map

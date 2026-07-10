@@ -1,5 +1,6 @@
 (ns acceptance.steps.data-layer-session
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.steps.observation-targets-support :as target-support]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (defn active-session? [state]
@@ -77,8 +78,9 @@
                     :actual (get-in world [:session-state :session :history-path])}))
 
 (def handlers
-  [{:pattern #"^command <([A-Za-z0-9_]+)> is run for the active tab$"
+  [{:pattern #"^command <([A-Za-z0-9_]+)> (?:is run(?: again)? for the selected observation target|is run for the active testing session)$"
     :handler (fn [world example [command-key]]
+               (target-support/validate-all-example-values! example)
                (let [command-id (support/require-example example command-key)
                      history-path (:history-path world)
                      tab (or (:active-tab world) (default-tab))]
@@ -99,14 +101,14 @@
                    (throw (ex-info (str "Unsupported session command: " command-id)
                                    {:command-id command-id})))))}
 
-   {:pattern #"^a data layer testing session starts for the active tab$"
+   {:pattern #"^a data layer testing session starts for the selected target tab$"
     :handler (fn [world _example _captures]
                (support/assert! (active-session? (:session-state world))
                                 "Data layer testing session did not start."
                                 {:session-state (:session-state world)})
                world)}
 
-   {:pattern #"^the session scope is the active tab journey$"
+   {:pattern #"^the session scope is the selected target tab journey$"
     :handler (fn [world _example _captures]
                (support/assert! (= "active-tab journey"
                                    (session-scope (:session-state world)))
@@ -146,8 +148,9 @@
                                                                :url (:url tab)
                                                                :history-path (:history-path world)})))))}
 
-   {:pattern #"^the active tab navigates or reloads from <([A-Za-z0-9_]+)> to <([A-Za-z0-9_]+)>$"
+   {:pattern #"^the selected target tab navigates or reloads from <([A-Za-z0-9_]+)> to <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [start-url-key next-url-key]]
+               (target-support/validate-all-example-values! example)
                (let [start-url (support/require-example example start-url-key)
                      next-url (support/require-example example next-url-key)]
                  (assert-canonical-history! world)
@@ -272,5 +275,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T15:41:12.803381479+02:00", :module-hash "-746219869", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2116833989"} {:id "defn/active-session?", :kind "defn", :line 5, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 8, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 19, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 24, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 28, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 33, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 40, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 45, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 48, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 53, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 59, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 65, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 69, :end-line nil, :hash "-1862329308"} {:id "defn-/assert-canonical-history!", :kind "defn-", :line 73, :end-line nil, :hash "-838603358"} {:id "def/handlers", :kind "def", :line 79, :end-line nil, :hash "-610759664"}]}
+;; {:version 1, :tested-at "2026-07-10T19:22:44.671688713+02:00", :module-hash "9985672", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1086522596"} {:id "defn/active-session?", :kind "defn", :line 6, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 9, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 20, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 25, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 29, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 34, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 41, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 46, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 49, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 54, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 60, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 63, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 66, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 70, :end-line nil, :hash "-1862329308"} {:id "defn-/assert-canonical-history!", :kind "defn-", :line 74, :end-line nil, :hash "-838603358"} {:id "def/handlers", :kind "def", :line 80, :end-line nil, :hash "1286201018"}]}
 ;; clj-mutate-manifest-end

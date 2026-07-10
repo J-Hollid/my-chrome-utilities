@@ -67,6 +67,7 @@ export interface HistoryArrayObserverAttachOptions {
   pageObject?: unknown;
   pageAccessStatus?: PageAccessStatus;
   requestId?: string;
+  importExisting?: boolean;
 }
 
 function pathParts(path: string): string[] {
@@ -227,7 +228,7 @@ export function attachHistoryArrayObserver(
     ),
   };
 
-  return status === "ready"
+  return status === "ready" && options.importExisting !== false
     ? captureExistingHistoryEntries(nextState, observer)
     : nextState;
 }

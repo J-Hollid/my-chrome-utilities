@@ -51,7 +51,9 @@ assert.equal(endAndAttachObservationTarget(attachedCheckout, confirmation.id).st
 const navigated = navigateObservationTarget(attachedCheckout, 42, "https://shop.example.test/confirmation");
 assert.equal(navigated.targets.find(({ tabId }) => tabId === 42)?.pageUrl, "https://shop.example.test/confirmation");
 assert.equal(closeObservationTarget(attachedCheckout, 42).sessionState, "Target unavailable");
-assert.equal(updateObservationTargetAccess(attachedCheckout, checkout.id, "Permission required").attachedTargetId, undefined);
+const permissionLost = updateObservationTargetAccess(attachedCheckout, checkout.id, "Permission required");
+assert.equal(permissionLost.attachedTargetId, undefined);
+assert.equal(permissionLost.sessionState, "Permission required");
 
 const commandEvents = [];
 for (const [id, action] of [

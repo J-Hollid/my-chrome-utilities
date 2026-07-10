@@ -99,7 +99,7 @@ export function attachHistoryArrayObserver(state, options) {
         observer,
         subscription: nextSubscription(state.subscription ?? { imported: new Set(), activeCount: 0 }, options.pageUrl, options.historyPath, options.requestId ?? `${options.pageUrl}:${options.historyPath}`),
     };
-    return status === "ready"
+    return status === "ready" && options.importExisting !== false
         ? captureExistingHistoryEntries(nextState, observer)
         : nextState;
 }

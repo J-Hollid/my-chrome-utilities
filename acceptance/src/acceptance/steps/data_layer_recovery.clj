@@ -1,5 +1,6 @@
 (ns acceptance.steps.data-layer-recovery
   (:require [acceptance.steps.data-layer-session :as session]
+            [acceptance.steps.observation-targets-support :as target-support]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
@@ -118,8 +119,9 @@
                                    :session-state (:session-state world)})
                  world))}
 
-   {:pattern #"^the active tab refreshes during a data layer testing session$"
+   {:pattern #"^the selected target tab refreshes during a data layer testing session$"
     :handler (fn [world example _captures]
+               (target-support/validate-all-example-values! example)
                (let [status (support/require-example example "status")
                      root (support/repository-root)
                      source (support/source-file root "src/side-panel.ts")
@@ -141,7 +143,7 @@
                                   {})
                  world))}
 
-   {:pattern #"^the user can restart observation for the active tab$"
+   {:pattern #"^the user can restart observation for the selected target tab$"
     :handler (fn [world _example _captures]
                (let [restarted (restart-observation world)]
                  (support/assert! (= "attached" (:observer-status restarted))
@@ -202,5 +204,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T23:13:29.806739233+02:00", :module-hash "559010487", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1724478247"} {:id "def/recovery-timestamp", :kind "def", :line 6, :end-line nil, :hash "-829136013"} {:id "defn/capture-observed-event", :kind "defn", :line 8, :end-line nil, :hash "2002826544"} {:id "defn/reopen-after-navigation", :kind "defn", :line 18, :end-line nil, :hash "1175227345"} {:id "defn/timeline-entry", :kind "defn", :line 23, :end-line nil, :hash "-1808051897"} {:id "defn/restored-history-path", :kind "defn", :line 27, :end-line nil, :hash "1405355457"} {:id "defn-/observed-event-urls", :kind "defn-", :line 31, :end-line nil, :hash "-1284049393"} {:id "defn-/restart-observation-available?", :kind "defn-", :line 36, :end-line nil, :hash "1280026819"} {:id "defn/refresh-active-session", :kind "defn", :line 39, :end-line nil, :hash "193455126"} {:id "defn/restart-observation", :kind "defn", :line 44, :end-line nil, :hash "-1184222671"} {:id "defn/reopen-side-panel", :kind "defn", :line 47, :end-line nil, :hash "693468688"} {:id "def/forbidden-recovery-capability-patterns", :kind "def", :line 52, :end-line nil, :hash "1231321701"} {:id "defn/forbidden-recovery-capability-findings", :kind "defn", :line 58, :end-line nil, :hash "1181618589"} {:id "defn/forbidden-recovery-capability-findings-of-kind", :kind "defn", :line 61, :end-line nil, :hash "1965889639"} {:id "defn-/inspect-recovery-implementation", :kind "defn-", :line 64, :end-line nil, :hash "1472227023"} {:id "def/handlers", :kind "def", :line 70, :end-line nil, :hash "-2071532688"}]}
+;; {:version 1, :tested-at "2026-07-10T19:22:51.080478138+02:00", :module-hash "-366222747", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1256953708"} {:id "def/recovery-timestamp", :kind "def", :line 7, :end-line nil, :hash "-829136013"} {:id "defn/capture-observed-event", :kind "defn", :line 9, :end-line nil, :hash "2002826544"} {:id "defn/reopen-after-navigation", :kind "defn", :line 19, :end-line nil, :hash "1175227345"} {:id "defn/timeline-entry", :kind "defn", :line 24, :end-line nil, :hash "-1808051897"} {:id "defn/restored-history-path", :kind "defn", :line 28, :end-line nil, :hash "1405355457"} {:id "defn-/observed-event-urls", :kind "defn-", :line 32, :end-line nil, :hash "-1284049393"} {:id "defn-/restart-observation-available?", :kind "defn-", :line 37, :end-line nil, :hash "1280026819"} {:id "defn/refresh-active-session", :kind "defn", :line 40, :end-line nil, :hash "193455126"} {:id "defn/restart-observation", :kind "defn", :line 45, :end-line nil, :hash "-1184222671"} {:id "defn/reopen-side-panel", :kind "defn", :line 48, :end-line nil, :hash "693468688"} {:id "def/forbidden-recovery-capability-patterns", :kind "def", :line 53, :end-line nil, :hash "1231321701"} {:id "defn/forbidden-recovery-capability-findings", :kind "defn", :line 59, :end-line nil, :hash "1181618589"} {:id "defn/forbidden-recovery-capability-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "1965889639"} {:id "defn-/inspect-recovery-implementation", :kind "defn-", :line 65, :end-line nil, :hash "1472227023"} {:id "def/handlers", :kind "def", :line 71, :end-line nil, :hash "1225887256"}]}
 ;; clj-mutate-manifest-end

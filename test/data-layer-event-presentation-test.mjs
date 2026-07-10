@@ -94,6 +94,17 @@ const sessionState = startDataLayerTestingSession(
     historyPath: context.destination,
   },
 );
+const recoveredObserverState = attachHistoryArrayObserver(
+  { pageObject: firstPage, sessionState, sourceEvents: [] },
+  {
+    historyPath: context.destination,
+    pageUrl: context.pageUrl,
+    pageObject: firstPage,
+    requestId: "recovery",
+    importExisting: false,
+  },
+);
+assert.equal(recoveredObserverState.sourceEvents.length, 0);
 let observerState = attachHistoryArrayObserver(
   { pageObject: firstPage, sessionState, sourceEvents: [] },
   {

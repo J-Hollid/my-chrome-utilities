@@ -119,6 +119,7 @@
                              [hardening.live-event-presentation-hardening-test]
                              [hardening.live-observer-hardening-test]
                              [hardening.observability-source-foundation-hardening-test]
+                             [hardening.observation-targets-hardening-test]
                              [hardening.operator-interface-hardening-test]
                              [hardening.project-skeleton-hardening-test]
                              [hardening.saved-sessions-hardening-test]
@@ -132,6 +133,7 @@
                                                      'hardening.live-event-presentation-hardening-test
                                                      'hardening.live-observer-hardening-test
                                                      'hardening.observability-source-foundation-hardening-test
+                                                     'hardening.observation-targets-hardening-test
                                                      'hardening.operator-interface-hardening-test
                                                      'hardening.project-skeleton-hardening-test
                                                      'hardening.saved-sessions-hardening-test
