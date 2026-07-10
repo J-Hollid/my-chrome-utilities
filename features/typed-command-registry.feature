@@ -41,7 +41,8 @@ Feature: Typed command registry
   # Typed command registry 004
   Scenario Outline: Typed command registry 004
     When command features are inspected
-    Then no user-configurable keybindings are present
+    Then registered command ids are stable keymap identifiers
+    And command execution remains available through command ids
 
     Examples:
       | project_name         |
