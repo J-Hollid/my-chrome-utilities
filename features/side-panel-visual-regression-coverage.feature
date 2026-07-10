@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=16f5a3fe2034af4cd8926baa16cb189c29344d2ed8f0ef26085121fcb5eefa77
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-10T14:48:29.567626528Z","feature_name":"Side panel visual regression coverage","feature_path":"features/side-panel-visual-regression-coverage.feature","background_hash":"021c56ced56b1e280e2e853f6b9fe02c136b6d656cfb79cd83297f5f1b78fcc6","implementation_hash":"sha256:operator-interface-semantic-v2","scenarios":[{"index":0,"name":"Side panel visual regression coverage 001","scenario_hash":"e6235a5c7323fb14ab1931533a587fab6dbc71598e9a9b09eeada3eeb6723e9f","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:29.567626528Z"},{"index":1,"name":"Side panel visual regression coverage 002","scenario_hash":"c8dc28f700cc3220460da4d88a301d34a9839c4249c42bed3fe2076a0f05de69","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:29.567626528Z"},{"index":2,"name":"Side panel visual regression coverage 003","scenario_hash":"7171542d1f27c5845fe6104638196fd5f4b77ca03042e5acc2b04c536db81d0d","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:29.567626528Z"},{"index":3,"name":"Side panel visual regression coverage 004","scenario_hash":"1b29508d256a49254e42f44dcbd55e497d1023256492656612f314b1c6c99141","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-10T14:48:29.567626528Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Side panel visual regression coverage
 
   Background:
