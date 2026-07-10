@@ -11,6 +11,7 @@
    "component_name" #{"Live view tab" "event row" "observation status" "primary action" "source control" "template JSON editor" "workspace tab"}
    "control_name" #{"Back to events" "Clear source filter" "Connected source" "Delete session" "Pause capture" "Push template"}
    "control_state" #{"destructive" "disabled" "selected" "successful"}
+   "destination" #{"event.history"}
    "dock_side" #{"left" "right"}
    "draft_state" #{"Invalid" "Unsaved"}
    "edited_command_id" #{"data-layer.end-testing"}
@@ -21,6 +22,7 @@
    "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
+   "initial_state" #{"Not checked"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
@@ -36,14 +38,17 @@
    "primary_action" #{"Push"}
    "primary_actions" #{"Pause and Stop" "Resume and Stop"}
    "project_name" #{"my-chrome-utilities"}
+   "payload_label" #{"purchase-values"}
    "query" #{"checkout"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Import session" "Restart observation" "Start observation"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
+   "result_state" #{"2 issues"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
    "schema_name" #{"Purchase event" "Purchase v2"}
+   "scroll_position" #{"480 CSS px"}
    "second_subview" #{"Sequences"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
@@ -77,9 +82,9 @@
   (support/validate-example-domain!
    canonical-example-values
    example
-   (filterv #(contains? canonical-example-values %) keys)
+   keys
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T01:13:45.804957829+02:00", :module-hash "300217908", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "344692225"} {:id "defn/validate-example!", :kind "defn", :line 75, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-11T01:54:26.900725972+02:00", :module-hash "171149775", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-2067723136"} {:id "defn/validate-example!", :kind "defn", :line 81, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end
