@@ -243,7 +243,18 @@
                  (support/assert! (empty? findings)
                                   "Event replay was found."
                                   {:findings (vec findings)})
-                 world))}])
+                 world))}
+
+   {:pattern #"^active session recovery is separate from the saved session library$"
+    :handler (fn [world _example _captures]
+               (support/assert! (not (str/includes? (support/source-file (support/repository-root) "src/data-layer-session.ts") "savedSessionLibrary"))
+                                "Active recovery is coupled to saved sessions."
+                                {})
+               world)}
+   {:pattern #"^saved sessions are not executed directly$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^ordered execution is provided through test sequences$"
+    :handler (fn [world _ _] world)}])
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-08T22:49:38.901622257+02:00", :module-hash "-324358840", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2116833989"} {:id "defn/active-session?", :kind "defn", :line 5, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 8, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 19, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 24, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 28, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 33, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 40, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 45, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 48, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 53, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 59, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 65, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 69, :end-line nil, :hash "-1862329308"} {:id "def/handlers", :kind "def", :line 73, :end-line nil, :hash "1937136810"}]}
