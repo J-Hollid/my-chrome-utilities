@@ -8,6 +8,9 @@
        "data-layer-views data-layer-view-live data-layer-panel-live live-session-summary live-source-statuses live-event-feed live-event-inspector pause-capture resume-capture"
        "dataLayerViewForNavigationKey recordLiveEvent selectLiveEvent renderLiveObserver")))
 
+(deftest verifies-live-observer-state-transitions
+  (is (live-observer/live-observer-semantics? ".")))
+
 (def live-features
   ["features/data-layer-observer-workspace.feature"
    "features/data-layer-event-timeline.feature"])
