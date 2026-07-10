@@ -25,6 +25,7 @@
                         [acceptance.data-layer-page-context-steps-test]
                         [acceptance.workspace-editor-steps-test]
                         [acceptance.observability-library-steps-test]
+                        [acceptance.operator-interface-steps-test]
                         [acceptance.live-observer-steps-test]
                         [acceptance.event-library-editor-steps-test]
                         [acceptance.schema-verification-steps-test]
@@ -46,6 +47,7 @@
                                                 'acceptance.data-layer-page-context-steps-test
                                                 'acceptance.workspace-editor-steps-test
                                                 'acceptance.observability-library-steps-test
+                                                'acceptance.operator-interface-steps-test
                                                 'acceptance.live-observer-steps-test
                                                 'acceptance.event-library-editor-steps-test
                                                 'acceptance.schema-verification-steps-test

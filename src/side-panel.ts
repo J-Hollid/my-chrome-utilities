@@ -174,13 +174,17 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
-const liveObserverElements = findLiveObserverElements();
-const {
-  viewList: dataLayerViewList,
-  backToEventsButton,
-  pauseCaptureButton,
-  resumeCaptureButton,
-} = liveObserverElements;
+const dataLayerViewList = document.querySelector<HTMLElement>("#data-layer-views");
+const liveSessionSummary = document.querySelector<HTMLElement>("#live-session-summary");
+const livePageUrl = document.querySelector<HTMLElement>("#live-page-url");
+const liveSessionMessage = document.querySelector<HTMLElement>("#live-session-message");
+const liveSourceStatuses = document.querySelector<HTMLElement>("#live-source-statuses");
+const liveEventFeed = document.querySelector<HTMLElement>("#live-event-feed");
+const liveEventList = document.querySelector<HTMLElement>("#live-event-list");
+const liveEventInspector = document.querySelector<HTMLElement>("#live-event-inspector");
+const backToEventsButton = document.querySelector<HTMLButtonElement>("#back-to-events");
+const pauseCaptureButton = document.querySelector<HTMLButtonElement>("#pause-capture");
+const resumeCaptureButton = document.querySelector<HTMLButtonElement>("#resume-capture");
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const savedSessionSearch = document.querySelector<HTMLInputElement>("#saved-session-search");
 const importSavedSessionButton = document.querySelector<HTMLButtonElement>("#import-saved-session");
@@ -190,16 +194,19 @@ const savedSessionCount = document.querySelector<HTMLElement>("#saved-session-co
 const savedSessionConfirmation = document.querySelector<HTMLElement>("#saved-session-confirmation");
 const cancelSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
-const eventLibraryEditorElements = findEventLibraryEditorElements();
-const {
-  search: eventTemplateSearch,
-  saveLatestButton: saveLatestTemplateButton,
-  json: eventTemplateJson,
-  saveRevisionButton: saveTemplateRevisionButton,
-  saveCopyButton: saveTemplateCopyButton,
-  pushDraftButton: pushTemplateDraftButton,
-  discardDraftButton: discardTemplateDraftButton,
-} = eventLibraryEditorElements;
+const eventTemplateSearch = document.querySelector<HTMLInputElement>("#event-template-search");
+const saveLatestTemplateButton = document.querySelector<HTMLButtonElement>("#save-latest-template");
+const eventTemplateCount = document.querySelector<HTMLElement>("#event-template-count");
+const eventTemplateList = document.querySelector<HTMLElement>("#event-template-list");
+const eventPropertyEditor = document.querySelector<HTMLElement>("#event-property-editor");
+const eventTemplateProperties = document.querySelector<HTMLElement>("#event-template-properties");
+const eventTemplateJson = document.querySelector<HTMLTextAreaElement>("#event-template-json");
+const eventTemplateValidation = document.querySelector<HTMLElement>("#event-template-validation");
+const saveTemplateRevisionButton = document.querySelector<HTMLButtonElement>("#save-template-revision");
+const saveTemplateCopyButton = document.querySelector<HTMLButtonElement>("#save-template-copy");
+const pushTemplateDraftButton = document.querySelector<HTMLButtonElement>("#push-template-draft");
+const discardTemplateDraftButton = document.querySelector<HTMLButtonElement>("#discard-template-draft");
+const eventTemplateResult = document.querySelector<HTMLElement>("#event-template-result");
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
@@ -207,7 +214,8 @@ const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-sc
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
-const sequenceReplayElements = findSequenceReplayElements();
+const sequenceList = document.querySelector<HTMLElement>("#sequence-list");
+const sequenceRunResult = document.querySelector<HTMLElement>("#sequence-run-result");
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -255,45 +263,98 @@ function renderHistoryPath(path: string, fieldValue = path): void {
 function showDataLayerView(view: DataLayerView, focus = false): void {
   liveObserverState = { ...liveObserverState, view };
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-  renderDataLayerView(liveObserverElements, view, focus);
+  for (const candidate of dataLayerViews) {
+    const button = document.querySelector<HTMLButtonElement>(
+      `#data-layer-view-${candidate.toLowerCase()}`,
+    );
+    const panel = document.querySelector<HTMLElement>(
+      `#data-layer-panel-${candidate.toLowerCase()}`,
+    );
+    const selected = candidate === view;
+    if (button) {
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+      if (focus) button.focus();
+    }
+    if (panel) panel.hidden = !selected;
+  }
 }
 
 function renderLiveObserver(): void {
-  renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  if (liveSessionSummary) {
+    liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
+  }
+  if (livePageUrl) livePageUrl.textContent = liveObserverState.pageUrl;
+  if (liveSourceStatuses) {
+    liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
+      const item = document.createElement("li");
+      item.textContent = `${source.name}: ${source.status}`;
+      return item;
+    }));
+  }
+  if (liveEventFeed) {
+    liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
+      button.addEventListener("click", () => openLiveInspector(event.id));
+      item.append(button);
+      return item;
+    }));
+  }
+  if (liveEventList) liveEventList.hidden = !liveObserverState.listVisible;
+  if (liveEventInspector) liveEventInspector.hidden = !liveObserverState.inspectorEventId;
+  if (backToEventsButton) backToEventsButton.hidden = liveObserverState.listVisible;
 }
 
 function openLiveInspector(eventId: string): void {
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
-  if (event) renderLiveInspector(liveObserverElements, event);
+  if (liveEventInspector && event) {
+    liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
+  }
   renderLiveObserver();
 }
 
 function setLiveSessionMessage(message: string): void {
-  renderLiveSessionMessage(liveObserverElements, message);
+  if (liveSessionMessage) liveSessionMessage.textContent = message;
 }
 
 function renderEventTemplateLibrary(): void {
   const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
-  renderEventLibraryEditor(
-    eventLibraryEditorElements,
-    templates,
-    propertyEditorState,
-    {
-      edit: openTemplateEditor,
-      duplicate: (template) => {
+  if (eventTemplateCount) eventTemplateCount.textContent = `${templates.length} templates`;
+  if (eventTemplateList) {
+    eventTemplateList.replaceChildren(...templates.map((template) => {
+      const item = document.createElement("li");
+      const edit = document.createElement("button");
+      const duplicate = document.createElement("button");
+      const push = document.createElement("button");
+      item.textContent = `${template.name}: ${template.eventName}, ${template.sourceName}, ${template.destination}, ${template.tags.join(", ") || "no tags"}, ${template.schemaId ?? "no schema"}, ${template.validation}, v${template.version}. `;
+      edit.type = duplicate.type = push.type = "button";
+      edit.textContent = "Edit";
+      duplicate.textContent = "Duplicate";
+      push.textContent = "Push";
+      edit.addEventListener("click", () => openTemplateEditor(template));
+      duplicate.addEventListener("click", () => {
         const copy = saveAsTemplateCopy(openPropertyEditor(template), `${template.name} copy`);
         eventTemplates = [...eventTemplates, copy];
         persistEventTemplateLibrary();
         renderEventTemplateLibrary();
-      },
-      push: (template) => {
+      });
+      push.addEventListener("click", () => {
         openTemplateEditor(template);
         pushCurrentTemplateDraft();
-      },
-    },
-  );
+      });
+      item.append(edit, duplicate, push);
+      return item;
+    }));
+  }
+  if (eventPropertyEditor) eventPropertyEditor.hidden = !propertyEditorState;
+  if (eventTemplateJson && propertyEditorState) eventTemplateJson.value = propertyEditorState.jsonDraft;
+  if (eventTemplateValidation) eventTemplateValidation.textContent = propertyEditorState?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
+  if (eventTemplateProperties) eventTemplateProperties.replaceChildren(...(propertyEditorState ? renderDraftProperties(propertyEditorState.draft) : []));
 }
 
 function renderSchemas(): void {
@@ -313,50 +374,20 @@ function persistEventTemplateLibrary(): void {
   localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 
-function renderSequences(): void {
-  renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
-    const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
-      id: template.id,
-      name: template.name,
-      version: template.version,
-      sourceId: template.sourceId,
-      destination: template.destination,
-      payload: template.payload,
-    }));
-    const adapters = liveObserverState.sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      kind: "Data Layer",
-      destination: "event.history",
-      enabled: true,
-      status: source.status,
-      capabilities: ["push"] as const,
-    }));
-    const ready = readiness(sequence, templates, adapters);
-    if (!ready.runnable) {
-      setSequenceReplayResult(
-        sequenceReplayElements,
-        `Not runnable: ${ready.blocked.join(", ")}`,
-      );
-      return;
-    }
-    const record = runSequence(
-      sequence,
-      templates,
-      adapters,
-      liveObserverState.pageUrl,
-      "Run all",
-    );
-    setSequenceReplayResult(
-      sequenceReplayElements,
-      `${record.result}: ${record.steps.length} steps.`,
-    );
-  });
+function renderSequences(): void { if (!sequenceList) return; sequenceList.replaceChildren(...replaySequences.map((sequence) => { const item = document.createElement("li"); const run = document.createElement("button"); run.type = "button"; run.textContent = "Run all"; item.textContent = `${sequence.name}: ${sequence.steps.length} ordered steps. `; run.addEventListener("click", () => { const templates: ReplayTemplate[] = eventTemplates.map((template) => ({ id: template.id, name: template.name, version: template.version, sourceId: template.sourceId, destination: template.destination, payload: template.payload })); const adapters = liveObserverState.sources.map((source) => ({ id: source.id, name: source.name, kind: "Data Layer", destination: "event.history", enabled: true, status: source.status, capabilities: ["push"] as const })); const ready = readiness(sequence, templates, adapters); if (!ready.runnable) { if (sequenceRunResult) sequenceRunResult.textContent = `Not runnable: ${ready.blocked.join(", ")}`; return; } const record = runSequence(sequence, templates, adapters, liveObserverState.pageUrl, "Run all"); if (sequenceRunResult) sequenceRunResult.textContent = `${record.result}: ${record.steps.length} steps.`; }); item.append(run); return item; })); }
+
+function renderDraftProperties(value: unknown, path = ""): HTMLLIElement[] {
+  if (value === null || typeof value !== "object") {
+    const item = document.createElement("li");
+    item.textContent = `${path || "/"}: ${String(value)} (${typeof value})`;
+    return [item];
+  }
+  return Object.entries(value).flatMap(([key, child]) => renderDraftProperties(child, `${path}/${key}`));
 }
+
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
-  setEventLibraryResult(eventLibraryEditorElements,
-                        `Editing ${template.name}; unsaved changes require keep, discard, or save.`);
+  if (eventTemplateResult) eventTemplateResult.textContent = `Editing ${template.name}; unsaved changes require keep, discard, or save.`;
   renderEventTemplateLibrary();
 }
 
@@ -375,8 +406,7 @@ function pushCurrentTemplateDraft(): void {
   }, liveObserverState.pageUrl, (destination, payload) => {
     globalThis.dispatchEvent(new CustomEvent("data-layer-template-push", { detail: { destination, payload } }));
   });
-  setEventLibraryResult(eventLibraryEditorElements,
-                        `${record.activePage}; ${record.adapterId}; ${record.destination}; ${record.result}.`);
+  if (eventTemplateResult) eventTemplateResult.textContent = `${record.activePage}; ${record.adapterId}; ${record.destination}; ${record.result}.`;
 }
 
 function renderSavedSessions(): void {
@@ -1195,7 +1225,7 @@ exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0];
 saveLatestTemplateButton?.addEventListener("click", () => {
   const event = liveObserverState.events.at(-1);
   if (!event) {
-    setEventLibraryResult(eventLibraryEditorElements, "Capture an event before saving a template.");
+    if (eventTemplateResult) eventTemplateResult.textContent = "Capture an event before saving a template.";
     return;
   }
   const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
@@ -1218,7 +1248,7 @@ saveLatestTemplateButton?.addEventListener("click", () => {
   });
   eventTemplates = [...eventTemplates, template];
   persistEventTemplateLibrary();
-  setEventLibraryResult(eventLibraryEditorElements, `Saved ${template.name} to Library.`);
+  if (eventTemplateResult) eventTemplateResult.textContent = `Saved ${template.name} to Library.`;
   renderEventTemplateLibrary();
 });
 
@@ -1234,12 +1264,10 @@ saveTemplateRevisionButton?.addEventListener("click", () => {
     propertyEditorState = saveDraftRevision(propertyEditorState);
     eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
     persistEventTemplateLibrary();
-    setEventLibraryResult(eventLibraryEditorElements,
-                          `Saved ${propertyEditorState.template.name} as version ${propertyEditorState.template.version}.`);
+    if (eventTemplateResult) eventTemplateResult.textContent = `Saved ${propertyEditorState.template.name} as version ${propertyEditorState.template.version}.`;
     renderEventTemplateLibrary();
   } catch (error) {
-    setEventLibraryValidation(eventLibraryEditorElements,
-                              error instanceof Error ? error.message : "Draft is invalid.");
+    if (eventTemplateValidation) eventTemplateValidation.textContent = error instanceof Error ? error.message : "Draft is invalid.";
   }
 });
 
@@ -1249,11 +1277,10 @@ saveTemplateCopyButton?.addEventListener("click", () => {
     const copy = saveAsTemplateCopy(propertyEditorState, `${propertyEditorState.template.name} copy`);
     eventTemplates = [...eventTemplates, copy];
     persistEventTemplateLibrary();
-    setEventLibraryResult(eventLibraryEditorElements, `Saved ${copy.name} as a distinct template.`);
+    if (eventTemplateResult) eventTemplateResult.textContent = `Saved ${copy.name} as a distinct template.`;
     renderEventTemplateLibrary();
   } catch (error) {
-    setEventLibraryValidation(eventLibraryEditorElements,
-                              error instanceof Error ? error.message : "Draft is invalid.");
+    if (eventTemplateValidation) eventTemplateValidation.textContent = error instanceof Error ? error.message : "Draft is invalid.";
   }
 });
 
@@ -1262,7 +1289,7 @@ pushTemplateDraftButton?.addEventListener("click", pushCurrentTemplateDraft);
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;
   propertyEditorState = discardDraft(propertyEditorState);
-  setEventLibraryResult(eventLibraryEditorElements, "Draft discarded.");
+  if (eventTemplateResult) eventTemplateResult.textContent = "Draft discarded.";
   renderEventTemplateLibrary();
 });
 

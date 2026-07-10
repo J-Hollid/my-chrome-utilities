@@ -10,6 +10,7 @@
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.observability-library :as observability-library]
+            [acceptance.steps.operator-interface :as operator-interface]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
@@ -40,6 +41,7 @@
                schema-verification/handlers
                session-boundaries/handlers
                sequence-replay/handlers
+               operator-interface/handlers
                palette/handlers
                package-flow/handlers
                observability-library/handlers)))
