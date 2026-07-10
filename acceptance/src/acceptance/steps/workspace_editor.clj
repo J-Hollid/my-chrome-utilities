@@ -43,9 +43,9 @@
    {:pattern #"^global command controls remain visible outside the workspace tabs$"
     :handler (fn [world _ _]
                (let [world (require-wiring world tabs-wired? "Workspace tabs are not wired.")]
-                 (support/assert! (and (str/includes? (:html world) "id=\"commands\"")
+                 (support/assert! (and (str/includes? (:html world) "id=\"open-palette\"")
                                        (str/includes? (:html world) "id=\"workspace-tabs\""))
-                                "Global command controls are not outside workspace tabs." {}) world))}
+                                "Global command launcher is not outside workspace tabs." {}) world))}
    {:pattern #"^workspace tabs are ordered <([A-Za-z0-9_]+)> then <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [first-key second-key]]
                (let [html (:html world) first-label (command-id example first-key) second-label (command-id example second-key)]
