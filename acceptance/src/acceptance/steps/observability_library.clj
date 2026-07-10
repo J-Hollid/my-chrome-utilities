@@ -21,12 +21,57 @@
    "execution record" {:content-lifecycle "immutable"
                        :execution-behavior "not executable"}})
 
+(def canonical-captured-event
+  {:event-name "pageview"
+   :source-id "event-history-primary"
+   :source-kind "data-layer"})
+
+(def canonical-normalized-inputs
+  #{{:source-id "event-history-primary"
+     :shape "tuple"
+     :event-name "pageview"
+     :payload "pageview-values"}
+    {:source-id "data-layer-primary"
+     :shape "object"
+     :event-name "purchase"
+     :payload "purchase-values"}})
+
+(def canonical-provenance-fixture
+  {:raw-input "purchase-raw"
+   :session-name "Checkout capture"
+   :template-name "Purchase confirmation"})
+
+(def canonical-adapter-capabilities
+  {"data-layer" ["inspect" "save" "validate" "push"]
+   "adobe" ["inspect" "save" "validate"]})
+
+(def canonical-source-times ["10:48:03.000" "10:48:01.000"])
+(def canonical-capture-times ["10:48:01.100" "10:48:03.100"])
+
+(def canonical-queue-sources
+  [{:name "Event history" :destination "event.history"}
+   {:name "GTM dataLayer" :destination "window.dataLayer"}])
+
+(def canonical-observation-adapters ["Data Layer" "Adobe" "GTAG"])
+(def canonical-source-statuses
+  {:failing {:name "Event history" :status "Path missing"}
+   :connected {:name "Adobe beacons" :status "Connected"}})
+(def canonical-filter
+  {:sources ["Event history" "Adobe beacons"]
+   :selected "Adobe beacons"})
+(def canonical-reusable-source
+  {:name "Event history" :adapter "Data Layer" :destination "event.history"})
+(def canonical-added-source
+  {:name "GA4 collect" :adapter "GTAG" :destination "/g/collect endpoint"})
+(def canonical-managed-source "Event history")
+
 (defn observability-library? [source]
   (support/includes-all? source required-library-contract))
 
 (defn- inspect-library [world]
   (let [root (or (:root world) (support/repository-root))
-        source (support/source-file root "src/data-layer-observability.ts")]
+        source (str (support/source-file root "src/data-layer-source.ts") "\n"
+                    (support/source-file root "src/data-layer-observability.ts"))]
     (support/assert! (observability-library? source)
                      "Data layer source foundation is incomplete."
                      {})
@@ -42,10 +87,7 @@
   (support/require-example example key))
 
 (defn- words [text]
-  (->> (str/split text #"\s*(?:,|\band\b)\s*")
-       (map str/trim)
-       (remove str/blank?)
-       vec))
+  (support/split-list text #"\s*(?:,|\band\b)\s*"))
 
 (defn- source-id [name]
   (-> name str/lower-case (str/replace #"[^a-z0-9]+" "-") (str/replace #"(^-|-$)" "")))
@@ -97,13 +139,20 @@
 (def source-foundation-handlers
   [{:pattern #"^source event <([A-Za-z0-9_]+)> is captured from <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [event-key source-key]]
-               (let [world (inspect-library world)
+               (let [event-name (value example event-key)
+                     world (inspect-library world)
                      source-id-value (value example source-key)
                      source-kind (value example "source_kind")
                      source (assoc (source source-id-value source-kind "event.history" "Connected")
                                    :id source-id-value)]
+                 (support/assert! (= canonical-captured-event
+                                     {:event-name event-name
+                                      :source-id source-id-value
+                                      :source-kind source-kind})
+                                  "Captured event fixture no longer represents the canonical source event."
+                                  {})
                  (assoc world :captured-event
-                        (assoc (event 1 source (value example event-key)
+                        (assoc (event 1 source event-name
                                       "2026-07-10T10:48:01.100Z")
                                :source-time "2026-07-10T10:48:03.000Z"))))}
 
@@ -139,11 +188,14 @@
 
    {:pattern #"^source <([A-Za-z0-9_]+)> emits <([A-Za-z0-9_]+)> input with event name <([A-Za-z0-9_]+)> and payload <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key shape-key event-key payload-key]]
-               (assoc (inspect-library world) :adapter-input
-                      {:source-id (value example source-key)
-                       :shape (value example shape-key)
-                       :event-name (value example event-key)
-                       :payload (value example payload-key)}))}
+               (let [input {:source-id (value example source-key)
+                            :shape (value example shape-key)
+                            :event-name (value example event-key)
+                            :payload (value example payload-key)}]
+                 (support/assert! (contains? canonical-normalized-inputs input)
+                                  "Normalized input fixture is not part of the source contract."
+                                  {:input input})
+                 (assoc (inspect-library world) :adapter-input input)))}
 
    {:pattern #"^the input is normalized into a source event$"
     :handler (fn [world _ _]
@@ -172,6 +224,9 @@
    {:pattern #"^a normalized event retains raw input <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [raw-key]]
                (let [raw (value example raw-key)]
+                 (support/assert! (= (:raw-input canonical-provenance-fixture) raw)
+                                  "Raw input fixture is not canonical."
+                                  {:raw-input raw})
                  (assoc (inspect-library world)
                         :captured-event {:id "event-origin"
                                          :session-id "session-origin"
@@ -180,12 +235,19 @@
 
    {:pattern #"^the event is saved in session <([A-Za-z0-9_]+)> and used to create template <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [session-key template-key]]
-               (assoc world
-                      :saved-session {:name (value example session-key)
+               (let [session-name (value example session-key)
+                     template-name (value example template-key)]
+                 (support/assert! (= (select-keys canonical-provenance-fixture
+                                                  [:session-name :template-name])
+                                     {:session-name session-name :template-name template-name})
+                                  "Session/template provenance fixture is not canonical."
+                                  {})
+                 (assoc world
+                      :saved-session {:name session-name
                                       :events [(:captured-event world)]}
-                      :template {:name (value example template-key)
+                      :template {:name template-name
                                  :originating-event-id (get-in world [:captured-event :id])
-                                 :payload (get-in world [:captured-event :payload])}))}
+                                 :payload (get-in world [:captured-event :payload])})))}
 
    {:pattern #"^raw input <([A-Za-z0-9_]+)> in session <([A-Za-z0-9_]+)> remains unchanged$"
     :handler (fn [world example [raw-key session-key]]
@@ -209,6 +271,9 @@
     :handler (fn [world example [kind-key capabilities-key]]
                (let [kind (value example kind-key)
                      capabilities (words (value example capabilities-key))]
+                 (support/assert! (= (get canonical-adapter-capabilities kind) capabilities)
+                                  "Adapter capabilities do not match the source contract."
+                                  {:adapter kind :capabilities capabilities})
                  (assoc (inspect-library world) :adapter
                         (assoc (source kind kind "configured-destination" "Connected")
                                :capabilities capabilities))))}
@@ -234,6 +299,10 @@
     :handler (fn [world example [source-times-key capture-times-key]]
                (let [source-times (words (value example source-times-key))
                      capture-times (words (value example capture-times-key))]
+                 (support/assert! (and (= canonical-source-times source-times)
+                                       (= canonical-capture-times capture-times))
+                                  "Combined-feed timestamp fixture is not canonical."
+                                  {:source-times source-times :capture-times capture-times})
                  (assoc (inspect-library world) :events
                         (mapv (fn [index source-time capture-time]
                                 {:id (str "event-" index)
@@ -286,11 +355,16 @@
 
    {:pattern #"^Data Layer queue sources <([A-Za-z0-9_]+)> at <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> at <([A-Za-z0-9_]+)> are configured$"
     :handler (fn [world example [first-source-key first-path-key second-source-key second-path-key]]
-               (assoc (inspect-library world) :sources
-                      [(source (value example first-source-key) "Data Layer"
-                               (value example first-path-key) "Connected")
-                       (source (value example second-source-key) "Data Layer"
-                               (value example second-path-key) "Connected")]))}
+               (let [configured [{:name (value example first-source-key)
+                                  :destination (value example first-path-key)}
+                                 {:name (value example second-source-key)
+                                  :destination (value example second-path-key)}]]
+                 (support/assert! (= canonical-queue-sources configured)
+                                  "Queue source fixture does not match the observation contract."
+                                  {:sources configured})
+                 (assoc (inspect-library world) :sources
+                        (mapv #(source (:name %) "Data Layer" (:destination %) "Connected")
+                              configured))))}
 
    {:pattern #"^observation starts for the active page$"
     :handler (fn [world _ _]
@@ -319,9 +393,13 @@
 
    {:pattern #"^observation adapters for <([A-Za-z0-9_]+)> are enabled$"
     :handler (fn [world example [kinds-key]]
-               (assoc (inspect-library world) :sources
-                      (mapv #(source % % (str (source-id %) "-destination") "Connected")
-                            (words (value example kinds-key))))) }
+               (let [kinds (words (value example kinds-key))]
+                 (support/assert! (= canonical-observation-adapters kinds)
+                                  "Observation adapter fixture does not match the source contract."
+                                  {:adapters kinds})
+                 (assoc (inspect-library world) :sources
+                        (mapv #(source % % (str (source-id %) "-destination") "Connected")
+                              kinds))))}
 
    {:pattern #"^events are captured from each adapter$"
     :handler (fn [world _ _]
@@ -351,15 +429,25 @@
 
    {:pattern #"^source <([A-Za-z0-9_]+)> has status <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key status-key]]
-               (update (inspect-library world) :sources (fnil conj [])
-                       (source (value example source-key) "Data Layer" "configured"
-                               (value example status-key))))}
+               (let [failing {:name (value example source-key)
+                              :status (value example status-key)}]
+                 (support/assert! (= (:failing canonical-source-statuses) failing)
+                                  "Failing source fixture does not match the recovery contract."
+                                  {:source failing})
+                 (update (inspect-library world) :sources (fnil conj [])
+                         (source (:name failing) "Data Layer" "configured"
+                                 (:status failing))))) }
 
    {:pattern #"^connected source <([A-Za-z0-9_]+)> has status <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key status-key]]
-               (update world :sources (fnil conj [])
-                       (source (value example source-key) "Adobe" "configured"
-                               (value example status-key))))}
+               (let [connected {:name (value example source-key)
+                                :status (value example status-key)}]
+                 (support/assert! (= (:connected canonical-source-statuses) connected)
+                                  "Connected source fixture does not match the recovery contract."
+                                  {:source connected})
+                 (update world :sources (fnil conj [])
+                         (source (:name connected) "Adobe" "configured"
+                                 (:status connected))))) }
 
    {:pattern #"^observation continues$"
     :handler (fn [world _ _]
@@ -384,17 +472,24 @@
 
    {:pattern #"^events from sources <([A-Za-z0-9_]+)> are visible$"
     :handler (fn [world example [source-names-key]]
-               (let [sources (mapv #(source % "Adapter" "configured" "Connected")
-                                   (words (value example source-names-key)))]
+               (let [source-names (words (value example source-names-key))
+                     sources (mapv #(source % "Adapter" "configured" "Connected") source-names)]
+                 (support/assert! (= (:sources canonical-filter) source-names)
+                                  "Filter source fixture does not match the feed contract."
+                                  {:sources source-names})
                  (reduce (fn [state source]
                            (add-captured-event state (:name source) (str (:id source) "-event")))
                          (assoc (inspect-library world) :sources sources) sources)))}
 
    {:pattern #"^the user filters the feed to source <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key]]
-               (assoc world :source-filter (value example source-key)
-                      :visible-events (filterv #(= (value example source-key) (:source-name %))
-                                               (:events world))))}
+               (let [selected (value example source-key)]
+                 (support/assert! (= (:selected canonical-filter) selected)
+                                  "Selected source fixture does not match the feed contract."
+                                  {:selected selected})
+                 (assoc world :source-filter selected
+                        :visible-events (filterv #(= selected (:source-name %))
+                                                 (:events world))))) }
 
    {:pattern #"^only events from <([A-Za-z0-9_]+)> are visible$"
     :handler (fn [world example [source-key]]
@@ -420,9 +515,15 @@
 
    {:pattern #"^source <([A-Za-z0-9_]+)> is configured with adapter <([A-Za-z0-9_]+)> and destination <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key adapter-key destination-key]]
-               (assoc (inspect-library world) :selected-source
-                      (source (value example source-key) (value example adapter-key)
-                              (value example destination-key) "Connected")))}
+               (let [configured {:name (value example source-key)
+                                 :adapter (value example adapter-key)
+                                 :destination (value example destination-key)}]
+                 (support/assert! (= canonical-reusable-source configured)
+                                  "Reusable source fixture does not match the routing contract."
+                                  {:source configured})
+                 (assoc (inspect-library world) :selected-source
+                        (source (:name configured) (:adapter configured)
+                                (:destination configured) "Connected"))))}
 
    {:pattern #"^a reusable event for <([A-Za-z0-9_]+)> is opened$"
     :handler (fn [world example [source-key]]
@@ -462,9 +563,15 @@
 
    {:pattern #"^the user adds source <([A-Za-z0-9_]+)> with adapter <([A-Za-z0-9_]+)> and destination <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [source-key adapter-key destination-key]]
-               (update world :sources conj
-                       (source (value example source-key) (value example adapter-key)
-                               (value example destination-key) "Connected")))}
+               (let [added {:name (value example source-key)
+                            :adapter (value example adapter-key)
+                            :destination (value example destination-key)}]
+                 (support/assert! (= canonical-added-source added)
+                                  "Added source fixture does not match the manager contract."
+                                  {:source added})
+                 (update world :sources conj
+                         (source (:name added) (:adapter added)
+                                 (:destination added) "Connected"))))}
 
    {:pattern #"^source <([A-Za-z0-9_]+)> is available to observe, filter, validate, and configure according to adapter capabilities$"
     :handler (fn [world example [source-key]]
@@ -477,7 +584,11 @@
 
    {:pattern #"^source <([A-Za-z0-9_]+)> has already captured events$"
     :handler (fn [world example [source-key]]
-               (let [source (source (value example source-key) "Data Layer"
+               (let [source-name (value example source-key)
+                     _ (support/assert! (= canonical-managed-source source-name)
+                                        "Managed source fixture does not match the manager contract."
+                                        {:source source-name})
+                     source (source source-name "Data Layer"
                                     "event.history" "Connected")]
                  (add-captured-event (assoc (inspect-library world) :sources [source])
                                      (:name source) "captured-event")))}
@@ -518,3 +629,7 @@
 
 (def handlers
   source-foundation-handlers)
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-10T14:28:27.90184122+02:00", :module-hash "-1907499002", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1936792300"} {:id "def/required-library-contract", :kind "def", :line 5, :end-line nil, :hash "-125943996"} {:id "def/lifecycle-contracts", :kind "def", :line 12, :end-line nil, :hash "2043582087"} {:id "def/canonical-captured-event", :kind "def", :line 24, :end-line nil, :hash "-1503857037"} {:id "def/canonical-normalized-inputs", :kind "def", :line 29, :end-line nil, :hash "-1130134560"} {:id "def/canonical-provenance-fixture", :kind "def", :line 39, :end-line nil, :hash "-1891593639"} {:id "def/canonical-adapter-capabilities", :kind "def", :line 44, :end-line nil, :hash "1563000415"} {:id "def/canonical-source-times", :kind "def", :line 48, :end-line nil, :hash "-1281790755"} {:id "def/canonical-capture-times", :kind "def", :line 49, :end-line nil, :hash "-272046131"} {:id "def/canonical-queue-sources", :kind "def", :line 51, :end-line nil, :hash "254022233"} {:id "def/canonical-observation-adapters", :kind "def", :line 55, :end-line nil, :hash "882066214"} {:id "def/canonical-source-statuses", :kind "def", :line 56, :end-line nil, :hash "-147906546"} {:id "def/canonical-filter", :kind "def", :line 59, :end-line nil, :hash "128685613"} {:id "def/canonical-reusable-source", :kind "def", :line 62, :end-line nil, :hash "11704306"} {:id "def/canonical-added-source", :kind "def", :line 64, :end-line nil, :hash "-1092958663"} {:id "def/canonical-managed-source", :kind "def", :line 66, :end-line nil, :hash "2058889750"} {:id "defn/observability-library?", :kind "defn", :line 68, :end-line nil, :hash "-2061695907"} {:id "defn-/inspect-library", :kind "defn-", :line 71, :end-line nil, :hash "-1002374162"} {:id "defn-/value", :kind "defn-", :line 86, :end-line nil, :hash "1331618860"} {:id "defn-/words", :kind "defn-", :line 89, :end-line nil, :hash "-1981763742"} {:id "defn-/source-id", :kind "defn-", :line 92, :end-line nil, :hash "-1991612144"} {:id "defn-/source", :kind "defn-", :line 95, :end-line nil, :hash "-369001057"} {:id "defn-/event", :kind "defn-", :line 106, :end-line nil, :hash "-818793242"} {:id "defn-/normalize-input", :kind "defn-", :line 121, :end-line nil, :hash "-1431178384"} {:id "defn-/add-captured-event", :kind "defn-", :line 131, :end-line nil, :hash "-641934483"} {:id "def/source-foundation-handlers", :kind "def", :line 139, :end-line nil, :hash "-572805242"} {:id "defn/source-foundation-step-covered?", :kind "defn", :line 625, :end-line nil, :hash "-1009225973"} {:id "def/handlers", :kind "def", :line 630, :end-line nil, :hash "-462853513"}]}
+;; clj-mutate-manifest-end
