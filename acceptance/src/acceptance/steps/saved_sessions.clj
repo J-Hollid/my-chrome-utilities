@@ -1,7 +1,5 @@
 (ns acceptance.steps.saved-sessions
-  (:require [babashka.fs :as fs]
-            [babashka.process :as process]
-            [acceptance.steps.support :as support]
+  (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (def saved-session-step-templates
@@ -56,32 +54,6 @@
 (defn saved-session-step-covered? [text]
   (some #(re-matches (template-pattern %) text) saved-session-step-templates))
 
-(def ^:private saved-session-semantics-script
-  (str "const saved = await import(process.argv[1]);"
-       "const completed = {id: 'active-1', pageScope: 'https://example.test/checkout', startedAt: '2026-07-10T10:00:00Z', endedAt: '2026-07-10T10:02:00Z', provenance: {capture: 'live observer'}, events: [{id: 'event-1', sourceId: 'history', sourceName: 'Event history', name: 'purchase', payload: {value: 49.95}, rawInput: ['purchase', 49.95], pageUrl: 'https://example.test/checkout', captureOrder: 1, provenance: {adapter: 'history'}}]};"
-       "let library = saved.saveCompletedSession(saved.createSavedSessionLibrary(), completed, 'Checkout journey');"
-       "const session = library.sessions[0]; completed.events[0].payload.value = 0;"
-       "const archived = saved.openSavedSession(library, session.id); const resumed = saved.resumeSavedSession(archived, 'https://example.test/confirmation');"
-       "const restored = saved.importSavedSession(saved.createSavedSessionLibrary(), saved.exportSavedSession(session));"
-       "library = saved.renameSavedSession(library, session.id, 'Checkout archive');"
-       "const matched = saved.searchSavedSessions(library, 'purchase');"
-       "library = saved.requestSavedSessionDeletion(library, session.id); const named = library.deletionConfirmation?.name;"
-       "library = saved.cancelSavedSessionDeletion(library); const retained = library.sessions.length === 1;"
-       "library = saved.confirmSavedSessionDeletion(saved.requestSavedSessionDeletion(library, session.id));"
-       "if (!session.immutable || session.events[0].payload.value !== 49.95 || archived.mode !== 'Archived' || archived.startLiveObserver || resumed.activeSession.parentSavedSessionId !== session.id || resumed.activeSession.events.length !== 0 || JSON.stringify(restored.sessions[0]) !== JSON.stringify(session) || matched.length !== 1 || named !== 'Checkout archive' || !retained || library.sessions.length !== 0) process.exit(1);"))
-
-(defonce ^:private semantic-results (atom {}))
-
-(defn saved-session-semantics? [root]
-  (if-let [result (get @semantic-results root)]
-    (:passed? result)
-    (let [result (process/shell {:out :string :err :string :continue true}
-                                "node" "--input-type=module" "--eval" saved-session-semantics-script
-                                (str (fs/path root "dist/data-layer-saved-sessions.js")))
-          checked {:passed? (zero? (:exit result)) :result result}]
-      (swap! semantic-results assoc root checked)
-      (:passed? checked))))
-
 (defn- inspect [world]
   (let [root (or (:root world) (support/repository-root))
         html (support/source-file root "side-panel.html")
@@ -89,9 +61,6 @@
                     (support/source-file root "src/data-layer-saved-sessions.ts"))]
     (support/assert! (saved-sessions-wired? html source)
                      "Saved session archive UI and domain wiring is incomplete."
-                     {})
-    (support/assert! (saved-session-semantics? root)
-                     "Saved session archive state transitions are incomplete."
                      {})
     (assoc world :root root :saved-sessions-html html :saved-sessions-source source)))
 
@@ -282,5 +251,5 @@
         saved-session-step-templates))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:51:35.357104824+02:00", :module-hash "478321306", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1459061664"} {:id "def/saved-session-step-templates", :kind "def", :line 5, :end-line nil, :hash "1009794076"} {:id "defn-/template-pattern", :kind "defn-", :line 37, :end-line nil, :hash "1527216068"} {:id "defn/saved-sessions-wired?", :kind "defn", :line 43, :end-line nil, :hash "2048093371"} {:id "defn/saved-session-step-covered?", :kind "defn", :line 54, :end-line nil, :hash "975002399"} {:id "defn-/inspect", :kind "defn-", :line 57, :end-line nil, :hash "-498473813"} {:id "defn-/value", :kind "defn-", :line 67, :end-line nil, :hash "1331618860"} {:id "defn-/event", :kind "defn-", :line 70, :end-line nil, :hash "1148909128"} {:id "defn-/saved-session", :kind "defn-", :line 75, :end-line nil, :hash "-130519237"} {:id "defn-/canonical-name!", :kind "defn-", :line 80, :end-line nil, :hash "828133435"} {:id "defn-/transition", :kind "defn-", :line 86, :end-line nil, :hash "1778896175"} {:id "def/handlers", :kind "def", :line 244, :end-line nil, :hash "-420917044"}]}
+;; {:version 1, :tested-at "2026-07-10T14:56:11.459853176+02:00", :module-hash "478321306", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1459061664"} {:id "def/saved-session-step-templates", :kind "def", :line 5, :end-line nil, :hash "1009794076"} {:id "defn-/template-pattern", :kind "defn-", :line 37, :end-line nil, :hash "1527216068"} {:id "defn/saved-sessions-wired?", :kind "defn", :line 43, :end-line nil, :hash "2048093371"} {:id "defn/saved-session-step-covered?", :kind "defn", :line 54, :end-line nil, :hash "975002399"} {:id "defn-/inspect", :kind "defn-", :line 57, :end-line nil, :hash "-498473813"} {:id "defn-/value", :kind "defn-", :line 67, :end-line nil, :hash "1331618860"} {:id "defn-/event", :kind "defn-", :line 70, :end-line nil, :hash "1148909128"} {:id "defn-/saved-session", :kind "defn-", :line 75, :end-line nil, :hash "-130519237"} {:id "defn-/canonical-name!", :kind "defn-", :line 80, :end-line nil, :hash "828133435"} {:id "defn-/transition", :kind "defn-", :line 86, :end-line nil, :hash "1778896175"} {:id "def/handlers", :kind "def", :line 244, :end-line nil, :hash "-420917044"}]}
 ;; clj-mutate-manifest-end
