@@ -74,6 +74,27 @@ const saveDataLayerSessionCommand: AppCommand = {
   },
 };
 
+function observationTargetCommand(
+  id:
+    | "data-layer.choose-observation-target"
+    | "data-layer.attach-selected-target"
+    | "data-layer.detach-observation-target",
+  title: string,
+  action: string,
+): AppCommand {
+  return {
+    id,
+    title,
+    description: `${action} in the Data Layer Live view.`,
+    category: "data-layer",
+    run(context: CommandRunContext): void {
+      context.showWorkspace?.("data-layer");
+      context.showDataLayerView?.("Live");
+      context.record({ commandId: id, message: action });
+    },
+  };
+}
+
 function dataLayerViewCommand(
   id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
   title: string,
@@ -114,6 +135,21 @@ const commands: readonly AppCommand[] = [
   startDataLayerTestingCommand,
   endDataLayerTestingCommand,
   saveDataLayerSessionCommand,
+  observationTargetCommand(
+    "data-layer.choose-observation-target",
+    "Choose target",
+    "Choose target",
+  ),
+  observationTargetCommand(
+    "data-layer.attach-selected-target",
+    "Attach selected target",
+    "Attach selected target",
+  ),
+  observationTargetCommand(
+    "data-layer.detach-observation-target",
+    "Detach target",
+    "Detach target",
+  ),
   dataLayerViewCommand("data-layer.show-live", "Show Live"),
   dataLayerViewCommand("data-layer.show-library", "Show Library"),
   dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
