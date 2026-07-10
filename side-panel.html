@@ -21,6 +21,34 @@
       </div>
       <section id="workspace-panel-data-layer" role="tabpanel" aria-labelledby="workspace-tab-data-layer">
       <h2>Data Layer</h2>
+      <div id="data-layer-views" role="tablist" aria-label="Data Layer views">
+        <button id="data-layer-view-live" type="button" role="tab" aria-controls="data-layer-panel-live" aria-selected="true">Live</button>
+        <button id="data-layer-view-library" type="button" role="tab" aria-controls="data-layer-panel-library" aria-selected="false" tabindex="-1">Library</button>
+        <button id="data-layer-view-sessions" type="button" role="tab" aria-controls="data-layer-panel-sessions" aria-selected="false" tabindex="-1">Sessions</button>
+        <button id="data-layer-view-schemas" type="button" role="tab" aria-controls="data-layer-panel-schemas" aria-selected="false" tabindex="-1">Schemas</button>
+      </div>
+      <section id="data-layer-panel-live" role="tabpanel" aria-labelledby="data-layer-view-live">
+        <h3>Live</h3>
+        <header id="live-session-header">
+          <output id="live-session-summary" aria-live="polite">Live: 0 events, 1 source</output>
+          <output id="live-page-url"></output>
+          <button id="pause-capture" type="button">Pause capture</button>
+          <button id="resume-capture" type="button">Resume capture</button>
+          <button id="stop-capture" type="button">Stop</button>
+          <button id="save-live-session" type="button">Save</button>
+          <output id="live-session-message" aria-live="polite"></output>
+        </header>
+        <ul id="live-source-statuses" aria-label="Observation sources"></ul>
+        <section id="live-event-list" aria-label="Observed event feed">
+          <h4>Events</h4>
+          <ul id="live-event-feed"></ul>
+          <button id="back-to-events" type="button" hidden>Back to events</button>
+        </section>
+        <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
+      </section>
+      <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden><h3>Library</h3></section>
+      <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden><h3>Sessions</h3></section>
+      <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden><h3>Schemas</h3></section>
       <section id="data-layer-settings" aria-label="Data layer testing settings">
         <label for="history-path">History array path</label>
         <input id="history-path" type="text" value="queue.history" />
