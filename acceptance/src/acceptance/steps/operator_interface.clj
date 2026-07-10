@@ -6,6 +6,9 @@
 (def feature-files
   ["features/data-layer-library-operator-layout.feature"
    "features/data-layer-live-operator-layout.feature"
+   "features/data-layer-live-inspector-actions.feature"
+   "features/data-layer-live-inspector-layout.feature"
+   "features/data-layer-live-inspector-navigation.feature"
    "features/data-layer-schemas-operator-layout.feature"
    "features/data-layer-sessions-operator-layout.feature"
    "features/side-panel-hotkey-operator-layout.feature"
