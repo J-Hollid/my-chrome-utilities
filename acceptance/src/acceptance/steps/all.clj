@@ -11,6 +11,7 @@
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
+            [acceptance.steps.saved-sessions :as saved-sessions]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.workspace-editor :as workspace-editor]))
@@ -28,6 +29,7 @@
                data-layer-timeline/handlers
                hotkey-keymap/handlers
                workspace-editor/handlers
+               saved-sessions/handlers
                palette/handlers
                package-flow/handlers
                observability-library/handlers)))
