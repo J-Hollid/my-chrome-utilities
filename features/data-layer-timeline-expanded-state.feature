@@ -13,7 +13,8 @@ Feature: Data layer timeline expanded state
 
   # Data layer timeline expanded state 001
   Scenario Outline: Data layer timeline expanded state 001
-    Given pageload <page_url> is expanded in the side panel timeline
+    Given the event feed is grouped by page
+    And pageload <page_url> is expanded in the side panel timeline
     And the expanded pageload uses the canonical page URL
     When observed event <event_name> is recorded for pageload <page_url>
     And the expanded-state event uses the canonical event name

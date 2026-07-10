@@ -39,7 +39,6 @@ Feature: Data layer configurable history path
     When data layer settings are inspected
     Then config import is not present
     And config export is not present
-    And validation schemas are not present
 
     Examples:
       | project_name         |

@@ -70,7 +70,9 @@ Feature: Data layer testing session
   Scenario Outline: Data layer testing session 006
     When data layer testing session features are inspected
     Then a multi-profile session manager is not present
-    And event replay is not present
+    And active session recovery is separate from the saved session library
+    And saved sessions are not executed directly
+    And ordered execution is provided through test sequences
 
     Examples:
       | project_name         | history_path  |
