@@ -132,9 +132,11 @@
        (zero? (get-in entry [:result :Errors] 0))
        (= (:mutation_count entry) (mutation-count-for-scenario mutations (:index entry)))))
 
-(defn- merge-reusable-previous-scenarios [current previous feature level mutations]
+(defn- merge-reusable-previous-scenarios
+  [current previous feature level mutations executed-scenario-indexes]
   (let [existing (set (map :index (:scenarios current)))
-        reusable (remove #(existing (:index %))
+        reusable (remove #(or (existing (:index %))
+                              (executed-scenario-indexes (:index %)))
                          (filter #(manifest-entry-reusable? previous current % level feature mutations)
                                  (:scenarios previous)))]
     (update current :scenarios into reusable)))
@@ -144,8 +146,13 @@
         previous (read-mutation-metadata feature-path)
         cleaned (strip-mutation-metadata content)
         stamp (mutation-hash/sha256 cleaned)
+        executed-scenario-indexes (set (keys (scenario-summaries feature report)))
         manifest (cond-> (new-manifest feature-path feature report implementation-hash mutations)
-                   previous (merge-reusable-previous-scenarios (:manifest previous) feature level mutations))
+                   previous (merge-reusable-previous-scenarios (:manifest previous)
+                                                               feature
+                                                               level
+                                                               mutations
+                                                               executed-scenario-indexes))
         manifest-json (json/generate-string manifest)
         metadata (str (when write-stamp?
                         (str "# mutation-stamp: sha256=" stamp "\n"))
