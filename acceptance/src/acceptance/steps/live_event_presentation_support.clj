@@ -36,5 +36,5 @@
    "Live-event example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T17:44:58.027812226+02:00", :module-hash "-1320254732", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-47281875"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "53034911"} {:id "defn/validate-example!", :kind "defn", :line 29, :end-line nil, :hash "-1464813556"}]}
+;; {:version 1, :tested-at "2026-07-10T17:52:27.526639608+02:00", :module-hash "-1320254732", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-47281875"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "53034911"} {:id "defn/validate-example!", :kind "defn", :line 29, :end-line nil, :hash "-1464813556"}]}
 ;; clj-mutate-manifest-end
