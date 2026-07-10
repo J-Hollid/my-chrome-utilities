@@ -1,4 +1,6 @@
-export type CommandCategory = "demo" | "data-layer";
+import type { WorkspaceTabId } from "./workspace-tabs.js";
+
+export type CommandCategory = "demo" | "data-layer" | "navigation";
 
 export interface CommandRunRecord {
   commandId: string;
@@ -7,6 +9,7 @@ export interface CommandRunRecord {
 
 export interface CommandRunContext {
   record(entry: CommandRunRecord): void;
+  showWorkspace?(tab: WorkspaceTabId): void;
 }
 
 export interface AppCommand {
@@ -56,10 +59,33 @@ const endDataLayerTestingCommand: AppCommand = {
   },
 };
 
+function workspaceNavigationCommand(
+  id: "navigation.show-data-layer" | "navigation.show-hotkeys",
+  title: string,
+  tab: WorkspaceTabId,
+): AppCommand {
+  return {
+    id,
+    title,
+    description: `Shows the ${title.replace("Show ", "")} workspace.`,
+    category: "navigation",
+    run(context: CommandRunContext): void {
+      context.showWorkspace?.(tab);
+      context.record({ commandId: id, message: `${id} ran` });
+    },
+  };
+}
+
 const commands: readonly AppCommand[] = [
   sayHelloCommand,
   startDataLayerTestingCommand,
   endDataLayerTestingCommand,
+  workspaceNavigationCommand(
+    "navigation.show-data-layer",
+    "Show Data Layer",
+    "data-layer",
+  ),
+  workspaceNavigationCommand("navigation.show-hotkeys", "Show Hotkeys", "hotkeys"),
 ];
 
 export function listCommands(): readonly AppCommand[] {

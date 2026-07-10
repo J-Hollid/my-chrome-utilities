@@ -21,7 +21,8 @@
                         [acceptance.data-layer-observer-steps-test]
                         [acceptance.data-layer-timeline-steps-test]
                         [acceptance.data-layer-recovery-steps-test]
-                        [acceptance.data-layer-page-context-steps-test])
+                        [acceptance.data-layer-page-context-steps-test]
+                        [acceptance.workspace-editor-steps-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
@@ -35,15 +36,22 @@
                                                 'acceptance.data-layer-observer-steps-test
                                                 'acceptance.data-layer-timeline-steps-test
                                                 'acceptance.data-layer-recovery-steps-test
-                                                'acceptance.data-layer-page-context-steps-test)]
+                                                'acceptance.data-layer-page-context-steps-test
+                                                'acceptance.workspace-editor-steps-test)]
                      (when (pos? (+ (:fail result) (:error result)))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]
-                            [acceptance.property-test])
+                            [acceptance.property-test]
+                            [babashka.process :as process])
                  :task (let [result (test/run-tests 'acceptance.property-test)]
-                         (when (pos? (+ (:fail result) (:error result)))
-                           (System/exit 1)))}
+                         (let [property-result (process/shell {:out :inherit
+                                                               :err :inherit
+                                                               :continue true}
+                                                              "npm" "run" "test:property:workspace-tabs")]
+                           (when (or (pos? (+ (:fail result) (:error result)))
+                                     (not (zero? (:exit property-result))))
+                             (System/exit 1))))}
   test:hardening {:doc "Run mutation hardening tests."
                   :requires ([clojure.test :as test]
                              [hardening.hotkey-keymap-hardening-test])

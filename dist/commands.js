@@ -34,10 +34,24 @@ const endDataLayerTestingCommand = {
         });
     },
 };
+function workspaceNavigationCommand(id, title, tab) {
+    return {
+        id,
+        title,
+        description: `Shows the ${title.replace("Show ", "")} workspace.`,
+        category: "navigation",
+        run(context) {
+            context.showWorkspace?.(tab);
+            context.record({ commandId: id, message: `${id} ran` });
+        },
+    };
+}
 const commands = [
     sayHelloCommand,
     startDataLayerTestingCommand,
     endDataLayerTestingCommand,
+    workspaceNavigationCommand("navigation.show-data-layer", "Show Data Layer", "data-layer"),
+    workspaceNavigationCommand("navigation.show-hotkeys", "Show Hotkeys", "hotkeys"),
 ];
 export function listCommands() {
     return commands;

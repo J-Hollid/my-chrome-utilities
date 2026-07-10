@@ -10,7 +10,8 @@
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.project-skeleton :as project-skeleton]
-            [acceptance.steps.side-panel :as side-panel]))
+            [acceptance.steps.side-panel :as side-panel]
+            [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
   (vec (concat project-skeleton/handlers
@@ -23,6 +24,7 @@
                data-layer-session/handlers
                data-layer-timeline/handlers
                hotkey-keymap/handlers
+               workspace-editor/handlers
                palette/handlers
                package-flow/handlers)))
 

@@ -48,6 +48,22 @@ export function updateHotkeyKeymap(existing, commands) {
             .sort(),
     };
 }
+export function changeHotkeyBinding(keymap, commandId, sequence) {
+    const normalized = normalizeKeySequence(sequence);
+    const next = {
+        ...keymap,
+        bindings: { ...keymap.bindings, [commandId]: normalized },
+    };
+    const conflict = duplicateSequences(next).find((duplicate) => duplicate.commandIds.includes(commandId));
+    if (conflict) {
+        const conflictingCommandId = conflict.commandIds.find((id) => id !== commandId);
+        return {
+            sequence: normalized,
+            ...(conflictingCommandId ? { conflictingCommandId } : {}),
+        };
+    }
+    return { keymap: next, sequence: normalized };
+}
 export function duplicateSequences(keymap) {
     const sequences = new Map();
     for (const [commandId, binding] of Object.entries(keymap.bindings)) {
