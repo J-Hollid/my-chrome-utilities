@@ -13,8 +13,12 @@
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
+            [acceptance.steps.schema-verification :as schema-verification]
+            [acceptance.steps.session-boundaries :as session-boundaries]
+            [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.side-panel :as side-panel]
+            [acceptance.steps.timeline-presentations :as timeline-presentations]
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
@@ -28,10 +32,14 @@
                data-layer-session/handlers
                live-observer/handlers
                data-layer-timeline/handlers
+               timeline-presentations/handlers
                event-library-editor/handlers
                hotkey-keymap/handlers
                workspace-editor/handlers
                saved-sessions/handlers
+               schema-verification/handlers
+               session-boundaries/handlers
+               sequence-replay/handlers
                palette/handlers
                package-flow/handlers
                observability-library/handlers)))

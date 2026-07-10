@@ -126,6 +126,13 @@ import {
   setEventLibraryResult,
   setEventLibraryValidation,
 } from "./data-layer-event-library-editor-ui.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
+import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
+import {
+  findSequenceReplayElements,
+  renderSequenceReplay,
+  setSequenceReplayResult,
+} from "./data-layer-sequence-replay-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -193,6 +200,14 @@ const {
   pushDraftButton: pushTemplateDraftButton,
   discardDraftButton: discardTemplateDraftButton,
 } = eventLibraryEditorElements;
+const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
+const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
+const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
+const schemaCount = document.querySelector<HTMLElement>("#schema-count");
+const schemaList = document.querySelector<HTMLElement>("#schema-list");
+const schemaResult = document.querySelector<HTMLElement>("#schema-result");
+const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -216,6 +231,8 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let schemas: SchemaDefinition[] = [];
+let replaySequences: ReplaySequence[] = [];
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -279,10 +296,63 @@ function renderEventTemplateLibrary(): void {
   );
 }
 
+function renderSchemas(): void {
+  const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+  if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
+  if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
+    item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+    revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = [...schemas.filter(({ id }) => id !== schema.id), next]; renderSchemas(); });
+    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; renderSchemas(); });
+    remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); renderSchemas(); }); item.append(revise, duplicate, remove); return item;
+  }));
+}
+
 function persistEventTemplateLibrary(): void {
   localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 
+function renderSequences(): void {
+  renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
+    const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      version: template.version,
+      sourceId: template.sourceId,
+      destination: template.destination,
+      payload: template.payload,
+    }));
+    const adapters = liveObserverState.sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: "Data Layer",
+      destination: "event.history",
+      enabled: true,
+      status: source.status,
+      capabilities: ["push"] as const,
+    }));
+    const ready = readiness(sequence, templates, adapters);
+    if (!ready.runnable) {
+      setSequenceReplayResult(
+        sequenceReplayElements,
+        `Not runnable: ${ready.blocked.join(", ")}`,
+      );
+      return;
+    }
+    const record = runSequence(
+      sequence,
+      templates,
+      adapters,
+      liveObserverState.pageUrl,
+      "Run all",
+    );
+    setSequenceReplayResult(
+      sequenceReplayElements,
+      `${record.result}: ${record.steps.length} steps.`,
+    );
+  });
+}
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements,
@@ -319,7 +389,7 @@ function renderSavedSessions(): void {
       const rename = document.createElement("button");
       const exportButton = document.createElement("button");
       const resumeCapture = document.createElement("button");
-      const createSequence = document.createElement("button");
+      const createSequenceButton = document.createElement("button");
       const remove = document.createElement("button");
       open.type = "button";
       open.textContent = `Open ${session.name}`;
@@ -362,12 +432,13 @@ function renderSavedSessions(): void {
         renderLiveObserver();
         showDataLayerView("Live");
       });
-      createSequence.type = "button";
-      createSequence.textContent = "Create sequence";
-      createSequence.addEventListener("click", () => {
-        if (savedSessionConfirmation) {
-          savedSessionConfirmation.textContent = `Create sequence from ${session.name} is ready for the sequence editor.`;
-        }
+      createSequenceButton.type = "button";
+      createSequenceButton.textContent = "Create sequence";
+      createSequenceButton.addEventListener("click", () => {
+        const templates: ReplayTemplate[] = eventTemplates.filter((template) => session.events.some((event) => `template:${event.id}` === template.id)).map((template) => ({ id: template.id, name: template.name, version: template.version, sourceId: template.sourceId, destination: template.destination, payload: template.payload }));
+        replaySequences = [...replaySequences, createSequence(`sequence:${session.id}`, `${session.name} sequence`, session.id, templates)];
+        renderSequences();
+        if (savedSessionConfirmation) savedSessionConfirmation.textContent = `Created sequence from ${session.name}; saved session remains unchanged.`;
       });
       remove.type = "button";
       remove.textContent = "Delete";
@@ -379,7 +450,7 @@ function renderSavedSessions(): void {
       });
       const summary = savedSessionSummary(session);
       item.textContent = `${session.name}: ${summary.captureDate}, ${summary.pageScope}, ${summary.duration}, ${summary.sourceCount} sources, ${summary.eventCount} events, ${summary.validationSummary}. `;
-      item.append(open, rename, exportButton, resumeCapture, createSequence, remove);
+      item.append(open, rename, exportButton, resumeCapture, createSequenceButton, remove);
       return item;
     }));
   }
@@ -1116,6 +1187,10 @@ saveLiveSessionButton?.addEventListener("click", () => {
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+schemaSearch?.addEventListener("input", renderSchemas);
+createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult) schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
+exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
 saveLatestTemplateButton?.addEventListener("click", () => {
   const event = liveObserverState.events.at(-1);
@@ -1335,6 +1410,8 @@ showDataLayerView("Live");
 renderLiveObserver();
 renderSavedSessions();
 renderEventTemplateLibrary();
+renderSchemas();
+renderSequences();
 activateHotkeyFocus();
 
 export {

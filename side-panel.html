@@ -65,6 +65,7 @@
           <button id="discard-template-draft" type="button">Discard draft</button>
         </section>
         <output id="event-template-result" aria-live="polite"></output>
+        <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><output id="sequence-run-result" aria-live="polite"></output></section>
       </section>
       <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
         <h3>Sessions</h3>
@@ -78,7 +79,11 @@
         <button id="cancel-saved-session-delete" type="button" hidden>Cancel deletion</button>
         <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
       </section>
-      <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden><h3>Schemas</h3></section>
+      <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden>
+        <h3>Schemas</h3><label for="schema-search">Search schemas</label><input id="schema-search" type="search" />
+        <button id="create-schema" type="button">Create</button><button id="import-schema" type="button">Import</button><button id="export-schema" type="button">Export</button>
+        <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><output id="schema-result" aria-live="polite"></output>
+      </section>
       <section id="data-layer-settings" aria-label="Data layer testing settings">
         <label for="history-path">History array path</label>
         <input id="history-path" type="text" value="queue.history" />

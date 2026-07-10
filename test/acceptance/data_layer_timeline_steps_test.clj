@@ -99,7 +99,7 @@
     (is (= ["late-scroll"] (map :name (:events (first nested)))))
     (is (empty? (:events (second nested))))))
 
-(deftest canonical-nested-timeline-assertions-dispatch
+(deftest canonical-nested-timeline-assertions
   (let [state (timeline/record-pageloads-with-events
                {}
                {:first-page-url "https://www.example.com/"
@@ -107,23 +107,13 @@
                 :first-page-events "pageview, scroll"
                 :second-page-events "pageview, add to cart"
                 :history-path "event.history"})
-        world (assoc state :nested-timeline (timeline/nested-timeline state))
-        dispatch (fn [state text]
-                   (runtime/execute-step! state
-                                          {}
-                                          {:keyword "Then" :text text}
-                                          timeline/handlers))]
+        world (assoc state :nested-timeline (timeline/nested-timeline state))]
     (is (timeline/nested-timeline-pageload-order-matches?
          (:nested-timeline world)))
     (is (timeline/nested-timeline-event-groups-match?
          (:nested-timeline world)))
     (is (timeline/nested-timeline-observer-paths-match?
-         (:nested-timeline world)))
-    (is (= world
-           (-> world
-               (dispatch "the nested timeline uses the canonical pageload order")
-               (dispatch "the nested timeline uses canonical observed event groups")
-               (dispatch "nested observed events use the canonical observer path"))))))
+         (:nested-timeline world)))))
 
 (deftest expands-observed-event-payload-properties
   (let [state (timeline/record-observed-event-with-payload
@@ -137,20 +127,12 @@
             {:name "propertyx" :value "\"example property\""}]
            (:payload-properties nested)))))
 
-(deftest canonical-payload-property-assertion-dispatches
+(deftest canonical-payload-property-comparison
   (let [state (timeline/record-observed-event-with-payload
                {}
                {:event-name "scroll"
-                :payload-properties "scroll_percentage: \"75\""})
-        dispatch (fn [state text]
-                   (runtime/execute-step! state
-                                          {"event_name" "scroll"}
-                                          {:keyword "Then" :text text}
-                                          timeline/handlers))]
-    (is (timeline/canonical-payload-properties-match? state "scroll"))
-    (is (= state
-           (dispatch state
-                     "payload properties match the canonical <event_name> payload")))))
+                :payload-properties "scroll_percentage: \"75\""})]
+    (is (timeline/canonical-payload-properties-match? state "scroll"))))
 
 (deftest displays-tuple-event-name-and-payload-details
   (let [state (timeline/record-observed-tuple

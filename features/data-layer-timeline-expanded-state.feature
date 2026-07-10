@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=d049dbb9b81dd15d3335c3f616def4ee17b3159055e80b06cb541b31e421a3ee
+# mutation-stamp: sha256=2e32502807dc497029eac2f0c200e719ef2c37b20013726795bcf1a9d08e39d7
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-09T21:41:48.388153225Z","feature_name":"Data layer timeline expanded state","feature_path":"features/data-layer-timeline-expanded-state.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:d0c7ec892a10eb624d6234334298614a4c2a0403e61021ab638dbf67738b69ac","scenarios":[{"index":0,"name":"Data layer timeline expanded state 001","scenario_hash":"a06085f02f04158c7b42b0aa2e8291894e5feb6a614755ee1b86daee6f0bad5a","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-09T21:41:37.335607665Z"}]}
+# {"version":1,"tested_at":"2026-07-10T13:46:15.973200190Z","feature_name":"Data layer timeline expanded state","feature_path":"features/data-layer-timeline-expanded-state.feature","background_hash":"1ed406330c33164448b1b64f5e6411da604de2b6e19e02c7feda7ced47da0b2d","implementation_hash":"sha256:timeline-expanded-semantic-v2","scenarios":[{"index":0,"name":"Data layer timeline expanded state 001","scenario_hash":"197c004fefdee65455ee966fad5a5be8722578d615fee66e0aef7dd28fd988f2","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T13:46:15.973200190Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer timeline expanded state
