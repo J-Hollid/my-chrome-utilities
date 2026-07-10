@@ -1,3 +1,7 @@
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-10T11:44:11.631364843Z","feature_name":"Data layer source-aware event model","feature_path":"features/data-layer-source-aware-event-model.feature","background_hash":"7eff79698fd64e8f9a3868028adc9e1e92c8ecb38c6e280eb613d153d0449040","implementation_hash":"sha256:8ac6b167da2f1f87d86b6a8ca1b27f11d22ad37eea1ef86cb4469632fcb1bf6d","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer source-aware event model
 
   Background:

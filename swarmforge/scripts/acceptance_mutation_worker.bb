@@ -9,16 +9,20 @@
 (defn- now-ns []
   (System/nanoTime))
 
-(defn- command-from-generated-dir [generated-dir]
+(defn- command-from-generated-dir [generated-dir feature-json]
   (let [shell-runner (fs/path generated-dir "run-acceptance.sh")
         bb-runner (fs/path generated-dir "run_acceptance.bb")]
     (cond
-      (fs/executable? shell-runner) (str shell-runner)
-      (fs/regular-file? bb-runner) (str "bb " bb-runner))))
+      (fs/executable? shell-runner) [(str shell-runner) feature-json]
+      (fs/regular-file? bb-runner) ["bb" (str bb-runner) feature-json])))
+
+(defn- command-tokens [command]
+  (str/split (str/trim command) #"\s+"))
 
 (defn- runner-command [job]
-  (or (not-empty (System/getenv "SWARMFORGE_ACCEPTANCE_MUTATION_COMMAND"))
-      (command-from-generated-dir (:generated_dir job))))
+  (if-let [command (not-empty (System/getenv "SWARMFORGE_ACCEPTANCE_MUTATION_COMMAND"))]
+    (conj (vec (command-tokens command)) (:feature_json job))
+    (command-from-generated-dir (:generated_dir job) (:feature_json job))))
 
 (defn- runner-env [job]
   {"ACCEPTANCE_MUTATION_ID" (:id job)
@@ -36,11 +40,12 @@
 (defn- run-job [job]
   (let [started (now-ns)]
     (if-let [command (runner-command job)]
-      (let [result @(process/shell {:continue true
-                                    :out :string
-                                    :err :string
-                                    :extra-env (runner-env job)}
-                                   command)
+      (let [result @(apply process/shell
+                           {:continue true
+                            :out :string
+                            :err :string
+                            :extra-env (runner-env job)}
+                           command)
             exit (:exit result)
             outcome (case exit
                       0 "test_success"
