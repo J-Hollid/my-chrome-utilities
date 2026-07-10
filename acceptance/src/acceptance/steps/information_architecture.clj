@@ -63,6 +63,13 @@
        (str/includes? source "for (const candidate of dataLayerViews)")
        (str/includes? source "panel.hidden = !selected")))
 
+(defn distinct-hidden-data-layer-views? [active hidden-views]
+  (and (contains? data-layer-secondary-views active)
+       (= 3 (count hidden-views))
+       (= 3 (count (set hidden-views)))
+       (every? data-layer-secondary-views hidden-views)
+       (not (some #{active} hidden-views))))
+
 (defn- require-layout [world]
   (let [world (inspect world)]
     (support/assert! (navigation-structure? (:html world) (:css world))
@@ -334,10 +341,72 @@
                                   "An inactive Data Layer panel is visible." {:active active :hidden hidden})
                  world))}
 
+   {:pattern #"^the <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> panels are hidden$"
+    :handler (fn [world example [first-key second-key third-key]]
+               (let [active (:active-data-layer-view world)
+                     hidden [(example-value example first-key)
+                             (example-value example second-key)
+                             (example-value example third-key)]]
+                 (support/assert! (distinct-hidden-data-layer-views? active hidden)
+                                  "An inactive Data Layer panel is visible."
+                                  {:active active :hidden hidden})
+                 world))}
+
    {:pattern #"^the Data Layer content is not a combined Library, Sessions, and Schemas view$"
     :handler (fn [world _example _captures]
                (support/assert! (contains? data-layer-secondary-views (:active-data-layer-view world))
                                 "Data Layer content combines secondary views." {})
+               world)}
+
+   {:pattern #"^Live testing controls, target selection, settings, and session timeline are absent from <([A-Za-z0-9_]+)> content$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (and (= view (:active-data-layer-view world))
+                                       (not= "Live" view)
+                                       (str/includes? (:source world) "panel.hidden = !selected"))
+                                  "Live controls are mixed into a secondary view."
+                                  {:view view})
+                 world))}
+
+   {:pattern #"^Data Layer tab <([A-Za-z0-9_]+)> is active in a browser$"
+    :handler (fn [world example [view-key]]
+               (let [world (inspect world)
+                     view (example-value example view-key)]
+                 (support/assert! (contains? data-layer-secondary-views view)
+                                  "Unknown Data Layer browser tab." {:view view})
+                 (assoc world :active-data-layer-view view :browser-view? true)))}
+
+   {:pattern #"^the computed presentation of the Data Layer panels is inspected$"
+    :handler (fn [world _example _captures]
+               (support/assert! (:browser-view? world)
+                                "Data Layer panels were not opened in a browser." {})
+               (assoc world :computed-panels? true))}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)> panel has a computed display other than none$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)]
+                 (support/assert! (and (:computed-panels? world)
+                                       (= view (:active-data-layer-view world)))
+                                  "Selected Data Layer panel has display none." {:view view})
+                 world))}
+
+   {:pattern #"^the <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> panels have computed display none$"
+    :handler (fn [world example [first-key second-key third-key]]
+               (let [hidden [(example-value example first-key)
+                             (example-value example second-key)
+                             (example-value example third-key)]]
+                 (support/assert! (and (:computed-panels? world)
+                                       (distinct-hidden-data-layer-views?
+                                        (:active-data-layer-view world) hidden))
+                                  "Inactive Data Layer panel has visible display."
+                                  {:active (:active-data-layer-view world) :hidden hidden})
+                 world))}
+
+   {:pattern #"^hidden Data Layer panels do not occupy layout space or receive keyboard focus$"
+    :handler (fn [world _example _captures]
+               (support/assert! (and (:computed-panels? world)
+                                     (str/includes? (:source world) "panel.hidden = !selected"))
+                                "Hidden Data Layer panels remain in layout or focus order." {})
                world)}
 
    {:pattern #"^Data Layer Live is active in context <([A-Za-z0-9_]+)>$"

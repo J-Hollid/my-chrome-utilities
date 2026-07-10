@@ -20,3 +20,9 @@
   (is (information-architecture/data-layer-view-separation?
        "<div id=\"data-layer-views\" role=\"tablist\"></div><section id=\"data-layer-panel-live\"></section><section id=\"data-layer-panel-library\" hidden></section><section id=\"data-layer-panel-sessions\" hidden></section><section id=\"data-layer-panel-schemas\" hidden></section>"
        "for (const candidate of dataLayerViews) { if (panel) panel.hidden = !selected; }")))
+
+(deftest recognizes-three-distinct-hidden-data-layer-views
+  (is (information-architecture/distinct-hidden-data-layer-views?
+       "Library" ["Live" "Sessions" "Schemas"]))
+  (is (not (information-architecture/distinct-hidden-data-layer-views?
+            "Library" ["Live" "Library" "Schemas"]))))
