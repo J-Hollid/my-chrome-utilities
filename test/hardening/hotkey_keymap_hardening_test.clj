@@ -1,17 +1,10 @@
 (ns hardening.hotkey-keymap-hardening-test
-  (:require [acceptance.runtime :as runtime]
-            [acceptance.steps.hotkey-keymap :as hotkey-keymap]
+  (:require [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]))
+            [clojure.test :refer [deftest is]]
+            [hardening.support :as support]))
 
-(defn- dispatch
-  ([world text]
-   (dispatch world {} text))
-  ([world example text]
-   (runtime/execute-step! world
-                          example
-                          {:keyword "Then" :text text}
-                          hotkey-keymap/handlers)))
+(def dispatch (partial support/dispatch hotkey-keymap/handlers))
 
 (deftest hardens-side-panel-and-shortcut-state-transitions
   (let [closed (dispatch {:root "."

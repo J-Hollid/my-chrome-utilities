@@ -46,16 +46,18 @@
                             [babashka.process :as process])
                  :task (let [result (test/run-tests 'acceptance.property-test)]
                          (let [property-result (process/shell {:out :inherit
-                                                               :err :inherit
-                                                               :continue true}
-                                                              "npm" "run" "test:property:workspace-tabs")]
+                                                              :err :inherit
+                                                              :continue true}
+                                                              "npm" "run" "test:property:browser-core")]
                            (when (or (pos? (+ (:fail result) (:error result)))
                                      (not (zero? (:exit property-result))))
                              (System/exit 1))))}
   test:hardening {:doc "Run mutation hardening tests."
                   :requires ([clojure.test :as test]
-                             [hardening.hotkey-keymap-hardening-test])
-                  :task (let [result (test/run-tests 'hardening.hotkey-keymap-hardening-test)]
+                             [hardening.hotkey-keymap-hardening-test]
+                             [hardening.workspace-editor-hardening-test])
+                  :task (let [result (test/run-tests 'hardening.hotkey-keymap-hardening-test
+                                                     'hardening.workspace-editor-hardening-test)]
                           (when (pos? (+ (:fail result) (:error result)))
                             (System/exit 1)))}
   acceptance {:doc "Run the normal APS acceptance pipeline."
