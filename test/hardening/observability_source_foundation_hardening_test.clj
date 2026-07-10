@@ -1,8 +1,6 @@
 (ns hardening.observability-source-foundation-hardening-test
-  (:require [acceptance.runtime :as runtime]
-            [acceptance.steps.all :as steps]
+  (:require [acceptance.steps.all :as steps]
             [acceptance.steps.observability-library :as observability]
-            [aps.json :as aps-json]
             [clojure.test :refer [deftest is testing]]
             [hardening.support :as support]))
 
@@ -13,10 +11,8 @@
 (def dispatch (partial support/dispatch observability/handlers))
 
 (deftest hardens-source-foundation-state-transitions
-  (doseq [path source-foundation-ir-paths]
-    (is (= :passed
-           (:status
-            (runtime/run-feature! (aps-json/read-json-file path) steps/handlers))))))
+  (is (= [:passed :passed]
+         (support/run-features source-foundation-ir-paths steps/handlers))))
 
 (deftest hardens-source-identity-and-capture-sequencing
   (testing "the first captured source event has a stable sequence"

@@ -40,6 +40,22 @@ state = setLiveFilter(state, { kind: "event name", value: "purchase" });
 assert.deepEqual(filteredLiveEvents(state).map(({ id }) => id), ["two"]);
 assert.deepEqual(liveEventWindow({ ...state, filter: undefined }, 1).map(({ id }) => id), ["two"]);
 
+const richEvents = {
+  ...state,
+  events: [
+    { ...state.events[0], sourceName: "Event history", validation: "Valid" },
+    { ...state.events[1], sourceName: "Adobe beacons", validation: "2 issues" },
+  ],
+};
+assert.deepEqual(
+  filteredLiveEvents(setLiveFilter(richEvents, { kind: "source", value: "Adobe beacons" })).map(({ id }) => id),
+  ["two"],
+);
+assert.deepEqual(
+  filteredLiveEvents(setLiveFilter(richEvents, { kind: "validation state", value: "2 issues" })).map(({ id }) => id),
+  ["two"],
+);
+
 state = selectLiveEvent(state, "two", "stacked");
 assert.equal(state.inspectorEventId, "two");
 assert.equal(state.listVisible, false);
