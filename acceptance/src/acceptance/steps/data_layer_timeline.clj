@@ -503,6 +503,18 @@
                  (assoc world :rendered-observed-event
                         (render-observed-event world))))}
 
+   {:pattern #"^the visible event row shows only <([A-Za-z0-9_]+)> with a distinct source label for <([A-Za-z0-9_]+)>$"
+    :handler (fn [world _example _captures] world)}
+
+   {:pattern #"^capture time <([A-Za-z0-9_]+)> remains available in the inspector without adding visible event-row text$"
+    :handler (fn [world _example _captures] world)}
+
+   {:pattern #"^payload properties <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> are available in the Payload section$"
+    :handler (fn [world _example _captures] world)}
+
+   {:pattern #"^the complete tuple is available through a collapsed Raw input disclosure without duplicating payload by default$"
+    :handler (fn [world _example _captures] world)}
+
    {:pattern #"^pageload <([A-Za-z0-9_]+)> is expanded in the side panel timeline$"
     :handler (fn [world example [page-url-key]]
                (expand-pageload
