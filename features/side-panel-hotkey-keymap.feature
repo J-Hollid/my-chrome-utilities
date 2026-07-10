@@ -115,3 +115,14 @@ Feature: Side panel hotkey keymap
     Examples:
       | project_name         | command_id               | sequence | prefix | cancel_key |
       | my-chrome-utilities | data-layer.start-testing | C-c s    | C-c    | Escape     |
+
+  # Side panel hotkey keymap 008
+  Scenario Outline: Side panel hotkey keymap 008
+    Given an existing keymap has <missing_count> missing registered command ids and <obsolete_count> obsolete command ids
+    When the user updates the hotkey keymap file
+    Then the visible keymap update status is Keymap updated: added <missing_count>, removed <obsolete_count>
+
+    Examples:
+      | project_name         | missing_count | obsolete_count |
+      | my-chrome-utilities | 1             | 0              |
+      | my-chrome-utilities | 0             | 1              |
