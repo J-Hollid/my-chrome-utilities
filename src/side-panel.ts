@@ -82,6 +82,13 @@ import {
   type DataLayerView,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
+import {
+  findLiveObserverElements,
+  renderDataLayerView,
+  renderLiveInspector,
+  renderLiveObserverState,
+  renderLiveSessionMessage,
+} from "./data-layer-live-observer-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -123,17 +130,13 @@ const keymapWarning = document.querySelector<HTMLElement>("#keymap-warning");
 const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
-const dataLayerViewList = document.querySelector<HTMLElement>("#data-layer-views");
-const liveSessionSummary = document.querySelector<HTMLElement>("#live-session-summary");
-const livePageUrl = document.querySelector<HTMLElement>("#live-page-url");
-const liveSessionMessage = document.querySelector<HTMLElement>("#live-session-message");
-const liveSourceStatuses = document.querySelector<HTMLElement>("#live-source-statuses");
-const liveEventFeed = document.querySelector<HTMLElement>("#live-event-feed");
-const liveEventList = document.querySelector<HTMLElement>("#live-event-list");
-const liveEventInspector = document.querySelector<HTMLElement>("#live-event-inspector");
-const backToEventsButton = document.querySelector<HTMLButtonElement>("#back-to-events");
-const pauseCaptureButton = document.querySelector<HTMLButtonElement>("#pause-capture");
-const resumeCaptureButton = document.querySelector<HTMLButtonElement>("#resume-capture");
+const liveObserverElements = findLiveObserverElements();
+const {
+  viewList: dataLayerViewList,
+  backToEventsButton,
+  pauseCaptureButton,
+  resumeCaptureButton,
+} = liveObserverElements;
 const allCommands = [...listCommands()];
 
 let visibleCommands: readonly AppCommand[] = allCommands;
@@ -175,63 +178,23 @@ function renderHistoryPath(path: string, fieldValue = path): void {
 function showDataLayerView(view: DataLayerView, focus = false): void {
   liveObserverState = { ...liveObserverState, view };
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-  for (const candidate of dataLayerViews) {
-    const button = document.querySelector<HTMLButtonElement>(
-      `#data-layer-view-${candidate.toLowerCase()}`,
-    );
-    const panel = document.querySelector<HTMLElement>(
-      `#data-layer-panel-${candidate.toLowerCase()}`,
-    );
-    const selected = candidate === view;
-    if (button) {
-      button.setAttribute("aria-selected", String(selected));
-      button.tabIndex = selected ? 0 : -1;
-      if (focus) button.focus();
-    }
-    if (panel) panel.hidden = !selected;
-  }
+  renderDataLayerView(liveObserverElements, view, focus);
 }
 
 function renderLiveObserver(): void {
-  if (liveSessionSummary) {
-    liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
-  }
-  if (livePageUrl) livePageUrl.textContent = liveObserverState.pageUrl;
-  if (liveSourceStatuses) {
-    liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
-      const item = document.createElement("li");
-      item.textContent = `${source.name}: ${source.status}`;
-      return item;
-    }));
-  }
-  if (liveEventFeed) {
-    liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
-      button.addEventListener("click", () => openLiveInspector(event.id));
-      item.append(button);
-      return item;
-    }));
-  }
-  if (liveEventList) liveEventList.hidden = !liveObserverState.listVisible;
-  if (liveEventInspector) liveEventInspector.hidden = !liveObserverState.inspectorEventId;
-  if (backToEventsButton) backToEventsButton.hidden = liveObserverState.listVisible;
+  renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
 }
 
 function openLiveInspector(eventId: string): void {
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
-  if (liveEventInspector && event) {
-    liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
-  }
+  if (event) renderLiveInspector(liveObserverElements, event);
   renderLiveObserver();
 }
 
 function setLiveSessionMessage(message: string): void {
-  if (liveSessionMessage) liveSessionMessage.textContent = message;
+  renderLiveSessionMessage(liveObserverElements, message);
 }
 
 function expandedTimelinePageIndexes(): Set<number> {

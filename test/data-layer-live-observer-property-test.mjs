@@ -53,6 +53,8 @@ for (let sample = 0; sample < 100; sample += 1) {
       id: `event-${sample}-${index}`,
       name: index % 2 === 0 ? "pageview" : "purchase",
       sourceId: sources[index % sources.length].id,
+      sourceName: sources[index % sources.length].name,
+      validation: index % 3 === 0 ? "2 issues" : "Valid",
       captureTime: `2026-01-01T00:00:${String(index).padStart(2, "0")}.000Z`,
     });
   }
@@ -72,6 +74,15 @@ for (let sample = 0; sample < 100; sample += 1) {
   const sourceId = sources[nextInteger(sources.length)].id;
   const filtered = setLiveFilter(state, { kind: "source", value: sourceId });
   assert.ok(filteredLiveEvents(filtered).every((event) => event.sourceId === sourceId));
+  const validationFiltered = setLiveFilter(state, {
+    kind: "validation state",
+    value: "2 issues",
+  });
+  assert.ok(
+    filteredLiveEvents(validationFiltered).every(
+      (event) => event.validation === "2 issues",
+    ),
+  );
   const windowSize = nextInteger(eventCount) + 1;
   assert.deepEqual(
     liveEventWindow(setLiveFilter(state, undefined), windowSize),

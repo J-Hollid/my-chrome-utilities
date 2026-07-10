@@ -34,6 +34,18 @@ const endDataLayerTestingCommand = {
         });
     },
 };
+const saveDataLayerSessionCommand = {
+    id: "data-layer.save-session",
+    title: "Save data layer session",
+    description: "Saves the active data layer testing session.",
+    category: "data-layer",
+    run(context) {
+        context.record({
+            commandId: "data-layer.save-session",
+            message: "data-layer.save-session ran",
+        });
+    },
+};
 function dataLayerViewCommand(id, title) {
     const view = title.replace("Show ", "");
     return {
@@ -64,6 +76,7 @@ const commands = [
     sayHelloCommand,
     startDataLayerTestingCommand,
     endDataLayerTestingCommand,
+    saveDataLayerSessionCommand,
     dataLayerViewCommand("data-layer.show-live", "Show Live"),
     dataLayerViewCommand("data-layer.show-library", "Show Library"),
     dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),

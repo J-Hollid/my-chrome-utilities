@@ -43,11 +43,19 @@ export function filteredLiveEvents(state) {
         return [...state.events];
     const value = state.filter.value.toLowerCase();
     return state.events.filter((event) => {
-        if (state.filter?.kind === "source")
-            return event.sourceId.toLowerCase().includes(value);
+        if (state.filter?.kind === "source") {
+            return `${event.sourceName ?? ""} ${event.sourceId}`
+                .toLowerCase()
+                .includes(value);
+        }
         if (state.filter?.kind === "event name")
             return event.name.toLowerCase().includes(value);
-        return `${event.name} ${event.sourceId}`.toLowerCase().includes(value);
+        if (state.filter?.kind === "validation state") {
+            return event.validation?.toLowerCase().includes(value) ?? false;
+        }
+        return `${event.name} ${event.sourceName ?? ""} ${event.sourceId} ${JSON.stringify(event.keyProperties ?? event.payload ?? "")}`
+            .toLowerCase()
+            .includes(value);
     });
 }
 export function liveEventWindow(state, count) {

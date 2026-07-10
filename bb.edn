@@ -73,11 +73,13 @@
                   :requires ([clojure.test :as test]
                              [hardening.data-layer-timeline-hardening-test]
                              [hardening.hotkey-keymap-hardening-test]
+                             [hardening.live-observer-hardening-test]
                              [hardening.observability-source-foundation-hardening-test]
                              [hardening.project-skeleton-hardening-test]
                              [hardening.workspace-editor-hardening-test])
                   :task (let [result (test/run-tests 'hardening.data-layer-timeline-hardening-test
                                                      'hardening.hotkey-keymap-hardening-test
+                                                     'hardening.live-observer-hardening-test
                                                      'hardening.observability-source-foundation-hardening-test
                                                      'hardening.project-skeleton-hardening-test
                                                      'hardening.workspace-editor-hardening-test)]

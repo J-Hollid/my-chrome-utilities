@@ -11,6 +11,7 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, } from "./data-layer-live-observer-ui.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -38,17 +39,8 @@ const keymapWarning = document.querySelector("#keymap-warning");
 const workspaceTabList = document.querySelector("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector("#hotkey-editor-commands");
-const dataLayerViewList = document.querySelector("#data-layer-views");
-const liveSessionSummary = document.querySelector("#live-session-summary");
-const livePageUrl = document.querySelector("#live-page-url");
-const liveSessionMessage = document.querySelector("#live-session-message");
-const liveSourceStatuses = document.querySelector("#live-source-statuses");
-const liveEventFeed = document.querySelector("#live-event-feed");
-const liveEventList = document.querySelector("#live-event-list");
-const liveEventInspector = document.querySelector("#live-event-inspector");
-const backToEventsButton = document.querySelector("#back-to-events");
-const pauseCaptureButton = document.querySelector("#pause-capture");
-const resumeCaptureButton = document.querySelector("#resume-capture");
+const liveObserverElements = findLiveObserverElements();
+const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, } = liveObserverElements;
 const allCommands = [...listCommands()];
 let visibleCommands = allCommands;
 let selectedIndex = 0;
@@ -83,63 +75,21 @@ function renderHistoryPath(path, fieldValue = path) {
 function showDataLayerView(view, focus = false) {
     liveObserverState = { ...liveObserverState, view };
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
-    for (const candidate of dataLayerViews) {
-        const button = document.querySelector(`#data-layer-view-${candidate.toLowerCase()}`);
-        const panel = document.querySelector(`#data-layer-panel-${candidate.toLowerCase()}`);
-        const selected = candidate === view;
-        if (button) {
-            button.setAttribute("aria-selected", String(selected));
-            button.tabIndex = selected ? 0 : -1;
-            if (focus)
-                button.focus();
-        }
-        if (panel)
-            panel.hidden = !selected;
-    }
+    renderDataLayerView(liveObserverElements, view, focus);
 }
 function renderLiveObserver() {
-    if (liveSessionSummary) {
-        liveSessionSummary.textContent = `${liveObserverState.status}: ${liveObserverState.events.length} events, ${liveObserverState.sources.length} sources`;
-    }
-    if (livePageUrl)
-        livePageUrl.textContent = liveObserverState.pageUrl;
-    if (liveSourceStatuses) {
-        liveSourceStatuses.replaceChildren(...liveObserverState.sources.map((source) => {
-            const item = document.createElement("li");
-            item.textContent = `${source.name}: ${source.status}`;
-            return item;
-        }));
-    }
-    if (liveEventFeed) {
-        liveEventFeed.replaceChildren(...liveObserverState.events.map((event) => {
-            const item = document.createElement("li");
-            const button = document.createElement("button");
-            button.type = "button";
-            button.textContent = `${event.captureTime} | ${event.sourceId} | ${event.name}`;
-            button.addEventListener("click", () => openLiveInspector(event.id));
-            item.append(button);
-            return item;
-        }));
-    }
-    if (liveEventList)
-        liveEventList.hidden = !liveObserverState.listVisible;
-    if (liveEventInspector)
-        liveEventInspector.hidden = !liveObserverState.inspectorEventId;
-    if (backToEventsButton)
-        backToEventsButton.hidden = liveObserverState.listVisible;
+    renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
 }
 function openLiveInspector(eventId) {
     const split = globalThis.innerWidth >= 800;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
-    if (liveEventInspector && event) {
-        liveEventInspector.textContent = `Event ${event.name}; source ${event.sourceId}; captured ${event.captureTime}. Fields, Raw, Validation.`;
-    }
+    if (event)
+        renderLiveInspector(liveObserverElements, event);
     renderLiveObserver();
 }
 function setLiveSessionMessage(message) {
-    if (liveSessionMessage)
-        liveSessionMessage.textContent = message;
+    renderLiveSessionMessage(liveObserverElements, message);
 }
 function expandedTimelinePageIndexes() {
     const expandedIndexes = new Set();
