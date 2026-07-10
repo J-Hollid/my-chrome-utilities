@@ -101,6 +101,7 @@
    {:pattern #"^keymap file controls are grouped under a collapsed <([A-Za-z0-9_]+)> section$"
     :handler (fn [world example [label-key]] (support/assert! (str/includes? (:html world) (str "<summary>" (command-id example label-key) "</summary>")) "Keymap files are not collapsed." {}) world)}
    {:pattern #"^the user searches for <([A-Za-z0-9_]+)>$"
+    :applies? (fn [world] (not (contains? world :sessions)))
     :handler (fn [world example [query-key]] (assoc world :query (command-id example query-key)))}
    {:pattern #"^only commands matching <([A-Za-z0-9_]+)> by title, command id, or key sequence are listed$"
     :handler (fn [world example [query-key]] (support/assert! (and (= (command-id example query-key) (:query world)) (str/includes? (:source world) "command.title} ${command.id}")) "Editor search does not include title, id, and sequence." {}) world)}
@@ -146,5 +147,5 @@
     :handler (fn [world _ _] (dissoc world :pending-sequence))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T12:33:50.452380065+02:00", :module-hash "-1493155185", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1978799929"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-115564348"} {:id "defn/tabs-wired?", :kind "defn", :line 15, :end-line nil, :hash "-1561432839"} {:id "defn/editor-wired?", :kind "defn", :line 23, :end-line nil, :hash "-1153408800"} {:id "defn-/require-wiring", :kind "defn-", :line 30, :end-line nil, :hash "-148584365"} {:id "defn-/command-id", :kind "defn-", :line 35, :end-line nil, :hash "-316749086"} {:id "defn-/sequence", :kind "defn-", :line 36, :end-line nil, :hash "-1899006383"} {:id "def/handlers", :kind "def", :line 38, :end-line nil, :hash "-304905103"}]}
+;; {:version 1, :tested-at "2026-07-10T14:51:24.502274992+02:00", :module-hash "2007445990", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1978799929"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-115564348"} {:id "defn/tabs-wired?", :kind "defn", :line 15, :end-line nil, :hash "-1561432839"} {:id "defn/editor-wired?", :kind "defn", :line 23, :end-line nil, :hash "-1153408800"} {:id "defn-/require-wiring", :kind "defn-", :line 30, :end-line nil, :hash "-148584365"} {:id "defn-/command-id", :kind "defn-", :line 35, :end-line nil, :hash "-316749086"} {:id "defn-/sequence", :kind "defn-", :line 36, :end-line nil, :hash "-1899006383"} {:id "def/handlers", :kind "def", :line 38, :end-line nil, :hash "1868572257"}]}
 ;; clj-mutate-manifest-end
