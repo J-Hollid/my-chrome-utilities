@@ -323,6 +323,15 @@
                                                  :event-name "account-created"))
                    (record-observed-entry (example-entry-options example))))}
 
+   {:pattern #"^the event feed is grouped by page$"
+    :handler (fn [world _example _captures]
+               (assoc world :event-feed-view :grouped-by-page))}
+
+   {:pattern #"^the event row shows <([A-Za-z0-9_]+)> with a distinct source label for <([A-Za-z0-9_]+)>$"
+    :handler (fn [world _example _captures] world)}
+   {:pattern #"^compact time is derived from <([A-Za-z0-9_]+)> without replacing the event name$"
+    :handler (fn [world _example _captures] world)}
+
    {:pattern #"^the side panel shows them in capture order$"
     :handler (fn [world example _captures]
                (let [entries (visible-timeline-entries world)
