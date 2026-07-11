@@ -27,7 +27,7 @@
    "initial_state" #{"Not checked"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
-   "history_path" #{"queue.history"}
+   "history_path" #{"event.history" "queue.history"}
    "push_path" #{"dataLayer" "analytics.queue"}
    "first_push_path" #{"dataLayer"}
    "second_push_path" #{"analytics.queue"}
@@ -37,7 +37,10 @@
    "navigation_key" #{"ArrowDown"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
-   "new_event" #{"checkout"}
+   "new_event" #{"checkout" "purchase"}
+   "existing_events" #{"pageview" "pageview, banner view"}
+   "first_page_events" #{"pageview"}
+   "next_page_events" #{"checkout, purchase"}
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
@@ -46,7 +49,8 @@
    "other_page_title" #{"Documentation"}
    "tab_id" #{"42"}
    "other_tab_id" #{"77"}
-   "page_url" #{"https://shop.example.test/p/"}
+   "page_url" #{"https://example.test/home" "https://shop.example.test/p/"}
+   "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}

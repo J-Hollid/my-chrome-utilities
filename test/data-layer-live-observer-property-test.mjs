@@ -9,6 +9,7 @@ import {
   liveEventWindow,
   pauseCapture,
   recordLiveEvent,
+  resetLiveObserverForSession,
   resumeCapture,
   selectLiveEvent,
   setLiveFilter,
@@ -101,4 +102,11 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(closed.listVisible, true);
   assert.deepEqual(closed.events, selected.events);
   assert.deepEqual(closeLiveInspector(closed), closed);
+
+  const reset = resetLiveObserverForSession(selected);
+  assert.deepEqual(reset.events, []);
+  assert.equal(reset.inspectorEventId, undefined);
+  assert.equal(reset.listVisible, true);
+  assert.equal(reset.pageUrl, selected.pageUrl);
+  assert.deepEqual(reset.sources, selected.sources);
 }
