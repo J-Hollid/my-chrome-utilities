@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=307024d916d88b47c02d68b941ed694455fb24a00b6bb0f8c36b8d3b037eaa3f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-11T01:18:04.369992104Z","feature_name":"Data layer selected target push runtime","feature_path":"features/data-layer-selected-target-push-runtime.feature","background_hash":"b0b2036fff7a6db2d9b3300aecee47865ddb01c5e2b5329230c0ef3d4a7bd16a","implementation_hash":"sha256:selected-target-event-push-v1","scenarios":[{"index":0,"name":"Data layer selected target push runtime 001","scenario_hash":"ee09594df8cf0e3ed3dc09f81448d873952171ea48db6f1e6adfbf7f5b7b57e2","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.369992104Z"},{"index":1,"name":"Data layer selected target push runtime 002","scenario_hash":"ed64b588d622c44718c70536cd2fd76eff9d775afde31e36bc3467777b66ee80","mutation_count":7,"result":{"Total":7,"Killed":7,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.369992104Z"},{"index":2,"name":"Data layer selected target push runtime 003","scenario_hash":"45328029018eedf87f9d5ea59de1581ef6e03366ed85344acacc9924ead67d1d","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.369992104Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer selected target push runtime
 
   Background:
