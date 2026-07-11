@@ -100,12 +100,14 @@
           <label for="push-destination-path">Push destination path</label>
           <input id="push-destination-path" type="text" value="dataLayer" />
           <output id="event-template-validation" aria-live="assertive"></output>
-          <button id="save-template-revision" type="button">Save revision</button>
-          <button id="save-template-copy" type="button">Save as copy</button>
-          <button id="push-template-draft" type="button">Push draft</button>
-          <button id="discard-template-draft" type="button">Discard draft</button>
-          <button id="close-template-editor" type="button">Close editor</button>
-          <button id="back-to-captured-event" type="button">Back to captured event</button>
+          <div id="event-template-actions" aria-label="Template actions">
+            <button id="save-template-revision" type="button">Save revision</button>
+            <button id="save-template-copy" type="button">Save as copy</button>
+            <button id="push-template-draft" type="button">Push draft</button>
+            <button id="discard-template-draft" type="button">Discard draft</button>
+            <button id="close-template-editor" type="button">Close editor</button>
+            <button id="back-to-captured-event" type="button">Back to captured event</button>
+          </div>
         </section>
         <output id="event-template-result" aria-live="polite"></output>
         <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><output id="sequence-run-result" aria-live="polite"></output></section>
