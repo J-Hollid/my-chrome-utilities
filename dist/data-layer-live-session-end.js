@@ -1,7 +1,9 @@
 import { attachedObservationTarget, detachObservationTarget, } from "./data-layer-observation-targets.js";
 import { endDataLayerTestingSession, } from "./data-layer-session.js";
-export function endLiveSession(sessionState, targetState) {
+export function endLiveSession(sessionState, targetState, releaseTarget = () => { }) {
     const releasedTargetId = attachedObservationTarget(targetState)?.id;
+    if (releasedTargetId !== undefined)
+        releaseTarget(releasedTargetId);
     return {
         sessionState: endDataLayerTestingSession(sessionState),
         targetState: detachObservationTarget(targetState),
