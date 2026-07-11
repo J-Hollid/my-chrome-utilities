@@ -30,3 +30,11 @@
 (deftest recognizes-hidden-panel-css-precedence
   (is (information-architecture/hidden-panel-css-wins?
        "#data-layer-panel-library { display:grid; } [role=tabpanel][hidden] { display:none !important; }")))
+
+(deftest recognizes-canonical-live-session-controls
+  (is (information-architecture/contextual-actions?
+       "<section id=\"live-context-actions\"><button id=\"start-data-layer-testing\"></button><button id=\"end-data-layer-testing\"></button><button id=\"choose-observation-target\"></button></section><button id=\"pause-capture\"></button><button id=\"resume-capture\"></button>"
+       "function renderLiveContextActions() {} startTestingButton?.addEventListener(() => {})"))
+  (is (not (information-architecture/contextual-actions?
+            "<section id=\"live-context-actions\"><button id=\"start-data-layer-testing\"></button><button id=\"end-data-layer-testing\"></button><button id=\"choose-observation-target\"></button><button id=\"stop-capture\"></button></section><button id=\"pause-capture\"></button><button id=\"resume-capture\"></button>"
+            "function renderLiveContextActions() {} startTestingButton?.addEventListener(() => {})"))))

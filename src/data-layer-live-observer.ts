@@ -130,5 +130,5 @@ export function closeLiveInspector(state: LiveObserverState): LiveObserverState 
 
 export function resetLiveObserverForSession(state: LiveObserverState): LiveObserverState {
   const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
-  return { ...withoutInspector, events: [], listVisible: true };
+  return { ...withoutInspector, status: "Live", events: [], listVisible: true };
 }

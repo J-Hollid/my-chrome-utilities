@@ -55,7 +55,7 @@
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}
    "primary_action" #{"Push"}
-   "primary_actions" #{"Pause and Stop" "Resume and Stop"}
+   "primary_actions" #{"Pause capture" "Resume capture"}
    "project_name" #{"my-chrome-utilities"}
    "payload_label" #{"pageview-values" "purchase-values"}
    "query" #{"checkout"}
@@ -76,7 +76,9 @@
    "selected_event" #{"banner"}
    "sequence" #{"C-c s"}
    "sequence_name" #{"Purchase journey"}
-   "session_action" #{"Create sequence" "Export"}
+   "session_action" #{"Create sequence" "End testing" "Export" "Start testing"}
+   "capture_action" #{"none" "Pause capture" "Resume capture"}
+   "capture_state" #{"Inactive" "Live" "Paused"}
    "session_actions" #{"Open archived, Resume, Create sequence, Export"}
    "session_name" #{"Checkout journey"}
    "session_state" #{"Live" "Paused"}

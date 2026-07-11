@@ -11,8 +11,6 @@ export interface ObservationTargetElements {
   result: HTMLElement | null;
   chooseButton: HTMLButtonElement | null;
   browseButton: HTMLButtonElement | null;
-  attachButton: HTMLButtonElement | null;
-  detachButton: HTMLButtonElement | null;
   picker: HTMLElement | null;
   closePickerButton: HTMLButtonElement | null;
   sidePanelContent: HTMLElement | null;
@@ -38,8 +36,6 @@ export function findObservationTargetElements(
     result: root.querySelector<HTMLElement>("#observation-target-result"),
     chooseButton: root.querySelector<HTMLButtonElement>("#choose-observation-target"),
     browseButton: root.querySelector<HTMLButtonElement>("#browse-observation-targets"),
-    attachButton: root.querySelector<HTMLButtonElement>("#attach-selected-target"),
-    detachButton: root.querySelector<HTMLButtonElement>("#detach-observation-target"),
     picker: root.querySelector<HTMLElement>("#observation-target-picker"),
     closePickerButton: root.querySelector<HTMLButtonElement>("#close-observation-target-picker"),
     sidePanelContent: root.querySelector<HTMLElement>("#side-panel-content"),
@@ -166,7 +162,7 @@ export function closeDetachTargetConfirmation(
   elements: ObservationTargetElements,
 ): void {
   if (elements.detachConfirmation) elements.detachConfirmation.hidden = true;
-  elements.detachButton?.focus();
+  elements.chooseButton?.focus();
 }
 
 function targetActions(elements: ObservationTargetElements): HTMLButtonElement[] {
