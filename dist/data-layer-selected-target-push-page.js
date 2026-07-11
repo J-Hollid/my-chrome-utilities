@@ -1,4 +1,4 @@
-export function pushPayloadInPage(destination, payload, root = globalThis) {
+export function pushPayloadInPage(destination, eventName, payload, root = globalThis) {
     let value = root;
     for (const segment of destination.split(".")) {
         if (value === null || typeof value !== "object" || !(segment in value)) {
@@ -9,7 +9,7 @@ export function pushPayloadInPage(destination, payload, root = globalThis) {
     if (!Array.isArray(value)) {
         return { success: false, result: `Destination ${destination} cannot accept payload.` };
     }
-    value.push(payload);
+    value.push([eventName, payload]);
     return { success: true };
 }
 //# sourceMappingURL=data-layer-selected-target-push-page.js.map

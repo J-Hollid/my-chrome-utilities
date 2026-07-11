@@ -37,6 +37,7 @@ export async function pushTemplateToSelectedTarget(editor, target, pushToPage) {
         await pushToPage({
             tabId: target.tabId,
             destination,
+            eventName: editor.template.eventName,
             payload: structuredClone(editor.draft),
         });
         return { success: true, result: "Pushed", summary: summary(target, destination, "Pushed") };
