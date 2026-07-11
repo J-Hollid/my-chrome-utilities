@@ -157,6 +157,12 @@ import {
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import {
+  captureInspectorReturn,
+  restoreInspectorReturn,
+  type InspectorReturnSnapshot,
+} from "./data-layer-live-inspector-return.js";
+import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
+import {
   createEditableTemplate,
   discardDraft,
   openPropertyEditor,
@@ -327,6 +333,7 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
   pageUrl: globalThis.location.href,
   sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
+let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
 let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
@@ -723,12 +730,21 @@ function currentLiveSessionSummary() {
 }
 
 function closeInspectorAndReturnToEvents(): void {
+  const returnSnapshot = inspectorReturnSnapshot;
   liveObserverState = closeLiveInspector(liveObserverState);
   renderLiveObserver();
-  liveObserverElements.eventFeed?.querySelector<HTMLButtonElement>("button")?.focus();
+  if (returnSnapshot) {
+    const restored = restoreInspectorReturn(returnSnapshot);
+    restoreInspectorReturnUi(liveObserverElements, restored);
+  }
+  inspectorReturnSnapshot = undefined;
 }
 
 function openLiveInspector(eventId: string): void {
+  inspectorReturnSnapshot = captureInspectorReturn(
+    eventId,
+    liveObserverElements.eventList?.scrollTop ?? 0,
+  );
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);

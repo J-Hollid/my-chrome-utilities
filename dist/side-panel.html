@@ -69,14 +69,13 @@
           <output id="live-session-message" aria-live="polite"></output>
         </header>
         <ul id="live-source-statuses" aria-label="Observation sources"></ul>
-        <section id="live-event-list" aria-label="Observed event feed">
+          <section id="live-event-list" aria-label="Observed event feed">
           <h4>Events</h4>
           <ul id="live-event-feed"></ul>
           <section id="live-events-empty-state" class="panel-empty-state" aria-live="polite"><h5>No events captured yet</h5><p>Start testing to capture events from the selected target.</p></section>
           <section id="live-source-error-state" class="panel-empty-state" aria-live="assertive" hidden><h5>Source connection failed</h5><p>Restart observation to reconnect the source.</p></section>
-          <button id="back-to-events" type="button" hidden>Back to events</button>
         </section>
-        <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
+        <aside id="live-event-inspector" aria-label="Event inspector" hidden><button id="back-to-events" type="button" hidden>Back to events</button></aside>
         <details id="data-layer-settings" aria-label="Data layer testing settings">
           <summary>Settings</summary>
           <section id="observation-target-controls" aria-label="Observation target controls">
