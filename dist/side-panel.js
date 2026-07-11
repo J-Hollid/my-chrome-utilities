@@ -122,6 +122,15 @@ const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
+const createSchemaRuleButton = document.querySelector("#create-schema-rule");
+const schemaRuleEditor = document.querySelector("#schema-rule-editor");
+const schemaRuleName = document.querySelector("#schema-rule-name");
+const saveSchemaRuleButton = document.querySelector("#save-schema-rule");
+const schemaAssignmentEditor = document.querySelector("#schema-assignment-editor");
+const schemaAssignmentSource = document.querySelector("#schema-assignment-source");
+const schemaAssignmentEvent = document.querySelector("#schema-assignment-event");
+const schemaAssignmentPriority = document.querySelector("#schema-assignment-priority");
+const saveSchemaAssignmentButton = document.querySelector("#save-schema-assignment");
 const pushDraftReview = document.querySelector("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
@@ -1658,13 +1667,25 @@ saveSchemaButton?.addEventListener("click", () => {
     if (schemaResult)
         schemaResult.textContent = `Saved ${saved.name} version 1.`;
 });
-createSchemaAssignmentButton?.addEventListener("click", () => {
+createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
+    schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
+saveSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleName?.value.trim() && schemaResult)
+    schemaResult.textContent = `Saved reusable rule ${schemaRuleName.value.trim()}.`; if (schemaRuleEditor)
+    schemaRuleEditor.hidden = true; });
+createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor)
+    schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll: true }); });
+saveSchemaAssignmentButton?.addEventListener("click", () => {
     const schema = schemas[0];
     if (!schema)
         return;
-    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, { sourceId: "event-history", eventName: "page_view", target: "payload", id: `assignment:${candidate.id}`, name: `${candidate.name} automatic`, priority: 10, enabled: true }] } : candidate);
+    const sourceId = schemaAssignmentSource?.value.trim() || "event-history";
+    const eventName = schemaAssignmentEvent?.value.trim() || "page_view";
+    const priority = Number(schemaAssignmentPriority?.value ?? 10);
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, { sourceId, eventName, target: "payload", id: `assignment:${candidate.id}:${eventName}`, name: `${candidate.name} automatic`, priority, enabled: true }] } : candidate);
     persistSchemaLibrary();
     renderSchemas();
+    if (schemaAssignmentEditor)
+        schemaAssignmentEditor.hidden = true;
 });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized)
     return; try {
