@@ -1,4 +1,4 @@
-import { newEventValidation } from "./data-layer-event-library-editor.js";
+import { newEventValidation, templateIdentityValidation } from "./data-layer-event-library-editor.js";
 import { templateActionHierarchy } from "./side-panel-action-hierarchy.js";
 import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 export function findEventLibraryEditorElements(root = document) {
@@ -78,7 +78,7 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         }
         const actionsRow = document.createElement("div");
         actionsRow.className = "event-template-actions";
-        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Rename", () => actions.rename(template), "quiet", template.id, `Rename ${template.name}`), actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
         item.append(identity, routing, attributes, actionsRow);
         return item;
     }));
@@ -86,21 +86,22 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         elements.propertyEditor.hidden = !editor;
     if (elements.editorTitle && editor)
         elements.editorTitle.textContent = editor.isNew ? "New event" : `${editor.template.name} editor`;
-    for (const field of [elements.templateName, elements.eventName, elements.source]) {
+    for (const field of [elements.templateName, elements.eventName])
         if (field)
-            field.disabled = !editor?.isNew;
-    }
+            field.disabled = !editor;
+    if (elements.source)
+        elements.source.disabled = !editor?.isNew;
     if (elements.templateName)
         elements.templateName.value = editor?.template.name ?? "";
     if (elements.eventName)
         elements.eventName.value = editor?.template.eventName ?? "";
     if (elements.source)
         elements.source.value = editor?.template.sourceId ?? "";
-    const newErrors = editor?.isNew ? newEventValidation(editor) : {};
+    const newErrors = editor?.isNew ? newEventValidation(editor) : (editor ? templateIdentityValidation(editor) : {});
     const validationFields = [
         [elements.templateName, newErrors.name],
         [elements.eventName, newErrors.eventName],
-        [elements.source, newErrors.source],
+        [elements.source, editor?.isNew ? newEventValidation(editor).source : undefined],
     ];
     for (const [field, error] of validationFields) {
         if (!field)
@@ -124,6 +125,12 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
             return item;
         })
         : []));
+    const revisionSummary = elements.revisionHistory?.parentElement?.querySelector("summary");
+    if (revisionSummary)
+        revisionSummary.textContent = `Revision history (${editor ? editor.revisions.length + 1 : 0} saved revisions)`;
+    const propertiesSummary = elements.properties?.parentElement?.querySelector("summary");
+    if (propertiesSummary)
+        propertiesSummary.textContent = `Properties (${editor ? "draft properties available" : "no draft properties"})`;
     if (elements.json) {
         elements.json.value = editor?.jsonDraft ?? "";
         const error = editor?.jsonError ?? "";
@@ -144,11 +151,13 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         const hierarchy = templateActionHierarchy(editor);
         if (elements.saveRevisionButton)
             elements.saveRevisionButton.textContent = editor.isNew ? "Save new event" : "Save revision";
-        const error = editor.isNew ? Object.values(newEventValidation(editor))[0] : undefined;
+        const error = Object.values(newErrors)[0];
         applyActionTreatment(elements.saveRevisionButton, error
             ? { variant: "primary", disabled: true, disabledReason: error }
             : hierarchy.saveRevision, "save-template-revision-reason");
-        applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
+        applyActionTreatment(elements.pushDraftButton, error
+            ? { variant: "secondary", disabled: true, disabledReason: error }
+            : hierarchy.pushDraft, "push-template-draft-reason");
         applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
     }
 }

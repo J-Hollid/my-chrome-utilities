@@ -64,6 +64,7 @@ export function openPropertyEditor(template) {
     const draft = clone(template.payload);
     return {
         template: clone(template),
+        savedTemplate: revisionSnapshot(template),
         revisions: (template.revisionHistory ?? []).map(revisionSnapshot),
         draft,
         jsonDraft: json(draft),
@@ -94,6 +95,15 @@ export function setNewEventField(state, field, value) {
         ? { ...state.template, sourceId: value.id, sourceName: value.name }
         : { ...state.template, [field]: value };
     return { ...state, template, dirty: true };
+}
+export function setTemplateIdentity(state, field, value) {
+    return { ...state, template: { ...state.template, [field]: value }, dirty: true };
+}
+export function templateIdentityValidation(state) {
+    return {
+        ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),
+        ...(state.template.eventName.trim() ? {} : { eventName: "Enter an event name" }),
+    };
 }
 export function saveNewEvent(state, createId) {
     const error = Object.values(newEventValidation(state))[0];
@@ -154,7 +164,7 @@ export function saveDraftRevision(state) {
         version: state.template.version + 1,
         revisionHistory: revisions,
     };
-    return { template, revisions, draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
+    return { template, savedTemplate: revisionSnapshot(template), revisions, draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
 }
 export function saveAsTemplateCopy(state, name) {
     if (state.jsonError)
