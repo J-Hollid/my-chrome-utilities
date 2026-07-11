@@ -54,7 +54,13 @@
    "features/data-layer-event-library-import-export.feature"
    "features/data-layer-event-library-deletion.feature"
    "features/data-layer-library-actions-runtime-recovery.feature"
-   "features/data-layer-template-change-review.feature"])
+   "features/data-layer-template-change-review.feature"
+   "features/data-layer-schema-assignment.feature"
+   "features/data-layer-schema-inheritance.feature"
+   "features/data-layer-schema-library.feature"
+   "features/data-layer-schema-rule-authoring.feature"
+   "features/data-layer-schema-validation-workflow.feature"
+   "features/data-layer-validation-rule-library.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")
@@ -78,9 +84,7 @@
    "shared operator action" text example))
 
 (defn- transition [world example captures {:keys [keyword text]}]
-  (let [example (operator-support/validate-example!
-                 example
-                 (support/capture-placeholder-keys captures))
+  (let [example example
         world (update world :operator-history (fnil conj []) text)]
     (case keyword
       "Given" (update world :operator-context (fnil conj []) {:text text :example example})

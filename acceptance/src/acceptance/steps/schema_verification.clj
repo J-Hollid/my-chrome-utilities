@@ -18,7 +18,7 @@
    "events have validation states <validation_states>"
    "the user filters by validation state <selected_state>"
    "only events with validation state <selected_state> are visible"
-   "the session summary reports counts for Valid, Issues, and Not checked"
+   "the session summary reports counts for Valid, Warnings, Issues, Not checked, and Assignment error"
    "event template <template_name> has an editable draft" "the draft changes"
    "validation results refresh against its assigned schema version"
    "validation issues do not mutate or discard the draft"
@@ -124,7 +124,7 @@
     (do (support/assert! (not= "Valid" (:validation-state world)) "Unassigned event is valid." {}) world)
     "events have validation states <validation_states>"
     (let [states (support/split-list (value example "validation_states") #"\s*,\s*")]
-      (assert-value! states ["Valid" "2 issues" "Not checked"] "Validation filter fixture is incorrect.")
+      (assert-value! states ["Valid" "1 warning" "2 issues" "Not checked" "Assignment error"] "Validation filter fixture is incorrect.")
       (assoc world :events (mapv (fn [index state] {:id index :validation state}) (range) states)))
     "the user filters by validation state <selected_state>"
     (let [state (value example "selected_state")]
@@ -136,9 +136,9 @@
                        "Active validation filter is incorrect.")
         (support/assert! (every? #(= (:selected-state world) (:validation %))
                                  (:visible-events world)) "Validation filter leaked events." {}) world)
-    "the session summary reports counts for Valid, Issues, and Not checked"
+    "the session summary reports counts for Valid, Warnings, Issues, Not checked, and Assignment error"
     (do (assert-value! (frequencies (map :validation (:events world)))
-                       {"Valid" 1 "2 issues" 1 "Not checked" 1}
+                       {"Valid" 1 "1 warning" 1 "2 issues" 1 "Not checked" 1 "Assignment error" 1}
                        "Validation summary is incorrect.") world)
     "event template <template_name> has an editable draft"
     (let [name (value example "template_name")]
