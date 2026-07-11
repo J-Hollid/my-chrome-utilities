@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=6a97dfbfd5b9a67d7273e9f9c588384a334b43190e1d2798b0ae3a05b444c61e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-11T00:12:20.962684984Z","feature_name":"Data Layer Live inspector action runtime","feature_path":"features/data-layer-live-inspector-action-runtime.feature","background_hash":"12da915c01085c3aa86081183b92624998ea827a73adaaf10b093082dd34f063","implementation_hash":"sha256:live-inspector-runtime-integration-v1","scenarios":[{"index":2,"name":"Data Layer Live inspector action runtime 003","scenario_hash":"b47a8a17a764eb39be646f3686ad16a5bebd756af2280fd047b550c8a25c62ba","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-11T00:12:20.962684984Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data Layer Live inspector action runtime
 
   Background:
