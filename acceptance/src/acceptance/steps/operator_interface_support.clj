@@ -85,7 +85,8 @@
    "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"
                        "chrome-extension://abcdefghijkl/side-panel.html"}
-   "panel_width" #{"320" "320 CSS px" "320 px" "480 px" "720 px"}
+   "panel_width" #{"320" "320 CSS px" "320 px" "360" "480 px" "520" "720" "720 px"}
+   "metadata_columns" #{"1" "2" "3"}
    "panel_height" #{"640 CSS px"}
    "primary_action" #{"Push" "Choose target" "Start testing"}
    "primary_actions" #{"Pause capture" "Pause capture and End testing" "Resume capture" "Resume capture and End testing"}
