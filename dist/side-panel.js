@@ -13,11 +13,12 @@ import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
-import { createLiveObserverState, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, } from "./data-layer-live-observer-ui.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
+import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createEditableTemplate, discardDraft, executeDraftPush, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -374,12 +375,41 @@ function showDataLayerView(view, focus = false) {
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
 }
+function closeInspectorAndReturnToEvents() {
+    liveObserverState = closeLiveInspector(liveObserverState);
+    renderLiveObserver();
+    liveObserverElements.eventFeed?.querySelector("button")?.focus();
+}
 function openLiveInspector(eventId) {
     const split = globalThis.innerWidth >= 800;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
     if (event)
-        renderLiveInspector(liveObserverElements, event);
+        renderLiveInspector(liveObserverElements, event, createLiveInspectorActions({
+            currentPageUrl: () => liveObserverState.pageUrl,
+            writeClipboard: async (text) => {
+                if (!navigator.clipboard?.writeText) {
+                    throw new Error("Clipboard access is unavailable.");
+                }
+                await navigator.clipboard.writeText(text);
+            },
+            storeTemplate: (template) => {
+                eventTemplates = [...eventTemplates, template];
+                persistEventTemplateLibrary();
+                renderEventTemplateLibrary();
+            },
+            validationState: (selected) => validateEvent({
+                sourceId: selected.sourceId,
+                eventName: selected.name,
+                payload: selected.payload,
+                rawInput: selected.rawInput,
+            }, schemas).state,
+            updateValidation: (selectedId, validation) => {
+                liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === selectedId ? { ...candidate, validation } : candidate) };
+                renderLiveObserver();
+                updateLiveInspectorValidation(liveObserverElements, validation);
+            },
+        }));
     renderLiveObserver();
 }
 function setLiveSessionMessage(message) {
@@ -1202,9 +1232,7 @@ confirmSavedSessionDeleteButton?.addEventListener("click", () => {
     renderSavedSessions();
 });
 backToEventsButton?.addEventListener("click", () => {
-    const { inspectorEventId: _inspectorEventId, ...withoutInspector } = liveObserverState;
-    liveObserverState = { ...withoutInspector, listVisible: true };
-    renderLiveObserver();
+    closeInspectorAndReturnToEvents();
 });
 createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
 updateKeymapButton?.addEventListener("click", updateHotkeyKeymapFile);
@@ -1261,7 +1289,15 @@ confirmDetachTargetButton?.addEventListener("click", () => {
 observationTargetSearch?.addEventListener("input", renderObservationTargetPicker);
 observationTargetSearch?.addEventListener("keydown", (event) => handleObservationTargetSearchKeydown(observationTargetElements, event));
 observationTargetList?.addEventListener("keydown", (event) => handleObservationTargetListKeydown(observationTargetElements, event));
-document.addEventListener("keydown", handleHotkeyKeydown, true);
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && liveObserverState.inspectorEventId) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeInspectorAndReturnToEvents();
+        return;
+    }
+    handleHotkeyKeydown(event);
+}, true);
 if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message) => {
         if (isFocusHotkeysMessage(message)) {

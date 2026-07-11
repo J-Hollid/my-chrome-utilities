@@ -2,7 +2,8 @@
   (:require [acceptance.steps.support :as support]))
 
 (def canonical-example-values
-  {"adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
+  {"action_name" #{"Copy payload" "Save to Library" "Validate"}
+   "adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
    "advanced_section" #{"Keymap files"}
    "animation_behavior" #{"brief" "disabled"}
    "assignment" #{"event.history purchase payload"}
@@ -20,6 +21,7 @@
    "event_action" #{"Save to Library"}
    "event_count" #{"18" "42"}
    "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
+   "external_effect" #{"clipboard contains payload JSON" "event validation state changes" "persisted Library template exists"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
    "initial_state" #{"Not checked"}
@@ -86,5 +88,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T01:54:26.900725972+02:00", :module-hash "171149775", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-2067723136"} {:id "defn/validate-example!", :kind "defn", :line 81, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-11T02:49:08.26201227+02:00", :module-hash "-1339076188", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "461757959"} {:id "defn/validate-example!", :kind "defn", :line 83, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end
