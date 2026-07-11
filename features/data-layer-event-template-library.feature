@@ -22,7 +22,7 @@ Feature: Data layer event template library
 
   # Data layer event template library 002
   Scenario Outline: Data layer event template library 002
-    Given event templates <template_names> are saved
+    Given Library inventory includes <template_names>
     When the user searches and filters by <query>
     Then only templates matching <query> by friendly name, event name, source, destination, tag, schema, or property are listed
     And the filtered template count is shown
@@ -33,7 +33,7 @@ Feature: Data layer event template library
 
   # Data layer event template library 003
   Scenario Outline: Data layer event template library 003
-    Given event template <template_name> is saved
+    Given Library record <template_name> exists
     When template <template_name> is shown in the Library
     Then it shows friendly name, event name, source adapter, destination, tags, schema assignment, validation state, and version
     And visible actions offer Edit, Duplicate, and Push when supported by the source adapter
@@ -58,8 +58,8 @@ Feature: Data layer event template library
 
   # Data layer event template library 005
   Scenario Outline: Data layer event template library 005
-    Given event template <template_name> has version <version>
-    When the user duplicates it as <copy_name>
+    Given revision <version> of <template_name> exists
+    When the user reviews and confirms duplicate name <copy_name>
     Then a distinct template named <copy_name> is created with the same payload and destination
     And edits to <copy_name> do not change <template_name> version <version>
 

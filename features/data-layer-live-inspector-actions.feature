@@ -7,7 +7,7 @@ Feature: Data Layer Live inspector actions
 
   # Data Layer Live inspector actions 001
   Scenario Outline: Data Layer Live inspector actions 001
-    Given captured event <event_name> with payload <payload_label> is selected in the Live inspector
+    Given Live inspector selection has event <event_name> and payload <payload_label>
     When Copy payload is activated
     Then canonical JSON for <payload_label> is written to the system clipboard
     And success feedback appears only after the clipboard write succeeds
@@ -19,7 +19,7 @@ Feature: Data Layer Live inspector actions
 
   # Data Layer Live inspector actions 002
   Scenario Outline: Data Layer Live inspector actions 002
-    Given captured event <event_name> from <source_name> with destination <destination> and payload <payload_label> is selected
+    Given selected capture details are <event_name>, <source_name>, <destination>, and <payload_label>
     When Save to Library is activated
     Then exactly one editable event template is created from <event_name>, <source_name>, <destination>, and <payload_label>
     And the saved template is visible and persisted in the Library view
@@ -48,7 +48,7 @@ Feature: Data Layer Live inspector actions
   Scenario Outline: Data Layer Live inspector actions 004
     Given captured event <event_name> has no compatible assigned schema
     When its inspector actions are displayed
-    Then Validate is absent or disabled with an explanation
+    Then Validate is disabled with explanation Select a schema to validate
     And activating inspector actions cannot report validation completed without running validation
 
     Examples:
