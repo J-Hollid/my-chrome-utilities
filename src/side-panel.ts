@@ -107,6 +107,7 @@ import {
   dataLayerViews,
   pauseCapture,
   recordLiveEvent,
+  resetLiveObserverForSession,
   resumeCapture,
   selectLiveEvent,
   updateLiveSourceStatus,
@@ -564,6 +565,7 @@ async function attachSelectedTarget(): Promise<void> {
     targetOrigin: target.origin,
     historyPath: getHistoryArrayPath(),
   });
+  liveObserverState = resetLiveObserverForSession(liveObserverState);
   dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: target.pageUrl });
   dataLayerObserverState = attachHistoryArrayObserver({
     pageObject: dataLayerObserverState.pageObject,
