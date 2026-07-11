@@ -362,6 +362,17 @@ function renderLiveContextActions(): void {
     },
     { activeSession, captureStatus: liveObserverState.status },
   );
+  if (startTestingButton) {
+    const ready = selectedTarget?.accessState === "Ready";
+    startTestingButton.disabled = !activeSession && !ready;
+    startTestingButton.textContent = ready && selectedTarget
+      ? `Start testing ${selectedTarget.title}`
+      : "Start testing";
+    startTestingButton.setAttribute(
+      "aria-description",
+      ready ? "Starts testing with the selected ready target." : "Choose a ready target before starting",
+    );
+  }
   if (chooseObservationTargetButton) chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
 }
 
