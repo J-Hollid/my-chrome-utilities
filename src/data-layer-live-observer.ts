@@ -127,3 +127,8 @@ export function closeLiveInspector(state: LiveObserverState): LiveObserverState 
   const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
   return { ...withoutInspector, listVisible: true };
 }
+
+export function resetLiveObserverForSession(state: LiveObserverState): LiveObserverState {
+  const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
+  return { ...withoutInspector, events: [], listVisible: true };
+}

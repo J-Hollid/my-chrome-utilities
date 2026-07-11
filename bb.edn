@@ -63,6 +63,10 @@
                                                       :err :inherit
                                                       :continue true}
                                                       "npm" "run" "test:unit:source-foundation")
+                         session-result (process/shell {:out :inherit
+                                                       :err :inherit
+                                                       :continue true}
+                                                      "npm" "run" "test:unit:data-layer-session")
                          live-result (process/shell {:out :inherit
                                                      :err :inherit
                                                      :continue true}
@@ -97,6 +101,7 @@
                                                        "npm" "run" "test:unit:command-palette")]
                      (when (or (pos? (+ (:fail result) (:error result)))
                                (not (zero? (:exit source-result)))
+                               (not (zero? (:exit session-result)))
                                (not (zero? (:exit live-result)))
                                (not (zero? (:exit presentation-result)))
                                (not (zero? (:exit target-result)))
