@@ -14,10 +14,11 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { liveSessionControls } from "./data-layer-live-session-controls.js";
+import { createLiveSessionSummary } from "./data-layer-live-session-summary.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionSummary, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
@@ -54,7 +55,7 @@ const workspaceTabList = document.querySelector("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector("#hotkey-editor-commands");
 const liveObserverElements = findLiveObserverElements();
-const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, } = liveObserverElements;
+const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, copyPageUrlButton, } = liveObserverElements;
 const saveLiveSessionButton = document.querySelector("#save-live-session");
 const savedSessionSearch = document.querySelector("#saved-session-search");
 const importSavedSessionButton = document.querySelector("#import-saved-session");
@@ -392,7 +393,23 @@ function showDataLayerView(view, focus = false) {
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    renderLiveSessionSummary(liveObserverElements, currentLiveSessionSummary());
     renderLiveContextActions();
+}
+function currentLiveSessionSummary() {
+    const session = dataLayerSessionState.session;
+    const target = attachedObservationTarget(observationTargetState)
+        ?? selectedObservationTarget(observationTargetState);
+    return createLiveSessionSummary({
+        testingState: session?.status === "active"
+            ? (liveObserverState.status === "Paused" ? "Paused" : "Active")
+            : "Detached",
+        targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
+        pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
+        observerPath: session?.historyPath ?? getHistoryArrayPath(),
+        capturedEventCount: liveObserverState.events.length,
+        connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
+    });
 }
 function closeInspectorAndReturnToEvents() {
     liveObserverState = closeLiveInspector(liveObserverState);
@@ -433,6 +450,18 @@ function openLiveInspector(eventId) {
 }
 function setLiveSessionMessage(message) {
     renderLiveSessionMessage(liveObserverElements, message);
+}
+async function copyLivePageUrl() {
+    const pageUrl = currentLiveSessionSummary().pageUrl;
+    if (!pageUrl || !navigator.clipboard?.writeText)
+        return;
+    try {
+        await navigator.clipboard.writeText(pageUrl);
+        setLiveSessionMessage("Page URL copied");
+    }
+    catch {
+        setLiveSessionMessage("Page URL could not be copied");
+    }
 }
 function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
@@ -1120,6 +1149,9 @@ resumeCaptureButton?.addEventListener("click", () => {
     liveObserverState = resumeCapture(liveObserverState);
     setLiveSessionMessage("Capture resumed");
     renderLiveObserver();
+});
+copyPageUrlButton?.addEventListener("click", () => {
+    void copyLivePageUrl();
 });
 saveLiveSessionButton?.addEventListener("click", () => {
     const completed = {

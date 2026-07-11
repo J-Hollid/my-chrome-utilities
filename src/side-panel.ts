@@ -93,6 +93,7 @@ import {
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { liveSessionControls } from "./data-layer-live-session-controls.js";
+import { createLiveSessionSummary } from "./data-layer-live-session-summary.js";
 import {
   nestedTimeline,
   timelineEventHeading,
@@ -135,6 +136,7 @@ import {
   renderDataLayerView,
   renderLiveInspector,
   renderLiveObserverState,
+  renderLiveSessionSummary,
   renderLiveSessionMessage,
   updateLiveInspectorValidation,
 } from "./data-layer-live-observer-ui.js";
@@ -232,6 +234,7 @@ const {
   backToEventsButton,
   pauseCaptureButton,
   resumeCaptureButton,
+  copyPageUrlButton,
 } = liveObserverElements;
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const savedSessionSearch = document.querySelector<HTMLInputElement>("#saved-session-search");
@@ -633,7 +636,24 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
 
 function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  renderLiveSessionSummary(liveObserverElements, currentLiveSessionSummary());
   renderLiveContextActions();
+}
+
+function currentLiveSessionSummary() {
+  const session = dataLayerSessionState.session;
+  const target = attachedObservationTarget(observationTargetState)
+    ?? selectedObservationTarget(observationTargetState);
+  return createLiveSessionSummary({
+    testingState: session?.status === "active"
+      ? (liveObserverState.status === "Paused" ? "Paused" : "Active")
+      : "Detached",
+    targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
+    pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
+    observerPath: session?.historyPath ?? getHistoryArrayPath(),
+    capturedEventCount: liveObserverState.events.length,
+    connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
+  });
 }
 
 function closeInspectorAndReturnToEvents(): void {
@@ -677,6 +697,17 @@ function openLiveInspector(eventId: string): void {
 
 function setLiveSessionMessage(message: string): void {
   renderLiveSessionMessage(liveObserverElements, message);
+}
+
+async function copyLivePageUrl(): Promise<void> {
+  const pageUrl = currentLiveSessionSummary().pageUrl;
+  if (!pageUrl || !navigator.clipboard?.writeText) return;
+  try {
+    await navigator.clipboard.writeText(pageUrl);
+    setLiveSessionMessage("Page URL copied");
+  } catch {
+    setLiveSessionMessage("Page URL could not be copied");
+  }
 }
 
 function renderEventTemplateLibrary(): void {
@@ -1547,6 +1578,10 @@ resumeCaptureButton?.addEventListener("click", () => {
   liveObserverState = resumeCapture(liveObserverState);
   setLiveSessionMessage("Capture resumed");
   renderLiveObserver();
+});
+
+copyPageUrlButton?.addEventListener("click", () => {
+  void copyLivePageUrl();
 });
 
 saveLiveSessionButton?.addEventListener("click", () => {

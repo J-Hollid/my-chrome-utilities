@@ -4,6 +4,7 @@ import {
   type LiveEvent,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
+import type { LiveSessionSummary } from "./data-layer-live-session-summary.js";
 import {
   runLiveInspectorAction,
   type LiveInspectorActions,
@@ -11,8 +12,13 @@ import {
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
-  sessionSummary: HTMLElement | null;
+  sessionStatus: HTMLElement | null;
+  targetPage: HTMLElement | null;
   pageUrl: HTMLElement | null;
+  observerPath: HTMLElement | null;
+  capturedEventCount: HTMLElement | null;
+  connectedSourceCount: HTMLElement | null;
+  copyPageUrlButton: HTMLButtonElement | null;
   sessionMessage: HTMLElement | null;
   sourceStatuses: HTMLElement | null;
   eventFeed: HTMLElement | null;
@@ -28,8 +34,13 @@ export function findLiveObserverElements(
 ): LiveObserverElements {
   return {
     viewList: root.querySelector<HTMLElement>("#data-layer-views"),
-    sessionSummary: root.querySelector<HTMLElement>("#live-session-summary"),
+    sessionStatus: root.querySelector<HTMLElement>("#live-session-status"),
+    targetPage: root.querySelector<HTMLElement>("#live-target-page"),
     pageUrl: root.querySelector<HTMLElement>("#live-page-url"),
+    observerPath: root.querySelector<HTMLElement>("#live-observer-path"),
+    capturedEventCount: root.querySelector<HTMLElement>("#live-captured-event-count"),
+    connectedSourceCount: root.querySelector<HTMLElement>("#live-connected-source-count"),
+    copyPageUrlButton: root.querySelector<HTMLButtonElement>("#copy-live-page-url"),
     sessionMessage: root.querySelector<HTMLElement>("#live-session-message"),
     sourceStatuses: root.querySelector<HTMLElement>("#live-source-statuses"),
     eventFeed: root.querySelector<HTMLElement>("#live-event-feed"),
@@ -88,10 +99,6 @@ export function renderLiveObserverState(
   state: LiveObserverState,
   openEvent: (eventId: string) => void,
 ): void {
-  if (elements.sessionSummary) {
-    elements.sessionSummary.textContent = `${state.status}: ${state.events.length} events, ${state.sources.length} sources`;
-  }
-  if (elements.pageUrl) elements.pageUrl.textContent = state.pageUrl;
   if (elements.sourceStatuses) {
     elements.sourceStatuses.replaceChildren(
       ...state.sources.map((source) => {
@@ -115,6 +122,22 @@ export function renderLiveObserverState(
   if (elements.backToEventsButton) {
     elements.backToEventsButton.hidden = state.listVisible;
   }
+}
+
+export function renderLiveSessionSummary(
+  elements: LiveObserverElements,
+  summary: LiveSessionSummary,
+): void {
+  if (elements.sessionStatus) {
+    elements.sessionStatus.textContent = summary.statusLabel;
+    elements.sessionStatus.dataset.status = summary.statusLabel.toLowerCase();
+  }
+  if (elements.targetPage) elements.targetPage.textContent = summary.targetPage;
+  if (elements.pageUrl) elements.pageUrl.textContent = summary.pageUrl;
+  if (elements.observerPath) elements.observerPath.textContent = summary.observerPath;
+  if (elements.capturedEventCount) elements.capturedEventCount.textContent = String(summary.capturedEventCount);
+  if (elements.connectedSourceCount) elements.connectedSourceCount.textContent = String(summary.connectedSourceCount);
+  if (elements.copyPageUrlButton) elements.copyPageUrlButton.disabled = summary.pageUrl.length === 0;
 }
 
 export function renderLiveInspector(
