@@ -1,8 +1,10 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
+import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 export function findLiveObserverElements(root = document) {
     return {
+        livePanel: root.querySelector("#data-layer-panel-live"),
         viewList: root.querySelector("#data-layer-views"),
         sessionMessage: root.querySelector("#live-session-message"),
         sourceStatuses: root.querySelector("#live-source-statuses"),
@@ -47,6 +49,7 @@ function eventRow(event, selected, openEvent) {
     return item;
 }
 export function renderLiveObserverState(elements, state, openEvent) {
+    elements.livePanel?.setAttribute("data-live-layout", liveResponsiveLayout(state, globalThis.innerWidth));
     if (elements.sourceStatuses) {
         elements.sourceStatuses.replaceChildren(...state.sources.map((source) => {
             const item = document.createElement("li");

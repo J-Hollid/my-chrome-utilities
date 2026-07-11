@@ -179,6 +179,9 @@
    "new_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
+   "selection_state" #{"none" "purchase"}
+   "active_pane" #{"event feed" "event inspector"}
+   "inactive_pane" #{"event feed" "event inspector"}
    "sequence" #{"C-c s"}
    "sequence_name" #{"Purchase journey"}
    "session_action" #{"Create sequence" "End testing" "Export" "Start testing"}
