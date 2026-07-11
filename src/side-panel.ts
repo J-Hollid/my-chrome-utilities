@@ -313,7 +313,7 @@ if (app) {
   app.textContent = PROJECT_NAME;
 }
 
-function renderHistoryPath(path: string, fieldValue = path): void {
+function renderHistoryPath(path: string, fieldValue = path, status = "Checking target…"): void {
   if (historyPathInput) {
     historyPathInput.value = fieldValue;
   }
@@ -323,7 +323,7 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 
   if (historyPathStatus) {
-    historyPathStatus.textContent = pathStatus(samplePageObject(), path);
+    historyPathStatus.textContent = status;
   }
 }
 
@@ -1746,6 +1746,13 @@ historyPathInput?.addEventListener("input", () => {
   renderHistoryPath(path, typedPath);
   void currentTargetObservation(path).then((observation) => {
     if (!observation) return;
+    renderHistoryPath(
+      path,
+      typedPath,
+      observation.pageAccessStatus === "page access available"
+        ? pathStatus(observation.pageObject, path)
+        : "page access unavailable",
+    );
     dataLayerObserverState = attachHistoryArrayObserver(
       dataLayerObserverState,
       observation,
