@@ -13,6 +13,7 @@ import {
   updateObservationTargetAccess,
 } from "../dist/data-layer-observation-targets.js";
 import { findCommand, runCommandById } from "../dist/commands.js";
+import { closeObservationTargetPicker, showObservationTargetPicker } from "../dist/data-layer-observation-targets-ui.js";
 
 const checkout = createObservationTarget({
   tabId: 42,
@@ -70,5 +71,21 @@ for (const [id, action] of [
 }
 assert.equal(commandEvents.filter(({ tab }) => tab === "data-layer").length, 3);
 assert.equal(commandEvents.filter(({ view }) => view === "Live").length, 3);
+
+const calls = [];
+const picker = { hidden: true };
+const elements = {
+  picker,
+  sidePanelContent: { setAttribute: (...args) => calls.push(["set", ...args]), removeAttribute: (...args) => calls.push(["remove", ...args]) },
+  search: { focus: () => calls.push(["search-focus"]) },
+  browseButton: { focus: () => calls.push(["browse-focus"]) },
+};
+showObservationTargetPicker(elements);
+assert.equal(picker.hidden, false);
+assert.deepEqual(calls, [["set", "inert", ""], ["search-focus"]]);
+closeObservationTargetPicker(elements);
+assert.equal(picker.hidden, true);
+assert.deepEqual(calls.at(-2), ["remove", "inert"]);
+assert.deepEqual(calls.at(-1), ["browse-focus"]);
 
 console.log("observation target unit tests passed");

@@ -34,13 +34,15 @@
    "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
+   "navigation_key" #{"ArrowDown"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
    "new_event" #{"checkout"}
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
-   "page_title" #{"Shop"}
+   "page_title" #{"Checkout" "Shop"}
+   "page_titles" #{"Home, Checkout, Purchase"}
    "other_page_title" #{"Documentation"}
    "tab_id" #{"42"}
    "other_tab_id" #{"77"}
@@ -53,6 +55,9 @@
    "project_name" #{"my-chrome-utilities"}
    "payload_label" #{"pageview-values" "purchase-values"}
    "query" #{"checkout"}
+   "tab_count" #{"12"}
+   "selection_input" #{"Enter" "Select button"}
+   "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Import session" "Restart observation" "Start observation"}
