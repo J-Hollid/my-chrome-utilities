@@ -92,7 +92,7 @@ import {
   type DataLayerSessionState,
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
-import { liveSessionControls } from "./data-layer-live-session-controls.js";
+import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import {
   nestedTimeline,
   timelineEventHeading,
@@ -346,16 +346,16 @@ function renderObservationTargetContext(): void {
 function renderLiveContextActions(): void {
   const activeSession = dataLayerSessionState.session?.status === "active";
   const selectedTarget = selectedObservationTarget(observationTargetState);
-  const controls = liveSessionControls({
-    activeSession,
-    captureStatus: liveObserverState.status,
-  });
-
-  if (startTestingButton) startTestingButton.hidden = controls.sessionAction !== "Start testing";
-  if (endTestingButton) endTestingButton.hidden = controls.sessionAction !== "End testing";
+  renderLiveSessionControls(
+    {
+      startTestingButton,
+      endTestingButton,
+      pauseCaptureButton,
+      resumeCaptureButton,
+    },
+    { activeSession, captureStatus: liveObserverState.status },
+  );
   if (chooseObservationTargetButton) chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
-  if (pauseCaptureButton) pauseCaptureButton.hidden = controls.captureAction !== "Pause capture";
-  if (resumeCaptureButton) resumeCaptureButton.hidden = controls.captureAction !== "Resume capture";
 }
 
 function targetFromTab(

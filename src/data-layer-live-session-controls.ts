@@ -1,8 +1,8 @@
-export type LiveCaptureStatus = "Live" | "Paused";
+import type { LiveStatus } from "./data-layer-live-observer.js";
 
 export interface LiveSessionControlState {
   activeSession: boolean;
-  captureStatus: LiveCaptureStatus;
+  captureStatus: LiveStatus;
 }
 
 export interface LiveSessionControls {
