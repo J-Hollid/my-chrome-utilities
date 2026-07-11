@@ -35,7 +35,7 @@ Feature: Side panel action feedback
     Examples:
       | editor_action | success_result                                                              |
       | Save revision | Saved Purchase confirmation as version 4                                    |
-      | Push draft    | Pushed purchase to Checkout through event.history at 10:04:05              |
+      | Push purchase to Checkout | Pushed purchase to Checkout through event.history at 10:04:05    |
 
   # Side panel action feedback 004
   Scenario Outline: Side panel action feedback 004
@@ -61,7 +61,7 @@ Feature: Side panel action feedback
       | action_context | action_name     | failure_reason              | recovery_step       |
       | Live inspector | Save to Library | browser storage is unavailable | Retry Save to Library |
       | Library editor | Save revision   | the JSON draft is invalid   | Correct the JSON    |
-      | Library editor | Push draft      | target Checkout is closed   | Choose target       |
+      | Library editor | Push purchase to Checkout | target Checkout is closed | Choose target |
 
   # Side panel action feedback 006
   Scenario Outline: Side panel action feedback 006
