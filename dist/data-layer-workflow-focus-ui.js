@@ -4,6 +4,7 @@ function focusables(dialog) {
 export function openPushReview(elements) {
     if (!elements.dialog)
         return;
+    elements.dialog.hidden = false;
     if (!elements.dialog.open)
         elements.dialog.showModal();
     elements.heading?.focus({ preventScroll: true });
@@ -11,6 +12,8 @@ export function openPushReview(elements) {
 export function closePushReview(elements, restoreFocus = true) {
     if (elements.dialog?.open)
         elements.dialog.close();
+    if (elements.dialog)
+        elements.dialog.hidden = true;
     if (restoreFocus)
         elements.trigger?.focus({ preventScroll: true });
 }

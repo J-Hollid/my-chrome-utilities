@@ -50,6 +50,8 @@
    "collection_name" #{"events" "schemas" "sessions" "templates"}
    "command_id" #{"data-layer.start-testing"}
    "component_name" #{"Live view tab" "event row" "observation status" "primary action" "source control" "template JSON editor" "workspace tab"}
+   "component" #{"Live setup steps" "Library empty state" "dirty-editor close confirmation" "target-selection dialog" "push confirmation"}
+   "layout_display" #{"flex" "grid"}
    "control_name" #{"Back to events" "Clear source filter" "Connected source" "Delete session" "Pause capture" "Push template"}
    "control_state" #{"destructive" "disabled" "selected" "successful"}
    "destination" #{"checkoutLayer" "dataLayer" "event.history"}
@@ -86,6 +88,10 @@
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "navigation_key" #{"ArrowDown" "ArrowLeft" "ArrowRight" "Home" "End"}
+   "navigation_action" #{"Close editor" "Back to captured event"}
+   "overlay" #{"target-selection dialog" "push confirmation"}
+   "open_action" #{"Choose target" "Push draft"}
+   "close_action" #{"Escape" "Cancel"}
    "tab_set" #{"Workspace" "Data Layer"}
    "initial_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Sessions" "Schemas"}
    "target_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Schemas"}
