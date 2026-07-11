@@ -363,6 +363,15 @@ const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
+const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
+const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
+const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
+const saveSchemaRuleButton = document.querySelector<HTMLButtonElement>("#save-schema-rule");
+const schemaAssignmentEditor = document.querySelector<HTMLElement>("#schema-assignment-editor");
+const schemaAssignmentSource = document.querySelector<HTMLInputElement>("#schema-assignment-source");
+const schemaAssignmentEvent = document.querySelector<HTMLInputElement>("#schema-assignment-event");
+const schemaAssignmentPriority = document.querySelector<HTMLInputElement>("#schema-assignment-priority");
+const saveSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#save-schema-assignment");
 const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
@@ -2113,10 +2122,14 @@ saveSchemaButton?.addEventListener("click", () => {
   schemas = [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
   if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version 1.`;
 });
-createSchemaAssignmentButton?.addEventListener("click", () => {
+createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
+saveSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleName?.value.trim() && schemaResult) schemaResult.textContent = `Saved reusable rule ${schemaRuleName.value.trim()}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
+createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll:true }); });
+saveSchemaAssignmentButton?.addEventListener("click", () => {
   const schema = schemas[0]; if (!schema) return;
-  schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, { sourceId:"event-history", eventName:"page_view", target:"payload", id:`assignment:${candidate.id}`, name:`${candidate.name} automatic`, priority:10, enabled:true }] } : candidate);
-  persistSchemaLibrary(); renderSchemas();
+  const sourceId = schemaAssignmentSource?.value.trim() || "event-history"; const eventName = schemaAssignmentEvent?.value.trim() || "page_view"; const priority = Number(schemaAssignmentPriority?.value ?? 10);
+  schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, { sourceId, eventName, target:"payload", id:`assignment:${candidate.id}:${eventName}`, name:`${candidate.name} automatic`, priority, enabled:true }] } : candidate);
+  persistSchemaLibrary(); renderSchemas(); if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
