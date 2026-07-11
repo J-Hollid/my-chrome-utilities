@@ -88,7 +88,7 @@
             </section>
           </section>
           <label for="history-path">History array path</label>
-          <input id="history-path" type="text" value="queue.history" />
+          <input id="history-path" type="text" value="queue.history" aria-describedby="history-path-status" />
           <output id="history-path-display">queue.history</output>
           <output id="history-path-status" aria-live="polite">ready</output>
         </details>
@@ -107,9 +107,9 @@
           <header class="detail-view-header"><button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button><h4 id="event-template-editor-title" tabindex="-1">Event property editor</h4></header>
           <dl id="event-template-editor-summary" aria-label="Template editor summary"></dl>
           <section id="event-template-properties-section" aria-label="Properties"><h5>Properties</h5><ul id="event-template-properties" aria-label="Draft properties"></ul></section>
-          <details id="event-template-json-section"><summary>JSON</summary><label for="event-template-json">JSON draft</label><textarea id="event-template-json" rows="10"></textarea></details>
-          <details id="event-template-execution-settings"><summary>Execution settings</summary><label for="push-destination-path">Push destination path</label><input id="push-destination-path" type="text" value="dataLayer" /></details>
-          <output id="event-template-validation" aria-live="assertive"></output>
+          <details id="event-template-json-section"><summary>JSON</summary><label for="event-template-json">JSON draft</label><p id="event-template-help">Edit the structured Properties summary or use JSON for advanced changes.</p><textarea id="event-template-json" rows="10" aria-describedby="event-template-help event-template-validation"></textarea></details>
+          <details id="event-template-execution-settings"><summary>Execution settings</summary><label for="push-destination-path">Push destination path</label><input id="push-destination-path" type="text" value="dataLayer" aria-describedby="event-template-validation" /></details>
+          <output id="event-template-validation" role="status" aria-live="polite"></output>
           <div id="event-template-actions" aria-label="Template actions">
             <div class="action-group" aria-label="Save template actions">
               <button id="save-template-revision" type="button" data-action-variant="primary" aria-describedby="save-template-revision-reason">Save revision</button>
@@ -132,7 +132,7 @@
             <button id="cancel-push-draft" type="button" data-action-variant="secondary">Cancel</button>
           </dialog>
         </section>
-        <section id="event-template-footer"><output id="event-template-result" aria-live="polite"></output><section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section></section>
+        <section id="event-template-footer"><output id="event-template-result" role="status" aria-live="polite"></output><section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section></section>
       </section>
       <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
         <h3>Sessions</h3>

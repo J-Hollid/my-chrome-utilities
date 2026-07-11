@@ -189,7 +189,15 @@
    "source_count" #{"3"}
    "source_name" #{"Adobe beacons" "Event history" "GA4" "GA4 collect" "event.history"}
    "source_status" #{"Connected" "Disconnected"}
-   "state_name" #{"invalid" "restarted" "selected"}
+   "state_name" #{"invalid" "restarted" "selected" "Capturing" "Connected" "Permission required" "Error"}
+   "state_context" #{"session status" "observer status" "path warning" "observer failure"}
+   "result_kind" #{"validation result" "action result" "validation error" "action error"}
+   "result_text" #{"Draft is valid" "Saved Purchase confirmation as version 4" "Correct invalid JSON before saving" "Choose another target before pushing purchase"}
+   "consequence" #{"non-blocking" "blocking error"}
+   "announcement_priority" #{"polite" "assertive"}
+   "input_name" #{"JSON payload" "Destination path" "Observer path"}
+   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array"}
+   "color_scheme" #{"light" "dark"}
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}
    "target_size" #{"44 CSS px"}
