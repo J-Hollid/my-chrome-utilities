@@ -89,6 +89,7 @@ const firstPage = {
 const sessionState = startDataLayerTestingSession(
   {},
   {
+    id: "tab-1-session-presentation",
     tabId: 1,
     url: context.pageUrl,
     historyPath: context.destination,

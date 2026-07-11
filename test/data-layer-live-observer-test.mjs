@@ -8,6 +8,7 @@ import {
   liveEventWindow,
   pauseCapture,
   recordLiveEvent,
+  resetLiveObserverForSession,
   resumeCapture,
   selectLiveEvent,
   setLiveFilter,
@@ -62,5 +63,9 @@ assert.equal(state.listVisible, false);
 state = selectLiveEvent(state, "two", "split");
 assert.equal(state.listVisible, true);
 state = closeLiveInspector(state);
+assert.equal(state.inspectorEventId, undefined);
+assert.equal(state.listVisible, true);
+state = resetLiveObserverForSession(state);
+assert.deepEqual(state.events, []);
 assert.equal(state.inspectorEventId, undefined);
 assert.equal(state.listVisible, true);

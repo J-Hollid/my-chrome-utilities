@@ -27,7 +27,7 @@
    "initial_state" #{"Not checked"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
-   "history_path" #{"queue.history"}
+   "history_path" #{"event.history" "queue.history"}
    "push_path" #{"dataLayer" "analytics.queue"}
    "first_push_path" #{"dataLayer"}
    "second_push_path" #{"analytics.queue"}
@@ -37,7 +37,10 @@
    "navigation_key" #{"ArrowDown"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
-   "new_event" #{"checkout"}
+   "new_event" #{"checkout" "purchase"}
+   "existing_events" #{"pageview" "pageview, banner view"}
+   "first_page_events" #{"pageview"}
+   "next_page_events" #{"checkout, purchase"}
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
@@ -46,7 +49,8 @@
    "other_page_title" #{"Documentation"}
    "tab_id" #{"42"}
    "other_tab_id" #{"77"}
-   "page_url" #{"https://shop.example.test/p/"}
+   "page_url" #{"https://example.test/home" "https://shop.example.test/p/"}
+   "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}
@@ -104,5 +108,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T10:17:39.192845185+02:00", :module-hash "350860108", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-606875447"} {:id "defn/validate-example!", :kind "defn", :line 99, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-11T11:11:54.061997004+02:00", :module-hash "1677799820", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "497625458"} {:id "defn/validate-example!", :kind "defn", :line 103, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end

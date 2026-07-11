@@ -48,6 +48,7 @@ export function sessionScope(state: DataLayerSessionState): string | undefined {
 export function startDataLayerTestingSession(
   state: DataLayerSessionState,
   options: {
+    id: string;
     tabId: number;
     url: string;
     historyPath?: string;
@@ -65,7 +66,7 @@ export function startDataLayerTestingSession(
 
   return {
     session: {
-      id: `tab-${options.tabId}`,
+      id: options.id,
       status: "active",
       tabId: options.tabId,
       historyPath: options.historyPath ?? getHistoryArrayPath(),

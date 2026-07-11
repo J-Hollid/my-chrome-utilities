@@ -12,7 +12,7 @@ export function startDataLayerTestingSession(state, options) {
     }
     return {
         session: {
-            id: `tab-${options.tabId}`,
+            id: options.id,
             status: "active",
             tabId: options.tabId,
             historyPath: options.historyPath ?? getHistoryArrayPath(),

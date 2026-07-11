@@ -89,9 +89,9 @@ import {
   persistSession,
   restoreSession,
   sessionScope,
-  startDataLayerTestingSession,
   type DataLayerSessionState,
 } from "./data-layer-session.js";
+import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import {
   nestedTimeline,
   timelineEventHeading,
@@ -289,6 +289,14 @@ let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
+let nextSessionSequence = 0;
+
+function newDataLayerSessionId(tabId: number): string {
+  nextSessionSequence += 1;
+  const unique = globalThis.crypto?.randomUUID?.()
+    ?? `${Date.now()}-${nextSessionSequence}`;
+  return `tab-${tabId}-session-${unique}`;
+}
 
 if (app) {
   app.textContent = PROJECT_NAME;
@@ -556,7 +564,8 @@ async function attachSelectedTarget(): Promise<void> {
     return;
   }
   observationTargetState = decision.state;
-  dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
+  const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
+    id: newDataLayerSessionId(target.tabId),
     tabId: target.tabId,
     windowId: target.windowId,
     url: target.pageUrl,
@@ -564,6 +573,8 @@ async function attachSelectedTarget(): Promise<void> {
     targetOrigin: target.origin,
     historyPath: getHistoryArrayPath(),
   });
+  dataLayerSessionState = started.sessionState;
+  liveObserverState = started.liveObserverState;
   dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: target.pageUrl });
   dataLayerObserverState = attachHistoryArrayObserver({
     pageObject: dataLayerObserverState.pageObject,
