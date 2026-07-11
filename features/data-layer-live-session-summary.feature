@@ -7,18 +7,19 @@ Feature: Data layer Live session summary
   # Data layer Live session summary 001
   Scenario Outline: Data layer Live session summary 001
     Given the session summary represents testing state <testing_state> for target page <page_title> at <page_url>
-    And observer path <observer_path> has captured <event_count> events from <connected_source_count> connected sources
+    And observer path <observer_path> has observer state <observer_status> after capturing <event_count> events from <connected_source_count> connected sources
     When the Live session summary is displayed
-    Then the session status indicator shows <status_label>
-    And the status indicator is visually distinct from the summary metadata and identifiable without color alone
+    Then the summary shows exactly one session status <session_status> and one observer status <observer_status>
+    And both status indicators are visually distinct from the summary metadata and identifiable without color alone
     And separately labelled fields show Target page <page_title>, Page URL <page_url>, Observer path <observer_path>, Captured events <event_count>, and Connected sources <connected_source_count>
     And the summary values are not serialized into one sentence
 
     Examples:
-      | testing_state | status_label | page_title           | page_url                                 | observer_path | event_count | connected_source_count |
-      | Active        | Capturing    | Checkout             | https://shop.example.test/checkout       | event.history | 42          | 3                      |
-      | Paused        | Paused       | Order confirmation   | https://shop.example.test/confirmation   | dataLayer     | 7           | 2                      |
-      | Detached      | Detached     | Cart                  | https://shop.example.test/cart           | queue.history | 0           | 0                      |
+      | testing_state | session_status | observer_status  | page_title           | page_url                                 | observer_path | event_count | connected_source_count |
+      | Active        | Capturing      | Connected        | Checkout             | https://shop.example.test/checkout       | event.history | 42          | 3                      |
+      | Active        | Capturing      | Waiting for path | Product detail       | https://shop.example.test/products/blue  | dataLayer     | 12          | 1                      |
+      | Paused        | Paused         | Error            | Order confirmation   | https://shop.example.test/confirmation   | queue.history | 7           | 2                      |
+      | Ended         | Ended          | Disconnected     | Cart                  | https://shop.example.test/cart           | analytics     | 0           | 0                      |
 
   # Data layer Live session summary 002
   Scenario Outline: Data layer Live session summary 002
@@ -34,3 +35,19 @@ Feature: Data layer Live session summary
     Examples:
       | page_title | page_url                                                                                         | side_panel_url                               | panel_width |
       | Checkout   | https://shop.example.test/checkout?campaign=summer-sale&audience=returning-customers&variant=blue | chrome-extension://abcdefghijkl/side-panel.html | 320         |
+
+  # Data layer Live session summary 003
+  Scenario Outline: Data layer Live session summary 003
+    Given canonical statuses are <session_status> for the session and <observer_status> for the observer
+    And equivalent legacy status fragments <duplicate_fragments> could describe the same state
+    When persistent Live status content is displayed
+    Then persistent content contains session status <session_status> and observer status <observer_status> exactly once each
+    And equivalent fragments <duplicate_fragments> are absent from persistent page content
+    When action <action_name> produces result <action_result>
+    Then temporary notification <notification> is announced without replacing either canonical status
+    And notification <notification> does not remain as another persistent status message
+
+    Examples:
+      | session_status | observer_status | duplicate_fragments                                                   | action_name   | action_result | notification    |
+      | Capturing      | Connected       | observation started, event history connected, session is live         | Start testing | succeeded     | Testing started |
+      | Paused         | Error           | attached to target, active data layer attached, observation connected | Pause capture | failed        | Pause failed    |

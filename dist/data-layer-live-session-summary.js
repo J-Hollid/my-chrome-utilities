@@ -3,6 +3,7 @@ export function createLiveSessionSummary(input) {
         statusLabel: input.testingState === "Active"
             ? "Capturing"
             : input.testingState,
+        observerStatus: input.observerStatus,
         targetPage: input.targetPage,
         pageUrl: input.pageUrl,
         observerPath: input.observerPath,
