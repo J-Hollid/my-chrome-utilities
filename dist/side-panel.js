@@ -23,6 +23,7 @@ import { createSequence, readiness, runSequence } from "./data-layer-sequence-re
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
+import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -498,20 +499,7 @@ async function pushPayloadToSelectedTargetPage(request) {
         target: { tabId: request.tabId },
         world: "MAIN",
         args: [request.destination, request.payload],
-        func: (destination, payload) => {
-            let value = globalThis;
-            for (const segment of destination.split(".")) {
-                if (value === null || typeof value !== "object" || !(segment in value)) {
-                    return { success: false, result: `Destination ${destination} is unavailable.` };
-                }
-                value = value[segment];
-            }
-            if (!Array.isArray(value)) {
-                return { success: false, result: `Destination ${destination} cannot accept payload.` };
-            }
-            value.push(payload);
-            return { success: true };
-        },
+        func: pushPayloadInPage,
     });
     const result = injection?.result;
     if (!result?.success) {

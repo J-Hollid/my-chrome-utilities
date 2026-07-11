@@ -169,6 +169,10 @@ import {
   pushTemplateToSelectedTarget,
   type SelectedTargetPushRequest,
 } from "./data-layer-selected-target-push.js";
+import {
+  pushPayloadInPage,
+  type PagePushResult,
+} from "./data-layer-selected-target-push-page.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -753,22 +757,9 @@ async function pushPayloadToSelectedTargetPage(
     target: { tabId: request.tabId },
     world: "MAIN",
     args: [request.destination, request.payload],
-    func: (destination: string, payload: unknown): { success: boolean; result?: string } => {
-      let value: unknown = globalThis;
-      for (const segment of destination.split(".")) {
-        if (value === null || typeof value !== "object" || !(segment in value)) {
-          return { success: false, result: `Destination ${destination} is unavailable.` };
-        }
-        value = (value as Record<string, unknown>)[segment];
-      }
-      if (!Array.isArray(value)) {
-        return { success: false, result: `Destination ${destination} cannot accept payload.` };
-      }
-      value.push(payload);
-      return { success: true };
-    },
+    func: pushPayloadInPage,
   });
-  const result = injection?.result as { success?: boolean; result?: string } | undefined;
+  const result = injection?.result as PagePushResult | undefined;
   if (!result?.success) {
     throw new Error(result?.result ?? "Selected-page push failed.");
   }

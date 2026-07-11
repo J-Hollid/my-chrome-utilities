@@ -99,5 +99,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T02:49:08.26201227+02:00", :module-hash "-1339076188", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "461757959"} {:id "defn/validate-example!", :kind "defn", :line 83, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-11T03:17:13.652044249+02:00", :module-hash "905001172", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-1149064035"} {:id "defn/validate-example!", :kind "defn", :line 94, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end

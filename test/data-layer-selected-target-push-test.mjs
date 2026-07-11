@@ -6,6 +6,7 @@ import {
   setPushDestination,
 } from "../dist/data-layer-event-library-editor.js";
 import { pushTemplateToSelectedTarget } from "../dist/data-layer-selected-target-push.js";
+import { pushPayloadInPage } from "../dist/data-layer-selected-target-push-page.js";
 
 const template = createEditableTemplate({
   id: "event-1", sessionId: "session-1", sourceId: "history", sourceKind: "page",
@@ -29,6 +30,18 @@ assert.equal(success.result, "Pushed");
 assert.match(success.summary, /Shop; https:\/\/shop\.example\.test\/p\/; dataLayer; Pushed/);
 assert.deepEqual(calls, [{ tabId: 42, destination: "dataLayer", payload: { transaction_id: "test-123" } }]);
 assert.deepEqual(editor.draft, { transaction_id: "test-123" });
+
+const selectedPage = { dataLayer: [], analytics: { queue: [] } };
+assert.deepEqual(
+  pushPayloadInPage("dataLayer", { transaction_id: "test-123" }, selectedPage),
+  { success: true },
+);
+assert.deepEqual(selectedPage.dataLayer, [{ transaction_id: "test-123" }]);
+assert.deepEqual(selectedPage.analytics.queue, []);
+assert.deepEqual(
+  pushPayloadInPage("missing.queue", {}, selectedPage),
+  { success: false, result: "Destination missing.queue is unavailable." },
+);
 
 editor = setPushDestination(editor, "analytics[");
 const invalid = await pushTemplateToSelectedTarget(editor, target, async () => {
