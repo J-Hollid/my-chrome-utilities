@@ -33,7 +33,8 @@ import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplat
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
-import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
+import { findEventLibraryEditorElements, focusTemplateEditAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
+import { closePushReview, handlePushReviewKeydown, openPushReview, } from "./data-layer-workflow-focus-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
 import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
 import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
@@ -90,9 +91,15 @@ const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
 const pushDraftReview = document.querySelector("#push-draft-review");
+const pushDraftReviewHeading = document.querySelector("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector("#cancel-push-draft");
+const closeTemplateEditorConfirmation = document.querySelector("#close-template-editor-confirmation");
+const closeTemplateEditorSummary = document.querySelector("#close-template-editor-summary");
+const keepEditingTemplateButton = document.querySelector("#keep-editing-template");
+const saveAndCloseTemplateButton = document.querySelector("#save-and-close-template");
+const discardAndCloseTemplateButton = document.querySelector("#discard-and-close-template");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
@@ -124,6 +131,7 @@ let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
 let pendingPushDraftReview;
+let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 let schemas = [];
 let replaySequences = [];
@@ -502,6 +510,7 @@ function openLiveInspector(eventId) {
             },
         }));
     renderLiveObserver();
+    backToEventsButton?.focus({ preventScroll: true });
 }
 function appendOpenInLibraryAction(eventId, templateName) {
     const action = document.createElement("button");
@@ -606,9 +615,22 @@ function renderSequences() {
     });
 }
 function openTemplateEditor(template) {
+    templateEditorReturnTemplateId = template.id;
     propertyEditorState = openPropertyEditor(template);
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
+    eventLibraryEditorElements.editorTitle?.focus({ preventScroll: true });
+}
+function closeTemplateEditor() {
+    propertyEditorState = undefined;
+    if (closeTemplateEditorConfirmation)
+        closeTemplateEditorConfirmation.hidden = true;
+    setEventLibraryResult(eventLibraryEditorElements, "");
+    renderEventTemplateLibrary();
+    if (templateEditorReturnTemplateId) {
+        focusTemplateEditAction(eventLibraryEditorElements, templateEditorReturnTemplateId);
+    }
+    templateEditorReturnTemplateId = undefined;
 }
 async function pushPayloadToSelectedTargetPage(request) {
     if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
@@ -651,8 +673,7 @@ function openPushDraftReview() {
         pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
     if (confirmPushDraftButton)
         confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
-    if (pushDraftReview)
-        pushDraftReview.hidden = false;
+    openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
 }
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
@@ -1366,15 +1387,18 @@ pushTemplateDraftButton?.addEventListener("click", () => {
 confirmPushDraftButton?.addEventListener("click", () => {
     const review = pendingPushDraftReview;
     pendingPushDraftReview = undefined;
-    if (pushDraftReview)
-        pushDraftReview.hidden = true;
+    closePushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton }, false);
     if (review)
         void pushCurrentTemplateDraft(review.editor, review.target);
 });
 cancelPushDraftButton?.addEventListener("click", () => {
     pendingPushDraftReview = undefined;
-    if (pushDraftReview)
-        pushDraftReview.hidden = true;
+    closePushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
+});
+pushDraftReview?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape")
+        pendingPushDraftReview = undefined;
+    handlePushReviewKeydown({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton }, event);
 });
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
@@ -1384,16 +1408,42 @@ discardTemplateDraftButton?.addEventListener("click", () => {
     renderEventTemplateLibrary();
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
-    propertyEditorState = undefined;
-    setEventLibraryResult(eventLibraryEditorElements, "");
-    renderEventTemplateLibrary();
+    if (!propertyEditorState?.dirty) {
+        closeTemplateEditor();
+        return;
+    }
+    if (closeTemplateEditorSummary)
+        closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft).join(", ")}.`;
+    if (closeTemplateEditorConfirmation)
+        closeTemplateEditorConfirmation.hidden = false;
 });
+keepEditingTemplateButton?.addEventListener("click", () => { if (closeTemplateEditorConfirmation)
+    closeTemplateEditorConfirmation.hidden = true; });
+saveAndCloseTemplateButton?.addEventListener("click", () => {
+    if (!propertyEditorState)
+        return;
+    try {
+        propertyEditorState = saveDraftRevision(propertyEditorState);
+        eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
+        persistEventTemplateLibrary();
+        closeTemplateEditor();
+    }
+    catch (error) {
+        setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid.");
+    }
+});
+discardAndCloseTemplateButton?.addEventListener("click", () => closeTemplateEditor());
 backToCapturedEventButton?.addEventListener("click", () => {
     const eventId = propertyEditorState?.template.originatingEventId;
     if (!eventId)
         return;
+    const returnSnapshot = inspectorReturnSnapshot;
     showDataLayerView("Live");
     openLiveInspector(eventId);
+    if (returnSnapshot) {
+        restoreInspectorReturnUi(liveObserverElements, restoreInspectorReturn(returnSnapshot));
+        inspectorReturnSnapshot = returnSnapshot;
+    }
 });
 importSavedSessionButton?.addEventListener("click", () => savedSessionFileInput?.click());
 savedSessionFileInput?.addEventListener("change", () => {
@@ -1486,6 +1536,9 @@ observationTargetSearch?.addEventListener("keydown", (event) => handleObservatio
 observationTargetList?.addEventListener("keydown", (event) => handleObservationTargetListKeydown(observationTargetElements, event));
 observationTargetPicker?.addEventListener("keydown", (event) => handleObservationTargetDialogKeydown(observationTargetElements, event));
 document.addEventListener("keydown", (event) => {
+    if (pushDraftReview?.open || (observationTargetPicker && !observationTargetPicker.hidden)) {
+        return;
+    }
     if (event.key === "Escape" && liveObserverState.inspectorEventId) {
         event.preventDefault();
         event.stopPropagation();

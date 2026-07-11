@@ -12,6 +12,7 @@ export interface EventLibraryEditorElements {
   list: HTMLElement | null;
   propertyEditor: HTMLElement | null;
   editorTitle: HTMLElement | null;
+  editorSummary: HTMLElement | null;
   properties: HTMLElement | null;
   json: HTMLTextAreaElement | null;
   pushDestination: HTMLInputElement | null;
@@ -41,6 +42,7 @@ export function findEventLibraryEditorElements(
     list: root.querySelector<HTMLElement>("#event-template-list"),
     propertyEditor: root.querySelector<HTMLElement>("#event-property-editor"),
     editorTitle: root.querySelector<HTMLElement>("#event-template-editor-title"),
+    editorSummary: root.querySelector<HTMLElement>("#event-template-editor-summary"),
     properties: root.querySelector<HTMLElement>("#event-template-properties"),
     json: root.querySelector<HTMLTextAreaElement>("#event-template-json"),
     pushDestination: root.querySelector<HTMLInputElement>("#push-destination-path"),
@@ -70,11 +72,13 @@ function actionButton(
   label: string,
   action: () => void,
   variant: "secondary" | "quiet" = "secondary",
+  templateId?: string,
 ): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = label;
   button.dataset.actionVariant = variant;
+  if (templateId) button.dataset.templateId = templateId;
   button.addEventListener("click", action);
   return button;
 }
@@ -114,7 +118,7 @@ export function renderEventLibraryEditor(
       const actionsRow = document.createElement("div");
       actionsRow.className = "event-template-actions";
       actionsRow.append(
-        actionButton("Edit", () => actions.edit(template), "quiet"),
+        actionButton("Edit", () => actions.edit(template), "quiet", template.id),
         actionButton("Duplicate", () => actions.duplicate(template)),
         actionButton("Push", () => actions.push(template)),
       );
@@ -123,7 +127,13 @@ export function renderEventLibraryEditor(
     }),
   );
   if (elements.propertyEditor) elements.propertyEditor.hidden = !editor;
-  if (elements.editorTitle && editor) elements.editorTitle.textContent = `${editor.template.eventName} (${editor.template.originatingEventId}) · ${editor.template.originatingSessionId}`;
+  if (elements.editorTitle && editor) elements.editorTitle.textContent = `${editor.template.name} editor`;
+  if (elements.editorSummary) {
+    elements.editorSummary.replaceChildren(...(editor ? [
+      ["Template", editor.template.name], ["Version", String(editor.template.version)],
+      ["Draft", editor.dirty ? "Unsaved changes" : "Saved"], ["Provenance", editor.template.provenance],
+    ].flatMap(([label, value]) => { const term = document.createElement("dt"); const description = document.createElement("dd"); term.textContent = String(label); description.textContent = String(value); return [term, description]; }) : []));
+  }
   if (elements.json && editor) elements.json.value = editor.jsonDraft;
   if (elements.pushDestination && editor) {
     elements.pushDestination.value = editor.template.destination;
@@ -141,6 +151,18 @@ export function renderEventLibraryEditor(
     applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
     applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
   }
+}
+
+export function focusTemplateEditAction(
+  elements: EventLibraryEditorElements,
+  templateId: string,
+): void {
+  const escaped = typeof CSS !== "undefined" && CSS.escape
+    ? CSS.escape(templateId)
+    : templateId.replace(/["\\]/g, "\\$&");
+  elements.list?.querySelector<HTMLButtonElement>(
+    `button[data-template-id="${escaped}"]`,
+  )?.focus({ preventScroll: true });
 }
 
 export function setEventLibraryResult(

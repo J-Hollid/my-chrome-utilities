@@ -85,7 +85,11 @@
    "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
-   "navigation_key" #{"ArrowDown"}
+   "navigation_key" #{"ArrowDown" "ArrowLeft" "ArrowRight" "Home" "End"}
+   "tab_set" #{"Workspace" "Data Layer"}
+   "initial_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Sessions" "Schemas"}
+   "target_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Schemas"}
+   "return_action" #{"Back to events" "Escape"}
    "navigation_level" #{"Data Layer" "workspace"}
    "notification" #{"Pause failed" "Testing started"}
    "middle_event" #{"banner"}

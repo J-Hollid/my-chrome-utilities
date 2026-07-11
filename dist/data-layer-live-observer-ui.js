@@ -22,7 +22,7 @@ export function renderDataLayerView(elements, view, focus = false) {
         if (button) {
             button.setAttribute("aria-selected", String(selected));
             button.tabIndex = selected ? 0 : -1;
-            if (focus)
+            if (focus && selected)
                 button.focus();
         }
         if (panel)

@@ -5,6 +5,7 @@
 
 (def feature-files
   ["features/data-layer-library-operator-layout.feature"
+   "features/data-layer-template-editor-progressive-disclosure.feature"
    "features/data-layer-live-operator-layout.feature"
    "features/data-layer-live-session-summary.feature"
    "features/data-layer-live-session-end-status-runtime.feature"
@@ -13,6 +14,7 @@
    "features/data-layer-captured-event-template-workflow.feature"
    "features/data-layer-detail-view-headers.feature"
    "features/data-layer-event-property-form-layout.feature"
+   "features/data-layer-event-property-editor.feature"
    "features/data-layer-live-inspector-actions.feature"
    "features/data-layer-live-inspector-layout.feature"
    "features/data-layer-live-inspector-navigation.feature"
@@ -38,7 +40,8 @@
    "features/data-layer-push-draft-review.feature"
    "features/data-layer-state-aware-actions.feature"
    "features/data-layer-view-responsive-layouts.feature"
-   "features/side-panel-component-layout-runtime.feature"])
+   "features/side-panel-component-layout-runtime.feature"
+   "features/data-layer-workflow-focus-management.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")

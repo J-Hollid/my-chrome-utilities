@@ -186,11 +186,17 @@ import {
 } from "./data-layer-sequence-replay-ui.js";
 import {
   findEventLibraryEditorElements,
+  focusTemplateEditAction,
   renderEventLibraryEditor,
   setEventLibraryResult,
   setEventLibraryValidation,
   setPushDestinationValidation,
 } from "./data-layer-event-library-editor-ui.js";
+import {
+  closePushReview,
+  handlePushReviewKeydown,
+  openPushReview,
+} from "./data-layer-workflow-focus-ui.js";
 import {
   pushTemplateToSelectedTarget,
   type SelectedTargetPushRequest,
@@ -303,10 +309,16 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
-const pushDraftReview = document.querySelector<HTMLElement>("#push-draft-review");
+const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
+const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
+const closeTemplateEditorConfirmation = document.querySelector<HTMLElement>("#close-template-editor-confirmation");
+const closeTemplateEditorSummary = document.querySelector<HTMLElement>("#close-template-editor-summary");
+const keepEditingTemplateButton = document.querySelector<HTMLButtonElement>("#keep-editing-template");
+const saveAndCloseTemplateButton = document.querySelector<HTMLButtonElement>("#save-and-close-template");
+const discardAndCloseTemplateButton = document.querySelector<HTMLButtonElement>("#discard-and-close-template");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
@@ -339,6 +351,7 @@ let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
 let pendingPushDraftReview: PushDraftReview | undefined;
+let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
@@ -788,6 +801,7 @@ function openLiveInspector(eventId: string): void {
     },
   }));
   renderLiveObserver();
+  backToEventsButton?.focus({ preventScroll: true });
 }
 
 function appendOpenInLibraryAction(eventId: string, templateName: string): void {
@@ -902,9 +916,22 @@ function renderSequences(): void {
 }
 
 function openTemplateEditor(template: EditableEventTemplate): void {
+  templateEditorReturnTemplateId = template.id;
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
+  eventLibraryEditorElements.editorTitle?.focus({ preventScroll: true });
+}
+
+function closeTemplateEditor(): void {
+  propertyEditorState = undefined;
+  if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
+  setEventLibraryResult(eventLibraryEditorElements, "");
+  renderEventTemplateLibrary();
+  if (templateEditorReturnTemplateId) {
+    focusTemplateEditAction(eventLibraryEditorElements, templateEditorReturnTemplateId);
+  }
+  templateEditorReturnTemplateId = undefined;
 }
 
 async function pushPayloadToSelectedTargetPage(
@@ -954,7 +981,7 @@ function openPushDraftReview(): void {
   pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
   if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
   if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
-  if (pushDraftReview) pushDraftReview.hidden = false;
+  openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
 }
 
 function renderSavedSessions(): void {
@@ -1839,12 +1866,19 @@ pushTemplateDraftButton?.addEventListener("click", () => {
 confirmPushDraftButton?.addEventListener("click", () => {
   const review = pendingPushDraftReview;
   pendingPushDraftReview = undefined;
-  if (pushDraftReview) pushDraftReview.hidden = true;
+  closePushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton }, false);
   if (review) void pushCurrentTemplateDraft(review.editor, review.target);
 });
 cancelPushDraftButton?.addEventListener("click", () => {
   pendingPushDraftReview = undefined;
-  if (pushDraftReview) pushDraftReview.hidden = true;
+  closePushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
+});
+pushDraftReview?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") pendingPushDraftReview = undefined;
+  handlePushReviewKeydown(
+    { dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton },
+    event,
+  );
 });
 
 discardTemplateDraftButton?.addEventListener("click", () => {
@@ -1854,15 +1888,26 @@ discardTemplateDraftButton?.addEventListener("click", () => {
   renderEventTemplateLibrary();
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
-  propertyEditorState = undefined;
-  setEventLibraryResult(eventLibraryEditorElements, "");
-  renderEventTemplateLibrary();
+  if (!propertyEditorState?.dirty) { closeTemplateEditor(); return; }
+  if (closeTemplateEditorSummary) closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft as Record<string, unknown>).join(", ")}.`;
+  if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = false;
 });
+keepEditingTemplateButton?.addEventListener("click", () => { if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; });
+saveAndCloseTemplateButton?.addEventListener("click", () => {
+  if (!propertyEditorState) return;
+  try { propertyEditorState = saveDraftRevision(propertyEditorState); eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template); persistEventTemplateLibrary(); closeTemplateEditor(); } catch (error) { setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid."); }
+});
+discardAndCloseTemplateButton?.addEventListener("click", () => closeTemplateEditor());
 backToCapturedEventButton?.addEventListener("click", () => {
   const eventId = propertyEditorState?.template.originatingEventId;
   if (!eventId) return;
+  const returnSnapshot = inspectorReturnSnapshot;
   showDataLayerView("Live");
   openLiveInspector(eventId);
+  if (returnSnapshot) {
+    restoreInspectorReturnUi(liveObserverElements, restoreInspectorReturn(returnSnapshot));
+    inspectorReturnSnapshot = returnSnapshot;
+  }
 });
 
 importSavedSessionButton?.addEventListener("click", () => savedSessionFileInput?.click());
@@ -1971,6 +2016,9 @@ observationTargetPicker?.addEventListener("keydown", (event) =>
   handleObservationTargetDialogKeydown(observationTargetElements, event));
 
 document.addEventListener("keydown", (event) => {
+  if (pushDraftReview?.open || (observationTargetPicker && !observationTargetPicker.hidden)) {
+    return;
+  }
   if (event.key === "Escape" && liveObserverState.inspectorEventId) {
     event.preventDefault();
     event.stopPropagation();
