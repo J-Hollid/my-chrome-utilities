@@ -4,7 +4,7 @@
             [clojure.string :as str]))
 
 (def views ["Live" "Library" "Sessions" "Schemas"])
-(def session-actions ["Pause capture" "Stop" "Save"])
+(def session-actions ["Pause capture" "End testing" "Save"])
 (def navigation-commands
   {"data-layer.show-live" "Live"
    "data-layer.show-library" "Library"
@@ -61,7 +61,7 @@
                  (live/assert-value! [event-count source-count] [2 1]
                                      "Live session fixture is not canonical.")
                  (assoc (live/inspect world)
-                        :session-state "Live"
+                        :session-state "Capturing"
                         :events (mapv #(live/event % (if (= % 1) "pageview" "purchase")
                                                    "Event history")
                                       (range 1 (inc event-count)))
@@ -114,14 +114,41 @@
                      attachment (live/value example attachment-key)
                      source-name (live/value example source-key)
                      status (if (= [configuration attachment] ["valid" "attached"])
-                              "Connected" "Path missing")]
+                              "Connected" "Waiting for path")]
                  (live/assert-value! source-name "event.history" "Source status fixture is incorrect.")
                  (support/assert! (contains? #{["valid" "attached"] ["missing" "detached"]}
                                             [configuration attachment])
                                   "Source configuration fixture is incorrect." {})
                  (assoc (live/inspect world) :source-status
                         {:name source-name :status status
-                         :restart-visible (= status "Path missing")})))}
+                         :restart-visible (= status "Waiting for path")})))}
+
+   {:pattern #"^the Live observer status is displayed$"
+    :handler (fn [world _ _]
+               (support/assert! (:source-status world) "Live observer status is missing." {})
+               world)}
+
+   {:pattern #"^exactly one observer status shows <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [status-key]]
+               (live/assert-value! (live/value example status-key)
+                                   (:status (:source-status world))
+                                   "Observer status is incorrect.")
+               world)}
+
+   {:pattern #"^contradictory source status <([A-Za-z0-9_]+)> is not shown$"
+    :handler (fn [world example [status-key]]
+               (support/assert! (not= (live/value example status-key)
+                                      (:status (:source-status world)))
+                                "Contradictory observer status is visible."
+                                {})
+               world)}
+
+   {:pattern #"^source <([A-Za-z0-9_]+)> remains identifiable without another equivalent status fragment$"
+    :handler (fn [world example [source-key]]
+               (live/assert-value! (live/value example source-key)
+                                   (:name (:source-status world))
+                                   "Source identity is missing.")
+               world)}
 
    {:pattern #"^the live source status is displayed$"
     :handler (fn [world _ _]
@@ -133,17 +160,6 @@
                (live/assert-value! [(live/value example source-key) (live/value example status-key)]
                                    [(:name (:source-status world)) (:status (:source-status world))]
                                    "Visible source status is incorrect.")
-               world)}
-
-   {:pattern #"^contradictory source status <([A-Za-z0-9_]+)> is not shown$"
-    :handler (fn [world example [status-key]]
-               (let [visible (:status (:source-status world))
-                     hidden (live/value example status-key)]
-                 (live/assert-value! hidden
-                                     (if (= visible "Connected") "Path missing" "Connected")
-                                     "Contradictory source fixture is incorrect.")
-                 (support/assert! (not= hidden visible)
-                                  "Contradictory source status is visible." {}))
                world)}
 
    {:pattern #"^Restart observation is <([A-Za-z0-9_]+)>$"
@@ -171,6 +187,13 @@
     :handler (fn [world _ _]
                (support/assert! (empty? (:events world))
                                 "Session message was inserted into the event feed." {})
+               world)}
+
+   {:pattern #"^message <([A-Za-z0-9_]+)> is temporary rather than retained as another session or observer status$"
+    :handler (fn [world example [message-key]]
+               (support/assert! (= (live/value example message-key) (:session-message world))
+                                "Temporary session message is missing."
+                                {})
                world)}
 
    {:pattern #"^the event list and event inspector cannot fit side by side$"
@@ -270,7 +293,7 @@
                (let [event-name (live/value example event-key)]
                  (live/assert-value! event-name "pageview" "Pause/resume fixture is incorrect.")
                  (assoc (live/inspect world)
-                        :session-state "Live"
+                        :session-state "Capturing"
                         :sources [{:name "Event history" :status "Connected"}]
                         :events [(live/event 1 event-name "Event history")])))}
 
@@ -300,7 +323,7 @@
 
    {:pattern #"^the user resumes capture$"
     :handler (fn [world _ _]
-               (assoc world :session-state "Live" :events-before-resume (count (:events world))))}
+               (assoc world :session-state "Capturing" :events-before-resume (count (:events world))))}
 
    {:pattern #"^the session returns to state <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [state-key]]

@@ -43,7 +43,6 @@ const sessionStatus = document.querySelector("#session-status");
 const sessionHistoryPath = document.querySelector("#session-history-path");
 const sessionTimeline = document.querySelector("#session-timeline");
 const sessionWarning = document.querySelector("#session-warning");
-const observerStatus = document.querySelector("#observer-status");
 const restartObservationButton = document.querySelector("#restart-observation");
 const observationTargetElements = findObservationTargetElements();
 const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
@@ -401,13 +400,22 @@ function currentLiveSessionSummary() {
     return createLiveSessionSummary({
         testingState: session?.status === "active"
             ? (liveObserverState.status === "Paused" ? "Paused" : "Active")
-            : "Detached",
+            : "Ended",
+        observerStatus: canonicalObserverStatus(),
         targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
         pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
         observerPath: session?.historyPath ?? getHistoryArrayPath(),
         capturedEventCount: liveObserverState.events.length,
         connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
     });
+}
+function canonicalObserverStatus() {
+    switch (observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)) {
+        case "attached": return "Connected";
+        case "needs sync": return "Waiting for path";
+        case "page access unavailable": return "Error";
+        case "inactive": return "Disconnected";
+    }
 }
 function closeInspectorAndReturnToEvents() {
     liveObserverState = closeLiveInspector(liveObserverState);
@@ -751,9 +759,7 @@ function appendDefinition(list, label, value) {
     list.append(term, description);
 }
 function renderObserverState() {
-    if (observerStatus) {
-        observerStatus.textContent = observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState);
-    }
+    renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
 }
 function updateSessionFromObserverState() {
     dataLayerSessionState =

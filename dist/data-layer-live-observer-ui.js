@@ -44,7 +44,7 @@ export function renderLiveObserverState(elements, state, openEvent) {
     if (elements.sourceStatuses) {
         elements.sourceStatuses.replaceChildren(...state.sources.map((source) => {
             const item = document.createElement("li");
-            item.textContent = `${source.name}: ${source.status}`;
+            item.textContent = source.name;
             return item;
         }));
     }

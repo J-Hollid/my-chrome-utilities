@@ -80,13 +80,13 @@
    "first_source" #{"Event history"}
    "first_view" #{"Live"}
    "fourth_view" #{"Schemas"}
-   "hidden_status" #{"Connected" "Path missing"}
+   "hidden_status" #{"Connected" "Waiting for path"}
    "history_path" #{"dataLayerHistory" "event.history" "missing.path"
                     "queue.history" "queue.value" "test_obj.history"
                     "window.dataLayer"}
    "initial_view" #{"Live" "Schemas"}
    "live_event" #{"purchase"}
-   "live_state" #{"Live"}
+   "live_state" #{"Capturing" "Live"}
    "message" #{"Data Layer observation started" "Data Layer observation stopped"}
    "navigation_key" #{"ArrowRight" "End" "Home"}
    "next_url" #{"https://example.test/" "https://example.test/cart/"
@@ -110,8 +110,8 @@
    "second_view" #{"Library"}
    "selected_source" #{"Adobe beacons"}
    "session_action" #{"End testing" "Stop capture"}
-   "session_actions" #{"Pause capture, Stop, and Save"}
-   "session_state" #{"Live" "Paused"}
+   "session_actions" #{"Pause capture, End testing, and Save"}
+   "session_state" #{"Capturing" "Live" "Paused"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"}
    "source_count" #{"1" "3"}
    "source_kinds" #{"Data Layer, Adobe, and GTAG"}
@@ -125,7 +125,7 @@
    "validation_state" #{"2 issues" "Valid"}
    "view_name" #{"Library" "Live" "Schemas" "Sessions"}
    "visible_count" #{"7"}
-   "visible_status" #{"Connected" "Path missing"}})
+   "visible_status" #{"Connected" "Waiting for path"}})
 
 (def all-canonical-example-values
   (merge-with into canonical-example-values compatibility-example-values))

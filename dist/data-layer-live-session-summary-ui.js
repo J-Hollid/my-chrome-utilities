@@ -1,6 +1,7 @@
 export function findLiveSessionSummaryElements(root = document) {
     return {
         sessionStatus: root.querySelector("#live-session-status"),
+        observerStatus: root.querySelector("#live-observer-status"),
         targetPage: root.querySelector("#live-target-page"),
         pageUrl: root.querySelector("#live-page-url"),
         observerPath: root.querySelector("#live-observer-path"),
@@ -13,6 +14,12 @@ export function renderLiveSessionSummary(elements, summary) {
     if (elements.sessionStatus) {
         elements.sessionStatus.textContent = summary.statusLabel;
         elements.sessionStatus.dataset.status = summary.statusLabel.toLowerCase();
+    }
+    if (elements.observerStatus) {
+        elements.observerStatus.textContent = summary.observerStatus;
+        elements.observerStatus.dataset.status = summary.observerStatus
+            .toLowerCase()
+            .replaceAll(" ", "-");
     }
     if (elements.targetPage)
         elements.targetPage.textContent = summary.targetPage;
