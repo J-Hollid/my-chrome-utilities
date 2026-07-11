@@ -14,8 +14,8 @@ export interface EditableEventTemplate {
   validation: ValidationState;
   payload: JsonValue;
   version: number;
-  originatingSessionId: string;
-  originatingEventId: string;
+  originatingSessionId?: string;
+  originatingEventId?: string;
   provenance: string;
   revisionHistory?: readonly EditableEventTemplate[];
 }
@@ -27,6 +27,7 @@ export interface PropertyEditorState {
   jsonDraft: string;
   jsonError?: string;
   dirty: boolean;
+  isNew?: boolean;
 }
 
 export interface PushExecutionRecord {
@@ -116,6 +117,60 @@ export function openPropertyEditor(template: EditableEventTemplate): PropertyEdi
     draft,
     jsonDraft: json(draft),
     dirty: false,
+  };
+}
+
+export function createNewEventEditor(): PropertyEditorState {
+  return {
+    template: {
+      id: "new-event", name: "", eventName: "", sourceId: "", sourceName: "",
+      destination: "", tags: [], validation: "Not checked", payload: {}, version: 0,
+      provenance: "library-created",
+    },
+    revisions: [], draft: {}, jsonDraft: "{}", dirty: false, isNew: true,
+  };
+}
+
+export interface NewEventValidation {
+  name?: string;
+  eventName?: string;
+  source?: string;
+  destination?: string;
+  json?: string;
+}
+
+export function newEventValidation(state: PropertyEditorState): NewEventValidation {
+  return {
+    ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),
+    ...(state.template.eventName.trim() ? {} : { eventName: "Enter an event name" }),
+    ...(state.template.sourceId ? {} : { source: "Select an event source" }),
+    ...(state.template.destination.trim() ? {} : { destination: "Enter a destination path" }),
+    ...(state.jsonError ? { json: "Correct the JSON draft" } : {}),
+  };
+}
+
+export function setNewEventField(
+  state: PropertyEditorState,
+  field: "name" | "eventName" | "destination" | "source",
+  value: string | { id: string; name: string },
+): PropertyEditorState {
+  const template = field === "source"
+    ? { ...state.template, sourceId: (value as { id: string }).id, sourceName: (value as { name: string }).name }
+    : { ...state.template, [field]: value as string };
+  return { ...state, template, dirty: true };
+}
+
+export function saveNewEvent(
+  state: PropertyEditorState,
+  createId: () => string,
+): EditableEventTemplate {
+  const error = Object.values(newEventValidation(state))[0];
+  if (error) throw new Error(error);
+  return {
+    ...state.template,
+    id: createId(), name: state.template.name.trim(), eventName: state.template.eventName.trim(),
+    destination: state.template.destination.trim(), payload: clone(state.draft), version: 1,
+    provenance: "library-created",
   };
 }
 

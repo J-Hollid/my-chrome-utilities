@@ -204,6 +204,147 @@ const fixture = `(() => {
   return true;
 })()`;
 
+const naturalLibraryActionsRuntime = `(() => {
+  const editor = document.querySelector("#event-property-editor");
+  const actions = ["#add-new-event", "#import-event-library", "#export-event-library", "#clear-event-library"].map((selector) => {
+    const button = document.querySelector(selector); return { id:button.id, visible:button.getClientRects().length > 0, disabled:button.disabled };
+  });
+  return {
+    editorHidden:editor.hidden,
+    editorDisplay:getComputedStyle(editor).display,
+    editorOffsetParent:editor.offsetParent === null,
+    actions,
+    saveLatestPresent:Boolean(document.querySelector("#save-latest-template")),
+  };
+})()`;
+
+const openLibraryRuntime = `(() => {
+  const tab = document.querySelector("#data-layer-view-library");
+  tab.click();
+  return {
+    selected:tab.getAttribute("aria-selected"),
+    panelHidden:document.querySelector("#data-layer-panel-library").hidden,
+  };
+})()`;
+
+const libraryActionsRecoveryRuntime = `(async () => {
+  const q = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) throw new Error("Missing " + selector);
+    return element;
+  };
+  const visible = (element) => {
+    const rect = element.getBoundingClientRect();
+    return !element.hidden && getComputedStyle(element).display !== "none" && rect.width > 0 && rect.height > 0;
+  };
+  const dialogState = (dialog) => {
+    const rect = dialog.getBoundingClientRect();
+    return {
+      hidden: dialog.hidden,
+      display: getComputedStyle(dialog).display,
+      positiveGeometry: rect.width > 0 && rect.height > 0,
+      hiddenAncestor: Boolean(dialog.parentElement?.closest("[hidden]")),
+      focused: dialog.contains(document.activeElement),
+    };
+  };
+  const setValue = (selector, value) => {
+    const field = q(selector);
+    field.value = value;
+    field.dispatchEvent(new Event("input", { bubbles:true }));
+  };
+  const create = (name, eventName, destination, payload) => {
+    q("#add-new-event").click();
+    q("#event-template-json-section summary").click();
+    q("#event-template-execution-settings summary").click();
+    const initial = {
+      editor: visible(q("#event-property-editor")),
+      fields: ["#event-template-name", "#event-template-event-name", "#event-template-source", "#push-destination-path", "#event-template-json"].map((selector) => ({ selector, value:q(selector).value, visible:visible(q(selector)) })),
+      saveDisabled:q("#save-template-revision").disabled,
+      focused:document.activeElement === q("#event-template-name"),
+    };
+    setValue("#event-template-name", name);
+    setValue("#event-template-event-name", eventName);
+    const source = q("#event-template-source");
+    source.value = "event-history";
+    source.dispatchEvent(new Event("input", { bubbles:true }));
+    setValue("#push-destination-path", destination);
+    setValue("#event-template-json", JSON.stringify(payload));
+    const saveEnabled = !q("#save-template-revision").disabled;
+    q("#save-template-revision").click();
+    return { initial, saveEnabled };
+  };
+
+  const purchase = create("Purchase confirmation", "purchase", "event.history", { transaction_id:"purchase-1" });
+  const close = q("#close-template-editor");
+  close.click();
+  const closeResult = {
+    hidden:q("#event-property-editor").hidden,
+    display:getComputedStyle(q("#event-property-editor")).display,
+    offsetParent:q("#event-property-editor").offsetParent === null,
+    editFocused:document.activeElement === q('[data-template-id]'),
+  };
+
+  const rename = q('[aria-label="Rename Purchase confirmation"]');
+  rename.focus();
+  rename.click();
+  const renameDialog = q("#event-template-rename");
+  const renameOpen = {
+    ...dialogState(renameDialog),
+    controls:["#event-template-rename-name", "#event-template-rename-event-name", "#save-template-names", "#cancel-template-rename"].map((selector) => visible(q(selector))),
+  };
+  renameDialog.dispatchEvent(new Event("cancel", { cancelable:true }));
+  const renameClose = { closed:renameDialog.hidden && !renameDialog.open, returned:document.activeElement === q('[aria-label="Rename Purchase confirmation"]') };
+
+  const scroll = create("Scroll milestone", "scroll", "event.history", { scroll_percentage:25 });
+  q("#close-template-editor").click();
+
+  let exported;
+  const createObjectUrl = URL.createObjectURL;
+  URL.createObjectURL = (blob) => { exported = blob; return createObjectUrl.call(URL, blob); };
+  try { q("#export-event-library").click(); }
+  finally { URL.createObjectURL = createObjectUrl; }
+  const exportData = JSON.parse(await exported.text());
+  const exportResult = {
+    templateNames:exportData.templates.map((template) => template.name).sort(),
+    revisions:exportData.templates.map((template) => template.version).sort(),
+    payloads:exportData.templates.map((template) => template.payload),
+    settings:exportData.templates.map((template) => template.destination),
+  };
+
+  q("#clear-event-library").click();
+  const clearReview = { ...dialogState(q("#event-library-delete-review")), summary:q("#event-library-delete-review-summary").textContent };
+  q("#confirm-event-library-delete").click();
+  const cleared = { count:q("#event-template-list").children.length, addAvailable:visible(q("#add-new-event")), importAvailable:visible(q("#import-event-library")) };
+
+  const file = new File([JSON.stringify(exportData)], "event-library.json", { type:"application/json" });
+  const fileInput = q("#event-library-file");
+  Object.defineProperty(fileInput, "files", { configurable:true, value:[file] });
+  fileInput.dispatchEvent(new Event("change", { bubbles:true }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const importReview = { ...dialogState(q("#event-library-import-review")), replaceVisible:visible(q("#replace-event-library")), appendVisible:visible(q("#append-event-library")) };
+  q("#replace-event-library").click();
+  const replaceArmed = q("#replace-event-library").textContent;
+  q("#replace-event-library").click();
+  const restored = {
+    names:[...q("#event-template-list").querySelectorAll(".event-template-identity")].map((element) => element.textContent.split(" · ")[0]).sort(),
+    persisted:JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1") ?? "[]").map((template) => template.name).sort(),
+  };
+
+  q('[aria-label="Delete Purchase confirmation"]').click();
+  const deleteReview = { ...dialogState(q("#event-library-delete-review")), summary:q("#event-library-delete-review-summary").textContent };
+  q("#confirm-event-library-delete").click();
+  const afterDelete = [...q("#event-template-list").querySelectorAll(".event-template-identity")].map((element) => element.textContent);
+  q("#clear-event-library").click();
+  q("#confirm-event-library-delete").click();
+  const final = {
+    count:q("#event-template-list").children.length,
+    persisted:JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1") ?? "[]").length,
+    addAvailable:visible(q("#add-new-event")),
+    importAvailable:visible(q("#import-event-library")),
+  };
+  return { purchase, closeResult, renameOpen, renameClose, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+})()`;
+
 const measurements = `(() => {
   const rect = (selector) => { const value = document.querySelector(selector).getBoundingClientRect(); return { x:value.x, y:value.y, width:value.width, height:value.height, right:value.right, bottom:value.bottom }; };
   const css = (selector) => getComputedStyle(document.querySelector(selector));
@@ -399,6 +540,25 @@ const jsonValidationRecoveryRuntime = `Promise.all([
   return { invalid, recovered, transitions, saved:{ version:saved.template.version, payload:saved.template.payload }, review:{ event:review.rows[0][1], draft:review.editor.draft, changes:reviewChanges } };
 })`;
 
+const libraryNewEventRuntime = `Promise.all([
+  import("./data-layer-event-library-editor.js"),
+  import("./data-layer-event-library-editor-ui.js"),
+]).then(([model, ui]) => {
+  const elements = ui.findEventLibraryEditorElements();
+  let state = model.createNewEventEditor();
+  ui.renderEventLibraryEditor(elements, [], state, { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} });
+  const initial = { title:elements.editorTitle.textContent, count:elements.count.textContent, addHidden:elements.addNewButton.hidden, name:elements.templateName.value, event:elements.eventName.value, source:elements.source.value, destination:elements.pushDestination.value, json:elements.json.value, saveDisabled:elements.saveRevisionButton.disabled };
+  state = model.setNewEventField(state, "name", "Scroll milestone"); state = model.setNewEventField(state, "eventName", "scroll"); state = model.setNewEventField(state, "source", { id:"event-history", name:"Event history" }); state = model.setNewEventField(state, "destination", "event.history"); state = model.updateDraftJson(state, '{"scroll_percentage":25}');
+  const created = model.saveNewEvent(state, () => "template:library:new");
+  return { initial, created };
+})`;
+
+const eventLibraryDeletionRuntime = `import("./data-layer-event-library-deletion.js").then((deletion) => {
+  const template = (id, name) => ({ id, name, eventName:"purchase", sourceId:"history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Valid", payload:{}, version:1, provenance:"library-created" });
+  const first = template("template-7", "Purchase confirmation"); const sameNamed = template("template-9", "Purchase confirmation");
+  return { afterDelete:deletion.deleteEventTemplate([first, sameNamed], "template-7").map((item) => item.id), afterClear:deletion.clearEventLibrary([first, sameNamed]).length };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -470,6 +630,71 @@ try {
   const port = await debuggingPort();
   for (const width of [360, 520, 720]) {
     const socket = await openPanel(port, width);
+    assert.deepEqual(await evaluate(socket, openLibraryRuntime), {
+      selected:"true",
+      panelHidden:false,
+    }, `Library tab did not open through its ${width}px rendered control`);
+    assert.deepEqual(await evaluate(socket, naturalLibraryActionsRuntime), {
+      editorHidden:true,
+      editorDisplay:"none",
+      editorOffsetParent:true,
+      actions:[
+        { id:"add-new-event", visible:true, disabled:false },
+        { id:"import-event-library", visible:true, disabled:false },
+        { id:"export-event-library", visible:true, disabled:true },
+        { id:"clear-event-library", visible:true, disabled:true },
+      ],
+      saveLatestPresent:false,
+    }, `natural Library action surface violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, libraryActionsRecoveryRuntime), {
+      purchase:{
+        initial:{
+          editor:true,
+          fields:[
+            { selector:"#event-template-name", value:"", visible:true },
+            { selector:"#event-template-event-name", value:"", visible:true },
+            { selector:"#event-template-source", value:"", visible:true },
+            { selector:"#push-destination-path", value:"", visible:true },
+            { selector:"#event-template-json", value:"{}", visible:true },
+          ],
+          saveDisabled:true,
+          focused:true,
+        },
+        saveEnabled:true,
+      },
+      closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
+      renameOpen:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, controls:[true, true, true, true] },
+      renameClose:{ closed:true, returned:true },
+      scroll:{
+        initial:{
+          editor:true,
+          fields:[
+            { selector:"#event-template-name", value:"", visible:true },
+            { selector:"#event-template-event-name", value:"", visible:true },
+            { selector:"#event-template-source", value:"", visible:true },
+            { selector:"#push-destination-path", value:"", visible:true },
+            { selector:"#event-template-json", value:"{}", visible:true },
+          ],
+          saveDisabled:true,
+          focused:true,
+        },
+        saveEnabled:true,
+      },
+      exportResult:{
+        templateNames:["Purchase confirmation", "Scroll milestone"],
+        revisions:[1, 1],
+        payloads:[{ transaction_id:"purchase-1" }, { scroll_percentage:25 }],
+        settings:["event.history", "event.history"],
+      },
+      clearReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"All 2 templates and their saved revisions will be removed." },
+      cleared:{ count:0, addAvailable:true, importAvailable:true },
+      importReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, replaceVisible:true, appendVisible:true },
+      replaceArmed:"Confirm replace 0 with 2",
+      restored:{ names:["Purchase confirmation", "Scroll milestone"], persisted:["Purchase confirmation", "Scroll milestone"] },
+      deleteReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"Purchase confirmation; event purchase; 1 saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged." },
+      afterDelete:["Scroll milestone · scroll"],
+      final:{ count:0, persisted:0, addAvailable:true, importAvailable:true },
+    }, `natural Library actions failed their ${width}px browser recovery contract`);
     await evaluate(socket, fixture);
     const measured = await evaluate(socket, measurements);
     assert.ok(measured.document.scrollWidth <= measured.document.clientWidth, `document overflowed at ${width}px`);
@@ -503,6 +728,13 @@ try {
       saved:{ version:4, payload:{ tealium_generated:"1", scroll_percentage:25 } },
       review:{ event:"scroll", draft:{ tealium_generated:"1", scroll_percentage:25 }, changes:[["scroll_percentage","0","25"]] },
     }, `Library JSON validation recovery violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, libraryNewEventRuntime), {
+      initial:{ title:"New event", count:"0 templates", addHidden:true, name:"", event:"", source:"", destination:"", json:"{}", saveDisabled:true },
+      created:{ id:"template:library:new", name:"Scroll milestone", eventName:"scroll", sourceId:"event-history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Not checked", payload:{ scroll_percentage:25 }, version:1, provenance:"library-created" },
+    }, `Library new event creation violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, eventLibraryDeletionRuntime), {
+      afterDelete:["template-9"], afterClear:0,
+    }, `Library deletion violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,

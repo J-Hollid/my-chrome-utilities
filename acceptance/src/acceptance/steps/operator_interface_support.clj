@@ -36,8 +36,10 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name" "Select an event source" "Enter a destination path"}
    "changed_field" #{"Template name" "Event name"}
+   "closing_choice" #{"Save revision" "Discard changes"}
+   "expected_version" #{"3" "4"}
    "new_value" #{"Checkout purchase" "checkout_completed"}
    "expected_template_name" #{"Checkout purchase" "Purchase confirmation"}
    "expected_event_name" #{"purchase" "checkout_completed"}
@@ -159,9 +161,11 @@
    "selection_input" #{"Enter" "Select button"}
    "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
+   "readiness_problem" #{"Template name empty" "Event name empty" "Source not selected" "Destination empty" "JSON invalid"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Edit observer path" "Import session" "Open Live" "Request access" "Restart observation" "Retry target check" "Start observation" "Start testing"}
    "failure_reason" #{"browser storage is unavailable" "event.history is missing" "site access is missing" "target Checkout is closed" "the JSON draft is invalid" "the target read failed"}
+   "file_problem" #{"invalid JSON" "unsupported format version" "required template field absent" "invalid revision history"}
    "recovery_step" #{"Choose target" "Correct the JSON" "Retry Save to Library"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
@@ -209,9 +213,11 @@
    "result_kind" #{"validation result" "action result" "validation error" "action error"}
    "result_text" #{"Draft is valid" "Saved Purchase confirmation as version 4" "Correct invalid JSON before saving" "Choose another target before pushing purchase"}
    "consequence" #{"non-blocking" "blocking error"}
+   "confirmation_kind" #{"individual delete confirmation" "complete Library confirmation"}
+   "origin_control" #{"Delete for Purchase confirmation" "Clear Library"}
    "announcement_priority" #{"polite" "assertive"}
    "input_name" #{"JSON payload" "Destination path" "Observer path"}
-   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array"}
+   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array" "Select a valid Library JSON file" "Export with a supported Library version" "The import is missing required template data" "Correct the imported revision history"}
    "color_scheme" #{"light" "dark"}
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}

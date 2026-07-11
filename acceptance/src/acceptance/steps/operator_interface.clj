@@ -48,7 +48,12 @@
    "features/data-layer-live-pathname-header-runtime.feature"
    "features/data-layer-push-confirmation-decision-data-runtime.feature"
    "features/data-layer-event-template-renaming.feature"
-   "features/data-layer-library-json-validation-recovery-runtime.feature"])
+   "features/data-layer-library-json-validation-recovery-runtime.feature"
+   "features/data-layer-library-editor-close-runtime.feature"
+   "features/data-layer-library-new-event-creation.feature"
+   "features/data-layer-event-library-import-export.feature"
+   "features/data-layer-event-library-deletion.feature"
+   "features/data-layer-library-actions-runtime-recovery.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")
