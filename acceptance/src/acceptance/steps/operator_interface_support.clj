@@ -142,6 +142,7 @@
    "detail_max" #{"400" "432" "448"}
    "metadata_columns" #{"1" "2" "3"}
    "panel_height" #{"640 CSS px"}
+   "row_layout" #{"one column with each label above its value" "a compact 2-column definition list"}
    "primary_action" #{"End testing" "none" "Pause capture" "Push" "Push draft" "Push purchase to Signal Shop" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
    "primary_count" #{"0" "1"}
    "editing_status" #{"Saved" "Unsaved changes"}
