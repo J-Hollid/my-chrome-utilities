@@ -5,7 +5,7 @@ import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, detachObservationTarget, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
-import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetContext as renderObservationTargetContextUi, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
+import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
@@ -14,7 +14,8 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
-import { createLiveSessionSummary } from "./data-layer-live-session-summary.js";
+import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./data-layer-live-session-summary.js";
+import { createLiveNotificationController } from "./data-layer-live-notifications.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
@@ -39,11 +40,9 @@ const endTestingButton = document.querySelector("#end-data-layer-testing");
 const historyPathInput = document.querySelector("#history-path");
 const historyPathDisplay = document.querySelector("#history-path-display");
 const historyPathStatus = document.querySelector("#history-path-status");
-const sessionStatus = document.querySelector("#session-status");
 const sessionHistoryPath = document.querySelector("#session-history-path");
 const sessionTimeline = document.querySelector("#session-timeline");
 const sessionWarning = document.querySelector("#session-warning");
-const observerStatus = document.querySelector("#observer-status");
 const restartObservationButton = document.querySelector("#restart-observation");
 const observationTargetElements = findObservationTargetElements();
 const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
@@ -60,6 +59,7 @@ const liveObserverElements = findLiveObserverElements();
 const liveSessionSummaryElements = findLiveSessionSummaryElements();
 const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, } = liveObserverElements;
 const { copyPageUrlButton } = liveSessionSummaryElements;
+const liveNotificationController = createLiveNotificationController((message) => renderLiveSessionMessage(liveObserverElements, message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
 const saveLiveSessionButton = document.querySelector("#save-live-session");
 const savedSessionSearch = document.querySelector("#saved-session-search");
 const importSavedSessionButton = document.querySelector("#import-saved-session");
@@ -144,7 +144,6 @@ function setObservationTargetResult(result) {
     setObservationTargetResultUi(observationTargetElements, result);
 }
 function renderObservationTargetContext() {
-    renderObservationTargetContextUi(observationTargetElements, observationTargetState, getHistoryArrayPath());
     renderLiveContextActions();
 }
 function renderLiveContextActions() {
@@ -356,7 +355,8 @@ async function attachSelectedTarget() {
     updateSessionFromObserverState();
     await startLiveHistoryCapture(observation);
     persistAndRenderObservationState();
-    setObservationTargetResult(`Attached to ${target.title}`);
+    setObservationTargetResult("");
+    setLiveSessionMessage("Testing started");
     renderObservationTargetContext();
 }
 function beginDetachSelectedTarget() {
@@ -381,7 +381,8 @@ async function confirmDetachSelectedTarget() {
         await attachSelectedTarget();
         return;
     }
-    setObservationTargetResult("Target detached");
+    setObservationTargetResult("");
+    setLiveSessionMessage("Testing ended");
     renderObservationTargetContext();
 }
 function showDataLayerView(view, focus = false) {
@@ -401,7 +402,8 @@ function currentLiveSessionSummary() {
     return createLiveSessionSummary({
         testingState: session?.status === "active"
             ? (liveObserverState.status === "Paused" ? "Paused" : "Active")
-            : "Detached",
+            : "Ended",
+        observerStatus: canonicalLiveObserverStatus(observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)),
         targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
         pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
         observerPath: session?.historyPath ?? getHistoryArrayPath(),
@@ -447,7 +449,7 @@ function openLiveInspector(eventId) {
     renderLiveObserver();
 }
 function setLiveSessionMessage(message) {
-    renderLiveSessionMessage(liveObserverElements, message);
+    liveNotificationController.announce(message);
 }
 async function copyLivePageUrl() {
     const pageUrl = currentLiveSessionSummary().pageUrl;
@@ -684,9 +686,6 @@ function expandedTimelinePageIndexes() {
 }
 function renderSessionState() {
     const session = dataLayerSessionState.session;
-    if (sessionStatus) {
-        sessionStatus.textContent = session?.status ?? "inactive";
-    }
     if (sessionHistoryPath) {
         sessionHistoryPath.textContent = session?.historyPath ?? "";
     }
@@ -751,9 +750,7 @@ function appendDefinition(list, label, value) {
     list.append(term, description);
 }
 function renderObserverState() {
-    if (observerStatus) {
-        observerStatus.textContent = observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState);
-    }
+    renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
 }
 function updateSessionFromObserverState() {
     dataLayerSessionState =
@@ -910,6 +907,8 @@ async function recordDataLayerCommandRun(entry) {
         renderSessionState();
         observationTargetState = detachObservationTarget(observationTargetState);
         renderObservationTargetContext();
+        setObservationTargetResult("");
+        setLiveSessionMessage("Testing ended");
     }
     if (entry.commandId === "data-layer.choose-observation-target") {
         showObservationTargetPicker(observationTargetElements);
@@ -927,12 +926,6 @@ function recordCommandRun(entry) {
     void recordDataLayerCommandRun(entry);
     if (commandLog) {
         commandLog.textContent = entry.message;
-    }
-    if (entry.commandId === "data-layer.start-testing") {
-        setLiveSessionMessage("Data Layer observation started");
-    }
-    if (entry.commandId === "data-layer.end-testing") {
-        setLiveSessionMessage("Data Layer observation stopped");
     }
 }
 const commandRunContext = {

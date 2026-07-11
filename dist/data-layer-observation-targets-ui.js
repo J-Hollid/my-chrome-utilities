@@ -1,7 +1,6 @@
-import { attachedObservationTarget, selectedObservationTarget, targetAccessExplanation, } from "./data-layer-observation-targets.js";
+import { targetAccessExplanation, } from "./data-layer-observation-targets.js";
 export function findObservationTargetElements(root = document) {
     return {
-        state: root.querySelector("#observation-target-state"),
         result: root.querySelector("#observation-target-result"),
         chooseButton: root.querySelector("#choose-observation-target"),
         browseButton: root.querySelector("#browse-observation-targets"),
@@ -20,17 +19,6 @@ export function findObservationTargetElements(root = document) {
 export function setObservationTargetResult(elements, result) {
     if (elements.result)
         elements.result.textContent = result;
-}
-export function renderObservationTargetContext(elements, state, historyPath) {
-    if (!elements.state)
-        return;
-    const attached = attachedObservationTarget(state);
-    const selected = selectedObservationTarget(state);
-    elements.state.textContent = attached
-        ? `Attached — ${attached.title} — ${attached.pageUrl} — ${historyPath}`
-        : selected
-            ? `${state.sessionState} — ${selected.title} — ${selected.accessState}`
-            : "Detached — Choose target";
 }
 function targetLocation(target) {
     try {

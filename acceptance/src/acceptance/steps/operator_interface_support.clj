@@ -2,7 +2,8 @@
   (:require [acceptance.steps.support :as support]))
 
 (def canonical-example-values
-  {"action_name" #{"Copy payload" "Save to Library" "Validate"}
+  {"action_name" #{"Copy payload" "Pause capture" "Save to Library" "Start testing" "Validate"}
+   "action_result" #{"failed" "succeeded"}
    "adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
    "advanced_section" #{"Keymap files"}
    "animation_behavior" #{"brief" "disabled"}
@@ -13,13 +14,15 @@
    "control_name" #{"Back to events" "Clear source filter" "Connected source" "Delete session" "Pause capture" "Push template"}
    "control_state" #{"destructive" "disabled" "selected" "successful"}
    "destination" #{"event.history"}
+   "duplicate_fragments" #{"attached to target, active data layer attached, observation connected"
+                           "observation started, event history connected, session is live"}
    "dock_side" #{"left" "right"}
    "draft_state" #{"Invalid" "Unsaved"}
    "edited_command_id" #{"data-layer.end-testing"}
    "editor_actions" #{"Save and Cancel" "Save, Duplicate, Push"}
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
-   "event_count" #{"0" "7" "18" "42"}
+   "event_count" #{"0" "7" "12" "18" "42"}
    "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
    "external_effect" #{"clipboard contains payload JSON" "event validation state changes" "persisted Library template exists"}
    "first_subview" #{"Event templates"}
@@ -35,6 +38,7 @@
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "navigation_key" #{"ArrowDown"}
+   "notification" #{"Pause failed" "Testing started"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
    "new_event" #{"checkout" "purchase"}
@@ -44,7 +48,7 @@
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
-   "page_title" #{"Cart" "Checkout" "Order confirmation" "Shop"}
+   "page_title" #{"Cart" "Checkout" "Order confirmation" "Product detail" "Shop"}
    "page_titles" #{"Home, Checkout, Purchase"}
    "other_page_title" #{"Documentation"}
    "tab_id" #{"42"}
@@ -54,6 +58,7 @@
                 "https://shop.example.test/checkout"
                 "https://shop.example.test/checkout?campaign=summer-sale&audience=returning-customers&variant=blue"
                 "https://shop.example.test/confirmation"
+                "https://shop.example.test/products/blue"
                 "https://shop.example.test/p/"}
    "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"
@@ -88,10 +93,11 @@
    "session_actions" #{"Open archived, Resume, Create sequence, Export"}
    "session_name" #{"Checkout journey"}
    "session_state" #{"Capturing" "Live" "Paused"}
-   "testing_state" #{"Active" "Detached" "Paused"}
-   "status_label" #{"Capturing" "Detached" "Paused"}
-   "observer_path" #{"dataLayer" "event.history" "queue.history"}
-   "connected_source_count" #{"0" "2" "3"}
+   "testing_state" #{"Active" "Ended" "Paused"}
+   "session_status" #{"Capturing" "Ended" "Paused"}
+   "observer_status" #{"Connected" "Disconnected" "Error" "Waiting for path"}
+   "observer_path" #{"analytics" "dataLayer" "event.history" "queue.history"}
+   "connected_source_count" #{"0" "1" "2" "3"}
    "source_count" #{"3"}
    "source_name" #{"Adobe beacons" "Event history" "GA4 collect" "event.history"}
    "source_status" #{"Connected" "Disconnected"}
