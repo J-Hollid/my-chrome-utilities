@@ -952,6 +952,9 @@ function openTemplateEditor(template: EditableEventTemplate): void {
 
 function closeTemplateEditor(): void {
   propertyEditorState = undefined;
+  if (eventLibraryEditorElements.propertyEditor) {
+    eventLibraryEditorElements.propertyEditor.hidden = true;
+  }
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
