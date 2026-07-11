@@ -5,31 +5,40 @@
 
 Feature: Data Layer Live inspector navigation
 
+  Background:
+    Given capture state is Capturing
+
   # Data Layer Live inspector navigation 001
   Scenario Outline: Data Layer Live inspector navigation 001
     Given the Live event list is displayed at available width <panel_width>
     And event <event_name> is visible at feed scroll position <scroll_position>
     When event <event_name> is opened
-    Then the inspector replaces the event list
-    And a visible Back to events control remains inside the visible inspector context
+    Then only the inspector occupies the narrow detail region
+    And a visible Back to events control is displayed at the top of the inspector
+    And Back to events is not a descendant of the hidden event-list region
     And the return control is keyboard reachable while the event list is hidden
     When Back to events is activated
     Then the inspector closes and the event list is displayed
     And keyboard focus returns to event <event_name>
-    And the feed filters and scroll position <scroll_position> are restored
+    And feed state is restored with filters and scroll position <scroll_position>
+    And inspector navigation leaves capture state unchanged
 
     Examples:
       | panel_width | event_name | scroll_position |
-      | 320 CSS px  | banner     | 480 CSS px      |
+      | 360 CSS px  | banner     | 480 CSS px      |
+      | 520 CSS px  | purchase   | 960 CSS px      |
 
   # Data Layer Live inspector navigation 002
   Scenario Outline: Data Layer Live inspector navigation 002
     Given event <event_name> is open in the Live inspector
+    And viewport marker before inspection is <scroll_position>
     And no inspector disclosure or modal interaction is active
     When Escape is pressed
-    Then the inspector closes and the event list is displayed
+    Then the same return behavior as Back to events closes the inspector and displays the event list
     And keyboard focus returns to event <event_name>
+    And feed state is restored with filters and scroll position <scroll_position>
+    And inspector navigation leaves capture state unchanged
 
     Examples:
-      | event_name |
-      | banner     |
+      | event_name | scroll_position |
+      | banner     | 480 CSS px      |
