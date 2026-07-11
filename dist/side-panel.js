@@ -1645,6 +1645,7 @@ saveTemplateRevisionButton?.addEventListener("click", () => {
             const template = saveNewEvent(propertyEditorState, () => `template:library:${crypto.randomUUID()}`);
             eventTemplates = [...eventTemplates, template];
             propertyEditorState = openPropertyEditor(template);
+            templateEditorReturnTemplateId = template.id;
             persistEventTemplateLibrary();
             setEventLibraryResult(eventLibraryEditorElements, `Saved ${template.name} as version 1.`);
             renderEventTemplateLibrary();
