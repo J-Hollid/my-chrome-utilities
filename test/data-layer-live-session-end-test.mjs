@@ -9,9 +9,11 @@ const target = createObservationTarget({
   pageUrl: "https://shop.example.test/checkout",
   title: "Checkout",
 });
+const releasedTargetIds = [];
 const ended = endLiveSession(
   { session: { id: "test", status: "active", tabId: 42, historyPath: "event.history", startUrl: target.pageUrl, currentUrl: target.pageUrl, timeline: [] } },
   restoreAttachedObservationTarget(target),
+  (targetId) => releasedTargetIds.push(targetId),
 );
 
 assert.equal(ended.sessionState.session?.status, "ended");
@@ -19,3 +21,5 @@ assert.equal(ended.targetState.sessionState, "Detached");
 assert.equal(ended.targetState.attachedTargetId, undefined);
 assert.equal(ended.targetState.recentTargetId, target.id);
 assert.equal(ended.releasedTargetId, target.id);
+assert.deepEqual(releasedTargetIds, [target.id]);
+endLiveSession(ended.sessionState, ended.targetState, () => assert.fail("released target must not be released twice"));

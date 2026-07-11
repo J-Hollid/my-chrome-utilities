@@ -373,9 +373,8 @@ function beginDetachSelectedTarget() {
 async function confirmDetachSelectedTarget() {
     const switchTargetId = pendingObservationTargetSwitchId;
     pendingObservationTargetSwitchId = undefined;
-    stopLiveHistoryCapture();
     ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
-        endLiveSession(dataLayerSessionState, observationTargetState));
+        endLiveSession(dataLayerSessionState, observationTargetState, () => stopLiveHistoryCapture()));
     persistAndRenderObservationState();
     closeDetachTargetConfirmation(observationTargetElements);
     if (switchTargetId) {
@@ -903,9 +902,8 @@ async function recordDataLayerCommandRun(entry) {
         await attachSelectedTarget();
     }
     if (entry.commandId === "data-layer.end-testing") {
-        stopLiveHistoryCapture();
         ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
-            endLiveSession(dataLayerSessionState, observationTargetState));
+            endLiveSession(dataLayerSessionState, observationTargetState, () => stopLiveHistoryCapture()));
         persistAndRenderObservationState();
         renderObservationTargetContext();
         setObservationTargetResult("");

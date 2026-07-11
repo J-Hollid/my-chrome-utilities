@@ -17,8 +17,10 @@ export interface EndedLiveSession {
 export function endLiveSession(
   sessionState: DataLayerSessionState,
   targetState: ObservationTargetState,
+  releaseTarget: (targetId: string) => void = () => {},
 ): EndedLiveSession {
   const releasedTargetId = attachedObservationTarget(targetState)?.id;
+  if (releasedTargetId !== undefined) releaseTarget(releasedTargetId);
   return {
     sessionState: endDataLayerTestingSession(sessionState),
     targetState: detachObservationTarget(targetState),

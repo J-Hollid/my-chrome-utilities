@@ -616,9 +616,12 @@ function beginDetachSelectedTarget(): void {
 async function confirmDetachSelectedTarget(): Promise<void> {
   const switchTargetId = pendingObservationTargetSwitchId;
   pendingObservationTargetSwitchId = undefined;
-  stopLiveHistoryCapture();
   ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
-    endLiveSession(dataLayerSessionState, observationTargetState));
+    endLiveSession(
+      dataLayerSessionState,
+      observationTargetState,
+      () => stopLiveHistoryCapture(),
+    ));
   persistAndRenderObservationState();
   closeDetachTargetConfirmation(observationTargetElements);
   if (switchTargetId) {
@@ -1275,9 +1278,12 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
   }
 
   if (entry.commandId === "data-layer.end-testing") {
-    stopLiveHistoryCapture();
     ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
-      endLiveSession(dataLayerSessionState, observationTargetState));
+      endLiveSession(
+        dataLayerSessionState,
+        observationTargetState,
+        () => stopLiveHistoryCapture(),
+      ));
     persistAndRenderObservationState();
     renderObservationTargetContext();
     setObservationTargetResult("");
