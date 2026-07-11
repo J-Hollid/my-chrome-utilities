@@ -106,6 +106,7 @@
         <section id="event-property-editor" aria-labelledby="event-template-editor-title" hidden>
           <header class="detail-view-header"><button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button><h4 id="event-template-editor-title" tabindex="-1">Event property editor</h4></header>
           <dl id="event-template-editor-summary" aria-label="Template editor summary"></dl>
+          <section id="event-template-revision-history-section" aria-labelledby="event-template-revision-history-heading"><h5 id="event-template-revision-history-heading">Revision history</h5><ul id="event-template-revision-history"></ul></section>
           <section id="event-template-properties-section" aria-label="Properties"><h5>Properties</h5><ul id="event-template-properties" aria-label="Draft properties"></ul></section>
           <details id="event-template-json-section"><summary>JSON</summary><label for="event-template-json">JSON draft</label><p id="event-template-help">Edit the structured Properties summary or use JSON for advanced changes.</p><textarea id="event-template-json" rows="10" aria-describedby="event-template-help event-template-validation"></textarea></details>
           <details id="event-template-execution-settings"><summary>Execution settings</summary><label for="push-destination-path">Push destination path</label><input id="push-destination-path" type="text" value="dataLayer" aria-describedby="event-template-validation" /></details>
@@ -126,6 +127,23 @@
             </div>
             <section id="close-template-editor-confirmation" aria-label="Discard unsaved changes confirmation" hidden><output id="close-template-editor-summary"></output><button id="keep-editing-template" type="button" data-action-variant="secondary">Keep editing</button><button id="save-and-close-template" type="button" data-action-variant="primary">Save revision</button><button id="discard-and-close-template" type="button" data-action-variant="destructive">Discard changes</button></section>
           </div>
+          <dialog id="event-template-rename" aria-labelledby="event-template-rename-heading" hidden>
+            <h5 id="event-template-rename-heading" tabindex="-1">Rename template</h5>
+            <label for="event-template-rename-name">Template name</label>
+            <input id="event-template-rename-name" type="text" aria-describedby="event-template-rename-name-error" />
+            <output id="event-template-rename-name-error" role="alert"></output>
+            <label for="event-template-rename-event-name">Event name</label>
+            <input id="event-template-rename-event-name" type="text" aria-describedby="event-template-rename-event-name-error" />
+            <output id="event-template-rename-event-name-error" role="alert"></output>
+            <button id="save-template-names" type="button" data-action-variant="primary">Save names</button>
+            <button id="cancel-template-rename" type="button" data-action-variant="secondary">Cancel</button>
+          </dialog>
+          <dialog id="event-template-rename-review" aria-labelledby="event-template-rename-review-heading" hidden>
+            <h5 id="event-template-rename-review-heading" tabindex="-1">Review event name change</h5>
+            <p id="event-template-rename-review-summary"></p>
+            <button id="confirm-template-rename" type="button" data-action-variant="primary">Save names</button>
+            <button id="cancel-template-rename-review" type="button" data-action-variant="secondary">Cancel</button>
+          </dialog>
           <dialog id="push-draft-review" aria-labelledby="push-draft-review-heading" hidden>
             <h5 id="push-draft-review-heading" tabindex="-1">Review push</h5><dl id="push-draft-review-details"></dl><section id="push-draft-review-changes" aria-labelledby="push-draft-review-changes-heading"><h6 id="push-draft-review-changes-heading">Payload changes</h6><ul id="push-draft-review-change-list"></ul><p id="push-draft-review-no-changes" hidden>No payload changes</p></section><output id="push-draft-review-summary" hidden></output>
             <button id="confirm-push-draft" type="button" data-action-variant="primary">Confirm push</button>
