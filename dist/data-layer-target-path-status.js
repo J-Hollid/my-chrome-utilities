@@ -1,4 +1,9 @@
 import { pathStatus } from "./data-layer.js";
+export function targetPathStatusForObservation(observation, path) {
+    return observation.pageAccessStatus === "page access available"
+        ? pathStatus(observation.pageObject, path)
+        : "page access unavailable";
+}
 export function createTargetPathStatusController(options) {
     let latestRequest = 0;
     return {
@@ -13,9 +18,7 @@ export function createTargetPathStatusController(options) {
                 options.render(path, fieldValue, "Selection required");
                 return;
             }
-            options.render(path, fieldValue, observation.pageAccessStatus === "page access available"
-                ? pathStatus(observation.pageObject, path)
-                : "page access unavailable");
+            options.render(path, fieldValue, targetPathStatusForObservation(observation, path));
             options.apply(observation);
         },
     };

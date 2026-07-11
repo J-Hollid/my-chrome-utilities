@@ -42,13 +42,18 @@
             <button id="copy-live-page-url" type="button">Copy page URL</button>
           </section>
           <section id="live-context-actions" aria-label="Live actions">
+          <ol id="live-setup-steps" aria-label="Live setup steps">
+            <li id="live-setup-target">Choose target</li>
+            <li id="live-setup-readiness">Confirm access and path</li>
+            <li id="live-setup-session">Start testing</li>
+          </ol>
           <button id="start-data-layer-testing" type="button">Start testing</button>
           <button id="end-data-layer-testing" type="button" hidden>End testing</button>
           <button id="choose-observation-target" type="button">Choose target</button>
           </section>
           <button id="pause-capture" type="button" hidden>Pause capture</button>
           <button id="resume-capture" type="button" hidden>Resume capture</button>
-          <button id="save-live-session" type="button">Save</button>
+          <button id="save-live-session" type="button">Save session</button>
           <output id="live-session-message" aria-live="polite"></output>
         </header>
         <ul id="live-source-statuses" aria-label="Observation sources"></ul>
@@ -58,6 +63,22 @@
           <button id="back-to-events" type="button" hidden>Back to events</button>
         </section>
         <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
+        <details id="data-layer-settings" aria-label="Data layer testing settings">
+          <summary>Settings</summary>
+          <section id="observation-target-controls" aria-label="Observation target controls">
+            <button id="browse-observation-targets" type="button">Browse all tabs</button>
+            <output id="observation-target-result" aria-live="polite"></output>
+            <section id="detach-observation-target-confirmation" aria-label="Detach target confirmation" hidden>
+              <output id="detach-observation-target-message"></output>
+              <button id="cancel-detach-observation-target" type="button">Cancel</button>
+              <button id="confirm-detach-observation-target" type="button">Detach target</button>
+            </section>
+          </section>
+          <label for="history-path">History array path</label>
+          <input id="history-path" type="text" value="queue.history" />
+          <output id="history-path-display">queue.history</output>
+          <output id="history-path-status" aria-live="polite">ready</output>
+        </details>
       </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
         <h3>Library</h3>
@@ -98,21 +119,6 @@
         <h3>Schemas</h3><label for="schema-search">Search schemas</label><input id="schema-search" type="search" />
         <button id="create-schema" type="button">Create</button><button id="import-schema" type="button">Import</button><button id="export-schema" type="button">Export</button>
         <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><output id="schema-result" aria-live="polite"></output>
-      </section>
-      <section id="data-layer-settings" aria-label="Data layer testing settings">
-        <section id="observation-target-controls" aria-label="Observation target controls">
-          <button id="browse-observation-targets" type="button">Browse all tabs</button>
-          <output id="observation-target-result" aria-live="polite"></output>
-          <section id="detach-observation-target-confirmation" aria-label="Detach target confirmation" hidden>
-            <output id="detach-observation-target-message"></output>
-            <button id="cancel-detach-observation-target" type="button">Cancel</button>
-            <button id="confirm-detach-observation-target" type="button">Detach target</button>
-          </section>
-        </section>
-        <label for="history-path">History array path</label>
-        <input id="history-path" type="text" value="queue.history" />
-        <output id="history-path-display">queue.history</output>
-        <output id="history-path-status" aria-live="polite">ready</output>
       </section>
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-history-path"></output>
