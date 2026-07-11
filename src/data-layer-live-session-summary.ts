@@ -1,3 +1,5 @@
+import type { ObserverAttachmentStatus } from "./data-layer-recovery.js";
+
 export type LiveTestingState = "Active" | "Paused" | "Ended";
 export type LiveObserverStatus = "Connected" | "Waiting for path" | "Error" | "Disconnected";
 
@@ -29,4 +31,15 @@ export function createLiveSessionSummary(
     capturedEventCount: input.capturedEventCount,
     connectedSourceCount: input.connectedSourceCount,
   };
+}
+
+export function canonicalLiveObserverStatus(
+  status: ObserverAttachmentStatus,
+): LiveObserverStatus {
+  switch (status) {
+    case "attached": return "Connected";
+    case "needs sync": return "Waiting for path";
+    case "page access unavailable": return "Error";
+    case "inactive": return "Disconnected";
+  }
 }

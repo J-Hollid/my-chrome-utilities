@@ -36,7 +36,9 @@ export function renderLiveSessionSummary(
   }
   if (elements.observerStatus) {
     elements.observerStatus.textContent = summary.observerStatus;
-    elements.observerStatus.dataset.status = summary.observerStatus.toLowerCase().replaceAll(" ", "-");
+    elements.observerStatus.dataset.status = summary.observerStatus
+      .toLowerCase()
+      .replaceAll(" ", "-");
   }
   if (elements.targetPage) elements.targetPage.textContent = summary.targetPage;
   if (elements.pageUrl) elements.pageUrl.textContent = summary.pageUrl;
