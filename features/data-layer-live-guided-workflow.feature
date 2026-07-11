@@ -27,7 +27,7 @@ Feature: Data layer Live guided workflow
 
     Examples:
       | page_title | access_state | observer_path | path_status | primary_action |
-      | Checkout   | Ready        | event.history | ready       | Start testing  |
+      | Checkout   | Ready        | event.history | Ready       | Start testing  |
 
   # Data layer Live guided workflow 003
   Scenario Outline: Data layer Live guided workflow 003

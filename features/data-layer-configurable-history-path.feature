@@ -12,8 +12,8 @@ Feature: Data layer configurable history path
   Scenario Outline: Data layer configurable history path 001
     When the data layer testing settings are opened
     Then the user can enter history array path <history_path>
-    And the configured history array path is shown in the side panel
-    And the configured history array path is persisted locally
+    And Settings displays value <history_path>
+    And value <history_path> survives a side panel reload
 
     Examples:
       | project_name         | history_path             |
@@ -23,22 +23,21 @@ Feature: Data layer configurable history path
 
   # Data layer configurable history path 002
   Scenario Outline: Data layer configurable history path 002
-    Given history array path <history_path> is configured
-    When the configured page object is checked
-    Then path status <status> is shown in the side panel
+    Given the target probe uses history array path <history_path>
+    When the target probe completes
+    Then labelled readiness <status> appears
     And no page script error is caused by the path check
 
     Examples:
       | project_name         | history_path  | status       |
-      | my-chrome-utilities | queue.history | ready        |
-      | my-chrome-utilities | missing.path  | path missing |
-      | my-chrome-utilities | queue.value   | not an array |
+      | my-chrome-utilities | queue.history | Ready            |
+      | my-chrome-utilities | missing.path  | Waiting for path |
+      | my-chrome-utilities | queue.value   | Error            |
 
   # Data layer configurable history path 003
   Scenario Outline: Data layer configurable history path 003
-    When data layer settings are inspected
-    Then config import is not present
-    And config export is not present
+    When advanced configuration controls are reviewed
+    Then neither config import nor config export is present
 
     Examples:
       | project_name         |

@@ -18,7 +18,9 @@
    "duplicate_choice" #{"Create copy" "Update existing"}
    "duplicate_result" #{"Purchase updated" "distinct copy created"}
    "template_count" #{"1" "2"}
-   "access_state" #{"Ready"}
+   "access_state" #{"Granted" "Permission required" "Ready"}
+   "probe_outcome" #{"array" "path missing" "not read" "not an array" "read failed"}
+   "path_readiness" #{"Ready" "Waiting for path" "Permission required" "Error"}
    "first_step" #{"Choose target"}
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
@@ -27,6 +29,8 @@
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
+   "transition_message" #{"Checking target" "Requesting access"}
+   "new_path_readiness" #{"Ready" "Permission required"}
    "setup_action" #{"Choose target" "Start testing Checkout"}
    "adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
    "advanced_section" #{"Keymap files"}
@@ -88,7 +92,7 @@
    "new_tab_id" #{"73"}
    "target_value" #{"array containing pageview" "missing" "object containing order"}
    "sample_value" #{"array containing order" "array containing purchase" "missing"}
-   "path_status" #{"not an array" "path missing" "ready"}
+   "path_status" #{"Error" "Ready" "Waiting for path" "not an array" "path missing" "ready"}
    "pathname" #{"/checkout" "/products"}
    "other_tab_id" #{"77"}
    "page_url" #{"https://example.test/home"
@@ -117,7 +121,8 @@
    "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
-   "recovery_action" #{"Clear filters" "Create schema" "Import session" "Restart observation" "Start observation"}
+   "recovery_action" #{"Clear filters" "Create schema" "Edit observer path" "Import session" "Request access" "Restart observation" "Retry target check" "Start observation"}
+   "failure_reason" #{"event.history is missing" "site access is missing" "the target read failed"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
