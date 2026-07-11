@@ -165,6 +165,7 @@
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Edit observer path" "Import session" "Open Live" "Request access" "Restart observation" "Retry target check" "Start observation" "Start testing"}
    "failure_reason" #{"browser storage is unavailable" "event.history is missing" "site access is missing" "target Checkout is closed" "the JSON draft is invalid" "the target read failed"}
+   "file_problem" #{"invalid JSON" "unsupported format version" "required template field absent" "invalid revision history"}
    "recovery_step" #{"Choose target" "Correct the JSON" "Retry Save to Library"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
@@ -214,7 +215,7 @@
    "consequence" #{"non-blocking" "blocking error"}
    "announcement_priority" #{"polite" "assertive"}
    "input_name" #{"JSON payload" "Destination path" "Observer path"}
-   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array"}
+   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array" "Select a valid Library JSON file" "Export with a supported Library version" "The import is missing required template data" "Correct the imported revision history"}
    "color_scheme" #{"light" "dark"}
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}

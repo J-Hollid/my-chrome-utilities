@@ -99,9 +99,13 @@
           <label for="event-template-search">Search templates</label>
           <input id="event-template-search" type="search" />
           <button id="add-new-event" type="button" data-action-variant="secondary">Add new event</button>
+          <button id="export-event-library" type="button" data-action-variant="secondary" aria-describedby="export-event-library-reason">Export Library</button><output id="export-event-library-reason" class="visually-hidden">Add or import an event before exporting</output>
+          <button id="import-event-library" type="button" data-action-variant="secondary">Import Library</button><input id="event-library-file" type="file" accept="application/json,.json" hidden />
           <output id="event-template-count" aria-live="polite"></output>
           <ul id="event-template-list"></ul>
           <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
+          <output id="event-library-transfer-result" role="status" aria-live="polite"></output>
+          <dialog id="event-library-import-review" aria-labelledby="event-library-import-review-heading" hidden><h4 id="event-library-import-review-heading" tabindex="-1">Review Library import</h4><output id="event-library-import-review-summary"></output><button id="replace-event-library" type="button" data-action-variant="destructive">Replace entire Library</button><button id="append-event-library" type="button" data-action-variant="secondary">Append to Library</button><button id="cancel-event-library-import" type="button" data-action-variant="quiet">Cancel</button></dialog>
         </section>
         <section id="event-property-editor" aria-labelledby="event-template-editor-title" hidden>
           <header class="detail-view-header"><button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button><h4 id="event-template-editor-title" tabindex="-1">Event property editor</h4></header>
