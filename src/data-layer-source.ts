@@ -1,4 +1,4 @@
-export type ValidationState = "Not checked" | "Valid" | `${number} issues`;
+export type ValidationState = "Not checked" | "Valid" | "Assignment error" | `${number} issues`;
 export type AdapterCapability = "inspect" | "save" | "validate" | "push";
 export type ArtifactType =
   | "captured event"

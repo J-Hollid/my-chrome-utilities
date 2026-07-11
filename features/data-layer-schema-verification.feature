@@ -59,11 +59,11 @@ Feature: Data layer schema verification
     Given events have validation states <validation_states>
     When the user filters by validation state <selected_state>
     Then only events with validation state <selected_state> are visible
-    And the session summary reports counts for Valid, Issues, and Not checked
+    And the session summary reports counts for Valid, Warnings, Issues, Not checked, and Assignment error
 
     Examples:
       | project_name         | schema_name    | schema_version | validation_states          | selected_state |
-      | my-chrome-utilities | Purchase event | 2              | Valid, 2 issues, Not checked | 2 issues       |
+      | my-chrome-utilities | Purchase event | 2              | Valid, 1 warning, 2 issues, Not checked, Assignment error | 2 issues |
 
   # Data layer schema verification 006
   Scenario Outline: Data layer schema verification 006
