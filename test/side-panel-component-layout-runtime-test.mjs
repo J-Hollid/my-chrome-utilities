@@ -190,6 +190,7 @@ async function evaluate(socket, expression) {
 const fixture = `(() => {
   const text = "Long metadata and form content that must wrap within the side panel component without creating document overflow. ".repeat(8);
   for (const selector of ["#data-layer-panel-live", "#data-layer-panel-library", "#data-layer-panel-sessions", "#data-layer-panel-schemas", "#event-property-editor", "#live-event-inspector"]) document.querySelector(selector).hidden = false;
+  document.querySelector("#data-layer-panel-live").dataset.liveLayout = "wide-detail";
   document.querySelector("#event-template-json").value = text;
   document.querySelector("#push-destination-path").value = "analytics.destination.with.a.deliberately.long.name";
   for (const selector of ["#live-event-feed", "#event-template-list", "#saved-session-list", "#schema-list"]) {
@@ -242,6 +243,24 @@ const inspectorReturnRuntime = `import("./data-layer-live-inspector-return-ui.js
   return result;
 })`;
 
+const hiddenStateRuntime = `(() => {
+  const component = document.createElement("section");
+  component.hidden = true;
+  component.style.display = "flex";
+  const control = document.createElement("button");
+  control.textContent = "Hidden control";
+  component.append(control); document.body.append(component);
+  control.focus();
+  const result = {
+    display: getComputedStyle(component).display,
+    offsetParent: component.offsetParent === null,
+    zeroSpace: component.getBoundingClientRect().width === 0 && component.getBoundingClientRect().height === 0,
+    focusExcluded: document.activeElement !== control,
+    ariaHidden: component.getAttribute("aria-hidden") !== "false",
+  };
+  component.remove(); return result;
+})()`;
+
 const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
   const eventList = document.querySelector("#live-event-list");
   const eventFeed = document.querySelector("#live-event-feed");
@@ -263,6 +282,29 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     backInsideList: eventList.contains(backToEventsButton),
     backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
   };
+})`;
+
+const pathnameHeaderRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveObserverState }) => {
+  const feed = document.createElement("ul"); const list = document.createElement("section"); list.style.cssText = "width:100%;overflow-x:hidden"; list.append(feed); document.body.append(list);
+  const events = [
+    { id:"event-1", name:"pageview", sourceId:"event-history", captureTime:"10:00:00", pageUrl:"https://example.test/products", payload:{ page_name:"Products", page_type:"listing", page_category:"catalog" } },
+    { id:"event-2", name:"pageview", sourceId:"event-history", captureTime:"10:01:00", pageUrl:"https://example.test/products", payload:{ page_name:"Products", page_type:"detail", page_category:"product" } },
+    { id:"event-3", name:"pageview", sourceId:"event-history", captureTime:"10:02:00", pageUrl:"https://example.test/checkout", payload:{ page_name:"Checkout", page_type:"form", page_category:"conversion" } },
+    { id:"event-4", name:"pageview", sourceId:"event-history", captureTime:"10:03:00", pageUrl:"https://example.test/checkout", payload:{ page_name:"", page_type:"detail", page_category:"product" } },
+    { id:"event-5", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products", payload:{} },
+  ];
+  renderLiveObserverState({ livePanel:null, eventFeed:feed, eventList:list, eventInspector:null, backToEventsButton:null, sourceStatuses:null }, { sources:[], events, listVisible:true }, () => {});
+  const headers = [...feed.querySelectorAll(".pathname-visit-heading")].map((header) => ({ text:header.textContent.trim(), name:header.getAttribute("aria-label"), associated:header.parentElement.getAttribute("aria-labelledby") === header.id }));
+  const rows = [...feed.querySelectorAll(".pathname-visit button")].map((button) => button.textContent);
+  renderLiveObserverState({ livePanel:null, eventFeed:feed, eventList:list, eventInspector:null, backToEventsButton:null, sourceStatuses:null }, { sources:[], events:[{ id:"long", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products/field-notebook", payload:{} }], listVisible:true }, () => {});
+  const longHeader = feed.querySelector(".pathname-visit-heading"); const headerRect = longHeader.getBoundingClientRect(); const listRect = list.getBoundingClientRect();
+  const longResult = {
+    bounded:headerRect.left >= listRect.left - 1 && headerRect.right <= listRect.right + 1,
+    unclipped:[...longHeader.children].every((field) => field.scrollWidth <= field.clientWidth + 1),
+    pathnameCount:(longHeader.textContent.match(/\\/products\\/field-notebook/g) ?? []).length,
+    documentFits:document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  };
+  list.remove(); return { headers, rows, longResult };
 })`;
 
 const workflowFocusRuntime = `Promise.all([
@@ -343,6 +385,9 @@ try {
     assert.deepEqual(measured.controls.filter(({ width: controlWidth, available, right, parentRight }) => controlWidth + 1 < available || right > parentRight + 1), [], `form control width contract failed at ${width}px`);
     assert.ok(measured.overflow.every(({ scrollHeight, clientHeight, overflowY }) => scrollHeight > clientHeight && /auto|scroll/.test(overflowY)), `bounded overflow contract failed at ${width}px`);
     if (width === 360) {
+      assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
+        display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,
+      }, "hidden components violated the authoritative browser contract");
       assert.deepEqual([measured.live.header, measured.live.master, measured.live.detail].filter((component) => !withinColumn(component, measured.root)), [], "compact components escaped their content column");
       assert.ok(measured.actionChildren.every(({ rect, parent }) => rect.x >= parent.x - 1 && rect.right <= parent.right + 1), "an action button escaped its wrapping action group");
       assert.deepEqual(await evaluate(socket, inspectorReturnRuntime), {
@@ -357,6 +402,21 @@ try {
         backInsideList: false,
         backIsFirstHeaderControl: true,
       }, "stacked inspector navigation layout violated its browser contract");
+      assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
+        headers: [
+          { text:"/productsLatest 10:04:00Events 1", name:"/products, Latest 10:04:00, Events 1", associated:true },
+          { text:"/checkoutLatest 10:03:00Events 2", name:"/checkout, Latest 10:03:00, Events 2", associated:true },
+          { text:"/productsLatest 10:01:00Events 2", name:"/products, Latest 10:01:00, Events 2", associated:true },
+        ],
+        rows:[
+          "pageview · 10:04:00 · event-history · Not checked",
+          "pageview · 10:03:00 · event-history · Not checked · Page Type detail, Page Category product",
+          "pageview · 10:02:00 · event-history · Not checked · Page Name Checkout, Page Type form",
+          "pageview · 10:01:00 · event-history · Not checked · Page Name Products, Page Type detail",
+          "pageview · 10:00:00 · event-history · Not checked · Page Name Products, Page Type listing",
+        ],
+        longResult:{ bounded:true, unclipped:true, pathnameCount:1, documentFits:true },
+      }, "rendered pathname headers omitted required visit metadata");
       assert.deepEqual(await evaluate(socket, workflowFocusRuntime), {
         tabResult: { workspaceRight:true, workspaceLeft:true, dataLayerEnd:true, dataLayerHome:true, singleDataLayerTabStop:true },
         editorResult: { title:"Purchase confirmation editor", headingFocused:true, disclosuresClosed:true, returnedToTemplate:"template:purchase" },

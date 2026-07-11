@@ -36,7 +36,7 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
@@ -50,6 +50,8 @@
    "collection_name" #{"events" "schemas" "sessions" "templates"}
    "command_id" #{"data-layer.start-testing"}
    "component_name" #{"Live view tab" "event row" "observation status" "primary action" "source control" "template JSON editor" "workspace tab"}
+   "component" #{"Live setup steps" "Library empty state" "dirty-editor close confirmation" "target-selection dialog" "push confirmation"}
+   "layout_display" #{"flex" "grid"}
    "control_name" #{"Back to events" "Clear source filter" "Connected source" "Delete session" "Pause capture" "Push template"}
    "control_state" #{"destructive" "disabled" "selected" "successful"}
    "destination" #{"checkoutLayer" "dataLayer" "event.history"}
@@ -86,6 +88,10 @@
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "navigation_key" #{"ArrowDown" "ArrowLeft" "ArrowRight" "Home" "End"}
+   "navigation_action" #{"Close editor" "Back to captured event"}
+   "overlay" #{"target-selection dialog" "push confirmation"}
+   "open_action" #{"Choose target" "Push draft"}
+   "close_action" #{"Escape" "Cancel"}
    "tab_set" #{"Workspace" "Data Layer"}
    "initial_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Sessions" "Schemas"}
    "target_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Schemas"}
@@ -173,6 +179,9 @@
    "new_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
+   "selection_state" #{"none" "purchase"}
+   "active_pane" #{"event feed" "event inspector"}
+   "inactive_pane" #{"event feed" "event inspector"}
    "sequence" #{"C-c s"}
    "sequence_name" #{"Purchase journey"}
    "session_action" #{"Create sequence" "End testing" "Export" "Start testing"}
@@ -189,7 +198,15 @@
    "source_count" #{"3"}
    "source_name" #{"Adobe beacons" "Event history" "GA4" "GA4 collect" "event.history"}
    "source_status" #{"Connected" "Disconnected"}
-   "state_name" #{"invalid" "restarted" "selected"}
+   "state_name" #{"invalid" "restarted" "selected" "Capturing" "Connected" "Permission required" "Error"}
+   "state_context" #{"session status" "observer status" "path warning" "observer failure"}
+   "result_kind" #{"validation result" "action result" "validation error" "action error"}
+   "result_text" #{"Draft is valid" "Saved Purchase confirmation as version 4" "Correct invalid JSON before saving" "Choose another target before pushing purchase"}
+   "consequence" #{"non-blocking" "blocking error"}
+   "announcement_priority" #{"polite" "assertive"}
+   "input_name" #{"JSON payload" "Destination path" "Observer path"}
+   "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array"}
+   "color_scheme" #{"light" "dark"}
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}
    "target_size" #{"44 CSS px"}

@@ -1,8 +1,10 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
+import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 export function findLiveObserverElements(root = document) {
     return {
+        livePanel: root.querySelector("#data-layer-panel-live"),
         viewList: root.querySelector("#data-layer-views"),
         sessionMessage: root.querySelector("#live-session-message"),
         sourceStatuses: root.querySelector("#live-source-statuses"),
@@ -46,7 +48,25 @@ function eventRow(event, selected, openEvent) {
     item.append(button);
     return item;
 }
+function visitHeader(pathname, events) {
+    const heading = document.createElement("h5");
+    heading.className = "pathname-visit-heading";
+    const latest = events[0]?.captureTime ?? "Unknown";
+    heading.setAttribute("aria-label", `${pathname}, Latest ${latest}, Events ${events.length}`);
+    const pathnameText = document.createElement("span");
+    pathnameText.className = "pathname-visit-path";
+    pathnameText.textContent = pathname;
+    const latestLabel = document.createElement("span");
+    latestLabel.className = "pathname-visit-latest";
+    latestLabel.textContent = `Latest ${latest}`;
+    const eventCount = document.createElement("span");
+    eventCount.className = "pathname-visit-count";
+    eventCount.textContent = `Events ${events.length}`;
+    heading.append(pathnameText, latestLabel, eventCount);
+    return heading;
+}
 export function renderLiveObserverState(elements, state, openEvent) {
+    elements.livePanel?.setAttribute("data-live-layout", liveResponsiveLayout(state, globalThis.innerWidth));
     if (elements.sourceStatuses) {
         elements.sourceStatuses.replaceChildren(...state.sources.map((source) => {
             const item = document.createElement("li");
@@ -54,11 +74,12 @@ export function renderLiveObserverState(elements, state, openEvent) {
             return item;
         }));
     }
-    elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit) => {
+    elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit, index) => {
         const group = document.createElement("li");
         group.className = "pathname-visit";
-        const heading = document.createElement("h5");
-        heading.textContent = visit.pathname;
+        const heading = visitHeader(visit.pathname, visit.events);
+        heading.id = `pathname-visit-heading-${index}`;
+        group.setAttribute("aria-labelledby", heading.id);
         const rows = document.createElement("ul");
         rows.replaceChildren(...visit.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
         group.append(heading, rows);
