@@ -49,9 +49,10 @@ Feature: Data layer schemas operator layout
   Scenario Outline: Data layer schemas operator layout 004
     Given schema <schema_name> version <version> is being edited
     When the editor is displayed
-    Then the new-version identity and assignment controls appear before the schema document editor
-    And parse status and validation examples are shown near the editor rather than in the schema list
-    And persistent actions <editor_actions> remain reachable while the schema document scrolls
+    Then identity, target, parent, and assignment controls appear before property and general rule authoring
+    And validation examples and generated-document status are shown near the editor rather than in the schema list
+    And the generated schema document is a secondary disclosure rather than the primary authoring control
+    And persistent actions <editor_actions> remain reachable while the property tree scrolls
 
     Examples:
       | project_name         | schema_name    | version | editor_actions |
