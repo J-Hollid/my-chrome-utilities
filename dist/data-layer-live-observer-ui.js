@@ -1,4 +1,5 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
+import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -104,12 +105,7 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         action.type = "button";
         action.textContent = label;
         action.addEventListener("click", () => {
-            feedback.textContent = "";
-            void callback().then(() => {
-                feedback.textContent = `${label} completed for ${event.name}.`;
-            }).catch(() => {
-                feedback.textContent = `${label} failed for ${event.name}.`;
-            });
+            void runLiveInspectorAction(label, event, callback, (message) => { feedback.textContent = message; });
         });
         actions.append(action);
     }
@@ -121,6 +117,7 @@ function appendSummaryItem(summary, label, value) {
         return;
     const term = document.createElement("dt");
     const description = document.createElement("dd");
+    term.dataset.field = label.toLowerCase();
     term.textContent = label;
     description.textContent = value;
     summary.append(term, description);
@@ -128,5 +125,11 @@ function appendSummaryItem(summary, label, value) {
 export function renderLiveSessionMessage(elements, message) {
     if (elements.sessionMessage)
         elements.sessionMessage.textContent = message;
+}
+export function updateLiveInspectorValidation(elements, validation) {
+    const term = elements.eventInspector?.querySelector('dt[data-field="validation"]');
+    const description = term?.nextElementSibling;
+    if (description instanceof HTMLElement)
+        description.textContent = validation;
 }
 //# sourceMappingURL=data-layer-live-observer-ui.js.map

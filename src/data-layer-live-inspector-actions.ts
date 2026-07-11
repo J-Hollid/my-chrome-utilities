@@ -1,0 +1,74 @@
+import {
+  createEditableTemplate,
+  type EditableEventTemplate,
+} from "./data-layer-event-library-editor.js";
+import type { LiveEvent } from "./data-layer-live-observer.js";
+import type { ValidationState } from "./data-layer-source.js";
+
+export interface LiveInspectorActions {
+  copyPayload(event: LiveEvent): Promise<void>;
+  saveToLibrary(event: LiveEvent): void;
+  validate(event: LiveEvent): void;
+}
+
+export interface LiveInspectorActionEffects {
+  currentPageUrl(): string;
+  writeClipboard(text: string): Promise<void>;
+  storeTemplate(template: EditableEventTemplate): void;
+  validationState(event: LiveEvent): ValidationState;
+  updateValidation(eventId: string, state: ValidationState): void;
+}
+
+export type LiveInspectorFeedback = (message: string) => void;
+
+export function createLiveInspectorActions(
+  effects: LiveInspectorActionEffects,
+): LiveInspectorActions {
+  return {
+    async copyPayload(event) {
+      await effects.writeClipboard(JSON.stringify(event.payload));
+    },
+    saveToLibrary(event) {
+      effects.storeTemplate(createEditableTemplate({
+        id: event.id,
+        sessionId: event.sessionId ?? "live",
+        sourceId: event.sourceId,
+        sourceKind: event.sourceKind ?? "page",
+        name: event.name,
+        captureTime: event.captureTime,
+        pageUrl: event.pageUrl ?? effects.currentPageUrl(),
+        payload: event.payload,
+        rawInput: event.rawInput ?? event,
+        validation: event.validation ?? "Not checked",
+        provenance: event.provenance ?? "live",
+      }, {
+        name: event.name,
+        destination: event.destination ?? "event.history",
+        sourceName: event.sourceName ?? event.sourceId,
+      }));
+    },
+    validate(event) {
+      const previous = event.validation ?? "Not checked";
+      const next = effects.validationState(event);
+      if (next === previous) {
+        throw new Error("Validation did not change the event state.");
+      }
+      effects.updateValidation(event.id, next);
+    },
+  };
+}
+
+export async function runLiveInspectorAction(
+  label: string,
+  event: LiveEvent,
+  action: (event: LiveEvent) => void | Promise<void>,
+  report: LiveInspectorFeedback,
+): Promise<void> {
+  report("");
+  try {
+    await action(event);
+    report(`${label} completed for ${event.name}.`);
+  } catch {
+    report(`${label} failed for ${event.name}.`);
+  }
+}

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  closeLiveInspector,
   createLiveObserverState,
   dataLayerViewForNavigationKey,
   dataLayerViews,
@@ -94,4 +95,10 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(selected.listVisible, false);
   assert.equal(selected.inspectorEventId, state.events[0].id);
   assert.equal(selectLiveEvent(selected, state.events[0].id, "split").listVisible, true);
+
+  const closed = closeLiveInspector(selected);
+  assert.equal(closed.inspectorEventId, undefined);
+  assert.equal(closed.listVisible, true);
+  assert.deepEqual(closed.events, selected.events);
+  assert.deepEqual(closeLiveInspector(closed), closed);
 }
