@@ -30,7 +30,9 @@
    "features/side-panel-action-hierarchy.feature"
    "features/side-panel-responsive-navigation-shell.feature"
    "features/side-panel-visual-regression-coverage.feature"
-   "features/side-panel-visual-system.feature"])
+   "features/side-panel-visual-system.feature"
+   "features/data-layer-event-feed-summaries.feature"
+   "features/data-layer-live-pathname-visits.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")
