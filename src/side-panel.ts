@@ -387,6 +387,15 @@ const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-sc
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
+const schemaSubviews = ["schemas", "rules", "assignments"] as const;
+const schemaSubviewButtons = new Map(schemaSubviews.map((name) => [name, document.querySelector<HTMLButtonElement>(`#schema-subview-${name}`)]));
+const schemaSubviewPanels = new Map(schemaSubviews.map((name) => [name, document.querySelector<HTMLElement>(name === "schemas" ? "#schema-master" : name === "rules" ? "#schema-rule-library" : "#schema-assignments")]));
+const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
+const schemaRuleList = document.querySelector<HTMLElement>("#schema-rule-list");
+const schemaRuleCount = document.querySelector<HTMLElement>("#schema-rule-count");
+const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
+const schemaAssignmentList = document.querySelector<HTMLElement>("#schema-assignment-list");
+const schemaAssignmentCount = document.querySelector<HTMLElement>("#schema-assignment-count");
 const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
 let activeHotkeyKeymap: HotkeyKeymap =
@@ -421,6 +430,16 @@ let pendingEventLibraryDeletion: { id?: string; name?: string; count: number } |
 let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+let reusableSchemaRules: string[] = [];
+
+function showSchemaSubview(active: typeof schemaSubviews[number]): void {
+  for (const name of schemaSubviews) {
+    const selected = name === active;
+    const button = schemaSubviewButtons.get(name); const panel = schemaSubviewPanels.get(name);
+    if (button) { button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1; }
+    if (panel) panel.hidden = !selected;
+  }
+}
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -2060,6 +2079,20 @@ templateEmptyRecovery?.addEventListener("click", () => {
   }
 });
 schemaSearch?.addEventListener("input", renderSchemas);
+for (const name of schemaSubviews) schemaSubviewButtons.get(name)?.addEventListener("click", () => showSchemaSubview(name));
+createSchemaRuleButton?.addEventListener("click", () => {
+  const name = `Rule ${reusableSchemaRules.length + 1}`; reusableSchemaRules = [...reusableSchemaRules, name];
+  schemaRuleCount && (schemaRuleCount.textContent = `${reusableSchemaRules.length} rules`);
+  schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => { const item = document.createElement("li"); item.textContent = `${rule} · string · required`; return item; }));
+});
+createSchemaAssignmentButton?.addEventListener("click", () => {
+  const schema = schemas[0]; if (!schema) return;
+  const assignment = { sourceId:"event-history", eventName:"page_view", target:"payload" as const, id:`assignment:${schema.id}`, name:`${schema.name} automatic`, priority:10, enabled:true };
+  schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, assignment] } : candidate); persistSchemaLibrary();
+  const all = schemas.flatMap((candidate) => candidate.assignments.map((value) => `${candidate.name}: ${value.sourceId}/${value.eventName}`));
+  schemaAssignmentCount && (schemaAssignmentCount.textContent = `${all.length} assignments`);
+  schemaAssignmentList?.replaceChildren(...all.map((value) => { const item = document.createElement("li"); item.textContent = value; return item; }));
+});
 createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; persistSchemaLibrary(); if (schemaResult) schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
