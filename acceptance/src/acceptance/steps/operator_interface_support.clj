@@ -125,7 +125,7 @@
    "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"
                        "chrome-extension://abcdefghijkl/side-panel.html"}
-   "panel_width" #{"320" "320 CSS px" "320 px" "360" "360 CSS px" "480 px" "520" "720" "720 px"}
+   "panel_width" #{"320" "320 CSS px" "320 px" "360" "360 CSS px" "360 px" "480 px" "520" "720" "720 px"}
    "master_min" #{"240" "280"}
    "master_max" #{"288" "300" "320"}
    "detail_min" #{"344" "360" "384"}
