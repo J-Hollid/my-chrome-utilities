@@ -42,11 +42,12 @@ Feature: Data layer captured event presentation pipeline
   # Data layer captured event presentation pipeline 003
   Scenario Outline: Data layer captured event presentation pipeline 003
     Given canonical event <event_name> from <source_name> has capture time <capture_time>, validation state <validation_state>, and key property <property_preview>
-    When the event is displayed in the Live feed
+    And feed summary configuration selects key property <property_preview>
+    When the captured record is displayed in the Live feed
     Then <event_name> is the event row's primary label
-    And the visible event button shows <source_name> without capture time, <validation_state>, or <property_preview>
-    And capture time, <validation_state>, and <property_preview> remain available in the event inspector
-    And its accessible name identifies <event_name> and <source_name> without serializing the event payload
+    And the visible event button shows <capture_time>, <source_name>, <validation_state>, and <property_preview>
+    And exact capture time, <validation_state>, and <property_preview> remain available in the event inspector
+    And its accessible name identifies <event_name>, <capture_time>, <source_name>, page pathname, <validation_state>, and <property_preview> without serializing other payload data
 
     Examples:
       | project_name         | page_url                 | source_name   | history_path  | event_name | capture_time             | validation_state | property_preview     |
@@ -70,9 +71,9 @@ Feature: Data layer captured event presentation pipeline
   # Data layer captured event presentation pipeline 005
   Scenario Outline: Data layer captured event presentation pipeline 005
     Given source <source_name> captures unsupported raw input <raw_label> without an event name
-    When the input is displayed in the Live feed
+    When the captured record is displayed in the Live feed
     Then it is retained as a distinct event with explicit label <fallback_label>
-    And the visible event button contains only <fallback_label> and <source_name>
+    And the visible event button shows <fallback_label>, compact capture time, <source_name>, and validation state without a summary area
     And opening the row makes complete raw input <raw_label> available through a collapsed disclosure
     And the interface does not imply that <fallback_label> was supplied by the page
 
