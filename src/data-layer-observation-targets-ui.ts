@@ -14,6 +14,8 @@ export interface ObservationTargetElements {
   attachButton: HTMLButtonElement | null;
   detachButton: HTMLButtonElement | null;
   picker: HTMLElement | null;
+  closePickerButton: HTMLButtonElement | null;
+  sidePanelContent: HTMLElement | null;
   search: HTMLInputElement | null;
   count: HTMLElement | null;
   list: HTMLElement | null;
@@ -39,6 +41,8 @@ export function findObservationTargetElements(
     attachButton: root.querySelector<HTMLButtonElement>("#attach-selected-target"),
     detachButton: root.querySelector<HTMLButtonElement>("#detach-observation-target"),
     picker: root.querySelector<HTMLElement>("#observation-target-picker"),
+    closePickerButton: root.querySelector<HTMLButtonElement>("#close-observation-target-picker"),
+    sidePanelContent: root.querySelector<HTMLElement>("#side-panel-content"),
     search: root.querySelector<HTMLInputElement>("#observation-target-search"),
     count: root.querySelector<HTMLElement>("#observation-target-count"),
     list: root.querySelector<HTMLElement>("#observation-target-list"),
@@ -128,14 +132,17 @@ export function renderObservationTargetPicker(
 export function showObservationTargetPicker(
   elements: ObservationTargetElements,
 ): void {
+  elements.sidePanelContent?.setAttribute("inert", "");
   if (elements.picker) elements.picker.hidden = false;
+  elements.search?.focus();
 }
 
 export function closeObservationTargetPicker(
   elements: ObservationTargetElements,
 ): void {
   if (elements.picker) elements.picker.hidden = true;
-  elements.chooseButton?.focus();
+  elements.sidePanelContent?.removeAttribute("inert");
+  elements.browseButton?.focus();
 }
 
 export function showDetachTargetConfirmation(
@@ -166,6 +173,35 @@ function targetActions(elements: ObservationTargetElements): HTMLButtonElement[]
   return Array.from(
     elements.list?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
   );
+}
+
+function pickerFocusables(elements: ObservationTargetElements): HTMLElement[] {
+  return [
+    elements.closePickerButton,
+    elements.search,
+    ...targetActions(elements),
+  ].filter((element): element is HTMLButtonElement | HTMLInputElement => element !== null);
+}
+
+export function handleObservationTargetDialogKeydown(
+  elements: ObservationTargetElements,
+  event: KeyboardEvent,
+): void {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeObservationTargetPicker(elements);
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusables = pickerFocusables(elements);
+  const current = focusables.indexOf(document.activeElement as HTMLElement);
+  const next = event.shiftKey
+    ? (current <= 0 ? focusables.length - 1 : current - 1)
+    : (current >= focusables.length - 1 ? 0 : current + 1);
+  if (focusables.length > 0) {
+    event.preventDefault();
+    focusables.at(next)?.focus();
+  }
 }
 
 export function handleObservationTargetSearchKeydown(

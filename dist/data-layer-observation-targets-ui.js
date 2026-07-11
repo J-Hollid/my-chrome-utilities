@@ -8,6 +8,8 @@ export function findObservationTargetElements(root = document) {
         attachButton: root.querySelector("#attach-selected-target"),
         detachButton: root.querySelector("#detach-observation-target"),
         picker: root.querySelector("#observation-target-picker"),
+        closePickerButton: root.querySelector("#close-observation-target-picker"),
+        sidePanelContent: root.querySelector("#side-panel-content"),
         search: root.querySelector("#observation-target-search"),
         count: root.querySelector("#observation-target-count"),
         list: root.querySelector("#observation-target-list"),
@@ -79,13 +81,16 @@ export function renderObservationTargetPicker(elements, targets, actions) {
     elements.list?.replaceChildren(...targets.map((target) => targetRow(target, actions)));
 }
 export function showObservationTargetPicker(elements) {
+    elements.sidePanelContent?.setAttribute("inert", "");
     if (elements.picker)
         elements.picker.hidden = false;
+    elements.search?.focus();
 }
 export function closeObservationTargetPicker(elements) {
     if (elements.picker)
         elements.picker.hidden = true;
-    elements.chooseButton?.focus();
+    elements.sidePanelContent?.removeAttribute("inert");
+    elements.browseButton?.focus();
 }
 export function showDetachTargetConfirmation(elements, message, labels = {
     cancel: "Cancel",
@@ -109,6 +114,31 @@ export function closeDetachTargetConfirmation(elements) {
 }
 function targetActions(elements) {
     return Array.from(elements.list?.querySelectorAll("button:not(:disabled)") ?? []);
+}
+function pickerFocusables(elements) {
+    return [
+        elements.closePickerButton,
+        elements.search,
+        ...targetActions(elements),
+    ].filter((element) => element !== null);
+}
+export function handleObservationTargetDialogKeydown(elements, event) {
+    if (event.key === "Escape") {
+        event.preventDefault();
+        closeObservationTargetPicker(elements);
+        return;
+    }
+    if (event.key !== "Tab")
+        return;
+    const focusables = pickerFocusables(elements);
+    const current = focusables.indexOf(document.activeElement);
+    const next = event.shiftKey
+        ? (current <= 0 ? focusables.length - 1 : current - 1)
+        : (current >= focusables.length - 1 ? 0 : current + 1);
+    if (focusables.length > 0) {
+        event.preventDefault();
+        focusables.at(next)?.focus();
+    }
 }
 export function handleObservationTargetSearchKeydown(elements, event) {
     if (event.key === "Escape") {

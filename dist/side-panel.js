@@ -5,7 +5,7 @@ import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, detachObservationTarget, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
-import { closeDetachTargetConfirmation, findObservationTargetElements, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetContext as renderObservationTargetContextUi, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
+import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetContext as renderObservationTargetContextUi, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
@@ -41,7 +41,7 @@ const sessionWarning = document.querySelector("#session-warning");
 const observerStatus = document.querySelector("#observer-status");
 const restartObservationButton = document.querySelector("#restart-observation");
 const observationTargetElements = findObservationTargetElements();
-const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, attachButton: attachSelectedTargetButton, detachButton: detachObservationTargetButton, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
+const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, attachButton: attachSelectedTargetButton, detachButton: detachObservationTargetButton, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
 const createKeymapButton = document.querySelector("#create-keymap");
 const updateKeymapButton = document.querySelector("#update-keymap");
 const loadKeymapButton = document.querySelector("#load-keymap");
@@ -220,6 +220,7 @@ function renderObservationTargetPicker() {
             setObservationTargetResult(`Selected ${target.title}`);
             renderObservationTargetPicker();
             renderObservationTargetContext();
+            closeObservationTargetPicker(observationTargetElements);
         },
         requestAccess: (target) => void requestSelectedTargetAccess(target),
     });
@@ -1292,6 +1293,9 @@ browseObservationTargetsButton?.addEventListener("click", () => {
     showObservationTargetPicker(observationTargetElements);
     void browseObservationTargets();
 });
+closeObservationTargetPickerButton?.addEventListener("click", () => {
+    closeObservationTargetPicker(observationTargetElements);
+});
 attachSelectedTargetButton?.addEventListener("click", () => {
     void attachSelectedTarget();
 });
@@ -1306,6 +1310,7 @@ confirmDetachTargetButton?.addEventListener("click", () => {
 observationTargetSearch?.addEventListener("input", renderObservationTargetPicker);
 observationTargetSearch?.addEventListener("keydown", (event) => handleObservationTargetSearchKeydown(observationTargetElements, event));
 observationTargetList?.addEventListener("keydown", (event) => handleObservationTargetListKeydown(observationTargetElements, event));
+observationTargetPicker?.addEventListener("keydown", (event) => handleObservationTargetDialogKeydown(observationTargetElements, event));
 document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && liveObserverState.inspectorEventId) {
         event.preventDefault();
