@@ -218,5 +218,10 @@ export function executeDraftPush(state, adapter, activePage, push) {
 export function leaveEditorOptions(state) {
     return state.dirty ? ["keep editing", "discard draft", "save"] : ["keep editing"];
 }
-export function discardDraft(state) { return openPropertyEditor(state.template); }
+export function discardDraft(state) {
+    const saved = state.savedTemplate
+        ? { ...state.savedTemplate, revisionHistory: state.revisions }
+        : state.template;
+    return openPropertyEditor(saved);
+}
 //# sourceMappingURL=data-layer-event-library-editor.js.map

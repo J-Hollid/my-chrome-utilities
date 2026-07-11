@@ -275,15 +275,6 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
 
   const purchase = create("Purchase confirmation", "purchase", "event.history", { transaction_id:"purchase-1" });
-  const close = q("#close-template-editor");
-  close.click();
-  const closeResult = {
-    hidden:q("#event-property-editor").hidden,
-    display:getComputedStyle(q("#event-property-editor")).display,
-    offsetParent:q("#event-property-editor").offsetParent === null,
-    editFocused:document.activeElement === q('[data-template-id]'),
-  };
-
   q('[data-template-id]').click();
   const inlineIdentity = {
     noRename:Boolean(document.querySelector('[aria-label^="Rename "]')) || Boolean(document.querySelector("#event-template-rename")),
@@ -294,11 +285,30 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
   setValue("#event-template-name", "Completed checkout");
   setValue("#event-template-event-name", "checkout_completed");
+  q("#event-template-execution-settings summary").click();
+  setValue("#push-destination-path", "queue.history");
+  q("#event-template-json-section summary").click();
+  setValue("#event-template-json", '{"transaction_id":"purchase-2"}');
   q("#save-template-revision").click();
-  const revisionReview = { ...dialogState(q("#revision-change-review")), confirm:q("#confirm-revision-change").textContent };
+  const revisionReview = {
+    ...dialogState(q("#revision-change-review")),
+    confirm:q("#confirm-revision-change").textContent,
+    identity:q("#revision-change-review").textContent.includes("Purchase confirmation → Completed checkout") && q("#revision-change-review").textContent.includes("purchase → checkout_completed"),
+    destination:q("#revision-change-review").textContent.includes("event.history → queue.history"),
+    payload:q("#revision-change-review").textContent.includes("transaction_id") && q("#revision-change-review").textContent.includes("purchase-2"),
+  };
+  q("#revision-change-review").dispatchEvent(new Event("cancel", { cancelable:true }));
+  const revisionCancel = { hidden:q("#revision-change-review").hidden, draft:[q("#event-template-name").value, q("#event-template-event-name").value, q("#push-destination-path").value], focused:document.activeElement === q("#save-template-revision") };
+  q("#save-template-revision").click();
   q("#confirm-revision-change").click();
   const revisionSaved = { identity:q(".event-template-identity").textContent, result:q("#event-template-result").textContent };
   q("#close-template-editor").click();
+  const closeResult = {
+    hidden:q("#event-property-editor").hidden,
+    display:getComputedStyle(q("#event-property-editor")).display,
+    offsetParent:q("#event-property-editor").offsetParent === null,
+    editFocused:document.activeElement === q('[data-template-id]'),
+  };
 
   const scroll = create("Scroll milestone", "scroll", "event.history", { scroll_percentage:25 });
   q("#close-template-editor").click();
@@ -347,7 +357,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, closeResult, inlineIdentity, revisionReview, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, closeResult, inlineIdentity, revisionReview, revisionCancel, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -649,9 +659,10 @@ try {
         },
         saveEnabled:true,
       },
+      revisionReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, confirm:"Save revision 2", identity:true, destination:true, payload:true },
+      revisionCancel:{ hidden:true, draft:["Completed checkout", "checkout_completed", "queue.history"], focused:true },
       closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
       inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"], disclosuresClosed:true },
-      revisionReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, confirm:"Save revision 2" },
       revisionSaved:{ identity:"Completed checkout · checkout_completed", result:"Saved version 2; identity, execution, and payload changes applied." },
       scroll:{
         initial:{
@@ -671,8 +682,8 @@ try {
       exportResult:{
         templateNames:["Completed checkout", "Scroll milestone"],
         revisions:[1, 2],
-        payloads:[{ transaction_id:"purchase-1" }, { scroll_percentage:25 }],
-        settings:["event.history", "event.history"],
+        payloads:[{ transaction_id:"purchase-2" }, { scroll_percentage:25 }],
+        settings:["queue.history", "event.history"],
       },
       clearReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"All 2 templates and their saved revisions will be removed." },
       cleared:{ count:0, addAvailable:true, importAvailable:true },

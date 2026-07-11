@@ -175,6 +175,7 @@ import {
   setPushDestination,
   setNewEventField,
   setTemplateIdentity,
+  templateIdentityValidation,
   saveNewEvent,
   updateDraftJson,
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
@@ -1220,6 +1221,8 @@ async function pushCurrentTemplateDraft(
 function openRevisionChangeReview(): void {
   if (!propertyEditorState || propertyEditorState.isNew) return;
   if (propertyEditorState.jsonError) { setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft."); return; }
+  const identityError = Object.values(templateIdentityValidation(propertyEditorState))[0];
+  if (identityError) { setEventLibraryValidation(eventLibraryEditorElements, identityError); return; }
   pendingRevisionChangeReview = { editor: structuredClone(propertyEditorState), review: createTemplateChangeReview(propertyEditorState, "revision") };
   renderTemplateChangeReview(revisionChangeReview ?? document, pendingRevisionChangeReview.review);
   if (confirmRevisionChangeButton) confirmRevisionChangeButton.textContent = `Save revision ${pendingRevisionChangeReview.review.resultingVersion}`;

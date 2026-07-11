@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { openPropertyEditor, setPushDestination, setTemplateIdentity, updateDraftJson } from "../dist/data-layer-event-library-editor.js";
+import { discardDraft, openPropertyEditor, setPushDestination, setTemplateIdentity, updateDraftJson } from "../dist/data-layer-event-library-editor.js";
 import { createTemplateChangeReview } from "../dist/data-layer-template-change-review.js";
 
 const template = { id:"template-7", name:"Purchase confirmation", eventName:"purchase", sourceId:"event-history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Valid", payload:{ ecommerce:{ value:18 }, legacy:{ debug:true } }, version:3, provenance:"captured:event-history" };
@@ -21,3 +21,7 @@ assert.deepEqual(revision.changes, [
 ]);
 assert.equal(push.resultingVersion, 3);
 assert.equal(push.proposedLabel, "Pushed");
+const discarded = discardDraft(editor);
+assert.equal(discarded.template.name, "Purchase confirmation");
+assert.equal(discarded.template.eventName, "purchase");
+assert.equal(discarded.template.destination, "event.history");
