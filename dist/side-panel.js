@@ -30,6 +30,7 @@ import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
+import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
@@ -87,6 +88,16 @@ const liveEventsEmptyState = document.querySelector("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector("#live-source-error-state");
 const templateEmptyStateElements = findPanelEmptyStateElements("#event-template-empty-state", "#event-template-empty-recovery");
 const templateEmptyRecovery = templateEmptyStateElements.recovery;
+const exportEventLibraryButton = document.querySelector("#export-event-library");
+const importEventLibraryButton = document.querySelector("#import-event-library");
+const eventLibraryFile = document.querySelector("#event-library-file");
+const eventLibraryTransferResult = document.querySelector("#event-library-transfer-result");
+const eventLibraryImportReview = document.querySelector("#event-library-import-review");
+const eventLibraryImportReviewHeading = document.querySelector("#event-library-import-review-heading");
+const eventLibraryImportReviewSummary = document.querySelector("#event-library-import-review-summary");
+const replaceEventLibraryButton = document.querySelector("#replace-event-library");
+const appendEventLibraryButton = document.querySelector("#append-event-library");
+const cancelEventLibraryImportButton = document.querySelector("#cancel-event-library-import");
 const savedSessionEmptyState = document.querySelector("#saved-session-empty-state");
 const schemaEmptyState = document.querySelector("#schema-empty-state");
 const sequenceEmptyState = document.querySelector("#sequence-empty-state");
@@ -148,6 +159,8 @@ let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMP
 let propertyEditorState;
 let pendingPushDraftReview;
 let pendingTemplateRename;
+let pendingEventLibraryImport;
+let replaceEventLibraryArmed = false;
 let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 let schemas = [];
@@ -560,6 +573,8 @@ function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
     const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
     renderPanelEmptyState(templateEmptyStateElements, empty);
+    if (exportEventLibraryButton)
+        exportEventLibraryButton.disabled = eventTemplates.length === 0;
     renderEventLibraryEditor(eventLibraryEditorElements, templates, propertyEditorState, {
         edit: openTemplateEditor,
         rename: openTemplateRename,
@@ -601,6 +616,56 @@ function renderSchemas() {
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
+}
+function downloadEventLibrary() {
+    const blob = new Blob([`${JSON.stringify(eventLibraryExport(eventTemplates), null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "event-library.json";
+    link.click();
+    URL.revokeObjectURL(url);
+}
+async function reviewEventLibraryImport() {
+    const file = eventLibraryFile?.files?.[0];
+    if (!file)
+        return;
+    try {
+        pendingEventLibraryImport = eventLibraryImport(await file.text());
+        replaceEventLibraryArmed = false;
+        if (replaceEventLibraryButton)
+            replaceEventLibraryButton.textContent = "Replace entire Library";
+        if (eventLibraryImportReviewSummary)
+            eventLibraryImportReviewSummary.textContent = `Format version ${pendingEventLibraryImport.version}; ${pendingEventLibraryImport.templates.length} templates; ${pendingEventLibraryImport.templates.reduce((count, template) => count + (template.revisionHistory?.length ?? 0), 0)} revisions; valid.`;
+        showDialog(eventLibraryImportReview, eventLibraryImportReviewHeading);
+    }
+    catch (error) {
+        if (eventLibraryTransferResult)
+            eventLibraryTransferResult.textContent = error instanceof Error ? error.message : "Select a valid Library JSON file";
+    }
+    finally {
+        if (eventLibraryFile)
+            eventLibraryFile.value = "";
+    }
+}
+function commitEventLibraryImport(mode) {
+    if (!pendingEventLibraryImport)
+        return;
+    const importCount = pendingEventLibraryImport.templates.length;
+    const previous = eventTemplates.length;
+    const result = mode === "replace"
+        ? { templates: replaceImportedTemplates(eventTemplates, pendingEventLibraryImport.templates), remapped: 0 }
+        : appendImportedTemplates(eventTemplates, pendingEventLibraryImport.templates, () => `template:import:${crypto.randomUUID()}`);
+    eventTemplates = result.templates;
+    persistEventTemplateLibrary();
+    pendingEventLibraryImport = undefined;
+    replaceEventLibraryArmed = false;
+    hideDialog(eventLibraryImportReview);
+    renderEventTemplateLibrary();
+    if (eventLibraryTransferResult)
+        eventLibraryTransferResult.textContent = mode === "replace"
+            ? `${eventTemplates.length} imported and ${previous} replaced.`
+            : `${importCount} appended and ${result.remapped} identity remapped.`;
 }
 function renderSequences() {
     if (sequenceEmptyState)
@@ -1440,6 +1505,23 @@ catch {
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult)
     schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 addNewButton?.addEventListener("click", openNewEventEditor);
+exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
+importEventLibraryButton?.addEventListener("click", () => eventLibraryFile?.click());
+eventLibraryFile?.addEventListener("change", () => { void reviewEventLibraryImport(); });
+replaceEventLibraryButton?.addEventListener("click", () => {
+    if (!pendingEventLibraryImport)
+        return;
+    if (!replaceEventLibraryArmed) {
+        replaceEventLibraryArmed = true;
+        replaceEventLibraryButton.textContent = `Confirm replace ${eventTemplates.length} with ${pendingEventLibraryImport.templates.length}`;
+        if (eventLibraryImportReviewSummary)
+            eventLibraryImportReviewSummary.textContent = `${eventTemplates.length} current templates will be removed and ${pendingEventLibraryImport.templates.length} imported templates will be added.`;
+        return;
+    }
+    commitEventLibraryImport("replace");
+});
+appendEventLibraryButton?.addEventListener("click", () => commitEventLibraryImport("append"));
+cancelEventLibraryImportButton?.addEventListener("click", () => { pendingEventLibraryImport = undefined; hideDialog(eventLibraryImportReview); });
 eventTemplateName?.addEventListener("input", () => {
     if (propertyEditorState?.isNew) {
         propertyEditorState = setNewEventField(propertyEditorState, "name", eventTemplateName.value);
