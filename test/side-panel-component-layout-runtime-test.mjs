@@ -1,12 +1,31 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createServer } from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
+const assetServer = createServer(async (request, response) => {
+  const requested = request.url === "/" ? "side-panel.html" : request.url?.slice(1);
+  const file = path.resolve("dist", requested ?? "side-panel.html");
+  if (!file.startsWith(path.resolve("dist") + path.sep)) {
+    response.writeHead(404).end();
+    return;
+  }
+  try {
+    const content = await readFile(file);
+    const contentType = file.endsWith(".js") ? "text/javascript"
+      : file.endsWith(".css") ? "text/css"
+        : "text/html";
+    response.writeHead(200, { "Content-Type": contentType }).end(content);
+  } catch {
+    response.writeHead(404).end();
+  }
+});
+await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
+const assetPort = assetServer.address().port;
 const chrome = spawn("google-chrome", [
   "--headless=new",
   "--disable-gpu",
@@ -32,7 +51,7 @@ async function debuggingPort() {
       }
     });
     chrome.once("error", reject);
-    chrome.once("exit", (code) => reject(new Error(`Chrome exited before startup (${code}).`)));
+    chrome.once("exit", (code, signal) => reject(new Error(`Chrome exited before startup (${code ?? signal}). ${output.trim()}`)));
   });
 }
 
@@ -138,7 +157,8 @@ class DevtoolsSocket {
 }
 
 async function openPanel(port, width, height = 900) {
-  const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pathToFileURL(path.resolve("dist/side-panel.html")).href)}`, { method: "PUT" }).then((response) => response.json());
+  const panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`;
+  const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(panelUrl)}`, { method: "PUT" }).then((response) => response.json());
   const socket = new DevtoolsSocket(page.webSocketDebuggerUrl);
   await socket.connect();
   await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
@@ -149,7 +169,10 @@ async function openPanel(port, width, height = 900) {
       expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null",
       returnByValue: true,
     });
-    if (ready.result.value === true) { loaded = true; break; }
+    if (ready.result.value === true) {
+      loaded = true;
+      break;
+    }
     await wait(50);
   }
   if (!loaded) throw new Error("Side panel DOM did not finish loading.");
@@ -158,7 +181,9 @@ async function openPanel(port, width, height = 900) {
 
 async function evaluate(socket, expression) {
   const result = await socket.call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
+  }
   return result.result.value;
 }
 
@@ -199,6 +224,110 @@ const measurements = `(() => {
   };
 })()`;
 
+const inspectorReturnRuntime = `import("./data-layer-live-inspector-return-ui.js").then(({ restoreInspectorReturnUi }) => {
+  const eventList = document.createElement("section");
+  eventList.style.cssText = "height:40px;overflow:auto";
+  const eventFeed = document.createElement("div");
+  const spacer = document.createElement("div");
+  spacer.style.height = "1000px";
+  const eventButton = document.createElement("button");
+  eventButton.dataset.eventId = "purchase";
+  eventButton.textContent = "purchase";
+  eventFeed.append(spacer, eventButton);
+  eventList.append(eventFeed);
+  document.body.append(eventList);
+  restoreInspectorReturnUi({ eventList, eventFeed }, { eventId: "purchase", scrollTop: 480 });
+  const result = { scrollTop: eventList.scrollTop, focusedEventId: document.activeElement?.dataset.eventId };
+  eventList.remove();
+  return result;
+})`;
+
+const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
+  const eventList = document.querySelector("#live-event-list");
+  const eventFeed = document.querySelector("#live-event-feed");
+  const eventInspector = document.querySelector("#live-event-inspector");
+  const backToEventsButton = document.querySelector("#back-to-events");
+  const event = { id:"purchase", name:"purchase", sourceId:"history", captureTime:"10:03:00", payload:{} };
+  const elements = { eventList, eventFeed, eventInspector, backToEventsButton, sourceStatuses:null };
+  renderLiveObserverState(elements, { sources:[], events:[event], inspectorEventId:"purchase", listVisible:false }, () => {});
+  renderLiveInspector(elements, event, {
+    copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
+    validationAvailability: () => ({ enabled:true }),
+  });
+  const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
+  return {
+    listInLayout: eventList.getClientRects().length > 0,
+    inspectorInLayout: eventInspector.getClientRects().length > 0,
+    backInLayout: backToEventsButton.getClientRects().length > 0,
+    backHasHiddenAncestor: hiddenAncestor(backToEventsButton),
+    backInsideList: eventList.contains(backToEventsButton),
+    backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
+  };
+})`;
+
+const workflowFocusRuntime = `Promise.all([
+  import("./data-layer-event-library-editor-ui.js"),
+  import("./data-layer-workflow-focus-ui.js"),
+  import("./data-layer-observation-targets-ui.js"),
+]).then(([editorUi, pushUi, targetUi]) => {
+  const workspaceData = document.querySelector("#workspace-tab-data-layer");
+  const workspaceHotkeys = document.querySelector("#workspace-tab-hotkeys");
+  workspaceData.focus(); workspaceData.dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowRight", bubbles:true }));
+  const tabResult = { workspaceRight:document.activeElement === workspaceHotkeys && workspaceHotkeys.getAttribute("aria-selected") === "true" };
+  workspaceHotkeys.dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowLeft", bubbles:true }));
+  tabResult.workspaceLeft = document.activeElement === workspaceData && workspaceData.getAttribute("aria-selected") === "true";
+  const liveTab = document.querySelector("#data-layer-view-live"); const schemasTab = document.querySelector("#data-layer-view-schemas");
+  liveTab.focus(); liveTab.dispatchEvent(new KeyboardEvent("keydown", { key:"End", bubbles:true }));
+  tabResult.dataLayerEnd = document.activeElement === schemasTab && schemasTab.tabIndex === 0 && !document.querySelector("#data-layer-panel-schemas").hidden;
+  schemasTab.dispatchEvent(new KeyboardEvent("keydown", { key:"Home", bubbles:true }));
+  tabResult.dataLayerHome = document.activeElement === liveTab && liveTab.tabIndex === 0 && !document.querySelector("#data-layer-panel-live").hidden;
+  tabResult.singleDataLayerTabStop = [...document.querySelectorAll("#data-layer-views [role=tab]")].filter((tab) => tab.tabIndex === 0).length === 1;
+
+  const host = document.createElement("section");
+  host.innerHTML = '<ul data-list></ul><section data-editor><h4 data-title tabindex="-1"></h4><dl data-summary></dl><ul data-properties></ul><textarea data-json></textarea><input data-destination><output data-validation></output></section>';
+  document.body.append(host);
+  const template = { id:"template:purchase", name:"Purchase confirmation", eventName:"purchase", sourceName:"history", destination:"dataLayer", version:3, validation:"Valid", tags:[], provenance:"captured", originatingEventId:"purchase", originatingSessionId:"session-1", payload:{ transaction_id:"T-1", revenue:12 } };
+  const editor = { template, revisions:[], draft:template.payload, jsonDraft:JSON.stringify(template.payload), dirty:false };
+  const elements = { list:host.querySelector("[data-list]"), propertyEditor:host.querySelector("[data-editor]"), editorTitle:host.querySelector("[data-title]"), editorSummary:host.querySelector("[data-summary]"), properties:host.querySelector("[data-properties]"), json:host.querySelector("[data-json]"), pushDestination:host.querySelector("[data-destination]"), validation:host.querySelector("[data-validation]") };
+  editorUi.renderEventLibraryEditor(elements, [template], editor, { edit:()=>{}, duplicate:()=>{}, push:()=>{} });
+  elements.editorTitle.focus({ preventScroll:true });
+  const editorResult = { title:elements.editorTitle.textContent, headingFocused:document.activeElement === elements.editorTitle, disclosuresClosed:!document.querySelector("#event-template-json-section").open && !document.querySelector("#event-template-execution-settings").open };
+  editorUi.renderEventLibraryEditor(elements, [template], undefined, { edit:()=>{}, duplicate:()=>{}, push:()=>{} });
+  editorUi.focusTemplateEditAction(elements, template.id);
+  editorResult.returnedToTemplate = document.activeElement?.dataset.templateId;
+
+  const background = document.createElement("button"); background.textContent = "Background";
+  const trigger = document.createElement("button"); trigger.textContent = "Push draft";
+  const dialog = document.createElement("dialog");
+  dialog.innerHTML = '<h5 tabindex="-1">Review push</h5><button data-first>Confirm</button><button data-last>Cancel</button>';
+  document.body.append(background, trigger, dialog);
+  const pushElements = { dialog, heading:dialog.querySelector("h5"), trigger };
+  dialog.addEventListener("keydown", (event) => pushUi.handlePushReviewKeydown(pushElements, event));
+  trigger.focus(); pushUi.openPushReview(pushElements);
+  const pushResult = { headingFocused:document.activeElement === pushElements.heading, modal:dialog.matches(":modal") };
+  dialog.querySelector("[data-last]").focus(); dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", bubbles:true }));
+  pushResult.forwardWrapped = document.activeElement === dialog.querySelector("[data-first]");
+  dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", shiftKey:true, bubbles:true }));
+  pushResult.backwardWrapped = document.activeElement === dialog.querySelector("[data-last]");
+  background.focus(); pushResult.backgroundExcluded = document.activeElement !== background;
+  dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  pushResult.returnedToTrigger = document.activeElement === trigger;
+
+  const sideContent = document.createElement("section"); const choose = document.createElement("button"); const picker = document.createElement("section");
+  const close = document.createElement("button"); const search = document.createElement("input"); const list = document.createElement("ul");
+  picker.append(close, search, list); document.body.append(sideContent, choose, picker); choose.focus();
+  const targetElements = { sidePanelContent:sideContent, picker, closePickerButton:close, search, list, browseButton:null };
+  picker.addEventListener("keydown", (event) => targetUi.handleObservationTargetDialogKeydown(targetElements, event));
+  targetUi.showObservationTargetPicker(targetElements);
+  const targetResult = { inert:sideContent.hasAttribute("inert"), searchFocused:document.activeElement === search };
+  close.focus(); picker.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", shiftKey:true, bubbles:true }));
+  targetResult.backwardWrapped = document.activeElement === search;
+  picker.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  targetResult.returnedToChoose = document.activeElement === choose;
+  host.remove(); background.remove(); trigger.remove(); dialog.remove(); sideContent.remove(); choose.remove(); picker.remove();
+  return { tabResult, editorResult, pushResult, targetResult };
+})`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -216,6 +345,24 @@ try {
     if (width === 360) {
       assert.deepEqual([measured.live.header, measured.live.master, measured.live.detail].filter((component) => !withinColumn(component, measured.root)), [], "compact components escaped their content column");
       assert.ok(measured.actionChildren.every(({ rect, parent }) => rect.x >= parent.x - 1 && rect.right <= parent.right + 1), "an action button escaped its wrapping action group");
+      assert.deepEqual(await evaluate(socket, inspectorReturnRuntime), {
+        scrollTop: 480,
+        focusedEventId: "purchase",
+      }, "inspector return did not restore browser scroll and focus");
+      assert.deepEqual(await evaluate(socket, inspectorNavigationRuntime), {
+        listInLayout: false,
+        inspectorInLayout: true,
+        backInLayout: true,
+        backHasHiddenAncestor: false,
+        backInsideList: false,
+        backIsFirstHeaderControl: true,
+      }, "stacked inspector navigation layout violated its browser contract");
+      assert.deepEqual(await evaluate(socket, workflowFocusRuntime), {
+        tabResult: { workspaceRight:true, workspaceLeft:true, dataLayerEnd:true, dataLayerHome:true, singleDataLayerTabStop:true },
+        editorResult: { title:"Purchase confirmation editor", headingFocused:true, disclosuresClosed:true, returnedToTemplate:"template:purchase" },
+        pushResult: { headingFocused:true, modal:true, forwardWrapped:true, backwardWrapped:true, backgroundExcluded:true, returnedToTrigger:true },
+        targetResult: { inert:true, searchFocused:true, backwardWrapped:true, returnedToChoose:true },
+      }, "workflow focus callbacks violated their browser contract");
     }
     if (width === 720) {
       for (const [name, pane, masterRange, detailRange] of [["live", measured.live, [280, 320], [344, 400]], ["library", measured.library, [240, 288], [384, 448]], ["sessions", measured.sessions, [240, 300], [360, 432]], ["schemas", measured.schemas, [240, 300], [360, 432]]]) {
@@ -229,11 +376,12 @@ try {
     socket.close();
   }
 } finally {
-  if (!chrome.killed) {
-    await new Promise((resolve) => {
+  if (chrome.exitCode === null && !chrome.killed) {
+    await Promise.race([new Promise((resolve) => {
       chrome.once("exit", resolve);
       chrome.kill("SIGTERM");
-    });
+    }), wait(1000)]);
   }
+  await new Promise((resolve) => assetServer.close(resolve));
   await rm(chromeProfile, { recursive: true, force: true });
 }

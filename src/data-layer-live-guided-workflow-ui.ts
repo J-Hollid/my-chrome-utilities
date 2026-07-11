@@ -1,5 +1,5 @@
 import type { LiveGuidedWorkflow, LiveSetupStepId } from "./data-layer-live-guided-workflow.js";
-import { applyActionTreatment } from "./side-panel-action-hierarchy.js";
+import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 
 export interface LiveGuidedWorkflowElements {
   setupSteps: HTMLOListElement | null;

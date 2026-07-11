@@ -1,6 +1,6 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
-import { pathnameVisits, resolveFeedSummaries } from "./data-layer-event-feed-summaries.js";
+import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -22,7 +22,7 @@ export function renderDataLayerView(elements, view, focus = false) {
         if (button) {
             button.setAttribute("aria-selected", String(selected));
             button.tabIndex = selected ? 0 : -1;
-            if (focus)
+            if (focus && selected)
                 button.focus();
         }
         if (panel)
@@ -36,7 +36,7 @@ function eventRow(event, selected, openEvent) {
     button.dataset.eventId = event.id;
     const sourceName = event.sourceName ?? event.sourceId;
     const summaries = resolveFeedSummaries(event);
-    const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+    const pathname = eventPathname(event.pageUrl);
     const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
     const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
     button.setAttribute("aria-label", [event.name, compactTime, sourceName, pathname, event.validation ?? "Not checked", summaryText].filter(Boolean).join(", "));
@@ -121,10 +121,13 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         action.type = "button";
         action.textContent = label;
         action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
-        if (label === "Validate" && !event.schemaId) {
+        const availability = label === "Validate"
+            ? actionHandlers.validationAvailability(event)
+            : { enabled: true };
+        if (!availability.enabled) {
             action.disabled = true;
-            action.setAttribute("aria-description", "Select a schema to validate");
-            action.title = "Select a schema to validate";
+            action.setAttribute("aria-description", availability.reason ?? "Action unavailable");
+            action.title = availability.reason ?? "Action unavailable";
         }
         action.addEventListener("click", () => {
             void runLiveInspectorAction(label, event, callback, (message) => { feedback.textContent = message; });

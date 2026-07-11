@@ -1,4 +1,4 @@
-import { applyActionTreatment } from "./side-panel-action-hierarchy.js";
+import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 export function findLiveGuidedWorkflowElements(root = document) {
     return {
         setupSteps: root.querySelector("#live-setup-steps"),

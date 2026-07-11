@@ -8,7 +8,11 @@ import {
   runLiveInspectorAction,
   type LiveInspectorActions,
 } from "./data-layer-live-inspector-actions.js";
-import { pathnameVisits, resolveFeedSummaries } from "./data-layer-event-feed-summaries.js";
+import {
+  eventPathname,
+  pathnameVisits,
+  resolveFeedSummaries,
+} from "./data-layer-event-feed-summaries.js";
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
@@ -54,7 +58,7 @@ export function renderDataLayerView(
     if (button) {
       button.setAttribute("aria-selected", String(selected));
       button.tabIndex = selected ? 0 : -1;
-      if (focus) button.focus();
+      if (focus && selected) button.focus();
     }
     if (panel) panel.hidden = !selected;
   }
@@ -71,7 +75,7 @@ function eventRow(
   button.dataset.eventId = event.id;
   const sourceName = event.sourceName ?? event.sourceId;
   const summaries = resolveFeedSummaries(event);
-  const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+  const pathname = eventPathname(event.pageUrl);
   const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
   const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
   button.setAttribute(
@@ -171,10 +175,13 @@ export function renderLiveInspector(
     action.type = "button";
     action.textContent = label;
     action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
-    if (label === "Validate" && !(event as LiveEvent & { schemaId?: string }).schemaId) {
+    const availability = label === "Validate"
+      ? actionHandlers.validationAvailability(event)
+      : { enabled: true };
+    if (!availability.enabled) {
       action.disabled = true;
-      action.setAttribute("aria-description", "Select a schema to validate");
-      action.title = "Select a schema to validate";
+      action.setAttribute("aria-description", availability.reason ?? "Action unavailable");
+      action.title = availability.reason ?? "Action unavailable";
     }
     action.addEventListener("click", () => {
       void runLiveInspectorAction(
