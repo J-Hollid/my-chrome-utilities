@@ -28,6 +28,8 @@
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
    "initial_state" #{"Not checked"}
+   "initial_session_status" #{"Capturing" "Paused"}
+   "initial_observer_status" #{"Connected" "Waiting for path"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
    "history_path" #{"event.history" "queue.history"}

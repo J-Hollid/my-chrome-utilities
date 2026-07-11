@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { endLiveSession } from "../dist/data-layer-live-session-end.js";
 import {
   attachSelectedObservationTarget,
   createObservationTarget,
@@ -72,6 +73,25 @@ for (let sample = 0; sample < 100; sample += 1) {
   const detached = detachObservationTarget(restored);
   assert.equal(detached.attachedTargetId, undefined);
   assert.equal(detached.recentTargetId, checkout.id);
+
+  const session = {
+    session: {
+      id: `session-${sample}`,
+      status: "active",
+      tabId: checkout.tabId,
+      historyPath: "event.history",
+      startUrl: checkout.pageUrl,
+      currentUrl: checkout.pageUrl,
+      timeline: [],
+    },
+  };
+  const ended = endLiveSession(session, restored);
+  assert.equal(ended.sessionState.session?.status, "ended");
+  assert.equal(ended.targetState.attachedTargetId, undefined);
+  assert.deepEqual(
+    endLiveSession(ended.sessionState, ended.targetState),
+    ended,
+  );
 
   const permissionLost = updateObservationTargetAccess(
     switched,

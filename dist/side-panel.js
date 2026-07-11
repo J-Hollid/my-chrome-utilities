@@ -4,15 +4,16 @@ import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KE
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { tabPageObservation, } from "./active-page-observation.js";
-import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, detachObservationTarget, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
+import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
 import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
-import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
+import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { endLiveSession } from "./data-layer-live-session-end.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./data-layer-live-session-summary.js";
 import { createLiveNotificationController } from "./data-layer-live-notifications.js";
@@ -372,9 +373,9 @@ async function confirmDetachSelectedTarget() {
     const switchTargetId = pendingObservationTargetSwitchId;
     pendingObservationTargetSwitchId = undefined;
     stopLiveHistoryCapture();
-    dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
-    persistAndRenderSessionState();
-    observationTargetState = detachObservationTarget(observationTargetState);
+    ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
+        endLiveSession(dataLayerSessionState, observationTargetState));
+    persistAndRenderObservationState();
     closeDetachTargetConfirmation(observationTargetElements);
     if (switchTargetId) {
         observationTargetState = selectObservationTarget(observationTargetState, switchTargetId);
@@ -902,10 +903,9 @@ async function recordDataLayerCommandRun(entry) {
     }
     if (entry.commandId === "data-layer.end-testing") {
         stopLiveHistoryCapture();
-        dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
-        persistSession(dataLayerSessionState);
-        renderSessionState();
-        observationTargetState = detachObservationTarget(observationTargetState);
+        ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
+            endLiveSession(dataLayerSessionState, observationTargetState));
+        persistAndRenderObservationState();
         renderObservationTargetContext();
         setObservationTargetResult("");
         setLiveSessionMessage("Testing ended");

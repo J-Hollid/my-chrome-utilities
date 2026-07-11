@@ -25,7 +25,6 @@ import {
   attachSelectedObservationTarget,
   createObservationTarget,
   createObservationTargetState,
-  detachObservationTarget,
   findObservationTargets,
   navigateObservationTarget,
   refreshDiscoveredObservationTargets,
@@ -83,7 +82,6 @@ import {
 import {
   captureEntry,
   DATA_LAYER_SESSION_STORAGE_KEY,
-  endDataLayerTestingSession,
   navigateSession,
   persistSession,
   restoreSession,
@@ -91,6 +89,7 @@ import {
   type DataLayerSessionState,
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { endLiveSession } from "./data-layer-live-session-end.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import {
   canonicalLiveObserverStatus,
@@ -618,9 +617,9 @@ async function confirmDetachSelectedTarget(): Promise<void> {
   const switchTargetId = pendingObservationTargetSwitchId;
   pendingObservationTargetSwitchId = undefined;
   stopLiveHistoryCapture();
-  dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
-  persistAndRenderSessionState();
-  observationTargetState = detachObservationTarget(observationTargetState);
+  ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
+    endLiveSession(dataLayerSessionState, observationTargetState));
+  persistAndRenderObservationState();
   closeDetachTargetConfirmation(observationTargetElements);
   if (switchTargetId) {
     observationTargetState = selectObservationTarget(
@@ -1277,10 +1276,9 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
 
   if (entry.commandId === "data-layer.end-testing") {
     stopLiveHistoryCapture();
-    dataLayerSessionState = endDataLayerTestingSession(dataLayerSessionState);
-    persistSession(dataLayerSessionState);
-    renderSessionState();
-    observationTargetState = detachObservationTarget(observationTargetState);
+    ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
+      endLiveSession(dataLayerSessionState, observationTargetState));
+    persistAndRenderObservationState();
     renderObservationTargetContext();
     setObservationTargetResult("");
     setLiveSessionMessage("Testing ended");
