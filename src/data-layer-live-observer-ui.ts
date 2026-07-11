@@ -4,6 +4,10 @@ import {
   type LiveEvent,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
+import {
+  runLiveInspectorAction,
+  type LiveInspectorActions,
+} from "./data-layer-live-inspector-actions.js";
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
@@ -17,12 +21,6 @@ export interface LiveObserverElements {
   backToEventsButton: HTMLButtonElement | null;
   pauseCaptureButton: HTMLButtonElement | null;
   resumeCaptureButton: HTMLButtonElement | null;
-}
-
-export interface LiveInspectorActions {
-  copyPayload(event: LiveEvent): Promise<void>;
-  saveToLibrary(event: LiveEvent): void;
-  validate(event: LiveEvent): void;
 }
 
 export function findLiveObserverElements(
@@ -165,12 +163,12 @@ export function renderLiveInspector(
     action.type = "button";
     action.textContent = label;
     action.addEventListener("click", () => {
-      feedback.textContent = "";
-      void callback().then(() => {
-        feedback.textContent = `${label} completed for ${event.name}.`;
-      }).catch(() => {
-        feedback.textContent = `${label} failed for ${event.name}.`;
-      });
+      void runLiveInspectorAction(
+        label,
+        event,
+        callback,
+        (message) => { feedback.textContent = message; },
+      );
     });
     actions.append(action);
   }
@@ -186,6 +184,7 @@ function appendSummaryItem(
   if (!value) return;
   const term = document.createElement("dt");
   const description = document.createElement("dd");
+  term.dataset.field = label.toLowerCase();
   term.textContent = label;
   description.textContent = value;
   summary.append(term, description);
@@ -196,4 +195,15 @@ export function renderLiveSessionMessage(
   message: string,
 ): void {
   if (elements.sessionMessage) elements.sessionMessage.textContent = message;
+}
+
+export function updateLiveInspectorValidation(
+  elements: LiveObserverElements,
+  validation: string,
+): void {
+  const term = elements.eventInspector?.querySelector<HTMLElement>(
+    'dt[data-field="validation"]',
+  );
+  const description = term?.nextElementSibling;
+  if (description instanceof HTMLElement) description.textContent = validation;
 }

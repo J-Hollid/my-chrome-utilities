@@ -15,7 +15,8 @@ import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSessio
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, } from "./data-layer-live-observer-ui.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
+import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createEditableTemplate, discardDraft, executeDraftPush, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
@@ -384,36 +385,31 @@ function openLiveInspector(eventId) {
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
     if (event)
-        renderLiveInspector(liveObserverElements, event, {
-            copyPayload: async (selected) => {
+        renderLiveInspector(liveObserverElements, event, createLiveInspectorActions({
+            currentPageUrl: () => liveObserverState.pageUrl,
+            writeClipboard: async (text) => {
                 if (!navigator.clipboard?.writeText) {
                     throw new Error("Clipboard access is unavailable.");
                 }
-                await navigator.clipboard.writeText(JSON.stringify(selected.payload));
+                await navigator.clipboard.writeText(text);
             },
-            saveToLibrary: (selected) => {
-                const template = createEditableTemplate({
-                    id: selected.id, sessionId: selected.sessionId ?? "live", sourceId: selected.sourceId,
-                    sourceKind: selected.sourceKind ?? "page", name: selected.name,
-                    captureTime: selected.captureTime, pageUrl: selected.pageUrl ?? liveObserverState.pageUrl,
-                    payload: selected.payload, rawInput: selected.rawInput ?? selected,
-                    validation: selected.validation ?? "Not checked", provenance: selected.provenance ?? "live",
-                }, { name: selected.name, destination: selected.destination ?? "event.history", sourceName: selected.sourceName ?? selected.sourceId });
+            storeTemplate: (template) => {
                 eventTemplates = [...eventTemplates, template];
                 persistEventTemplateLibrary();
                 renderEventTemplateLibrary();
             },
-            validate: (selected) => {
-                const result = validateEvent({
-                    sourceId: selected.sourceId,
-                    eventName: selected.name,
-                    payload: selected.payload,
-                    rawInput: selected.rawInput,
-                }, schemas);
-                liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === selected.id ? { ...candidate, validation: result.state } : candidate) };
+            validationState: (selected) => validateEvent({
+                sourceId: selected.sourceId,
+                eventName: selected.name,
+                payload: selected.payload,
+                rawInput: selected.rawInput,
+            }, schemas).state,
+            updateValidation: (selectedId, validation) => {
+                liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === selectedId ? { ...candidate, validation } : candidate) };
                 renderLiveObserver();
+                updateLiveInspectorValidation(liveObserverElements, validation);
             },
-        });
+        }));
     renderLiveObserver();
 }
 function setLiveSessionMessage(message) {

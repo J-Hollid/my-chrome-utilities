@@ -13,7 +13,6 @@ import {
   setLiveFilter,
   updateLiveSourceStatus,
 } from "../dist/data-layer-live-observer.js";
-
 assert.equal(dataLayerViewForNavigationKey("Live", "ArrowRight"), "Library");
 assert.equal(dataLayerViewForNavigationKey("Schemas", "ArrowRight"), "Live");
 assert.equal(dataLayerViewForNavigationKey("Schemas", "Home"), "Live");
