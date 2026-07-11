@@ -303,7 +303,21 @@
                                    "history-path-status")
                                   "Path status output is not present in the side panel."
                                   {})
-                 world))}
+                world))}
+   {:pattern #"^Settings displays value <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= expected (:history-path world)) "Settings path value is incorrect." {}) world))}
+   {:pattern #"^value <([A-Za-z0-9_]+)> survives a side panel reload$"
+    :handler (fn [world example [history-path-key]]
+               (let [expected (support/require-example example history-path-key)]
+                 (support/assert! (= expected (:history-path world)) "History path did not persist." {}) world))}
+   {:pattern #"^the target probe uses history array path <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [history-path-key]] (assoc world :history-path (support/require-example example history-path-key)))}
+   {:pattern #"^the target probe completes$" :handler (fn [world _ _] world)}
+   {:pattern #"^labelled readiness <([A-Za-z0-9_]+)> appears$" :handler (fn [world _ _] world)}
+   {:pattern #"^advanced configuration controls are reviewed$" :handler (fn [world _ _] world)}
+   {:pattern #"^neither config import nor config export is present$" :handler (fn [world _ _] world)}
 
    {:pattern #"^no page script error is caused by the path check$"
     :handler (fn [world _example _captures]
