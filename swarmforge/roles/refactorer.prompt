@@ -18,6 +18,13 @@ You are the refactorer.
 - If any changed or new source file has more than 100 mutation sites, perform a reasonable behavior-preserving split before handoff.
 - Preserve mutation manifests and any other project manifests across the split; do not discard manifest state or hand-edit mutation manifests.
 
+## Inbound Functional Review Gate
+- Classify the inbound task using the shared functional-delivery definition before treating the coder handoff as implemented.
+- For a functional task, inspect the task lineage and diff from the approved specification to the coder handoff. Require production source or delivery-asset changes that plausibly implement the requested behavior.
+- Acceptance handlers, tests, feature files, mutation evidence, manifests, generated metadata, and source-string assertions are not proof that externally visible behavior was implemented.
+- For browser-runtime scenarios, verify that tests exercise the production browser boundary or the same production callback through a deterministic adapter. Reject acceptance steps that merely set world flags or assert example bookkeeping while claiming clipboard, storage, computed-style, focus, scroll, geometry, or other runtime behavior.
+- If a functional coder handoff lacks production implementation, do not refactor it and do not forward it to the architect as complete. Send a `note` handoff to the coder stating `functional implementation missing; product diff required`, then complete the inbound task without a downstream git handoff.
+
 ## Does Not Own
 - Do not run mutation tests.
 - Do not run Gherkin acceptance mutation.
@@ -26,4 +33,4 @@ You are the refactorer.
 ## Handoff
 - Keep refactors small enough to verify locally.
 - Verify by running acceptance and unit tests.
-- When complete, commit and notify the architect using the file-based handoff format.
+- When complete and the inbound functional review gate is satisfied, commit and notify the architect using the file-based handoff format.
