@@ -94,6 +94,11 @@ import {
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { createLiveSessionSummary } from "./data-layer-live-session-summary.js";
+import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
+import {
+  findLiveSessionSummaryElements,
+  renderLiveSessionSummary,
+} from "./data-layer-live-session-summary-ui.js";
 import {
   nestedTimeline,
   timelineEventHeading,
@@ -136,7 +141,6 @@ import {
   renderDataLayerView,
   renderLiveInspector,
   renderLiveObserverState,
-  renderLiveSessionSummary,
   renderLiveSessionMessage,
   updateLiveInspectorValidation,
 } from "./data-layer-live-observer-ui.js";
@@ -229,13 +233,14 @@ const workspaceTabList = document.querySelector<HTMLElement>("#workspace-tabs");
 const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
 const liveObserverElements = findLiveObserverElements();
+const liveSessionSummaryElements = findLiveSessionSummaryElements();
 const {
   viewList: dataLayerViewList,
   backToEventsButton,
   pauseCaptureButton,
   resumeCaptureButton,
-  copyPageUrlButton,
 } = liveObserverElements;
+const { copyPageUrlButton } = liveSessionSummaryElements;
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const savedSessionSearch = document.querySelector<HTMLInputElement>("#saved-session-search");
 const importSavedSessionButton = document.querySelector<HTMLButtonElement>("#import-saved-session");
@@ -636,7 +641,7 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
 
 function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
-  renderLiveSessionSummary(liveObserverElements, currentLiveSessionSummary());
+  renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
   renderLiveContextActions();
 }
 
@@ -701,13 +706,10 @@ function setLiveSessionMessage(message: string): void {
 
 async function copyLivePageUrl(): Promise<void> {
   const pageUrl = currentLiveSessionSummary().pageUrl;
-  if (!pageUrl || !navigator.clipboard?.writeText) return;
-  try {
-    await navigator.clipboard.writeText(pageUrl);
-    setLiveSessionMessage("Page URL copied");
-  } catch {
-    setLiveSessionMessage("Page URL could not be copied");
-  }
+  const writeText = navigator.clipboard?.writeText.bind(navigator.clipboard);
+  const result = await copyLivePageUrlAction(pageUrl, writeText);
+  if (result === "copied") setLiveSessionMessage("Page URL copied");
+  if (result === "failed") setLiveSessionMessage("Page URL could not be copied");
 }
 
 function renderEventTemplateLibrary(): void {
