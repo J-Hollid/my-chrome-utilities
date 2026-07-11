@@ -50,7 +50,6 @@ import {
 } from "./data-layer-observation-targets-ui.js";
 import {
   getHistoryArrayPath,
-  pathStatus,
   samplePageObject,
   setHistoryArrayPath,
 } from "./data-layer.js";
@@ -96,6 +95,7 @@ import {
   createLiveSessionSummary,
 } from "./data-layer-live-session-summary.js";
 import { createLiveNotificationController } from "./data-layer-live-notifications.js";
+import { createTargetPathStatusController } from "./data-layer-target-path-status.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import {
   findLiveSessionSummaryElements,
@@ -313,7 +313,7 @@ if (app) {
   app.textContent = PROJECT_NAME;
 }
 
-function renderHistoryPath(path: string, fieldValue = path): void {
+function renderHistoryPath(path: string, fieldValue = path, status = "Checking target…"): void {
   if (historyPathInput) {
     historyPathInput.value = fieldValue;
   }
@@ -323,7 +323,7 @@ function renderHistoryPath(path: string, fieldValue = path): void {
   }
 
   if (historyPathStatus) {
-    historyPathStatus.textContent = pathStatus(samplePageObject(), path);
+    historyPathStatus.textContent = status;
   }
 }
 
@@ -1740,12 +1740,10 @@ keymapFileInput?.addEventListener("change", () => {
   void loadHotkeyKeymapFile();
 });
 
-historyPathInput?.addEventListener("input", () => {
-  const typedPath = historyPathInput.value;
-  const path = setHistoryArrayPath(typedPath);
-  renderHistoryPath(path, typedPath);
-  void currentTargetObservation(path).then((observation) => {
-    if (!observation) return;
+const targetPathStatusController = createTargetPathStatusController({
+  render: renderHistoryPath,
+  read: currentTargetObservation,
+  apply: (observation) => {
     dataLayerObserverState = attachHistoryArrayObserver(
       dataLayerObserverState,
       observation,
@@ -1754,7 +1752,13 @@ historyPathInput?.addEventListener("input", () => {
     persistAndRenderSessionState();
     restartLiveHistoryCaptureIfActive(observation);
     renderObserverState();
-  });
+  },
+});
+
+historyPathInput?.addEventListener("input", () => {
+  const typedPath = historyPathInput.value;
+  const path = setHistoryArrayPath(typedPath);
+  void targetPathStatusController.configure(path, typedPath);
 });
 
 restartObservationButton?.addEventListener("click", () => {

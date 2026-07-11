@@ -6,7 +6,7 @@ import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
-import { getHistoryArrayPath, pathStatus, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
+import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
@@ -17,6 +17,7 @@ import { endLiveSession } from "./data-layer-live-session-end.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./data-layer-live-session-summary.js";
 import { createLiveNotificationController } from "./data-layer-live-notifications.js";
+import { createTargetPathStatusController } from "./data-layer-target-path-status.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
@@ -116,7 +117,7 @@ function newDataLayerSessionId(tabId) {
 if (app) {
     app.textContent = PROJECT_NAME;
 }
-function renderHistoryPath(path, fieldValue = path) {
+function renderHistoryPath(path, fieldValue = path, status = "Checking target…") {
     if (historyPathInput) {
         historyPathInput.value = fieldValue;
     }
@@ -124,7 +125,7 @@ function renderHistoryPath(path, fieldValue = path) {
         historyPathDisplay.textContent = path;
     }
     if (historyPathStatus) {
-        historyPathStatus.textContent = pathStatus(samplePageObject(), path);
+        historyPathStatus.textContent = status;
     }
 }
 function restoredObservationTargetState() {
@@ -1296,19 +1297,21 @@ loadKeymapButton?.addEventListener("click", () => {
 keymapFileInput?.addEventListener("change", () => {
     void loadHotkeyKeymapFile();
 });
-historyPathInput?.addEventListener("input", () => {
-    const typedPath = historyPathInput.value;
-    const path = setHistoryArrayPath(typedPath);
-    renderHistoryPath(path, typedPath);
-    void currentTargetObservation(path).then((observation) => {
-        if (!observation)
-            return;
+const targetPathStatusController = createTargetPathStatusController({
+    render: renderHistoryPath,
+    read: currentTargetObservation,
+    apply: (observation) => {
         dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
         updateSessionFromObserverState();
         persistAndRenderSessionState();
         restartLiveHistoryCaptureIfActive(observation);
         renderObserverState();
-    });
+    },
+});
+historyPathInput?.addEventListener("input", () => {
+    const typedPath = historyPathInput.value;
+    const path = setHistoryArrayPath(typedPath);
+    void targetPathStatusController.configure(path, typedPath);
 });
 restartObservationButton?.addEventListener("click", () => {
     void currentTargetObservation(getHistoryArrayPath()).then((observation) => {

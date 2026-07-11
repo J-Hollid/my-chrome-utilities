@@ -53,7 +53,10 @@
    "page_title" #{"Cart" "Checkout" "Order confirmation" "Product detail" "Shop"}
    "page_titles" #{"Home, Checkout, Purchase"}
    "other_page_title" #{"Documentation"}
-   "tab_id" #{"42"}
+   "tab_id" #{"42" "43" "44"}
+   "target_value" #{"array containing pageview" "missing" "object containing order"}
+   "sample_value" #{"array containing order" "array containing purchase" "missing"}
+   "path_status" #{"not an array" "path missing" "ready"}
    "other_tab_id" #{"77"}
    "page_url" #{"https://example.test/home"
                 "https://shop.example.test/cart"
@@ -61,6 +64,7 @@
                 "https://shop.example.test/checkout?campaign=summer-sale&audience=returning-customers&variant=blue"
                 "https://shop.example.test/confirmation"
                 "https://shop.example.test/products/blue"
+                "https://shop.example.test/product/blue"
                 "https://shop.example.test/p/"}
    "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"
