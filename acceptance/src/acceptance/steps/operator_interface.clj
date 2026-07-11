@@ -36,7 +36,8 @@
    "features/data-layer-authoritative-live-state.feature"
    "features/side-panel-action-feedback.feature"
    "features/data-layer-push-draft-review.feature"
-   "features/data-layer-state-aware-actions.feature"])
+   "features/data-layer-state-aware-actions.feature"
+   "features/data-layer-view-responsive-layouts.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")
