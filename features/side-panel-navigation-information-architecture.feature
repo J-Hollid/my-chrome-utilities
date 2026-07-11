@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=fa43695ce021261031f16a71824284e336ae9ca7adb29ab351b71c2c9bfb1123
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T19:29:19.058780129Z","feature_name":"Side panel navigation information architecture","feature_path":"features/side-panel-navigation-information-architecture.feature","background_hash":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","implementation_hash":"sha256:side-panel-information-architecture-v3","scenarios":[{"index":3,"name":"Side panel navigation information architecture 004","scenario_hash":"2181bc9f562cd48a8a92b911f2aa5f70944f15927e6e6220e3f7ea61dcf66bb9","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-10T19:29:19.058780129Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Side panel navigation information architecture
 
   # Side panel navigation information architecture 001
@@ -58,5 +53,19 @@ Feature: Side panel navigation information architecture
       | no active testing session | Start testing |
       | active testing session    | End testing   |
       | no selected target        | Choose target |
-      | selected detached target  | Attach target |
-      | selected attached target  | Detach target |
+
+  # Side panel navigation information architecture 005
+  Scenario Outline: Side panel navigation information architecture 005
+    Given Data Layer Live has session state <session_state> and capture state <capture_state>
+    When the Live contextual actions are displayed
+    Then session action <session_action> is visible
+    And the available capture action is <capture_action>
+    And permanent Live action buttons Attach target, Detach target, and Stop are absent
+    And Start testing attaches the selected target when a session starts
+    And End testing detaches the target when the active session ends
+
+    Examples:
+      | session_state | capture_state | session_action | capture_action |
+      | Inactive      | Inactive      | Start testing  | none           |
+      | Active        | Live          | End testing    | Pause capture  |
+      | Active        | Paused        | End testing    | Resume capture |

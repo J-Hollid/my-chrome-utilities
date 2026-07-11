@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=88c015ba1ecb0bdb7824ece129f6c0fa9c0c058b3cdb897acbe9a09e0fb3fcde
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T23:14:44.207478631Z","feature_name":"Data layer live operator layout","feature_path":"features/data-layer-live-operator-layout.feature","background_hash":"943f0ca383aa9d62dbc07900def5a21947650222fb7339a72c22ee12c675f99f","implementation_hash":"sha256:live-event-inspector-ux-v1","scenarios":[{"index":0,"name":"Data layer live operator layout 001","scenario_hash":"2d3238a22ba1337e52790cde54afcad734337fcfd92765525fc126aa779c4519","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":1,"name":"Data layer live operator layout 002","scenario_hash":"024531ec5e8216c9ab3c96cb70fd3f2ba7960da658e9a8c4a05277713c9a79cc","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":2,"name":"Data layer live operator layout 003","scenario_hash":"ba00b9b6d295d4f3014c7434cb7cb9ab54c38071e24294a148e4724538b41c2d","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":3,"name":"Data layer live operator layout 004","scenario_hash":"1f2fe8c34c368c28c20d06d84dccaa9e5b3ddf889b62b061e248cf4a05be76bb","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":4,"name":"Data layer live operator layout 005","scenario_hash":"8e058c82b9d189f5f7d90989bee81c6f3fb3832bfd5c140eeeedd0829ff47685","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":5,"name":"Data layer live operator layout 006","scenario_hash":"ed7d95bfbf8d168ed7f62a944894d24685e7d488383dc5bb61acc80e0b9a5b00","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":6,"name":"Data layer live operator layout 007","scenario_hash":"98c815e0535339c98eb01bf7342995845f88eaef55b00f8f3c93d947f9d52a16","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"},{"index":7,"name":"Data layer live operator layout 008","scenario_hash":"b20257db791177931643b804ab2a8241b77d2f4df3e76acd72ea926d6d161580","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T23:14:44.207478631Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer live operator layout
 
   Background:
@@ -16,13 +11,14 @@ Feature: Data layer live operator layout
     When the Live view header is displayed
     Then it shows state <session_state>, <event_count> events, and <source_count> sources before the event feed
     And primary actions <primary_actions> are visible without opening another region
-    And less frequent session actions remain reachable from the same context
+    And End testing remains reachable from the same context
+    And a Stop button is absent from the Live session actions
     And the selected target page is shown once as session context rather than repeated as an event heading
 
     Examples:
       | project_name         | session_state | event_count | source_count | primary_actions |
-      | my-chrome-utilities | Live          | 42          | 3            | Pause and Stop  |
-      | my-chrome-utilities | Paused        | 42          | 3            | Resume and Stop |
+      | my-chrome-utilities | Live          | 42          | 3            | Pause capture   |
+      | my-chrome-utilities | Paused        | 42          | 3            | Resume capture  |
 
   # Data layer live operator layout 002
   Scenario Outline: Data layer live operator layout 002
