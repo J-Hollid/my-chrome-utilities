@@ -11,8 +11,13 @@ Feature: Data layer Live session summary
     When the Live session summary is displayed
     Then the summary shows exactly one session status <session_status> and one observer status <observer_status>
     And both status indicators are visually distinct from the summary metadata and identifiable without color alone
-    And separately labelled fields show Target page <page_title>, Page URL <page_url>, Observer path <observer_path>, Captured events <event_count>, and Connected sources <connected_source_count>
+    And the status indicators appear before Target page <page_title> and Captured events <event_count>
+    And Target page <page_title> and Captured events <event_count> are visible without expanding Details
+    And a collapsed Details disclosure contains only Page URL <page_url>, Observer path <observer_path>, and Connected sources <connected_source_count>
     And the summary values are not serialized into one sentence
+    When the operator expands Details
+    Then its three technical values are revealed as separately labelled fields
+    And the primary status, target page, and captured-event count remain visible
 
     Examples:
       | testing_state | session_status | observer_status  | page_title           | page_url                                 | observer_path | event_count | connected_source_count |
@@ -51,3 +56,33 @@ Feature: Data layer Live session summary
       | session_status | observer_status | duplicate_fragments                                                   | action_name   | action_result | notification    |
       | Capturing      | Connected       | observation started, event history connected, session is live         | Start testing | succeeded     | Testing started |
       | Paused         | Error           | attached to target, active data layer attached, observation connected | Pause capture | failed        | Pause failed    |
+
+  # Data layer Live session summary 004
+  Scenario Outline: Data layer Live session summary 004
+    Given the summary reports session status <session_status>, observer status <observer_status>, target page Checkout, and 42 captured events
+    And a long event inspector requires the Live view to scroll
+    When the operator scrolls beyond the initial session summary position
+    Then session status <session_status> and observer status <observer_status> remain visible at the start of the stable session header
+    And the stable header continues to expose Checkout and 42 captured events
+    And the scrolling inspector does not cover the stable session header
+
+    Examples:
+      | session_status | observer_status |
+      | Capturing      | Connected       |
+      | Ended          | Disconnected    |
+
+  # Data layer Live session summary 005
+  Scenario Outline: Data layer Live session summary 005
+    Given <panel_width> CSS px are available for the Live session summary
+    And Details is expanded
+    When the Live session summary is displayed
+    Then primary and secondary metadata each use <metadata_columns> columns
+    And each metadata item keeps its label and value together
+    And long values wrap or truncate within their own item without overlapping another item
+    And the summary causes no horizontal document scrolling
+
+    Examples:
+      | panel_width | metadata_columns |
+      | 360         | 1                |
+      | 520         | 2                |
+      | 720         | 3                |
