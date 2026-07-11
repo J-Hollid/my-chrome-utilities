@@ -749,9 +749,15 @@ function renderSequences() {
         setSequenceReplayResult(sequenceReplayElements, `${record.result}: ${record.steps.length} steps.`);
     });
 }
+function resetTemplateEditorDisclosures() {
+    document.querySelectorAll("#event-property-editor details").forEach((disclosure) => {
+        disclosure.open = false;
+    });
+}
 function openTemplateEditor(template) {
     templateEditorReturnTemplateId = template.id;
     propertyEditorState = openPropertyEditor(template);
+    resetTemplateEditorDisclosures();
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
     eventLibraryEditorElements.editorTitle?.focus({ preventScroll: true });
@@ -759,6 +765,7 @@ function openTemplateEditor(template) {
 function openNewEventEditor() {
     templateEditorReturnTemplateId = undefined;
     propertyEditorState = createNewEventEditor();
+    resetTemplateEditorDisclosures();
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
     eventTemplateName?.focus({ preventScroll: true });
@@ -766,6 +773,7 @@ function openNewEventEditor() {
 function closeTemplateEditor() {
     const wasNew = propertyEditorState?.isNew;
     propertyEditorState = undefined;
+    resetTemplateEditorDisclosures();
     if (eventLibraryEditorElements.propertyEditor) {
         eventLibraryEditorElements.propertyEditor.hidden = true;
     }
