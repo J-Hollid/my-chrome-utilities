@@ -1,12 +1,5 @@
 import { getHistoryArrayPath } from "./data-layer.js";
 export const DATA_LAYER_SESSION_STORAGE_KEY = "dataLayerTestingSession";
-let nextSessionSequence = 0;
-function nextSessionId(tabId) {
-    nextSessionSequence += 1;
-    const unique = globalThis.crypto?.randomUUID?.()
-        ?? `${Date.now()}-${nextSessionSequence}`;
-    return `tab-${tabId}-session-${unique}`;
-}
 export function sessionScope(state) {
     return state.session ? "active-tab journey" : undefined;
 }
@@ -19,7 +12,7 @@ export function startDataLayerTestingSession(state, options) {
     }
     return {
         session: {
-            id: nextSessionId(options.tabId),
+            id: options.id,
             status: "active",
             tabId: options.tabId,
             historyPath: options.historyPath ?? getHistoryArrayPath(),
