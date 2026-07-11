@@ -474,6 +474,12 @@ function openLiveInspector(eventId) {
                 savedInspectorTemplateId = template.id;
                 appendOpenInLibraryAction(event.id, template.name);
             },
+            validationAvailable: (selected) => Boolean(validateEvent({
+                sourceId: selected.sourceId,
+                eventName: selected.name,
+                payload: selected.payload,
+                rawInput: selected.rawInput,
+            }, schemas).schema),
             validationState: (selected) => validateEvent({
                 sourceId: selected.sourceId,
                 eventName: selected.name,

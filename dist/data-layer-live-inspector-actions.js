@@ -25,6 +25,11 @@ export function createLiveInspectorActions(effects) {
             effects.storeTemplate(template);
             effects.onTemplateSaved?.(template);
         },
+        validationAvailability(event) {
+            return effects.validationAvailable?.(event) === false
+                ? { enabled: false, reason: "Select a schema to validate" }
+                : { enabled: true };
+        },
         validate(event) {
             const previous = event.validation ?? "Not checked";
             const next = effects.validationState(event);

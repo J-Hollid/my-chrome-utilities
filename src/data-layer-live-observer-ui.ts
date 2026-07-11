@@ -171,10 +171,13 @@ export function renderLiveInspector(
     action.type = "button";
     action.textContent = label;
     action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
-    if (label === "Validate" && !(event as LiveEvent & { schemaId?: string }).schemaId) {
+    const availability = label === "Validate"
+      ? actionHandlers.validationAvailability(event)
+      : { enabled: true };
+    if (!availability.enabled) {
       action.disabled = true;
-      action.setAttribute("aria-description", "Select a schema to validate");
-      action.title = "Select a schema to validate";
+      action.setAttribute("aria-description", availability.reason ?? "Action unavailable");
+      action.title = availability.reason ?? "Action unavailable";
     }
     action.addEventListener("click", () => {
       void runLiveInspectorAction(
