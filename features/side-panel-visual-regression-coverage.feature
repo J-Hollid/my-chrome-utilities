@@ -12,7 +12,7 @@ Feature: Side panel visual regression coverage
   # Side panel visual regression coverage 001
   Scenario Outline: Side panel visual regression coverage 001
     When baseline image coverage is generated for view <view_name> in state <view_state>
-    Then the view is captured at available widths 320, 480, and 720 CSS pixels
+    Then the view is captured at available widths 360, 520, and 720 CSS pixels
     And each width is captured in light and dark themes
     And timestamps, generated ids, and active-page URLs use deterministic fixture values
 
@@ -28,7 +28,7 @@ Feature: Side panel visual regression coverage
 
   # Side panel visual regression coverage 002
   Scenario Outline: Side panel visual regression coverage 002
-    When baseline image coverage is generated for exceptional state <view_state> in view <view_name>
+    When exceptional-state fixture <view_state> is captured in view <view_name>
     Then the state title, explanation, recovery action, and surrounding navigation are visible
     And the capture contains no unexpected horizontal overflow or clipped control label
 
@@ -50,7 +50,7 @@ Feature: Side panel visual regression coverage
 
     Examples:
       | project_name         | view_name | panel_width | theme_name |
-      | my-chrome-utilities | Live      | 320 px      | light      |
+      | my-chrome-utilities | Live      | 360 px      | light      |
       | my-chrome-utilities | Library   | 720 px      | dark       |
 
   # Side panel visual regression coverage 004

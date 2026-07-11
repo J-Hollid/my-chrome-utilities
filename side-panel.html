@@ -96,12 +96,14 @@
       </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
         <h3>Library</h3>
-        <label for="event-template-search">Search templates</label>
-        <input id="event-template-search" type="search" />
-        <button id="save-latest-template" type="button" data-action-variant="secondary">Save latest event to Library</button>
-        <output id="event-template-count" aria-live="polite"></output>
-        <ul id="event-template-list"></ul>
-        <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
+        <section id="event-template-master" aria-label="Event template library">
+          <label for="event-template-search">Search templates</label>
+          <input id="event-template-search" type="search" />
+          <button id="save-latest-template" type="button" data-action-variant="secondary">Save latest event to Library</button>
+          <output id="event-template-count" aria-live="polite"></output>
+          <ul id="event-template-list"></ul>
+          <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
+        </section>
         <section id="event-property-editor" aria-label="Event property editor" hidden>
           <h4 id="event-template-editor-title">Event property editor</h4>
           <label for="event-template-json">JSON draft</label>
@@ -132,26 +134,28 @@
             </section>
           </div>
         </section>
-        <output id="event-template-result" aria-live="polite"></output>
-        <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section>
+        <section id="event-template-footer"><output id="event-template-result" aria-live="polite"></output><section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section></section>
       </section>
       <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
         <h3>Sessions</h3>
-        <label for="saved-session-search">Search sessions</label>
-        <input id="saved-session-search" type="search" />
-        <button id="import-saved-session" type="button" data-action-variant="secondary">Import session</button>
-        <input id="saved-session-file" type="file" accept="application/json,.json" hidden />
-        <output id="saved-session-count" aria-live="polite"></output>
-        <ul id="saved-session-list"></ul>
-        <section id="saved-session-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4>No sessions saved yet</h4><p>Import a session to review a captured archive.</p></section>
-        <output id="saved-session-confirmation" aria-live="assertive"></output>
-        <button id="cancel-saved-session-delete" type="button" hidden>Cancel deletion</button>
-        <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
+        <section id="saved-session-master" aria-label="Saved session library">
+          <label for="saved-session-search">Search sessions</label>
+          <input id="saved-session-search" type="search" />
+          <button id="import-saved-session" type="button" data-action-variant="secondary">Import session</button>
+          <input id="saved-session-file" type="file" accept="application/json,.json" hidden />
+          <output id="saved-session-count" aria-live="polite"></output>
+          <ul id="saved-session-list"></ul>
+          <section id="saved-session-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4>No sessions saved yet</h4><p>Import a session to review a captured archive.</p></section>
+          <output id="saved-session-confirmation" aria-live="assertive"></output>
+          <button id="cancel-saved-session-delete" type="button" hidden>Cancel deletion</button>
+          <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
+        </section>
+        <aside id="saved-session-detail" aria-label="Saved session detail"><h4>Session details</h4><p>Select a saved session to review its captured events and replay options.</p></aside>
       </section>
       <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden>
-        <h3>Schemas</h3><label for="schema-search">Search schemas</label><input id="schema-search" type="search" />
+        <h3>Schemas</h3><section id="schema-master" aria-label="Schema library"><label for="schema-search">Search schemas</label><input id="schema-search" type="search" />
         <button id="create-schema" type="button" data-action-variant="secondary">Create</button><button id="import-schema" type="button" data-action-variant="secondary">Import</button><button id="export-schema" type="button" data-action-variant="secondary">Export</button>
-        <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><section id="schema-empty-state" class="panel-empty-state" aria-live="polite"><h4>No schemas saved yet</h4><p>Create a schema to begin validation.</p></section><output id="schema-result" aria-live="polite"></output>
+        <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><section id="schema-empty-state" class="panel-empty-state" aria-live="polite"><h4>No schemas saved yet</h4><p>Create a schema to begin validation.</p></section><output id="schema-result" aria-live="polite"></output></section><aside id="schema-detail" aria-label="Schema detail"><h4>Schema details</h4><p>Select a schema to inspect revisions and validation rules.</p></aside>
       </section>
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-history-path"></output>
