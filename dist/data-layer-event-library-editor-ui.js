@@ -5,6 +5,7 @@ export function findEventLibraryEditorElements(root = document) {
         count: root.querySelector("#event-template-count"),
         list: root.querySelector("#event-template-list"),
         propertyEditor: root.querySelector("#event-property-editor"),
+        editorTitle: root.querySelector("#event-template-editor-title"),
         properties: root.querySelector("#event-template-properties"),
         json: root.querySelector("#event-template-json"),
         pushDestination: root.querySelector("#push-destination-path"),
@@ -13,6 +14,8 @@ export function findEventLibraryEditorElements(root = document) {
         saveCopyButton: root.querySelector("#save-template-copy"),
         pushDraftButton: root.querySelector("#push-template-draft"),
         discardDraftButton: root.querySelector("#discard-template-draft"),
+        closeEditorButton: root.querySelector("#close-template-editor"),
+        backToCapturedEventButton: root.querySelector("#back-to-captured-event"),
         result: root.querySelector("#event-template-result"),
     };
 }
@@ -42,6 +45,8 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
     }));
     if (elements.propertyEditor)
         elements.propertyEditor.hidden = !editor;
+    if (elements.editorTitle && editor)
+        elements.editorTitle.textContent = `${editor.template.eventName} (${editor.template.originatingEventId}) · ${editor.template.originatingSessionId}`;
     if (elements.json && editor)
         elements.json.value = editor.jsonDraft;
     if (elements.pushDestination && editor) {

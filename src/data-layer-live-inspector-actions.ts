@@ -15,6 +15,7 @@ export interface LiveInspectorActionEffects {
   currentPageUrl(): string;
   writeClipboard(text: string): Promise<void>;
   storeTemplate(template: EditableEventTemplate): void;
+  onTemplateSaved?(template: EditableEventTemplate): void;
   validationState(event: LiveEvent): ValidationState;
   updateValidation(eventId: string, state: ValidationState): void;
 }
@@ -29,7 +30,7 @@ export function createLiveInspectorActions(
       await effects.writeClipboard(JSON.stringify(event.payload));
     },
     saveToLibrary(event) {
-      effects.storeTemplate(createEditableTemplate({
+      const template = createEditableTemplate({
         id: event.id,
         sessionId: event.sessionId ?? "live",
         sourceId: event.sourceId,
@@ -45,7 +46,9 @@ export function createLiveInspectorActions(
         name: event.name,
         destination: event.destination ?? "event.history",
         sourceName: event.sourceName ?? event.sourceId,
-      }));
+      });
+      effects.storeTemplate(template);
+      effects.onTemplateSaved?.(template);
     },
     validate(event) {
       const previous = event.validation ?? "Not checked";

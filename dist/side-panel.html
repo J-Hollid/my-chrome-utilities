@@ -88,7 +88,7 @@
         <output id="event-template-count" aria-live="polite"></output>
         <ul id="event-template-list"></ul>
         <section id="event-property-editor" aria-label="Event property editor" hidden>
-          <h4>Event property editor</h4>
+          <h4 id="event-template-editor-title">Event property editor</h4>
           <label for="event-template-json">JSON draft</label>
           <ul id="event-template-properties" aria-label="Draft properties"></ul>
           <textarea id="event-template-json" rows="10"></textarea>
@@ -99,6 +99,8 @@
           <button id="save-template-copy" type="button">Save as copy</button>
           <button id="push-template-draft" type="button">Push draft</button>
           <button id="discard-template-draft" type="button">Discard draft</button>
+          <button id="close-template-editor" type="button">Close editor</button>
+          <button id="back-to-captured-event" type="button">Back to captured event</button>
         </section>
         <output id="event-template-result" aria-live="polite"></output>
         <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><output id="sequence-run-result" aria-live="polite"></output></section>

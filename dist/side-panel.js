@@ -75,7 +75,7 @@ const savedSessionConfirmation = document.querySelector("#saved-session-confirma
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
-const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, } = eventLibraryEditorElements;
+const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
@@ -106,6 +106,7 @@ let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let savedInspectorTemplateId;
 let schemas = [];
 let replaySequences = [];
 let observationTargetState = restoredObservationTargetState();
@@ -443,9 +444,16 @@ function openLiveInspector(eventId) {
                 await navigator.clipboard.writeText(text);
             },
             storeTemplate: (template) => {
-                eventTemplates = [...eventTemplates, template];
+                const existing = eventTemplates.find(({ originatingEventId }) => originatingEventId === template.originatingEventId);
+                eventTemplates = existing
+                    ? eventTemplates.map((candidate) => candidate.id === existing.id ? { ...template, id: existing.id } : candidate)
+                    : [...eventTemplates, template];
                 persistEventTemplateLibrary();
                 renderEventTemplateLibrary();
+            },
+            onTemplateSaved: (template) => {
+                savedInspectorTemplateId = template.id;
+                appendOpenInLibraryAction(event.id, template.name);
             },
             validationState: (selected) => validateEvent({
                 sourceId: selected.sourceId,
@@ -460,6 +468,21 @@ function openLiveInspector(eventId) {
             },
         }));
     renderLiveObserver();
+}
+function appendOpenInLibraryAction(eventId, templateName) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.textContent = "Open in Library";
+    action.addEventListener("click", () => {
+        const template = eventTemplates.find(({ id }) => id === savedInspectorTemplateId)
+            ?? eventTemplates.find(({ originatingEventId }) => originatingEventId === eventId);
+        if (!template)
+            return;
+        showDataLayerView("Library");
+        openTemplateEditor(template);
+    });
+    liveObserverElements.eventInspector?.append(action);
+    setLiveSessionMessage(`Saved ${templateName} to Library. Open in Library is available.`);
 }
 function setLiveSessionMessage(message) {
     liveNotificationController.announce(message);
@@ -1273,6 +1296,17 @@ discardTemplateDraftButton?.addEventListener("click", () => {
     propertyEditorState = discardDraft(propertyEditorState);
     setEventLibraryResult(eventLibraryEditorElements, "Draft discarded.");
     renderEventTemplateLibrary();
+});
+closeTemplateEditorButton?.addEventListener("click", () => {
+    propertyEditorState = undefined;
+    renderEventTemplateLibrary();
+});
+backToCapturedEventButton?.addEventListener("click", () => {
+    const eventId = propertyEditorState?.template.originatingEventId;
+    if (!eventId)
+        return;
+    showDataLayerView("Live");
+    openLiveInspector(eventId);
 });
 importSavedSessionButton?.addEventListener("click", () => savedSessionFileInput?.click());
 savedSessionFileInput?.addEventListener("change", () => {

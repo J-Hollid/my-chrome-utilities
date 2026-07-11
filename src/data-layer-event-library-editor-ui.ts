@@ -9,6 +9,7 @@ export interface EventLibraryEditorElements {
   count: HTMLElement | null;
   list: HTMLElement | null;
   propertyEditor: HTMLElement | null;
+  editorTitle: HTMLElement | null;
   properties: HTMLElement | null;
   json: HTMLTextAreaElement | null;
   pushDestination: HTMLInputElement | null;
@@ -17,6 +18,8 @@ export interface EventLibraryEditorElements {
   saveCopyButton: HTMLButtonElement | null;
   pushDraftButton: HTMLButtonElement | null;
   discardDraftButton: HTMLButtonElement | null;
+  closeEditorButton: HTMLButtonElement | null;
+  backToCapturedEventButton: HTMLButtonElement | null;
   result: HTMLElement | null;
 }
 
@@ -35,6 +38,7 @@ export function findEventLibraryEditorElements(
     count: root.querySelector<HTMLElement>("#event-template-count"),
     list: root.querySelector<HTMLElement>("#event-template-list"),
     propertyEditor: root.querySelector<HTMLElement>("#event-property-editor"),
+    editorTitle: root.querySelector<HTMLElement>("#event-template-editor-title"),
     properties: root.querySelector<HTMLElement>("#event-template-properties"),
     json: root.querySelector<HTMLTextAreaElement>("#event-template-json"),
     pushDestination: root.querySelector<HTMLInputElement>("#push-destination-path"),
@@ -43,6 +47,8 @@ export function findEventLibraryEditorElements(
     saveCopyButton: root.querySelector<HTMLButtonElement>("#save-template-copy"),
     pushDraftButton: root.querySelector<HTMLButtonElement>("#push-template-draft"),
     discardDraftButton: root.querySelector<HTMLButtonElement>("#discard-template-draft"),
+    closeEditorButton: root.querySelector<HTMLButtonElement>("#close-template-editor"),
+    backToCapturedEventButton: root.querySelector<HTMLButtonElement>("#back-to-captured-event"),
     result: root.querySelector<HTMLElement>("#event-template-result"),
   };
 }
@@ -89,6 +95,7 @@ export function renderEventLibraryEditor(
     }),
   );
   if (elements.propertyEditor) elements.propertyEditor.hidden = !editor;
+  if (elements.editorTitle && editor) elements.editorTitle.textContent = `${editor.template.eventName} (${editor.template.originatingEventId}) · ${editor.template.originatingSessionId}`;
   if (elements.json && editor) elements.json.value = editor.jsonDraft;
   if (elements.pushDestination && editor) {
     elements.pushDestination.value = editor.template.destination;

@@ -5,7 +5,7 @@ export function createLiveInspectorActions(effects) {
             await effects.writeClipboard(JSON.stringify(event.payload));
         },
         saveToLibrary(event) {
-            effects.storeTemplate(createEditableTemplate({
+            const template = createEditableTemplate({
                 id: event.id,
                 sessionId: event.sessionId ?? "live",
                 sourceId: event.sourceId,
@@ -21,7 +21,9 @@ export function createLiveInspectorActions(effects) {
                 name: event.name,
                 destination: event.destination ?? "event.history",
                 sourceName: event.sourceName ?? event.sourceId,
-            }));
+            });
+            effects.storeTemplate(template);
+            effects.onTemplateSaved?.(template);
         },
         validate(event) {
             const previous = event.validation ?? "Not checked";

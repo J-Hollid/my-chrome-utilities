@@ -4,6 +4,9 @@
 (def canonical-example-values
   {"action_name" #{"Copy payload" "Pause capture" "Save to Library" "Start testing" "Validate"}
    "action_result" #{"failed" "succeeded"}
+   "duplicate_choice" #{"Create copy" "Update existing"}
+   "duplicate_result" #{"Purchase updated" "distinct copy created"}
+   "template_count" #{"1" "2"}
    "access_state" #{"Ready"}
    "first_step" #{"Choose target"}
    "second_step" #{"Confirm access and path"}
@@ -100,7 +103,7 @@
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
    "schema_name" #{"Purchase event" "Purchase v2"}
-   "scroll_position" #{"480 CSS px"}
+   "scroll_position" #{"480 CSS px" "960 px"}
    "second_subview" #{"Sequences"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
