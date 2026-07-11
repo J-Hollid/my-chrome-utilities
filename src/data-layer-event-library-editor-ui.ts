@@ -2,16 +2,20 @@ import type {
   EditableEventTemplate,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
+import { newEventValidation } from "./data-layer-event-library-editor.js";
 import { templateActionHierarchy } from "./side-panel-action-hierarchy.js";
 import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 
 export interface EventLibraryEditorElements {
   search: HTMLInputElement | null;
-  saveLatestButton: HTMLButtonElement | null;
+  addNewButton: HTMLButtonElement | null;
   count: HTMLElement | null;
   list: HTMLElement | null;
   propertyEditor: HTMLElement | null;
   editorTitle: HTMLElement | null;
+  templateName: HTMLInputElement | null;
+  eventName: HTMLInputElement | null;
+  source: HTMLSelectElement | null;
   editorSummary: HTMLElement | null;
   revisionHistory: HTMLElement | null;
   properties: HTMLElement | null;
@@ -39,11 +43,14 @@ export function findEventLibraryEditorElements(
 ): EventLibraryEditorElements {
   return {
     search: root.querySelector<HTMLInputElement>("#event-template-search"),
-    saveLatestButton: root.querySelector<HTMLButtonElement>("#save-latest-template"),
+    addNewButton: root.querySelector<HTMLButtonElement>("#add-new-event"),
     count: root.querySelector<HTMLElement>("#event-template-count"),
     list: root.querySelector<HTMLElement>("#event-template-list"),
     propertyEditor: root.querySelector<HTMLElement>("#event-property-editor"),
     editorTitle: root.querySelector<HTMLElement>("#event-template-editor-title"),
+    templateName: root.querySelector<HTMLInputElement>("#event-template-name"),
+    eventName: root.querySelector<HTMLInputElement>("#event-template-event-name"),
+    source: root.querySelector<HTMLSelectElement>("#event-template-source"),
     editorSummary: root.querySelector<HTMLElement>("#event-template-editor-summary"),
     revisionHistory: root.querySelector<HTMLElement>("#event-template-revision-history"),
     properties: root.querySelector<HTMLElement>("#event-template-properties"),
@@ -95,6 +102,7 @@ export function renderEventLibraryEditor(
   actions: EventLibraryEditorActions,
 ): void {
   if (elements.count) elements.count.textContent = `${templates.length} templates`;
+  if (elements.addNewButton) elements.addNewButton.hidden = Boolean(editor?.isNew);
   elements.list?.replaceChildren(
     ...templates.map((template) => {
       const item = document.createElement("li");
@@ -133,7 +141,25 @@ export function renderEventLibraryEditor(
     }),
   );
   if (elements.propertyEditor) elements.propertyEditor.hidden = !editor;
-  if (elements.editorTitle && editor) elements.editorTitle.textContent = `${editor.template.name} editor`;
+  if (elements.editorTitle && editor) elements.editorTitle.textContent = editor.isNew ? "New event" : `${editor.template.name} editor`;
+  for (const field of [elements.templateName, elements.eventName, elements.source]) {
+    if (field) field.disabled = !editor?.isNew;
+  }
+  if (elements.templateName) elements.templateName.value = editor?.template.name ?? "";
+  if (elements.eventName) elements.eventName.value = editor?.template.eventName ?? "";
+  if (elements.source) elements.source.value = editor?.template.sourceId ?? "";
+  const newErrors = editor?.isNew ? newEventValidation(editor) : {};
+  const validationFields: ReadonlyArray<readonly [HTMLInputElement | HTMLSelectElement | null, string | undefined]> = [
+    [elements.templateName, newErrors.name],
+    [elements.eventName, newErrors.eventName],
+    [elements.source, newErrors.source],
+  ];
+  for (const [field, error] of validationFields) {
+    if (!field) continue;
+    field.setAttribute("aria-invalid", String(Boolean(error)));
+    if (error) field.setAttribute("aria-describedby", "event-template-validation");
+    else field.removeAttribute("aria-describedby");
+  }
   if (elements.editorSummary) {
     elements.editorSummary.replaceChildren(...(editor ? [
       ["Template", editor.template.name], ["Version", String(editor.template.version)],
@@ -157,7 +183,7 @@ export function renderEventLibraryEditor(
     elements.pushDestination.value = editor.template.destination;
   }
   if (elements.validation) {
-    const error = editor?.jsonError;
+    const error = editor?.jsonError ?? Object.values(newErrors)[0];
     elements.validation.textContent = error ?? "Properties, JSON, and Validation edit the same draft.";
     elements.validation.setAttribute("aria-live", error ? "assertive" : "polite");
     elements.validation.setAttribute("role", error ? "alert" : "status");
@@ -167,7 +193,11 @@ export function renderEventLibraryEditor(
   );
   if (editor) {
     const hierarchy = templateActionHierarchy(editor);
-    applyActionTreatment(elements.saveRevisionButton, hierarchy.saveRevision, "save-template-revision-reason");
+    if (elements.saveRevisionButton) elements.saveRevisionButton.textContent = editor.isNew ? "Save new event" : "Save revision";
+    const error = editor.isNew ? Object.values(newEventValidation(editor))[0] : undefined;
+    applyActionTreatment(elements.saveRevisionButton, error
+      ? { variant: "primary", disabled: true, disabledReason: error }
+      : hierarchy.saveRevision, "save-template-revision-reason");
     applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
     applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
   }

@@ -36,7 +36,7 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name" "Select an event source" "Enter a destination path"}
    "changed_field" #{"Template name" "Event name"}
    "closing_choice" #{"Save revision" "Discard changes"}
    "expected_version" #{"3" "4"}
@@ -161,6 +161,7 @@
    "selection_input" #{"Enter" "Select button"}
    "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
+   "readiness_problem" #{"Template name empty" "Event name empty" "Source not selected" "Destination empty" "JSON invalid"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Edit observer path" "Import session" "Open Live" "Request access" "Restart observation" "Retry target check" "Start observation" "Start testing"}
    "failure_reason" #{"browser storage is unavailable" "event.history is missing" "site access is missing" "target Checkout is closed" "the JSON draft is invalid" "the target read failed"}
