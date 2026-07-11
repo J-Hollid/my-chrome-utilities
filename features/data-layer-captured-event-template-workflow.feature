@@ -44,8 +44,8 @@ Feature: Data layer captured event template workflow
 
   # Data layer captured event template workflow 005
   Scenario Outline: Data layer captured event template workflow 005
-    Given Purchase is the existing Library result for this capture
-    When Save to Library is activated again for event event-42
+    Given existing Library result Purchase differs from capture event-42
+    When Update Library template is activated for event event-42
     Then no additional template is created without confirmation
     And the operator is asked to choose Update existing or Create copy
     When the operator chooses <duplicate_choice>

@@ -9,11 +9,11 @@
    "editable event template <template_name> is created independently of the captured event"
    "template <template_name> records the originating session id and event id"
    "changing template <template_name> cannot change the captured event or its saved session"
-   "event templates <template_names> are saved"
+   "event templates <template_names> are saved" "Library inventory includes <template_names>"
    "the user searches and filters by <query>"
    "only templates matching <query> by friendly name, event name, source, destination, tag, schema, or property are listed"
    "the filtered template count is shown"
-   "event template <template_name> is saved"
+   "event template <template_name> is saved" "Library record <template_name> exists"
    "template <template_name> is shown in the Library"
    "it shows friendly name, event name, source adapter, destination, tags, schema assignment, validation state, and version"
    "visible actions offer Edit, Duplicate, and Push when supported by the source adapter"
@@ -24,8 +24,8 @@
    "the second tuple item is the exact saved template payload"
    "the visible result identifies the active page, source adapter, destination, and success or failure"
    "no captured event or saved session is changed"
-   "event template <template_name> has version <version>"
-   "the user duplicates it as <copy_name>"
+   "event template <template_name> has version <version>" "revision <version> of <template_name> exists"
+   "the user duplicates it as <copy_name>" "the user reviews and confirms duplicate name <copy_name>"
    "a distinct template named <copy_name> is created with the same payload and destination"
    "edits to <copy_name> do not change <template_name> version <version>"
    "event <event_name> is visible in a live or archived session"
@@ -84,6 +84,7 @@
       (assoc world :templates [(editor/event-template (first names))
                                (assoc (editor/event-template (second names))
                                       :event-name "product" :tags ["catalog"])]))
+    "Library inventory includes <template_names>" (transition "event templates <template_names> are saved" world example)
 
     "the user searches and filters by <query>"
     (let [query (editor/value example "query")]
@@ -105,6 +106,7 @@
     "event template <template_name> is saved"
     (let [name (canonical-name! example)]
       (assoc world :templates [(editor/event-template name)]))
+    "Library record <template_name> exists" (transition "event template <template_name> is saved" world example)
 
     "template <template_name> is shown in the Library"
     (let [name (canonical-name! example)]
@@ -162,11 +164,13 @@
     (let [name (canonical-name! example) version (parse-long (editor/value example "version"))]
       (editor/assert-value! version 3 "Version fixture is not canonical.")
       (assoc world :template (editor/event-template name version)))
+    "revision <version> of <template_name> exists" (transition "event template <template_name> has version <version>" world example)
 
     "the user duplicates it as <copy_name>"
     (let [copy-name (editor/value example "copy_name")]
       (editor/assert-value! copy-name "Purchase failure view" "Copy fixture is not canonical.")
       (assoc world :copy (assoc (:template world) :id "template:copy" :name copy-name)))
+    "the user reviews and confirms duplicate name <copy_name>" (transition "the user duplicates it as <copy_name>" world example)
 
     "a distinct template named <copy_name> is created with the same payload and destination"
     (do (editor/assert-value! (editor/value example "copy_name") (:name (:copy world))

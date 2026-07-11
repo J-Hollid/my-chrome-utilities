@@ -62,5 +62,6 @@ Feature: Side panel action hierarchy
     Examples:
       | view_name | action_name   | disabled_reason                        |
       | Live      | Start testing | a ready target must be selected        |
+      | Live      | Validate      | Select a schema to validate            |
       | Library   | Save revision | the draft has no unsaved changes       |
       | Library   | Push draft    | the JSON draft must be valid           |
