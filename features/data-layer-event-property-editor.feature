@@ -12,7 +12,7 @@ Feature: Data layer event property editor
   # Data layer event property editor 001
   Scenario Outline: Data layer event property editor 001
     When the property editor is displayed
-    Then Properties is selected before JSON, Validation, and Execution settings
+    Then Properties is ordered before JSON, Validation, and Execution settings
     And JSON and Execution settings are separate disclosures or tabs editing the same draft
     And JSON is collapsed by default when Properties provides a sufficient summary
     And the Properties view preserves string, number, boolean, null, object, and array value types
