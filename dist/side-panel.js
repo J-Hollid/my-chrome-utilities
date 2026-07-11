@@ -375,7 +375,7 @@ async function confirmDetachSelectedTarget() {
     stopLiveHistoryCapture();
     ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
         endLiveSession(dataLayerSessionState, observationTargetState));
-    persistAndRenderSessionState();
+    persistAndRenderObservationState();
     closeDetachTargetConfirmation(observationTargetElements);
     if (switchTargetId) {
         observationTargetState = selectObservationTarget(observationTargetState, switchTargetId);
@@ -905,8 +905,7 @@ async function recordDataLayerCommandRun(entry) {
         stopLiveHistoryCapture();
         ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
             endLiveSession(dataLayerSessionState, observationTargetState));
-        persistSession(dataLayerSessionState);
-        renderSessionState();
+        persistAndRenderObservationState();
         renderObservationTargetContext();
         setObservationTargetResult("");
         setLiveSessionMessage("Testing ended");

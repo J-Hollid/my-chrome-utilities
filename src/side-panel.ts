@@ -619,7 +619,7 @@ async function confirmDetachSelectedTarget(): Promise<void> {
   stopLiveHistoryCapture();
   ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
     endLiveSession(dataLayerSessionState, observationTargetState));
-  persistAndRenderSessionState();
+  persistAndRenderObservationState();
   closeDetachTargetConfirmation(observationTargetElements);
   if (switchTargetId) {
     observationTargetState = selectObservationTarget(
@@ -1278,8 +1278,7 @@ async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void>
     stopLiveHistoryCapture();
     ({ sessionState: dataLayerSessionState, targetState: observationTargetState } =
       endLiveSession(dataLayerSessionState, observationTargetState));
-    persistSession(dataLayerSessionState);
-    renderSessionState();
+    persistAndRenderObservationState();
     renderObservationTargetContext();
     setObservationTargetResult("");
     setLiveSessionMessage("Testing ended");
