@@ -369,7 +369,9 @@ const templateRenameRuntime = `Promise.all([
 const jsonValidationRecoveryRuntime = `Promise.all([
   import("./data-layer-event-library-editor.js"),
   import("./data-layer-event-library-editor-ui.js"),
-]).then(([editorModel, editorUi]) => {
+  import("./data-layer-push-draft-review.js"),
+  import("./data-layer-push-draft-review-ui.js"),
+]).then(([editorModel, editorUi, reviewModel, reviewUi]) => {
   const elements = editorUi.findEventLibraryEditorElements();
   const template = { id:"template-scroll", name:"Scroll depth", eventName:"scroll", sourceId:"history", sourceName:"Event history", destination:"queue.history", tags:[], validation:"Valid", payload:{ tealium_generated:"1", scroll_percentage:0 }, version:3, originatingSessionId:"session-1", originatingEventId:"event-1", provenance:"captured:history" };
   let state = editorModel.openPropertyEditor(template);
@@ -383,7 +385,18 @@ const jsonValidationRecoveryRuntime = `Promise.all([
   state = editorModel.updateDraftJson(state, elements.json.value);
   editorUi.renderEventLibraryEditor(elements, [template], state, actions);
   const recovered = { error:Boolean(state.jsonError), status:elements.validation.textContent, invalid:elements.json.getAttribute("aria-invalid"), saveDisabled:elements.saveRevisionButton.disabled, pushDisabled:elements.pushDraftButton.disabled, draft:state.draft };
-  return { invalid, recovered };
+  const transitions = [];
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    state = editorModel.updateDraftJson(state, invalidSource); editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+    transitions.push(Boolean(state.jsonError) && elements.saveRevisionButton.disabled && elements.pushDraftButton.disabled);
+    state = editorModel.updateDraftJson(state, '{"tealium_generated":"1","scroll_percentage":25}'); editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+    transitions.push(!state.jsonError && !elements.saveRevisionButton.disabled && !elements.pushDraftButton.disabled && !elements.validation.textContent.includes("Invalid JSON"));
+  }
+  const saved = editorModel.saveDraftRevision(state);
+  const review = reviewModel.createPushDraftReview(state, { title:"Signal Shop", pageUrl:"https://signal.example.test/checkout", accessState:"Ready" });
+  const reviewElements = reviewUi.findPushDraftReviewElements(); reviewUi.renderPushDraftReview(reviewElements, review);
+  const reviewChanges = [...reviewElements.changeList.querySelectorAll("dl")].map((row) => [...row.querySelectorAll("dd")].map((value) => value.textContent));
+  return { invalid, recovered, transitions, saved:{ version:saved.template.version, payload:saved.template.payload }, review:{ event:review.rows[0][1], draft:review.editor.draft, changes:reviewChanges } };
 })`;
 
 const libraryNewEventRuntime = `Promise.all([
@@ -499,6 +512,9 @@ try {
     assert.deepEqual(await evaluate(socket, jsonValidationRecoveryRuntime), {
       invalid:{ error:true, status:"Invalid JSON at position 58.", invalid:"true", saveDisabled:true, pushDisabled:true, saveReason:"Correct the JSON draft.", pushReason:"Correct the JSON draft.", draft:{ tealium_generated:"1", scroll_percentage:0 } },
       recovered:{ error:false, status:"Properties, JSON, and Validation edit the same draft.", invalid:"false", saveDisabled:false, pushDisabled:false, draft:{ tealium_generated:"1", scroll_percentage:25 } },
+      transitions:[true,true,true,true,true,true],
+      saved:{ version:4, payload:{ tealium_generated:"1", scroll_percentage:25 } },
+      review:{ event:"scroll", draft:{ tealium_generated:"1", scroll_percentage:25 }, changes:[["scroll_percentage","0","25"]] },
     }, `Library JSON validation recovery violated its ${width}px browser contract`);
     assert.deepEqual(await evaluate(socket, libraryNewEventRuntime), {
       initial:{ title:"New event", count:"0 templates", addHidden:true, name:"", event:"", source:"", destination:"", json:"{}", saveDisabled:true },

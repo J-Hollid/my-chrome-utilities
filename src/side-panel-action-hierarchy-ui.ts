@@ -12,7 +12,9 @@ export function applyActionTreatment(
     button.setAttribute("aria-description", treatment.disabledReason);
     if (descriptionId) {
       button.setAttribute("aria-describedby", descriptionId);
-      const description = document.getElementById(descriptionId);
+      const description = typeof document === "undefined"
+        ? null
+        : document.getElementById(descriptionId);
       if (description) description.textContent = treatment.disabledReason;
     }
     return;
