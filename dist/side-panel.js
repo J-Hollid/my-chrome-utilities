@@ -120,6 +120,11 @@ const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorTarget = document.querySelector("#schema-editor-target");
 const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
+const schemaRevisionReview = document.querySelector("#schema-revision-review");
+const confirmSchemaRevisionButton = document.querySelector("#confirm-schema-revision");
+const cancelSchemaRevisionButton = document.querySelector("#cancel-schema-revision");
+const schemaCloseReview = document.querySelector("#schema-close-review");
+const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
@@ -1681,6 +1686,16 @@ addSchemaRuleButton?.addEventListener("click", () => {
 saveSchemaButton?.addEventListener("click", () => {
     if (!schemaDraft || saveSchemaButton.disabled)
         return;
+    if (schemaRevisionReview) {
+        schemaRevisionReview.hidden = false;
+        schemaRevisionReview.showModal();
+        return;
+    }
+    confirmSchemaRevisionButton?.click();
+});
+confirmSchemaRevisionButton?.addEventListener("click", () => {
+    if (!schemaDraft)
+        return;
     const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
     const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [{ sourceId: "", eventName: "", target: target }] };
     schemas = [...schemas, saved];
@@ -1690,7 +1705,17 @@ saveSchemaButton?.addEventListener("click", () => {
     renderSchemas();
     if (schemaResult)
         schemaResult.textContent = `Saved ${saved.name} version 1.`;
+    if (schemaRevisionReview?.open)
+        schemaRevisionReview.close();
+    if (schemaRevisionReview)
+        schemaRevisionReview.hidden = true;
 });
+cancelSchemaRevisionButton?.addEventListener("click", () => { if (schemaRevisionReview?.open)
+    schemaRevisionReview.close(); if (schemaRevisionReview)
+    schemaRevisionReview.hidden = true; });
+discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; renderSchemaDraft(); if (schemaCloseReview?.open)
+    schemaCloseReview.close(); if (schemaCloseReview)
+    schemaCloseReview.hidden = true; });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
