@@ -213,6 +213,8 @@
    "result_kind" #{"validation result" "action result" "validation error" "action error"}
    "result_text" #{"Draft is valid" "Saved Purchase confirmation as version 4" "Correct invalid JSON before saving" "Choose another target before pushing purchase"}
    "consequence" #{"non-blocking" "blocking error"}
+   "confirmation_kind" #{"individual delete confirmation" "complete Library confirmation"}
+   "origin_control" #{"Delete for Purchase confirmation" "Clear Library"}
    "announcement_priority" #{"polite" "assertive"}
    "input_name" #{"JSON payload" "Destination path" "Observer path"}
    "error_message" #{"Enter valid JSON" "Enter an array destination path" "Resolve a path containing an array" "Select a valid Library JSON file" "Export with a supported Library version" "The import is missing required template data" "Correct the imported revision history"}
