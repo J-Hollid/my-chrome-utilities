@@ -363,6 +363,20 @@ const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
+const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
+const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
+const schemaRuleOperator = document.querySelector<HTMLSelectElement>("#schema-rule-operator");
+const schemaRuleParameters = document.querySelector<HTMLInputElement>("#schema-rule-parameters");
+const saveSchemaRuleButton = document.querySelector<HTMLButtonElement>("#save-schema-rule");
+const schemaRuleList = document.querySelector<HTMLElement>("#schema-rule-list");
+const schemaRuleCount = document.querySelector<HTMLElement>("#schema-rule-count");
+const schemaAssignmentEditor = document.querySelector<HTMLElement>("#schema-assignment-editor");
+const schemaAssignmentSource = document.querySelector<HTMLInputElement>("#schema-assignment-source");
+const schemaAssignmentEvent = document.querySelector<HTMLInputElement>("#schema-assignment-event");
+const schemaAssignmentPriority = document.querySelector<HTMLInputElement>("#schema-assignment-priority");
+const saveSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#save-schema-assignment");
+const schemaAssignmentList = document.querySelector<HTMLElement>("#schema-assignment-list");
+const schemaAssignmentCount = document.querySelector<HTMLElement>("#schema-assignment-count");
 const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
@@ -432,6 +446,7 @@ let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft: SchemaDefinition | undefined;
+let reusableRules: { name:string; operator:string; parameters:string }[] = [];
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -2101,6 +2116,13 @@ schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSu
 schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, name: schemaEditorName.value }; renderSchemaDraft(); } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
+document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
+saveSchemaRuleButton?.addEventListener("click", () => {
+  const name = schemaRuleName?.value.trim() ?? ""; if (!name) return;
+  reusableRules = [...reusableRules, { name, operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "" }];
+  schemaRuleList?.replaceChildren(...reusableRules.map((rule) => { const item = document.createElement("li"); item.textContent = `${rule.name} · ${rule.operator}${rule.parameters ? ` · ${rule.parameters}` : ""}`; return item; }));
+  if (schemaRuleCount) schemaRuleCount.textContent = `${reusableRules.length} rules`; if (schemaRuleEditor) schemaRuleEditor.hidden = true;
+});
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
   schemaDraft = { ...schemaDraft, document:{ ...schemaDraft.document, properties:{ ...schemaDraft.document.properties, example:{ type:"string" } } } };
@@ -2114,9 +2136,19 @@ saveSchemaButton?.addEventListener("click", () => {
   if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version 1.`;
 });
 createSchemaAssignmentButton?.addEventListener("click", () => {
+  if (schemaAssignmentEditor) { schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus(); return; }
   const schema = schemas[0]; if (!schema) return;
   schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, { sourceId:"event-history", eventName:"page_view", target:"payload", id:`assignment:${candidate.id}`, name:`${candidate.name} automatic`, priority:10, enabled:true }] } : candidate);
   persistSchemaLibrary(); renderSchemas();
+});
+saveSchemaAssignmentButton?.addEventListener("click", () => {
+  const schema = schemas[0]; const sourceId = schemaAssignmentSource?.value.trim(); const eventName = schemaAssignmentEvent?.value.trim();
+  if (!schema || !sourceId || !eventName) return;
+  const priority = Number(schemaAssignmentPriority?.value ?? 0);
+  const assignment = { sourceId, eventName, target:"payload" as const, id:`assignment:${schema.id}:${eventName}`, name:`${schema.name} automatic`, priority, enabled:true };
+  schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, assignment] } : candidate); persistSchemaLibrary(); renderSchemas();
+  schemaAssignmentList?.append(Object.assign(document.createElement("li"), { textContent:`${assignment.name} · ${sourceId}/${eventName} · priority ${priority}` }));
+  if (schemaAssignmentCount) schemaAssignmentCount.textContent = `${schemas.flatMap((candidate) => candidate.assignments).length} assignments`; if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
