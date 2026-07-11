@@ -39,7 +39,9 @@ import {
 } from "./data-layer-observation-targets.js";
 import {
   closeDetachTargetConfirmation,
+  closeObservationTargetPicker,
   findObservationTargetElements,
+  handleObservationTargetDialogKeydown,
   handleObservationTargetListKeydown,
   handleObservationTargetSearchKeydown,
   renderObservationTargetContext as renderObservationTargetContextUi,
@@ -203,6 +205,8 @@ const observationTargetElements = findObservationTargetElements();
 const {
   chooseButton: chooseObservationTargetButton,
   browseButton: browseObservationTargetsButton,
+  closePickerButton: closeObservationTargetPickerButton,
+  picker: observationTargetPicker,
   attachButton: attachSelectedTargetButton,
   detachButton: detachObservationTargetButton,
   search: observationTargetSearch,
@@ -426,6 +430,7 @@ function renderObservationTargetPicker(): void {
       setObservationTargetResult(`Selected ${target.title}`);
       renderObservationTargetPicker();
       renderObservationTargetContext();
+      closeObservationTargetPicker(observationTargetElements);
     },
     requestAccess: (target) => void requestSelectedTargetAccess(target),
   });
@@ -1732,6 +1737,9 @@ browseObservationTargetsButton?.addEventListener("click", () => {
   showObservationTargetPicker(observationTargetElements);
   void browseObservationTargets();
 });
+closeObservationTargetPickerButton?.addEventListener("click", () => {
+  closeObservationTargetPicker(observationTargetElements);
+});
 attachSelectedTargetButton?.addEventListener("click", () => {
   void attachSelectedTarget();
 });
@@ -1748,6 +1756,8 @@ observationTargetSearch?.addEventListener("keydown", (event) =>
   handleObservationTargetSearchKeydown(observationTargetElements, event));
 observationTargetList?.addEventListener("keydown", (event) =>
   handleObservationTargetListKeydown(observationTargetElements, event));
+observationTargetPicker?.addEventListener("keydown", (event) =>
+  handleObservationTargetDialogKeydown(observationTargetElements, event));
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && liveObserverState.inspectorEventId) {

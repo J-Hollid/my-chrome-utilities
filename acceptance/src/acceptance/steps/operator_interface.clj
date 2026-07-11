@@ -12,6 +12,7 @@
    "features/data-layer-live-inspector-action-runtime.feature"
    "features/data-layer-live-inspector-layout-runtime.feature"
    "features/data-layer-live-inspector-navigation-runtime.feature"
+   "features/data-layer-observation-target-picker-dialog.feature"
    "features/data-layer-push-destination-configuration.feature"
    "features/data-layer-selected-target-push-runtime.feature"
    "features/data-layer-schemas-operator-layout.feature"
