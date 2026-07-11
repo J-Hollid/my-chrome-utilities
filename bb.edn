@@ -98,7 +98,15 @@
                          palette-result (process/shell {:out :inherit
                                                         :err :inherit
                                                         :continue true}
-                                                       "npm" "run" "test:unit:command-palette")]
+                                                       "npm" "run" "test:unit:command-palette")
+                         action-hierarchy-result (process/shell {:out :inherit
+                                                                 :err :inherit
+                                                                 :continue true}
+                                                                "npm" "run" "test:unit:side-panel-action-hierarchy")
+                         component-layout-result (process/shell {:out :inherit
+                                                                 :err :inherit
+                                                                 :continue true}
+                                                                "npm" "run" "test:unit:component-layout")]
                      (when (or (pos? (+ (:fail result) (:error result)))
                                (not (zero? (:exit source-result)))
                                (not (zero? (:exit session-result)))
@@ -109,7 +117,9 @@
                                (not (zero? (:exit schema-result)))
                                (not (zero? (:exit sequence-result)))
                                (not (zero? (:exit saved-result)))
-                               (not (zero? (:exit palette-result))))
+                               (not (zero? (:exit palette-result)))
+                               (not (zero? (:exit action-hierarchy-result)))
+                               (not (zero? (:exit component-layout-result))))
                        (System/exit 1)))}
   test:property {:doc "Run property tests."
                  :requires ([clojure.test :as test]

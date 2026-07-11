@@ -10,6 +10,9 @@
    "features/data-layer-live-session-end-status-runtime.feature"
    "features/data-layer-target-path-status-runtime.feature"
    "features/data-layer-live-guided-workflow.feature"
+   "features/data-layer-captured-event-template-workflow.feature"
+   "features/data-layer-detail-view-headers.feature"
+   "features/data-layer-event-property-form-layout.feature"
    "features/data-layer-live-inspector-actions.feature"
    "features/data-layer-live-inspector-layout.feature"
    "features/data-layer-live-inspector-navigation.feature"
@@ -24,9 +27,18 @@
    "features/data-layer-sessions-operator-layout.feature"
    "features/side-panel-hotkey-operator-layout.feature"
    "features/side-panel-inclusive-interaction.feature"
+   "features/side-panel-action-hierarchy.feature"
    "features/side-panel-responsive-navigation-shell.feature"
    "features/side-panel-visual-regression-coverage.feature"
-   "features/side-panel-visual-system.feature"])
+   "features/side-panel-visual-system.feature"
+   "features/data-layer-event-feed-summaries.feature"
+   "features/data-layer-live-pathname-visits.feature"
+   "features/data-layer-authoritative-live-state.feature"
+   "features/side-panel-action-feedback.feature"
+   "features/data-layer-push-draft-review.feature"
+   "features/data-layer-state-aware-actions.feature"
+   "features/data-layer-view-responsive-layouts.feature"
+   "features/side-panel-component-layout-runtime.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")

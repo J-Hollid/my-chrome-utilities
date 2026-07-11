@@ -23,7 +23,7 @@ assert.equal(selectedWaiting.chooseTargetVisible, true);
 const ready = liveGuidedWorkflow({
   activeSession: false,
   selectedTarget: { title: "Checkout", accessState: "Ready" },
-  pathStatus: "ready",
+  pathStatus: "Ready",
 });
 assert.equal(ready.steps.find(({ state }) => state === "current")?.id, "session");
 assert.equal(ready.startTestingEnabled, true);
@@ -32,7 +32,7 @@ assert.equal(ready.startTestingLabel, "Start testing Checkout");
 const active = liveGuidedWorkflow({
   activeSession: true,
   selectedTarget: { title: "Checkout", accessState: "Ready" },
-  pathStatus: "ready",
+  pathStatus: "Ready",
 });
 assert.equal(active.setupVisible, false);
 assert.equal(active.chooseTargetVisible, false);
@@ -59,7 +59,9 @@ const elements = {
   startTestingButton: {
     disabled: true,
     textContent: "",
+    dataset: {},
     setAttribute(name, value) { this[name] = value; },
+    removeAttribute(name) { delete this[name]; },
   },
 };
 renderLiveGuidedWorkflow(elements, ready);

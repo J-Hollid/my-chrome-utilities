@@ -1,4 +1,5 @@
 import type { LiveGuidedWorkflow, LiveSetupStepId } from "./data-layer-live-guided-workflow.js";
+import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 
 export interface LiveGuidedWorkflowElements {
   setupSteps: HTMLOListElement | null;
@@ -39,8 +40,13 @@ export function renderLiveGuidedWorkflow(
     elements.chooseTargetButton.hidden = !workflow.chooseTargetVisible;
   }
   if (elements.startTestingButton) {
-    elements.startTestingButton.disabled = !workflow.startTestingEnabled;
     elements.startTestingButton.textContent = workflow.startTestingLabel;
-    elements.startTestingButton.setAttribute("aria-description", workflow.startTestingDescription);
+    applyActionTreatment(elements.startTestingButton, workflow.startTestingEnabled
+      ? { variant: "primary", disabled: false }
+      : {
+        variant: "primary",
+        disabled: true,
+        disabledReason: "A ready target must be selected.",
+      }, "start-testing-reason");
   }
 }

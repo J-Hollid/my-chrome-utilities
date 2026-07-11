@@ -13,7 +13,7 @@ const controller = createTargetPathStatusController({
 
 const first = controller.configure("event.history", " event.history ");
 const second = controller.configure("dataLayer");
-assert.deepEqual(renders.map(({ status }) => status), ["Checking target…", "Checking target…"]);
+assert.deepEqual(renders.map(({ status }) => status), []);
 
 pending.get("event.history")({
   historyPath: "event.history",
@@ -31,7 +31,7 @@ pending.get("dataLayer")({
   pageObject: {},
 });
 await second;
-assert.equal(renders.at(-1).status, "path missing");
+assert.equal(renders.at(-1).status, "Waiting for path");
 assert.deepEqual(applied, ["dataLayer"]);
 
 const unavailable = createTargetPathStatusController({

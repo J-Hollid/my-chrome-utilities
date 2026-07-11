@@ -8,6 +8,11 @@ import {
   runLiveInspectorAction,
   type LiveInspectorActions,
 } from "./data-layer-live-inspector-actions.js";
+import {
+  eventPathname,
+  pathnameVisits,
+  resolveFeedSummaries,
+} from "./data-layer-event-feed-summaries.js";
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
@@ -68,12 +73,16 @@ function eventRow(
   const button = document.createElement("button");
   button.type = "button";
   const sourceName = event.sourceName ?? event.sourceId;
+  const summaries = resolveFeedSummaries(event);
+  const pathname = eventPathname(event.pageUrl);
+  const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
+  const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
   button.setAttribute(
     "aria-label",
-    `${event.name}, ${sourceName}`,
+    [event.name, compactTime, sourceName, pathname, event.validation ?? "Not checked", summaryText].filter(Boolean).join(", "),
   );
   button.setAttribute("aria-pressed", String(selected));
-  button.textContent = `${event.name} | ${sourceName}`;
+  button.textContent = [event.name, compactTime, sourceName, event.validation ?? "Not checked", summaryText].filter(Boolean).join(" · ");
   button.addEventListener("click", () => openEvent(event.id));
   item.append(button);
   return item;
@@ -93,13 +102,16 @@ export function renderLiveObserverState(
       }),
     );
   }
-  elements.eventFeed?.replaceChildren(
-    ...state.events.map((event) => eventRow(
-      event,
-      event.id === state.inspectorEventId,
-      openEvent,
-    )),
-  );
+  elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit) => {
+    const group = document.createElement("li");
+    group.className = "pathname-visit";
+    const heading = document.createElement("h5");
+    heading.textContent = visit.pathname;
+    const rows = document.createElement("ul");
+    rows.replaceChildren(...visit.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
+    group.append(heading, rows);
+    return group;
+  }));
   if (elements.eventList) elements.eventList.hidden = !state.listVisible;
   if (elements.eventInspector) {
     elements.eventInspector.hidden = !state.inspectorEventId;
@@ -115,10 +127,14 @@ export function renderLiveInspector(
   actionHandlers: LiveInspectorActions,
 ): void {
   if (!elements.eventInspector) return;
+  elements.eventInspector.classList.add("live-detail-view");
   const heading = document.createElement("h4");
+  heading.className = "detail-view-header";
   heading.textContent = event.name;
   const source = document.createElement("p");
   source.textContent = `Source: ${event.sourceName ?? event.sourceId}`;
+  const status = document.createElement("output");
+  status.textContent = event.validation ?? "Not checked";
   const summary = document.createElement("dl");
   appendSummaryItem(summary, "Capture time", event.captureTime);
   appendSummaryItem(summary, "Page", event.pageUrl);
@@ -154,6 +170,15 @@ export function renderLiveInspector(
     const action = document.createElement("button");
     action.type = "button";
     action.textContent = label;
+    action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
+    const availability = label === "Validate"
+      ? actionHandlers.validationAvailability(event)
+      : { enabled: true };
+    if (!availability.enabled) {
+      action.disabled = true;
+      action.setAttribute("aria-description", availability.reason ?? "Action unavailable");
+      action.title = availability.reason ?? "Action unavailable";
+    }
     action.addEventListener("click", () => {
       void runLiveInspectorAction(
         label,
@@ -165,7 +190,7 @@ export function renderLiveInspector(
     actions.append(action);
   }
   actions.append(feedback);
-  elements.eventInspector.replaceChildren(heading, source, summary, payload, raw, actions);
+  elements.eventInspector.replaceChildren(heading, source, status, summary, payload, raw, actions);
 }
 
 function appendSummaryItem(
