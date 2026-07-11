@@ -163,11 +163,19 @@ async function openPanel(port, width, height = 900) {
   await socket.connect();
   await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
   await socket.call("Runtime.enable");
+  let loaded = false;
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    const ready = await socket.call("Runtime.evaluate", { expression: "document.readyState", returnByValue: true });
-    if (ready.result.value === "complete") break;
+    const ready = await socket.call("Runtime.evaluate", {
+      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null",
+      returnByValue: true,
+    });
+    if (ready.result.value === true) {
+      loaded = true;
+      break;
+    }
     await wait(50);
   }
+  if (!loaded) throw new Error("Side panel DOM did not finish loading.");
   return socket;
 }
 
