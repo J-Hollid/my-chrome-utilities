@@ -3,6 +3,7 @@
 
 (def canonical-example-values
   {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "action_context" #{"Library editor" "Live inspector"}
    "configuration_action" #{"add page_category last" "move page_type before page_name" "edit page_name to content_name" "remove page_type"}
    "expected_paths" #{"page_name, page_type, page_category" "page_type, page_name" "content_name, page_type" "page_name"}
    "exploration_action" #{"reads an older event" "keeps an inspector open"}
@@ -130,9 +131,11 @@
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
    "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Edit observer path" "Import session" "Open Live" "Request access" "Restart observation" "Retry target check" "Start observation" "Start testing"}
-   "failure_reason" #{"event.history is missing" "site access is missing" "the target read failed"}
+   "failure_reason" #{"browser storage is unavailable" "event.history is missing" "site access is missing" "target Checkout is closed" "the JSON draft is invalid" "the target read failed"}
+   "recovery_step" #{"Choose target" "Correct the JSON" "Retry Save to Library"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
+   "replacement_result" #{"no result" "validation result"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
    "schema_name" #{"Ecommerce" "None" "Purchase event" "Purchase v2"}
@@ -142,6 +145,14 @@
    "long_template" #{"International purchase confirmation with campaign"}
    "second_subview" #{"Sequences"}
    "selected_tab" #{"Data Layer" "Live"}
+   "subsequent_action" #{"activates Validate" "navigates away from Live" "opens another captured event"}
+   "editor_action" #{"Push draft" "Save revision"}
+   "success_result" #{"Pushed purchase to Checkout through event.history at 10:04:05" "Saved Purchase confirmation as version 4"}
+   "existing_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
+   "context_change" #{"the draft changes" "the editor closes" "the selected target changes"}
+   "helper_text" #{"Changes create a new version" "Push sends to the active target"}
+   "prior_result" #{"Draft is valid" "Ready to push"}
+   "new_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
    "sequence" #{"C-c s"}
