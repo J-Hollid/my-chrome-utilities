@@ -2,7 +2,8 @@
   (:require [acceptance.steps.support :as support]))
 
 (def canonical-example-values
-  {"adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
+  {"action_name" #{"Copy payload" "Save to Library" "Validate"}
+   "adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
    "advanced_section" #{"Keymap files"}
    "animation_behavior" #{"brief" "disabled"}
    "assignment" #{"event.history purchase payload"}
@@ -20,6 +21,7 @@
    "event_action" #{"Save to Library"}
    "event_count" #{"18" "42"}
    "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
+   "external_effect" #{"clipboard contains payload JSON" "event validation state changes" "persisted Library template exists"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
    "initial_state" #{"Not checked"}
