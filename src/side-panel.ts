@@ -194,6 +194,10 @@ import {
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
 import { panelEmptyState } from "./panel-empty-states.js";
+import {
+  findPanelEmptyStateElements,
+  renderPanelEmptyState,
+} from "./panel-empty-states-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -268,8 +272,11 @@ const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const liveEventsEmptyState = document.querySelector<HTMLElement>("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector<HTMLElement>("#live-source-error-state");
-const templateEmptyState = document.querySelector<HTMLElement>("#event-template-empty-state");
-const templateEmptyRecovery = document.querySelector<HTMLButtonElement>("#event-template-empty-recovery");
+const templateEmptyStateElements = findPanelEmptyStateElements(
+  "#event-template-empty-state",
+  "#event-template-empty-recovery",
+);
+const templateEmptyRecovery = templateEmptyStateElements.recovery;
 const savedSessionEmptyState = document.querySelector<HTMLElement>("#saved-session-empty-state");
 const schemaEmptyState = document.querySelector<HTMLElement>("#schema-empty-state");
 const sequenceEmptyState = document.querySelector<HTMLElement>("#sequence-empty-state");
@@ -782,14 +789,7 @@ async function copyLivePageUrl(): Promise<void> {
 function renderEventTemplateLibrary(): void {
   const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
   const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
-  if (templateEmptyState) {
-    templateEmptyState.hidden = !empty;
-    const heading = templateEmptyState.querySelector<HTMLElement>("h4");
-    const detail = templateEmptyState.querySelector<HTMLElement>("p");
-    if (heading && empty) heading.textContent = empty.message;
-    if (detail && empty) detail.textContent = `${empty.recoveryAction} can resolve this state.`;
-  }
-  if (templateEmptyRecovery && empty) templateEmptyRecovery.textContent = empty.recoveryAction;
+  renderPanelEmptyState(templateEmptyStateElements, empty);
   renderEventLibraryEditor(
     eventLibraryEditorElements,
     templates,
