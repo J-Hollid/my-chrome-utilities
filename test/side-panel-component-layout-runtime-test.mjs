@@ -366,6 +366,26 @@ const templateRenameRuntime = `Promise.all([
   dialog.close(); dialog.hidden = true; return result;
 })`;
 
+const jsonValidationRecoveryRuntime = `Promise.all([
+  import("./data-layer-event-library-editor.js"),
+  import("./data-layer-event-library-editor-ui.js"),
+]).then(([editorModel, editorUi]) => {
+  const elements = editorUi.findEventLibraryEditorElements();
+  const template = { id:"template-scroll", name:"Scroll depth", eventName:"scroll", sourceId:"history", sourceName:"Event history", destination:"queue.history", tags:[], validation:"Valid", payload:{ tealium_generated:"1", scroll_percentage:0 }, version:3, originatingSessionId:"session-1", originatingEventId:"event-1", provenance:"captured:history" };
+  let state = editorModel.openPropertyEditor(template);
+  const actions = { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} };
+  const invalidSource = '{\\n  "tealium_generated": "1",\\n  "scroll_percentage": 25,\\n\\n}';
+  elements.json.value = invalidSource; elements.json.dispatchEvent(new Event("input", { bubbles:true }));
+  state = editorModel.updateDraftJson(state, elements.json.value);
+  editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+  const invalid = { error:Boolean(state.jsonError), status:elements.validation.textContent, invalid:elements.json.getAttribute("aria-invalid"), saveDisabled:elements.saveRevisionButton.disabled, pushDisabled:elements.pushDraftButton.disabled, saveReason:document.querySelector("#save-template-revision-reason").textContent, pushReason:document.querySelector("#push-template-draft-reason").textContent, draft:state.draft };
+  elements.json.value = '{\\n  "tealium_generated": "1",\\n  "scroll_percentage": 25\\n}'; elements.json.dispatchEvent(new Event("input", { bubbles:true }));
+  state = editorModel.updateDraftJson(state, elements.json.value);
+  editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+  const recovered = { error:Boolean(state.jsonError), status:elements.validation.textContent, invalid:elements.json.getAttribute("aria-invalid"), saveDisabled:elements.saveRevisionButton.disabled, pushDisabled:elements.pushDraftButton.disabled, draft:state.draft };
+  return { invalid, recovered };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -463,6 +483,10 @@ try {
       validation:{ templateName:"Enter a template name" },
       history:["Version 3: Purchase confirmation · purchase"],
     }, `rendered template renaming violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, jsonValidationRecoveryRuntime), {
+      invalid:{ error:true, status:"Invalid JSON at position 58.", invalid:"true", saveDisabled:true, pushDisabled:true, saveReason:"Correct the JSON draft.", pushReason:"Correct the JSON draft.", draft:{ tealium_generated:"1", scroll_percentage:0 } },
+      recovered:{ error:false, status:"Properties, JSON, and Validation edit the same draft.", invalid:"false", saveDisabled:false, pushDisabled:false, draft:{ tealium_generated:"1", scroll_percentage:25 } },
+    }, `Library JSON validation recovery violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,

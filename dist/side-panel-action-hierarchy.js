@@ -3,14 +3,20 @@ export function actionTreatment(variant) {
 }
 export function templateActionHierarchy(editor) {
     return {
-        saveRevision: editor.dirty
-            ? actionTreatment("primary")
-            : { variant: "primary", disabled: true, disabledReason: "The draft has no unsaved changes." },
+        saveRevision: editor.jsonError
+            ? {
+                variant: "primary",
+                disabled: true,
+                disabledReason: "Correct the JSON draft.",
+            }
+            : editor.dirty
+                ? actionTreatment("primary")
+                : { variant: "primary", disabled: true, disabledReason: "The draft has no unsaved changes." },
         pushDraft: editor.jsonError
             ? {
                 variant: editor.dirty ? "secondary" : "primary",
                 disabled: true,
-                disabledReason: "The JSON draft must be valid.",
+                disabledReason: "Correct the JSON draft.",
             }
             : actionTreatment(editor.dirty ? "secondary" : "primary"),
         discardDraft: actionTreatment("destructive"),

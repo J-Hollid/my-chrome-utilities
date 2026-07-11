@@ -93,14 +93,20 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
             return item;
         })
         : []));
-    if (elements.json && editor)
-        elements.json.value = editor.jsonDraft;
+    if (elements.json) {
+        elements.json.value = editor?.jsonDraft ?? "";
+        const error = editor?.jsonError ?? "";
+        elements.json.setCustomValidity(error);
+        elements.json.setAttribute("aria-invalid", String(Boolean(error)));
+    }
     if (elements.pushDestination && editor) {
         elements.pushDestination.value = editor.template.destination;
     }
     if (elements.validation) {
-        elements.validation.textContent =
-            editor?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
+        const error = editor?.jsonError;
+        elements.validation.textContent = error ?? "Properties, JSON, and Validation edit the same draft.";
+        elements.validation.setAttribute("aria-live", error ? "assertive" : "polite");
+        elements.validation.setAttribute("role", error ? "alert" : "status");
     }
     elements.properties?.replaceChildren(...(editor ? draftProperties(editor.draft) : []));
     if (editor) {
