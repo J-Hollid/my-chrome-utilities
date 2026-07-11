@@ -17,3 +17,5 @@ const ended = endLiveSession(
 assert.equal(ended.sessionState.session?.status, "ended");
 assert.equal(ended.targetState.sessionState, "Detached");
 assert.equal(ended.targetState.attachedTargetId, undefined);
+assert.equal(ended.targetState.recentTargetId, target.id);
+assert.equal(ended.releasedTargetId, target.id);
