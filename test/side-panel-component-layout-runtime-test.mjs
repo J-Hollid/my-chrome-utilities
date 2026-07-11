@@ -265,6 +265,69 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
   };
 })`;
 
+const workflowFocusRuntime = `Promise.all([
+  import("./data-layer-event-library-editor-ui.js"),
+  import("./data-layer-workflow-focus-ui.js"),
+  import("./data-layer-observation-targets-ui.js"),
+]).then(([editorUi, pushUi, targetUi]) => {
+  const workspaceData = document.querySelector("#workspace-tab-data-layer");
+  const workspaceHotkeys = document.querySelector("#workspace-tab-hotkeys");
+  workspaceData.focus(); workspaceData.dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowRight", bubbles:true }));
+  const tabResult = { workspaceRight:document.activeElement === workspaceHotkeys && workspaceHotkeys.getAttribute("aria-selected") === "true" };
+  workspaceHotkeys.dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowLeft", bubbles:true }));
+  tabResult.workspaceLeft = document.activeElement === workspaceData && workspaceData.getAttribute("aria-selected") === "true";
+  const liveTab = document.querySelector("#data-layer-view-live"); const schemasTab = document.querySelector("#data-layer-view-schemas");
+  liveTab.focus(); liveTab.dispatchEvent(new KeyboardEvent("keydown", { key:"End", bubbles:true }));
+  tabResult.dataLayerEnd = document.activeElement === schemasTab && schemasTab.tabIndex === 0 && !document.querySelector("#data-layer-panel-schemas").hidden;
+  schemasTab.dispatchEvent(new KeyboardEvent("keydown", { key:"Home", bubbles:true }));
+  tabResult.dataLayerHome = document.activeElement === liveTab && liveTab.tabIndex === 0 && !document.querySelector("#data-layer-panel-live").hidden;
+  tabResult.singleDataLayerTabStop = [...document.querySelectorAll("#data-layer-views [role=tab]")].filter((tab) => tab.tabIndex === 0).length === 1;
+
+  const host = document.createElement("section");
+  host.innerHTML = '<ul data-list></ul><section data-editor><h4 data-title tabindex="-1"></h4><dl data-summary></dl><ul data-properties></ul><textarea data-json></textarea><input data-destination><output data-validation></output></section>';
+  document.body.append(host);
+  const template = { id:"template:purchase", name:"Purchase confirmation", eventName:"purchase", sourceName:"history", destination:"dataLayer", version:3, validation:"Valid", tags:[], provenance:"captured", originatingEventId:"purchase", originatingSessionId:"session-1", payload:{ transaction_id:"T-1", revenue:12 } };
+  const editor = { template, revisions:[], draft:template.payload, jsonDraft:JSON.stringify(template.payload), dirty:false };
+  const elements = { list:host.querySelector("[data-list]"), propertyEditor:host.querySelector("[data-editor]"), editorTitle:host.querySelector("[data-title]"), editorSummary:host.querySelector("[data-summary]"), properties:host.querySelector("[data-properties]"), json:host.querySelector("[data-json]"), pushDestination:host.querySelector("[data-destination]"), validation:host.querySelector("[data-validation]") };
+  editorUi.renderEventLibraryEditor(elements, [template], editor, { edit:()=>{}, duplicate:()=>{}, push:()=>{} });
+  elements.editorTitle.focus({ preventScroll:true });
+  const editorResult = { title:elements.editorTitle.textContent, headingFocused:document.activeElement === elements.editorTitle, disclosuresClosed:!document.querySelector("#event-template-json-section").open && !document.querySelector("#event-template-execution-settings").open };
+  editorUi.renderEventLibraryEditor(elements, [template], undefined, { edit:()=>{}, duplicate:()=>{}, push:()=>{} });
+  editorUi.focusTemplateEditAction(elements, template.id);
+  editorResult.returnedToTemplate = document.activeElement?.dataset.templateId;
+
+  const background = document.createElement("button"); background.textContent = "Background";
+  const trigger = document.createElement("button"); trigger.textContent = "Push draft";
+  const dialog = document.createElement("dialog");
+  dialog.innerHTML = '<h5 tabindex="-1">Review push</h5><button data-first>Confirm</button><button data-last>Cancel</button>';
+  document.body.append(background, trigger, dialog);
+  const pushElements = { dialog, heading:dialog.querySelector("h5"), trigger };
+  dialog.addEventListener("keydown", (event) => pushUi.handlePushReviewKeydown(pushElements, event));
+  trigger.focus(); pushUi.openPushReview(pushElements);
+  const pushResult = { headingFocused:document.activeElement === pushElements.heading, modal:dialog.matches(":modal") };
+  dialog.querySelector("[data-last]").focus(); dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", bubbles:true }));
+  pushResult.forwardWrapped = document.activeElement === dialog.querySelector("[data-first]");
+  dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", shiftKey:true, bubbles:true }));
+  pushResult.backwardWrapped = document.activeElement === dialog.querySelector("[data-last]");
+  background.focus(); pushResult.backgroundExcluded = document.activeElement !== background;
+  dialog.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  pushResult.returnedToTrigger = document.activeElement === trigger;
+
+  const sideContent = document.createElement("section"); const choose = document.createElement("button"); const picker = document.createElement("section");
+  const close = document.createElement("button"); const search = document.createElement("input"); const list = document.createElement("ul");
+  picker.append(close, search, list); document.body.append(sideContent, choose, picker); choose.focus();
+  const targetElements = { sidePanelContent:sideContent, picker, closePickerButton:close, search, list, browseButton:null };
+  picker.addEventListener("keydown", (event) => targetUi.handleObservationTargetDialogKeydown(targetElements, event));
+  targetUi.showObservationTargetPicker(targetElements);
+  const targetResult = { inert:sideContent.hasAttribute("inert"), searchFocused:document.activeElement === search };
+  close.focus(); picker.dispatchEvent(new KeyboardEvent("keydown", { key:"Tab", shiftKey:true, bubbles:true }));
+  targetResult.backwardWrapped = document.activeElement === search;
+  picker.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  targetResult.returnedToChoose = document.activeElement === choose;
+  host.remove(); background.remove(); trigger.remove(); dialog.remove(); sideContent.remove(); choose.remove(); picker.remove();
+  return { tabResult, editorResult, pushResult, targetResult };
+})`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -294,6 +357,12 @@ try {
         backInsideList: false,
         backIsFirstHeaderControl: true,
       }, "stacked inspector navigation layout violated its browser contract");
+      assert.deepEqual(await evaluate(socket, workflowFocusRuntime), {
+        tabResult: { workspaceRight:true, workspaceLeft:true, dataLayerEnd:true, dataLayerHome:true, singleDataLayerTabStop:true },
+        editorResult: { title:"Purchase confirmation editor", headingFocused:true, disclosuresClosed:true, returnedToTemplate:"template:purchase" },
+        pushResult: { headingFocused:true, modal:true, forwardWrapped:true, backwardWrapped:true, backgroundExcluded:true, returnedToTrigger:true },
+        targetResult: { inert:true, searchFocused:true, backwardWrapped:true, returnedToChoose:true },
+      }, "workflow focus callbacks violated their browser contract");
     }
     if (width === 720) {
       for (const [name, pane, masterRange, detailRange] of [["live", measured.live, [280, 320], [344, 400]], ["library", measured.library, [240, 288], [384, 448]], ["sessions", measured.sessions, [240, 300], [360, 432]], ["schemas", measured.schemas, [240, 300], [360, 432]]]) {
