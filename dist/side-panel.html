@@ -29,9 +29,18 @@
       <section id="data-layer-panel-live" role="tabpanel" aria-labelledby="data-layer-view-live">
         <h3>Live</h3>
         <header id="live-session-header">
-          <output id="live-session-summary" aria-live="polite">Live: 0 events, 1 source</output>
+          <section id="live-session-summary" aria-label="Live session summary">
+            <output id="live-session-status" data-status="detached" aria-live="polite">Detached</output>
+            <dl id="live-session-metadata">
+              <div><dt>Target page</dt><dd id="live-target-page">No target selected</dd></div>
+              <div><dt>Page URL</dt><dd id="live-page-url"></dd></div>
+              <div><dt>Observer path</dt><dd id="live-observer-path">queue.history</dd></div>
+              <div><dt>Captured events</dt><dd id="live-captured-event-count">0</dd></div>
+              <div><dt>Connected sources</dt><dd id="live-connected-source-count">0</dd></div>
+            </dl>
+            <button id="copy-live-page-url" type="button">Copy page URL</button>
+          </section>
           <output id="observation-target-state" aria-live="polite">Detached — Choose target</output>
-          <output id="live-page-url"></output>
           <section id="live-context-actions" aria-label="Live actions">
           <button id="start-data-layer-testing" type="button">Start testing</button>
           <button id="end-data-layer-testing" type="button" hidden>End testing</button>

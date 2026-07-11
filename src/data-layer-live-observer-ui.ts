@@ -11,8 +11,6 @@ import {
 
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
-  sessionSummary: HTMLElement | null;
-  pageUrl: HTMLElement | null;
   sessionMessage: HTMLElement | null;
   sourceStatuses: HTMLElement | null;
   eventFeed: HTMLElement | null;
@@ -28,8 +26,6 @@ export function findLiveObserverElements(
 ): LiveObserverElements {
   return {
     viewList: root.querySelector<HTMLElement>("#data-layer-views"),
-    sessionSummary: root.querySelector<HTMLElement>("#live-session-summary"),
-    pageUrl: root.querySelector<HTMLElement>("#live-page-url"),
     sessionMessage: root.querySelector<HTMLElement>("#live-session-message"),
     sourceStatuses: root.querySelector<HTMLElement>("#live-source-statuses"),
     eventFeed: root.querySelector<HTMLElement>("#live-event-feed"),
@@ -88,10 +84,6 @@ export function renderLiveObserverState(
   state: LiveObserverState,
   openEvent: (eventId: string) => void,
 ): void {
-  if (elements.sessionSummary) {
-    elements.sessionSummary.textContent = `${state.status}: ${state.events.length} events, ${state.sources.length} sources`;
-  }
-  if (elements.pageUrl) elements.pageUrl.textContent = state.pageUrl;
   if (elements.sourceStatuses) {
     elements.sourceStatuses.replaceChildren(
       ...state.sources.map((source) => {

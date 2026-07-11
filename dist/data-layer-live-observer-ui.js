@@ -3,8 +3,6 @@ import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js"
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
-        sessionSummary: root.querySelector("#live-session-summary"),
-        pageUrl: root.querySelector("#live-page-url"),
         sessionMessage: root.querySelector("#live-session-message"),
         sourceStatuses: root.querySelector("#live-source-statuses"),
         eventFeed: root.querySelector("#live-event-feed"),
@@ -43,11 +41,6 @@ function eventRow(event, selected, openEvent) {
     return item;
 }
 export function renderLiveObserverState(elements, state, openEvent) {
-    if (elements.sessionSummary) {
-        elements.sessionSummary.textContent = `${state.status}: ${state.events.length} events, ${state.sources.length} sources`;
-    }
-    if (elements.pageUrl)
-        elements.pageUrl.textContent = state.pageUrl;
     if (elements.sourceStatuses) {
         elements.sourceStatuses.replaceChildren(...state.sources.map((source) => {
             const item = document.createElement("li");
