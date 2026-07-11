@@ -307,6 +307,31 @@ const pathnameHeaderRuntime = `import("./data-layer-live-observer-ui.js").then((
   list.remove(); return { headers, rows, longResult };
 })`;
 
+const pushDecisionRuntime = `Promise.all([
+  import("./data-layer-push-draft-review.js"),
+  import("./data-layer-push-draft-review-ui.js"),
+]).then(([reviewModel, reviewUi]) => {
+  const host = document.createElement("section"); host.id = "push-draft-review";
+  host.innerHTML = '<dl id="push-draft-review-details"></dl><ul id="push-draft-review-change-list"></ul><p id="push-draft-review-no-changes" hidden>No payload changes</p>';
+  document.body.append(host);
+  const elements = reviewUi.findPushDraftReviewElements(host);
+  const template = { eventName:"purchase", destination:"queue.history", version:3, validation:"Valid", payload:{ ecommerce:{ value:18 }, items:[{ quantity:1 }], legacy:{ debug:true } } };
+  const target = { title:"Signal Shop", pageUrl:"https://signal.example.test/checkout" };
+  const changed = reviewModel.createPushDraftReview({ template, draft:{ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } } }, target);
+  reviewUi.renderPushDraftReview(elements, changed);
+  const pairs = (root) => [...root.querySelectorAll("dt")].map((term) => [term.textContent, term.nextElementSibling?.textContent]);
+  const detailPairs = pairs(elements.details);
+  const changePairs = [...elements.changeList.querySelectorAll("dl")].map(pairs);
+  const columns = getComputedStyle(elements.details).gridTemplateColumns.trim().split(/\\s+/).length;
+  const readable = [...host.querySelectorAll("dt,dd")].every((value) => value.scrollWidth <= value.clientWidth + 1);
+  const documentFits = document.documentElement.scrollWidth <= document.documentElement.clientWidth;
+  const unchanged = reviewModel.createPushDraftReview({ template, draft:structuredClone(template.payload) }, target);
+  reviewUi.renderPushDraftReview(elements, unchanged);
+  const emptyResult = { text:elements.noChanges.textContent, visible:!elements.noChanges.hidden, changeCount:elements.changeList.children.length };
+  host.remove();
+  return { detailPairs, changePairs, columns, readable, documentFits, emptyResult };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -384,6 +409,14 @@ try {
     assert.deepEqual(measured.visibleText.filter(({ clipped }) => clipped), [], `component text was clipped at ${width}px`);
     assert.deepEqual(measured.controls.filter(({ width: controlWidth, available, right, parentRight }) => controlWidth + 1 < available || right > parentRight + 1), [], `form control width contract failed at ${width}px`);
     assert.ok(measured.overflow.every(({ scrollHeight, clientHeight, overflowY }) => scrollHeight > clientHeight && /auto|scroll/.test(overflowY)), `bounded overflow contract failed at ${width}px`);
+    assert.deepEqual(await evaluate(socket, pushDecisionRuntime), {
+      detailPairs:[["Event","purchase"],["Target title","Signal Shop"],["Target URL","https://signal.example.test/checkout"],["Destination","queue.history"],["Version","3"],["Validation","Valid"]],
+      changePairs:[[["Path","ecommerce.value"],["Previous","18"],["Pushed","19"]],[["Path","items[0].quantity"],["Previous","1"],["Pushed","2"]],[["Path","legacy.debug"],["Previous","true"],["Pushed","Not present"]],[["Path","experiment.variant"],["Previous","Not present"],["Pushed","treatment-b"]]],
+      columns:width === 360 ? 1 : 2,
+      readable:true,
+      documentFits:true,
+      emptyResult:{ text:"No payload changes", visible:true, changeCount:0 },
+    }, `rendered push decision data violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,

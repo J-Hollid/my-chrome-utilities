@@ -206,6 +206,10 @@ import {
   type PushDraftReview,
 } from "./data-layer-push-draft-review.js";
 import {
+  findPushDraftReviewElements,
+  renderPushDraftReview,
+} from "./data-layer-push-draft-review-ui.js";
+import {
   pushPayloadInPage,
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
@@ -312,6 +316,7 @@ const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
 const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
+const pushDraftReviewElements = findPushDraftReviewElements();
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
 const closeTemplateEditorConfirmation = document.querySelector<HTMLElement>("#close-template-editor-confirmation");
@@ -979,7 +984,8 @@ function openPushDraftReview(): void {
     return;
   }
   pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
-  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+  renderPushDraftReview(pushDraftReviewElements, pendingPushDraftReview);
+  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = "";
   if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
   openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
 }
