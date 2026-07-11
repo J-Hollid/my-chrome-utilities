@@ -5,8 +5,6 @@ export function findObservationTargetElements(root = document) {
         result: root.querySelector("#observation-target-result"),
         chooseButton: root.querySelector("#choose-observation-target"),
         browseButton: root.querySelector("#browse-observation-targets"),
-        attachButton: root.querySelector("#attach-selected-target"),
-        detachButton: root.querySelector("#detach-observation-target"),
         picker: root.querySelector("#observation-target-picker"),
         closePickerButton: root.querySelector("#close-observation-target-picker"),
         sidePanelContent: root.querySelector("#side-panel-content"),
@@ -110,7 +108,7 @@ export function showDetachTargetConfirmation(elements, message, labels = {
 export function closeDetachTargetConfirmation(elements) {
     if (elements.detachConfirmation)
         elements.detachConfirmation.hidden = true;
-    elements.detachButton?.focus();
+    elements.chooseButton?.focus();
 }
 function targetActions(elements) {
     return Array.from(elements.list?.querySelectorAll("button:not(:disabled)") ?? []);

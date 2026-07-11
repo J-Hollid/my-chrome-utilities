@@ -12,7 +12,7 @@
     "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs",
     "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs",
     "test:unit:observation-targets": "npm run build && node test/data-layer-observation-targets-test.mjs",
-    "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
+    "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-live-session-controls-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
     "test:unit:live-event-presentation": "npm run build && node test/data-layer-event-presentation-test.mjs",
     "test:unit:event-library-editor": "npm run build && node test/data-layer-event-library-editor-test.mjs && node test/data-layer-selected-target-push-test.mjs",
     "test:unit:schema-verification": "npm run build && node test/data-layer-schema-verification-test.mjs",

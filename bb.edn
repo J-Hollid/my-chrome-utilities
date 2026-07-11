@@ -186,6 +186,7 @@
                                                      args)]
                                    (when-not (zero? (:exit result))
                                      (System/exit (:exit result)))))]
+                      (run! "npm" "run" "build")
                       (doseq [feature features
                               :let [name (slug feature)
                                     feature-path (str feature)

@@ -92,6 +92,7 @@ import {
   type DataLayerSessionState,
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import {
   nestedTimeline,
   timelineEventHeading,
@@ -207,8 +208,6 @@ const {
   browseButton: browseObservationTargetsButton,
   closePickerButton: closeObservationTargetPickerButton,
   picker: observationTargetPicker,
-  attachButton: attachSelectedTargetButton,
-  detachButton: detachObservationTargetButton,
   search: observationTargetSearch,
   list: observationTargetList,
   cancelDetachButton: cancelDetachTargetButton,
@@ -347,13 +346,16 @@ function renderObservationTargetContext(): void {
 function renderLiveContextActions(): void {
   const activeSession = dataLayerSessionState.session?.status === "active";
   const selectedTarget = selectedObservationTarget(observationTargetState);
-  const attachedTarget = attachedObservationTarget(observationTargetState);
-
-  if (startTestingButton) startTestingButton.hidden = activeSession;
-  if (endTestingButton) endTestingButton.hidden = !activeSession;
+  renderLiveSessionControls(
+    {
+      startTestingButton,
+      endTestingButton,
+      pauseCaptureButton,
+      resumeCaptureButton,
+    },
+    { activeSession, captureStatus: liveObserverState.status },
+  );
   if (chooseObservationTargetButton) chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
-  if (attachSelectedTargetButton) attachSelectedTargetButton.hidden = activeSession || !selectedTarget;
-  if (detachObservationTargetButton) detachObservationTargetButton.hidden = !attachedTarget;
 }
 
 function targetFromTab(
@@ -631,6 +633,7 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
 
 function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  renderLiveContextActions();
 }
 
 function closeInspectorAndReturnToEvents(): void {
@@ -1751,10 +1754,6 @@ browseObservationTargetsButton?.addEventListener("click", () => {
 closeObservationTargetPickerButton?.addEventListener("click", () => {
   closeObservationTargetPicker(observationTargetElements);
 });
-attachSelectedTargetButton?.addEventListener("click", () => {
-  void attachSelectedTarget();
-});
-detachObservationTargetButton?.addEventListener("click", beginDetachSelectedTarget);
 cancelDetachTargetButton?.addEventListener("click", () => {
   pendingObservationTargetSwitchId = undefined;
   closeDetachTargetConfirmation(observationTargetElements);

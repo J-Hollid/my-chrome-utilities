@@ -13,6 +13,7 @@ import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
@@ -42,7 +43,7 @@ const sessionWarning = document.querySelector("#session-warning");
 const observerStatus = document.querySelector("#observer-status");
 const restartObservationButton = document.querySelector("#restart-observation");
 const observationTargetElements = findObservationTargetElements();
-const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, attachButton: attachSelectedTargetButton, detachButton: detachObservationTargetButton, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
+const { chooseButton: chooseObservationTargetButton, browseButton: browseObservationTargetsButton, closePickerButton: closeObservationTargetPickerButton, picker: observationTargetPicker, search: observationTargetSearch, list: observationTargetList, cancelDetachButton: cancelDetachTargetButton, confirmDetachButton: confirmDetachTargetButton, } = observationTargetElements;
 const createKeymapButton = document.querySelector("#create-keymap");
 const updateKeymapButton = document.querySelector("#update-keymap");
 const loadKeymapButton = document.querySelector("#load-keymap");
@@ -144,17 +145,14 @@ function renderObservationTargetContext() {
 function renderLiveContextActions() {
     const activeSession = dataLayerSessionState.session?.status === "active";
     const selectedTarget = selectedObservationTarget(observationTargetState);
-    const attachedTarget = attachedObservationTarget(observationTargetState);
-    if (startTestingButton)
-        startTestingButton.hidden = activeSession;
-    if (endTestingButton)
-        endTestingButton.hidden = !activeSession;
+    renderLiveSessionControls({
+        startTestingButton,
+        endTestingButton,
+        pauseCaptureButton,
+        resumeCaptureButton,
+    }, { activeSession, captureStatus: liveObserverState.status });
     if (chooseObservationTargetButton)
         chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
-    if (attachSelectedTargetButton)
-        attachSelectedTargetButton.hidden = activeSession || !selectedTarget;
-    if (detachObservationTargetButton)
-        detachObservationTargetButton.hidden = !attachedTarget;
 }
 function targetFromTab(tab, currentWindow = false) {
     if (tab.id === undefined || tab.windowId === undefined || !tab.url)
@@ -388,6 +386,7 @@ function showDataLayerView(view, focus = false) {
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    renderLiveContextActions();
 }
 function closeInspectorAndReturnToEvents() {
     liveObserverState = closeLiveInspector(liveObserverState);
@@ -1307,10 +1306,6 @@ browseObservationTargetsButton?.addEventListener("click", () => {
 closeObservationTargetPickerButton?.addEventListener("click", () => {
     closeObservationTargetPicker(observationTargetElements);
 });
-attachSelectedTargetButton?.addEventListener("click", () => {
-    void attachSelectedTarget();
-});
-detachObservationTargetButton?.addEventListener("click", beginDetachSelectedTarget);
 cancelDetachTargetButton?.addEventListener("click", () => {
     pendingObservationTargetSwitchId = undefined;
     closeDetachTargetConfirmation(observationTargetElements);
