@@ -103,8 +103,8 @@
           <ul id="event-template-list"></ul>
           <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
         </section>
-        <section id="event-property-editor" aria-label="Event property editor" hidden>
-          <h4 id="event-template-editor-title">Event property editor</h4>
+        <section id="event-property-editor" aria-labelledby="event-template-editor-title" hidden>
+          <header class="detail-view-header"><button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button><h4 id="event-template-editor-title" tabindex="-1">Event property editor</h4></header>
           <dl id="event-template-editor-summary" aria-label="Template editor summary"></dl>
           <section id="event-template-properties-section" aria-label="Properties"><h5>Properties</h5><ul id="event-template-properties" aria-label="Draft properties"></ul></section>
           <details id="event-template-json-section"><summary>JSON</summary><label for="event-template-json">JSON draft</label><p id="event-template-help">Edit the structured Properties summary or use JSON for advanced changes.</p><textarea id="event-template-json" rows="10" aria-describedby="event-template-help event-template-validation"></textarea></details>
@@ -122,16 +122,15 @@
               <button id="discard-template-draft" type="button" data-action-variant="destructive">Discard changes</button>
             </div>
             <div class="action-group" aria-label="Editor navigation actions">
-              <button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button>
               <button id="back-to-captured-event" type="button" data-action-variant="quiet">Back to captured event</button>
             </div>
-            <section id="push-draft-review" aria-label="Push draft review" hidden>
-              <h5 id="push-draft-review-heading" tabindex="-1">Review push</h5><output id="push-draft-review-summary"></output>
-              <button id="confirm-push-draft" type="button" data-action-variant="primary">Confirm push</button>
-              <button id="cancel-push-draft" type="button" data-action-variant="secondary">Cancel</button>
-            </section>
             <section id="close-template-editor-confirmation" aria-label="Discard unsaved changes confirmation" hidden><output id="close-template-editor-summary"></output><button id="keep-editing-template" type="button" data-action-variant="secondary">Keep editing</button><button id="save-and-close-template" type="button" data-action-variant="primary">Save revision</button><button id="discard-and-close-template" type="button" data-action-variant="destructive">Discard changes</button></section>
           </div>
+          <dialog id="push-draft-review" aria-labelledby="push-draft-review-heading">
+            <h5 id="push-draft-review-heading" tabindex="-1">Review push</h5><output id="push-draft-review-summary"></output>
+            <button id="confirm-push-draft" type="button" data-action-variant="primary">Confirm push</button>
+            <button id="cancel-push-draft" type="button" data-action-variant="secondary">Cancel</button>
+          </dialog>
         </section>
         <section id="event-template-footer"><output id="event-template-result" role="status" aria-live="polite"></output><section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section></section>
       </section>

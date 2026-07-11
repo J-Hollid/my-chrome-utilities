@@ -30,11 +30,13 @@ function draftProperties(value, path = "") {
     }
     return Object.entries(value).flatMap(([key, child]) => draftProperties(child, `${path}/${key}`));
 }
-function actionButton(label, action, variant = "secondary") {
+function actionButton(label, action, variant = "secondary", templateId) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
     button.dataset.actionVariant = variant;
+    if (templateId)
+        button.dataset.templateId = templateId;
     button.addEventListener("click", action);
     return button;
 }
@@ -67,14 +69,14 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         }
         const actionsRow = document.createElement("div");
         actionsRow.className = "event-template-actions";
-        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet"), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
         item.append(identity, routing, attributes, actionsRow);
         return item;
     }));
     if (elements.propertyEditor)
         elements.propertyEditor.hidden = !editor;
     if (elements.editorTitle && editor)
-        elements.editorTitle.textContent = `${editor.template.eventName} (${editor.template.originatingEventId}) · ${editor.template.originatingSessionId}`;
+        elements.editorTitle.textContent = `${editor.template.name} editor`;
     if (elements.editorSummary) {
         elements.editorSummary.replaceChildren(...(editor ? [
             ["Template", editor.template.name], ["Version", String(editor.template.version)],
@@ -97,6 +99,12 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
         applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
     }
+}
+export function focusTemplateEditAction(elements, templateId) {
+    const escaped = typeof CSS !== "undefined" && CSS.escape
+        ? CSS.escape(templateId)
+        : templateId.replace(/["\\]/g, "\\$&");
+    elements.list?.querySelector(`button[data-template-id="${escaped}"]`)?.focus({ preventScroll: true });
 }
 export function setEventLibraryResult(elements, message) {
     if (elements.result)
