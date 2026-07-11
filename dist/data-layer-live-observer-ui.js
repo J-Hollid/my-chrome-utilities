@@ -116,6 +116,11 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         action.type = "button";
         action.textContent = label;
         action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
+        if (label === "Validate" && !event.schemaId) {
+            action.disabled = true;
+            action.setAttribute("aria-description", "Select a schema to validate");
+            action.title = "Select a schema to validate";
+        }
         action.addEventListener("click", () => {
             void runLiveInspectorAction(label, event, callback, (message) => { feedback.textContent = message; });
         });

@@ -12,6 +12,12 @@
    "resolved_value" #{"null" "undefined" "empty string" "empty array" "empty object" "numeric 0" "boolean false" "non-empty array" "non-empty object"}
    "usability" #{"usable" "unusable"}
    "unresolved_condition" #{"no active target" "permission missing" "destination invalid" "JSON invalid" "adapter not ready"}
+   "library_relationship" #{"no linked template" "linked template matches event" "linked template differs from event"}
+   "action_label" #{"Save to Library" "Saved" "Update Library template"}
+   "availability" #{"enabled" "disabled"}
+   "captured_event_count" #{"0" "12"}
+   "session_save_state" #{"unsaved" "saved" "nothing to save"}
+   "consequence_text" #{"12 captured events have not been saved" "All 12 captured events are saved" "No captured events need saving"}
    "action_meaning" #{"consequential" "supporting"}
    "action_variant" #{"destructive" "quiet" "secondary"}
    "capture_time" #{"10:03:00" "10:04:00"}
