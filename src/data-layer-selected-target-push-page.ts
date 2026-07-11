@@ -5,6 +5,7 @@ export interface PagePushResult {
 
 export function pushPayloadInPage(
   destination: string,
+  eventName: string,
   payload: unknown,
   root: unknown = globalThis,
 ): PagePushResult {
@@ -18,6 +19,6 @@ export function pushPayloadInPage(
   if (!Array.isArray(value)) {
     return { success: false, result: `Destination ${destination} cannot accept payload.` };
   }
-  value.push(payload);
+  value.push([eventName, payload]);
   return { success: true };
 }

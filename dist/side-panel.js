@@ -498,7 +498,7 @@ async function pushPayloadToSelectedTargetPage(request) {
     const [injection] = await chrome.scripting.executeScript({
         target: { tabId: request.tabId },
         world: "MAIN",
-        args: [request.destination, request.payload],
+        args: [request.destination, request.eventName, request.payload],
         func: pushPayloadInPage,
     });
     const result = injection?.result;
