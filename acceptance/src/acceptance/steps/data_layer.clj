@@ -86,10 +86,11 @@
              (history-path-input-source-wired? source)])))
 
 (defn history-path-incremental-entry-wired? [source]
-  (every? #(str/includes? source %)
-          ["const typedPath = historyPathInput.value"
-           "setHistoryArrayPath(typedPath)"
-           "renderHistoryPath(path, typedPath)"]))
+  (and (every? #(str/includes? source %)
+               ["const typedPath = historyPathInput.value"
+                "setHistoryArrayPath(typedPath)"])
+       (or (str/includes? source "renderHistoryPath(path, typedPath)")
+           (str/includes? source "targetPathStatusController.configure(path, typedPath)"))))
 
 (defn- assert-history-path-entry-wired! [world history-path]
   (support/assert! (settings-allow-history-path-entry?
