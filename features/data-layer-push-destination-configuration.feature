@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=dfd5961fd6a34863ad007375fdaec72ffc42fe43a7380d3e14d40b8dc2f16148
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-11T01:18:04.238031739Z","feature_name":"Data layer push destination configuration","feature_path":"features/data-layer-push-destination-configuration.feature","background_hash":"5b4846e9f20fff9fb7e190a95e9d0a72afb99c92c8ec73b4e61f6defcec91dca","implementation_hash":"sha256:selected-target-event-push-v1","scenarios":[{"index":0,"name":"Data layer push destination configuration 001","scenario_hash":"81ab18a34588977c4186d6c668aabeaeb6e77eeb1a335aed83559d46d1b37972","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.238031739Z"},{"index":1,"name":"Data layer push destination configuration 002","scenario_hash":"ef438e244e79e26297b160a502408616b0cb17e494988c2cfc3775d9c1da1102","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.238031739Z"},{"index":2,"name":"Data layer push destination configuration 003","scenario_hash":"70a2bb2e12e331bf777e377ab09f4b5c4911d33b69ab08770576b47addd0b170","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-11T01:18:04.238031739Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer push destination configuration
 
   Background:
