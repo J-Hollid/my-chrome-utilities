@@ -1,4 +1,5 @@
-import { applyActionTreatment, templateActionHierarchy, } from "./side-panel-action-hierarchy.js";
+import { templateActionHierarchy } from "./side-panel-action-hierarchy.js";
+import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 export function findEventLibraryEditorElements(root = document) {
     return {
         search: root.querySelector("#event-template-search"),
