@@ -130,7 +130,7 @@ function newDataLayerSessionId(tabId) {
 if (app) {
     app.textContent = PROJECT_NAME;
 }
-function renderHistoryPath(path, fieldValue = path, status = "Checking target…") {
+function renderHistoryPath(path, fieldValue = path, status = "Selection required") {
     if (historyPathInput) {
         historyPathInput.value = fieldValue;
     }

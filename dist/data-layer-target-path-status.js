@@ -1,8 +1,17 @@
 import { pathStatus } from "./data-layer.js";
+export function authoritativePathStatus(status) {
+    if (status === "ready")
+        return "Ready";
+    if (status === "path missing")
+        return "Waiting for path";
+    if (status === "page access unavailable")
+        return "Permission required";
+    return "Error";
+}
 export function targetPathStatusForObservation(observation, path) {
-    return observation.pageAccessStatus === "page access available"
+    return authoritativePathStatus(observation.pageAccessStatus === "page access available"
         ? pathStatus(observation.pageObject, path)
-        : "page access unavailable";
+        : "page access unavailable");
 }
 export function createTargetPathStatusController(options) {
     let latestRequest = 0;
@@ -10,7 +19,6 @@ export function createTargetPathStatusController(options) {
         async configure(path, fieldValue = path) {
             latestRequest += 1;
             const request = latestRequest;
-            options.render(path, fieldValue, "Checking target…");
             const observation = await options.read(path);
             if (request !== latestRequest)
                 return;

@@ -26,7 +26,7 @@ export function liveGuidedWorkflow(input: {
 }): LiveGuidedWorkflow {
   const targetSelected = input.selectedTarget !== undefined;
   const ready = input.selectedTarget?.accessState === "Ready"
-    && input.pathStatus === "ready";
+    && input.pathStatus === "Ready";
   const current: LiveSetupStepId = !targetSelected
     ? "target"
     : ready

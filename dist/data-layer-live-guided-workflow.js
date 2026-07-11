@@ -1,7 +1,7 @@
 export function liveGuidedWorkflow(input) {
     const targetSelected = input.selectedTarget !== undefined;
     const ready = input.selectedTarget?.accessState === "Ready"
-        && input.pathStatus === "ready";
+        && input.pathStatus === "Ready";
     const current = !targetSelected
         ? "target"
         : ready
