@@ -293,7 +293,9 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
   setValue("#event-template-name", "Completed checkout");
   setValue("#event-template-event-name", "checkout_completed");
+  q("#event-template-execution-settings summary").click();
   setValue("#push-destination-path", "queue.history");
+  q("#event-template-json-section summary").click();
   setValue("#event-template-json", JSON.stringify({ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } }));
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:7, windowId:1, url:"https://signal.example.test/checkout", title:"Signal Shop", active:true }] },
