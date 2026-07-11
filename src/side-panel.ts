@@ -200,7 +200,6 @@ const sessionHistoryPath = document.querySelector<HTMLElement>(
 );
 const sessionTimeline = document.querySelector<HTMLElement>("#session-timeline");
 const sessionWarning = document.querySelector<HTMLElement>("#session-warning");
-const observerStatus = document.querySelector<HTMLElement>("#observer-status");
 const restartObservationButton = document.querySelector<HTMLButtonElement>(
   "#restart-observation",
 );
@@ -647,13 +646,23 @@ function currentLiveSessionSummary() {
   return createLiveSessionSummary({
     testingState: session?.status === "active"
       ? (liveObserverState.status === "Paused" ? "Paused" : "Active")
-      : "Detached",
+      : "Ended",
+    observerStatus: canonicalObserverStatus(),
     targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
     pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
     observerPath: session?.historyPath ?? getHistoryArrayPath(),
     capturedEventCount: liveObserverState.events.length,
     connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
   });
+}
+
+function canonicalObserverStatus() {
+  switch (observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)) {
+    case "attached": return "Connected" as const;
+    case "needs sync": return "Waiting for path" as const;
+    case "page access unavailable": return "Error" as const;
+    case "inactive": return "Disconnected" as const;
+  }
 }
 
 function closeInspectorAndReturnToEvents(): void {
@@ -1050,12 +1059,7 @@ function appendDefinition(list: HTMLElement, label: string, value: string): void
 }
 
 function renderObserverState(): void {
-  if (observerStatus) {
-    observerStatus.textContent = observerAttachmentStatus(
-      dataLayerSessionState,
-      dataLayerObserverState,
-    );
-  }
+  renderLiveSessionSummary(liveObserverElements, currentLiveSessionSummary());
 }
 
 function updateSessionFromObserverState(): void {

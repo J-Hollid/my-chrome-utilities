@@ -10,15 +10,16 @@ const fields = {
   connectedSourceCount: 3,
 };
 
-assert.deepEqual(createLiveSessionSummary({ ...fields, testingState: "Active" }), {
+assert.deepEqual(createLiveSessionSummary({ ...fields, testingState: "Active", observerStatus: "Connected" }), {
   statusLabel: "Capturing",
+  observerStatus: "Connected",
   ...fields,
 });
 assert.equal(
-  createLiveSessionSummary({ ...fields, testingState: "Paused" }).statusLabel,
+  createLiveSessionSummary({ ...fields, testingState: "Paused", observerStatus: "Error" }).statusLabel,
   "Paused",
 );
 assert.equal(
-  createLiveSessionSummary({ ...fields, testingState: "Detached" }).statusLabel,
-  "Detached",
+  createLiveSessionSummary({ ...fields, testingState: "Ended", observerStatus: "Disconnected" }).statusLabel,
+  "Ended",
 );

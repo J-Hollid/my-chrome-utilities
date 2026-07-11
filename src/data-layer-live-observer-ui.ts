@@ -13,6 +13,7 @@ import {
 export interface LiveObserverElements {
   viewList: HTMLElement | null;
   sessionStatus: HTMLElement | null;
+  observerStatus: HTMLElement | null;
   targetPage: HTMLElement | null;
   pageUrl: HTMLElement | null;
   observerPath: HTMLElement | null;
@@ -35,6 +36,7 @@ export function findLiveObserverElements(
   return {
     viewList: root.querySelector<HTMLElement>("#data-layer-views"),
     sessionStatus: root.querySelector<HTMLElement>("#live-session-status"),
+    observerStatus: root.querySelector<HTMLElement>("#live-observer-status"),
     targetPage: root.querySelector<HTMLElement>("#live-target-page"),
     pageUrl: root.querySelector<HTMLElement>("#live-page-url"),
     observerPath: root.querySelector<HTMLElement>("#live-observer-path"),
@@ -103,7 +105,7 @@ export function renderLiveObserverState(
     elements.sourceStatuses.replaceChildren(
       ...state.sources.map((source) => {
         const item = document.createElement("li");
-        item.textContent = `${source.name}: ${source.status}`;
+        item.textContent = source.name;
         return item;
       }),
     );
@@ -131,6 +133,10 @@ export function renderLiveSessionSummary(
   if (elements.sessionStatus) {
     elements.sessionStatus.textContent = summary.statusLabel;
     elements.sessionStatus.dataset.status = summary.statusLabel.toLowerCase();
+  }
+  if (elements.observerStatus) {
+    elements.observerStatus.textContent = summary.observerStatus;
+    elements.observerStatus.dataset.status = summary.observerStatus.toLowerCase().replaceAll(" ", "-");
   }
   if (elements.targetPage) elements.targetPage.textContent = summary.targetPage;
   if (elements.pageUrl) elements.pageUrl.textContent = summary.pageUrl;
