@@ -13,7 +13,7 @@ import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
-import { liveSessionControls } from "./data-layer-live-session-controls.js";
+import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { createLiveSessionSummary } from "./data-layer-live-session-summary.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
@@ -146,20 +146,14 @@ function renderObservationTargetContext() {
 function renderLiveContextActions() {
     const activeSession = dataLayerSessionState.session?.status === "active";
     const selectedTarget = selectedObservationTarget(observationTargetState);
-    const controls = liveSessionControls({
-        activeSession,
-        captureStatus: liveObserverState.status,
-    });
-    if (startTestingButton)
-        startTestingButton.hidden = controls.sessionAction !== "Start testing";
-    if (endTestingButton)
-        endTestingButton.hidden = controls.sessionAction !== "End testing";
+    renderLiveSessionControls({
+        startTestingButton,
+        endTestingButton,
+        pauseCaptureButton,
+        resumeCaptureButton,
+    }, { activeSession, captureStatus: liveObserverState.status });
     if (chooseObservationTargetButton)
         chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
-    if (pauseCaptureButton)
-        pauseCaptureButton.hidden = controls.captureAction !== "Pause capture";
-    if (resumeCaptureButton)
-        resumeCaptureButton.hidden = controls.captureAction !== "Resume capture";
 }
 function targetFromTab(tab, currentWindow = false) {
     if (tab.id === undefined || tab.windowId === undefined || !tab.url)
