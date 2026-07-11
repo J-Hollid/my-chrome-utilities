@@ -51,7 +51,7 @@
    "primary_action" #{"Push"}
    "primary_actions" #{"Pause and Stop" "Resume and Stop"}
    "project_name" #{"my-chrome-utilities"}
-   "payload_label" #{"purchase-values"}
+   "payload_label" #{"pageview-values" "purchase-values"}
    "query" #{"checkout"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}

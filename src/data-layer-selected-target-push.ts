@@ -7,6 +7,7 @@ import type { ObservationTarget } from "./data-layer-observation-targets.js";
 export interface SelectedTargetPushRequest {
   tabId: number;
   destination: string;
+  eventName: string;
   payload: JsonValue;
 }
 
@@ -67,6 +68,7 @@ export async function pushTemplateToSelectedTarget(
     await pushToPage({
       tabId: target.tabId,
       destination,
+      eventName: editor.template.eventName,
       payload: structuredClone(editor.draft),
     });
     return { success: true, result: "Pushed", summary: summary(target, destination, "Pushed") };

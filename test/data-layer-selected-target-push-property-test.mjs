@@ -43,6 +43,7 @@ for (let sample = 0; sample < 100; sample += 1) {
   }
 
   const result = await pushTemplateToSelectedTarget(editor, target, async (request) => {
+    assert.equal(request.eventName, "purchase");
     request.payload.sample = -1;
   });
   assert.equal(result.success, true);
@@ -52,12 +53,12 @@ for (let sample = 0; sample < 100; sample += 1) {
   const selectedPage = { dataLayer: { events: [] } };
   const pagePayload = { sample };
   assert.deepEqual(
-    pushPayloadInPage("dataLayer.events", pagePayload, selectedPage),
+    pushPayloadInPage("dataLayer.events", "purchase", pagePayload, selectedPage),
     { success: true },
   );
-  assert.deepEqual(selectedPage.dataLayer.events, [pagePayload]);
+  assert.deepEqual(selectedPage.dataLayer.events, [["purchase", pagePayload]]);
   assert.deepEqual(
-    pushPayloadInPage("dataLayer.missing", pagePayload, selectedPage),
+    pushPayloadInPage("dataLayer.missing", "purchase", pagePayload, selectedPage),
     { success: false, result: "Destination dataLayer.missing is unavailable." },
   );
 }
