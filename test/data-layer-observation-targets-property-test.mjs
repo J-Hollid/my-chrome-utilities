@@ -88,10 +88,10 @@ for (let sample = 0; sample < 100; sample += 1) {
   const ended = endLiveSession(session, restored);
   assert.equal(ended.sessionState.session?.status, "ended");
   assert.equal(ended.targetState.attachedTargetId, undefined);
-  assert.deepEqual(
-    endLiveSession(ended.sessionState, ended.targetState),
-    ended,
-  );
+  const endedAgain = endLiveSession(ended.sessionState, ended.targetState);
+  assert.deepEqual(endedAgain.sessionState, ended.sessionState);
+  assert.deepEqual(endedAgain.targetState, ended.targetState);
+  assert.equal(endedAgain.releasedTargetId, undefined);
 
   const permissionLost = updateObservationTargetAccess(
     switched,

@@ -51,9 +51,13 @@
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
    "page_title" #{"Cart" "Checkout" "Order confirmation" "Product detail" "Shop"}
+   "old_page_title" #{"Checkout"}
+   "new_page_title" #{"Order confirmation"}
    "page_titles" #{"Home, Checkout, Purchase"}
    "other_page_title" #{"Documentation"}
    "tab_id" #{"42" "43" "44"}
+   "old_tab_id" #{"42"}
+   "new_tab_id" #{"73"}
    "target_value" #{"array containing pageview" "missing" "object containing order"}
    "sample_value" #{"array containing order" "array containing purchase" "missing"}
    "path_status" #{"not an array" "path missing" "ready"}
