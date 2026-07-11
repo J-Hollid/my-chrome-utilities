@@ -105,11 +105,10 @@
         </section>
         <section id="event-property-editor" aria-label="Event property editor" hidden>
           <h4 id="event-template-editor-title">Event property editor</h4>
-          <label for="event-template-json">JSON draft</label>
-          <ul id="event-template-properties" aria-label="Draft properties"></ul>
-          <textarea id="event-template-json" rows="10"></textarea>
-          <label for="push-destination-path">Push destination path</label>
-          <input id="push-destination-path" type="text" value="dataLayer" />
+          <dl id="event-template-editor-summary" aria-label="Template editor summary"></dl>
+          <section id="event-template-properties-section" aria-label="Properties"><h5>Properties</h5><ul id="event-template-properties" aria-label="Draft properties"></ul></section>
+          <details id="event-template-json-section"><summary>JSON</summary><label for="event-template-json">JSON draft</label><textarea id="event-template-json" rows="10"></textarea></details>
+          <details id="event-template-execution-settings"><summary>Execution settings</summary><label for="push-destination-path">Push destination path</label><input id="push-destination-path" type="text" value="dataLayer" /></details>
           <output id="event-template-validation" aria-live="assertive"></output>
           <div id="event-template-actions" aria-label="Template actions">
             <div class="action-group" aria-label="Save template actions">
@@ -120,7 +119,7 @@
               <button id="save-template-copy" type="button" data-action-variant="secondary">Save as copy</button>
             </div>
             <div class="action-group destructive-action-group" aria-label="Discard template action">
-              <button id="discard-template-draft" type="button" data-action-variant="destructive">Discard draft</button>
+              <button id="discard-template-draft" type="button" data-action-variant="destructive">Discard changes</button>
             </div>
             <div class="action-group" aria-label="Editor navigation actions">
               <button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button>
@@ -131,6 +130,7 @@
               <button id="confirm-push-draft" type="button" data-action-variant="primary">Confirm push</button>
               <button id="cancel-push-draft" type="button" data-action-variant="secondary">Cancel</button>
             </section>
+            <section id="close-template-editor-confirmation" aria-label="Discard unsaved changes confirmation" hidden><output id="close-template-editor-summary"></output><button id="keep-editing-template" type="button" data-action-variant="secondary">Keep editing</button><button id="save-and-close-template" type="button" data-action-variant="primary">Save revision</button><button id="discard-and-close-template" type="button" data-action-variant="destructive">Discard changes</button></section>
           </div>
         </section>
         <section id="event-template-footer"><output id="event-template-result" aria-live="polite"></output><section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section></section>

@@ -92,6 +92,11 @@ const pushDraftReview = document.querySelector("#push-draft-review");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector("#cancel-push-draft");
+const closeTemplateEditorConfirmation = document.querySelector("#close-template-editor-confirmation");
+const closeTemplateEditorSummary = document.querySelector("#close-template-editor-summary");
+const keepEditingTemplateButton = document.querySelector("#keep-editing-template");
+const saveAndCloseTemplateButton = document.querySelector("#save-and-close-template");
+const discardAndCloseTemplateButton = document.querySelector("#discard-and-close-template");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
@@ -610,6 +615,13 @@ function renderSequences() {
 }
 function openTemplateEditor(template) {
     propertyEditorState = openPropertyEditor(template);
+    setEventLibraryResult(eventLibraryEditorElements, "");
+    renderEventTemplateLibrary();
+}
+function closeTemplateEditor() {
+    propertyEditorState = undefined;
+    if (closeTemplateEditorConfirmation)
+        closeTemplateEditorConfirmation.hidden = true;
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
 }
@@ -1387,10 +1399,31 @@ discardTemplateDraftButton?.addEventListener("click", () => {
     renderEventTemplateLibrary();
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
-    propertyEditorState = undefined;
-    setEventLibraryResult(eventLibraryEditorElements, "");
-    renderEventTemplateLibrary();
+    if (!propertyEditorState?.dirty) {
+        closeTemplateEditor();
+        return;
+    }
+    if (closeTemplateEditorSummary)
+        closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft).join(", ")}.`;
+    if (closeTemplateEditorConfirmation)
+        closeTemplateEditorConfirmation.hidden = false;
 });
+keepEditingTemplateButton?.addEventListener("click", () => { if (closeTemplateEditorConfirmation)
+    closeTemplateEditorConfirmation.hidden = true; });
+saveAndCloseTemplateButton?.addEventListener("click", () => {
+    if (!propertyEditorState)
+        return;
+    try {
+        propertyEditorState = saveDraftRevision(propertyEditorState);
+        eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
+        persistEventTemplateLibrary();
+        closeTemplateEditor();
+    }
+    catch (error) {
+        setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid.");
+    }
+});
+discardAndCloseTemplateButton?.addEventListener("click", () => closeTemplateEditor());
 backToCapturedEventButton?.addEventListener("click", () => {
     const eventId = propertyEditorState?.template.originatingEventId;
     if (!eventId)

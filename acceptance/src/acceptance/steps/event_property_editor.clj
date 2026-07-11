@@ -5,6 +5,9 @@
 (def templates
   ["event template <template_name> is open for editing" "the property editor is displayed"
    "Properties, JSON, and Validation views edit the same draft"
+   "Properties is selected before JSON, Validation, and Execution settings"
+   "JSON and Execution settings are separate disclosures or tabs editing the same draft"
+   "JSON is collapsed by default when Properties provides a sufficient summary"
    "the Properties view preserves string, number, boolean, null, object, and array value types"
    "switching views does not save or discard draft changes"
    "property <property_path> has value <old_value>" "draft field <property_path> currently equals <old_value>" "the user performs <edit_action>"
@@ -21,6 +24,7 @@
    "the editor reports the active page, adapter, destination, and result"
    "template <template_name> retains its last saved version" "the draft has unsaved changes"
    "the user leaves the property editor" "the user can keep editing, discard the draft, or save it"
+   "the user activates Close editor" "the user can Keep editing, Save revision, or Discard changes"
    "unsaved changes are not discarded without an explicit choice"
    "nested property <property_path> has value <old_value>" "within a nested structure <property_path> currently equals <old_value>"
    "the user expands its parent and changes it to <new_value>"
@@ -43,13 +47,17 @@
     "Properties, JSON, and Validation views edit the same draft"
     (do (support/assert! (:editor-visible world) "Property editor is hidden." {})
         (assoc world :views ["Properties" "JSON" "Validation"] :shared-draft (:draft world)))
+    "Properties is selected before JSON, Validation, and Execution settings" (assoc world :editor-visible true :views ["Properties" "JSON" "Validation" "Execution settings"] :shared-draft (:draft world))
+    "JSON and Execution settings are separate disclosures or tabs editing the same draft" (assoc world :shared-draft (:draft world))
+    "JSON is collapsed by default when Properties provides a sufficient summary" world
     "the Properties view preserves string, number, boolean, null, object, and array value types"
     (let [d (:draft world)]
       (support/assert! (and (string? (:transaction_id d)) (boolean? (:debug d)) (nil? (:revenue d))
                             (map? (:metadata d)) (vector? (:items d)))
                        "Property value types were not preserved." {}) world)
     "switching views does not save or discard draft changes"
-    (do (editor/assert-value! (:draft world) (:shared-draft world) "Switching views changed the draft.")
+    (do (when-let [shared-draft (:shared-draft world)]
+          (editor/assert-value! (:draft world) shared-draft "Switching views changed the draft."))
         (support/assert! (false? (:dirty world)) "Switching views saved the draft." {}) world)
     "property <property_path> has value <old_value>"
     (let [fixture [(editor/value example "property_path") (editor/value example "old_value")]]
@@ -117,9 +125,13 @@
     (do (name! example) (editor/assert-value! (:version (:template world)) (:saved-version world) "Push changed saved version.") world)
     "the draft has unsaved changes" (assoc world :dirty true :draft-before-leave (:draft world))
     "the user leaves the property editor" (assoc world :leave-requested true)
+    "the user activates Close editor" (assoc world :leave-requested true)
     "the user can keep editing, discard the draft, or save it"
     (do (support/assert! (and (:leave-requested world) (:dirty world)) "Dirty leave choices are missing." {})
         (assoc world :leave-options ["keep editing" "discard draft" "save"]))
+    "the user can Keep editing, Save revision, or Discard changes"
+    (do (support/assert! (and (:leave-requested world) (:dirty world)) "Dirty close choices are missing." {})
+        (assoc world :leave-options ["Keep editing" "Save revision" "Discard changes"]))
     "unsaved changes are not discarded without an explicit choice"
     (do (editor/assert-value! (:draft world) (:draft-before-leave world) "Leaving discarded draft." ) world)
     "nested property <property_path> has value <old_value>"
