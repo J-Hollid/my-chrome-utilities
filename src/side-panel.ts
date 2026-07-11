@@ -872,8 +872,7 @@ function renderSequences(): void {
 
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
-  setEventLibraryResult(eventLibraryEditorElements,
-                        `Editing ${template.name}; unsaved changes require keep, discard, or save.`);
+  setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
 }
 
@@ -1737,12 +1736,14 @@ saveLatestTemplateButton?.addEventListener("click", () => {
 
 eventTemplateJson?.addEventListener("input", () => {
   if (!propertyEditorState) return;
+  setEventLibraryResult(eventLibraryEditorElements, "");
   propertyEditorState = updateDraftJson(propertyEditorState, eventTemplateJson.value);
   renderEventTemplateLibrary();
 });
 
 eventTemplatePushDestination?.addEventListener("input", () => {
   if (!propertyEditorState) return;
+  setEventLibraryResult(eventLibraryEditorElements, "");
   propertyEditorState = setPushDestination(
     propertyEditorState,
     eventTemplatePushDestination.value,
@@ -1793,6 +1794,7 @@ discardTemplateDraftButton?.addEventListener("click", () => {
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
   propertyEditorState = undefined;
+  setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
 });
 backToCapturedEventButton?.addEventListener("click", () => {
