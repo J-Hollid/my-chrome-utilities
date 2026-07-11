@@ -1,3 +1,4 @@
+import { applyActionTreatment, templateActionHierarchy, } from "./side-panel-action-hierarchy.js";
 export function findEventLibraryEditorElements(root = document) {
     return {
         search: root.querySelector("#event-template-search"),
@@ -27,10 +28,11 @@ function draftProperties(value, path = "") {
     }
     return Object.entries(value).flatMap(([key, child]) => draftProperties(child, `${path}/${key}`));
 }
-function actionButton(label, action) {
+function actionButton(label, action, variant = "secondary") {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
+    button.dataset.actionVariant = variant;
     button.addEventListener("click", action);
     return button;
 }
@@ -63,7 +65,7 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         }
         const actionsRow = document.createElement("div");
         actionsRow.className = "event-template-actions";
-        actionsRow.append(actionButton("Edit", () => actions.edit(template)), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet"), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
         item.append(identity, routing, attributes, actionsRow);
         return item;
     }));
@@ -81,6 +83,12 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
             editor?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
     }
     elements.properties?.replaceChildren(...(editor ? draftProperties(editor.draft) : []));
+    if (editor) {
+        const hierarchy = templateActionHierarchy(editor);
+        applyActionTreatment(elements.saveRevisionButton, hierarchy.saveRevision, "save-template-revision-reason");
+        applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
+        applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
+    }
 }
 export function setEventLibraryResult(elements, message) {
     if (elements.result)

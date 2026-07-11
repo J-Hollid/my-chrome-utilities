@@ -2,7 +2,9 @@
   (:require [acceptance.steps.support :as support]))
 
 (def canonical-example-values
-  {"action_name" #{"Copy payload" "Pause capture" "Save to Library" "Start testing" "Validate"}
+  {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "action_meaning" #{"consequential" "supporting"}
+   "action_variant" #{"destructive" "quiet" "secondary"}
    "action_result" #{"failed" "succeeded"}
    "duplicate_choice" #{"Create copy" "Update existing"}
    "duplicate_result" #{"Purchase updated" "distinct copy created"}
@@ -12,7 +14,8 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid"}
+   "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
    "setup_action" #{"Choose target" "Start testing Checkout"}
@@ -88,7 +91,8 @@
    "panel_width" #{"320" "320 CSS px" "320 px" "360" "480 px" "520" "720" "720 px"}
    "metadata_columns" #{"1" "2" "3"}
    "panel_height" #{"640 CSS px"}
-   "primary_action" #{"Push" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "primary_action" #{"End testing" "none" "Pause capture" "Push" "Push draft" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "primary_count" #{"0" "1"}
    "editing_status" #{"Saved" "Unsaved changes"}
    "primary_actions" #{"Pause capture" "Pause capture and End testing" "Resume capture" "Resume capture and End testing"}
    "project_name" #{"my-chrome-utilities"}
@@ -141,7 +145,7 @@
    "validation_summary" #{"16 valid, 2 issues"}
    "version" #{"1" "2" "3"}
    "view_name" #{"Hotkeys" "Library" "Live" "Schemas" "Sessions"}
-   "view_state" #{"command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sessions" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor"}
+   "view_state" #{"browsing command bindings" "browsing saved schemas" "browsing saved sessions" "command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sessions" "operator-confirmed push is next" "ready target selected" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor" "valid draft has unsaved changes"}
    "visible_count" #{"7"}
    "workspace_name" #{"Data Layer" "Hotkeys"}})
 

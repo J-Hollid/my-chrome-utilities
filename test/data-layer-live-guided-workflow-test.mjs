@@ -59,7 +59,9 @@ const elements = {
   startTestingButton: {
     disabled: true,
     textContent: "",
+    dataset: {},
     setAttribute(name, value) { this[name] = value; },
+    removeAttribute(name) { delete this[name]; },
   },
 };
 renderLiveGuidedWorkflow(elements, ready);

@@ -1,3 +1,4 @@
+import { applyActionTreatment } from "./side-panel-action-hierarchy.js";
 export function findLiveGuidedWorkflowElements(root = document) {
     return {
         setupSteps: root.querySelector("#live-setup-steps"),
@@ -28,9 +29,14 @@ export function renderLiveGuidedWorkflow(elements, workflow) {
         elements.chooseTargetButton.hidden = !workflow.chooseTargetVisible;
     }
     if (elements.startTestingButton) {
-        elements.startTestingButton.disabled = !workflow.startTestingEnabled;
         elements.startTestingButton.textContent = workflow.startTestingLabel;
-        elements.startTestingButton.setAttribute("aria-description", workflow.startTestingDescription);
+        applyActionTreatment(elements.startTestingButton, workflow.startTestingEnabled
+            ? { variant: "primary", disabled: false }
+            : {
+                variant: "primary",
+                disabled: true,
+                disabledReason: "A ready target must be selected.",
+            }, "start-testing-reason");
     }
 }
 //# sourceMappingURL=data-layer-live-guided-workflow-ui.js.map
