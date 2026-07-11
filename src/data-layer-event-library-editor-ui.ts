@@ -14,6 +14,7 @@ export interface EventLibraryEditorElements {
   list: HTMLElement | null;
   propertyEditor: HTMLElement | null;
   editorTitle: HTMLElement | null;
+  editorSummary: HTMLElement | null;
   properties: HTMLElement | null;
   json: HTMLTextAreaElement | null;
   pushDestination: HTMLInputElement | null;
@@ -43,6 +44,7 @@ export function findEventLibraryEditorElements(
     list: root.querySelector<HTMLElement>("#event-template-list"),
     propertyEditor: root.querySelector<HTMLElement>("#event-property-editor"),
     editorTitle: root.querySelector<HTMLElement>("#event-template-editor-title"),
+    editorSummary: root.querySelector<HTMLElement>("#event-template-editor-summary"),
     properties: root.querySelector<HTMLElement>("#event-template-properties"),
     json: root.querySelector<HTMLTextAreaElement>("#event-template-json"),
     pushDestination: root.querySelector<HTMLInputElement>("#push-destination-path"),
@@ -126,6 +128,12 @@ export function renderEventLibraryEditor(
   );
   if (elements.propertyEditor) elements.propertyEditor.hidden = !editor;
   if (elements.editorTitle && editor) elements.editorTitle.textContent = `${editor.template.eventName} (${editor.template.originatingEventId}) · ${editor.template.originatingSessionId}`;
+  if (elements.editorSummary) {
+    elements.editorSummary.replaceChildren(...(editor ? [
+      ["Template", editor.template.name], ["Version", String(editor.template.version)],
+      ["Draft", editor.dirty ? "Unsaved changes" : "Saved"], ["Provenance", editor.template.provenance],
+    ].flatMap(([label, value]) => { const term = document.createElement("dt"); const description = document.createElement("dd"); term.textContent = String(label); description.textContent = String(value); return [term, description]; }) : []));
+  }
   if (elements.json && editor) elements.json.value = editor.jsonDraft;
   if (elements.pushDestination && editor) {
     elements.pushDestination.value = editor.template.destination;

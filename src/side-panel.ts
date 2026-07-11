@@ -295,6 +295,11 @@ const pushDraftReview = document.querySelector<HTMLElement>("#push-draft-review"
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
+const closeTemplateEditorConfirmation = document.querySelector<HTMLElement>("#close-template-editor-confirmation");
+const closeTemplateEditorSummary = document.querySelector<HTMLElement>("#close-template-editor-summary");
+const keepEditingTemplateButton = document.querySelector<HTMLButtonElement>("#keep-editing-template");
+const saveAndCloseTemplateButton = document.querySelector<HTMLButtonElement>("#save-and-close-template");
+const discardAndCloseTemplateButton = document.querySelector<HTMLButtonElement>("#discard-and-close-template");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
@@ -894,6 +899,13 @@ function renderSequences(): void {
 
 function openTemplateEditor(template: EditableEventTemplate): void {
   propertyEditorState = openPropertyEditor(template);
+  setEventLibraryResult(eventLibraryEditorElements, "");
+  renderEventTemplateLibrary();
+}
+
+function closeTemplateEditor(): void {
+  propertyEditorState = undefined;
+  if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
 }
@@ -1835,10 +1847,16 @@ discardTemplateDraftButton?.addEventListener("click", () => {
   renderEventTemplateLibrary();
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
-  propertyEditorState = undefined;
-  setEventLibraryResult(eventLibraryEditorElements, "");
-  renderEventTemplateLibrary();
+  if (!propertyEditorState?.dirty) { closeTemplateEditor(); return; }
+  if (closeTemplateEditorSummary) closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft as Record<string, unknown>).join(", ")}.`;
+  if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = false;
 });
+keepEditingTemplateButton?.addEventListener("click", () => { if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; });
+saveAndCloseTemplateButton?.addEventListener("click", () => {
+  if (!propertyEditorState) return;
+  try { propertyEditorState = saveDraftRevision(propertyEditorState); eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template); persistEventTemplateLibrary(); closeTemplateEditor(); } catch (error) { setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid."); }
+});
+discardAndCloseTemplateButton?.addEventListener("click", () => closeTemplateEditor());
 backToCapturedEventButton?.addEventListener("click", () => {
   const eventId = propertyEditorState?.template.originatingEventId;
   if (!eventId) return;
