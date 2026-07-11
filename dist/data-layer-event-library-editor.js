@@ -70,6 +70,42 @@ export function openPropertyEditor(template) {
         dirty: false,
     };
 }
+export function createNewEventEditor() {
+    return {
+        template: {
+            id: "new-event", name: "", eventName: "", sourceId: "", sourceName: "",
+            destination: "", tags: [], validation: "Not checked", payload: {}, version: 0,
+            provenance: "library-created",
+        },
+        revisions: [], draft: {}, jsonDraft: "{}", dirty: false, isNew: true,
+    };
+}
+export function newEventValidation(state) {
+    return {
+        ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),
+        ...(state.template.eventName.trim() ? {} : { eventName: "Enter an event name" }),
+        ...(state.template.sourceId ? {} : { source: "Select an event source" }),
+        ...(state.template.destination.trim() ? {} : { destination: "Enter a destination path" }),
+        ...(state.jsonError ? { json: "Correct the JSON draft" } : {}),
+    };
+}
+export function setNewEventField(state, field, value) {
+    const template = field === "source"
+        ? { ...state.template, sourceId: value.id, sourceName: value.name }
+        : { ...state.template, [field]: value };
+    return { ...state, template, dirty: true };
+}
+export function saveNewEvent(state, createId) {
+    const error = Object.values(newEventValidation(state))[0];
+    if (error)
+        throw new Error(error);
+    return {
+        ...state.template,
+        id: createId(), name: state.template.name.trim(), eventName: state.template.eventName.trim(),
+        destination: state.template.destination.trim(), payload: clone(state.draft), version: 1,
+        provenance: "library-created",
+    };
+}
 export function updateDraftJson(state, source) {
     try {
         const draft = JSON.parse(source);

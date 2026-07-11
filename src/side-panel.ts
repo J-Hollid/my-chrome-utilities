@@ -164,6 +164,7 @@ import {
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import {
   createEditableTemplate,
+  createNewEventEditor,
   discardDraft,
   openPropertyEditor,
   saveAsTemplateCopy,
@@ -172,6 +173,8 @@ import {
   restoreEventTemplateLibrary,
   serializeEventTemplateLibrary,
   setPushDestination,
+  setNewEventField,
+  saveNewEvent,
   updateDraftJson,
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
   type EditableEventTemplate,
@@ -309,7 +312,10 @@ const schemaEmptyState = document.querySelector<HTMLElement>("#schema-empty-stat
 const sequenceEmptyState = document.querySelector<HTMLElement>("#sequence-empty-state");
 const {
   search: eventTemplateSearch,
-  saveLatestButton: saveLatestTemplateButton,
+  addNewButton,
+  templateName: eventTemplateName,
+  eventName: eventTemplateEventName,
+  source: eventTemplateSource,
   json: eventTemplateJson,
   pushDestination: eventTemplatePushDestination,
   saveRevisionButton: saveTemplateRevisionButton,
@@ -950,7 +956,16 @@ function openTemplateEditor(template: EditableEventTemplate): void {
   eventLibraryEditorElements.editorTitle?.focus({ preventScroll: true });
 }
 
+function openNewEventEditor(): void {
+  templateEditorReturnTemplateId = undefined;
+  propertyEditorState = createNewEventEditor();
+  setEventLibraryResult(eventLibraryEditorElements, "");
+  renderEventTemplateLibrary();
+  eventTemplateName?.focus({ preventScroll: true });
+}
+
 function closeTemplateEditor(): void {
+  const wasNew = propertyEditorState?.isNew;
   propertyEditorState = undefined;
   if (eventLibraryEditorElements.propertyEditor) {
     eventLibraryEditorElements.propertyEditor.hidden = true;
@@ -961,6 +976,7 @@ function closeTemplateEditor(): void {
   if (templateEditorReturnTemplateId) {
     focusTemplateEditAction(eventLibraryEditorElements, templateEditorReturnTemplateId);
   }
+  if (wasNew) addNewButton?.focus({ preventScroll: true });
   templateEditorReturnTemplateId = undefined;
 }
 
@@ -1911,36 +1927,28 @@ createSchemaButton?.addEventListener("click", () => { const schema = createSchem
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
-saveLatestTemplateButton?.addEventListener("click", () => {
-  const event = liveObserverState.events.at(-1);
-  if (!event) {
-    setEventLibraryResult(eventLibraryEditorElements,
-                          "Capture an event before saving a template.");
-    return;
+addNewButton?.addEventListener("click", openNewEventEditor);
+
+eventTemplateName?.addEventListener("input", () => {
+  if (propertyEditorState?.isNew) {
+    propertyEditorState = setNewEventField(propertyEditorState, "name", eventTemplateName.value);
+    renderEventTemplateLibrary();
   }
-  const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
-  const template = createEditableTemplate({
-    id: event.id,
-    sessionId: event.sessionId ?? `live:${liveObserverState.pageUrl}`,
-    sourceId: event.sourceId,
-    sourceKind: event.sourceKind ?? "page",
-    name: event.name,
-    captureTime: event.captureTime,
-    pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
-    payload: event.payload,
-    rawInput: event.rawInput ?? event,
-    validation: event.validation ?? "Not checked",
-    provenance: event.provenance ?? `captured:${event.sourceId}`,
-  }, {
-    name: event.name,
-    destination: "event.history",
-    sourceName: source?.name ?? event.sourceId,
-  });
-  eventTemplates = [...eventTemplates, template];
-  persistEventTemplateLibrary();
-  setEventLibraryResult(eventLibraryEditorElements,
-                        `Saved ${template.name} to Library.`);
-  renderEventTemplateLibrary();
+});
+eventTemplateEventName?.addEventListener("input", () => {
+  if (propertyEditorState?.isNew) {
+    propertyEditorState = setNewEventField(propertyEditorState, "eventName", eventTemplateEventName.value);
+    renderEventTemplateLibrary();
+  }
+});
+eventTemplateSource?.addEventListener("input", () => {
+  if (propertyEditorState?.isNew) {
+    propertyEditorState = setNewEventField(propertyEditorState, "source", {
+      id: eventTemplateSource.value,
+      name: eventTemplateSource.selectedOptions[0]?.textContent ?? "",
+    });
+    renderEventTemplateLibrary();
+  }
 });
 
 eventTemplateJson?.addEventListener("input", () => {
@@ -1993,6 +2001,15 @@ templateRenameReview?.addEventListener("cancel", (event) => {
 saveTemplateRevisionButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;
   try {
+    if (propertyEditorState.isNew) {
+      const template = saveNewEvent(propertyEditorState, () => `template:library:${crypto.randomUUID()}`);
+      eventTemplates = [...eventTemplates, template];
+      propertyEditorState = openPropertyEditor(template);
+      persistEventTemplateLibrary();
+      setEventLibraryResult(eventLibraryEditorElements, `Saved ${template.name} as version 1.`);
+      renderEventTemplateLibrary();
+      return;
+    }
     propertyEditorState = saveDraftRevision(propertyEditorState);
     eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template);
     persistEventTemplateLibrary();
@@ -2049,13 +2066,26 @@ discardTemplateDraftButton?.addEventListener("click", () => {
 });
 closeTemplateEditorButton?.addEventListener("click", () => {
   if (!propertyEditorState?.dirty) { closeTemplateEditor(); return; }
+  if (propertyEditorState.isNew) {
+    if (saveAndCloseTemplateButton) saveAndCloseTemplateButton.textContent = "Save new event";
+    if (discardAndCloseTemplateButton) discardAndCloseTemplateButton.textContent = "Discard new event";
+  }
   if (closeTemplateEditorSummary) closeTemplateEditorSummary.textContent = `Unsaved changes: ${Object.keys(propertyEditorState.draft as Record<string, unknown>).join(", ")}.`;
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = false;
 });
 keepEditingTemplateButton?.addEventListener("click", () => { if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true; });
 saveAndCloseTemplateButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;
-  try { propertyEditorState = saveDraftRevision(propertyEditorState); eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template); persistEventTemplateLibrary(); closeTemplateEditor(); } catch (error) { setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid."); }
+  try {
+    if (propertyEditorState.isNew) {
+      const template = saveNewEvent(propertyEditorState, () => `template:library:${crypto.randomUUID()}`);
+      eventTemplates = [...eventTemplates, template];
+      persistEventTemplateLibrary();
+      closeTemplateEditor();
+      return;
+    }
+    propertyEditorState = saveDraftRevision(propertyEditorState); eventTemplates = eventTemplates.map((template) => template.id === propertyEditorState?.template.id ? propertyEditorState.template : template); persistEventTemplateLibrary(); closeTemplateEditor();
+  } catch (error) { setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid."); }
 });
 discardAndCloseTemplateButton?.addEventListener("click", () => closeTemplateEditor());
 backToCapturedEventButton?.addEventListener("click", () => {

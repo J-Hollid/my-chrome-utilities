@@ -98,13 +98,14 @@
         <section id="event-template-master" aria-label="Event template library">
           <label for="event-template-search">Search templates</label>
           <input id="event-template-search" type="search" />
-          <button id="save-latest-template" type="button" data-action-variant="secondary">Save latest event to Library</button>
+          <button id="add-new-event" type="button" data-action-variant="secondary">Add new event</button>
           <output id="event-template-count" aria-live="polite"></output>
           <ul id="event-template-list"></ul>
           <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
         </section>
         <section id="event-property-editor" aria-labelledby="event-template-editor-title" hidden>
           <header class="detail-view-header"><button id="close-template-editor" type="button" data-action-variant="quiet">Close editor</button><h4 id="event-template-editor-title" tabindex="-1">Event property editor</h4></header>
+          <section id="event-template-identity-fields" aria-label="Event identity"><label for="event-template-name">Template name</label><input id="event-template-name" type="text" /><label for="event-template-event-name">Event name</label><input id="event-template-event-name" type="text" /><label for="event-template-source">Source</label><select id="event-template-source"><option value="">no source selected</option><option value="event-history">Event history</option></select></section>
           <dl id="event-template-editor-summary" aria-label="Template editor summary"></dl>
           <section id="event-template-revision-history-section" aria-labelledby="event-template-revision-history-heading"><h5 id="event-template-revision-history-heading">Revision history</h5><ul id="event-template-revision-history"></ul></section>
           <section id="event-template-properties-section" aria-label="Properties"><h5>Properties</h5><ul id="event-template-properties" aria-label="Draft properties"></ul></section>
