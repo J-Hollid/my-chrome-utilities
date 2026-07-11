@@ -34,6 +34,13 @@
    "dock_side" #{"left" "right"}
    "draft_state" #{"Invalid" "Unsaved"}
    "edited_command_id" #{"data-layer.end-testing"}
+   "empty_message" #{"No events captured yet"
+                     "No schemas saved yet"
+                     "No sequences saved yet"
+                     "No sessions saved yet"
+                     "No templates match these filters"
+                     "No templates saved yet"
+                     "Source connection failed"}
    "editor_actions" #{"Save and Cancel" "Save, Duplicate, Push"}
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
@@ -55,6 +62,7 @@
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "navigation_key" #{"ArrowDown"}
+   "navigation_level" #{"Data Layer" "workspace"}
    "notification" #{"Pause failed" "Testing started"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
@@ -103,7 +111,7 @@
    "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
-   "recovery_action" #{"Clear filters" "Create schema" "Import session" "Restart observation" "Start observation"}
+   "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Import session" "Open Live" "Restart observation" "Start observation" "Start testing"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
@@ -114,6 +122,7 @@
    "short_template" #{"View"}
    "long_template" #{"International purchase confirmation with campaign"}
    "second_subview" #{"Sequences"}
+   "selected_tab" #{"Data Layer" "Live"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
    "sequence" #{"C-c s"}
@@ -144,9 +153,10 @@
    "validation_state" #{"2 issues" "Not checked" "Valid"}
    "validation_summary" #{"16 valid, 2 issues"}
    "version" #{"1" "2" "3"}
-   "view_name" #{"Hotkeys" "Library" "Live" "Schemas" "Sessions"}
-   "view_state" #{"browsing command bindings" "browsing saved schemas" "browsing saved sessions" "command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sessions" "operator-confirmed push is next" "ready target selected" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor" "valid draft has unsaved changes"}
+   "view_name" #{"Hotkeys" "Library" "Library sequences" "Library templates" "Live" "Schemas" "Sessions"}
+   "view_state" #{"browsing command bindings" "browsing saved schemas" "browsing saved sessions" "command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sequences" "no saved sessions" "no saved templates" "operator-confirmed push is next" "ready target selected" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor" "valid draft has unsaved changes"}
    "visible_count" #{"7"}
+   "width_use" #{"longer readable content lines" "purposeful list and detail panes"}
    "workspace_name" #{"Data Layer" "Hotkeys"}})
 
 (defn validate-example! [example keys]
