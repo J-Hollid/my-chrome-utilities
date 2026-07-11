@@ -33,7 +33,8 @@ import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplat
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
-import { findEventLibraryEditorElements, focusTemplateEditAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
+import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
+import { beginTemplateRename, renameValidation, saveTemplateRename, } from "./data-layer-event-template-renaming.js";
 import { closePushReview, handlePushReviewKeydown, openPushReview, } from "./data-layer-workflow-focus-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
 import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
@@ -102,6 +103,19 @@ const closeTemplateEditorSummary = document.querySelector("#close-template-edito
 const keepEditingTemplateButton = document.querySelector("#keep-editing-template");
 const saveAndCloseTemplateButton = document.querySelector("#save-and-close-template");
 const discardAndCloseTemplateButton = document.querySelector("#discard-and-close-template");
+const templateRenameDialog = document.querySelector("#event-template-rename");
+const templateRenameHeading = document.querySelector("#event-template-rename-heading");
+const templateRenameName = document.querySelector("#event-template-rename-name");
+const templateRenameEventName = document.querySelector("#event-template-rename-event-name");
+const templateRenameNameError = document.querySelector("#event-template-rename-name-error");
+const templateRenameEventNameError = document.querySelector("#event-template-rename-event-name-error");
+const saveTemplateNamesButton = document.querySelector("#save-template-names");
+const cancelTemplateRenameButton = document.querySelector("#cancel-template-rename");
+const templateRenameReview = document.querySelector("#event-template-rename-review");
+const templateRenameReviewHeading = document.querySelector("#event-template-rename-review-heading");
+const templateRenameReviewSummary = document.querySelector("#event-template-rename-review-summary");
+const confirmTemplateRenameButton = document.querySelector("#confirm-template-rename");
+const cancelTemplateRenameReviewButton = document.querySelector("#cancel-template-rename-review");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
@@ -133,6 +147,7 @@ let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
 let pendingPushDraftReview;
+let pendingTemplateRename;
 let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 let schemas = [];
@@ -547,6 +562,7 @@ function renderEventTemplateLibrary() {
     renderPanelEmptyState(templateEmptyStateElements, empty);
     renderEventLibraryEditor(eventLibraryEditorElements, templates, propertyEditorState, {
         edit: openTemplateEditor,
+        rename: openTemplateRename,
         duplicate: (template) => {
             const copy = saveAsTemplateCopy(openPropertyEditor(template), `${template.name} copy`);
             eventTemplates = [...eventTemplates, copy];
@@ -633,6 +649,104 @@ function closeTemplateEditor() {
         focusTemplateEditAction(eventLibraryEditorElements, templateEditorReturnTemplateId);
     }
     templateEditorReturnTemplateId = undefined;
+}
+function hideDialog(dialog) {
+    if (dialog?.open)
+        dialog.close();
+    if (dialog)
+        dialog.hidden = true;
+}
+function showDialog(dialog, focus) {
+    if (!dialog)
+        return;
+    dialog.hidden = false;
+    if (!dialog.open)
+        dialog.showModal();
+    focus?.focus({ preventScroll: true });
+}
+function renderTemplateRenameValidation() {
+    if (!pendingTemplateRename)
+        return false;
+    const errors = renameValidation(pendingTemplateRename.draft);
+    const fields = [
+        [templateRenameName, templateRenameNameError, errors.templateName],
+        [templateRenameEventName, templateRenameEventNameError, errors.eventName],
+    ];
+    for (const [input, message, error] of fields) {
+        if (!input)
+            continue;
+        input.setCustomValidity(error ?? "");
+        input.setAttribute("aria-invalid", String(Boolean(error)));
+        if (message)
+            message.textContent = error ?? "";
+    }
+    const firstError = errors.templateName ?? errors.eventName;
+    if (saveTemplateNamesButton) {
+        saveTemplateNamesButton.disabled = Boolean(firstError);
+        if (firstError)
+            saveTemplateNamesButton.setAttribute("aria-describedby", errors.templateName ? "event-template-rename-name-error" : "event-template-rename-event-name-error");
+        else
+            saveTemplateNamesButton.removeAttribute("aria-describedby");
+    }
+    return !firstError;
+}
+function openTemplateRename(template) {
+    pendingTemplateRename = {
+        editor: openPropertyEditor(template),
+        draft: beginTemplateRename(template),
+        templateId: template.id,
+    };
+    if (templateRenameName)
+        templateRenameName.value = pendingTemplateRename.draft.templateName;
+    if (templateRenameEventName)
+        templateRenameEventName.value = pendingTemplateRename.draft.eventName;
+    renderTemplateRenameValidation();
+    showDialog(templateRenameDialog, templateRenameName ?? templateRenameHeading);
+}
+function closeTemplateRename() {
+    hideDialog(templateRenameDialog);
+    const templateId = pendingTemplateRename?.templateId;
+    pendingTemplateRename = undefined;
+    if (templateId)
+        focusTemplateRenameAction(eventLibraryEditorElements, templateId);
+}
+function commitTemplateRename() {
+    if (!pendingTemplateRename)
+        return;
+    const renamed = saveTemplateRename(pendingTemplateRename.editor, pendingTemplateRename.draft);
+    eventTemplates = eventTemplates.map((template) => template.id === renamed.template.id ? renamed.template : template);
+    if (propertyEditorState?.template.id === renamed.template.id) {
+        propertyEditorState = renamed;
+    }
+    persistEventTemplateLibrary();
+    hideDialog(templateRenameDialog);
+    hideDialog(templateRenameReview);
+    const templateId = renamed.template.id;
+    pendingTemplateRename = undefined;
+    renderEventTemplateLibrary();
+    focusTemplateRenameAction(eventLibraryEditorElements, templateId);
+}
+function requestTemplateRenameSave() {
+    if (!pendingTemplateRename || !renderTemplateRenameValidation())
+        return;
+    const { editor, draft } = pendingTemplateRename;
+    if (draft.eventName.trim() === editor.template.eventName) {
+        commitTemplateRename();
+        return;
+    }
+    hideDialog(templateRenameDialog);
+    if (templateRenameReviewSummary) {
+        templateRenameReviewSummary.textContent =
+            `${editor.template.eventName} changes to ${draft.eventName.trim()}. Future pushes use ${draft.eventName.trim()}. The originating captured ${editor.template.eventName} event remains unchanged.`;
+    }
+    if (confirmTemplateRenameButton) {
+        confirmTemplateRenameButton.textContent = `Save names and use ${draft.eventName.trim()}`;
+    }
+    showDialog(templateRenameReview, templateRenameReviewHeading);
+}
+function returnToTemplateRename() {
+    hideDialog(templateRenameReview);
+    showDialog(templateRenameDialog, saveTemplateNamesButton);
 }
 async function pushPayloadToSelectedTargetPage(request) {
     if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
@@ -1355,6 +1469,36 @@ eventTemplatePushDestination?.addEventListener("input", () => {
     propertyEditorState = setPushDestination(propertyEditorState, eventTemplatePushDestination.value);
     setPushDestinationValidation(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
+});
+templateRenameName?.addEventListener("input", () => {
+    if (!pendingTemplateRename)
+        return;
+    pendingTemplateRename.draft = {
+        ...pendingTemplateRename.draft,
+        templateName: templateRenameName.value,
+    };
+    renderTemplateRenameValidation();
+});
+templateRenameEventName?.addEventListener("input", () => {
+    if (!pendingTemplateRename)
+        return;
+    pendingTemplateRename.draft = {
+        ...pendingTemplateRename.draft,
+        eventName: templateRenameEventName.value,
+    };
+    renderTemplateRenameValidation();
+});
+saveTemplateNamesButton?.addEventListener("click", requestTemplateRenameSave);
+cancelTemplateRenameButton?.addEventListener("click", closeTemplateRename);
+templateRenameDialog?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeTemplateRename();
+});
+confirmTemplateRenameButton?.addEventListener("click", commitTemplateRename);
+cancelTemplateRenameReviewButton?.addEventListener("click", returnToTemplateRename);
+templateRenameReview?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    returnToTemplateRename();
 });
 saveTemplateRevisionButton?.addEventListener("click", () => {
     if (!propertyEditorState)

@@ -36,7 +36,12 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name"}
+   "changed_field" #{"Template name" "Event name"}
+   "new_value" #{"Checkout purchase" "checkout_completed"}
+   "expected_template_name" #{"Checkout purchase" "Purchase confirmation"}
+   "expected_event_name" #{"purchase" "checkout_completed"}
+   "invalid_field" #{"Template name" "Event name"}
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
@@ -71,7 +76,7 @@
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
    "event_count" #{"0" "7" "12" "18" "42"}
-   "event_name" #{"banner" "checkout" "offer" "page_view" "pageview" "purchase"}
+   "event_name" #{"banner" "checkout" "offer" "page_view" "pageview" "purchase" "whitespace only"}
    "external_effect" #{"clipboard contains payload JSON" "event validation state changes" "persisted Library template exists"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
@@ -211,7 +216,7 @@
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}
    "target_size" #{"44 CSS px"}
-   "template_name" #{"Purchase confirmation" "View"}
+   "template_name" #{"Purchase confirmation" "View" "whitespace only"}
    "text_zoom" #{"100 percent" "200 percent"}
    "theme_name" #{"dark" "light"}
    "total_count" #{"42"}
