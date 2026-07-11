@@ -128,10 +128,12 @@ export function renderLiveObserverState(
       }),
     );
   }
-  elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit) => {
+  elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit, index) => {
     const group = document.createElement("li");
     group.className = "pathname-visit";
     const heading = visitHeader(visit.pathname, visit.events);
+    heading.id = `pathname-visit-heading-${index}`;
+    group.setAttribute("aria-labelledby", heading.id);
     const rows = document.createElement("ul");
     rows.replaceChildren(...visit.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
     group.append(heading, rows);

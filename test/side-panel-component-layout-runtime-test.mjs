@@ -285,16 +285,26 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
 })`;
 
 const pathnameHeaderRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveObserverState }) => {
-  const feed = document.createElement("ul"); const list = document.createElement("section"); list.append(feed); document.body.append(list);
+  const feed = document.createElement("ul"); const list = document.createElement("section"); list.style.cssText = "width:100%;overflow-x:hidden"; list.append(feed); document.body.append(list);
   const events = [
-    { id:"products-1", name:"pageview", sourceId:"event-history", captureTime:"10:01:00", pageUrl:"https://example.test/products", payload:{} },
-    { id:"checkout-1", name:"pageview", sourceId:"event-history", captureTime:"10:03:00", pageUrl:"https://example.test/checkout", payload:{} },
-    { id:"products-2", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products", payload:{} },
+    { id:"event-1", name:"pageview", sourceId:"event-history", captureTime:"10:00:00", pageUrl:"https://example.test/products", payload:{ page_name:"Products", page_type:"listing", page_category:"catalog" } },
+    { id:"event-2", name:"pageview", sourceId:"event-history", captureTime:"10:01:00", pageUrl:"https://example.test/products", payload:{ page_name:"Products", page_type:"detail", page_category:"product" } },
+    { id:"event-3", name:"pageview", sourceId:"event-history", captureTime:"10:02:00", pageUrl:"https://example.test/checkout", payload:{ page_name:"Checkout", page_type:"form", page_category:"conversion" } },
+    { id:"event-4", name:"pageview", sourceId:"event-history", captureTime:"10:03:00", pageUrl:"https://example.test/checkout", payload:{ page_name:"", page_type:"detail", page_category:"product" } },
+    { id:"event-5", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products", payload:{} },
   ];
   renderLiveObserverState({ livePanel:null, eventFeed:feed, eventList:list, eventInspector:null, backToEventsButton:null, sourceStatuses:null }, { sources:[], events, listVisible:true }, () => {});
-  const headers = [...feed.querySelectorAll(".pathname-visit-heading")].map((header) => ({ text:header.textContent.trim(), name:header.getAttribute("aria-label") }));
+  const headers = [...feed.querySelectorAll(".pathname-visit-heading")].map((header) => ({ text:header.textContent.trim(), name:header.getAttribute("aria-label"), associated:header.parentElement.getAttribute("aria-labelledby") === header.id }));
   const rows = [...feed.querySelectorAll(".pathname-visit button")].map((button) => button.textContent);
-  list.remove(); return { headers, rows };
+  renderLiveObserverState({ livePanel:null, eventFeed:feed, eventList:list, eventInspector:null, backToEventsButton:null, sourceStatuses:null }, { sources:[], events:[{ id:"long", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products/field-notebook", payload:{} }], listVisible:true }, () => {});
+  const longHeader = feed.querySelector(".pathname-visit-heading"); const headerRect = longHeader.getBoundingClientRect(); const listRect = list.getBoundingClientRect();
+  const longResult = {
+    bounded:headerRect.left >= listRect.left - 1 && headerRect.right <= listRect.right + 1,
+    unclipped:[...longHeader.children].every((field) => field.scrollWidth <= field.clientWidth + 1),
+    pathnameCount:(longHeader.textContent.match(/\\/products\\/field-notebook/g) ?? []).length,
+    documentFits:document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  };
+  list.remove(); return { headers, rows, longResult };
 })`;
 
 const workflowFocusRuntime = `Promise.all([
@@ -394,10 +404,18 @@ try {
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
-          { text:"/productsLatest 10:04:00Events 1", name:"/products, Latest 10:04:00, Events 1" },
-          { text:"/checkoutLatest 10:03:00Events 1", name:"/checkout, Latest 10:03:00, Events 1" },
-          { text:"/productsLatest 10:01:00Events 1", name:"/products, Latest 10:01:00, Events 1" },
-        ], rows:["pageview · 10:04:00 · event-history · Not checked", "pageview · 10:03:00 · event-history · Not checked", "pageview · 10:01:00 · event-history · Not checked"],
+          { text:"/productsLatest 10:04:00Events 1", name:"/products, Latest 10:04:00, Events 1", associated:true },
+          { text:"/checkoutLatest 10:03:00Events 2", name:"/checkout, Latest 10:03:00, Events 2", associated:true },
+          { text:"/productsLatest 10:01:00Events 2", name:"/products, Latest 10:01:00, Events 2", associated:true },
+        ],
+        rows:[
+          "pageview · 10:04:00 · event-history · Not checked",
+          "pageview · 10:03:00 · event-history · Not checked · Page Type detail, Page Category product",
+          "pageview · 10:02:00 · event-history · Not checked · Page Name Checkout, Page Type form",
+          "pageview · 10:01:00 · event-history · Not checked · Page Name Products, Page Type detail",
+          "pageview · 10:00:00 · event-history · Not checked · Page Name Products, Page Type listing",
+        ],
+        longResult:{ bounded:true, unclipped:true, pathnameCount:1, documentFits:true },
       }, "rendered pathname headers omitted required visit metadata");
       assert.deepEqual(await evaluate(socket, workflowFocusRuntime), {
         tabResult: { workspaceRight:true, workspaceLeft:true, dataLayerEnd:true, dataLayerHome:true, singleDataLayerTabStop:true },
