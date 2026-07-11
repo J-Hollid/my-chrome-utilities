@@ -8,6 +8,7 @@ import {
   pushDestinationPathError,
   pushTemplateToSelectedTarget,
 } from "../dist/data-layer-selected-target-push.js";
+import { pushPayloadInPage } from "../dist/data-layer-selected-target-push-page.js";
 
 const target = {
   id: "tab:1:window:1",
@@ -48,4 +49,16 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(result.success, true);
   assert.equal(editor.draft.sample, sample);
   assert.equal(editor.draft.nested.parity, sample % 2);
+
+  const selectedPage = { dataLayer: { events: [] } };
+  const pagePayload = { sample };
+  assert.deepEqual(
+    pushPayloadInPage("dataLayer.events", "purchase", pagePayload, selectedPage),
+    { success: true },
+  );
+  assert.deepEqual(selectedPage.dataLayer.events, [["purchase", pagePayload]]);
+  assert.deepEqual(
+    pushPayloadInPage("dataLayer.missing", "purchase", pagePayload, selectedPage),
+    { success: false, result: "Destination dataLayer.missing is unavailable." },
+  );
 }
