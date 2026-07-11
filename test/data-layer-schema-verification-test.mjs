@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, createSchema, duplicateSchema, exportSchema, filterByValidation, importSchema, revalidateExplicitly, reviseSchema, searchSchemas, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, createSchema, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, searchSchemas, serializeSchemaLibrary, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
 const valid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { transaction_id: "test-123", revenue: 49.95 }, rawInput: [] }, [schema]);
@@ -12,3 +12,11 @@ assert.equal(filterByValidation([{ validation: "Valid" }, { validation: "2 issue
 assert.equal(searchSchemas([schema], "history").length, 1); assert.deepEqual(importSchema(exportSchema(schema)), schema);
 const revised = reviseSchema(schema, { type: "object", required: ["revenue"] }); assert.equal(revised.version, 3); assert.equal(revalidateExplicitly({ sourceId: "history", eventName: "purchase", payload: {}, rawInput: [] }, [schema, revised], 2).schema.version, 2);
 assert.equal(duplicateSchema(schema, "Purchase copy").name, "Purchase copy");
+const generic = assignSchema(createSchema("Generic page view", 4, { type:"object" }), { id:"generic", name:"generic-page-view", sourceId:"history", eventName:"page_view", target:"payload", priority:10, enabled:true });
+const order = assignSchema(createSchema("Order confirmation", 2, { type:"object" }), { id:"order", name:"order-confirmation", sourceId:"history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", enabled:true });
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation?order=42#done", [generic, order]).schema.name, "Order confirmation");
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://uk.shop.example/products", [assignSchema(generic, { id:"wildcard", name:"wildcard", sourceId:"history", eventName:"page_view", target:"payload", priority:20, domainCondition:"*.shop.example" })]).assignment.name, "wildcard");
+const tied = assignSchema(createSchema("Tied", 1, {}), { id:"tied", name:"tied", sourceId:"history", eventName:"page_view", target:"payload", priority:100 });
+assert.match(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation", [order, tied]).error, /Assignment error/);
+assert.equal(validateEvent({ sourceId:"history", eventName:"page_view", payload:{}, rawInput:[] }, [order, tied], "https://shop.example/order-confirmation").state, "Assignment error");
+assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([generic, order])), [generic, order]);
