@@ -25,3 +25,9 @@ By coder.
 
 ## Failure Conditions
 - If the expected git layout or assigned worktree is missing, stop and report instead of silently working in the wrong place.
+
+## Completion Classification
+- Before declaring a task complete, classify it as functional or explicitly non-functional using the shared engineering rules.
+- For a functional task, inspect the task lineage and changed-file set. Completion requires relevant production source or delivery assets in addition to tests and acceptance evidence.
+- If the functional delivery gate fails, the task is incomplete. Do not describe it as verified, reviewed, architecturally complete, or ready for terminal merge.
+- Prompt, workflow, tooling, documentation, and test-only tasks may complete without production code only when their inbound task explicitly has that scope.
