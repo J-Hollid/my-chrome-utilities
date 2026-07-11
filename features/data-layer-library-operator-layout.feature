@@ -39,8 +39,8 @@ Feature: Data layer library operator layout
   Scenario Outline: Data layer library operator layout 003
     Given event template <template_name> is selected
     When its editor is displayed
-    Then template identity, source adapter, destination, schema, version, tags, and provenance appear before the payload editor
-    And the payload can be edited through a structured property editor or raw JSON view
+    Then a named detail pane shows template identity, version, draft state, and provenance before editing sections
+    And Properties appears first with JSON and execution settings available through separate progressive sections
     And changing editor view preserves the current draft
     And persistent actions <editor_actions> remain reachable while the payload scrolls
 

@@ -12,7 +12,9 @@ Feature: Data layer event property editor
   # Data layer event property editor 001
   Scenario Outline: Data layer event property editor 001
     When the property editor is displayed
-    Then Properties, JSON, and Validation views edit the same draft
+    Then Properties is selected before JSON, Validation, and Execution settings
+    And JSON and Execution settings are separate disclosures or tabs editing the same draft
+    And JSON is collapsed by default when Properties provides a sufficient summary
     And the Properties view preserves string, number, boolean, null, object, and array value types
     And switching views does not save or discard draft changes
 
@@ -72,8 +74,8 @@ Feature: Data layer event property editor
   # Data layer event property editor 006
   Scenario Outline: Data layer event property editor 006
     Given the draft has unsaved changes
-    When the user leaves the property editor
-    Then the user can keep editing, discard the draft, or save it
+    When the user activates Close editor
+    Then the user can Keep editing, Save revision, or Discard changes
     And unsaved changes are not discarded without an explicit choice
 
     Examples:
