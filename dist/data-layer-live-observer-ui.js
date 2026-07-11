@@ -3,8 +3,13 @@ import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js"
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
-        sessionSummary: root.querySelector("#live-session-summary"),
+        sessionStatus: root.querySelector("#live-session-status"),
+        targetPage: root.querySelector("#live-target-page"),
         pageUrl: root.querySelector("#live-page-url"),
+        observerPath: root.querySelector("#live-observer-path"),
+        capturedEventCount: root.querySelector("#live-captured-event-count"),
+        connectedSourceCount: root.querySelector("#live-connected-source-count"),
+        copyPageUrlButton: root.querySelector("#copy-live-page-url"),
         sessionMessage: root.querySelector("#live-session-message"),
         sourceStatuses: root.querySelector("#live-source-statuses"),
         eventFeed: root.querySelector("#live-event-feed"),
@@ -43,11 +48,6 @@ function eventRow(event, selected, openEvent) {
     return item;
 }
 export function renderLiveObserverState(elements, state, openEvent) {
-    if (elements.sessionSummary) {
-        elements.sessionSummary.textContent = `${state.status}: ${state.events.length} events, ${state.sources.length} sources`;
-    }
-    if (elements.pageUrl)
-        elements.pageUrl.textContent = state.pageUrl;
     if (elements.sourceStatuses) {
         elements.sourceStatuses.replaceChildren(...state.sources.map((source) => {
             const item = document.createElement("li");
@@ -64,6 +64,24 @@ export function renderLiveObserverState(elements, state, openEvent) {
     if (elements.backToEventsButton) {
         elements.backToEventsButton.hidden = state.listVisible;
     }
+}
+export function renderLiveSessionSummary(elements, summary) {
+    if (elements.sessionStatus) {
+        elements.sessionStatus.textContent = summary.statusLabel;
+        elements.sessionStatus.dataset.status = summary.statusLabel.toLowerCase();
+    }
+    if (elements.targetPage)
+        elements.targetPage.textContent = summary.targetPage;
+    if (elements.pageUrl)
+        elements.pageUrl.textContent = summary.pageUrl;
+    if (elements.observerPath)
+        elements.observerPath.textContent = summary.observerPath;
+    if (elements.capturedEventCount)
+        elements.capturedEventCount.textContent = String(summary.capturedEventCount);
+    if (elements.connectedSourceCount)
+        elements.connectedSourceCount.textContent = String(summary.connectedSourceCount);
+    if (elements.copyPageUrlButton)
+        elements.copyPageUrlButton.disabled = summary.pageUrl.length === 0;
 }
 export function renderLiveInspector(elements, event, actionHandlers) {
     if (!elements.eventInspector)
