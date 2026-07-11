@@ -8,7 +8,7 @@ Feature: Data layer live operator layout
   # Data layer live operator layout 001
   Scenario Outline: Data layer live operator layout 001
     Given the session has state <session_state>, <event_count> captured events, and <source_count> configured sources
-    When the Live view header is displayed
+    When session header content is rendered
     Then it shows state <session_state>, <event_count> events, and <source_count> sources before the event feed
     And primary actions <primary_actions> are visible without opening another region
     And a Stop button is absent from the Live session actions
@@ -49,21 +49,22 @@ Feature: Data layer live operator layout
 
   # Data layer live operator layout 004
   Scenario Outline: Data layer live operator layout 004
-    Given captured event <event_name> came from source <source_name>
+    Given captured event <event_name> came from source <source_name> at <capture_time> with validation <validation_state> in pathname visit <pathname>
+    And configured summaries selected <visible_summaries>
     When the event is shown in the feed
     Then <event_name> is the row's primary label
-    And the visible event button contains only <event_name> and <source_name>
-    And capture time, destination, validation, and payload are available from the inspector rather than repeated in the visible event button
-    And the event button's accessible name identifies <event_name> and <source_name> without serializing payload data
+    And the visible event button shows <capture_time>, <source_name>, <validation_state>, and <visible_summaries>
+    And complete page URL, destination, provenance, and payload remain available from the inspector
+    And the event button's accessible name identifies <event_name>, <capture_time>, <source_name>, <pathname>, <validation_state>, and <visible_summaries> without serializing other payload data
 
     Examples:
-      | project_name         | event_name | source_name   |
-      | my-chrome-utilities | purchase   | Event history |
-      | my-chrome-utilities | page_view  | Adobe beacons |
+      | project_name         | event_name | source_name   | capture_time | validation_state | pathname  | visible_summaries                         |
+      | my-chrome-utilities | purchase   | Event history | 10:03:00     | Valid            | /checkout | Transaction id order-42, Revenue 49.95    |
+      | my-chrome-utilities | page_view  | Adobe beacons | 10:04:00     | Not checked      | /products | Page name Products, Page type listing     |
 
   # Data layer live operator layout 005
   Scenario Outline: Data layer live operator layout 005
-    Given captured event <event_name> is selected
+    Given the inspector selection points to captured event <event_name>
     When its inspector is displayed
     Then an inspector header identifies <event_name> and its source before detailed content
     And the corresponding event row exposes a selected state
@@ -95,7 +96,7 @@ Feature: Data layer live operator layout
   # Data layer live operator layout 007
   Scenario Outline: Data layer live operator layout 007
     Given events <oldest_event>, <middle_event>, and <latest_event> were captured in that order
-    When the Live event feed is displayed
+    When reverse chronology is rendered
     Then visible event rows are ordered <latest_event>, <middle_event>, and <oldest_event>
     And equal capture times are ordered by reverse capture sequence without dropping an event
 
@@ -105,10 +106,10 @@ Feature: Data layer live operator layout
 
   # Data layer live operator layout 008
   Scenario Outline: Data layer live operator layout 008
-    Given event <selected_event> is selected in the inspector
-    When event <new_event> is captured
+    Given the inspector is open for <selected_event>
+    When the source appends <new_event>
     Then <new_event> is prepended to the feed
-    And event <selected_event> remains selected in the inspector
+    And the inspector continues to show <selected_event>
     And keyboard focus and the user's feed scroll position remain unchanged
     And when the feed is scrolled away from the top a new-events control makes <new_event> reachable without jumping the feed
 

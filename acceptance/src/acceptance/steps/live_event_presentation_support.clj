@@ -3,7 +3,7 @@
 
 (def canonical-example-values
   {"capture_phase" #{"existing" "live push"}
-   "capture_time" #{"2026-07-10T15:04:44.850Z" "2026-07-10T15:04:46.488Z"}
+   "capture_time" #{"10:03:00" "10:04:00" "2026-07-10T15:04:44.850Z" "2026-07-10T15:04:46.488Z"}
    "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
    "event_names" #{"pageview, offer_view, click"}
    "existing_event" #{"pageview"}
@@ -24,7 +24,9 @@
    "second_request" #{"manual restart"}
    "session_action" #{"Stop capture" "End testing"}
    "source_name" #{"Adobe beacons" "Event history"}
-   "validation_state" #{"Not checked"}})
+   "pathname" #{"/checkout" "/products"}
+   "visible_summaries" #{"Transaction id order-42, Revenue 49.95" "Page name Products, Page type listing"}
+   "validation_state" #{"Not checked" "Valid"}})
 
 (defn validate-example! [example capture-keys]
   (support/validate-example-domain!

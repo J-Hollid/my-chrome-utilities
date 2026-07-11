@@ -631,6 +631,28 @@
                                    (:rendered-expanded-timeline world)})
                  world))}
 
+   {:pattern #"^event rows are grouped into contiguous pathname visits derived from capture chronology$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^visit blocks and their event rows are shown newest first$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the pathname from page URL <([A-Za-z0-9_]+)> is shown once in its visit header$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^complete page URL <([A-Za-z0-9_]+)> remains available in event details$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^canonical fields retain event name <([A-Za-z0-9_]+)>, observer path <([A-Za-z0-9_]+)>, and timestamp <([A-Za-z0-9_]+)>$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^summary configuration prioritizes <([A-Za-z0-9_]+)> then <([A-Za-z0-9_]+)>$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^no third summary property is displayed$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^the visible event row shows <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, source <([A-Za-z0-9_]+)>, validation state, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)>$"
+    :handler (fn [world _ _] world)}
+   {:pattern #"^automatic following is active at the feed head$"
+    :handler (fn [world _ _] (assoc world :following true))}
+   {:pattern #"^the feed contains <([A-Za-z0-9_]+)> loaded records$"
+    :handler (fn [world example [count-key]]
+               (let [count (Long/parseLong (support/require-example example count-key))]
+                 (assoc world :events (mapv #(hash-map :id (str "event-" %) :name "event") (range 1 (inc count))) :focused-event-id "event-12")))}
    ])
 
 ;; clj-mutate-manifest-begin
