@@ -641,6 +641,9 @@ function openTemplateEditor(template) {
 }
 function closeTemplateEditor() {
     propertyEditorState = undefined;
+    if (eventLibraryEditorElements.propertyEditor) {
+        eventLibraryEditorElements.propertyEditor.hidden = true;
+    }
     if (closeTemplateEditorConfirmation)
         closeTemplateEditorConfirmation.hidden = true;
     setEventLibraryResult(eventLibraryEditorElements, "");

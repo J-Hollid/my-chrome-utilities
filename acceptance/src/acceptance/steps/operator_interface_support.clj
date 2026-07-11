@@ -38,6 +38,8 @@
    "disabled_action" #{"Start testing"}
    "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready" "Enter a template name" "Enter an event name"}
    "changed_field" #{"Template name" "Event name"}
+   "closing_choice" #{"Save revision" "Discard changes"}
+   "expected_version" #{"3" "4"}
    "new_value" #{"Checkout purchase" "checkout_completed"}
    "expected_template_name" #{"Checkout purchase" "Purchase confirmation"}
    "expected_event_name" #{"purchase" "checkout_completed"}
