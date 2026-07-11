@@ -10,6 +10,7 @@
    "features/data-layer-live-session-end-status-runtime.feature"
    "features/data-layer-target-path-status-runtime.feature"
    "features/data-layer-live-guided-workflow.feature"
+   "features/data-layer-captured-event-template-workflow.feature"
    "features/data-layer-live-inspector-actions.feature"
    "features/data-layer-live-inspector-layout.feature"
    "features/data-layer-live-inspector-navigation.feature"

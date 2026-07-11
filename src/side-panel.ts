@@ -264,6 +264,8 @@ const {
   saveCopyButton: saveTemplateCopyButton,
   pushDraftButton: pushTemplateDraftButton,
   discardDraftButton: discardTemplateDraftButton,
+  closeEditorButton: closeTemplateEditorButton,
+  backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
@@ -296,6 +298,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
@@ -698,9 +701,16 @@ function openLiveInspector(eventId: string): void {
       await navigator.clipboard.writeText(text);
     },
     storeTemplate: (template) => {
-      eventTemplates = [...eventTemplates, template];
+      const existing = eventTemplates.find(({ originatingEventId }) => originatingEventId === template.originatingEventId);
+      eventTemplates = existing
+        ? eventTemplates.map((candidate) => candidate.id === existing.id ? { ...template, id: existing.id } : candidate)
+        : [...eventTemplates, template];
       persistEventTemplateLibrary();
       renderEventTemplateLibrary();
+    },
+    onTemplateSaved: (template) => {
+      savedInspectorTemplateId = template.id;
+      appendOpenInLibraryAction(event.id, template.name);
     },
     validationState: (selected) => validateEvent({
         sourceId: selected.sourceId,
@@ -716,6 +726,21 @@ function openLiveInspector(eventId: string): void {
     },
   }));
   renderLiveObserver();
+}
+
+function appendOpenInLibraryAction(eventId: string, templateName: string): void {
+  const action = document.createElement("button");
+  action.type = "button";
+  action.textContent = "Open in Library";
+  action.addEventListener("click", () => {
+    const template = eventTemplates.find(({ id }) => id === savedInspectorTemplateId)
+      ?? eventTemplates.find(({ originatingEventId }) => originatingEventId === eventId);
+    if (!template) return;
+    showDataLayerView("Library");
+    openTemplateEditor(template);
+  });
+  liveObserverElements.eventInspector?.append(action);
+  setLiveSessionMessage(`Saved ${templateName} to Library. Open in Library is available.`);
 }
 
 function setLiveSessionMessage(message: string): void {
@@ -1721,6 +1746,16 @@ discardTemplateDraftButton?.addEventListener("click", () => {
   propertyEditorState = discardDraft(propertyEditorState);
   setEventLibraryResult(eventLibraryEditorElements, "Draft discarded.");
   renderEventTemplateLibrary();
+});
+closeTemplateEditorButton?.addEventListener("click", () => {
+  propertyEditorState = undefined;
+  renderEventTemplateLibrary();
+});
+backToCapturedEventButton?.addEventListener("click", () => {
+  const eventId = propertyEditorState?.template.originatingEventId;
+  if (!eventId) return;
+  showDataLayerView("Live");
+  openLiveInspector(eventId);
 });
 
 importSavedSessionButton?.addEventListener("click", () => savedSessionFileInput?.click());
