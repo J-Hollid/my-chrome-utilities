@@ -1044,9 +1044,16 @@ function renderSequences(): void {
   });
 }
 
+function resetTemplateEditorDisclosures(): void {
+  document.querySelectorAll<HTMLDetailsElement>("#event-property-editor details").forEach((disclosure) => {
+    disclosure.open = false;
+  });
+}
+
 function openTemplateEditor(template: EditableEventTemplate): void {
   templateEditorReturnTemplateId = template.id;
   propertyEditorState = openPropertyEditor(template);
+  resetTemplateEditorDisclosures();
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
   eventLibraryEditorElements.editorTitle?.focus({ preventScroll: true });
@@ -1055,6 +1062,7 @@ function openTemplateEditor(template: EditableEventTemplate): void {
 function openNewEventEditor(): void {
   templateEditorReturnTemplateId = undefined;
   propertyEditorState = createNewEventEditor();
+  resetTemplateEditorDisclosures();
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
   eventTemplateName?.focus({ preventScroll: true });
@@ -1063,14 +1071,11 @@ function openNewEventEditor(): void {
 function closeTemplateEditor(): void {
   const wasNew = propertyEditorState?.isNew;
   propertyEditorState = undefined;
+  resetTemplateEditorDisclosures();
   if (eventLibraryEditorElements.propertyEditor) {
     eventLibraryEditorElements.propertyEditor.hidden = true;
   }
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
-  for (const selector of ["#event-template-revision-history-section", "#event-template-properties-section", "#event-template-json-section", "#event-template-execution-settings"]) {
-    const disclosure = document.querySelector<HTMLDetailsElement>(selector);
-    if (disclosure) disclosure.open = false;
-  }
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
   if (templateEditorReturnTemplateId) {

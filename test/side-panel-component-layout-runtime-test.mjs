@@ -254,14 +254,14 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
   const create = (name, eventName, destination, payload) => {
     q("#add-new-event").click();
-    q("#event-template-json-section summary").click();
-    q("#event-template-execution-settings summary").click();
     const initial = {
       editor: visible(q("#event-property-editor")),
       fields: ["#event-template-name", "#event-template-event-name", "#event-template-source", "#push-destination-path", "#event-template-json"].map((selector) => ({ selector, value:q(selector).value, visible:visible(q(selector)) })),
       saveDisabled:q("#save-template-revision").disabled,
       focused:document.activeElement === q("#event-template-name"),
     };
+    q("#event-template-json-section summary").click();
+    q("#event-template-execution-settings summary").click();
     setValue("#event-template-name", name);
     setValue("#event-template-event-name", eventName);
     const source = q("#event-template-source");
@@ -274,24 +274,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     return { initial, saveEnabled };
   };
 
-  const purchase = create("Purchase confirmation", "purchase", "event.history", { transaction_id:"purchase-1" });
-  setValue("#event-template-name", "Completed checkout");
-  setValue("#event-template-event-name", "checkout_completed");
-  q("#event-template-execution-settings summary").click();
-  setValue("#push-destination-path", "queue.history");
-  q("#event-template-json-section summary").click();
-  setValue("#event-template-json", '{"transaction_id":"purchase-2"}');
-  q("#save-template-revision").click();
-  const revisionReview = {
-    ...dialogState(q("#revision-change-review")),
-    confirm:q("#confirm-revision-change").textContent,
-    identity:q("#revision-change-review").textContent.includes("Purchase confirmation → Completed checkout") && q("#revision-change-review").textContent.includes("purchase → checkout_completed"),
-    destination:q("#revision-change-review").textContent.includes("event.history → queue.history"),
-    payload:q("#revision-change-review").textContent.includes("transaction_id") && q("#revision-change-review").textContent.includes("purchase-2"),
-  };
-  q("#revision-change-review").dispatchEvent(new Event("cancel", { cancelable:true }));
-  const revisionCancel = { hidden:q("#revision-change-review").hidden, draft:[q("#event-template-name").value, q("#event-template-event-name").value, q("#push-destination-path").value], focused:document.activeElement === q("#save-template-revision") };
-  q("#discard-template-draft").click();
+  const purchase = create("Purchase confirmation", "purchase", "event.history", { ecommerce:{ value:18 }, items:[{ quantity:1 }], legacy:{ debug:true } });
   const close = q("#close-template-editor");
   close.click();
   const closeResult = {
@@ -307,7 +290,38 @@ const libraryActionsRecoveryRuntime = `(async () => {
     editor:visible(q("#event-property-editor")),
     fields:[q("#event-template-name").disabled, q("#event-template-event-name").disabled],
     values:[q("#event-template-name").value, q("#event-template-event-name").value],
+    disclosuresClosed:["#event-template-revision-history-section", "#event-template-properties-section", "#event-template-json-section", "#event-template-execution-settings"].every((selector) => !q(selector).open),
   };
+  setValue("#event-template-name", "Completed checkout");
+  setValue("#event-template-event-name", "checkout_completed");
+  setValue("#push-destination-path", "queue.history");
+  setValue("#event-template-json", JSON.stringify({ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } }));
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:7, windowId:1, url:"https://signal.example.test/checkout", title:"Signal Shop", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{} }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q('#observation-target-list [data-target-id]').click();
+  q("#push-template-draft").click();
+  const pairs = (root) => [...root.querySelectorAll("dt")].map((term) => [term.textContent, term.nextElementSibling?.textContent]);
+  const pushReview = {
+    ...dialogState(q("#push-draft-review")),
+    details:pairs(q("#push-draft-review-details")),
+    changes:[...q("#push-draft-review-change-list").querySelectorAll("dl")].map(pairs),
+    confirm:q("#confirm-push-draft").textContent,
+  };
+  q("#cancel-push-draft").click();
+  const pushCancelled = { focused:document.activeElement === q("#push-template-draft"), result:q("#event-template-result").textContent };
+  q("#save-template-revision").click();
+  const revisionReview = {
+    ...dialogState(q("#revision-change-review")),
+    details:pairs(q("#revision-change-review [data-change-details]")),
+    changes:[...q("#revision-change-review [data-change-list]").querySelectorAll("dl")].map(pairs),
+    confirm:q("#confirm-revision-change").textContent,
+  };
+  q("#confirm-revision-change").click();
+  const revisionSaved = { identity:q(".event-template-identity").textContent, result:q("#event-template-result").textContent };
   q("#close-template-editor").click();
 
   const scroll = create("Scroll milestone", "scroll", "event.history", { scroll_percentage:25 });
@@ -345,7 +359,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     persisted:JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1") ?? "[]").map((template) => template.name).sort(),
   };
 
-  q('[aria-label="Delete Purchase confirmation"]').click();
+  q('[aria-label="Delete Completed checkout"]').click();
   const deleteReview = { ...dialogState(q("#event-library-delete-review")), summary:q("#event-library-delete-review-summary").textContent };
   q("#confirm-event-library-delete").click();
   const afterDelete = [...q("#event-template-list").querySelectorAll(".event-template-identity")].map((element) => element.textContent);
@@ -357,7 +371,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, revisionReview, revisionCancel, closeResult, inlineIdentity, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, closeResult, inlineIdentity, pushReview, pushCancelled, revisionReview, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -660,9 +674,22 @@ try {
         saveEnabled:true,
       },
       revisionReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, confirm:"Save revision 2", identity:true, destination:true, payload:true },
-      revisionCancel:{ hidden:true, draft:["Completed checkout", "checkout_completed", "queue.history"], focused:true },
       closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
-      inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"] },
+      inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"], disclosuresClosed:true },
+      pushReview:{
+        hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true,
+        details:[["Event","checkout_completed"],["Target title","Signal Shop"],["Target URL","https://signal.example.test/checkout"],["Destination","queue.history"],["Version","1"],["Validation","Not checked"],["Template name","Purchase confirmation → Completed checkout"],["Event name","purchase → checkout_completed"],["Destination","event.history → queue.history"]],
+        changes:[[["Path","ecommerce.value"],["Previous","18"],["Pushed","19"]],[["Path","items[0].quantity"],["Previous","1"],["Pushed","2"]],[["Path","legacy.debug"],["Previous","true"],["Pushed","Not present"]],[["Path","experiment.variant"],["Previous","Not present"],["Pushed","treatment-b"]]],
+        confirm:"Push checkout_completed to the active target",
+      },
+      pushCancelled:{ focused:true, result:"" },
+      revisionReview:{
+        hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true,
+        details:[["Operation","Save revision"],["Current version","1"],["Resulting version","2"],["Validation","Not checked"],["Template name","Purchase confirmation → Completed checkout"],["Event name","purchase → checkout_completed"],["Destination","event.history → queue.history"]],
+        changes:[[["Path","ecommerce.value"],["Previous","18"],["Revised","19"],["Change","changed"]],[["Path","items[0].quantity"],["Previous","1"],["Revised","2"],["Change","changed"]],[["Path","legacy.debug"],["Previous","true"],["Revised","Not present"],["Change","removed"]],[["Path","experiment.variant"],["Previous","Not present"],["Revised","treatment-b"],["Change","added"]]],
+        confirm:"Save revision 2",
+      },
+      revisionSaved:{ identity:"Completed checkout · checkout_completed", result:"Saved version 2; identity, execution, and payload changes applied." },
       scroll:{
         initial:{
           editor:true,
@@ -679,17 +706,17 @@ try {
         saveEnabled:true,
       },
       exportResult:{
-        templateNames:["Purchase confirmation", "Scroll milestone"],
-        revisions:[1, 1],
-        payloads:[{ transaction_id:"purchase-1" }, { scroll_percentage:25 }],
-        settings:["event.history", "event.history"],
+        templateNames:["Completed checkout", "Scroll milestone"],
+        revisions:[1, 2],
+        payloads:[{ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } }, { scroll_percentage:25 }],
+        settings:["queue.history", "event.history"],
       },
       clearReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"All 2 templates and their saved revisions will be removed." },
       cleared:{ count:0, addAvailable:true, importAvailable:true },
       importReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, replaceVisible:true, appendVisible:true },
       replaceArmed:"Confirm replace 0 with 2",
-      restored:{ names:["Purchase confirmation", "Scroll milestone"], persisted:["Purchase confirmation", "Scroll milestone"] },
-      deleteReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"Purchase confirmation; event purchase; 1 saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged." },
+      restored:{ names:["Completed checkout", "Scroll milestone"], persisted:["Completed checkout", "Scroll milestone"] },
+      deleteReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"Completed checkout; event checkout_completed; 2 saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged." },
       afterDelete:["Scroll milestone · scroll"],
       final:{ count:0, persisted:0, addAvailable:true, importAvailable:true },
     }, `natural Library actions failed their ${width}px browser recovery contract`);
