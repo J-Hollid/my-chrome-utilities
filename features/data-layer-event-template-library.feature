@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=d5c9070fe5bdee04f0a94142c3f862d66e3b6c4da684a299154c01d7a8f150bf
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T17:25:29.225187191Z","feature_name":"Data layer event template library","feature_path":"features/data-layer-event-template-library.feature","background_hash":"39070a43f3c1e9253948291e1f4f67745f6faf3dd627acae6b09ade9ea231548","implementation_hash":"sha256:event-library-editor-architectural-review-v2","scenarios":[{"index":0,"name":"Data layer event template library 001","scenario_hash":"e4391d3fad4aa9f9f3833b7382458e3d992138066b1d325cf7320a28b087e335","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":1,"name":"Data layer event template library 002","scenario_hash":"1a9be42b33ff9a2f25f28ce248405f1678249e9c47cecd889ef039aaf92cfb66","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":2,"name":"Data layer event template library 003","scenario_hash":"d6db11006b871c764a60ca794c3395dcf3f5e1d18125ecdfce9ba4f23967f54d","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":3,"name":"Data layer event template library 004","scenario_hash":"981c58a08302e1ba191871de4c9bed12579f487929c73898d6a9904fa2351da8","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":4,"name":"Data layer event template library 005","scenario_hash":"a71e79b0aee947ede4af92988e5193c6eaa3b8da3b0cb95a896819be9344fc05","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":5,"name":"Data layer event template library 006","scenario_hash":"594695136d986b169a9c80115cf7047533ee0888058eda2ffc95b8836b78d100","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"},{"index":6,"name":"Data layer event template library 007","scenario_hash":"9036aad1ea0b7da0027b0e4244f1e6236c9c50a1b963aaade5b1e32549e44f65","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:25:29.225187191Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer event template library
 
   Background:
@@ -46,7 +41,9 @@ Feature: Data layer event template library
   Scenario Outline: Data layer event template library 004
     Given event template <template_name> targets <destination> on the active page
     When the user pushes template <template_name> without editing it
-    Then the exact saved template payload is sent through its source adapter to <destination>
+    Then its source adapter appends one history tuple to <destination>
+    And the first tuple item is event name <event_name>
+    And the second tuple item is the exact saved template payload
     And the visible result identifies the active page, source adapter, destination, and success or failure
     And no captured event or saved session is changed
 
