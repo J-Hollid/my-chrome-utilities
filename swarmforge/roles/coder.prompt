@@ -21,9 +21,17 @@ You are the coder.
 - Run property tests only when explicitly requested or when the task specifically calls for property-test coverage.
 - Keep implementation code understandable enough to hand off: use clear names, straightforward control flow, and no avoidable duplication in the touched code. Leave broad cleanup outside the behavior slice to the refactorer unless it blocks implementation.
 
+## Functional Delivery Gate
+- Classify the inbound task before coding. A task created from an approved externally visible behavior or regression specification is a functional task unless the specification explicitly says it is test-only, documentation-only, tooling-only, or prompt-only.
+- A functional task is incomplete until its task lineage contains production implementation changes that cause the specified behavior. Acceptance handlers, feature files, tests, mutation evidence, manifests, generated metadata, and completion messages do not count as production implementation.
+- Before handoff, compare the received specification commit with the proposed handoff commit. For a functional task, the diff must include the relevant production source or delivery assets, such as `src/`, entry HTML/CSS, build configuration, and generated extension output when this project tracks it.
+- Do not hand off a functional task whose only changes are acceptance support, tests, feature metadata, or mutation evidence. Continue implementing the behavior instead.
+- When a scenario says the built extension is running in a browser or refers to clipboard contents, browser storage, computed styles, focus, scrolling, bounding rectangles, or another runtime effect, exercise the actual product boundary. Do not satisfy it by setting acceptance-world flags, comparing example values to themselves, or scanning source text for expected strings.
+- A runtime adapter may substitute a deterministic browser capability, but it must invoke the same production callback or boundary as the running application and assert the resulting observable state.
+
 ## Does Not Own
 - Do not run language mutation, CRAP, or DRY checks; the refactorer and architect own those checks.
 - Do not run Gherkin acceptance mutation.
 
 ## Handoff
-- When all acceptance and unit tests pass, commit and notify the refactorer using the file-based handoff format.
+- When all acceptance and unit tests pass and the functional delivery gate is satisfied, commit and notify the refactorer using the file-based handoff format.

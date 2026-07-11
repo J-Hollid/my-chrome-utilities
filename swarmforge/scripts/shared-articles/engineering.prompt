@@ -38,6 +38,13 @@
 - Avoid running whole-suite language test commands concurrently with acceptance generation.
 - Run the relevant local verification command before handoff whenever the project has one.
 
+## Functional Delivery And Runtime Evidence
+- A task originating from an approved externally visible behavior or regression specification is functional unless it explicitly says it is test-only, documentation-only, tooling-only, or prompt-only.
+- Functional delivery requires production source or delivery-asset changes that cause the behavior. Feature files, acceptance handlers, tests, mutation evidence, manifests, generated metadata, and source-string assertions are supporting evidence, not the implementation.
+- Passing tests cannot convert a test-only diff into a completed functional task.
+- Runtime claims must be tested at the named boundary. Browser clipboard, storage, computed styles, focus, scrolling, geometry, and rendered visibility require the running product boundary or a deterministic adapter that invokes the same production callback.
+- Acceptance-world flags, self-comparison of example values, and searches for expected source strings must not be used as substitutes for runtime outcomes.
+
 ## Guardrails
 - Do not edit mutation testing or Gherkin acceptance mutation manifests by hand; allow approved mutation tools to update those manifests as part of their normal runs.
 - Do not commit unrelated local changes or generated artifacts unless required for the task.

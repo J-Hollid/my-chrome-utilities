@@ -25,9 +25,18 @@ commit: <10-character-commit-abbrev>
   task, regardless of what changed. Formatting-only, manifest-only, audit-only,
   generated metadata, and other non-functional churn still require a forward
   down the chain.
+- The preceding forwarding rule applies only to completed work. A functional
+  task that fails the shared functional-delivery gate is incomplete and must
+  not be forwarded downstream as a completed `git_handoff`.
+- When a role prompt directs returning a functional-delivery failure, send the
+  directed terse `note` to the named upstream role, complete the failed review,
+  and do not forward the task farther down the pipeline.
 - When your role sends the end-of-chain handoff to multiple recipients, those
   recipients merge only (`merge_and_process`). They do not forward that handoff
   further. Only this terminal broadcast is merge-only without re-forwarding.
+- Do not send an end-of-chain completion handoff for a functional task until
+  the terminal functional-delivery gate confirms relevant production changes
+  in the task lineage.
 - Preserve the received task name when forwarding work for the same task. If the
   handoff starts new work, invent a short stable task name.
 - For `note`, write:
