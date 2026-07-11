@@ -88,7 +88,8 @@
    "panel_width" #{"320" "320 CSS px" "320 px" "360" "480 px" "520" "720" "720 px"}
    "metadata_columns" #{"1" "2" "3"}
    "panel_height" #{"640 CSS px"}
-   "primary_action" #{"Push" "Choose target" "Start testing"}
+   "primary_action" #{"Push" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "editing_status" #{"Saved" "Unsaved changes"}
    "primary_actions" #{"Pause capture" "Pause capture and End testing" "Resume capture" "Resume capture and End testing"}
    "project_name" #{"my-chrome-utilities"}
    "payload_label" #{"pageview-values" "purchase-values"}
