@@ -412,6 +412,12 @@ const libraryNewEventRuntime = `Promise.all([
   return { initial, created };
 })`;
 
+const eventLibraryDeletionRuntime = `import("./data-layer-event-library-deletion.js").then((deletion) => {
+  const template = (id, name) => ({ id, name, eventName:"purchase", sourceId:"history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Valid", payload:{}, version:1, provenance:"library-created" });
+  const first = template("template-7", "Purchase confirmation"); const sameNamed = template("template-9", "Purchase confirmation");
+  return { afterDelete:deletion.deleteEventTemplate([first, sameNamed], "template-7").map((item) => item.id), afterClear:deletion.clearEventLibrary([first, sameNamed]).length };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -520,6 +526,9 @@ try {
       initial:{ title:"New event", count:"0 templates", addHidden:true, name:"", event:"", source:"", destination:"", json:"{}", saveDisabled:true },
       created:{ id:"template:library:new", name:"Scroll milestone", eventName:"scroll", sourceId:"event-history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Not checked", payload:{ scroll_percentage:25 }, version:1, provenance:"library-created" },
     }, `Library new event creation violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, eventLibraryDeletionRuntime), {
+      afterDelete:["template-9"], afterClear:0,
+    }, `Library deletion violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,
