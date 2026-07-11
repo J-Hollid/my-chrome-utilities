@@ -39,8 +39,32 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         elements.count.textContent = `${templates.length} templates`;
     elements.list?.replaceChildren(...templates.map((template) => {
         const item = document.createElement("li");
-        item.textContent = `${template.name}: ${template.eventName}, ${template.sourceName}, ${template.destination}, ${template.tags.join(", ") || "no tags"}, ${template.schemaId ?? "no schema"}, ${template.validation}, v${template.version}. `;
-        item.append(actionButton("Edit", () => actions.edit(template)), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        item.className = "event-template-row";
+        const identity = document.createElement("div");
+        identity.className = "event-template-identity";
+        identity.textContent = `${template.name} · ${template.eventName}`;
+        const routing = document.createElement("div");
+        routing.className = "event-template-routing";
+        routing.textContent = `${template.sourceName} → ${template.destination}`;
+        const attributes = document.createElement("dl");
+        attributes.className = "event-template-attributes";
+        const attributesToRender = [
+            ["Version", String(template.version)],
+            ["Validation", template.validation],
+            ["Schema", template.schemaId ?? "None"],
+            ["Tags", template.tags.join(", ") || "none"],
+        ];
+        for (const [label, value] of attributesToRender) {
+            const term = document.createElement("dt");
+            const description = document.createElement("dd");
+            term.textContent = label;
+            description.textContent = value;
+            attributes.append(term, description);
+        }
+        const actionsRow = document.createElement("div");
+        actionsRow.className = "event-template-actions";
+        actionsRow.append(actionButton("Edit", () => actions.edit(template)), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        item.append(identity, routing, attributes, actionsRow);
         return item;
     }));
     if (elements.propertyEditor)
