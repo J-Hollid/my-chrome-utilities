@@ -34,8 +34,10 @@ import { createSequence, readiness, runSequence } from "./data-layer-sequence-re
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
+import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
 import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
 import { panelEmptyState } from "./panel-empty-states.js";
+import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -79,8 +81,8 @@ const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-s
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const liveEventsEmptyState = document.querySelector("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector("#live-source-error-state");
-const templateEmptyState = document.querySelector("#event-template-empty-state");
-const templateEmptyRecovery = document.querySelector("#event-template-empty-recovery");
+const templateEmptyStateElements = findPanelEmptyStateElements("#event-template-empty-state", "#event-template-empty-recovery");
+const templateEmptyRecovery = templateEmptyStateElements.recovery;
 const savedSessionEmptyState = document.querySelector("#saved-session-empty-state");
 const schemaEmptyState = document.querySelector("#schema-empty-state");
 const sequenceEmptyState = document.querySelector("#sequence-empty-state");
@@ -120,6 +122,7 @@ let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let pendingPushDraftReview;
 let savedInspectorTemplateId;
 let schemas = [];
 let replaySequences = [];
@@ -483,6 +486,12 @@ function openLiveInspector(eventId) {
                 savedInspectorTemplateId = template.id;
                 appendOpenInLibraryAction(event.id, template.name);
             },
+            validationAvailable: (selected) => Boolean(validateEvent({
+                sourceId: selected.sourceId,
+                eventName: selected.name,
+                payload: selected.payload,
+                rawInput: selected.rawInput,
+            }, schemas).schema),
             validationState: (selected) => validateEvent({
                 sourceId: selected.sourceId,
                 eventName: selected.name,
@@ -527,17 +536,7 @@ async function copyLivePageUrl() {
 function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
     const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
-    if (templateEmptyState) {
-        templateEmptyState.hidden = !empty;
-        const heading = templateEmptyState.querySelector("h4");
-        const detail = templateEmptyState.querySelector("p");
-        if (heading && empty)
-            heading.textContent = empty.message;
-        if (detail && empty)
-            detail.textContent = `${empty.recoveryAction} can resolve this state.`;
-    }
-    if (templateEmptyRecovery && empty)
-        templateEmptyRecovery.textContent = empty.recoveryAction;
+    renderPanelEmptyState(templateEmptyStateElements, empty);
     renderEventLibraryEditor(eventLibraryEditorElements, templates, propertyEditorState, {
         edit: openTemplateEditor,
         duplicate: (template) => {
@@ -629,10 +628,10 @@ async function pushPayloadToSelectedTargetPage(request) {
         throw new Error(result?.result ?? "Selected-page push failed.");
     }
 }
-async function pushCurrentTemplateDraft() {
-    if (!propertyEditorState)
+async function pushCurrentTemplateDraft(editor = propertyEditorState, target = selectedObservationTarget(observationTargetState)) {
+    if (!editor)
         return;
-    const record = await pushTemplateToSelectedTarget(propertyEditorState, selectedObservationTarget(observationTargetState), pushPayloadToSelectedTargetPage);
+    const record = await pushTemplateToSelectedTarget(editor, target, pushPayloadToSelectedTargetPage);
     setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
     if (record.fieldError)
         setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
@@ -650,8 +649,11 @@ function openPushDraftReview() {
         setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
         return;
     }
+    pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
     if (pushDraftReviewSummary)
-        pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+        pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+    if (confirmPushDraftButton)
+        confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
     if (pushDraftReview)
         pushDraftReview.hidden = false;
 }
@@ -1365,12 +1367,18 @@ pushTemplateDraftButton?.addEventListener("click", () => {
     openPushDraftReview();
 });
 confirmPushDraftButton?.addEventListener("click", () => {
-    void pushCurrentTemplateDraft();
+    const review = pendingPushDraftReview;
+    pendingPushDraftReview = undefined;
+    if (pushDraftReview)
+        pushDraftReview.hidden = true;
+    if (review)
+        void pushCurrentTemplateDraft(review.editor, review.target);
+});
+cancelPushDraftButton?.addEventListener("click", () => {
+    pendingPushDraftReview = undefined;
     if (pushDraftReview)
         pushDraftReview.hidden = true;
 });
-cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview)
-    pushDraftReview.hidden = true; });
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;

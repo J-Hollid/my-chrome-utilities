@@ -28,20 +28,3 @@ export function templateActionHierarchy(editor: {
     discardDraft: actionTreatment("destructive"),
   };
 }
-
-export function applyActionTreatment(
-  button: HTMLButtonElement | null,
-  treatment: ActionTreatment,
-  descriptionId?: string,
-): void {
-  if (!button) return;
-  button.dataset.actionVariant = treatment.variant;
-  button.disabled = treatment.disabled;
-  if (treatment.disabledReason) {
-    button.setAttribute("aria-description", treatment.disabledReason);
-    if (descriptionId) button.setAttribute("aria-describedby", descriptionId);
-  } else {
-    button.removeAttribute("aria-description");
-    if (descriptionId) button.removeAttribute("aria-describedby");
-  }
-}

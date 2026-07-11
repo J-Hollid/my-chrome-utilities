@@ -32,10 +32,15 @@ const inspectorActions = createLiveInspectorActions({
     await clipboardPending;
   },
   storeTemplate: (template) => { storedTemplates.push(template); },
+  validationAvailable: () => false,
   validationState: () => "2 issues",
   updateValidation: (eventId, validation) => {
     validationUpdates.push([eventId, validation]);
   },
+});
+assert.deepEqual(inspectorActions.validationAvailability(selectedEvent), {
+  enabled: false,
+  reason: "Select a schema to validate",
 });
 
 const copyFeedback = [];

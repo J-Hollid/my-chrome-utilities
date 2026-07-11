@@ -2,10 +2,8 @@ import type {
   EditableEventTemplate,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
-import {
-  applyActionTreatment,
-  templateActionHierarchy,
-} from "./side-panel-action-hierarchy.js";
+import { templateActionHierarchy } from "./side-panel-action-hierarchy.js";
+import { applyActionTreatment } from "./side-panel-action-hierarchy-ui.js";
 
 export interface EventLibraryEditorElements {
   search: HTMLInputElement | null;

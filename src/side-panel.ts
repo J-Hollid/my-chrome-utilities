@@ -195,10 +195,18 @@ import {
   type SelectedTargetPushRequest,
 } from "./data-layer-selected-target-push.js";
 import {
+  createPushDraftReview,
+  type PushDraftReview,
+} from "./data-layer-push-draft-review.js";
+import {
   pushPayloadInPage,
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
 import { panelEmptyState } from "./panel-empty-states.js";
+import {
+  findPanelEmptyStateElements,
+  renderPanelEmptyState,
+} from "./panel-empty-states-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -273,8 +281,11 @@ const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const liveEventsEmptyState = document.querySelector<HTMLElement>("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector<HTMLElement>("#live-source-error-state");
-const templateEmptyState = document.querySelector<HTMLElement>("#event-template-empty-state");
-const templateEmptyRecovery = document.querySelector<HTMLButtonElement>("#event-template-empty-recovery");
+const templateEmptyStateElements = findPanelEmptyStateElements(
+  "#event-template-empty-state",
+  "#event-template-empty-recovery",
+);
+const templateEmptyRecovery = templateEmptyStateElements.recovery;
 const savedSessionEmptyState = document.querySelector<HTMLElement>("#saved-session-empty-state");
 const schemaEmptyState = document.querySelector<HTMLElement>("#schema-empty-state");
 const sequenceEmptyState = document.querySelector<HTMLElement>("#sequence-empty-state");
@@ -326,6 +337,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let pendingPushDraftReview: PushDraftReview | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
@@ -758,6 +770,12 @@ function openLiveInspector(eventId: string): void {
       savedInspectorTemplateId = template.id;
       appendOpenInLibraryAction(event.id, template.name);
     },
+    validationAvailable: (selected) => Boolean(validateEvent({
+        sourceId: selected.sourceId,
+        eventName: selected.name,
+        payload: selected.payload,
+        rawInput: selected.rawInput,
+      }, schemas).schema),
     validationState: (selected) => validateEvent({
         sourceId: selected.sourceId,
         eventName: selected.name,
@@ -804,14 +822,7 @@ async function copyLivePageUrl(): Promise<void> {
 function renderEventTemplateLibrary(): void {
   const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
   const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
-  if (templateEmptyState) {
-    templateEmptyState.hidden = !empty;
-    const heading = templateEmptyState.querySelector<HTMLElement>("h4");
-    const detail = templateEmptyState.querySelector<HTMLElement>("p");
-    if (heading && empty) heading.textContent = empty.message;
-    if (detail && empty) detail.textContent = `${empty.recoveryAction} can resolve this state.`;
-  }
-  if (templateEmptyRecovery && empty) templateEmptyRecovery.textContent = empty.recoveryAction;
+  renderPanelEmptyState(templateEmptyStateElements, empty);
   renderEventLibraryEditor(
     eventLibraryEditorElements,
     templates,
@@ -916,11 +927,14 @@ async function pushPayloadToSelectedTargetPage(
   }
 }
 
-async function pushCurrentTemplateDraft(): Promise<void> {
-  if (!propertyEditorState) return;
+async function pushCurrentTemplateDraft(
+  editor = propertyEditorState,
+  target = selectedObservationTarget(observationTargetState),
+): Promise<void> {
+  if (!editor) return;
   const record = await pushTemplateToSelectedTarget(
-    propertyEditorState,
-    selectedObservationTarget(observationTargetState),
+    editor,
+    target,
     pushPayloadToSelectedTargetPage,
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
@@ -939,7 +953,9 @@ function openPushDraftReview(): void {
     setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
     return;
   }
-  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+  pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
+  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+  if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
   if (pushDraftReview) pushDraftReview.hidden = false;
 }
 
@@ -1823,10 +1839,15 @@ pushTemplateDraftButton?.addEventListener("click", () => {
   openPushDraftReview();
 });
 confirmPushDraftButton?.addEventListener("click", () => {
-  void pushCurrentTemplateDraft();
+  const review = pendingPushDraftReview;
+  pendingPushDraftReview = undefined;
+  if (pushDraftReview) pushDraftReview.hidden = true;
+  if (review) void pushCurrentTemplateDraft(review.editor, review.target);
+});
+cancelPushDraftButton?.addEventListener("click", () => {
+  pendingPushDraftReview = undefined;
   if (pushDraftReview) pushDraftReview.hidden = true;
 });
-cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview) pushDraftReview.hidden = true; });
 
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;

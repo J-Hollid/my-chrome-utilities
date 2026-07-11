@@ -20,9 +20,19 @@ export function resolveFeedSummaries(event, rules = defaultFeedSummaryRules) {
     return paths.map((path) => ({ path, label: summaryLabel(path), value: atPath(event.payload, path) }))
         .filter(({ value }) => usableSummaryValue(value)).slice(0, 2);
 }
+export function eventPathname(pageUrl) {
+    if (!pageUrl)
+        return "/";
+    try {
+        return new URL(pageUrl).pathname;
+    }
+    catch {
+        return "/";
+    }
+}
 export function pathnameVisits(events) {
     return events.reduce((visits, event) => {
-        const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+        const pathname = eventPathname(event.pageUrl);
         const current = visits.at(-1);
         return current?.pathname === pathname
             ? [...visits.slice(0, -1), { ...current, events: [...current.events, event] }]

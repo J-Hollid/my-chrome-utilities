@@ -8,6 +8,7 @@ import type { ValidationState } from "./data-layer-source.js";
 export interface LiveInspectorActions {
   copyPayload(event: LiveEvent): Promise<void>;
   saveToLibrary(event: LiveEvent): void;
+  validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
 }
 
@@ -16,6 +17,7 @@ export interface LiveInspectorActionEffects {
   writeClipboard(text: string): Promise<void>;
   storeTemplate(template: EditableEventTemplate): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
+  validationAvailable?(event: LiveEvent): boolean;
   validationState(event: LiveEvent): ValidationState;
   updateValidation(eventId: string, state: ValidationState): void;
 }
@@ -49,6 +51,11 @@ export function createLiveInspectorActions(
       });
       effects.storeTemplate(template);
       effects.onTemplateSaved?.(template);
+    },
+    validationAvailability(event) {
+      return effects.validationAvailable?.(event) === false
+        ? { enabled: false, reason: "Select a schema to validate" }
+        : { enabled: true };
     },
     validate(event) {
       const previous = event.validation ?? "Not checked";

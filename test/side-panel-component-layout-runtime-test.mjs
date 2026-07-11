@@ -32,7 +32,7 @@ async function debuggingPort() {
       }
     });
     chrome.once("error", reject);
-    chrome.once("exit", (code) => reject(new Error(`Chrome exited before startup (${code}).`)));
+    chrome.once("exit", (code, signal) => reject(new Error(`Chrome exited before startup (${code ?? signal}). ${output.trim()}`)));
   });
 }
 
@@ -224,11 +224,11 @@ try {
     socket.close();
   }
 } finally {
-  if (!chrome.killed) {
-    await new Promise((resolve) => {
+  if (chrome.exitCode === null && !chrome.killed) {
+    await Promise.race([new Promise((resolve) => {
       chrome.once("exit", resolve);
       chrome.kill("SIGTERM");
-    });
+    }), wait(1000)]);
   }
   await rm(chromeProfile, { recursive: true, force: true });
 }

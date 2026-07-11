@@ -28,10 +28,19 @@ export function resolveFeedSummaries(event: { sourceId: string; name: string; pa
     .filter(({ value }) => usableSummaryValue(value)).slice(0, 2);
 }
 
+export function eventPathname(pageUrl: string | undefined): string {
+  if (!pageUrl) return "/";
+  try {
+    return new URL(pageUrl).pathname;
+  } catch {
+    return "/";
+  }
+}
+
 export interface PathnameVisit<T> { pathname: string; events: T[]; }
 export function pathnameVisits<T extends { pageUrl?: string }>(events: readonly T[]): PathnameVisit<T>[] {
   return events.reduce<PathnameVisit<T>[]>((visits, event) => {
-    const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+    const pathname = eventPathname(event.pageUrl);
     const current = visits.at(-1);
     return current?.pathname === pathname
       ? [...visits.slice(0, -1), { ...current, events: [...current.events, event] }]
