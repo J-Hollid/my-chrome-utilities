@@ -115,10 +115,14 @@ export function renderLiveInspector(
   actionHandlers: LiveInspectorActions,
 ): void {
   if (!elements.eventInspector) return;
+  elements.eventInspector.classList.add("live-detail-view");
   const heading = document.createElement("h4");
+  heading.className = "detail-view-header";
   heading.textContent = event.name;
   const source = document.createElement("p");
   source.textContent = `Source: ${event.sourceName ?? event.sourceId}`;
+  const status = document.createElement("output");
+  status.textContent = event.validation ?? "Not checked";
   const summary = document.createElement("dl");
   appendSummaryItem(summary, "Capture time", event.captureTime);
   appendSummaryItem(summary, "Page", event.pageUrl);
@@ -165,7 +169,7 @@ export function renderLiveInspector(
     actions.append(action);
   }
   actions.append(feedback);
-  elements.eventInspector.replaceChildren(heading, source, summary, payload, raw, actions);
+  elements.eventInspector.replaceChildren(heading, source, status, summary, payload, raw, actions);
 }
 
 function appendSummaryItem(
