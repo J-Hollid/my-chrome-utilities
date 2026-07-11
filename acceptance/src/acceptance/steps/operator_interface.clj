@@ -42,7 +42,8 @@
    "features/data-layer-view-responsive-layouts.feature"
    "features/side-panel-component-layout-runtime.feature"
    "features/data-layer-workflow-focus-management.feature"
-   "features/side-panel-accessible-state-communication.feature"])
+   "features/side-panel-accessible-state-communication.feature"
+   "features/side-panel-authoritative-hidden-state.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")
