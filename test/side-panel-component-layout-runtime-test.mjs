@@ -386,6 +386,19 @@ const jsonValidationRecoveryRuntime = `Promise.all([
   return { invalid, recovered };
 })`;
 
+const libraryNewEventRuntime = `Promise.all([
+  import("./data-layer-event-library-editor.js"),
+  import("./data-layer-event-library-editor-ui.js"),
+]).then(([model, ui]) => {
+  const elements = ui.findEventLibraryEditorElements();
+  let state = model.createNewEventEditor();
+  ui.renderEventLibraryEditor(elements, [], state, { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} });
+  const initial = { title:elements.editorTitle.textContent, count:elements.count.textContent, addHidden:elements.addNewButton.hidden, name:elements.templateName.value, event:elements.eventName.value, source:elements.source.value, destination:elements.pushDestination.value, json:elements.json.value, saveDisabled:elements.saveRevisionButton.disabled };
+  state = model.setNewEventField(state, "name", "Scroll milestone"); state = model.setNewEventField(state, "eventName", "scroll"); state = model.setNewEventField(state, "source", { id:"event-history", name:"Event history" }); state = model.setNewEventField(state, "destination", "event.history"); state = model.updateDraftJson(state, '{"scroll_percentage":25}');
+  const created = model.saveNewEvent(state, () => "template:library:new");
+  return { initial, created };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -487,6 +500,10 @@ try {
       invalid:{ error:true, status:"Invalid JSON at position 58.", invalid:"true", saveDisabled:true, pushDisabled:true, saveReason:"Correct the JSON draft.", pushReason:"Correct the JSON draft.", draft:{ tealium_generated:"1", scroll_percentage:0 } },
       recovered:{ error:false, status:"Properties, JSON, and Validation edit the same draft.", invalid:"false", saveDisabled:false, pushDisabled:false, draft:{ tealium_generated:"1", scroll_percentage:25 } },
     }, `Library JSON validation recovery violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, libraryNewEventRuntime), {
+      initial:{ title:"New event", count:"0 templates", addHidden:true, name:"", event:"", source:"", destination:"", json:"{}", saveDisabled:true },
+      created:{ id:"template:library:new", name:"Scroll milestone", eventName:"scroll", sourceId:"event-history", sourceName:"Event history", destination:"event.history", tags:[], validation:"Not checked", payload:{ scroll_percentage:25 }, version:1, provenance:"library-created" },
+    }, `Library new event creation violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,

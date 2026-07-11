@@ -44,7 +44,7 @@ Feature: Data layer view responsive layouts
   Scenario: Data layer view responsive layouts 003
     Given Purchase confirmation is the current Library record in wide presentation
     When the master-detail layout is rendered
-    Then the master pane contains the search label, search input, Save latest event action, template count, and template list in workflow order
+    Then the master pane contains the search label, search input, Add new event action, template count, and template list in workflow order
     And the search label remains directly adjacent to the search input
     And the template count remains with the template list
     And the detail pane contains the selected editor, its action row, and its local feedback
