@@ -12,6 +12,8 @@
    "features/data-layer-live-inspector-action-runtime.feature"
    "features/data-layer-live-inspector-layout-runtime.feature"
    "features/data-layer-live-inspector-navigation-runtime.feature"
+   "features/data-layer-push-destination-configuration.feature"
+   "features/data-layer-selected-target-push-runtime.feature"
    "features/data-layer-schemas-operator-layout.feature"
    "features/data-layer-sessions-operator-layout.feature"
    "features/side-panel-hotkey-operator-layout.feature"

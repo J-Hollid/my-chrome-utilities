@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { canPushTemplate, createEditableTemplate, discardDraft, executeDraftPush, leaveEditorOptions, openPropertyEditor, removeDraftProperty, restoreEventTemplateLibrary, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, serializeEventTemplateLibrary, setDraftProperty, updateDraftJson } from "../dist/data-layer-event-library-editor.js";
+import { canPushTemplate, createEditableTemplate, discardDraft, executeDraftPush, leaveEditorOptions, openPropertyEditor, removeDraftProperty, restoreEventTemplateLibrary, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, serializeEventTemplateLibrary, setDraftProperty, setPushDestination, updateDraftJson } from "../dist/data-layer-event-library-editor.js";
 
 const event = { id: "event-1", sessionId: "session-1", sourceId: "history", sourceKind: "page", name: "purchase", captureTime: "2026-07-10T10:00:00Z", pageUrl: "https://example.test/checkout", payload: { transaction_id: "test-123", debug: true, items: [{ product_id: "sku-123" }] }, rawInput: ["purchase"], validation: "Valid", provenance: "captured:history" };
 const adapter = { id: "history", name: "Event history", kind: "page", destination: "event.history", enabled: true, status: "Connected", capabilities: ["push"] };
@@ -21,6 +21,9 @@ editor = updateDraftJson(editor, JSON.stringify(editor.draft));
 const revised = saveDraftRevision(editor);
 assert.equal(revised.template.version, 2);
 assert.equal(revised.revisions[0].version, 1);
+const retargeted = saveDraftRevision(setPushDestination(revised, "analytics.queue"));
+assert.equal(retargeted.template.destination, "analytics.queue");
+assert.equal(openPropertyEditor(retargeted.template).template.destination, "analytics.queue");
 const copy = saveAsTemplateCopy(revised, "Purchase failure view");
 assert.notEqual(copy.id, revised.template.id);
 assert.deepEqual(copy.payload, revised.template.payload);

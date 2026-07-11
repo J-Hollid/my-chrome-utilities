@@ -27,6 +27,11 @@
    "initial_state" #{"Not checked"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
+   "history_path" #{"queue.history"}
+   "push_path" #{"dataLayer" "analytics.queue"}
+   "first_push_path" #{"dataLayer"}
+   "second_push_path" #{"analytics.queue"}
+   "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "middle_event" #{"banner"}
@@ -35,6 +40,12 @@
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
+   "page_title" #{"Shop"}
+   "other_page_title" #{"Documentation"}
+   "tab_id" #{"42"}
+   "other_tab_id" #{"77"}
+   "page_url" #{"https://shop.example.test/p/"}
+   "side_panel_url" #{"chrome-extension://extension/side-panel.html"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}
    "primary_action" #{"Push"}

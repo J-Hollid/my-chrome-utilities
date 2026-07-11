@@ -11,6 +11,7 @@ export interface EventLibraryEditorElements {
   propertyEditor: HTMLElement | null;
   properties: HTMLElement | null;
   json: HTMLTextAreaElement | null;
+  pushDestination: HTMLInputElement | null;
   validation: HTMLElement | null;
   saveRevisionButton: HTMLButtonElement | null;
   saveCopyButton: HTMLButtonElement | null;
@@ -36,6 +37,7 @@ export function findEventLibraryEditorElements(
     propertyEditor: root.querySelector<HTMLElement>("#event-property-editor"),
     properties: root.querySelector<HTMLElement>("#event-template-properties"),
     json: root.querySelector<HTMLTextAreaElement>("#event-template-json"),
+    pushDestination: root.querySelector<HTMLInputElement>("#push-destination-path"),
     validation: root.querySelector<HTMLElement>("#event-template-validation"),
     saveRevisionButton: root.querySelector<HTMLButtonElement>("#save-template-revision"),
     saveCopyButton: root.querySelector<HTMLButtonElement>("#save-template-copy"),
@@ -88,6 +90,9 @@ export function renderEventLibraryEditor(
   );
   if (elements.propertyEditor) elements.propertyEditor.hidden = !editor;
   if (elements.json && editor) elements.json.value = editor.jsonDraft;
+  if (elements.pushDestination && editor) {
+    elements.pushDestination.value = editor.template.destination;
+  }
   if (elements.validation) {
     elements.validation.textContent =
       editor?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
@@ -109,4 +114,13 @@ export function setEventLibraryValidation(
   message: string,
 ): void {
   if (elements.validation) elements.validation.textContent = message;
+}
+
+export function setPushDestinationValidation(
+  elements: EventLibraryEditorElements,
+  message: string,
+): void {
+  if (!elements.pushDestination) return;
+  elements.pushDestination.setCustomValidity(message);
+  elements.pushDestination.setAttribute("aria-invalid", String(Boolean(message)));
 }
