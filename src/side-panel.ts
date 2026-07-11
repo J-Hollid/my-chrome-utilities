@@ -293,6 +293,10 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const pushDraftReview = document.querySelector<HTMLElement>("#push-draft-review");
+const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
+const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
+const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
@@ -904,6 +908,21 @@ async function pushCurrentTemplateDraft(): Promise<void> {
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
   if (record.fieldError) setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
   setEventLibraryResult(eventLibraryEditorElements, record.summary);
+}
+
+function openPushDraftReview(): void {
+  if (!propertyEditorState) return;
+  const target = selectedObservationTarget(observationTargetState);
+  if (!target || target.accessState !== "Ready") {
+    setEventLibraryValidation(eventLibraryEditorElements, "Select a target before pushing.");
+    return;
+  }
+  if (propertyEditorState.jsonError) {
+    setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
+    return;
+  }
+  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+  if (pushDraftReview) pushDraftReview.hidden = false;
 }
 
 function renderSavedSessions(): void {
@@ -1783,8 +1802,13 @@ saveTemplateCopyButton?.addEventListener("click", () => {
 });
 
 pushTemplateDraftButton?.addEventListener("click", () => {
-  void pushCurrentTemplateDraft();
+  openPushDraftReview();
 });
+confirmPushDraftButton?.addEventListener("click", () => {
+  void pushCurrentTemplateDraft();
+  if (pushDraftReview) pushDraftReview.hidden = true;
+});
+cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview) pushDraftReview.hidden = true; });
 
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;

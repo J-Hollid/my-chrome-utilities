@@ -34,7 +34,8 @@
    "features/data-layer-event-feed-summaries.feature"
    "features/data-layer-live-pathname-visits.feature"
    "features/data-layer-authoritative-live-state.feature"
-   "features/side-panel-action-feedback.feature"])
+   "features/side-panel-action-feedback.feature"
+   "features/data-layer-push-draft-review.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")

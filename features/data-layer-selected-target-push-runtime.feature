@@ -14,7 +14,7 @@ Feature: Data layer selected target push runtime
   # Data layer selected target push runtime 001
   Scenario Outline: Data layer selected target push runtime 001
     Given <push_path> is available in the selected target page
-    When the user pushes template <template_name>
+    When the user activates confirmed action Push <event_name> to <page_title>
     Then one history tuple is appended to <push_path> in tab <tab_id>
     And the first tuple item is event name <event_name>
     And the second tuple item is the exact template payload <payload_label>
@@ -28,9 +28,9 @@ Feature: Data layer selected target push runtime
 
   # Data layer selected target push runtime 002
   Scenario Outline: Data layer selected target push runtime 002
-    Given observation target <other_page_title> with tab id <other_tab_id> is also available
+    Given another available tab is <other_page_title> with id <other_tab_id>
     When the user selects observation target <page_title>
-    And pushes template <template_name>
+    And the user activates confirmed action Push <event_name> to <page_title>
     Then history tuple for <event_name> and <payload_label> is pushed only in tab <tab_id>
     And no payload is pushed in tab <other_tab_id>
 
@@ -41,7 +41,7 @@ Feature: Data layer selected target push runtime
   # Data layer selected target push runtime 003
   Scenario Outline: Data layer selected target push runtime 003
     Given <push_path> cannot accept the payload in tab <tab_id>
-    When the user pushes template <template_name>
+    When the user activates confirmed action Push <event_name> to <page_title>
     Then the push result reports failure for <page_title> and <push_path>
     And no successful push result is displayed
     And the template payload remains unchanged
