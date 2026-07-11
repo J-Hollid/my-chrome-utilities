@@ -242,6 +242,24 @@ const inspectorReturnRuntime = `import("./data-layer-live-inspector-return-ui.js
   return result;
 })`;
 
+const hiddenStateRuntime = `(() => {
+  const component = document.createElement("section");
+  component.hidden = true;
+  component.style.display = "flex";
+  const control = document.createElement("button");
+  control.textContent = "Hidden control";
+  component.append(control); document.body.append(component);
+  control.focus();
+  const result = {
+    display: getComputedStyle(component).display,
+    offsetParent: component.offsetParent === null,
+    zeroSpace: component.getBoundingClientRect().width === 0 && component.getBoundingClientRect().height === 0,
+    focusExcluded: document.activeElement !== control,
+    ariaHidden: component.getAttribute("aria-hidden") !== "false",
+  };
+  component.remove(); return result;
+})()`;
+
 const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
   const eventList = document.querySelector("#live-event-list");
   const eventFeed = document.querySelector("#live-event-feed");
@@ -343,6 +361,9 @@ try {
     assert.deepEqual(measured.controls.filter(({ width: controlWidth, available, right, parentRight }) => controlWidth + 1 < available || right > parentRight + 1), [], `form control width contract failed at ${width}px`);
     assert.ok(measured.overflow.every(({ scrollHeight, clientHeight, overflowY }) => scrollHeight > clientHeight && /auto|scroll/.test(overflowY)), `bounded overflow contract failed at ${width}px`);
     if (width === 360) {
+      assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
+        display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,
+      }, "hidden components violated the authoritative browser contract");
       assert.deepEqual([measured.live.header, measured.live.master, measured.live.detail].filter((component) => !withinColumn(component, measured.root)), [], "compact components escaped their content column");
       assert.ok(measured.actionChildren.every(({ rect, parent }) => rect.x >= parent.x - 1 && rect.right <= parent.right + 1), "an action button escaped its wrapping action group");
       assert.deepEqual(await evaluate(socket, inspectorReturnRuntime), {
