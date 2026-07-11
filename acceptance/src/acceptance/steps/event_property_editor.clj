@@ -7,25 +7,25 @@
    "Properties, JSON, and Validation views edit the same draft"
    "the Properties view preserves string, number, boolean, null, object, and array value types"
    "switching views does not save or discard draft changes"
-   "property <property_path> has value <old_value>" "the user performs <edit_action>"
+   "property <property_path> has value <old_value>" "draft field <property_path> currently equals <old_value>" "the user performs <edit_action>"
    "the structured draft and JSON draft both reflect <expected_result>"
    "the original template remains unchanged until the draft is saved"
    "the JSON draft contains <invalid_content>" "the user attempts to save or push the draft"
    "the action is blocked" "a visible error identifies the invalid JSON location"
    "template <template_name> remains unchanged"
-   "event template <template_name> has version <old_version>" "the draft contains valid changes"
-   "the user saves the draft as a revision" "template <template_name> has version <new_version>"
+   "event template <template_name> has version <old_version>" "revision history for <template_name> ends at <old_version>" "the draft contains valid changes"
+   "the user saves the draft as a revision" "template <template_name> has version <new_version>" "saving appends revision <new_version> to <template_name>"
    "version <old_version> remains available to pinned test sequences"
-   "a valid unsaved draft targets <destination>" "the user pushes the draft to the active page"
+   "a valid unsaved draft targets <destination>" "the user pushes the draft to the active page" "the user reviews and confirms pushing the draft to the active page"
    "the exact draft payload is sent to <destination>"
    "the editor reports the active page, adapter, destination, and result"
    "template <template_name> retains its last saved version" "the draft has unsaved changes"
    "the user leaves the property editor" "the user can keep editing, discard the draft, or save it"
    "unsaved changes are not discarded without an explicit choice"
-   "nested property <property_path> has value <old_value>"
+   "nested property <property_path> has value <old_value>" "within a nested structure <property_path> currently equals <old_value>"
    "the user expands its parent and changes it to <new_value>"
    "the draft retains the surrounding object and array structure"
-   "nested property <property_path> has value <new_value> in Properties and JSON views"])
+   "nested property <property_path> has value <new_value> in Properties and JSON views" "Properties and JSON views both show <new_value> at nested path <property_path>"])
 
 (defn- name! [example]
   (let [name (editor/value example "template_name")]
@@ -56,6 +56,7 @@
       (support/assert! (contains? #{["transaction_id" "test-123"] ["debug" "true"] ["revenue" "absent"]} fixture)
                        "Property edit fixture is not canonical." {})
       (assoc world :property-fixture fixture))
+    "draft field <property_path> currently equals <old_value>" (transition "property <property_path> has value <old_value>" world example)
     "the user performs <edit_action>"
     (let [action (editor/value example "edit_action")]
       (case action
@@ -87,6 +88,7 @@
     (let [version (parse-long (editor/value example "old_version"))]
       (name! example) (editor/assert-value! version 3 "Revision fixture is not canonical.")
       (let [t (editor/event-template "Purchase confirmation" version)] (assoc world :template t :original t :revisions [])))
+    "revision history for <template_name> ends at <old_version>" (transition "event template <template_name> has version <old_version>" world example)
     "the draft contains valid changes" (assoc world :draft (assoc (:payload (:template world)) :transaction_id "test-456") :dirty true)
     "the user saves the draft as a revision"
     (do (support/assert! (:dirty world) "Valid draft is not marked dirty." {})
@@ -94,6 +96,7 @@
     "template <template_name> has version <new_version>"
     (do (name! example) (support/assert! (false? (:dirty world)) "Saved revision remains dirty." {})
         (editor/assert-value! (parse-long (editor/value example "new_version")) (:version (:template world)) "New version is incorrect.") world)
+    "saving appends revision <new_version> to <template_name>" (transition "template <template_name> has version <new_version>" world example)
     "version <old_version> remains available to pinned test sequences"
     (do (editor/assert-value! (parse-long (editor/value example "old_version")) (:version (first (:revisions world))) "Pinned revision is unavailable.") world)
     "a valid unsaved draft targets <destination>"
@@ -103,6 +106,7 @@
     "the user pushes the draft to the active page"
     (do (support/assert! (:dirty world) "Unsaved draft is not marked dirty." {})
         (assoc world :push {:payload (:draft world) :destination (:destination world) :page "https://example.test/" :adapter "Event history" :success true}))
+    "the user reviews and confirms pushing the draft to the active page" (transition "the user pushes the draft to the active page" world example)
     "the exact draft payload is sent to <destination>"
     (do (editor/assert-value! (editor/value example "destination") (:destination (:push world)) "Draft push destination is incorrect.")
         (editor/assert-value! (:payload (:push world)) (:draft world) "Draft push payload is incorrect.") world)
@@ -122,6 +126,7 @@
     (do (editor/assert-value! [(editor/value example "property_path") (editor/value example "old_value")]
                               ["/items/0/product_id" "sku-123"] "Nested fixture is not canonical.")
         (assoc world :property-path "/items/0/product_id"))
+    "within a nested structure <property_path> currently equals <old_value>" (transition "nested property <property_path> has value <old_value>" world example)
     "the user expands its parent and changes it to <new_value>"
     (let [v (editor/value example "new_value")]
       (editor/assert-value! v "sku-456" "Nested value fixture is not canonical.")
@@ -134,7 +139,8 @@
     "nested property <property_path> has value <new_value> in Properties and JSON views"
     (do (editor/assert-value! [(editor/value example "property_path") (editor/value example "new_value")]
                               [(:property-path world) (get-in world [:draft :items 0 :product_id])] "Nested views disagree.")
-        (assoc world :json-draft (pr-str (:draft world))))))
+        (assoc world :json-draft (pr-str (:draft world))))
+    "Properties and JSON views both show <new_value> at nested path <property_path>" (transition "nested property <property_path> has value <new_value> in Properties and JSON views" world example)))
 
 (def handlers
   (mapv (fn [step] {:pattern (editor/property-pattern step)

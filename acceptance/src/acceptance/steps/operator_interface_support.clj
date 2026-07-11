@@ -11,6 +11,7 @@
    "visible_summaries" #{"Page type=landing, Page category=Home" "Offer action=shown, Offer id=0" "Transaction id order-42, Revenue 49.95" "Page name Products, Page type listing"}
    "resolved_value" #{"null" "undefined" "empty string" "empty array" "empty object" "numeric 0" "boolean false" "non-empty array" "non-empty object"}
    "usability" #{"usable" "unusable"}
+   "unresolved_condition" #{"no active target" "permission missing" "destination invalid" "JSON invalid" "adapter not ready"}
    "action_meaning" #{"consequential" "supporting"}
    "action_variant" #{"destructive" "quiet" "secondary"}
    "capture_time" #{"10:03:00" "10:04:00"}
@@ -25,7 +26,7 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
