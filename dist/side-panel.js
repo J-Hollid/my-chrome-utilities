@@ -93,6 +93,9 @@ const schemaSearch = document.querySelector("#schema-search");
 const pushDraftReview = document.querySelector("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
+const pushDraftReviewDetails = document.querySelector("#push-draft-review-details");
+const pushDraftReviewChangeList = document.querySelector("#push-draft-review-change-list");
+const pushDraftReviewNoChanges = document.querySelector("#push-draft-review-no-changes");
 const confirmPushDraftButton = document.querySelector("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector("#cancel-push-draft");
 const closeTemplateEditorConfirmation = document.querySelector("#close-template-editor-confirmation");
@@ -669,8 +672,20 @@ function openPushDraftReview() {
         return;
     }
     pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
+    if (pushDraftReviewDetails)
+        pushDraftReviewDetails.replaceChildren(...pendingPushDraftReview.rows.flatMap(([label, value]) => { const term = document.createElement("dt"); const description = document.createElement("dd"); term.textContent = String(label); description.textContent = String(value); return [term, description]; }));
+    if (pushDraftReviewChangeList)
+        pushDraftReviewChangeList.replaceChildren(...pendingPushDraftReview.changes.map((change) => { const item = document.createElement("li"); const details = document.createElement("dl"); for (const [label, value] of [["Path", change.path], ["Previous", change.previous], ["Pushed", change.pushed]]) {
+            const term = document.createElement("dt");
+            const description = document.createElement("dd");
+            term.textContent = String(label);
+            description.textContent = String(value);
+            details.append(term, description);
+        } item.append(details); return item; }));
+    if (pushDraftReviewNoChanges)
+        pushDraftReviewNoChanges.hidden = pendingPushDraftReview.changes.length > 0;
     if (pushDraftReviewSummary)
-        pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+        pushDraftReviewSummary.textContent = "";
     if (confirmPushDraftButton)
         confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
     openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
