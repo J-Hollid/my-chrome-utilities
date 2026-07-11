@@ -2,6 +2,10 @@ import type {
   EditableEventTemplate,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
+import {
+  applyActionTreatment,
+  templateActionHierarchy,
+} from "./side-panel-action-hierarchy.js";
 
 export interface EventLibraryEditorElements {
   search: HTMLInputElement | null;
@@ -67,10 +71,12 @@ function draftProperties(value: unknown, path = ""): HTMLLIElement[] {
 function actionButton(
   label: string,
   action: () => void,
+  variant: "secondary" | "quiet" = "secondary",
 ): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = label;
+  button.dataset.actionVariant = variant;
   button.addEventListener("click", action);
   return button;
 }
@@ -110,7 +116,7 @@ export function renderEventLibraryEditor(
       const actionsRow = document.createElement("div");
       actionsRow.className = "event-template-actions";
       actionsRow.append(
-        actionButton("Edit", () => actions.edit(template)),
+        actionButton("Edit", () => actions.edit(template), "quiet"),
         actionButton("Duplicate", () => actions.duplicate(template)),
         actionButton("Push", () => actions.push(template)),
       );
@@ -131,6 +137,12 @@ export function renderEventLibraryEditor(
   elements.properties?.replaceChildren(
     ...(editor ? draftProperties(editor.draft) : []),
   );
+  if (editor) {
+    const hierarchy = templateActionHierarchy(editor);
+    applyActionTreatment(elements.saveRevisionButton, hierarchy.saveRevision, "save-template-revision-reason");
+    applyActionTreatment(elements.pushDraftButton, hierarchy.pushDraft, "push-template-draft-reason");
+    applyActionTreatment(elements.discardDraftButton, hierarchy.discardDraft);
+  }
 }
 
 export function setEventLibraryResult(

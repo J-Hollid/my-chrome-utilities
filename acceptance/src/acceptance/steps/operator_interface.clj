@@ -27,6 +27,7 @@
    "features/data-layer-sessions-operator-layout.feature"
    "features/side-panel-hotkey-operator-layout.feature"
    "features/side-panel-inclusive-interaction.feature"
+   "features/side-panel-action-hierarchy.feature"
    "features/side-panel-responsive-navigation-shell.feature"
    "features/side-panel-visual-regression-coverage.feature"
    "features/side-panel-visual-system.feature"])
