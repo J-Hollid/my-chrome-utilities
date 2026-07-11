@@ -11,4 +11,12 @@ export function createLiveSessionSummary(input) {
         connectedSourceCount: input.connectedSourceCount,
     };
 }
+export function canonicalLiveObserverStatus(status) {
+    switch (status) {
+        case "attached": return "Connected";
+        case "needs sync": return "Waiting for path";
+        case "page access unavailable": return "Error";
+        case "inactive": return "Disconnected";
+    }
+}
 //# sourceMappingURL=data-layer-live-session-summary.js.map

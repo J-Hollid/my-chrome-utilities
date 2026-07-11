@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 
-import { createLiveSessionSummary } from "../dist/data-layer-live-session-summary.js";
+import {
+  canonicalLiveObserverStatus,
+  createLiveSessionSummary,
+} from "../dist/data-layer-live-session-summary.js";
+import { createLiveNotificationController } from "../dist/data-layer-live-notifications.js";
 import { copyLivePageUrl } from "../dist/data-layer-live-session-summary-actions.js";
 import { renderLiveSessionSummary } from "../dist/data-layer-live-session-summary-ui.js";
 
@@ -24,6 +28,11 @@ assert.equal(
 assert.equal(
   createLiveSessionSummary({ ...fields, testingState: "Ended", observerStatus: "Disconnected" }).statusLabel,
   "Ended",
+);
+assert.deepEqual(
+  ["attached", "needs sync", "page access unavailable", "inactive"]
+    .map(canonicalLiveObserverStatus),
+  ["Connected", "Waiting for path", "Error", "Disconnected"],
 );
 
 const elements = {
@@ -77,3 +86,17 @@ assert.equal(
 assert.equal(copiedValue, fields.pageUrl);
 assert.equal(await copyLivePageUrl("", async () => {}), "unavailable");
 assert.equal(await copyLivePageUrl(fields.pageUrl, async () => { throw new Error("denied"); }), "failed");
+
+const notifications = [];
+const scheduled = [];
+const notificationController = createLiveNotificationController(
+  (message) => notifications.push(message),
+  (clear, delayMs) => scheduled.push({ clear, delayMs }),
+);
+notificationController.announce("Testing started");
+notificationController.announce("Capture paused");
+scheduled[0].clear();
+assert.deepEqual(notifications, ["Testing started", "Capture paused"]);
+scheduled[1].clear();
+assert.deepEqual(notifications, ["Testing started", "Capture paused", ""]);
+assert.equal(scheduled[1].delayMs, 4000);
