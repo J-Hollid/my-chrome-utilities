@@ -85,6 +85,10 @@ const schemaEmptyState = document.querySelector("#schema-empty-state");
 const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
+const pushDraftReview = document.querySelector("#push-draft-review");
+const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
+const confirmPushDraftButton = document.querySelector("#confirm-push-draft");
+const cancelPushDraftButton = document.querySelector("#cancel-push-draft");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
@@ -621,6 +625,23 @@ async function pushCurrentTemplateDraft() {
     if (record.fieldError)
         setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
     setEventLibraryResult(eventLibraryEditorElements, record.summary);
+}
+function openPushDraftReview() {
+    if (!propertyEditorState)
+        return;
+    const target = selectedObservationTarget(observationTargetState);
+    if (!target || target.accessState !== "Ready") {
+        setEventLibraryValidation(eventLibraryEditorElements, "Select a target before pushing.");
+        return;
+    }
+    if (propertyEditorState.jsonError) {
+        setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
+        return;
+    }
+    if (pushDraftReviewSummary)
+        pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+    if (pushDraftReview)
+        pushDraftReview.hidden = false;
 }
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
@@ -1329,8 +1350,15 @@ saveTemplateCopyButton?.addEventListener("click", () => {
     }
 });
 pushTemplateDraftButton?.addEventListener("click", () => {
-    void pushCurrentTemplateDraft();
+    openPushDraftReview();
 });
+confirmPushDraftButton?.addEventListener("click", () => {
+    void pushCurrentTemplateDraft();
+    if (pushDraftReview)
+        pushDraftReview.hidden = true;
+});
+cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview)
+    pushDraftReview.hidden = true; });
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;
