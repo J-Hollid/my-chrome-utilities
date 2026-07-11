@@ -234,6 +234,29 @@ const inspectorReturnRuntime = `import("./data-layer-live-inspector-return-ui.js
   return result;
 })`;
 
+const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
+  const eventList = document.querySelector("#live-event-list");
+  const eventFeed = document.querySelector("#live-event-feed");
+  const eventInspector = document.querySelector("#live-event-inspector");
+  const backToEventsButton = document.querySelector("#back-to-events");
+  const event = { id:"purchase", name:"purchase", sourceId:"history", captureTime:"10:03:00", payload:{} };
+  const elements = { eventList, eventFeed, eventInspector, backToEventsButton, sourceStatuses:null };
+  renderLiveObserverState(elements, { sources:[], events:[event], inspectorEventId:"purchase", listVisible:false }, () => {});
+  renderLiveInspector(elements, event, {
+    copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
+    validationAvailability: () => ({ enabled:true }),
+  });
+  const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
+  return {
+    listInLayout: eventList.getClientRects().length > 0,
+    inspectorInLayout: eventInspector.getClientRects().length > 0,
+    backInLayout: backToEventsButton.getClientRects().length > 0,
+    backHasHiddenAncestor: hiddenAncestor(backToEventsButton),
+    backInsideList: eventList.contains(backToEventsButton),
+    backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
+  };
+})`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -255,6 +278,14 @@ try {
         scrollTop: 480,
         focusedEventId: "purchase",
       }, "inspector return did not restore browser scroll and focus");
+      assert.deepEqual(await evaluate(socket, inspectorNavigationRuntime), {
+        listInLayout: false,
+        inspectorInLayout: true,
+        backInLayout: true,
+        backHasHiddenAncestor: false,
+        backInsideList: false,
+        backIsFirstHeaderControl: true,
+      }, "stacked inspector navigation layout violated its browser contract");
     }
     if (width === 720) {
       for (const [name, pane, masterRange, detailRange] of [["live", measured.live, [280, 320], [344, 400]], ["library", measured.library, [240, 288], [384, 448]], ["sessions", measured.sessions, [240, 300], [360, 432]], ["schemas", measured.schemas, [240, 300], [360, 432]]]) {
