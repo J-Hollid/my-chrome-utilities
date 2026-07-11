@@ -100,6 +100,7 @@ import {
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 import {
   createLiveObserverState,
+  closeLiveInspector,
   dataLayerViewForNavigationKey,
   dataLayerViews,
   pauseCapture,
@@ -148,7 +149,7 @@ import {
   type EditableEventTemplate,
   type PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, type SchemaDefinition } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -604,11 +605,47 @@ function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
 }
 
+function closeInspectorAndReturnToEvents(): void {
+  liveObserverState = closeLiveInspector(liveObserverState);
+  renderLiveObserver();
+  liveObserverElements.eventFeed?.querySelector<HTMLButtonElement>("button")?.focus();
+}
+
 function openLiveInspector(eventId: string): void {
   const split = globalThis.innerWidth >= 800;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
-  if (event) renderLiveInspector(liveObserverElements, event);
+  if (event) renderLiveInspector(liveObserverElements, event, {
+    copyPayload: async (selected) => {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard access is unavailable.");
+      }
+      await navigator.clipboard.writeText(JSON.stringify(selected.payload));
+    },
+    saveToLibrary: (selected) => {
+      const template = createEditableTemplate({
+        id: selected.id, sessionId: selected.sessionId ?? "live", sourceId: selected.sourceId,
+        sourceKind: selected.sourceKind ?? "page", name: selected.name,
+        captureTime: selected.captureTime, pageUrl: selected.pageUrl ?? liveObserverState.pageUrl,
+        payload: selected.payload, rawInput: selected.rawInput ?? selected,
+        validation: selected.validation ?? "Not checked", provenance: selected.provenance ?? "live",
+      }, { name: selected.name, destination: selected.destination ?? "event.history", sourceName: selected.sourceName ?? selected.sourceId });
+      eventTemplates = [...eventTemplates, template];
+      persistEventTemplateLibrary();
+      renderEventTemplateLibrary();
+    },
+    validate: (selected) => {
+      const result = validateEvent({
+        sourceId: selected.sourceId,
+        eventName: selected.name,
+        payload: selected.payload,
+        rawInput: selected.rawInput,
+      }, schemas);
+      liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) =>
+        candidate.id === selected.id ? { ...candidate, validation: result.state } : candidate) };
+      renderLiveObserver();
+    },
+  });
   renderLiveObserver();
 }
 
@@ -1613,9 +1650,7 @@ confirmSavedSessionDeleteButton?.addEventListener("click", () => {
 });
 
 backToEventsButton?.addEventListener("click", () => {
-  const { inspectorEventId: _inspectorEventId, ...withoutInspector } = liveObserverState;
-  liveObserverState = { ...withoutInspector, listVisible: true };
-  renderLiveObserver();
+  closeInspectorAndReturnToEvents();
 });
 
 createKeymapButton?.addEventListener("click", createHotkeyKeymapFile);
@@ -1684,7 +1719,15 @@ observationTargetSearch?.addEventListener("keydown", (event) =>
 observationTargetList?.addEventListener("keydown", (event) =>
   handleObservationTargetListKeydown(observationTargetElements, event));
 
-document.addEventListener("keydown", handleHotkeyKeydown, true);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && liveObserverState.inspectorEventId) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeInspectorAndReturnToEvents();
+    return;
+  }
+  handleHotkeyKeydown(event);
+}, true);
 
 if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
   chrome.runtime.onMessage.addListener((message: unknown) => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   createLiveObserverState,
+  closeLiveInspector,
   dataLayerViewForNavigationKey,
   filteredLiveEvents,
   liveEventWindow,
@@ -60,4 +61,7 @@ state = selectLiveEvent(state, "two", "stacked");
 assert.equal(state.inspectorEventId, "two");
 assert.equal(state.listVisible, false);
 state = selectLiveEvent(state, "two", "split");
+assert.equal(state.listVisible, true);
+state = closeLiveInspector(state);
+assert.equal(state.inspectorEventId, undefined);
 assert.equal(state.listVisible, true);
