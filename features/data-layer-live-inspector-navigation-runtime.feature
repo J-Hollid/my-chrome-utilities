@@ -6,17 +6,22 @@
 Feature: Data Layer Live inspector navigation runtime
 
   Background:
-    Given the built extension side panel is running in a browser at 320 CSS px wide
+    Given the built extension side panel is running in a browser at 360 CSS px wide
     And captured event purchase is available in the Live event list
 
   # Data Layer Live inspector navigation runtime 001
   Scenario: Data Layer Live inspector navigation runtime 001
-    Given the Live event list has keyboard focus on event purchase
+    Given the navigation return snapshot records row purchase and offset 480 CSS px
+    And the observation lifecycle snapshot reports Capturing
     When the user opens event purchase
-    Then the event list has computed display none
-    And the inspector and Back to events control have computed display other than none
+    Then computed layout removes the event list
+    And computed layout includes the inspector and visible Back to events control
+    And Back to events is in the inspector header before inspector body content
     And Back to events has no hidden ancestor
+    And Back to events is not contained by the event-list element
     When the user activates Back to events
-    Then the inspector has computed display none
-    And the event list has computed display other than none
-    And keyboard focus returns to event purchase
+    Then the inspector leaves the rendered layout
+    And the event list re-enters the layout
+    And document activeElement is the purchase row
+    And restored feed scrollTop equals 480 CSS px
+    And inspector navigation never changes the observation lifecycle snapshot
