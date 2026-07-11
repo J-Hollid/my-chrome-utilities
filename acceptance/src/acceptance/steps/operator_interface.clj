@@ -6,6 +6,7 @@
 (def feature-files
   ["features/data-layer-library-operator-layout.feature"
    "features/data-layer-live-operator-layout.feature"
+   "features/data-layer-live-session-summary.feature"
    "features/data-layer-live-inspector-actions.feature"
    "features/data-layer-live-inspector-layout.feature"
    "features/data-layer-live-inspector-navigation.feature"
