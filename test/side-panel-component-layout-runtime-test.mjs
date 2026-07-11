@@ -254,14 +254,14 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
   const create = (name, eventName, destination, payload) => {
     q("#add-new-event").click();
-    q("#event-template-json-section summary").click();
-    q("#event-template-execution-settings summary").click();
     const initial = {
       editor: visible(q("#event-property-editor")),
       fields: ["#event-template-name", "#event-template-event-name", "#event-template-source", "#push-destination-path", "#event-template-json"].map((selector) => ({ selector, value:q(selector).value, visible:visible(q(selector)) })),
       saveDisabled:q("#save-template-revision").disabled,
       focused:document.activeElement === q("#event-template-name"),
     };
+    q("#event-template-json-section summary").click();
+    q("#event-template-execution-settings summary").click();
     setValue("#event-template-name", name);
     setValue("#event-template-event-name", eventName);
     const source = q("#event-template-source");
@@ -290,7 +290,14 @@ const libraryActionsRecoveryRuntime = `(async () => {
     editor:visible(q("#event-property-editor")),
     fields:[q("#event-template-name").disabled, q("#event-template-event-name").disabled],
     values:[q("#event-template-name").value, q("#event-template-event-name").value],
+    disclosuresClosed:["#event-template-revision-history-section", "#event-template-properties-section", "#event-template-json-section", "#event-template-execution-settings"].every((selector) => !q(selector).open),
   };
+  setValue("#event-template-name", "Completed checkout");
+  setValue("#event-template-event-name", "checkout_completed");
+  q("#save-template-revision").click();
+  const revisionReview = { ...dialogState(q("#revision-change-review")), confirm:q("#confirm-revision-change").textContent };
+  q("#confirm-revision-change").click();
+  const revisionSaved = { identity:q(".event-template-identity").textContent, result:q("#event-template-result").textContent };
   q("#close-template-editor").click();
 
   const scroll = create("Scroll milestone", "scroll", "event.history", { scroll_percentage:25 });
@@ -328,7 +335,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     persisted:JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1") ?? "[]").map((template) => template.name).sort(),
   };
 
-  q('[aria-label="Delete Purchase confirmation"]').click();
+  q('[aria-label="Delete Completed checkout"]').click();
   const deleteReview = { ...dialogState(q("#event-library-delete-review")), summary:q("#event-library-delete-review-summary").textContent };
   q("#confirm-event-library-delete").click();
   const afterDelete = [...q("#event-template-list").querySelectorAll(".event-template-identity")].map((element) => element.textContent);
@@ -340,7 +347,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, closeResult, inlineIdentity, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, closeResult, inlineIdentity, revisionReview, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -643,7 +650,9 @@ try {
         saveEnabled:true,
       },
       closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
-      inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"] },
+      inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"], disclosuresClosed:true },
+      revisionReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, confirm:"Save revision 2" },
+      revisionSaved:{ identity:"Completed checkout · checkout_completed", result:"Saved version 2; identity, execution, and payload changes applied." },
       scroll:{
         initial:{
           editor:true,
@@ -660,8 +669,8 @@ try {
         saveEnabled:true,
       },
       exportResult:{
-        templateNames:["Purchase confirmation", "Scroll milestone"],
-        revisions:[1, 1],
+        templateNames:["Completed checkout", "Scroll milestone"],
+        revisions:[1, 2],
         payloads:[{ transaction_id:"purchase-1" }, { scroll_percentage:25 }],
         settings:["event.history", "event.history"],
       },
@@ -669,8 +678,8 @@ try {
       cleared:{ count:0, addAvailable:true, importAvailable:true },
       importReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, replaceVisible:true, appendVisible:true },
       replaceArmed:"Confirm replace 0 with 2",
-      restored:{ names:["Purchase confirmation", "Scroll milestone"], persisted:["Purchase confirmation", "Scroll milestone"] },
-      deleteReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"Purchase confirmation; event purchase; 1 saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged." },
+      restored:{ names:["Completed checkout", "Scroll milestone"], persisted:["Completed checkout", "Scroll milestone"] },
+      deleteReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, summary:"Completed checkout; event checkout_completed; 2 saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged." },
       afterDelete:["Scroll milestone · scroll"],
       final:{ count:0, persisted:0, addAvailable:true, importAvailable:true },
     }, `natural Library actions failed their ${width}px browser recovery contract`);
