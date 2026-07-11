@@ -25,7 +25,7 @@
    "component_name" #{"Live view tab" "event row" "observation status" "primary action" "source control" "template JSON editor" "workspace tab"}
    "control_name" #{"Back to events" "Clear source filter" "Connected source" "Delete session" "Pause capture" "Push template"}
    "control_state" #{"destructive" "disabled" "selected" "successful"}
-   "destination" #{"event.history"}
+   "destination" #{"checkoutLayer" "dataLayer" "event.history"}
    "duplicate_fragments" #{"attached to target, active data layer attached, observation connected"
                            "observation started, event history connected, session is live"}
    "dock_side" #{"left" "right"}
@@ -104,8 +104,11 @@
    "result_state" #{"2 issues"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
-   "schema_name" #{"Purchase event" "Purchase v2"}
+   "schema_name" #{"Ecommerce" "None" "Purchase event" "Purchase v2"}
+   "tags" #{"checkout, sale" "none"}
    "scroll_position" #{"480 CSS px" "960 px"}
+   "short_template" #{"View"}
+   "long_template" #{"International purchase confirmation with campaign"}
    "second_subview" #{"Sequences"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
@@ -123,20 +126,20 @@
    "observer_path" #{"analytics" "dataLayer" "event.history" "queue.history"}
    "connected_source_count" #{"0" "1" "2" "3"}
    "source_count" #{"3"}
-   "source_name" #{"Adobe beacons" "Event history" "GA4 collect" "event.history"}
+   "source_name" #{"Adobe beacons" "Event history" "GA4" "GA4 collect" "event.history"}
    "source_status" #{"Connected" "Disconnected"}
    "state_name" #{"invalid" "restarted" "selected"}
    "step_count" #{"4"}
    "subview_name" #{"Event templates" "Sequences"}
    "target_size" #{"44 CSS px"}
-   "template_name" #{"Purchase confirmation"}
+   "template_name" #{"Purchase confirmation" "View"}
    "text_zoom" #{"100 percent" "200 percent"}
    "theme_name" #{"dark" "light"}
    "total_count" #{"42"}
    "usage_count" #{"14"}
    "validation_state" #{"2 issues" "Not checked" "Valid"}
    "validation_summary" #{"16 valid, 2 issues"}
-   "version" #{"2" "3"}
+   "version" #{"1" "2" "3"}
    "view_name" #{"Hotkeys" "Library" "Live" "Schemas" "Sessions"}
    "view_state" #{"command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sessions" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor"}
    "visible_count" #{"7"}

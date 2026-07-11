@@ -22,16 +22,18 @@ Feature: Data layer library operator layout
 
   # Data layer library operator layout 002
   Scenario Outline: Data layer library operator layout 002
-    Given event template <template_name> has event <event_name>, source <source_name>, version <version>, and validation state <validation_state>
+    Given event template <template_name> has event <event_name>, source <source_name>, destination <destination>, version <version>, validation <validation_state>, schema <schema_name>, and tags <tags>
     When event templates are listed
-    Then <template_name> is the row's primary label
-    And the row shows <event_name>, <source_name>, version <version>, <validation_state>, destination, and tags
-    And frequently used action <primary_action> is visible on the selected row
-    And additional actions remain available without expanding every row
+    Then the first content line contains template name <template_name> followed by event name <event_name>
+    And the second content line contains source <source_name> followed by destination <destination>
+    And Version <version>, Validation <validation_state>, Schema <schema_name>, and Tags <tags> are separate labelled values or badges
+    And a dedicated action row contains Edit, Duplicate, and Push in that order
+    And no action is inline with a metadata sentence
 
     Examples:
-      | project_name         | template_name         | event_name | source_name   | version | validation_state | primary_action |
-      | my-chrome-utilities | Purchase confirmation | purchase   | event.history | 3       | Valid            | Push           |
+      | project_name         | template_name         | event_name | source_name   | destination    | version | validation_state | schema_name | tags            |
+      | my-chrome-utilities | Purchase confirmation | purchase   | event.history | checkoutLayer  | 3       | Valid            | Ecommerce  | checkout, sale  |
+      | my-chrome-utilities | View                   | page_view  | GA4            | dataLayer       | 1       | Not checked      | None       | none            |
 
   # Data layer library operator layout 003
   Scenario Outline: Data layer library operator layout 003
@@ -83,3 +85,15 @@ Feature: Data layer library operator layout
       | project_name         | subview_name    | item_name             |
       | my-chrome-utilities | Event templates | Purchase confirmation |
       | my-chrome-utilities | Sequences       | Purchase journey      |
+
+  # Data layer library operator layout 007
+  Scenario Outline: Data layer library operator layout 007
+    Given the Library contains templates <short_template> and <long_template> with unequal metadata lengths
+    When event templates are listed
+    Then both rows align the same identity, routing, attributes, and actions regions
+    And wrapped content in <long_template> does not change the region order used by <short_template>
+    And each action row begins after its own metadata regions rather than after the last wrapped word
+
+    Examples:
+      | project_name         | short_template | long_template                                      |
+      | my-chrome-utilities | View           | International purchase confirmation with campaign |
