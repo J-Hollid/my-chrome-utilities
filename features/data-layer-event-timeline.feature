@@ -13,9 +13,11 @@ Feature: Data layer event timeline
   Scenario Outline: Data layer event timeline 001
     Given observed event <event_name> is recorded from source <source_name> on page <page_url>
     When the live event feed is displayed
-    Then event rows are shown in capture order
+    Then event rows are grouped into contiguous pathname visits derived from capture chronology
+    And visit blocks and their event rows are shown newest first
     And the row for <event_name> shows compact capture time, source kind, source name <source_name>, event name, validation state, and key properties
-    And page URL <page_url> is shown once as a journey separator
+    And the pathname from page URL <page_url> is shown once in its visit header
+    And complete page URL <page_url> remains available in event details
     And full event metadata is not repeated in every collapsed row
 
     Examples:
@@ -66,7 +68,7 @@ Feature: Data layer event timeline
 
   # Data layer event timeline 005
   Scenario Outline: Data layer event timeline 005
-    Given the live feed is following the newest event
+    Given automatic following is active at the feed head
     When the user <exploration_action>
     Then automatic following is paused
     And newly captured events do not move the user's viewport
@@ -79,7 +81,7 @@ Feature: Data layer event timeline
 
   # Data layer event timeline 006
   Scenario Outline: Data layer event timeline 006
-    Given <event_count> events are loaded in the live feed
+    Given the feed contains <event_count> loaded records
     When another event is appended
     Then assistive technology can identify and move between event records
     And the feed exposes the updated event position and count

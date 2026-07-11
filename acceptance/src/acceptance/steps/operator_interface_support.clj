@@ -3,8 +3,17 @@
 
 (def canonical-example-values
   {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "configuration_action" #{"add page_category last" "move page_type before page_name" "edit page_name to content_name" "remove page_type"}
+   "expected_paths" #{"page_name, page_type, page_category" "page_type, page_name" "content_name, page_type" "page_name"}
+   "exploration_action" #{"reads an older event" "keeps an inspector open"}
+   "event_shape" #{"tuple" "object"}
+   "payload" #{"page_name=\"\", page_type=\"landing\", page_category=\"Home\"" "offer_action=\"shown\", offer_id=0, campaign=\"summer\""}
+   "visible_summaries" #{"Page type=landing, Page category=Home" "Offer action=shown, Offer id=0" "Transaction id order-42, Revenue 49.95" "Page name Products, Page type listing"}
+   "resolved_value" #{"null" "undefined" "empty string" "empty array" "empty object" "numeric 0" "boolean false" "non-empty array" "non-empty object"}
+   "usability" #{"usable" "unusable"}
    "action_meaning" #{"consequential" "supporting"}
    "action_variant" #{"destructive" "quiet" "secondary"}
+   "capture_time" #{"10:03:00" "10:04:00"}
    "action_result" #{"failed" "succeeded"}
    "duplicate_choice" #{"Create copy" "Update existing"}
    "duplicate_result" #{"Purchase updated" "distinct copy created"}
@@ -45,7 +54,7 @@
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
    "event_count" #{"0" "7" "12" "18" "42"}
-   "event_name" #{"banner" "checkout" "page_view" "pageview" "purchase"}
+   "event_name" #{"banner" "checkout" "offer" "page_view" "pageview" "purchase"}
    "external_effect" #{"clipboard contains payload JSON" "event validation state changes" "persisted Library template exists"}
    "first_subview" #{"Event templates"}
    "group_names" #{"Navigation and Data Layer"}
@@ -66,7 +75,11 @@
    "notification" #{"Pause failed" "Testing started"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
-   "new_event" #{"checkout" "purchase"}
+   "new_event" #{"checkout" "confirmation" "pageview" "purchase"}
+   "captured_pathname" #{"/checkout" "/confirmation"}
+   "expected_top_pathname" #{"/checkout" "/confirmation"}
+   "checkout_visit_count" #{"1"}
+   "confirmation_visit_count" #{"0" "1"}
    "existing_events" #{"pageview" "pageview, banner view"}
    "first_page_events" #{"pageview"}
    "next_page_events" #{"checkout, purchase"}
@@ -84,6 +97,7 @@
    "target_value" #{"array containing pageview" "missing" "object containing order"}
    "sample_value" #{"array containing order" "array containing purchase" "missing"}
    "path_status" #{"not an array" "path missing" "ready"}
+   "pathname" #{"/checkout" "/products"}
    "other_tab_id" #{"77"}
    "page_url" #{"https://example.test/home"
                 "https://shop.example.test/cart"

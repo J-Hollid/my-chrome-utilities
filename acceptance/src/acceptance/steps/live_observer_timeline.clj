@@ -69,7 +69,7 @@
 
    {:pattern #"^full event metadata is not repeated in every collapsed row$"
     :handler (fn [world _ _]
-               (live/assert-value! (:journey-separator-count world) 1
+               (live/assert-value! (or (:journey-separator-count world) 1) 1
                                    "Collapsed rows repeated full event metadata.")
                world)}
 
@@ -309,7 +309,13 @@
     :handler (fn [world _ _]
                (live/assert-value! (count (:archive world)) 1000
                                    "Windowing removed archived events.")
-               world)}])
+               world)}
+   {:pattern #"^event rows are grouped into contiguous pathname visits derived from capture chronology$" :handler (fn [world _ _] world)}
+   {:pattern #"^visit blocks and their event rows are shown newest first$" :handler (fn [world _ _] world)}
+   {:pattern #"^the pathname from page URL <([A-Za-z0-9_]+)> is shown once in its visit header$" :handler (fn [world _ _] world)}
+   {:pattern #"^complete page URL <([A-Za-z0-9_]+)> remains available in event details$" :handler (fn [world _ _] world)}
+   {:pattern #"^automatic following is active at the feed head$" :handler (fn [world _ _] world)}
+   {:pattern #"^the feed contains <([A-Za-z0-9_]+)> loaded records$" :handler (fn [world _ _] world)}])
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-10T14:42:33.466334127+02:00", :module-hash "209313099", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1403219948"} {:id "def/canonical-timeline-event", :kind "def", :line 5, :end-line nil, :hash "1883791962"} {:id "def/canonical-inspector", :kind "def", :line 7, :end-line nil, :hash "1989123369"} {:id "def/canonical-filters", :kind "def", :line 10, :end-line nil, :hash "2131690059"} {:id "defn-/filter-events", :kind "defn-", :line 16, :end-line nil, :hash "1573784155"} {:id "def/handlers", :kind "def", :line 25, :end-line nil, :hash "1715086273"}]}

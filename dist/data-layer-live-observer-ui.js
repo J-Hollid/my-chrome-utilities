@@ -1,5 +1,6 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
+import { pathnameVisits, resolveFeedSummaries } from "./data-layer-event-feed-summaries.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -33,9 +34,13 @@ function eventRow(event, selected, openEvent) {
     const button = document.createElement("button");
     button.type = "button";
     const sourceName = event.sourceName ?? event.sourceId;
-    button.setAttribute("aria-label", `${event.name}, ${sourceName}`);
+    const summaries = resolveFeedSummaries(event);
+    const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+    const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
+    const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
+    button.setAttribute("aria-label", [event.name, compactTime, sourceName, pathname, event.validation ?? "Not checked", summaryText].filter(Boolean).join(", "));
     button.setAttribute("aria-pressed", String(selected));
-    button.textContent = `${event.name} | ${sourceName}`;
+    button.textContent = [event.name, compactTime, sourceName, event.validation ?? "Not checked", summaryText].filter(Boolean).join(" · ");
     button.addEventListener("click", () => openEvent(event.id));
     item.append(button);
     return item;
@@ -48,7 +53,16 @@ export function renderLiveObserverState(elements, state, openEvent) {
             return item;
         }));
     }
-    elements.eventFeed?.replaceChildren(...state.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
+    elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit) => {
+        const group = document.createElement("li");
+        group.className = "pathname-visit";
+        const heading = document.createElement("h5");
+        heading.textContent = visit.pathname;
+        const rows = document.createElement("ul");
+        rows.replaceChildren(...visit.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
+        group.append(heading, rows);
+        return group;
+    }));
     if (elements.eventList)
         elements.eventList.hidden = !state.listVisible;
     if (elements.eventInspector) {
