@@ -34,6 +34,7 @@ import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResu
 import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
 import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
+import { panelEmptyState } from "./panel-empty-states.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -75,6 +76,13 @@ const savedSessionConfirmation = document.querySelector("#saved-session-confirma
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
+const liveEventsEmptyState = document.querySelector("#live-events-empty-state");
+const liveSourceErrorState = document.querySelector("#live-source-error-state");
+const templateEmptyState = document.querySelector("#event-template-empty-state");
+const templateEmptyRecovery = document.querySelector("#event-template-empty-recovery");
+const savedSessionEmptyState = document.querySelector("#saved-session-empty-state");
+const schemaEmptyState = document.querySelector("#schema-empty-state");
+const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
 const createSchemaButton = document.querySelector("#create-schema");
@@ -406,6 +414,10 @@ function showDataLayerView(view, focus = false) {
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    if (liveEventsEmptyState)
+        liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
+    if (liveSourceErrorState)
+        liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
     renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
     renderLiveContextActions();
 }
@@ -498,6 +510,18 @@ async function copyLivePageUrl() {
 }
 function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+    const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
+    if (templateEmptyState) {
+        templateEmptyState.hidden = !empty;
+        const heading = templateEmptyState.querySelector("h4");
+        const detail = templateEmptyState.querySelector("p");
+        if (heading && empty)
+            heading.textContent = empty.message;
+        if (detail && empty)
+            detail.textContent = `${empty.recoveryAction} can resolve this state.`;
+    }
+    if (templateEmptyRecovery && empty)
+        templateEmptyRecovery.textContent = empty.recoveryAction;
     renderEventLibraryEditor(eventLibraryEditorElements, templates, propertyEditorState, {
         edit: openTemplateEditor,
         duplicate: (template) => {
@@ -514,6 +538,8 @@ function renderEventTemplateLibrary() {
 }
 function renderSchemas() {
     const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+    if (schemaEmptyState)
+        schemaEmptyState.hidden = visible.length > 0;
     if (schemaCount)
         schemaCount.textContent = `${visible.length} schemas`;
     if (schemaList)
@@ -538,6 +564,8 @@ function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 function renderSequences() {
+    if (sequenceEmptyState)
+        sequenceEmptyState.hidden = replaySequences.length > 0;
     renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
         const templates = eventTemplates.map((template) => ({
             id: template.id,
@@ -596,6 +624,8 @@ async function pushCurrentTemplateDraft() {
 }
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
+    if (savedSessionEmptyState)
+        savedSessionEmptyState.hidden = sessions.length > 0;
     if (savedSessionCount)
         savedSessionCount.textContent = `${sessions.length} saved sessions`;
     if (savedSessionList) {
@@ -1203,6 +1233,15 @@ saveLiveSessionButton?.addEventListener("click", () => {
 });
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+templateEmptyRecovery?.addEventListener("click", () => {
+    if (eventTemplateSearch?.value.trim()) {
+        eventTemplateSearch.value = "";
+        renderEventTemplateLibrary();
+    }
+    else {
+        showDataLayerView("Live");
+    }
+});
 schemaSearch?.addEventListener("input", renderSchemas);
 createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult)
     schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });

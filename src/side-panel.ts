@@ -193,6 +193,7 @@ import {
   pushPayloadInPage,
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
+import { panelEmptyState } from "./panel-empty-states.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -265,6 +266,13 @@ const savedSessionConfirmation = document.querySelector<HTMLElement>("#saved-ses
 const cancelSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
+const liveEventsEmptyState = document.querySelector<HTMLElement>("#live-events-empty-state");
+const liveSourceErrorState = document.querySelector<HTMLElement>("#live-source-error-state");
+const templateEmptyState = document.querySelector<HTMLElement>("#event-template-empty-state");
+const templateEmptyRecovery = document.querySelector<HTMLButtonElement>("#event-template-empty-recovery");
+const savedSessionEmptyState = document.querySelector<HTMLElement>("#saved-session-empty-state");
+const schemaEmptyState = document.querySelector<HTMLElement>("#schema-empty-state");
+const sequenceEmptyState = document.querySelector<HTMLElement>("#sequence-empty-state");
 const {
   search: eventTemplateSearch,
   saveLatestButton: saveLatestTemplateButton,
@@ -673,6 +681,8 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
 
 function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  if (liveEventsEmptyState) liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
+  if (liveSourceErrorState) liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
   renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
   renderLiveContextActions();
 }
@@ -771,6 +781,15 @@ async function copyLivePageUrl(): Promise<void> {
 
 function renderEventTemplateLibrary(): void {
   const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
+  const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
+  if (templateEmptyState) {
+    templateEmptyState.hidden = !empty;
+    const heading = templateEmptyState.querySelector<HTMLElement>("h4");
+    const detail = templateEmptyState.querySelector<HTMLElement>("p");
+    if (heading && empty) heading.textContent = empty.message;
+    if (detail && empty) detail.textContent = `${empty.recoveryAction} can resolve this state.`;
+  }
+  if (templateEmptyRecovery && empty) templateEmptyRecovery.textContent = empty.recoveryAction;
   renderEventLibraryEditor(
     eventLibraryEditorElements,
     templates,
@@ -793,6 +812,7 @@ function renderEventTemplateLibrary(): void {
 
 function renderSchemas(): void {
   const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+  if (schemaEmptyState) schemaEmptyState.hidden = visible.length > 0;
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
     const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
@@ -809,6 +829,7 @@ function persistEventTemplateLibrary(): void {
 }
 
 function renderSequences(): void {
+  if (sequenceEmptyState) sequenceEmptyState.hidden = replaySequences.length > 0;
   renderSequenceReplay(sequenceReplayElements, replaySequences, (sequence) => {
     const templates: ReplayTemplate[] = eventTemplates.map((template) => ({
       id: template.id,
@@ -888,6 +909,7 @@ async function pushCurrentTemplateDraft(): Promise<void> {
 
 function renderSavedSessions(): void {
   const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
+  if (savedSessionEmptyState) savedSessionEmptyState.hidden = sessions.length > 0;
   if (savedSessionCount) savedSessionCount.textContent = `${sessions.length} saved sessions`;
   if (savedSessionList) {
     savedSessionList.replaceChildren(...sessions.map((session) => {
@@ -1668,6 +1690,14 @@ saveLiveSessionButton?.addEventListener("click", () => {
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
+templateEmptyRecovery?.addEventListener("click", () => {
+  if (eventTemplateSearch?.value.trim()) {
+    eventTemplateSearch.value = "";
+    renderEventTemplateLibrary();
+  } else {
+    showDataLayerView("Live");
+  }
+});
 schemaSearch?.addEventListener("input", renderSchemas);
 createSchemaButton?.addEventListener("click", () => { const schema = createSchema(`Schema ${schemas.length + 1}`, 1, { type: "object" }); schemas = [...schemas, schema]; if (schemaResult) schemaResult.textContent = `Created ${schema.name}.`; renderSchemas(); });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
