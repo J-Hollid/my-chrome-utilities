@@ -22,17 +22,18 @@ Feature: Data layer live operator layout
 
   # Data layer live operator layout 002
   Scenario Outline: Data layer live operator layout 002
-    Given source <source_name> has adapter kind <adapter_kind> and status <source_status>
+    Given source <source_name> has adapter kind <adapter_kind> and aggregate observer status <observer_status>
     When the source summary is displayed
-    Then a compact source control shows <source_name>, <adapter_kind>, and <source_status>
+    Then a compact source control shows <source_name> and <adapter_kind> without repeating observer status <observer_status>
+    And observer status <observer_status> appears once in the session summary
     And filtering to source <source_name> is available from the source summary
     And configuration and recovery actions are visually subordinate to the session actions
 
     Examples:
-      | project_name         | source_name    | adapter_kind | source_status |
-      | my-chrome-utilities | event.history  | Data Layer   | Connected     |
-      | my-chrome-utilities | Adobe beacons  | Adobe        | Disconnected  |
-      | my-chrome-utilities | GA4 collect    | GTAG         | Connected     |
+      | project_name         | source_name    | adapter_kind | observer_status  |
+      | my-chrome-utilities | event.history  | Data Layer   | Connected        |
+      | my-chrome-utilities | Adobe beacons  | Adobe        | Disconnected     |
+      | my-chrome-utilities | GA4 collect    | GTAG         | Waiting for path |
 
   # Data layer live operator layout 003
   Scenario Outline: Data layer live operator layout 003

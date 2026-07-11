@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=c1411221eb4ebda0b9885d1227903d2c6f8c9235942d5164ecb6d539ca65503b
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-10T17:24:39.337015842Z","feature_name":"Data layer observer workspace","feature_path":"features/data-layer-observer-workspace.feature","background_hash":"b7c2d967b2afd5e05cda1c062cc34a0fec38fd55953fe98585ee959f07b95a99","implementation_hash":"sha256:architect-semantic-review-v7","scenarios":[{"index":1,"name":"Data layer observer workspace 002","scenario_hash":"ae3dbcdd8ed507cb0652cb991896f5890345347bc1014cd5113670d702d824d3","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T17:24:39.337015842Z"},{"index":2,"name":"Data layer observer workspace 003","scenario_hash":"46f00d22694bc4d3502adf025700412917d6b01c0edb3b29007ac11f0ca65f5d","mutation_count":14,"result":{"Total":14,"Killed":14,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:44:20.873056216Z"},{"index":0,"name":"Data layer observer workspace 001","scenario_hash":"c40857eddc2aa9d0845e5a877d0990f1563a15f495851df2e821d8cbddf2b158","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":3,"name":"Data layer observer workspace 004","scenario_hash":"9e266b5b9c6d03f75d08d3a302701d757ee0f256fcc374405ed6d19f46b11c67","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":4,"name":"Data layer observer workspace 005","scenario_hash":"1f59bc75a559c2570618b328de7fd3cc6097c29503b33e0e46e38a9b0463fabb","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":5,"name":"Data layer observer workspace 006","scenario_hash":"6bc8a93e1b0040ce9bb1065318990e8bca8595a25d271a49324acaa47c9e0aff","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":6,"name":"Data layer observer workspace 007","scenario_hash":"5b52a5f9a65d04f6bcd603b9f9aa892055d3de88166c96c340e28fc874676f66","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":7,"name":"Data layer observer workspace 008","scenario_hash":"defc6ec937d175e22168ce11e9f221e5155aac758cc68856c9de9c0cfa6d7677","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"},{"index":8,"name":"Data layer observer workspace 009","scenario_hash":"d9553f636b306b0d56d10df5b3d41989cbe561676a986fc92335cdccb42ac820","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-10T12:43:43.074930099Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer observer workspace
 
   Background:
@@ -32,26 +27,28 @@ Feature: Data layer observer workspace
 
     Examples:
       | project_name         | view_name | session_state | event_count | source_count | session_actions         |
-      | my-chrome-utilities | Live      | Live          | 2           | 1            | Pause capture, Stop, and Save |
+      | my-chrome-utilities | Live      | Capturing     | 2           | 1            | Pause capture, End testing, and Save |
 
   # Data layer observer workspace 003
   Scenario Outline: Data layer observer workspace 003
     Given observation source <source_name> has configuration state <configuration_state> and attachment state <attachment_state>
-    When the live source status is displayed
-    Then one source status summary shows <source_name> with status <visible_status>
+    When the Live observer status is displayed
+    Then exactly one observer status shows <visible_status>
     And contradictory source status <hidden_status> is not shown
+    And source <source_name> remains identifiable without another equivalent status fragment
     And Restart observation is <restart_visibility>
 
     Examples:
       | project_name         | source_name   | configuration_state | attachment_state | visible_status | hidden_status | restart_visibility |
-      | my-chrome-utilities | event.history | valid               | attached         | Connected      | Path missing  | hidden             |
-      | my-chrome-utilities | event.history | missing             | detached         | Path missing   | Connected     | visible            |
+      | my-chrome-utilities | event.history | valid               | attached         | Connected        | Waiting for path | hidden             |
+      | my-chrome-utilities | event.history | missing             | detached         | Waiting for path | Connected        | visible            |
 
   # Data layer observer workspace 004
   Scenario Outline: Data layer observer workspace 004
     When control command <command_id> completes with message <message>
     Then message <message> is announced next to the session controls
     And message <message> is not inserted into the observed event feed
+    And message <message> is temporary rather than retained as another session or observer status
 
     Examples:
       | project_name         | command_id               | message                        |
@@ -121,4 +118,4 @@ Feature: Data layer observer workspace
 
     Examples:
       | project_name         | event_name | paused_state | live_state |
-      | my-chrome-utilities | pageview   | Paused       | Live       |
+      | my-chrome-utilities | pageview   | Paused       | Capturing  |
