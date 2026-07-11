@@ -64,4 +64,8 @@ export function liveEventWindow(state, count) {
 export function selectLiveEvent(state, eventId, layout) {
     return { ...state, inspectorEventId: eventId, listVisible: layout === "split" };
 }
+export function closeLiveInspector(state) {
+    const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
+    return { ...withoutInspector, listVisible: true };
+}
 //# sourceMappingURL=data-layer-live-observer.js.map

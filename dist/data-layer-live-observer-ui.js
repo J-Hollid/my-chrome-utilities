@@ -64,7 +64,7 @@ export function renderLiveObserverState(elements, state, openEvent) {
         elements.backToEventsButton.hidden = state.listVisible;
     }
 }
-export function renderLiveInspector(elements, event) {
+export function renderLiveInspector(elements, event, actionHandlers) {
     if (!elements.eventInspector)
         return;
     const heading = document.createElement("h4");
@@ -94,12 +94,22 @@ export function renderLiveInspector(elements, event) {
     actions.className = "live-inspector-actions";
     const feedback = document.createElement("output");
     feedback.setAttribute("aria-live", "polite");
-    for (const label of ["Copy payload", "Save to Library", "Validate"]) {
+    const actionCallbacks = {
+        "Copy payload": async () => actionHandlers.copyPayload(event),
+        "Save to Library": async () => actionHandlers.saveToLibrary(event),
+        Validate: async () => actionHandlers.validate(event),
+    };
+    for (const [label, callback] of Object.entries(actionCallbacks)) {
         const action = document.createElement("button");
         action.type = "button";
         action.textContent = label;
         action.addEventListener("click", () => {
-            feedback.textContent = `${label} completed for ${event.name}.`;
+            feedback.textContent = "";
+            void callback().then(() => {
+                feedback.textContent = `${label} completed for ${event.name}.`;
+            }).catch(() => {
+                feedback.textContent = `${label} failed for ${event.name}.`;
+            });
         });
         actions.append(action);
     }

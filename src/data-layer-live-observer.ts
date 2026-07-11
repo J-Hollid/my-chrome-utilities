@@ -122,3 +122,8 @@ export function selectLiveEvent(
 ): LiveObserverState {
   return { ...state, inspectorEventId: eventId, listVisible: layout === "split" };
 }
+
+export function closeLiveInspector(state: LiveObserverState): LiveObserverState {
+  const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
+  return { ...withoutInspector, listVisible: true };
+}
