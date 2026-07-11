@@ -1,4 +1,5 @@
 import { targetAccessExplanation, } from "./data-layer-observation-targets.js";
+let lastPickerFocus;
 export function findObservationTargetElements(root = document) {
     return {
         result: root.querySelector("#observation-target-result"),
@@ -67,6 +68,10 @@ export function renderObservationTargetPicker(elements, targets, actions) {
     elements.list?.replaceChildren(...targets.map((target) => targetRow(target, actions)));
 }
 export function showObservationTargetPicker(elements) {
+    lastPickerFocus = typeof document !== "undefined"
+        && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : undefined;
     elements.sidePanelContent?.setAttribute("inert", "");
     if (elements.picker)
         elements.picker.hidden = false;
@@ -76,7 +81,8 @@ export function closeObservationTargetPicker(elements) {
     if (elements.picker)
         elements.picker.hidden = true;
     elements.sidePanelContent?.removeAttribute("inert");
-    elements.browseButton?.focus();
+    (lastPickerFocus ?? elements.browseButton)?.focus();
+    lastPickerFocus = undefined;
 }
 export function showDetachTargetConfirmation(elements, message, labels = {
     cancel: "Cancel",

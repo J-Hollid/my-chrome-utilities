@@ -195,18 +195,10 @@ import {
   type SelectedTargetPushRequest,
 } from "./data-layer-selected-target-push.js";
 import {
-  createPushDraftReview,
-  type PushDraftReview,
-} from "./data-layer-push-draft-review.js";
-import {
   pushPayloadInPage,
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
 import { panelEmptyState } from "./panel-empty-states.js";
-import {
-  findPanelEmptyStateElements,
-  renderPanelEmptyState,
-} from "./panel-empty-states-ui.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -281,11 +273,8 @@ const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const liveEventsEmptyState = document.querySelector<HTMLElement>("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector<HTMLElement>("#live-source-error-state");
-const templateEmptyStateElements = findPanelEmptyStateElements(
-  "#event-template-empty-state",
-  "#event-template-empty-recovery",
-);
-const templateEmptyRecovery = templateEmptyStateElements.recovery;
+const templateEmptyState = document.querySelector<HTMLElement>("#event-template-empty-state");
+const templateEmptyRecovery = document.querySelector<HTMLButtonElement>("#event-template-empty-recovery");
 const savedSessionEmptyState = document.querySelector<HTMLElement>("#saved-session-empty-state");
 const schemaEmptyState = document.querySelector<HTMLElement>("#schema-empty-state");
 const sequenceEmptyState = document.querySelector<HTMLElement>("#sequence-empty-state");
@@ -303,6 +292,7 @@ const {
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
 const pushDraftReview = document.querySelector<HTMLElement>("#push-draft-review");
+const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
@@ -342,7 +332,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
-let pendingPushDraftReview: PushDraftReview | undefined;
+let templateEditorReturnFocus: HTMLElement | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
@@ -775,12 +765,6 @@ function openLiveInspector(eventId: string): void {
       savedInspectorTemplateId = template.id;
       appendOpenInLibraryAction(event.id, template.name);
     },
-    validationAvailable: (selected) => Boolean(validateEvent({
-        sourceId: selected.sourceId,
-        eventName: selected.name,
-        payload: selected.payload,
-        rawInput: selected.rawInput,
-      }, schemas).schema),
     validationState: (selected) => validateEvent({
         sourceId: selected.sourceId,
         eventName: selected.name,
@@ -794,6 +778,7 @@ function openLiveInspector(eventId: string): void {
       updateLiveInspectorValidation(liveObserverElements, validation);
     },
   }));
+  backToEventsButton?.focus();
   renderLiveObserver();
 }
 
@@ -827,7 +812,14 @@ async function copyLivePageUrl(): Promise<void> {
 function renderEventTemplateLibrary(): void {
   const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
   const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
-  renderPanelEmptyState(templateEmptyStateElements, empty);
+  if (templateEmptyState) {
+    templateEmptyState.hidden = !empty;
+    const heading = templateEmptyState.querySelector<HTMLElement>("h4");
+    const detail = templateEmptyState.querySelector<HTMLElement>("p");
+    if (heading && empty) heading.textContent = empty.message;
+    if (detail && empty) detail.textContent = `${empty.recoveryAction} can resolve this state.`;
+  }
+  if (templateEmptyRecovery && empty) templateEmptyRecovery.textContent = empty.recoveryAction;
   renderEventLibraryEditor(
     eventLibraryEditorElements,
     templates,
@@ -909,9 +901,13 @@ function renderSequences(): void {
 }
 
 function openTemplateEditor(template: EditableEventTemplate): void {
+  templateEditorReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : undefined;
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
+  eventLibraryEditorElements.editorTitle?.focus();
 }
 
 function closeTemplateEditor(): void {
@@ -919,6 +915,8 @@ function closeTemplateEditor(): void {
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
+  templateEditorReturnFocus?.focus();
+  templateEditorReturnFocus = undefined;
 }
 
 async function pushPayloadToSelectedTargetPage(
@@ -939,14 +937,11 @@ async function pushPayloadToSelectedTargetPage(
   }
 }
 
-async function pushCurrentTemplateDraft(
-  editor = propertyEditorState,
-  target = selectedObservationTarget(observationTargetState),
-): Promise<void> {
-  if (!editor) return;
+async function pushCurrentTemplateDraft(): Promise<void> {
+  if (!propertyEditorState) return;
   const record = await pushTemplateToSelectedTarget(
-    editor,
-    target,
+    propertyEditorState,
+    selectedObservationTarget(observationTargetState),
     pushPayloadToSelectedTargetPage,
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
@@ -965,10 +960,11 @@ function openPushDraftReview(): void {
     setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
     return;
   }
-  pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
-  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
-  if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
-  if (pushDraftReview) pushDraftReview.hidden = false;
+  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+  if (pushDraftReview) {
+    pushDraftReview.hidden = false;
+    pushDraftReviewHeading?.focus();
+  }
 }
 
 function renderSavedSessions(): void {
@@ -1851,14 +1847,24 @@ pushTemplateDraftButton?.addEventListener("click", () => {
   openPushDraftReview();
 });
 confirmPushDraftButton?.addEventListener("click", () => {
-  const review = pendingPushDraftReview;
-  pendingPushDraftReview = undefined;
+  void pushCurrentTemplateDraft();
   if (pushDraftReview) pushDraftReview.hidden = true;
-  if (review) void pushCurrentTemplateDraft(review.editor, review.target);
 });
-cancelPushDraftButton?.addEventListener("click", () => {
-  pendingPushDraftReview = undefined;
-  if (pushDraftReview) pushDraftReview.hidden = true;
+cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview) pushDraftReview.hidden = true; });
+pushDraftReview?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    pushDraftReview.hidden = true;
+    pushTemplateDraftButton?.focus();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusables = Array.from(pushDraftReview.querySelectorAll<HTMLElement>("button:not(:disabled), [tabindex='0']"));
+  const current = focusables.indexOf(document.activeElement as HTMLElement);
+  const next = event.shiftKey
+    ? (current <= 0 ? focusables.length - 1 : current - 1)
+    : (current >= focusables.length - 1 ? 0 : current + 1);
+  if (focusables.length) { event.preventDefault(); focusables[next]?.focus(); }
 });
 
 discardTemplateDraftButton?.addEventListener("click", () => {
