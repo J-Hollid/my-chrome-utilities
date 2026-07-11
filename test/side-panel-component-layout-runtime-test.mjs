@@ -275,6 +275,23 @@ const libraryActionsRecoveryRuntime = `(async () => {
   };
 
   const purchase = create("Purchase confirmation", "purchase", "event.history", { transaction_id:"purchase-1" });
+  setValue("#event-template-name", "Completed checkout");
+  setValue("#event-template-event-name", "checkout_completed");
+  q("#event-template-execution-settings summary").click();
+  setValue("#push-destination-path", "queue.history");
+  q("#event-template-json-section summary").click();
+  setValue("#event-template-json", '{"transaction_id":"purchase-2"}');
+  q("#save-template-revision").click();
+  const revisionReview = {
+    ...dialogState(q("#revision-change-review")),
+    confirm:q("#confirm-revision-change").textContent,
+    identity:q("#revision-change-review").textContent.includes("Purchase confirmation → Completed checkout") && q("#revision-change-review").textContent.includes("purchase → checkout_completed"),
+    destination:q("#revision-change-review").textContent.includes("event.history → queue.history"),
+    payload:q("#revision-change-review").textContent.includes("transaction_id") && q("#revision-change-review").textContent.includes("purchase-2"),
+  };
+  q("#revision-change-review").dispatchEvent(new Event("cancel", { cancelable:true }));
+  const revisionCancel = { hidden:q("#revision-change-review").hidden, draft:[q("#event-template-name").value, q("#event-template-event-name").value, q("#push-destination-path").value], focused:document.activeElement === q("#save-template-revision") };
+  q("#discard-template-draft").click();
   const close = q("#close-template-editor");
   close.click();
   const closeResult = {
@@ -340,7 +357,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, closeResult, inlineIdentity, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, revisionReview, revisionCancel, closeResult, inlineIdentity, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -642,6 +659,8 @@ try {
         },
         saveEnabled:true,
       },
+      revisionReview:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, confirm:"Save revision 2", identity:true, destination:true, payload:true },
+      revisionCancel:{ hidden:true, draft:["Completed checkout", "checkout_completed", "queue.history"], focused:true },
       closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
       inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"] },
       scroll:{

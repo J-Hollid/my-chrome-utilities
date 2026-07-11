@@ -29,7 +29,7 @@ import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, ren
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
-import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
+import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
@@ -771,6 +771,11 @@ function closeTemplateEditor() {
     }
     if (closeTemplateEditorConfirmation)
         closeTemplateEditorConfirmation.hidden = true;
+    for (const selector of ["#event-template-revision-history-section", "#event-template-properties-section", "#event-template-json-section", "#event-template-execution-settings"]) {
+        const disclosure = document.querySelector(selector);
+        if (disclosure)
+            disclosure.open = false;
+    }
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
     if (templateEditorReturnTemplateId) {
@@ -907,6 +912,11 @@ function openRevisionChangeReview() {
         return;
     if (propertyEditorState.jsonError) {
         setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
+        return;
+    }
+    const identityError = Object.values(templateIdentityValidation(propertyEditorState))[0];
+    if (identityError) {
+        setEventLibraryValidation(eventLibraryEditorElements, identityError);
         return;
     }
     pendingRevisionChangeReview = { editor: structuredClone(propertyEditorState), review: createTemplateChangeReview(propertyEditorState, "revision") };

@@ -175,6 +175,7 @@ import {
   setPushDestination,
   setNewEventField,
   setTemplateIdentity,
+  templateIdentityValidation,
   saveNewEvent,
   updateDraftJson,
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
@@ -1066,6 +1067,10 @@ function closeTemplateEditor(): void {
     eventLibraryEditorElements.propertyEditor.hidden = true;
   }
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
+  for (const selector of ["#event-template-revision-history-section", "#event-template-properties-section", "#event-template-json-section", "#event-template-execution-settings"]) {
+    const disclosure = document.querySelector<HTMLDetailsElement>(selector);
+    if (disclosure) disclosure.open = false;
+  }
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
   if (templateEditorReturnTemplateId) {
@@ -1211,6 +1216,8 @@ async function pushCurrentTemplateDraft(
 function openRevisionChangeReview(): void {
   if (!propertyEditorState || propertyEditorState.isNew) return;
   if (propertyEditorState.jsonError) { setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft."); return; }
+  const identityError = Object.values(templateIdentityValidation(propertyEditorState))[0];
+  if (identityError) { setEventLibraryValidation(eventLibraryEditorElements, identityError); return; }
   pendingRevisionChangeReview = { editor: structuredClone(propertyEditorState), review: createTemplateChangeReview(propertyEditorState, "revision") };
   renderTemplateChangeReview(revisionChangeReview ?? document, pendingRevisionChangeReview.review);
   if (confirmRevisionChangeButton) confirmRevisionChangeButton.textContent = `Save revision ${pendingRevisionChangeReview.review.resultingVersion}`;
