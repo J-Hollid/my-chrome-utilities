@@ -72,6 +72,8 @@
         <section id="live-event-list" aria-label="Observed event feed">
           <h4>Events</h4>
           <ul id="live-event-feed"></ul>
+          <section id="live-events-empty-state" class="panel-empty-state" aria-live="polite"><h5>No events captured yet</h5><p>Start testing to capture events from the selected target.</p></section>
+          <section id="live-source-error-state" class="panel-empty-state" aria-live="assertive" hidden><h5>Source connection failed</h5><p>Restart observation to reconnect the source.</p></section>
           <button id="back-to-events" type="button" hidden>Back to events</button>
         </section>
         <aside id="live-event-inspector" aria-label="Event inspector" hidden></aside>
@@ -99,6 +101,7 @@
         <button id="save-latest-template" type="button" data-action-variant="secondary">Save latest event to Library</button>
         <output id="event-template-count" aria-live="polite"></output>
         <ul id="event-template-list"></ul>
+        <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
         <section id="event-property-editor" aria-label="Event property editor" hidden>
           <h4 id="event-template-editor-title">Event property editor</h4>
           <label for="event-template-json">JSON draft</label>
@@ -125,7 +128,7 @@
           </div>
         </section>
         <output id="event-template-result" aria-live="polite"></output>
-        <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><output id="sequence-run-result" aria-live="polite"></output></section>
+        <section id="sequence-library" aria-label="Test sequences"><h4>Test sequences</h4><ul id="sequence-list"></ul><section id="sequence-empty-state" class="panel-empty-state" aria-live="polite"><h5>No sequences saved yet</h5><p>Create a sequence from a saved session.</p></section><output id="sequence-run-result" aria-live="polite"></output></section>
       </section>
       <section id="data-layer-panel-sessions" role="tabpanel" aria-labelledby="data-layer-view-sessions" hidden>
         <h3>Sessions</h3>
@@ -135,6 +138,7 @@
         <input id="saved-session-file" type="file" accept="application/json,.json" hidden />
         <output id="saved-session-count" aria-live="polite"></output>
         <ul id="saved-session-list"></ul>
+        <section id="saved-session-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4>No sessions saved yet</h4><p>Import a session to review a captured archive.</p></section>
         <output id="saved-session-confirmation" aria-live="assertive"></output>
         <button id="cancel-saved-session-delete" type="button" hidden>Cancel deletion</button>
         <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
@@ -142,7 +146,7 @@
       <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden>
         <h3>Schemas</h3><label for="schema-search">Search schemas</label><input id="schema-search" type="search" />
         <button id="create-schema" type="button" data-action-variant="secondary">Create</button><button id="import-schema" type="button" data-action-variant="secondary">Import</button><button id="export-schema" type="button" data-action-variant="secondary">Export</button>
-        <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><output id="schema-result" aria-live="polite"></output>
+        <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><section id="schema-empty-state" class="panel-empty-state" aria-live="polite"><h4>No schemas saved yet</h4><p>Create a schema to begin validation.</p></section><output id="schema-result" aria-live="polite"></output>
       </section>
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-history-path"></output>
