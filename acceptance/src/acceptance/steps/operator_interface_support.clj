@@ -36,7 +36,7 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a ready target" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
