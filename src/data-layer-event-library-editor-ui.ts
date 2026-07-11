@@ -36,6 +36,7 @@ export interface EventLibraryEditorActions {
   rename(template: EditableEventTemplate): void;
   duplicate(template: EditableEventTemplate): void;
   push(template: EditableEventTemplate): void;
+  delete(template: EditableEventTemplate): void;
 }
 
 export function findEventLibraryEditorElements(
@@ -81,7 +82,7 @@ function draftProperties(value: unknown, path = ""): HTMLLIElement[] {
 function actionButton(
   label: string,
   action: () => void,
-  variant: "secondary" | "quiet" = "secondary",
+  variant: "secondary" | "quiet" | "destructive" = "secondary",
   templateId?: string,
   accessibleName?: string,
 ): HTMLButtonElement {
@@ -133,6 +134,7 @@ export function renderEventLibraryEditor(
       actionsRow.append(
         actionButton("Edit", () => actions.edit(template), "quiet", template.id),
         actionButton("Rename", () => actions.rename(template), "quiet", template.id, `Rename ${template.name}`),
+        actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`),
         actionButton("Duplicate", () => actions.duplicate(template)),
         actionButton("Push", () => actions.push(template)),
       );

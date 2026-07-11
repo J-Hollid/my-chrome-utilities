@@ -186,6 +186,7 @@ import {
   eventLibraryImport,
   replaceImportedTemplates,
 } from "./data-layer-event-library-transfer.js";
+import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
@@ -317,6 +318,12 @@ const exportEventLibraryButton = document.querySelector<HTMLButtonElement>("#exp
 const importEventLibraryButton = document.querySelector<HTMLButtonElement>("#import-event-library");
 const eventLibraryFile = document.querySelector<HTMLInputElement>("#event-library-file");
 const eventLibraryTransferResult = document.querySelector<HTMLElement>("#event-library-transfer-result");
+const clearEventLibraryButton = document.querySelector<HTMLButtonElement>("#clear-event-library");
+const eventLibraryDeleteReview = document.querySelector<HTMLDialogElement>("#event-library-delete-review");
+const eventLibraryDeleteReviewHeading = document.querySelector<HTMLElement>("#event-library-delete-review-heading");
+const eventLibraryDeleteReviewSummary = document.querySelector<HTMLElement>("#event-library-delete-review-summary");
+const confirmEventLibraryDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-event-library-delete");
+const cancelEventLibraryDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-event-library-delete");
 const eventLibraryImportReview = document.querySelector<HTMLDialogElement>("#event-library-import-review");
 const eventLibraryImportReviewHeading = document.querySelector<HTMLElement>("#event-library-import-review-heading");
 const eventLibraryImportReviewSummary = document.querySelector<HTMLElement>("#event-library-import-review-summary");
@@ -401,6 +408,7 @@ let pendingPushDraftReview: PushDraftReview | undefined;
 let pendingTemplateRename: { editor: PropertyEditorState; draft: TemplateRenameDraft; templateId: string } | undefined;
 let pendingEventLibraryImport: ReturnType<typeof eventLibraryImport> | undefined;
 let replaceEventLibraryArmed = false;
+let pendingEventLibraryDeletion: { id?: string; name?: string; count: number } | undefined;
 let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
@@ -886,6 +894,7 @@ function renderEventTemplateLibrary(): void {
   const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
   renderPanelEmptyState(templateEmptyStateElements, empty);
   if (exportEventLibraryButton) exportEventLibraryButton.disabled = eventTemplates.length === 0;
+  if (clearEventLibraryButton) clearEventLibraryButton.disabled = eventTemplates.length === 0;
   renderEventLibraryEditor(
     eventLibraryEditorElements,
     templates,
@@ -903,6 +912,7 @@ function renderEventTemplateLibrary(): void {
         openTemplateEditor(template);
         void pushCurrentTemplateDraft();
       },
+      delete: requestEventTemplateDeletion,
     },
   );
 }
@@ -956,6 +966,31 @@ function commitEventLibraryImport(mode: "replace" | "append"): void {
   if (eventLibraryTransferResult) eventLibraryTransferResult.textContent = mode === "replace"
     ? `${eventTemplates.length} imported and ${previous} replaced.`
     : `${importCount} appended and ${result.remapped} identity remapped.`;
+}
+
+function requestEventTemplateDeletion(template: EditableEventTemplate): void {
+  pendingEventLibraryDeletion = { id: template.id, name: template.name, count: 1 };
+  if (eventLibraryDeleteReviewSummary) eventLibraryDeleteReviewSummary.textContent = `${template.name}; event ${template.eventName}; ${template.version} saved versions will be deleted. Captured events, saved sessions, and execution records remain unchanged.`;
+  if (confirmEventLibraryDeleteButton) confirmEventLibraryDeleteButton.textContent = `Delete ${template.name}`;
+  showDialog(eventLibraryDeleteReview, eventLibraryDeleteReviewHeading);
+}
+
+function requestClearEventLibrary(): void {
+  if (eventTemplates.length === 0) return;
+  pendingEventLibraryDeletion = { count: eventTemplates.length };
+  if (eventLibraryDeleteReviewSummary) eventLibraryDeleteReviewSummary.textContent = `All ${eventTemplates.length} templates and their saved revisions will be removed.`;
+  if (confirmEventLibraryDeleteButton) confirmEventLibraryDeleteButton.textContent = `Delete all ${eventTemplates.length} events`;
+  showDialog(eventLibraryDeleteReview, eventLibraryDeleteReviewHeading);
+}
+
+function commitEventLibraryDeletion(): void {
+  const pending = pendingEventLibraryDeletion; if (!pending) return;
+  eventTemplates = pending.id ? deleteEventTemplate(eventTemplates, pending.id) : clearEventLibrary(eventTemplates);
+  persistEventTemplateLibrary(); pendingEventLibraryDeletion = undefined; hideDialog(eventLibraryDeleteReview);
+  if (propertyEditorState && pending.id === propertyEditorState.template.id) propertyEditorState = undefined;
+  renderEventTemplateLibrary();
+  if (eventLibraryTransferResult) eventLibraryTransferResult.textContent = pending.id ? `Deleted ${pending.name}.` : `${pending.count} events deleted.`;
+  if (!pending.id) addNewButton?.focus({ preventScroll: true });
 }
 
 function renderSequences(): void {
@@ -1995,6 +2030,10 @@ replaceEventLibraryButton?.addEventListener("click", () => {
 });
 appendEventLibraryButton?.addEventListener("click", () => commitEventLibraryImport("append"));
 cancelEventLibraryImportButton?.addEventListener("click", () => { pendingEventLibraryImport = undefined; hideDialog(eventLibraryImportReview); });
+clearEventLibraryButton?.addEventListener("click", requestClearEventLibrary);
+confirmEventLibraryDeleteButton?.addEventListener("click", commitEventLibraryDeletion);
+cancelEventLibraryDeleteButton?.addEventListener("click", () => { pendingEventLibraryDeletion = undefined; hideDialog(eventLibraryDeleteReview); });
+eventLibraryDeleteReview?.addEventListener("cancel", (event) => { event.preventDefault(); pendingEventLibraryDeletion = undefined; hideDialog(eventLibraryDeleteReview); });
 
 eventTemplateName?.addEventListener("input", () => {
   if (propertyEditorState?.isNew) {
