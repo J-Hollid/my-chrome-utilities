@@ -2,7 +2,8 @@
   (:require [acceptance.steps.support :as support]))
 
 (def canonical-example-values
-  {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Save revision" "Save to Library" "Start testing" "Validate"}
+  {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Push purchase to Checkout" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "action_context" #{"Library editor" "Live inspector"}
    "configuration_action" #{"add page_category last" "move page_type before page_name" "edit page_name to content_name" "remove page_type"}
    "expected_paths" #{"page_name, page_type, page_category" "page_type, page_name" "content_name, page_type" "page_name"}
    "exploration_action" #{"reads an older event" "keeps an inspector open"}
@@ -35,7 +36,7 @@
    "second_step" #{"Confirm access and path"}
    "third_step" #{"Start testing"}
    "disabled_action" #{"Start testing"}
-   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
+   "disabled_reason" #{"Choose a ready target before starting" "a ready target must be selected" "the draft has no unsaved changes" "the JSON draft must be valid" "Select a schema to validate" "Select a target before pushing" "Request access for Signal Shop" "Correct destination path queue.history" "Correct the JSON draft" "Make adapter Event history ready"}
    "destructive_action" #{"Discard draft" "End testing"}
    "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
    "target_readiness" #{"Ready" "Unavailable"}
@@ -57,6 +58,13 @@
    "dock_side" #{"left" "right"}
    "draft_state" #{"Invalid" "Unsaved"}
    "edited_command_id" #{"data-layer.end-testing"}
+   "empty_message" #{"No events captured yet"
+                     "No schemas saved yet"
+                     "No sequences saved yet"
+                     "No sessions saved yet"
+                     "No templates match these filters"
+                     "No templates saved yet"
+                     "Source connection failed"}
    "editor_actions" #{"Save and Cancel" "Save, Duplicate, Push"}
    "element_name" #{"Live view tab" "Save template"}
    "event_action" #{"Save to Library"}
@@ -77,11 +85,8 @@
    "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
-   "navigation_key" #{"ArrowDown" "ArrowLeft" "ArrowRight" "Home" "End"}
-   "tab_set" #{"Workspace" "Data Layer"}
-   "initial_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Sessions" "Schemas"}
-   "target_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Schemas"}
-   "return_action" #{"Back to events" "Escape"}
+   "navigation_key" #{"ArrowDown"}
+   "navigation_level" #{"Data Layer" "workspace"}
    "notification" #{"Pause failed" "Testing started"}
    "middle_event" #{"banner"}
    "latest_event" #{"purchase"}
@@ -120,14 +125,14 @@
    "next_page_url" #{"https://example.test/checkout"}
    "side_panel_url" #{"chrome-extension://extension/side-panel.html"
                        "chrome-extension://abcdefghijkl/side-panel.html"}
-   "panel_width" #{"320" "320 CSS px" "320 px" "360" "360 CSS px" "480 px" "520" "520 CSS px" "720" "720 px"}
+   "panel_width" #{"320" "320 CSS px" "320 px" "360" "360 CSS px" "360 px" "480 px" "520" "520 CSS px" "720" "720 px"}
    "master_min" #{"240" "280"}
    "master_max" #{"288" "300" "320"}
    "detail_min" #{"344" "360" "384"}
    "detail_max" #{"400" "432" "448"}
    "metadata_columns" #{"1" "2" "3"}
    "panel_height" #{"640 CSS px"}
-   "primary_action" #{"End testing" "none" "Pause capture" "Push" "Push draft" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
+   "primary_action" #{"End testing" "none" "Pause capture" "Push" "Push draft" "Push purchase to Signal Shop" "Choose target" "Save revision" "Save to Library" "Start testing" "Validate"}
    "primary_count" #{"0" "1"}
    "editing_status" #{"Saved" "Unsaved changes"}
    "primary_actions" #{"Pause capture" "Pause capture and End testing" "Resume capture" "Resume capture and End testing"}
@@ -139,10 +144,12 @@
    "dismissal" #{"Escape" "Close button"}
    "readiness" #{"Ready"}
    "record_name" #{"Checkout journey" "Deleted checkout" "Purchase confirmation" "Purchase event v2" "data-layer.show-live" "purchase event"}
-   "recovery_action" #{"Clear filters" "Create schema" "Edit observer path" "Import session" "Request access" "Restart observation" "Retry target check" "Start observation"}
-   "failure_reason" #{"event.history is missing" "site access is missing" "the target read failed"}
+   "recovery_action" #{"Clear filters" "Create schema" "Create sequence" "Edit observer path" "Import session" "Open Live" "Request access" "Restart observation" "Retry target check" "Start observation" "Start testing"}
+   "failure_reason" #{"browser storage is unavailable" "event.history is missing" "site access is missing" "target Checkout is closed" "the JSON draft is invalid" "the target read failed"}
+   "recovery_step" #{"Choose target" "Correct the JSON" "Retry Save to Library"}
    "result" #{"added 0, removed 1, unchanged 9" "added 2, removed 0, unchanged 8"}
    "result_state" #{"2 issues"}
+   "replacement_result" #{"no result" "validation result"}
    "runner_controls" #{"Run step, Run all, Pause, Stop"}
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
    "schema_name" #{"Ecommerce" "None" "Purchase event" "Purchase v2"}
@@ -151,6 +158,15 @@
    "short_template" #{"View"}
    "long_template" #{"International purchase confirmation with campaign"}
    "second_subview" #{"Sequences"}
+   "selected_tab" #{"Data Layer" "Live"}
+   "subsequent_action" #{"activates Validate" "navigates away from Live" "opens another captured event"}
+   "editor_action" #{"Push draft" "Push purchase to Checkout" "Save revision"}
+   "success_result" #{"Pushed purchase to Checkout through event.history at 10:04:05" "Saved Purchase confirmation as version 4"}
+   "existing_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
+   "context_change" #{"the draft changes" "the editor closes" "the selected target changes"}
+   "helper_text" #{"Changes create a new version" "Push sends to the active target"}
+   "prior_result" #{"Draft is valid" "Ready to push"}
+   "new_result" #{"Pushed purchase to Checkout at 10:04:05" "Saved Purchase confirmation as version 4"}
    "semantic_state" #{"2 issues" "Connected" "Destructive"}
    "selected_event" #{"banner"}
    "sequence" #{"C-c s"}
@@ -181,9 +197,10 @@
    "validation_state" #{"2 issues" "Not checked" "Valid"}
    "validation_summary" #{"16 valid, 2 issues"}
    "version" #{"1" "2" "3"}
-   "view_name" #{"Hotkeys" "Library" "Live" "Schemas" "Sessions"}
-   "view_state" #{"browsing command bindings" "browsing saved schemas" "browsing saved sessions" "command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sessions" "operator-confirmed push is next" "ready target selected" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor" "valid draft has unsaved changes"}
+   "view_name" #{"Hotkeys" "Library" "Library sequences" "Library templates" "Live" "Schemas" "Sessions"}
+   "view_state" #{"browsing command bindings" "browsing saved schemas" "browsing saved sessions" "command assignments" "event inspector" "event list" "invalid schema draft" "key sequence conflict" "no captured events" "no matching templates" "no saved schemas" "no saved sequences" "no saved sessions" "no saved templates" "operator-confirmed push is next" "push review is ready to confirm" "ready target selected" "schema detail" "sequence editor" "session detail" "source connection failed" "template editor" "valid draft has unsaved changes"}
    "visible_count" #{"7"}
+   "width_use" #{"longer readable content lines" "purposeful list and detail panes"}
    "workspace_name" #{"Data Layer" "Hotkeys"}})
 
 (defn validate-example! [example keys]
