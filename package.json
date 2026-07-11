@@ -14,6 +14,7 @@
     "test:unit:observation-targets": "npm run build && node test/data-layer-observation-targets-test.mjs && node test/data-layer-target-path-status-test.mjs",
     "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-event-feed-summaries-test.mjs && node test/data-layer-live-session-controls-test.mjs && node test/data-layer-live-guided-workflow-test.mjs && node test/data-layer-live-session-summary-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
     "test:unit:side-panel-action-hierarchy": "npm run build && node test/side-panel-action-hierarchy-test.mjs && node test/side-panel-action-hierarchy-ui-test.mjs && node test/panel-empty-states-test.mjs && node test/panel-empty-states-ui-test.mjs",
+    "test:unit:component-layout": "npm run build && node test/side-panel-component-layout-runtime-test.mjs",
     "test:unit:live-event-presentation": "npm run build && node test/data-layer-event-presentation-test.mjs",
     "test:unit:event-library-editor": "npm run build && node test/data-layer-event-library-editor-test.mjs && node test/data-layer-selected-target-push-test.mjs && node test/data-layer-push-draft-review-test.mjs",
     "test:unit:schema-verification": "npm run build && node test/data-layer-schema-verification-test.mjs",
