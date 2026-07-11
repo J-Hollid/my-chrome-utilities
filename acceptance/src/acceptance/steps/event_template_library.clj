@@ -19,7 +19,9 @@
    "visible actions offer Edit, Duplicate, and Push when supported by the source adapter"
    "event template <template_name> targets <destination> on the active page"
    "the user pushes template <template_name> without editing it"
-   "the exact saved template payload is sent through its source adapter to <destination>"
+   "its source adapter appends one history tuple to <destination>"
+   "the first tuple item is event name <event_name>"
+   "the second tuple item is the exact saved template payload"
    "the visible result identifies the active page, source adapter, destination, and success or failure"
    "no captured event or saved session is changed"
    "event template <template_name> has version <version>"
@@ -126,16 +128,25 @@
 
     "the user pushes template <template_name> without editing it"
     (do (canonical-name! example)
-        (assoc world :push-record {:payload (:payload (:template world))
+        (assoc world :push-record {:tuple [(:event-name (:template world))
+                                           (:payload (:template world))]
                                    :destination (:destination (:template world))
                                    :adapter (:source (:template world)) :success true
                                    :page (:active-page world)}))
 
-    "the exact saved template payload is sent through its source adapter to <destination>"
+    "its source adapter appends one history tuple to <destination>"
     (do (editor/assert-value! (editor/value example "destination")
                               (:destination (:push-record world)) "Push destination is incorrect.")
-        (editor/assert-value! (:payload (:push-record world))
-                              (:payload (:template world)) "Push payload changed.") world)
+        (support/assert! (= 2 (count (:tuple (:push-record world))))
+                         "Push did not append one event tuple." {}) world)
+
+    "the first tuple item is event name <event_name>"
+    (do (editor/assert-value! (editor/value example "event_name")
+                              (first (:tuple (:push-record world))) "Tuple event name is incorrect.") world)
+
+    "the second tuple item is the exact saved template payload"
+    (do (editor/assert-value! (second (:tuple (:push-record world)))
+                              (:payload (:template world)) "Tuple payload changed.") world)
 
     "the visible result identifies the active page, source adapter, destination, and success or failure"
     (do (support/assert! (every? #(contains? (:push-record world) %)
@@ -204,8 +215,16 @@
 (def handlers
   (mapv (fn [template]
           {:pattern (editor/property-pattern template)
-           :applies? (when (= template "event template <template_name> has version <version>")
-                       (fn [world] (not (contains? world :draft))))
+           :applies? (cond
+                       (= template "event template <template_name> has version <version>")
+                       (fn [world] (not (contains? world :draft)))
+                       (= template "the user pushes template <template_name> without editing it")
+                       (fn [world] (contains? world :active-page))
+                       (contains? #{"its source adapter appends one history tuple to <destination>"
+                                    "the first tuple item is event name <event_name>"
+                                    "the second tuple item is the exact saved template payload"}
+                                  template)
+                       (fn [world] (contains? world :active-page)))
            :handler (fn [world example _] (transition template world example))})
         templates))
 

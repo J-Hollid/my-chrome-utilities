@@ -42,6 +42,7 @@ for (let sample = 0; sample < 100; sample += 1) {
   }
 
   const result = await pushTemplateToSelectedTarget(editor, target, async (request) => {
+    assert.equal(request.eventName, "purchase");
     request.payload.sample = -1;
   });
   assert.equal(result.success, true);

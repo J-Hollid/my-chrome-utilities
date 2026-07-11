@@ -28,18 +28,18 @@ const success = await pushTemplateToSelectedTarget(editor, target, async (reques
 assert.equal(success.success, true);
 assert.equal(success.result, "Pushed");
 assert.match(success.summary, /Shop; https:\/\/shop\.example\.test\/p\/; dataLayer; Pushed/);
-assert.deepEqual(calls, [{ tabId: 42, destination: "dataLayer", payload: { transaction_id: "test-123" } }]);
+assert.deepEqual(calls, [{ tabId: 42, destination: "dataLayer", eventName: "purchase", payload: { transaction_id: "test-123" } }]);
 assert.deepEqual(editor.draft, { transaction_id: "test-123" });
 
 const selectedPage = { dataLayer: [], analytics: { queue: [] } };
 assert.deepEqual(
-  pushPayloadInPage("dataLayer", { transaction_id: "test-123" }, selectedPage),
+  pushPayloadInPage("dataLayer", "purchase", { transaction_id: "test-123" }, selectedPage),
   { success: true },
 );
-assert.deepEqual(selectedPage.dataLayer, [{ transaction_id: "test-123" }]);
+assert.deepEqual(selectedPage.dataLayer, [["purchase", { transaction_id: "test-123" }]]);
 assert.deepEqual(selectedPage.analytics.queue, []);
 assert.deepEqual(
-  pushPayloadInPage("missing.queue", {}, selectedPage),
+  pushPayloadInPage("missing.queue", "purchase", {}, selectedPage),
   { success: false, result: "Destination missing.queue is unavailable." },
 );
 
