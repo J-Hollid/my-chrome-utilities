@@ -9,6 +9,7 @@ export function findEventLibraryEditorElements(root = document) {
         propertyEditor: root.querySelector("#event-property-editor"),
         editorTitle: root.querySelector("#event-template-editor-title"),
         editorSummary: root.querySelector("#event-template-editor-summary"),
+        revisionHistory: root.querySelector("#event-template-revision-history"),
         properties: root.querySelector("#event-template-properties"),
         json: root.querySelector("#event-template-json"),
         pushDestination: root.querySelector("#push-destination-path"),
@@ -30,13 +31,15 @@ function draftProperties(value, path = "") {
     }
     return Object.entries(value).flatMap(([key, child]) => draftProperties(child, `${path}/${key}`));
 }
-function actionButton(label, action, variant = "secondary", templateId) {
+function actionButton(label, action, variant = "secondary", templateId, accessibleName) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = label;
     button.dataset.actionVariant = variant;
     if (templateId)
         button.dataset.templateId = templateId;
+    if (accessibleName)
+        button.setAttribute("aria-label", accessibleName);
     button.addEventListener("click", action);
     return button;
 }
@@ -69,7 +72,7 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         }
         const actionsRow = document.createElement("div");
         actionsRow.className = "event-template-actions";
-        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Rename", () => actions.rename(template), "quiet", template.id, `Rename ${template.name}`), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
         item.append(identity, routing, attributes, actionsRow);
         return item;
     }));
@@ -83,14 +86,27 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
             ["Draft", editor.dirty ? "Unsaved changes" : "Saved"], ["Provenance", editor.template.provenance],
         ].flatMap(([label, value]) => { const term = document.createElement("dt"); const description = document.createElement("dd"); term.textContent = String(label); description.textContent = String(value); return [term, description]; }) : []));
     }
-    if (elements.json && editor)
-        elements.json.value = editor.jsonDraft;
+    elements.revisionHistory?.replaceChildren(...(editor
+        ? editor.revisions.map((revision) => {
+            const item = document.createElement("li");
+            item.textContent = `Version ${revision.version}: ${revision.name} · ${revision.eventName}`;
+            return item;
+        })
+        : []));
+    if (elements.json) {
+        elements.json.value = editor?.jsonDraft ?? "";
+        const error = editor?.jsonError ?? "";
+        elements.json.setCustomValidity(error);
+        elements.json.setAttribute("aria-invalid", String(Boolean(error)));
+    }
     if (elements.pushDestination && editor) {
         elements.pushDestination.value = editor.template.destination;
     }
     if (elements.validation) {
-        elements.validation.textContent =
-            editor?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
+        const error = editor?.jsonError;
+        elements.validation.textContent = error ?? "Properties, JSON, and Validation edit the same draft.";
+        elements.validation.setAttribute("aria-live", error ? "assertive" : "polite");
+        elements.validation.setAttribute("role", error ? "alert" : "status");
     }
     elements.properties?.replaceChildren(...(editor ? draftProperties(editor.draft) : []));
     if (editor) {
@@ -105,6 +121,12 @@ export function focusTemplateEditAction(elements, templateId) {
         ? CSS.escape(templateId)
         : templateId.replace(/["\\]/g, "\\$&");
     elements.list?.querySelector(`button[data-template-id="${escaped}"]`)?.focus({ preventScroll: true });
+}
+export function focusTemplateRenameAction(elements, templateId) {
+    const escaped = typeof CSS !== "undefined" && CSS.escape
+        ? CSS.escape(templateId)
+        : templateId.replace(/["\\]/g, "\\$&");
+    elements.list?.querySelector(`button[data-template-id="${escaped}"][aria-label^="Rename "]`)?.focus({ preventScroll: true });
 }
 export function setEventLibraryResult(elements, message) {
     if (elements.result)

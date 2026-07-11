@@ -29,5 +29,10 @@ assert.deepEqual(templateActionHierarchy({ dirty: true }), {
 assert.deepEqual(templateActionHierarchy({ dirty: true, jsonError: "Invalid JSON." }).pushDraft, {
   variant: "secondary",
   disabled: true,
-  disabledReason: "The JSON draft must be valid.",
+  disabledReason: "Correct the JSON draft.",
+});
+assert.deepEqual(templateActionHierarchy({ dirty: true, jsonError: "Invalid JSON." }).saveRevision, {
+  variant: "primary",
+  disabled: true,
+  disabledReason: "Correct the JSON draft.",
 });

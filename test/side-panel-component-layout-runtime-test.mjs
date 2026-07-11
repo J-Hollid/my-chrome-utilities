@@ -332,6 +332,73 @@ const pushDecisionRuntime = `Promise.all([
   return { detailPairs, changePairs, columns, readable, documentFits, emptyResult };
 })`;
 
+const templateRenameRuntime = `Promise.all([
+  import("./data-layer-event-library-editor-ui.js"),
+  import("./data-layer-event-template-renaming.js"),
+]).then(([editorUi, rename]) => {
+  const list = document.querySelector("#event-template-list");
+  const dialog = document.querySelector("#event-template-rename");
+  const name = document.querySelector("#event-template-rename-name");
+  const eventName = document.querySelector("#event-template-rename-event-name");
+  const revisionHistory = document.querySelector("#event-template-revision-history");
+  const template = { id:"template-7", name:"Purchase confirmation", eventName:"purchase", sourceId:"event-history", sourceName:"Event history", destination:"queue.history", tags:["checkout"], schemaId:"purchase", validation:"Valid", payload:{ transaction_id:"T-1" }, version:3, originatingSessionId:"session-1", originatingEventId:"event-1", provenance:"captured:event-history" };
+  const elements = { search:null, saveLatestButton:null, count:null, list, propertyEditor:null, editorTitle:null, editorSummary:null, revisionHistory, properties:null, json:null, pushDestination:null, validation:null, saveRevisionButton:null, saveCopyButton:null, pushDraftButton:null, discardDraftButton:null, closeEditorButton:null, backToCapturedEventButton:null, result:null };
+  let opened;
+  editorUi.renderEventLibraryEditor(elements, [template], undefined, { edit:()=>{}, rename:(value) => {
+    opened = rename.beginTemplateRename(value); name.value = opened.templateName; eventName.value = opened.eventName; dialog.hidden = false; dialog.showModal(); name.focus();
+  }, duplicate:()=>{}, push:()=>{} });
+  const action = list.querySelector('[aria-label="Rename Purchase confirmation"]'); action.click();
+  const editor = { template, revisions:[], draft:structuredClone(template.payload), jsonDraft:JSON.stringify(template.payload), dirty:false };
+  const renamed = rename.saveTemplateRename(editor, { templateName:"Completed checkout", eventName:"checkout_completed" });
+  editorUi.renderEventLibraryEditor(elements, [renamed.template], renamed, { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} });
+  const result = {
+    actionText:action.textContent,
+    actionName:action.getAttribute("aria-label"),
+    fields:[...dialog.querySelectorAll("label")].map((label) => label.textContent),
+    values:[name.value, eventName.value],
+    associated:[name.getAttribute("aria-describedby"), eventName.getAttribute("aria-describedby")],
+    focused:document.activeElement === name,
+    modal:dialog.matches(":modal"),
+    renamed:{ name:renamed.template.name, eventName:renamed.template.eventName, version:renamed.template.version, priorEvent:renamed.revisions[0].eventName, payload:renamed.template.payload.transaction_id, destination:renamed.template.destination, provenance:renamed.template.provenance },
+    validation:rename.renameValidation({ templateName:"   ", eventName:"purchase" }),
+    history:[...revisionHistory.children].map((item) => item.textContent),
+  };
+  dialog.close(); dialog.hidden = true; return result;
+})`;
+
+const jsonValidationRecoveryRuntime = `Promise.all([
+  import("./data-layer-event-library-editor.js"),
+  import("./data-layer-event-library-editor-ui.js"),
+  import("./data-layer-push-draft-review.js"),
+  import("./data-layer-push-draft-review-ui.js"),
+]).then(([editorModel, editorUi, reviewModel, reviewUi]) => {
+  const elements = editorUi.findEventLibraryEditorElements();
+  const template = { id:"template-scroll", name:"Scroll depth", eventName:"scroll", sourceId:"history", sourceName:"Event history", destination:"queue.history", tags:[], validation:"Valid", payload:{ tealium_generated:"1", scroll_percentage:0 }, version:3, originatingSessionId:"session-1", originatingEventId:"event-1", provenance:"captured:history" };
+  let state = editorModel.openPropertyEditor(template);
+  const actions = { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} };
+  const invalidSource = '{\\n  "tealium_generated": "1",\\n  "scroll_percentage": 25,\\n\\n}';
+  elements.json.value = invalidSource; elements.json.dispatchEvent(new Event("input", { bubbles:true }));
+  state = editorModel.updateDraftJson(state, elements.json.value);
+  editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+  const invalid = { error:Boolean(state.jsonError), status:elements.validation.textContent, invalid:elements.json.getAttribute("aria-invalid"), saveDisabled:elements.saveRevisionButton.disabled, pushDisabled:elements.pushDraftButton.disabled, saveReason:document.querySelector("#save-template-revision-reason").textContent, pushReason:document.querySelector("#push-template-draft-reason").textContent, draft:state.draft };
+  elements.json.value = '{\\n  "tealium_generated": "1",\\n  "scroll_percentage": 25\\n}'; elements.json.dispatchEvent(new Event("input", { bubbles:true }));
+  state = editorModel.updateDraftJson(state, elements.json.value);
+  editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+  const recovered = { error:Boolean(state.jsonError), status:elements.validation.textContent, invalid:elements.json.getAttribute("aria-invalid"), saveDisabled:elements.saveRevisionButton.disabled, pushDisabled:elements.pushDraftButton.disabled, draft:state.draft };
+  const transitions = [];
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    state = editorModel.updateDraftJson(state, invalidSource); editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+    transitions.push(Boolean(state.jsonError) && elements.saveRevisionButton.disabled && elements.pushDraftButton.disabled);
+    state = editorModel.updateDraftJson(state, '{"tealium_generated":"1","scroll_percentage":25}'); editorUi.renderEventLibraryEditor(elements, [template], state, actions);
+    transitions.push(!state.jsonError && !elements.saveRevisionButton.disabled && !elements.pushDraftButton.disabled && !elements.validation.textContent.includes("Invalid JSON"));
+  }
+  const saved = editorModel.saveDraftRevision(state);
+  const review = reviewModel.createPushDraftReview(state, { title:"Signal Shop", pageUrl:"https://signal.example.test/checkout", accessState:"Ready" });
+  const reviewElements = reviewUi.findPushDraftReviewElements(); reviewUi.renderPushDraftReview(reviewElements, review);
+  const reviewChanges = [...reviewElements.changeList.querySelectorAll("dl")].map((row) => [...row.querySelectorAll("dd")].map((value) => value.textContent));
+  return { invalid, recovered, transitions, saved:{ version:saved.template.version, payload:saved.template.payload }, review:{ event:review.rows[0][1], draft:review.editor.draft, changes:reviewChanges } };
+})`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -417,6 +484,25 @@ try {
       documentFits:true,
       emptyResult:{ text:"No payload changes", visible:true, changeCount:0 },
     }, `rendered push decision data violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, templateRenameRuntime), {
+      actionText:"Rename",
+      actionName:"Rename Purchase confirmation",
+      fields:["Template name", "Event name"],
+      values:["Purchase confirmation", "purchase"],
+      associated:["event-template-rename-name-error", "event-template-rename-event-name-error"],
+      focused:true,
+      modal:true,
+      renamed:{ name:"Completed checkout", eventName:"checkout_completed", version:4, priorEvent:"purchase", payload:"T-1", destination:"queue.history", provenance:"captured:event-history" },
+      validation:{ templateName:"Enter a template name" },
+      history:["Version 3: Purchase confirmation · purchase"],
+    }, `rendered template renaming violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, jsonValidationRecoveryRuntime), {
+      invalid:{ error:true, status:"Invalid JSON at position 58.", invalid:"true", saveDisabled:true, pushDisabled:true, saveReason:"Correct the JSON draft.", pushReason:"Correct the JSON draft.", draft:{ tealium_generated:"1", scroll_percentage:0 } },
+      recovered:{ error:false, status:"Properties, JSON, and Validation edit the same draft.", invalid:"false", saveDisabled:false, pushDisabled:false, draft:{ tealium_generated:"1", scroll_percentage:25 } },
+      transitions:[true,true,true,true,true,true],
+      saved:{ version:4, payload:{ tealium_generated:"1", scroll_percentage:25 } },
+      review:{ event:"scroll", draft:{ tealium_generated:"1", scroll_percentage:25 }, changes:[["scroll_percentage","0","25"]] },
+    }, `Library JSON validation recovery violated its ${width}px browser contract`);
     if (width === 360) {
       assert.deepEqual(await evaluate(socket, hiddenStateRuntime), {
         display: "none", offsetParent: true, zeroSpace: true, focusExcluded: true, ariaHidden: true,

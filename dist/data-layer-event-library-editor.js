@@ -1,5 +1,10 @@
 export const EVENT_TEMPLATE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.event-template-library.v1";
 function clone(value) { return structuredClone(value); }
+function revisionSnapshot(template) {
+    const snapshot = clone(template);
+    delete snapshot.revisionHistory;
+    return snapshot;
+}
 function json(value) { return JSON.stringify(value, null, 2); }
 function pointerSegments(path) {
     return path.replace(/^\/?/, "").split("/").filter(Boolean)
@@ -57,12 +62,19 @@ export function createEditableTemplate(event, options) {
 }
 export function openPropertyEditor(template) {
     const draft = clone(template.payload);
-    return { template: clone(template), revisions: [], draft, jsonDraft: json(draft), dirty: false };
+    return {
+        template: clone(template),
+        revisions: (template.revisionHistory ?? []).map(revisionSnapshot),
+        draft,
+        jsonDraft: json(draft),
+        dirty: false,
+    };
 }
 export function updateDraftJson(state, source) {
     try {
         const draft = JSON.parse(source);
-        return { ...state, draft, jsonDraft: json(draft), dirty: true };
+        const { jsonError: _jsonError, ...validState } = state;
+        return { ...validState, draft, jsonDraft: json(draft), dirty: true };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Invalid JSON";
@@ -98,13 +110,21 @@ export function removeDraftProperty(state, path) {
 export function saveDraftRevision(state) {
     if (state.jsonError)
         throw new Error(state.jsonError);
-    const template = { ...state.template, payload: clone(state.draft), version: state.template.version + 1 };
-    return { template, revisions: [...state.revisions, clone(state.template)], draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
+    const previous = revisionSnapshot(state.template);
+    const revisions = [...state.revisions, previous];
+    const template = {
+        ...state.template,
+        payload: clone(state.draft),
+        version: state.template.version + 1,
+        revisionHistory: revisions,
+    };
+    return { template, revisions, draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
 }
 export function saveAsTemplateCopy(state, name) {
     if (state.jsonError)
         throw new Error(state.jsonError);
-    return { ...state.template, id: `${state.template.id}:copy`, name, payload: clone(state.draft) };
+    const copy = revisionSnapshot(state.template);
+    return { ...copy, id: `${copy.id}:copy`, name, payload: clone(state.draft) };
 }
 export function searchEventTemplates(templates, query) {
     const needle = query.trim().toLowerCase();
