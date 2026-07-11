@@ -40,14 +40,6 @@ export interface DataLayerSessionState {
 }
 
 export const DATA_LAYER_SESSION_STORAGE_KEY = "dataLayerTestingSession";
-let nextSessionSequence = 0;
-
-function nextSessionId(tabId: number): string {
-  nextSessionSequence += 1;
-  const unique = globalThis.crypto?.randomUUID?.()
-    ?? `${Date.now()}-${nextSessionSequence}`;
-  return `tab-${tabId}-session-${unique}`;
-}
 
 export function sessionScope(state: DataLayerSessionState): string | undefined {
   return state.session ? "active-tab journey" : undefined;
@@ -56,6 +48,7 @@ export function sessionScope(state: DataLayerSessionState): string | undefined {
 export function startDataLayerTestingSession(
   state: DataLayerSessionState,
   options: {
+    id: string;
     tabId: number;
     url: string;
     historyPath?: string;
@@ -73,7 +66,7 @@ export function startDataLayerTestingSession(
 
   return {
     session: {
-      id: nextSessionId(options.tabId),
+      id: options.id,
       status: "active",
       tabId: options.tabId,
       historyPath: options.historyPath ?? getHistoryArrayPath(),
