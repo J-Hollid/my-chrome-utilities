@@ -70,6 +70,13 @@ export function updateDraftJson(state, source) {
         return { ...state, jsonDraft: source, jsonError: `Invalid JSON${position ? ` at position ${position}` : ""}.`, dirty: true };
     }
 }
+export function setPushDestination(state, destination) {
+    return {
+        ...state,
+        template: { ...state.template, destination },
+        dirty: true,
+    };
+}
 export function setDraftProperty(state, path, value) {
     const draft = clone(state.draft);
     const [parent, key] = parentAt(draft, path);

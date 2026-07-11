@@ -117,6 +117,17 @@ export function updateDraftJson(state: PropertyEditorState, source: string): Pro
   }
 }
 
+export function setPushDestination(
+  state: PropertyEditorState,
+  destination: string,
+): PropertyEditorState {
+  return {
+    ...state,
+    template: { ...state.template, destination },
+    dirty: true,
+  };
+}
+
 export function setDraftProperty(state: PropertyEditorState, path: string, value: JsonValue): PropertyEditorState {
   const draft = clone(state.draft);
   const [parent, key] = parentAt(draft, path);

@@ -7,6 +7,7 @@ export function findEventLibraryEditorElements(root = document) {
         propertyEditor: root.querySelector("#event-property-editor"),
         properties: root.querySelector("#event-template-properties"),
         json: root.querySelector("#event-template-json"),
+        pushDestination: root.querySelector("#push-destination-path"),
         validation: root.querySelector("#event-template-validation"),
         saveRevisionButton: root.querySelector("#save-template-revision"),
         saveCopyButton: root.querySelector("#save-template-copy"),
@@ -43,6 +44,9 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         elements.propertyEditor.hidden = !editor;
     if (elements.json && editor)
         elements.json.value = editor.jsonDraft;
+    if (elements.pushDestination && editor) {
+        elements.pushDestination.value = editor.template.destination;
+    }
     if (elements.validation) {
         elements.validation.textContent =
             editor?.jsonError ?? "Properties, JSON, and Validation edit the same draft.";
@@ -56,5 +60,11 @@ export function setEventLibraryResult(elements, message) {
 export function setEventLibraryValidation(elements, message) {
     if (elements.validation)
         elements.validation.textContent = message;
+}
+export function setPushDestinationValidation(elements, message) {
+    if (!elements.pushDestination)
+        return;
+    elements.pushDestination.setCustomValidity(message);
+    elements.pushDestination.setAttribute("aria-invalid", String(Boolean(message)));
 }
 //# sourceMappingURL=data-layer-event-library-editor-ui.js.map
