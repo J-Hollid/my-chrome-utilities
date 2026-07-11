@@ -89,13 +89,22 @@ import {
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
+import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
+import {
+  findLiveGuidedWorkflowElements,
+  renderLiveGuidedWorkflow,
+} from "./data-layer-live-guided-workflow-ui.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import {
   canonicalLiveObserverStatus,
   createLiveSessionSummary,
 } from "./data-layer-live-session-summary.js";
 import { createLiveNotificationController } from "./data-layer-live-notifications.js";
-import { createTargetPathStatusController } from "./data-layer-target-path-status.js";
+import {
+  createTargetPathStatusController,
+  targetPathStatusForObservation,
+  type TargetPathStatus,
+} from "./data-layer-target-path-status.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import {
   findLiveSessionSummaryElements,
@@ -234,6 +243,7 @@ const hotkeyEditorFilter = document.querySelector<HTMLInputElement>("#hotkey-edi
 const hotkeyEditorCommands = document.querySelector<HTMLElement>("#hotkey-editor-commands");
 const liveObserverElements = findLiveObserverElements();
 const liveSessionSummaryElements = findLiveSessionSummaryElements();
+const liveGuidedWorkflowElements = findLiveGuidedWorkflowElements();
 const {
   viewList: dataLayerViewList,
   backToEventsButton,
@@ -301,6 +311,7 @@ let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
 let nextSessionSequence = 0;
+let currentTargetPathStatus: TargetPathStatus = "Selection required";
 
 function newDataLayerSessionId(tabId: number): string {
   nextSessionSequence += 1;
@@ -362,18 +373,14 @@ function renderLiveContextActions(): void {
     },
     { activeSession, captureStatus: liveObserverState.status },
   );
-  if (startTestingButton) {
-    const ready = selectedTarget?.accessState === "Ready";
-    startTestingButton.disabled = !activeSession && !ready;
-    startTestingButton.textContent = ready && selectedTarget
-      ? `Start testing ${selectedTarget.title}`
-      : "Start testing";
-    startTestingButton.setAttribute(
-      "aria-description",
-      ready ? "Starts testing with the selected ready target." : "Choose a ready target before starting",
-    );
-  }
-  if (chooseObservationTargetButton) chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
+  renderLiveGuidedWorkflow(
+    liveGuidedWorkflowElements,
+    liveGuidedWorkflow({
+      activeSession,
+      ...(selectedTarget ? { selectedTarget } : {}),
+      pathStatus: currentTargetPathStatus,
+    }),
+  );
 }
 
 function targetFromTab(
@@ -429,6 +436,7 @@ async function discoverCurrentObservationTarget(): Promise<void> {
   }
   renderObservationTargetPicker();
   renderObservationTargetContext();
+  if (target) refreshSelectedTargetPathStatus();
 }
 
 async function browseObservationTargets(): Promise<void> {
@@ -459,6 +467,7 @@ function renderObservationTargetPicker(): void {
       renderObservationTargetPicker();
       renderObservationTargetContext();
       closeObservationTargetPicker(observationTargetElements);
+      refreshSelectedTargetPathStatus();
     },
     requestAccess: (target) => void requestSelectedTargetAccess(target),
   });
@@ -475,6 +484,7 @@ async function requestSelectedTargetAccess(target: ObservationTarget): Promise<v
   setObservationTargetResult(`Access granted for ${target.origin}`);
   renderObservationTargetPicker();
   renderObservationTargetContext();
+  refreshSelectedTargetPathStatus();
 }
 
 async function recoverAttachedObservationTarget(): Promise<void> {
@@ -583,6 +593,10 @@ async function attachSelectedTarget(): Promise<void> {
     renderObservationTargetContext();
     return;
   }
+  currentTargetPathStatus = targetPathStatusForObservation(
+    observation,
+    getHistoryArrayPath(),
+  );
   observationTargetState = decision.state;
   const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
     id: newDataLayerSessionId(target.tabId),
@@ -1758,7 +1772,11 @@ keymapFileInput?.addEventListener("change", () => {
 });
 
 const targetPathStatusController = createTargetPathStatusController({
-  render: renderHistoryPath,
+  render: (path, fieldValue, status) => {
+    currentTargetPathStatus = status;
+    renderHistoryPath(path, fieldValue, status);
+    renderLiveContextActions();
+  },
   read: currentTargetObservation,
   apply: (observation) => {
     dataLayerObserverState = attachHistoryArrayObserver(
@@ -1771,6 +1789,11 @@ const targetPathStatusController = createTargetPathStatusController({
     renderObserverState();
   },
 });
+
+function refreshSelectedTargetPathStatus(): void {
+  const path = getHistoryArrayPath();
+  void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
+}
 
 historyPathInput?.addEventListener("input", () => {
   const typedPath = historyPathInput.value;
