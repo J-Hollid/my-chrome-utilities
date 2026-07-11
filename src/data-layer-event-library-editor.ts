@@ -22,6 +22,7 @@ export interface EditableEventTemplate {
 
 export interface PropertyEditorState {
   template: EditableEventTemplate;
+  savedTemplate?: EditableEventTemplate;
   revisions: readonly EditableEventTemplate[];
   draft: JsonValue;
   jsonDraft: string;
@@ -113,6 +114,7 @@ export function openPropertyEditor(template: EditableEventTemplate): PropertyEdi
   const draft = clone(template.payload);
   return {
     template: clone(template),
+    savedTemplate: revisionSnapshot(template),
     revisions: (template.revisionHistory ?? []).map(revisionSnapshot),
     draft,
     jsonDraft: json(draft),
@@ -158,6 +160,21 @@ export function setNewEventField(
     ? { ...state.template, sourceId: (value as { id: string }).id, sourceName: (value as { name: string }).name }
     : { ...state.template, [field]: value as string };
   return { ...state, template, dirty: true };
+}
+
+export function setTemplateIdentity(
+  state: PropertyEditorState,
+  field: "name" | "eventName",
+  value: string,
+): PropertyEditorState {
+  return { ...state, template: { ...state.template, [field]: value }, dirty: true };
+}
+
+export function templateIdentityValidation(state: PropertyEditorState): Pick<NewEventValidation, "name" | "eventName"> {
+  return {
+    ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),
+    ...(state.template.eventName.trim() ? {} : { eventName: "Enter an event name" }),
+  };
 }
 
 export function saveNewEvent(
@@ -223,7 +240,7 @@ export function saveDraftRevision(state: PropertyEditorState): PropertyEditorSta
     version: state.template.version + 1,
     revisionHistory: revisions,
   };
-  return { template, revisions, draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
+  return { template, savedTemplate: revisionSnapshot(template), revisions, draft: clone(template.payload), jsonDraft: json(template.payload), dirty: false };
 }
 
 export function saveAsTemplateCopy(state: PropertyEditorState, name: string): EditableEventTemplate {

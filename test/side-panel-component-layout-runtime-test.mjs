@@ -284,16 +284,14 @@ const libraryActionsRecoveryRuntime = `(async () => {
     editFocused:document.activeElement === q('[data-template-id]'),
   };
 
-  const rename = q('[aria-label="Rename Purchase confirmation"]');
-  rename.focus();
-  rename.click();
-  const renameDialog = q("#event-template-rename");
-  const renameOpen = {
-    ...dialogState(renameDialog),
-    controls:["#event-template-rename-name", "#event-template-rename-event-name", "#save-template-names", "#cancel-template-rename"].map((selector) => visible(q(selector))),
+  q('[data-template-id]').click();
+  const inlineIdentity = {
+    noRename:Boolean(document.querySelector('[aria-label^="Rename "]')) || Boolean(document.querySelector("#event-template-rename")),
+    editor:visible(q("#event-property-editor")),
+    fields:[q("#event-template-name").disabled, q("#event-template-event-name").disabled],
+    values:[q("#event-template-name").value, q("#event-template-event-name").value],
   };
-  renameDialog.dispatchEvent(new Event("cancel", { cancelable:true }));
-  const renameClose = { closed:renameDialog.hidden && !renameDialog.open, returned:document.activeElement === q('[aria-label="Rename Purchase confirmation"]') };
+  q("#close-template-editor").click();
 
   const scroll = create("Scroll milestone", "scroll", "event.history", { scroll_percentage:25 });
   q("#close-template-editor").click();
@@ -342,7 +340,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, closeResult, renameOpen, renameClose, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, closeResult, inlineIdentity, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -473,38 +471,20 @@ const pushDecisionRuntime = `Promise.all([
   return { detailPairs, changePairs, columns, readable, documentFits, emptyResult };
 })`;
 
-const templateRenameRuntime = `Promise.all([
+const templateChangeReviewRuntime = `Promise.all([
+  import("./data-layer-event-library-editor.js"),
   import("./data-layer-event-library-editor-ui.js"),
-  import("./data-layer-event-template-renaming.js"),
-]).then(([editorUi, rename]) => {
+  import("./data-layer-template-change-review.js"),
+]).then(([editorModel, editorUi, reviewModel]) => {
   const list = document.querySelector("#event-template-list");
-  const dialog = document.querySelector("#event-template-rename");
-  const name = document.querySelector("#event-template-rename-name");
-  const eventName = document.querySelector("#event-template-rename-event-name");
-  const revisionHistory = document.querySelector("#event-template-revision-history");
   const template = { id:"template-7", name:"Purchase confirmation", eventName:"purchase", sourceId:"event-history", sourceName:"Event history", destination:"queue.history", tags:["checkout"], schemaId:"purchase", validation:"Valid", payload:{ transaction_id:"T-1" }, version:3, originatingSessionId:"session-1", originatingEventId:"event-1", provenance:"captured:event-history" };
-  const elements = { search:null, saveLatestButton:null, count:null, list, propertyEditor:null, editorTitle:null, editorSummary:null, revisionHistory, properties:null, json:null, pushDestination:null, validation:null, saveRevisionButton:null, saveCopyButton:null, pushDraftButton:null, discardDraftButton:null, closeEditorButton:null, backToCapturedEventButton:null, result:null };
-  let opened;
-  editorUi.renderEventLibraryEditor(elements, [template], undefined, { edit:()=>{}, rename:(value) => {
-    opened = rename.beginTemplateRename(value); name.value = opened.templateName; eventName.value = opened.eventName; dialog.hidden = false; dialog.showModal(); name.focus();
-  }, duplicate:()=>{}, push:()=>{} });
-  const action = list.querySelector('[aria-label="Rename Purchase confirmation"]'); action.click();
-  const editor = { template, revisions:[], draft:structuredClone(template.payload), jsonDraft:JSON.stringify(template.payload), dirty:false };
-  const renamed = rename.saveTemplateRename(editor, { templateName:"Completed checkout", eventName:"checkout_completed" });
-  editorUi.renderEventLibraryEditor(elements, [renamed.template], renamed, { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{} });
-  const result = {
-    actionText:action.textContent,
-    actionName:action.getAttribute("aria-label"),
-    fields:[...dialog.querySelectorAll("label")].map((label) => label.textContent),
-    values:[name.value, eventName.value],
-    associated:[name.getAttribute("aria-describedby"), eventName.getAttribute("aria-describedby")],
-    focused:document.activeElement === name,
-    modal:dialog.matches(":modal"),
-    renamed:{ name:renamed.template.name, eventName:renamed.template.eventName, version:renamed.template.version, priorEvent:renamed.revisions[0].eventName, payload:renamed.template.payload.transaction_id, destination:renamed.template.destination, provenance:renamed.template.provenance },
-    validation:rename.renameValidation({ templateName:"   ", eventName:"purchase" }),
-    history:[...revisionHistory.children].map((item) => item.textContent),
-  };
-  dialog.close(); dialog.hidden = true; return result;
+  const elements = editorUi.findEventLibraryEditorElements();
+  let editor = editorModel.openPropertyEditor(template);
+  editor = editorModel.setTemplateIdentity(editor, "name", "Completed checkout");
+  editor = editorModel.setTemplateIdentity(editor, "eventName", "checkout_completed");
+  editorUi.renderEventLibraryEditor(elements, [template], editor, { edit:()=>{}, rename:()=>{}, duplicate:()=>{}, push:()=>{}, delete:()=>{} });
+  const review = reviewModel.createTemplateChangeReview(editor, "revision");
+  return { renameAction:Boolean(list.querySelector('[aria-label^="Rename "]')), renameDialog:Boolean(document.querySelector("#event-template-rename")), editable:[elements.templateName.disabled, elements.eventName.disabled], review:{ label:review.proposedLabel, version:review.resultingVersion, identity:review.identity, noPayload:review.changes.length === 0 } };
 })`;
 
 const jsonValidationRecoveryRuntime = `Promise.all([
@@ -663,8 +643,7 @@ try {
         saveEnabled:true,
       },
       closeResult:{ hidden:true, display:"none", offsetParent:true, editFocused:true },
-      renameOpen:{ hidden:false, display:"block", positiveGeometry:true, hiddenAncestor:false, focused:true, controls:[true, true, true, true] },
-      renameClose:{ closed:true, returned:true },
+      inlineIdentity:{ noRename:false, editor:true, fields:[false, false], values:["Purchase confirmation", "purchase"] },
       scroll:{
         initial:{
           editor:true,
@@ -709,18 +688,12 @@ try {
       documentFits:true,
       emptyResult:{ text:"No payload changes", visible:true, changeCount:0 },
     }, `rendered push decision data violated its ${width}px browser contract`);
-    assert.deepEqual(await evaluate(socket, templateRenameRuntime), {
-      actionText:"Rename",
-      actionName:"Rename Purchase confirmation",
-      fields:["Template name", "Event name"],
-      values:["Purchase confirmation", "purchase"],
-      associated:["event-template-rename-name-error", "event-template-rename-event-name-error"],
-      focused:true,
-      modal:true,
-      renamed:{ name:"Completed checkout", eventName:"checkout_completed", version:4, priorEvent:"purchase", payload:"T-1", destination:"queue.history", provenance:"captured:event-history" },
-      validation:{ templateName:"Enter a template name" },
-      history:["Version 3: Purchase confirmation · purchase"],
-    }, `rendered template renaming violated its ${width}px browser contract`);
+    assert.deepEqual(await evaluate(socket, templateChangeReviewRuntime), {
+      renameAction:false,
+      renameDialog:false,
+      editable:[false, false],
+      review:{ label:"Revised", version:4, identity:[["Template name", "Purchase confirmation", "Completed checkout"], ["Event name", "purchase", "checkout_completed"]], noPayload:true },
+    }, `inline template change review violated its ${width}px browser contract`);
     assert.deepEqual(await evaluate(socket, jsonValidationRecoveryRuntime), {
       invalid:{ error:true, status:"Invalid JSON at position 58.", invalid:"true", saveDisabled:true, pushDisabled:true, saveReason:"Correct the JSON draft.", pushReason:"Correct the JSON draft.", draft:{ tealium_generated:"1", scroll_percentage:0 } },
       recovered:{ error:false, status:"Properties, JSON, and Validation edit the same draft.", invalid:"false", saveDisabled:false, pushDisabled:false, draft:{ tealium_generated:"1", scroll_percentage:25 } },

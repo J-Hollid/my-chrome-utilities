@@ -5,7 +5,7 @@
 (def templates
   ["event template <template_name> is open for editing" "the property editor is displayed"
    "Properties, JSON, and Validation views edit the same draft"
-   "Properties is selected before JSON, Validation, and Execution settings"
+   "Properties is ordered before JSON, Validation, and Execution settings"
    "JSON and Execution settings are separate disclosures or tabs editing the same draft"
    "JSON is collapsed by default when Properties provides a sufficient summary"
    "the Properties view preserves string, number, boolean, null, object, and array value types"
@@ -47,7 +47,7 @@
     "Properties, JSON, and Validation views edit the same draft"
     (do (support/assert! (:editor-visible world) "Property editor is hidden." {})
         (assoc world :views ["Properties" "JSON" "Validation"] :shared-draft (:draft world)))
-    "Properties is selected before JSON, Validation, and Execution settings" (assoc world :editor-visible true :views ["Properties" "JSON" "Validation" "Execution settings"] :shared-draft (:draft world))
+    "Properties is ordered before JSON, Validation, and Execution settings" (assoc world :editor-visible true :views ["Properties" "JSON" "Validation" "Execution settings"] :shared-draft (:draft world))
     "JSON and Execution settings are separate disclosures or tabs editing the same draft" (assoc world :shared-draft (:draft world))
     "JSON is collapsed by default when Properties provides a sufficient summary" world
     "the Properties view preserves string, number, boolean, null, object, and array value types"

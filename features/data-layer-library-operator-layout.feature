@@ -40,7 +40,7 @@ Feature: Data layer library operator layout
     Given event template <template_name> is selected
     When its editor is displayed
     Then a named detail pane shows template identity, version, draft state, and provenance before editing sections
-    And Properties appears first with JSON and execution settings available through separate progressive sections
+    And Properties appears first with Revision history, JSON, and execution settings available through separate progressive sections
     And changing editor view preserves the current draft
     And persistent actions <editor_actions> remain reachable while the payload scrolls
 

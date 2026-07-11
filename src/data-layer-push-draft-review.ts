@@ -53,12 +53,18 @@ export function createPushDraftReview(
 ): PushDraftReview {
   const reviewedEditor = structuredClone(editor);
   const reviewedTarget = structuredClone(target);
+  const saved = reviewedEditor.savedTemplate ?? reviewedEditor.template;
+  const identityAndExecution = [
+    ...(saved.name === reviewedEditor.template.name ? [] : [["Template name", `${saved.name} → ${reviewedEditor.template.name}`] as const]),
+    ...(saved.eventName === reviewedEditor.template.eventName ? [] : [["Event name", `${saved.eventName} → ${reviewedEditor.template.eventName}`] as const]),
+    ...(saved.destination === reviewedEditor.template.destination ? [] : [["Destination", `${saved.destination} → ${reviewedEditor.template.destination}`] as const]),
+  ];
   return {
     editor: reviewedEditor,
     target: reviewedTarget,
     summary: `${reviewedEditor.template.eventName}; ${reviewedTarget.title}; ${reviewedTarget.pageUrl}; ${reviewedEditor.template.destination}; version ${reviewedEditor.template.version}; ${reviewedEditor.template.validation}.`,
-    confirmLabel: `Push ${reviewedEditor.template.eventName} to ${reviewedTarget.title}`,
-    rows: [["Event", reviewedEditor.template.eventName], ["Target title", reviewedTarget.title], ["Target URL", reviewedTarget.pageUrl], ["Destination", reviewedEditor.template.destination], ["Version", String(reviewedEditor.template.version)], ["Validation", reviewedEditor.template.validation]],
+    confirmLabel: `Push ${reviewedEditor.template.eventName} to the active target`,
+    rows: [["Event", reviewedEditor.template.eventName], ["Target title", reviewedTarget.title], ["Target URL", reviewedTarget.pageUrl], ["Destination", reviewedEditor.template.destination], ["Version", String(reviewedEditor.template.version)], ["Validation", reviewedEditor.template.validation], ...identityAndExecution],
     changes: changesBetween(reviewedEditor.template.payload as JsonValue, reviewedEditor.draft),
   };
 }

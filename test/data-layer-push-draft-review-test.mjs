@@ -12,7 +12,7 @@ editor.draft.ecommerce.value = 20;
 target.title = "Different target";
 assert.equal(review.editor.draft.ecommerce.value, 19);
 assert.equal(review.target.title, "Signal Shop");
-assert.equal(review.confirmLabel, "Push purchase to Signal Shop");
+assert.equal(review.confirmLabel, "Push purchase to the active target");
 assert.match(review.summary, /queue\.history; version 3; Valid/);
 assert.deepEqual(review.rows, [["Event", "purchase"], ["Target title", "Signal Shop"], ["Target URL", "https://signal.example.test/checkout"], ["Destination", "queue.history"], ["Version", "3"], ["Validation", "Valid"]]);
 assert.deepEqual(review.changes, [

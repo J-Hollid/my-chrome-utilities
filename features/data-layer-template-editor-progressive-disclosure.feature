@@ -10,7 +10,7 @@ Feature: Data layer template editor progressive disclosure
     Then a named detail pane for Purchase confirmation opens
     And the pane edits only template Purchase confirmation
     And its header provides Close editor
-    And Properties is the first selected editing section
+    And Properties is the first editing disclosure
 
   # Data layer template editor progressive disclosure 002
   Scenario: Data layer template editor progressive disclosure 002
