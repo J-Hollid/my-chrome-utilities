@@ -27,6 +27,7 @@ import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigation
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
@@ -116,6 +117,7 @@ let liveObserverState = createLiveObserverState({
     pageUrl: globalThis.location.href,
     sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
+let inspectorReturnSnapshot;
 let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
@@ -445,11 +447,21 @@ function currentLiveSessionSummary() {
     });
 }
 function closeInspectorAndReturnToEvents() {
+    const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
     renderLiveObserver();
-    liveObserverElements.eventFeed?.querySelector("button")?.focus();
+    if (returnSnapshot) {
+        const restored = restoreInspectorReturn(returnSnapshot);
+        if (liveObserverElements.eventList)
+            liveObserverElements.eventList.scrollTop = restored.scrollTop;
+        Array.from(liveObserverElements.eventFeed?.querySelectorAll("button") ?? [])
+            .find((button) => button.dataset.eventId === restored.eventId)
+            ?.focus();
+    }
+    inspectorReturnSnapshot = undefined;
 }
 function openLiveInspector(eventId) {
+    inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
     const split = globalThis.innerWidth >= 800;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);

@@ -33,6 +33,7 @@ function eventRow(event, selected, openEvent) {
     const item = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
+    button.dataset.eventId = event.id;
     const sourceName = event.sourceName ?? event.sourceId;
     const summaries = resolveFeedSummaries(event);
     const pathname = eventPathname(event.pageUrl);
@@ -76,9 +77,13 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     if (!elements.eventInspector)
         return;
     elements.eventInspector.classList.add("live-detail-view");
+    const inspectorHeader = document.createElement("header");
+    inspectorHeader.className = "detail-view-header";
     const heading = document.createElement("h4");
-    heading.className = "detail-view-header";
     heading.textContent = event.name;
+    if (elements.backToEventsButton)
+        inspectorHeader.append(elements.backToEventsButton);
+    inspectorHeader.append(heading);
     const source = document.createElement("p");
     source.textContent = `Source: ${event.sourceName ?? event.sourceId}`;
     const status = document.createElement("output");
@@ -130,7 +135,7 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         actions.append(action);
     }
     actions.append(feedback);
-    elements.eventInspector.replaceChildren(heading, source, status, summary, payload, raw, actions);
+    elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, payload, raw, actions);
 }
 function appendSummaryItem(summary, label, value) {
     if (!value)
