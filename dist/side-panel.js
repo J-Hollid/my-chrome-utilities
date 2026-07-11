@@ -28,6 +28,7 @@ import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSes
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
+import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
@@ -452,11 +453,7 @@ function closeInspectorAndReturnToEvents() {
     renderLiveObserver();
     if (returnSnapshot) {
         const restored = restoreInspectorReturn(returnSnapshot);
-        if (liveObserverElements.eventList)
-            liveObserverElements.eventList.scrollTop = restored.scrollTop;
-        Array.from(liveObserverElements.eventFeed?.querySelectorAll("button") ?? [])
-            .find((button) => button.dataset.eventId === restored.eventId)
-            ?.focus();
+        restoreInspectorReturnUi(liveObserverElements, restored);
     }
     inspectorReturnSnapshot = undefined;
 }

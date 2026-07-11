@@ -1,12 +1,31 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createServer } from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
+const assetServer = createServer(async (request, response) => {
+  const requested = request.url === "/" ? "side-panel.html" : request.url?.slice(1);
+  const file = path.resolve("dist", requested ?? "side-panel.html");
+  if (!file.startsWith(path.resolve("dist") + path.sep)) {
+    response.writeHead(404).end();
+    return;
+  }
+  try {
+    const content = await readFile(file);
+    const contentType = file.endsWith(".js") ? "text/javascript"
+      : file.endsWith(".css") ? "text/css"
+        : "text/html";
+    response.writeHead(200, { "Content-Type": contentType }).end(content);
+  } catch {
+    response.writeHead(404).end();
+  }
+});
+await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
+const assetPort = assetServer.address().port;
 const chrome = spawn("google-chrome", [
   "--headless=new",
   "--disable-gpu",
@@ -138,7 +157,8 @@ class DevtoolsSocket {
 }
 
 async function openPanel(port, width, height = 900) {
-  const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pathToFileURL(path.resolve("dist/side-panel.html")).href)}`, { method: "PUT" }).then((response) => response.json());
+  const panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`;
+  const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(panelUrl)}`, { method: "PUT" }).then((response) => response.json());
   const socket = new DevtoolsSocket(page.webSocketDebuggerUrl);
   await socket.connect();
   await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
@@ -153,7 +173,9 @@ async function openPanel(port, width, height = 900) {
 
 async function evaluate(socket, expression) {
   const result = await socket.call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+  if (result.exceptionDetails) {
+    throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
+  }
   return result.result.value;
 }
 
@@ -194,6 +216,24 @@ const measurements = `(() => {
   };
 })()`;
 
+const inspectorReturnRuntime = `import("./data-layer-live-inspector-return-ui.js").then(({ restoreInspectorReturnUi }) => {
+  const eventList = document.createElement("section");
+  eventList.style.cssText = "height:40px;overflow:auto";
+  const eventFeed = document.createElement("div");
+  const spacer = document.createElement("div");
+  spacer.style.height = "1000px";
+  const eventButton = document.createElement("button");
+  eventButton.dataset.eventId = "purchase";
+  eventButton.textContent = "purchase";
+  eventFeed.append(spacer, eventButton);
+  eventList.append(eventFeed);
+  document.body.append(eventList);
+  restoreInspectorReturnUi({ eventList, eventFeed }, { eventId: "purchase", scrollTop: 480 });
+  const result = { scrollTop: eventList.scrollTop, focusedEventId: document.activeElement?.dataset.eventId };
+  eventList.remove();
+  return result;
+})`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -211,6 +251,10 @@ try {
     if (width === 360) {
       assert.deepEqual([measured.live.header, measured.live.master, measured.live.detail].filter((component) => !withinColumn(component, measured.root)), [], "compact components escaped their content column");
       assert.ok(measured.actionChildren.every(({ rect, parent }) => rect.x >= parent.x - 1 && rect.right <= parent.right + 1), "an action button escaped its wrapping action group");
+      assert.deepEqual(await evaluate(socket, inspectorReturnRuntime), {
+        scrollTop: 480,
+        focusedEventId: "purchase",
+      }, "inspector return did not restore browser scroll and focus");
     }
     if (width === 720) {
       for (const [name, pane, masterRange, detailRange] of [["live", measured.live, [280, 320], [344, 400]], ["library", measured.library, [240, 288], [384, 448]], ["sessions", measured.sessions, [240, 300], [360, 432]], ["schemas", measured.schemas, [240, 300], [360, 432]]]) {
@@ -230,5 +274,6 @@ try {
       chrome.kill("SIGTERM");
     }), wait(1000)]);
   }
+  await new Promise((resolve) => assetServer.close(resolve));
   await rm(chromeProfile, { recursive: true, force: true });
 }

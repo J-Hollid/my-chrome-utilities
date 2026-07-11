@@ -161,6 +161,7 @@ import {
   restoreInspectorReturn,
   type InspectorReturnSnapshot,
 } from "./data-layer-live-inspector-return.js";
+import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import {
   createEditableTemplate,
   discardDraft,
@@ -734,10 +735,7 @@ function closeInspectorAndReturnToEvents(): void {
   renderLiveObserver();
   if (returnSnapshot) {
     const restored = restoreInspectorReturn(returnSnapshot);
-    if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = restored.scrollTop;
-    Array.from(liveObserverElements.eventFeed?.querySelectorAll<HTMLButtonElement>("button") ?? [])
-      .find((button) => button.dataset.eventId === restored.eventId)
-      ?.focus();
+    restoreInspectorReturnUi(liveObserverElements, restored);
   }
   inspectorReturnSnapshot = undefined;
 }
