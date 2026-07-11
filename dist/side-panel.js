@@ -17,11 +17,13 @@ import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigation
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { createEditableTemplate, discardDraft, executeDraftPush, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
+import { createEditableTemplate, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, validateEvent } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
-import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, } from "./data-layer-event-library-editor-ui.js";
+import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
+import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
+import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -61,7 +63,7 @@ const savedSessionConfirmation = document.querySelector("#saved-session-confirma
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
-const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, } = eventLibraryEditorElements;
+const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
@@ -427,7 +429,7 @@ function renderEventTemplateLibrary() {
         },
         push: (template) => {
             openTemplateEditor(template);
-            pushCurrentTemplateDraft();
+            void pushCurrentTemplateDraft();
         },
     });
 }
@@ -489,23 +491,29 @@ function openTemplateEditor(template) {
     setEventLibraryResult(eventLibraryEditorElements, `Editing ${template.name}; unsaved changes require keep, discard, or save.`);
     renderEventTemplateLibrary();
 }
-function pushCurrentTemplateDraft() {
+async function pushPayloadToSelectedTargetPage(request) {
+    if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
+        throw new Error("Selected-page push is unavailable.");
+    }
+    const [injection] = await chrome.scripting.executeScript({
+        target: { tabId: request.tabId },
+        world: "MAIN",
+        args: [request.destination, request.payload],
+        func: pushPayloadInPage,
+    });
+    const result = injection?.result;
+    if (!result?.success) {
+        throw new Error(result?.result ?? "Selected-page push failed.");
+    }
+}
+async function pushCurrentTemplateDraft() {
     if (!propertyEditorState)
         return;
-    const template = propertyEditorState.template;
-    const source = liveObserverState.sources.find(({ id }) => id === template.sourceId);
-    const record = executeDraftPush(propertyEditorState, {
-        id: template.sourceId,
-        name: source?.name ?? template.sourceName,
-        kind: "page",
-        destination: template.destination,
-        enabled: true,
-        status: source?.status ?? "Connected",
-        capabilities: ["push"],
-    }, liveObserverState.pageUrl, (destination, payload) => {
-        globalThis.dispatchEvent(new CustomEvent("data-layer-template-push", { detail: { destination, payload } }));
-    });
-    setEventLibraryResult(eventLibraryEditorElements, `${record.activePage}; ${record.adapterId}; ${record.destination}; ${record.result}.`);
+    const record = await pushTemplateToSelectedTarget(propertyEditorState, selectedObservationTarget(observationTargetState), pushPayloadToSelectedTargetPage);
+    setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
+    if (record.fieldError)
+        setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
+    setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
@@ -1173,6 +1181,13 @@ eventTemplateJson?.addEventListener("input", () => {
     propertyEditorState = updateDraftJson(propertyEditorState, eventTemplateJson.value);
     renderEventTemplateLibrary();
 });
+eventTemplatePushDestination?.addEventListener("input", () => {
+    if (!propertyEditorState)
+        return;
+    propertyEditorState = setPushDestination(propertyEditorState, eventTemplatePushDestination.value);
+    setPushDestinationValidation(eventLibraryEditorElements, "");
+    renderEventTemplateLibrary();
+});
 saveTemplateRevisionButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;
@@ -1201,7 +1216,9 @@ saveTemplateCopyButton?.addEventListener("click", () => {
         setEventLibraryValidation(eventLibraryEditorElements, error instanceof Error ? error.message : "Draft is invalid.");
     }
 });
-pushTemplateDraftButton?.addEventListener("click", pushCurrentTemplateDraft);
+pushTemplateDraftButton?.addEventListener("click", () => {
+    void pushCurrentTemplateDraft();
+});
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;

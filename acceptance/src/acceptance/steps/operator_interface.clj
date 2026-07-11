@@ -12,6 +12,8 @@
    "features/data-layer-live-inspector-action-runtime.feature"
    "features/data-layer-live-inspector-layout-runtime.feature"
    "features/data-layer-live-inspector-navigation-runtime.feature"
+   "features/data-layer-push-destination-configuration.feature"
+   "features/data-layer-selected-target-push-runtime.feature"
    "features/data-layer-schemas-operator-layout.feature"
    "features/data-layer-sessions-operator-layout.feature"
    "features/side-panel-hotkey-operator-layout.feature"
@@ -70,5 +72,5 @@
            handlers))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T02:11:30.780307979+02:00", :module-hash "-1905379754", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "-574026697"} {:id "defn/operator-shell-wired?", :kind "defn", :line 23, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 34, :end-line nil, :hash "-359605785"} {:id "defn-/observe", :kind "defn-", :line 39, :end-line nil, :hash "-943567860"} {:id "defn-/transition", :kind "defn-", :line 44, :end-line nil, :hash "908273079"} {:id "def/handlers", :kind "def", :line 58, :end-line nil, :hash "-454832"} {:id "def/priority-handler-texts", :kind "def", :line 61, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 62, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 67, :end-line nil, :hash "1875904922"}]}
+;; {:version 1, :tested-at "2026-07-11T03:16:35.98333536+02:00", :module-hash "526374631", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "-748397560"} {:id "defn/operator-shell-wired?", :kind "defn", :line 25, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 36, :end-line nil, :hash "-359605785"} {:id "defn-/observe", :kind "defn-", :line 41, :end-line nil, :hash "-943567860"} {:id "defn-/transition", :kind "defn-", :line 46, :end-line nil, :hash "908273079"} {:id "def/handlers", :kind "def", :line 60, :end-line nil, :hash "-454832"} {:id "def/priority-handler-texts", :kind "def", :line 63, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 64, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 69, :end-line nil, :hash "1875904922"}]}
 ;; clj-mutate-manifest-end

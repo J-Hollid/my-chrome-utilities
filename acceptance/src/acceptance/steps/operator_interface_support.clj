@@ -27,6 +27,11 @@
    "initial_state" #{"Not checked"}
    "issue_count" #{"2"}
    "issue_summary" #{"2 schema issues" "JSON error" "Valid"}
+   "history_path" #{"queue.history"}
+   "push_path" #{"dataLayer" "analytics.queue"}
+   "first_push_path" #{"dataLayer"}
+   "second_push_path" #{"analytics.queue"}
+   "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
    "motion_preference" #{"no preference" "reduce"}
    "middle_event" #{"banner"}
@@ -35,6 +40,12 @@
    "oldest_event" #{"pageview"}
    "operation" #{"keymap reload"}
    "page_scope" #{"https://example.test/order/complete"}
+   "page_title" #{"Shop"}
+   "other_page_title" #{"Documentation"}
+   "tab_id" #{"42"}
+   "other_tab_id" #{"77"}
+   "page_url" #{"https://shop.example.test/p/"}
+   "side_panel_url" #{"chrome-extension://extension/side-panel.html"}
    "panel_width" #{"320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}
    "primary_action" #{"Push"}
@@ -88,5 +99,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T02:49:08.26201227+02:00", :module-hash "-1339076188", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "461757959"} {:id "defn/validate-example!", :kind "defn", :line 83, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-11T03:17:13.652044249+02:00", :module-hash "905001172", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "-1149064035"} {:id "defn/validate-example!", :kind "defn", :line 94, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end
