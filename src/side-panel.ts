@@ -292,6 +292,7 @@ const {
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
 const pushDraftReview = document.querySelector<HTMLElement>("#push-draft-review");
+const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
@@ -331,6 +332,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let templateEditorReturnFocus: HTMLElement | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
@@ -776,6 +778,7 @@ function openLiveInspector(eventId: string): void {
       updateLiveInspectorValidation(liveObserverElements, validation);
     },
   }));
+  backToEventsButton?.focus();
   renderLiveObserver();
 }
 
@@ -898,9 +901,13 @@ function renderSequences(): void {
 }
 
 function openTemplateEditor(template: EditableEventTemplate): void {
+  templateEditorReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : undefined;
   propertyEditorState = openPropertyEditor(template);
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
+  eventLibraryEditorElements.editorTitle?.focus();
 }
 
 function closeTemplateEditor(): void {
@@ -908,6 +915,8 @@ function closeTemplateEditor(): void {
   if (closeTemplateEditorConfirmation) closeTemplateEditorConfirmation.hidden = true;
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
+  templateEditorReturnFocus?.focus();
+  templateEditorReturnFocus = undefined;
 }
 
 async function pushPayloadToSelectedTargetPage(
@@ -952,7 +961,10 @@ function openPushDraftReview(): void {
     return;
   }
   if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
-  if (pushDraftReview) pushDraftReview.hidden = false;
+  if (pushDraftReview) {
+    pushDraftReview.hidden = false;
+    pushDraftReviewHeading?.focus();
+  }
 }
 
 function renderSavedSessions(): void {
@@ -1839,6 +1851,21 @@ confirmPushDraftButton?.addEventListener("click", () => {
   if (pushDraftReview) pushDraftReview.hidden = true;
 });
 cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview) pushDraftReview.hidden = true; });
+pushDraftReview?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    pushDraftReview.hidden = true;
+    pushTemplateDraftButton?.focus();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusables = Array.from(pushDraftReview.querySelectorAll<HTMLElement>("button:not(:disabled), [tabindex='0']"));
+  const current = focusables.indexOf(document.activeElement as HTMLElement);
+  const next = event.shiftKey
+    ? (current <= 0 ? focusables.length - 1 : current - 1)
+    : (current >= focusables.length - 1 ? 0 : current + 1);
+  if (focusables.length) { event.preventDefault(); focusables[next]?.focus(); }
+});
 
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;

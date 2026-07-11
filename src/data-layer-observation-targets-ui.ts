@@ -24,6 +24,8 @@ export interface ObservationTargetRowActions {
   requestAccess: (target: ObservationTarget) => void;
 }
 
+let lastPickerFocus: HTMLElement | undefined;
+
 export function findObservationTargetElements(
   root: ParentNode = document,
 ): ObservationTargetElements {
@@ -108,6 +110,10 @@ export function renderObservationTargetPicker(
 export function showObservationTargetPicker(
   elements: ObservationTargetElements,
 ): void {
+  lastPickerFocus = typeof document !== "undefined"
+    && document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : undefined;
   elements.sidePanelContent?.setAttribute("inert", "");
   if (elements.picker) elements.picker.hidden = false;
   elements.search?.focus();
@@ -118,7 +124,8 @@ export function closeObservationTargetPicker(
 ): void {
   if (elements.picker) elements.picker.hidden = true;
   elements.sidePanelContent?.removeAttribute("inert");
-  elements.browseButton?.focus();
+  (lastPickerFocus ?? elements.browseButton)?.focus();
+  lastPickerFocus = undefined;
 }
 
 export function showDetachTargetConfirmation(

@@ -87,6 +87,7 @@ const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, saveLatestButton: saveLatestTemplateButton, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
 const pushDraftReview = document.querySelector("#push-draft-review");
+const pushDraftReviewHeading = document.querySelector("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
 const confirmPushDraftButton = document.querySelector("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector("#cancel-push-draft");
@@ -125,6 +126,7 @@ let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let templateEditorReturnFocus;
 let savedInspectorTemplateId;
 let schemas = [];
 let replaySequences = [];
@@ -500,6 +502,7 @@ function openLiveInspector(eventId) {
                 updateLiveInspectorValidation(liveObserverElements, validation);
             },
         }));
+    backToEventsButton?.focus();
     renderLiveObserver();
 }
 function appendOpenInLibraryAction(eventId, templateName) {
@@ -615,9 +618,13 @@ function renderSequences() {
     });
 }
 function openTemplateEditor(template) {
+    templateEditorReturnFocus = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : undefined;
     propertyEditorState = openPropertyEditor(template);
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
+    eventLibraryEditorElements.editorTitle?.focus();
 }
 function closeTemplateEditor() {
     propertyEditorState = undefined;
@@ -625,6 +632,8 @@ function closeTemplateEditor() {
         closeTemplateEditorConfirmation.hidden = true;
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
+    templateEditorReturnFocus?.focus();
+    templateEditorReturnFocus = undefined;
 }
 async function pushPayloadToSelectedTargetPage(request) {
     if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
@@ -664,8 +673,10 @@ function openPushDraftReview() {
     }
     if (pushDraftReviewSummary)
         pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
-    if (pushDraftReview)
+    if (pushDraftReview) {
         pushDraftReview.hidden = false;
+        pushDraftReviewHeading?.focus();
+    }
 }
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
@@ -1383,6 +1394,25 @@ confirmPushDraftButton?.addEventListener("click", () => {
 });
 cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview)
     pushDraftReview.hidden = true; });
+pushDraftReview?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        event.preventDefault();
+        pushDraftReview.hidden = true;
+        pushTemplateDraftButton?.focus();
+        return;
+    }
+    if (event.key !== "Tab")
+        return;
+    const focusables = Array.from(pushDraftReview.querySelectorAll("button:not(:disabled), [tabindex='0']"));
+    const current = focusables.indexOf(document.activeElement);
+    const next = event.shiftKey
+        ? (current <= 0 ? focusables.length - 1 : current - 1)
+        : (current >= focusables.length - 1 ? 0 : current + 1);
+    if (focusables.length) {
+        event.preventDefault();
+        focusables[next]?.focus();
+    }
+});
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;
