@@ -17,7 +17,7 @@ Feature: Data layer live operator layout
 
     Examples:
       | project_name         | session_state | event_count | source_count | primary_actions |
-      | my-chrome-utilities | Live          | 42          | 3            | Pause capture   |
+      | my-chrome-utilities | Capturing     | 42          | 3            | Pause capture   |
       | my-chrome-utilities | Paused        | 42          | 3            | Resume capture  |
 
   # Data layer live operator layout 002
