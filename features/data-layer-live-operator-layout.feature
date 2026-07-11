@@ -11,14 +11,13 @@ Feature: Data layer live operator layout
     When the Live view header is displayed
     Then it shows state <session_state>, <event_count> events, and <source_count> sources before the event feed
     And primary actions <primary_actions> are visible without opening another region
-    And End testing remains reachable from the same context
     And a Stop button is absent from the Live session actions
     And the selected target page is shown once as session context rather than repeated as an event heading
 
     Examples:
       | project_name         | session_state | event_count | source_count | primary_actions |
-      | my-chrome-utilities | Capturing     | 42          | 3            | Pause capture   |
-      | my-chrome-utilities | Paused        | 42          | 3            | Resume capture  |
+      | my-chrome-utilities | Capturing     | 42          | 3            | Pause capture and End testing  |
+      | my-chrome-utilities | Paused        | 42          | 3            | Resume capture and End testing |
 
   # Data layer live operator layout 002
   Scenario Outline: Data layer live operator layout 002
