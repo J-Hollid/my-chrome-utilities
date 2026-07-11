@@ -101,6 +101,7 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         const action = document.createElement("button");
         action.type = "button";
         action.textContent = label;
+        action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
         action.addEventListener("click", () => {
             void runLiveInspectorAction(label, event, callback, (message) => { feedback.textContent = message; });
         });
