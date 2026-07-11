@@ -97,12 +97,6 @@
         <section id="observation-target-controls" aria-label="Observation target controls">
           <button id="browse-observation-targets" type="button">Browse all tabs</button>
           <output id="observation-target-result" aria-live="polite"></output>
-          <section id="observation-target-picker" aria-label="Observation target picker" hidden>
-            <label for="observation-target-search">Search targets</label>
-            <input id="observation-target-search" type="search" />
-            <output id="observation-target-count" aria-live="polite"></output>
-            <ul id="observation-target-list"></ul>
-          </section>
           <section id="detach-observation-target-confirmation" aria-label="Detach target confirmation" hidden>
             <output id="detach-observation-target-message"></output>
             <button id="cancel-detach-observation-target" type="button">Cancel</button>
@@ -149,6 +143,18 @@
       </section>
       <output id="command-log" aria-live="polite"></output>
       </div>
+      <section id="observation-target-picker" role="dialog" aria-modal="true" aria-labelledby="observation-target-picker-title" hidden>
+        <section id="observation-target-picker-panel">
+          <header>
+            <h2 id="observation-target-picker-title">Browse observation targets</h2>
+            <button id="close-observation-target-picker" type="button">Close</button>
+          </header>
+          <label for="observation-target-search">Search targets</label>
+          <input id="observation-target-search" type="search" />
+          <output id="observation-target-count" aria-live="polite"></output>
+          <ul id="observation-target-list" aria-label="Matching observation targets"></ul>
+        </section>
+      </section>
       <section id="palette" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
         <input id="palette-filter" type="search" aria-label="Filter commands" aria-controls="palette-results" />
         <ul id="palette-results" role="listbox" aria-label="Matching commands"></ul>
