@@ -13,8 +13,10 @@ import {
   pathnameVisits,
   resolveFeedSummaries,
 } from "./data-layer-event-feed-summaries.js";
+import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 
 export interface LiveObserverElements {
+  livePanel: HTMLElement | null;
   viewList: HTMLElement | null;
   sessionMessage: HTMLElement | null;
   sourceStatuses: HTMLElement | null;
@@ -30,6 +32,7 @@ export function findLiveObserverElements(
   root: ParentNode = document,
 ): LiveObserverElements {
   return {
+    livePanel: root.querySelector<HTMLElement>("#data-layer-panel-live"),
     viewList: root.querySelector<HTMLElement>("#data-layer-views"),
     sessionMessage: root.querySelector<HTMLElement>("#live-session-message"),
     sourceStatuses: root.querySelector<HTMLElement>("#live-source-statuses"),
@@ -94,6 +97,10 @@ export function renderLiveObserverState(
   state: LiveObserverState,
   openEvent: (eventId: string) => void,
 ): void {
+  elements.livePanel?.setAttribute(
+    "data-live-layout",
+    liveResponsiveLayout(state, globalThis.innerWidth),
+  );
   if (elements.sourceStatuses) {
     elements.sourceStatuses.replaceChildren(
       ...state.sources.map((source) => {

@@ -43,7 +43,8 @@
    "features/side-panel-component-layout-runtime.feature"
    "features/data-layer-workflow-focus-management.feature"
    "features/side-panel-accessible-state-communication.feature"
-   "features/side-panel-authoritative-hidden-state.feature"])
+   "features/side-panel-authoritative-hidden-state.feature"
+   "features/data-layer-live-responsive-master-detail.feature"])
 
 (defn operator-shell-wired? [root]
   (let [html (support/source-file root "side-panel.html")

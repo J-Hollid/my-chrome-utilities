@@ -467,7 +467,7 @@ function closeInspectorAndReturnToEvents() {
 }
 function openLiveInspector(eventId) {
     inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
-    const split = globalThis.innerWidth >= 800;
+    const split = globalThis.innerWidth >= 700;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
     if (event)
