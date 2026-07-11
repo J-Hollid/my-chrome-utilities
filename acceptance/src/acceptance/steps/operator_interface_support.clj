@@ -19,6 +19,9 @@
    "captured_event_count" #{"0" "12"}
    "session_save_state" #{"unsaved" "saved" "nothing to save"}
    "consequence_text" #{"12 captured events have not been saved" "All 12 captured events are saved" "No captured events need saving"}
+   "master_region" #{"event feed" "search, template count, and template list" "search, session count, and session list" "search, schema count, and schema list"}
+   "detail_region" #{"selected event inspector" "selected template editor" "selected session detail" "selected schema detail"}
+   "full_width_region" #{"session summary and capture controls" "Library navigation" "Sessions navigation" "schema creation and import actions"}
    "action_meaning" #{"consequential" "supporting"}
    "action_variant" #{"destructive" "quiet" "secondary"}
    "capture_time" #{"10:03:00" "10:04:00"}
