@@ -16,7 +16,7 @@ Feature: Side panel action hierarchy
       | view_name | view_state                         | primary_count | primary_action |
       | Live      | ready target selected               | 1             | Start testing  |
       | Library   | valid draft has unsaved changes     | 1             | Save revision  |
-      | Library   | operator-confirmed push is next     | 1             | Push draft     |
+      | Library   | push review is ready to confirm     | 1             | Push purchase to Signal Shop |
       | Sessions  | browsing saved sessions             | 0             | none           |
       | Schemas   | browsing saved schemas              | 0             | none           |
       | Hotkeys   | browsing command bindings           | 0             | none           |

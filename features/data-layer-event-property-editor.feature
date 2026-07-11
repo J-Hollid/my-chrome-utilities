@@ -22,7 +22,7 @@ Feature: Data layer event property editor
 
   # Data layer event property editor 002
   Scenario Outline: Data layer event property editor 002
-    Given property <property_path> has value <old_value>
+    Given draft field <property_path> currently equals <old_value>
     When the user performs <edit_action>
     Then the structured draft and JSON draft both reflect <expected_result>
     And the original template remains unchanged until the draft is saved
@@ -47,10 +47,10 @@ Feature: Data layer event property editor
 
   # Data layer event property editor 004
   Scenario Outline: Data layer event property editor 004
-    Given event template <template_name> has version <old_version>
+    Given revision history for <template_name> ends at <old_version>
     And the draft contains valid changes
     When the user saves the draft as a revision
-    Then template <template_name> has version <new_version>
+    Then saving appends revision <new_version> to <template_name>
     And version <old_version> remains available to pinned test sequences
 
     Examples:
@@ -60,7 +60,7 @@ Feature: Data layer event property editor
   # Data layer event property editor 005
   Scenario Outline: Data layer event property editor 005
     Given a valid unsaved draft targets <destination>
-    When the user pushes the draft to the active page
+    When the user reviews and confirms pushing the draft to the active page
     Then the exact draft payload is sent to <destination>
     And the editor reports the active page, adapter, destination, and result
     And template <template_name> retains its last saved version
@@ -82,10 +82,10 @@ Feature: Data layer event property editor
 
   # Data layer event property editor 007
   Scenario Outline: Data layer event property editor 007
-    Given nested property <property_path> has value <old_value>
+    Given within a nested structure <property_path> currently equals <old_value>
     When the user expands its parent and changes it to <new_value>
     Then the draft retains the surrounding object and array structure
-    And nested property <property_path> has value <new_value> in Properties and JSON views
+    And Properties and JSON views both show <new_value> at nested path <property_path>
 
     Examples:
       | project_name         | template_name         | property_path       | old_value | new_value |
