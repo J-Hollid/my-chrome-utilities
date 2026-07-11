@@ -11,9 +11,10 @@ import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArra
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
 import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
-import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, startDataLayerTestingSession, } from "./data-layer-session.js";
+import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, endDataLayerTestingSession, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
+import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
-import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resetLiveObserverForSession, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, updateLiveInspectorValidation, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
@@ -98,6 +99,13 @@ let schemas = [];
 let replaySequences = [];
 let observationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId;
+let nextSessionSequence = 0;
+function newDataLayerSessionId(tabId) {
+    nextSessionSequence += 1;
+    const unique = globalThis.crypto?.randomUUID?.()
+        ?? `${Date.now()}-${nextSessionSequence}`;
+    return `tab-${tabId}-session-${unique}`;
+}
 if (app) {
     app.textContent = PROJECT_NAME;
 }
@@ -323,7 +331,8 @@ async function attachSelectedTarget() {
         return;
     }
     observationTargetState = decision.state;
-    dataLayerSessionState = startDataLayerTestingSession(dataLayerSessionState, {
+    const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
+        id: newDataLayerSessionId(target.tabId),
         tabId: target.tabId,
         windowId: target.windowId,
         url: target.pageUrl,
@@ -331,7 +340,8 @@ async function attachSelectedTarget() {
         targetOrigin: target.origin,
         historyPath: getHistoryArrayPath(),
     });
-    liveObserverState = resetLiveObserverForSession(liveObserverState);
+    dataLayerSessionState = started.sessionState;
+    liveObserverState = started.liveObserverState;
     dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: target.pageUrl });
     dataLayerObserverState = attachHistoryArrayObserver({
         pageObject: dataLayerObserverState.pageObject,
