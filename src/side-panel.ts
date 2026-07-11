@@ -190,6 +190,10 @@ import {
   type SelectedTargetPushRequest,
 } from "./data-layer-selected-target-push.js";
 import {
+  createPushDraftReview,
+  type PushDraftReview,
+} from "./data-layer-push-draft-review.js";
+import {
   pushPayloadInPage,
   type PagePushResult,
 } from "./data-layer-selected-target-push-page.js";
@@ -327,6 +331,7 @@ let savedSessionLibrary: SavedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession: ArchivedSession | undefined;
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let pendingPushDraftReview: PushDraftReview | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = [];
 let replaySequences: ReplaySequence[] = [];
@@ -898,11 +903,14 @@ async function pushPayloadToSelectedTargetPage(
   }
 }
 
-async function pushCurrentTemplateDraft(): Promise<void> {
-  if (!propertyEditorState) return;
+async function pushCurrentTemplateDraft(
+  editor = propertyEditorState,
+  target = selectedObservationTarget(observationTargetState),
+): Promise<void> {
+  if (!editor) return;
   const record = await pushTemplateToSelectedTarget(
-    propertyEditorState,
-    selectedObservationTarget(observationTargetState),
+    editor,
+    target,
     pushPayloadToSelectedTargetPage,
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
@@ -921,7 +929,9 @@ function openPushDraftReview(): void {
     setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
     return;
   }
-  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+  pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
+  if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+  if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
   if (pushDraftReview) pushDraftReview.hidden = false;
 }
 
@@ -1805,10 +1815,15 @@ pushTemplateDraftButton?.addEventListener("click", () => {
   openPushDraftReview();
 });
 confirmPushDraftButton?.addEventListener("click", () => {
-  void pushCurrentTemplateDraft();
+  const review = pendingPushDraftReview;
+  pendingPushDraftReview = undefined;
+  if (pushDraftReview) pushDraftReview.hidden = true;
+  if (review) void pushCurrentTemplateDraft(review.editor, review.target);
+});
+cancelPushDraftButton?.addEventListener("click", () => {
+  pendingPushDraftReview = undefined;
   if (pushDraftReview) pushDraftReview.hidden = true;
 });
-cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview) pushDraftReview.hidden = true; });
 
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;

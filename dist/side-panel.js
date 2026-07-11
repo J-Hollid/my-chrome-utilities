@@ -33,6 +33,7 @@ import { createSequence, readiness, runSequence } from "./data-layer-sequence-re
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
 import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
+import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
 import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
@@ -119,6 +120,7 @@ let savedSessionLibrary = createSavedSessionLibrary();
 let archivedSavedSession;
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let pendingPushDraftReview;
 let savedInspectorTemplateId;
 let schemas = [];
 let replaySequences = [];
@@ -608,10 +610,10 @@ async function pushPayloadToSelectedTargetPage(request) {
         throw new Error(result?.result ?? "Selected-page push failed.");
     }
 }
-async function pushCurrentTemplateDraft() {
-    if (!propertyEditorState)
+async function pushCurrentTemplateDraft(editor = propertyEditorState, target = selectedObservationTarget(observationTargetState)) {
+    if (!editor)
         return;
-    const record = await pushTemplateToSelectedTarget(propertyEditorState, selectedObservationTarget(observationTargetState), pushPayloadToSelectedTargetPage);
+    const record = await pushTemplateToSelectedTarget(editor, target, pushPayloadToSelectedTargetPage);
     setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
     if (record.fieldError)
         setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
@@ -629,8 +631,11 @@ function openPushDraftReview() {
         setEventLibraryValidation(eventLibraryEditorElements, "Correct the JSON draft.");
         return;
     }
+    pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
     if (pushDraftReviewSummary)
-        pushDraftReviewSummary.textContent = `${propertyEditorState.template.eventName}; ${target.title}; ${target.pageUrl}; ${propertyEditorState.template.destination}; version ${propertyEditorState.template.version}.`;
+        pushDraftReviewSummary.textContent = pendingPushDraftReview.summary;
+    if (confirmPushDraftButton)
+        confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
     if (pushDraftReview)
         pushDraftReview.hidden = false;
 }
@@ -1344,12 +1349,18 @@ pushTemplateDraftButton?.addEventListener("click", () => {
     openPushDraftReview();
 });
 confirmPushDraftButton?.addEventListener("click", () => {
-    void pushCurrentTemplateDraft();
+    const review = pendingPushDraftReview;
+    pendingPushDraftReview = undefined;
+    if (pushDraftReview)
+        pushDraftReview.hidden = true;
+    if (review)
+        void pushCurrentTemplateDraft(review.editor, review.target);
+});
+cancelPushDraftButton?.addEventListener("click", () => {
+    pendingPushDraftReview = undefined;
     if (pushDraftReview)
         pushDraftReview.hidden = true;
 });
-cancelPushDraftButton?.addEventListener("click", () => { if (pushDraftReview)
-    pushDraftReview.hidden = true; });
 discardTemplateDraftButton?.addEventListener("click", () => {
     if (!propertyEditorState)
         return;
