@@ -283,7 +283,6 @@ const libraryActionsRecoveryRuntime = `(async () => {
     offsetParent:q("#event-property-editor").offsetParent === null,
     editFocused:document.activeElement === q('[data-template-id]'),
   };
-
   q('[data-template-id]').click();
   const inlineIdentity = {
     noRename:Boolean(document.querySelector('[aria-label^="Rename "]')) || Boolean(document.querySelector("#event-template-rename")),
@@ -320,6 +319,9 @@ const libraryActionsRecoveryRuntime = `(async () => {
     changes:[...q("#revision-change-review [data-change-list]").querySelectorAll("dl")].map(pairs),
     confirm:q("#confirm-revision-change").textContent,
   };
+  q("#revision-change-review").dispatchEvent(new Event("cancel", { cancelable:true }));
+  const revisionCancel = { hidden:q("#revision-change-review").hidden, draft:[q("#event-template-name").value, q("#event-template-event-name").value, q("#push-destination-path").value], focused:document.activeElement === q("#save-template-revision") };
+  q("#save-template-revision").click();
   q("#confirm-revision-change").click();
   const revisionSaved = { identity:q(".event-template-identity").textContent, result:q("#event-template-result").textContent };
   q("#close-template-editor").click();
@@ -371,7 +373,7 @@ const libraryActionsRecoveryRuntime = `(async () => {
     addAvailable:visible(q("#add-new-event")),
     importAvailable:visible(q("#import-event-library")),
   };
-  return { purchase, closeResult, inlineIdentity, pushReview, pushCancelled, revisionReview, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
+  return { purchase, closeResult, inlineIdentity, pushReview, pushCancelled, revisionReview, revisionCancel, revisionSaved, scroll, exportResult, clearReview, cleared, importReview, replaceArmed, restored, deleteReview, afterDelete, final };
 })()`;
 
 const measurements = `(() => {
@@ -688,6 +690,7 @@ try {
         changes:[[["Path","ecommerce.value"],["Previous","18"],["Revised","19"],["Change","changed"]],[["Path","items[0].quantity"],["Previous","1"],["Revised","2"],["Change","changed"]],[["Path","legacy.debug"],["Previous","true"],["Revised","Not present"],["Change","removed"]],[["Path","experiment.variant"],["Previous","Not present"],["Revised","treatment-b"],["Change","added"]]],
         confirm:"Save revision 2",
       },
+      revisionCancel:{ hidden:true, draft:["Completed checkout", "checkout_completed", "queue.history"], focused:true },
       revisionSaved:{ identity:"Completed checkout · checkout_completed", result:"Saved version 2; identity, execution, and payload changes applied." },
       scroll:{
         initial:{

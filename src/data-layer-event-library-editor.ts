@@ -301,4 +301,9 @@ export function leaveEditorOptions(state: PropertyEditorState): readonly ("keep 
   return state.dirty ? ["keep editing", "discard draft", "save"] : ["keep editing"];
 }
 
-export function discardDraft(state: PropertyEditorState): PropertyEditorState { return openPropertyEditor(state.template); }
+export function discardDraft(state: PropertyEditorState): PropertyEditorState {
+  const saved = state.savedTemplate
+    ? { ...state.savedTemplate, revisionHistory: state.revisions }
+    : state.template;
+  return openPropertyEditor(saved);
+}
