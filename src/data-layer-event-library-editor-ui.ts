@@ -164,7 +164,12 @@ export function setEventLibraryValidation(
   elements: EventLibraryEditorElements,
   message: string,
 ): void {
-  if (elements.validation) elements.validation.textContent = message;
+  if (elements.validation) {
+    const blocking = /invalid|correct|select|error|unavailable|must/i.test(message);
+    elements.validation.setAttribute("aria-live", blocking ? "assertive" : "polite");
+    elements.validation.setAttribute("role", blocking ? "alert" : "status");
+    elements.validation.textContent = message;
+  }
 }
 
 export function setPushDestinationValidation(
@@ -174,4 +179,5 @@ export function setPushDestinationValidation(
   if (!elements.pushDestination) return;
   elements.pushDestination.setCustomValidity(message);
   elements.pushDestination.setAttribute("aria-invalid", String(Boolean(message)));
+  if (message) elements.pushDestination.setAttribute("aria-describedby", "event-template-validation");
 }
