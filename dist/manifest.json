@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "my-chrome-utilities",
+  "version": "0.1.0",
+  "description": "Small Chrome utility extension.",
+  "action": {
+    "default_title": "my-chrome-utilities"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "side-panel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+1"
+      },
+      "description": "Open side panel hotkeys"
+    }
+  },
+  "permissions": ["sidePanel", "activeTab", "scripting"],
+  "optional_permissions": ["tabs"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"]
+}

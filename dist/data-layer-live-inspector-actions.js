@@ -1,0 +1,48 @@
+import { createEditableTemplate, } from "./data-layer-event-library-editor.js";
+export function createLiveInspectorActions(effects) {
+    return {
+        async copyPayload(event) {
+            await effects.writeClipboard(JSON.stringify(event.payload));
+        },
+        saveToLibrary(event) {
+            const template = createEditableTemplate({
+                id: event.id,
+                sessionId: event.sessionId ?? "live",
+                sourceId: event.sourceId,
+                sourceKind: event.sourceKind ?? "page",
+                name: event.name,
+                captureTime: event.captureTime,
+                pageUrl: event.pageUrl ?? effects.currentPageUrl(),
+                payload: event.payload,
+                rawInput: event.rawInput ?? event,
+                validation: event.validation ?? "Not checked",
+                provenance: event.provenance ?? "live",
+            }, {
+                name: event.name,
+                destination: event.destination ?? "event.history",
+                sourceName: event.sourceName ?? event.sourceId,
+            });
+            effects.storeTemplate(template);
+            effects.onTemplateSaved?.(template);
+        },
+        validate(event) {
+            const previous = event.validation ?? "Not checked";
+            const next = effects.validationState(event);
+            if (next === previous) {
+                throw new Error("Validation did not change the event state.");
+            }
+            effects.updateValidation(event.id, next);
+        },
+    };
+}
+export async function runLiveInspectorAction(label, event, action, report) {
+    report("");
+    try {
+        await action(event);
+        report(`${label} completed for ${event.name}.`);
+    }
+    catch {
+        report(`${label} failed for ${event.name}.`);
+    }
+}
+//# sourceMappingURL=data-layer-live-inspector-actions.js.map
