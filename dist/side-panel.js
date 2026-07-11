@@ -14,10 +14,12 @@ import { observerAttachmentStatus, restartObservation, } from "./data-layer-reco
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
+import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
+import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./data-layer-live-guided-workflow-ui.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
 import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./data-layer-live-session-summary.js";
 import { createLiveNotificationController } from "./data-layer-live-notifications.js";
-import { createTargetPathStatusController } from "./data-layer-target-path-status.js";
+import { createTargetPathStatusController, targetPathStatusForObservation, } from "./data-layer-target-path-status.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
@@ -59,6 +61,7 @@ const hotkeyEditorFilter = document.querySelector("#hotkey-editor-filter");
 const hotkeyEditorCommands = document.querySelector("#hotkey-editor-commands");
 const liveObserverElements = findLiveObserverElements();
 const liveSessionSummaryElements = findLiveSessionSummaryElements();
+const liveGuidedWorkflowElements = findLiveGuidedWorkflowElements();
 const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, resumeCaptureButton, } = liveObserverElements;
 const { copyPageUrlButton } = liveSessionSummaryElements;
 const liveNotificationController = createLiveNotificationController((message) => renderLiveSessionMessage(liveObserverElements, message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
@@ -109,6 +112,7 @@ let replaySequences = [];
 let observationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId;
 let nextSessionSequence = 0;
+let currentTargetPathStatus = "Selection required";
 function newDataLayerSessionId(tabId) {
     nextSessionSequence += 1;
     const unique = globalThis.crypto?.randomUUID?.()
@@ -158,16 +162,11 @@ function renderLiveContextActions() {
         pauseCaptureButton,
         resumeCaptureButton,
     }, { activeSession, captureStatus: liveObserverState.status });
-    if (startTestingButton) {
-        const ready = selectedTarget?.accessState === "Ready";
-        startTestingButton.disabled = !activeSession && !ready;
-        startTestingButton.textContent = ready && selectedTarget
-            ? `Start testing ${selectedTarget.title}`
-            : "Start testing";
-        startTestingButton.setAttribute("aria-description", ready ? "Starts testing with the selected ready target." : "Choose a ready target before starting");
-    }
-    if (chooseObservationTargetButton)
-        chooseObservationTargetButton.hidden = activeSession || Boolean(selectedTarget);
+    renderLiveGuidedWorkflow(liveGuidedWorkflowElements, liveGuidedWorkflow({
+        activeSession,
+        ...(selectedTarget ? { selectedTarget } : {}),
+        pathStatus: currentTargetPathStatus,
+    }));
 }
 function targetFromTab(tab, currentWindow = false) {
     if (tab.id === undefined || tab.windowId === undefined || !tab.url)
@@ -214,6 +213,8 @@ async function discoverCurrentObservationTarget() {
     }
     renderObservationTargetPicker();
     renderObservationTargetContext();
+    if (target)
+        refreshSelectedTargetPathStatus();
 }
 async function browseObservationTargets() {
     if (typeof chrome === "undefined" || !chrome.tabs?.query || !chrome.permissions) {
@@ -242,6 +243,7 @@ function renderObservationTargetPicker() {
             renderObservationTargetPicker();
             renderObservationTargetContext();
             closeObservationTargetPicker(observationTargetElements);
+            refreshSelectedTargetPathStatus();
         },
         requestAccess: (target) => void requestSelectedTargetAccess(target),
     });
@@ -258,6 +260,7 @@ async function requestSelectedTargetAccess(target) {
     setObservationTargetResult(`Access granted for ${target.origin}`);
     renderObservationTargetPicker();
     renderObservationTargetContext();
+    refreshSelectedTargetPathStatus();
 }
 async function recoverAttachedObservationTarget() {
     const target = attachedObservationTarget(observationTargetState);
@@ -343,6 +346,7 @@ async function attachSelectedTarget() {
         renderObservationTargetContext();
         return;
     }
+    currentTargetPathStatus = targetPathStatusForObservation(observation, getHistoryArrayPath());
     observationTargetState = decision.state;
     const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
         id: newDataLayerSessionId(target.tabId),
@@ -1338,7 +1342,11 @@ keymapFileInput?.addEventListener("change", () => {
     void loadHotkeyKeymapFile();
 });
 const targetPathStatusController = createTargetPathStatusController({
-    render: renderHistoryPath,
+    render: (path, fieldValue, status) => {
+        currentTargetPathStatus = status;
+        renderHistoryPath(path, fieldValue, status);
+        renderLiveContextActions();
+    },
     read: currentTargetObservation,
     apply: (observation) => {
         dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
@@ -1348,6 +1356,10 @@ const targetPathStatusController = createTargetPathStatusController({
         renderObserverState();
     },
 });
+function refreshSelectedTargetPathStatus() {
+    const path = getHistoryArrayPath();
+    void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
+}
 historyPathInput?.addEventListener("input", () => {
     const typedPath = historyPathInput.value;
     const path = setHistoryArrayPath(typedPath);

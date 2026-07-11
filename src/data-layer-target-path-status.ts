@@ -7,6 +7,15 @@ export interface TargetPathStatusController {
   configure: (path: string, fieldValue?: string) => Promise<void>;
 }
 
+export function targetPathStatusForObservation(
+  observation: ActivePageObservationResult,
+  path: string,
+): TargetPathStatus {
+  return observation.pageAccessStatus === "page access available"
+    ? pathStatus(observation.pageObject, path)
+    : "page access unavailable";
+}
+
 export function createTargetPathStatusController(options: {
   render: (path: string, fieldValue: string, status: TargetPathStatus) => void;
   read: (path: string) => Promise<ActivePageObservationResult | undefined>;
@@ -30,9 +39,7 @@ export function createTargetPathStatusController(options: {
       options.render(
         path,
         fieldValue,
-        observation.pageAccessStatus === "page access available"
-          ? pathStatus(observation.pageObject, path)
-          : "page access unavailable",
+        targetPathStatusForObservation(observation, path),
       );
       options.apply(observation);
     },
