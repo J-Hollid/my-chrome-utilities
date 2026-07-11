@@ -120,6 +120,8 @@ const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorTarget = document.querySelector("#schema-editor-target");
 const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
+const addSchemaRuleButton = document.querySelector("#add-schema-rule");
+const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const pushDraftReview = document.querySelector("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector("#push-draft-review-summary");
@@ -661,9 +663,10 @@ function renderSchemaDraft() {
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)
         schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+    const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length);
     const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
     if (saveSchemaButton)
-        saveSchemaButton.disabled = true;
+        saveSchemaButton.disabled = !ready;
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
 }
@@ -1636,6 +1639,33 @@ schemaEditorName?.addEventListener("input", () => { if (schemaDraft) {
 } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
+addSchemaRuleButton?.addEventListener("click", () => {
+    if (!schemaDraft)
+        return;
+    schemaDraft = { ...schemaDraft, document: { ...schemaDraft.document, properties: { ...schemaDraft.document.properties, example: { type: "string" } } } };
+    renderSchemaDraft();
+});
+saveSchemaButton?.addEventListener("click", () => {
+    if (!schemaDraft || saveSchemaButton.disabled)
+        return;
+    const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
+    const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [{ sourceId: "", eventName: "", target: target }] };
+    schemas = [...schemas, saved];
+    persistSchemaLibrary();
+    schemaDraft = undefined;
+    renderSchemaDraft();
+    renderSchemas();
+    if (schemaResult)
+        schemaResult.textContent = `Saved ${saved.name} version 1.`;
+});
+createSchemaAssignmentButton?.addEventListener("click", () => {
+    const schema = schemas[0];
+    if (!schema)
+        return;
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, { sourceId: "event-history", eventName: "page_view", target: "payload", id: `assignment:${candidate.id}`, name: `${candidate.name} automatic`, priority: 10, enabled: true }] } : candidate);
+    persistSchemaLibrary();
+    renderSchemas();
+});
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized)
     return; try {
     schemas = [...schemas, importSchema(serialized)];
