@@ -73,7 +73,8 @@ export function openPropertyEditor(template) {
 export function updateDraftJson(state, source) {
     try {
         const draft = JSON.parse(source);
-        return { ...state, draft, jsonDraft: json(draft), dirty: true };
+        const { jsonError: _jsonError, ...validState } = state;
+        return { ...validState, draft, jsonDraft: json(draft), dirty: true };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : "Invalid JSON";
