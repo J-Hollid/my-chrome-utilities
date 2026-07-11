@@ -5,6 +5,7 @@
 
 (def feature-files
   ["features/data-layer-library-operator-layout.feature"
+   "features/data-layer-template-editor-progressive-disclosure.feature"
    "features/data-layer-live-operator-layout.feature"
    "features/data-layer-live-session-summary.feature"
    "features/data-layer-live-session-end-status-runtime.feature"
@@ -13,6 +14,7 @@
    "features/data-layer-captured-event-template-workflow.feature"
    "features/data-layer-detail-view-headers.feature"
    "features/data-layer-event-property-form-layout.feature"
+   "features/data-layer-event-property-editor.feature"
    "features/data-layer-live-inspector-actions.feature"
    "features/data-layer-live-inspector-layout.feature"
    "features/data-layer-live-inspector-navigation.feature"

@@ -154,7 +154,7 @@
    "schema_actions" #{"Edit as new version, Duplicate, Export, Delete"}
    "schema_name" #{"Ecommerce" "None" "Purchase event" "Purchase v2"}
    "tags" #{"checkout, sale" "none"}
-   "scroll_position" #{"480 CSS px" "960 px" "960 CSS px"}
+   "scroll_position" #{"480 CSS px" "960 px"}
    "short_template" #{"View"}
    "long_template" #{"International purchase confirmation with campaign"}
    "second_subview" #{"Sequences"}
