@@ -139,13 +139,13 @@ import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.
 import {
   createEditableTemplate,
   discardDraft,
-  executeDraftPush,
   openPropertyEditor,
   saveAsTemplateCopy,
   saveDraftRevision,
   searchEventTemplates,
   restoreEventTemplateLibrary,
   serializeEventTemplateLibrary,
+  setPushDestination,
   updateDraftJson,
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
   type EditableEventTemplate,
@@ -163,7 +163,12 @@ import {
   renderEventLibraryEditor,
   setEventLibraryResult,
   setEventLibraryValidation,
+  setPushDestinationValidation,
 } from "./data-layer-event-library-editor-ui.js";
+import {
+  pushTemplateToSelectedTarget,
+  type SelectedTargetPushRequest,
+} from "./data-layer-selected-target-push.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -235,6 +240,7 @@ const {
   search: eventTemplateSearch,
   saveLatestButton: saveLatestTemplateButton,
   json: eventTemplateJson,
+  pushDestination: eventTemplatePushDestination,
   saveRevisionButton: saveTemplateRevisionButton,
   saveCopyButton: saveTemplateCopyButton,
   pushDraftButton: pushTemplateDraftButton,
@@ -666,7 +672,7 @@ function renderEventTemplateLibrary(): void {
       },
       push: (template) => {
         openTemplateEditor(template);
-        pushCurrentTemplateDraft();
+        void pushCurrentTemplateDraft();
       },
     },
   );
@@ -737,23 +743,47 @@ function openTemplateEditor(template: EditableEventTemplate): void {
   renderEventTemplateLibrary();
 }
 
-function pushCurrentTemplateDraft(): void {
-  if (!propertyEditorState) return;
-  const template = propertyEditorState.template;
-  const source = liveObserverState.sources.find(({ id }) => id === template.sourceId);
-  const record = executeDraftPush(propertyEditorState, {
-    id: template.sourceId,
-    name: source?.name ?? template.sourceName,
-    kind: "page",
-    destination: template.destination,
-    enabled: true,
-    status: source?.status ?? "Connected",
-    capabilities: ["push"],
-  }, liveObserverState.pageUrl, (destination, payload) => {
-    globalThis.dispatchEvent(new CustomEvent("data-layer-template-push", { detail: { destination, payload } }));
+async function pushPayloadToSelectedTargetPage(
+  request: SelectedTargetPushRequest,
+): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.scripting?.executeScript) {
+    throw new Error("Selected-page push is unavailable.");
+  }
+  const [injection] = await chrome.scripting.executeScript({
+    target: { tabId: request.tabId },
+    world: "MAIN",
+    args: [request.destination, request.payload],
+    func: (destination: string, payload: unknown): { success: boolean; result?: string } => {
+      let value: unknown = globalThis;
+      for (const segment of destination.split(".")) {
+        if (value === null || typeof value !== "object" || !(segment in value)) {
+          return { success: false, result: `Destination ${destination} is unavailable.` };
+        }
+        value = (value as Record<string, unknown>)[segment];
+      }
+      if (!Array.isArray(value)) {
+        return { success: false, result: `Destination ${destination} cannot accept payload.` };
+      }
+      value.push(payload);
+      return { success: true };
+    },
   });
-  setEventLibraryResult(eventLibraryEditorElements,
-                        `${record.activePage}; ${record.adapterId}; ${record.destination}; ${record.result}.`);
+  const result = injection?.result as { success?: boolean; result?: string } | undefined;
+  if (!result?.success) {
+    throw new Error(result?.result ?? "Selected-page push failed.");
+  }
+}
+
+async function pushCurrentTemplateDraft(): Promise<void> {
+  if (!propertyEditorState) return;
+  const record = await pushTemplateToSelectedTarget(
+    propertyEditorState,
+    selectedObservationTarget(observationTargetState),
+    pushPayloadToSelectedTargetPage,
+  );
+  setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
+  if (record.fieldError) setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
+  setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }
 
 function renderSavedSessions(): void {
@@ -1586,6 +1616,16 @@ eventTemplateJson?.addEventListener("input", () => {
   renderEventTemplateLibrary();
 });
 
+eventTemplatePushDestination?.addEventListener("input", () => {
+  if (!propertyEditorState) return;
+  propertyEditorState = setPushDestination(
+    propertyEditorState,
+    eventTemplatePushDestination.value,
+  );
+  setPushDestinationValidation(eventLibraryEditorElements, "");
+  renderEventTemplateLibrary();
+});
+
 saveTemplateRevisionButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;
   try {
@@ -1616,7 +1656,9 @@ saveTemplateCopyButton?.addEventListener("click", () => {
   }
 });
 
-pushTemplateDraftButton?.addEventListener("click", pushCurrentTemplateDraft);
+pushTemplateDraftButton?.addEventListener("click", () => {
+  void pushCurrentTemplateDraft();
+});
 
 discardTemplateDraftButton?.addEventListener("click", () => {
   if (!propertyEditorState) return;
