@@ -5,8 +5,12 @@ export function applyActionTreatment(button, treatment, descriptionId) {
     button.disabled = treatment.disabled;
     if (treatment.disabledReason) {
         button.setAttribute("aria-description", treatment.disabledReason);
-        if (descriptionId)
+        if (descriptionId) {
             button.setAttribute("aria-describedby", descriptionId);
+            const description = document.getElementById(descriptionId);
+            if (description)
+                description.textContent = treatment.disabledReason;
+        }
         return;
     }
     button.removeAttribute("aria-description");

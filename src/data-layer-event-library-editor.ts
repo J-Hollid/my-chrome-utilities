@@ -122,7 +122,8 @@ export function openPropertyEditor(template: EditableEventTemplate): PropertyEdi
 export function updateDraftJson(state: PropertyEditorState, source: string): PropertyEditorState {
   try {
     const draft = JSON.parse(source) as JsonValue;
-    return { ...state, draft, jsonDraft: json(draft), dirty: true };
+    const { jsonError: _jsonError, ...validState } = state;
+    return { ...validState, draft, jsonDraft: json(draft), dirty: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid JSON";
     const position = message.match(/position (\d+)/)?.[1];
