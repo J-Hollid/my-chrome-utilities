@@ -10,7 +10,7 @@
     "package": "npm run build && node scripts/package.mjs",
     "test:unit": "bb test:unit",
     "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs",
-    "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs && node test/data-layer-live-session-end-test.mjs",
+    "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs && node test/data-layer-live-session-end-test.mjs && node test/data-layer-live-session-target-release-test.mjs",
     "test:unit:observation-targets": "npm run build && node test/data-layer-observation-targets-test.mjs && node test/data-layer-target-path-status-test.mjs",
     "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-live-session-controls-test.mjs && node test/data-layer-live-session-summary-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
     "test:unit:live-event-presentation": "npm run build && node test/data-layer-event-presentation-test.mjs",

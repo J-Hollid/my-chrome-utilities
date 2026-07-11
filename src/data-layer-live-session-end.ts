@@ -1,4 +1,5 @@
 import {
+  attachedObservationTarget,
   detachObservationTarget,
   type ObservationTargetState,
 } from "./data-layer-observation-targets.js";
@@ -10,14 +11,19 @@ import {
 export interface EndedLiveSession {
   sessionState: DataLayerSessionState;
   targetState: ObservationTargetState;
+  releasedTargetId?: string;
 }
 
 export function endLiveSession(
   sessionState: DataLayerSessionState,
   targetState: ObservationTargetState,
+  releaseTarget: (targetId: string) => void = () => {},
 ): EndedLiveSession {
+  const releasedTargetId = attachedObservationTarget(targetState)?.id;
+  if (releasedTargetId !== undefined) releaseTarget(releasedTargetId);
   return {
     sessionState: endDataLayerTestingSession(sessionState),
     targetState: detachObservationTarget(targetState),
+    ...(releasedTargetId === undefined ? {} : { releasedTargetId }),
   };
 }
