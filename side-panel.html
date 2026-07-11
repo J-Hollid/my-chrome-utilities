@@ -42,6 +42,11 @@
             <button id="copy-live-page-url" type="button">Copy page URL</button>
           </section>
           <section id="live-context-actions" aria-label="Live actions">
+          <ol id="live-setup-steps" aria-label="Live setup steps">
+            <li id="live-setup-target">Choose target</li>
+            <li id="live-setup-readiness">Confirm access and path</li>
+            <li id="live-setup-session">Start testing</li>
+          </ol>
           <button id="start-data-layer-testing" type="button">Start testing</button>
           <button id="end-data-layer-testing" type="button" hidden>End testing</button>
           <button id="choose-observation-target" type="button">Choose target</button>
@@ -99,7 +104,8 @@
         <button id="create-schema" type="button">Create</button><button id="import-schema" type="button">Import</button><button id="export-schema" type="button">Export</button>
         <output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><output id="schema-result" aria-live="polite"></output>
       </section>
-      <section id="data-layer-settings" aria-label="Data layer testing settings">
+      <details id="data-layer-settings" aria-label="Data layer testing settings">
+        <summary>Settings</summary>
         <section id="observation-target-controls" aria-label="Observation target controls">
           <button id="browse-observation-targets" type="button">Browse all tabs</button>
           <output id="observation-target-result" aria-live="polite"></output>
@@ -113,7 +119,7 @@
         <input id="history-path" type="text" value="queue.history" />
         <output id="history-path-display">queue.history</output>
         <output id="history-path-status" aria-live="polite">ready</output>
-      </section>
+      </details>
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-history-path"></output>
         <button id="restart-observation" type="button">Restart observation</button>

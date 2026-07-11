@@ -4,6 +4,15 @@
 (def canonical-example-values
   {"action_name" #{"Copy payload" "Pause capture" "Save to Library" "Start testing" "Validate"}
    "action_result" #{"failed" "succeeded"}
+   "access_state" #{"Ready"}
+   "first_step" #{"Choose target"}
+   "second_step" #{"Confirm access and path"}
+   "third_step" #{"Start testing"}
+   "disabled_action" #{"Start testing"}
+   "disabled_reason" #{"Choose a ready target before starting"}
+   "primary_controls" #{"Pause capture and End testing" "Resume capture and End testing"}
+   "target_readiness" #{"Ready" "Unavailable"}
+   "setup_action" #{"Choose target" "Start testing Checkout"}
    "adapter_kind" #{"Adobe" "Data Layer" "GTAG"}
    "advanced_section" #{"Keymap files"}
    "animation_behavior" #{"brief" "disabled"}
@@ -75,8 +84,8 @@
                        "chrome-extension://abcdefghijkl/side-panel.html"}
    "panel_width" #{"320" "320 CSS px" "320 px" "480 px" "720 px"}
    "panel_height" #{"640 CSS px"}
-   "primary_action" #{"Push"}
-   "primary_actions" #{"Pause capture" "Resume capture"}
+   "primary_action" #{"Push" "Choose target" "Start testing"}
+   "primary_actions" #{"Pause capture" "Pause capture and End testing" "Resume capture" "Resume capture and End testing"}
    "project_name" #{"my-chrome-utilities"}
    "payload_label" #{"pageview-values" "purchase-values"}
    "query" #{"checkout"}
@@ -99,7 +108,7 @@
    "sequence_name" #{"Purchase journey"}
    "session_action" #{"Create sequence" "End testing" "Export" "Start testing"}
    "capture_action" #{"none" "Pause capture" "Resume capture"}
-   "capture_state" #{"Inactive" "Live" "Paused"}
+   "capture_state" #{"Capturing" "Inactive" "Live" "Paused"}
    "session_actions" #{"Open archived, Resume, Create sequence, Export"}
    "session_name" #{"Checkout journey"}
    "session_state" #{"Capturing" "Live" "Paused"}
