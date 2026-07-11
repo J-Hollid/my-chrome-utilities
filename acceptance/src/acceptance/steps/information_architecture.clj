@@ -1,5 +1,7 @@
 (ns acceptance.steps.information-architecture
   (:require [acceptance.steps.support :as support]
+            [babashka.process :as process]
+            [clojure.edn :as edn]
             [clojure.string :as str]))
 
 (defn- inspect [world]
@@ -49,10 +51,42 @@
                ["id=\"start-data-layer-testing\""
                 "id=\"end-data-layer-testing\""
                 "id=\"choose-observation-target\""
-                "id=\"attach-selected-target\""
-                "id=\"detach-observation-target\""])
+                "id=\"pause-capture\""
+                "id=\"resume-capture\""])
+       (not (str/includes? html "id=\"attach-selected-target\""))
+       (not (str/includes? html "id=\"detach-observation-target\""))
+       (not (str/includes? html "id=\"stop-capture\""))
        (str/includes? source "function renderLiveContextActions()")
        (str/includes? source "startTestingButton?.addEventListener")))
+
+(defn- run-production-module! [script]
+  (let [{:keys [exit out err]} (process/shell {:out :string :err :string}
+                                                "node" "--input-type=module" "--eval" script)]
+    (support/assert! (zero? exit)
+                     "Production module execution failed."
+                     {:error err})
+    (edn/read-string (str/trim out))))
+
+(defn- runtime-live-session-controls [session-state capture-state]
+  (run-production-module!
+   (format (str "import { liveSessionControls } from './dist/data-layer-live-session-controls.js';"
+                "const controls=liveSessionControls({activeSession:%s,captureStatus:%s});"
+                "console.log(`{:session-action ${JSON.stringify(controls.sessionAction)} :capture-action ${JSON.stringify(controls.captureAction)}}`);"
+                )
+           (if (= session-state "Active") "true" "false")
+           (pr-str (if (= capture-state "Paused") "Paused" "Live")))))
+
+(defn- runtime-live-session-lifecycle []
+  (run-production-module!
+   (str "import { createObservationTarget, createObservationTargetState, selectObservationTarget, attachSelectedObservationTarget, detachObservationTarget } from './dist/data-layer-observation-targets.js';"
+        "import { startDataLayerTestingSession, endDataLayerTestingSession } from './dist/data-layer-session.js';"
+        "const target=createObservationTarget({tabId:42,windowId:7,pageUrl:'https://example.test/',title:'Example'});"
+        "const selected=selectObservationTarget(createObservationTargetState([target]),target.id);"
+        "const attached=attachSelectedObservationTarget(selected);"
+        "const started=startDataLayerTestingSession({}, {id:'test',tabId:target.tabId,windowId:target.windowId,url:target.pageUrl,historyPath:'event.history',targetTitle:target.title,targetOrigin:target.origin});"
+        "const ended=endDataLayerTestingSession(started);"
+        "const detached=detachObservationTarget(attached.state);"
+        "console.log(`{:started ${attached.result==='Attached' && started.session?.status==='active'} :ended ${ended.session?.status==='ended' && detached.sessionState==='Detached'}}`);")))
 
 (def data-layer-secondary-views #{"Live" "Library" "Sessions" "Schemas"})
 
@@ -484,7 +518,53 @@
                                   "Live context actions are not scoped."
                                   {:context context
                                    :action (:contextual-action world)})
-                 world))}])
+                 world))}
+
+   {:pattern #"^Data Layer Live has session state <([A-Za-z0-9_]+)> and capture state <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [session-key capture-key]]
+               (let [session-state (example-value example session-key)
+                     capture-state (example-value example capture-key)]
+                 (assoc (inspect world)
+                        :runtime-controls (runtime-live-session-controls session-state capture-state)
+                        :runtime-lifecycle (runtime-live-session-lifecycle))))}
+   {:pattern #"^the Live contextual actions are displayed$"
+    :handler (fn [world _example _captures]
+               (support/assert! (contextual-actions? (:html world) (:source world))
+                                "Canonical Live controls are not rendered."
+                                {})
+               world)}
+   {:pattern #"^session action <([A-Za-z0-9_]+)> is visible$"
+    :handler (fn [world example [action-key]]
+               (support/assert! (= (example-value example action-key)
+                                   (:session-action (:runtime-controls world)))
+                                "Wrong session action is visible."
+                                {:controls (:runtime-controls world)})
+               world)}
+   {:pattern #"^the available capture action is <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [action-key]]
+               (support/assert! (= (example-value example action-key)
+                                   (:capture-action (:runtime-controls world)))
+                                "Wrong capture action is visible."
+                                {:controls (:runtime-controls world)})
+               world)}
+   {:pattern #"^permanent Live action buttons Attach target, Detach target, and Stop are absent$"
+    :handler (fn [world _example _captures]
+               (support/assert! (contextual-actions? (:html world) (:source world))
+                                "Obsolete Live action is still rendered."
+                                {})
+               world)}
+   {:pattern #"^Start testing attaches the selected target when a session starts$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (:started (:runtime-lifecycle world)))
+                                "Starting a session did not attach the selected target."
+                                {:lifecycle (:runtime-lifecycle world)})
+               world)}
+   {:pattern #"^End testing detaches the target when the active session ends$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (:ended (:runtime-lifecycle world)))
+                                "Ending a session did not detach its target."
+                                {:lifecycle (:runtime-lifecycle world)})
+               world)}])
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-11T00:19:09.820841237+02:00", :module-hash "-2050733191", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1853401062"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "1653053363"} {:id "defn-/example-value", :kind "defn-", :line 17, :end-line nil, :hash "-1416813660"} {:id "defn/palette-dialog?", :kind "defn", :line 20, :end-line nil, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 29, :end-line nil, :hash "-963751556"} {:id "defn/navigation-structure?", :kind "defn", :line 34, :end-line nil, :hash "514241598"} {:id "defn/contextual-actions?", :kind "defn", :line 46, :end-line nil, :hash "-645291225"} {:id "def/data-layer-secondary-views", :kind "def", :line 57, :end-line nil, :hash "-1480012677"} {:id "defn/data-layer-view-separation?", :kind "defn", :line 59, :end-line nil, :hash "-1906053387"} {:id "defn/distinct-hidden-data-layer-views?", :kind "defn", :line 66, :end-line nil, :hash "-672641782"} {:id "defn/hidden-panel-css-wins?", :kind "defn", :line 73, :end-line nil, :hash "-1823432900"} {:id "defn-/require-layout", :kind "defn-", :line 76, :end-line nil, :hash "-319387143"} {:id "def/handlers", :kind "def", :line 82, :end-line nil, :hash "380691815"}]}

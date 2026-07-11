@@ -81,5 +81,4 @@ Feature: Data layer observation subscription lifecycle
 
     Examples:
       | project_name         | page_url                 | history_path  | session_action |
-      | my-chrome-utilities | https://www.example.com/ | event.history | Stop capture   |
       | my-chrome-utilities | https://www.example.com/ | event.history | End testing    |

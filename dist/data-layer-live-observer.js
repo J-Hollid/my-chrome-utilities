@@ -70,6 +70,6 @@ export function closeLiveInspector(state) {
 }
 export function resetLiveObserverForSession(state) {
     const { inspectorEventId: _inspectorEventId, ...withoutInspector } = state;
-    return { ...withoutInspector, events: [], listVisible: true };
+    return { ...withoutInspector, status: "Live", events: [], listVisible: true };
 }
 //# sourceMappingURL=data-layer-live-observer.js.map
