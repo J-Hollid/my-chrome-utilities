@@ -1,6 +1,6 @@
 import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
-import { pathnameVisits, resolveFeedSummaries } from "./data-layer-event-feed-summaries.js";
+import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 export function findLiveObserverElements(root = document) {
     return {
         viewList: root.querySelector("#data-layer-views"),
@@ -35,7 +35,7 @@ function eventRow(event, selected, openEvent) {
     button.type = "button";
     const sourceName = event.sourceName ?? event.sourceId;
     const summaries = resolveFeedSummaries(event);
-    const pathname = event.pageUrl ? new URL(event.pageUrl).pathname : "/";
+    const pathname = eventPathname(event.pageUrl);
     const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
     const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
     button.setAttribute("aria-label", [event.name, compactTime, sourceName, pathname, event.validation ?? "Not checked", summaryText].filter(Boolean).join(", "));
