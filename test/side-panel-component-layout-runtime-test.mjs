@@ -190,6 +190,7 @@ async function evaluate(socket, expression) {
 const fixture = `(() => {
   const text = "Long metadata and form content that must wrap within the side panel component without creating document overflow. ".repeat(8);
   for (const selector of ["#data-layer-panel-live", "#data-layer-panel-library", "#data-layer-panel-sessions", "#data-layer-panel-schemas", "#event-property-editor", "#live-event-inspector"]) document.querySelector(selector).hidden = false;
+  document.querySelector("#data-layer-panel-live").dataset.liveLayout = "wide-detail";
   document.querySelector("#event-template-json").value = text;
   document.querySelector("#push-destination-path").value = "analytics.destination.with.a.deliberately.long.name";
   for (const selector of ["#live-event-feed", "#event-template-list", "#saved-session-list", "#schema-list"]) {
@@ -281,6 +282,19 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     backInsideList: eventList.contains(backToEventsButton),
     backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
   };
+})`;
+
+const pathnameHeaderRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveObserverState }) => {
+  const feed = document.createElement("ul"); const list = document.createElement("section"); list.append(feed); document.body.append(list);
+  const events = [
+    { id:"products-1", name:"pageview", sourceId:"event-history", captureTime:"10:01:00", pageUrl:"https://example.test/products", payload:{} },
+    { id:"checkout-1", name:"pageview", sourceId:"event-history", captureTime:"10:03:00", pageUrl:"https://example.test/checkout", payload:{} },
+    { id:"products-2", name:"pageview", sourceId:"event-history", captureTime:"10:04:00", pageUrl:"https://example.test/products", payload:{} },
+  ];
+  renderLiveObserverState({ livePanel:null, eventFeed:feed, eventList:list, eventInspector:null, backToEventsButton:null, sourceStatuses:null }, { sources:[], events, listVisible:true }, () => {});
+  const headers = [...feed.querySelectorAll(".pathname-visit-heading")].map((header) => ({ text:header.textContent.trim(), name:header.getAttribute("aria-label") }));
+  const rows = [...feed.querySelectorAll(".pathname-visit button")].map((button) => button.textContent);
+  list.remove(); return { headers, rows };
 })`;
 
 const workflowFocusRuntime = `Promise.all([
@@ -378,6 +392,13 @@ try {
         backInsideList: false,
         backIsFirstHeaderControl: true,
       }, "stacked inspector navigation layout violated its browser contract");
+      assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
+        headers: [
+          { text:"/productsLatest 10:04:00Events 1", name:"/products, Latest 10:04:00, Events 1" },
+          { text:"/checkoutLatest 10:03:00Events 1", name:"/checkout, Latest 10:03:00, Events 1" },
+          { text:"/productsLatest 10:01:00Events 1", name:"/products, Latest 10:01:00, Events 1" },
+        ], rows:["pageview · 10:04:00 · event-history · Not checked", "pageview · 10:03:00 · event-history · Not checked", "pageview · 10:01:00 · event-history · Not checked"],
+      }, "rendered pathname headers omitted required visit metadata");
       assert.deepEqual(await evaluate(socket, workflowFocusRuntime), {
         tabResult: { workspaceRight:true, workspaceLeft:true, dataLayerEnd:true, dataLayerHome:true, singleDataLayerTabStop:true },
         editorResult: { title:"Purchase confirmation editor", headingFocused:true, disclosuresClosed:true, returnedToTemplate:"template:purchase" },
