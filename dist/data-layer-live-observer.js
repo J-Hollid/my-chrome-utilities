@@ -51,6 +51,10 @@ export function filteredLiveEvents(state) {
         if (state.filter?.kind === "event name")
             return event.name.toLowerCase().includes(value);
         if (state.filter?.kind === "validation state") {
+            if (value === "warnings")
+                return event.validation?.endsWith("warnings") ?? false;
+            if (value === "issues")
+                return event.validation?.endsWith("issues") ?? false;
             return event.validation?.toLowerCase().includes(value) ?? false;
         }
         return `${event.name} ${event.sourceName ?? ""} ${event.sourceId} ${JSON.stringify(event.keyProperties ?? event.payload ?? "")}`
