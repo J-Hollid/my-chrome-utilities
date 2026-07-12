@@ -118,6 +118,7 @@ const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorTarget = document.querySelector("#schema-editor-target");
+const schemaEditorParent = document.querySelector("#schema-editor-parent");
 const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
@@ -832,6 +833,10 @@ function renderSchemaDraft() {
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)
         schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+    if (schemaEditorParent) {
+        schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "No parent" }), ...schemas.filter((schema) => schema.id !== draft.id).map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
+        schemaEditorParent.value = draft.parentId ?? "";
+    }
     const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length);
     const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
     if (saveSchemaButton)
@@ -1813,6 +1818,11 @@ schemaEditorName?.addEventListener("input", () => { if (schemaDraft) {
     renderSchemaDraft();
 } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
+schemaEditorParent?.addEventListener("input", () => { if (schemaDraft) {
+    const { parentId: _, ...draft } = schemaDraft;
+    schemaDraft = schemaEditorParent.value ? { ...draft, parentId: schemaEditorParent.value } : draft;
+    renderSchemaDraft();
+} });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 document.querySelector("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });

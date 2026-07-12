@@ -359,6 +359,7 @@ const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
 const schemaDetailEmpty = document.querySelector<HTMLElement>("#schema-detail-empty");
 const schemaEditorName = document.querySelector<HTMLInputElement>("#schema-editor-name");
 const schemaEditorTarget = document.querySelector<HTMLSelectElement>("#schema-editor-target");
+const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema");
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
@@ -1112,6 +1113,10 @@ function renderSchemaDraft(): void {
   if (!draft) return;
   if (schemaEditorName) schemaEditorName.value = draft.name;
   if (schemaEditorTarget) schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+  if (schemaEditorParent) {
+    schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"No parent" }), ...schemas.filter((schema) => schema.id !== draft.id).map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} version ${schema.version}` })));
+    schemaEditorParent.value = draft.parentId ?? "";
+  }
   const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length);
   const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
   if (saveSchemaButton) saveSchemaButton.disabled = !ready;
@@ -2251,6 +2256,7 @@ schemaAssignmentSearch?.addEventListener("input", renderSchemaAssignments);
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls") as "schema-master" | "schema-rule-library" | "schema-assignments")));
 schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, name: schemaEditorName.value }; renderSchemaDraft(); } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
+schemaEditorParent?.addEventListener("input", () => { if (schemaDraft) { const { parentId: _, ...draft } = schemaDraft; schemaDraft = schemaEditorParent.value ? { ...draft, parentId:schemaEditorParent.value } : draft; renderSchemaDraft(); } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
 saveSchemaRuleButton?.addEventListener("click", () => {
