@@ -17,7 +17,7 @@ export interface SchemaAssignment {
   versionPolicy?: "pinned" | "follow latest";
   manualOverride?: boolean;
 }
-export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; }
+export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; enum?: readonly string[]; forbidden?: readonly string[]; minimum?: number; maximum?: number; pattern?: string; additionalProperties?: boolean; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; severity?: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; }
 export interface SchemaValidationRecord { eventId: string; validatedAt: string; result: ValidationResult; }
@@ -75,8 +75,13 @@ export function restoreSchemaLibrary(serialized: string | null): SchemaDefinitio
 
 function issuesFor(value: unknown, schema: JsonSchema, path: string, schemaPath: string, result: ValidationIssue[], metadata: Pick<SchemaDefinition, "name" | "version">): void {
   if (schema.type && valueType(value) !== schema.type) result.push({ instancePath: path, message: "Type mismatch", expected: schema.type, actual: valueType(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: schemaPath });
+  if (schema.enum && !schema.enum.includes(String(value))) result.push({ instancePath:path, message:"Value is not allowed", expected:schema.enum.join(", "), actual:String(value), schemaName:metadata.name, schemaVersion:metadata.version, schemaLocation:`${schemaPath}/enum` });
+  if (schema.forbidden?.includes(String(value))) result.push({ instancePath:path, message:"Value is forbidden", expected:`not one of ${schema.forbidden.join(", ")}`, actual:String(value), schemaName:metadata.name, schemaVersion:metadata.version, schemaLocation:`${schemaPath}/forbidden` });
+  if (typeof value === "number" && ((schema.minimum !== undefined && value < schema.minimum) || (schema.maximum !== undefined && value > schema.maximum))) result.push({ instancePath:path, message:"Value is outside range", expected:`${schema.minimum ?? "-∞"}, ${schema.maximum ?? "∞"}`, actual:String(value), schemaName:metadata.name, schemaVersion:metadata.version, schemaLocation:`${schemaPath}/range` });
+  if (schema.pattern && !safeRegex(schema.pattern)?.test(String(value))) result.push({ instancePath:path, message:"Value does not match pattern", expected:schema.pattern, actual:String(value), schemaName:metadata.name, schemaVersion:metadata.version, schemaLocation:`${schemaPath}/pattern` });
   if (schema.type === "object" && value && typeof value === "object" && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
+    if (schema.additionalProperties === false) for (const property of Object.keys(record)) if (!(property in (schema.properties ?? {}))) result.push({ instancePath:`${path}/${property}`, message:"Undeclared property", expected:"declared property", actual:property, schemaName:metadata.name, schemaVersion:metadata.version, schemaLocation:`${schemaPath}/additionalProperties` });
     for (const property of schema.required ?? []) if (!(property in record)) result.push({ instancePath: `${path}/${property}`, message: "Required value", expected: schema.properties?.[property]?.type ?? "value", actual: "missing", schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/required` });
     for (const [property, child] of Object.entries(schema.properties ?? {})) if (property in record) issuesFor(record[property], child, `${path}/${property}`, `${schemaPath}/properties/${property}`, result, metadata);
   }

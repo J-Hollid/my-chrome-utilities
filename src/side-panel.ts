@@ -2313,7 +2313,11 @@ addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
   const selectedRule = reusableRules.find((rule) => `${rule.id}@${rule.version}` === schemaRuleAttachment?.value);
   const attachments = schemaDraft.ruleAttachments ?? [];
-  schemaDraft = { ...schemaDraft, document:{ ...schemaDraft.document, properties:{ ...schemaDraft.document.properties, example:{ type:"string" } } }, ...(selectedRule && !attachments.some((attachment) => attachment.ruleId === selectedRule.id && attachment.version === selectedRule.version) ? { ruleAttachments:[...attachments, { ruleId:selectedRule.id, version:selectedRule.version }] } : {}) };
+  const parameters = selectedRule?.parameters.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
+  const current = schemaDraft.document.properties?.example ?? { type:"string" as const };
+  const property = !selectedRule ? current : selectedRule.operator === "allowed-values" ? { ...current, type:"string" as const, enum:parameters } : selectedRule.operator === "forbidden-values" ? { ...current, type:"string" as const, forbidden:parameters } : selectedRule.operator === "number-range" ? { ...current, type:"number" as const, minimum:Number(parameters[0]), maximum:Number(parameters[1]) } : selectedRule.operator === "matches-pattern" ? { ...current, type:"string" as const, pattern:selectedRule.parameters } : current;
+  const required = selectedRule?.operator === "required" ? [...new Set([...(schemaDraft.document.required ?? []), "example"])] : schemaDraft.document.required;
+  schemaDraft = { ...schemaDraft, document:{ ...schemaDraft.document, ...(required ? { required } : {}), ...(selectedRule?.operator === "declared-only" ? { additionalProperties:false } : {}), properties:{ ...schemaDraft.document.properties, example:property } }, ...(selectedRule && !attachments.some((attachment) => attachment.ruleId === selectedRule.id && attachment.version === selectedRule.version) ? { ruleAttachments:[...attachments, { ruleId:selectedRule.id, version:selectedRule.version }] } : {}) };
   renderSchemaDraft();
 });
 saveSchemaButton?.addEventListener("click", () => {
