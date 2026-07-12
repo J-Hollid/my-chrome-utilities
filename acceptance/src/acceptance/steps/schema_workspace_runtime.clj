@@ -1,17 +1,21 @@
 (ns acceptance.steps.schema-workspace-runtime
   (:require [acceptance.steps.support :as support]
             [babashka.process :as process]
+            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
 
 (defn- browser-workspace! [world]
-  (if (:browser-workspace world)
+  (if (:browser-observation world)
     world
-    (let [result (process/shell support/build-shell-options "npm run test:unit:component-layout")]
+    (let [result (process/shell (assoc support/build-shell-options :env {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}) "node" "test/side-panel-component-layout-runtime-test.mjs")
+          line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
+          payload (when line (json/parse-string line true))]
       (support/assert! (zero? (:exit result)) "Schema workspace browser runtime verification failed."
                        {:out (:out result) :err (:err result)})
-      (assoc world :browser-workspace {:mounted true :production-callbacks true}))))
+      (support/assert! (true? (get-in payload [:schemaWorkspace :mounted])) "Production Schema workspace did not mount." {:payload payload})
+      (assoc world :browser-observation (:schemaWorkspace payload)))))
 
 (defn- require! [world key message]
   (support/assert! (get world key) message {:required key}) world)
@@ -26,7 +30,7 @@
 
     (str/includes? text "contains nested payload properties")
     (let [kind (source-value example "source_kind") name (source-value example "source_name")]
-      (require! world :browser-workspace "Schemas workspace was not mounted.")
+      (require! world :browser-observation "Schemas workspace was not mounted.")
       (assoc world :source {:kind kind :name name :paths #{"page_type" "page_name" "commerce.order.id"}}))
 
     (str/includes? text "activates Create schema")
@@ -94,9 +98,9 @@
     (str/includes? text "saved-session validation") world
 
     (str/includes? text "runtime acceptance suite is executed") (browser-workspace! world)
-    (str/includes? text "completes schema creation") (require! world :browser-workspace "Browser runtime was not executed.")
+    (str/includes? text "completes schema creation") (require! world :browser-observation "Browser runtime was not executed.")
     (str/includes? text "verifies browser storage") world
-    (str/includes? text "exercises production event capture") (do (support/assert! (get-in world [:browser-workspace :production-callbacks]) "Production callbacks were not exercised." {}) world)
+    (str/includes? text "exercises production event capture") (do (support/assert! (get-in world [:browser-observation :mounted]) "Production callbacks were not exercised." {}) world)
     (str/includes? text "delivered extension bundle") world
 
     :else (throw (ex-info "Unsupported schema workspace runtime step." {:step text}))))

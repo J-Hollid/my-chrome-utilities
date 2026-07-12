@@ -6,6 +6,8 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
+const schemaWorkspaceAdapterObservations = [];
+
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
 const assetServer = createServer(async (request, response) => {
   const requested = request.url === "/" ? "side-panel.html" : request.url?.slice(1);
@@ -894,7 +896,8 @@ try {
         assert.ok(!overlaps(pane.master, pane.detail), `${name} panes overlap`);
       }
     }
-    assert.deepEqual(await evaluate(socket, schemaAssignmentRuntime), {
+    const schemaWorkspaceRuntime = await evaluate(socket, schemaAssignmentRuntime);
+    assert.deepEqual(schemaWorkspaceRuntime, {
       fields:[
         { selector:"#schema-assignment-source", required:false },
         { selector:"#schema-assignment-event", required:false },
@@ -916,7 +919,17 @@ try {
       propertyRule:{ summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
+    if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
+      schemaWorkspaceAdapterObservations.push({
+        mounted:schemaWorkspaceRuntime.schemaMasterVisible,
+        rules:schemaWorkspaceRuntime.propertyRule,
+        assignment:schemaWorkspaceRuntime.assignment,
+      });
+    }
     socket.close();
+  }
+  if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaWorkspace:schemaWorkspaceAdapterObservations.at(-1) }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
