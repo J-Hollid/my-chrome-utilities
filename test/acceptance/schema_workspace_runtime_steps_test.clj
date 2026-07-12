@@ -24,3 +24,13 @@
                           #"format version"
                           (#'workspace/assert-export-preflight!
                            (assoc-in valid-observation [:transfer :content :version] 2))))))
+
+(deftest visibility-observation-starts-only-at-feature-entry-steps
+  (let [world {:browser-observation {:ruleEditorVisibility {}}}
+        example {}]
+    (is (true? (:schema-rule-visibility?
+                (#'workspace/begin-visibility-observation
+                 world example "Data Layer view <view_name> is active"))))
+    (is (= world
+           (#'workspace/begin-visibility-observation
+            world example "Rule configuration is not visible")))))

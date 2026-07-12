@@ -372,7 +372,7 @@
 
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
-(def visibility-entry-steps
+(def ^:private visibility-entry-steps
   #{"Data Layer view <view_name> is active"
     "the Schema workspace Rule Library subview is displayed"})
 
@@ -402,7 +402,7 @@
                    {:observation observation})
   world)
 
-(def visibility-transitions
+(def ^:private visibility-transitions
   {"Data Layer view <view_name> is active" activate-visibility-view
    "no reusable rule editor is open"
    (fn [world example observation]
@@ -451,3 +451,7 @@
         (support/feature-step-specs [visibility-feature-file] #{"the Data Layer workspace is displayed"})))
 
 (def handlers (vec (concat visibility-handlers runtime-handlers)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-12T19:04:57.541172952+02:00", :module-hash "-930840781", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "2070356081"} {:id "def/feature-file", :kind "def", :line 7, :end-line nil, :hash "-1813648721"} {:id "def/visibility-feature-file", :kind "def", :line 8, :end-line nil, :hash "782585494"} {:id "defn-/export-fixture", :kind "defn-", :line 10, :end-line nil, :hash "376473154"} {:id "defn-/assert-export-preflight!", :kind "defn-", :line 15, :end-line nil, :hash "1666428955"} {:id "defn-/browser-workspace!", :kind "defn-", :line 30, :end-line nil, :hash "-902216293"} {:id "defn-/require!", :kind "defn-", :line 68, :end-line nil, :hash "-936314498"} {:id "defn-/source-value", :kind "defn-", :line 71, :end-line nil, :hash "1957517251"} {:id "defn-/count-value", :kind "defn-", :line 74, :end-line nil, :hash "-1818484422"} {:id "defn-/assert-export-counts!", :kind "defn-", :line 77, :end-line nil, :hash "-737297105"} {:id "defn-/assert-browser-step!", :kind "defn-", :line 92, :end-line nil, :hash "-1661936637"} {:id "defn-/transition", :kind "defn-", :line 156, :end-line nil, :hash "2109981935"} {:id "def/visibility-entry-steps", :kind "def", :line 375, :end-line nil, :hash "-889792007"} {:id "defn-/begin-visibility-observation", :kind "defn-", :line 379, :end-line nil, :hash "-1955634581"} {:id "defn-/activate-visibility-view", :kind "defn-", :line 384, :end-line nil, :hash "1944164230"} {:id "defn-/assert-rule-configuration-hidden", :kind "defn-", :line 390, :end-line nil, :hash "-967894054"} {:id "defn-/assert-rule-configuration-visible", :kind "defn-", :line 397, :end-line nil, :hash "1957385540"} {:id "def/visibility-transitions", :kind "def", :line 405, :end-line nil, :hash "436198965"} {:id "defn-/visibility-transition", :kind "defn-", :line 422, :end-line nil, :hash "1101527031"} {:id "def/runtime-handlers", :kind "def", :line 429, :end-line nil, :hash "195233824"} {:id "def/visibility-handlers", :kind "def", :line 442, :end-line nil, :hash "-2063408008"} {:id "def/handlers", :kind "def", :line 453, :end-line nil, :hash "348612342"}]}
+;; clj-mutate-manifest-end
