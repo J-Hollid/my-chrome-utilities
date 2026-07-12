@@ -923,7 +923,7 @@ try {
       rule:{ id:"rule:known-page-types:1", name:"Known page types", version:1, applicableTypes:"string", operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout" },
       pinnedAttachments:"Pinned rules: Known page types v1",
       pinnedSchema:[{ ruleId:"rule:known-page-types:2", version:2 }],
-      ruleUpdateReview:{ open:true, summary:"Pinned attachment schema will be saved as version 2 with updated pinned rules." },
+      ruleUpdateReview:{ open:true, summary:"Affected schemas: Pinned attachment schema v1 → v2. Review updated pinned rules before saving." },
       attachedRuleDelete:"Cannot delete Known page types v2; pinned by Pinned attachment schema v2.",
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();

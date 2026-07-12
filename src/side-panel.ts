@@ -1009,7 +1009,7 @@ function renderSchemas(): void {
       });
       if (updated.every((attachment, index) => attachment.ruleId === attachments[index]?.ruleId && attachment.version === attachments[index]?.version)) { if (schemaResult) schemaResult.textContent = `${schema.name} already uses the latest pinned rules.`; return; }
       pendingSchemaRevision = { ...reviseSchema(schema, schema.document), ruleAttachments:updated };
-      if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${pendingSchemaRevision.version} with updated pinned rules.`;
+      if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `Affected schemas: ${schema.name} v${schema.version} → v${pendingSchemaRevision.version}. Review updated pinned rules before saving.`;
       showDialog(schemaRevisionReview, schemaRevisionReviewHeading);
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
