@@ -426,6 +426,7 @@ const cancelTemplateRenameReviewButton = document.querySelector<HTMLButtonElemen
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
+const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>("#recheck-schema-validation");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
@@ -978,7 +979,8 @@ function renderSchemas(): void {
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
     const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
-    item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+    const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
+    item.textContent = `${schema.name} v${schema.version}${parent ? ` inherits ${parent.name} v${parent.version}` : ""}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
     revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
     revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = schemas.map((candidate) => candidate.id === schema.id ? next : candidate.parentSchemaId === schema.id ? { ...candidate, parentSchemaId:next.id } : candidate); persistSchemaLibrary(); renderSchemas(); });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
@@ -1041,6 +1043,22 @@ function renderSchemaWorkflowRows(): void {
   schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => Object.assign(document.createElement("li"), { textContent: `${rule.name} · ${rule.kind}` })));
   const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
   schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => Object.assign(document.createElement("li"), { textContent: `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}` })));
+}
+
+function recheckCapturedSchemaValidation(): void {
+  const events = liveObserverState.events;
+  if (!events.length) { if (schemaResult) schemaResult.textContent = "No captured events are available to recheck."; return; }
+  let checked = 0;
+  liveObserverState = {
+    ...liveObserverState,
+    events: events.map((event) => {
+      const validation = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);
+      if (validation.state !== "Not checked") checked += 1;
+      return { ...event, validation:validation.state };
+    }),
+  };
+  renderLiveObserver();
+  if (schemaResult) schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
 }
 
 function persistEventTemplateLibrary(): void {
@@ -2207,6 +2225,7 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
 });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported]; const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates); if (inheritanceError) throw new Error(inheritanceError); schemas = candidates; persistSchemaLibrary(); renderSchemas(); if (schemaResult) schemaResult.textContent = `Imported ${imported.name} v${imported.version}.`; } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
+recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
 
 addNewButton?.addEventListener("click", openNewEventEditor);
 exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
