@@ -345,6 +345,9 @@ const schemaSourceCreationRuntime = `(() => {
   const draftBeforeRefresh = q("#event-template-json").value;
   q("#refresh-library-draft-validation").click();
   const draftRefresh = { unchanged:draftBeforeRefresh === q("#event-template-json").value, message:q("#event-template-validation").textContent };
+  q("#save-template-revision").click();
+  q("#confirm-revision-change").click();
+  const persistedAttachment = JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1") ?? "[]").find((template) => template.name === "Order complete")?.schemaId;
   const create = Array.from(q("#event-template-list").querySelectorAll("button")).find((button) => button.textContent === "Create schema");
   if (!create) throw new Error("Missing Library Create schema action");
   create.click();
@@ -355,6 +358,7 @@ const schemaSourceCreationRuntime = `(() => {
     paths:Array.from(q("#schema-property-tree").querySelectorAll("strong")).map((row) => row.textContent),
     assignment:q("#schema-editor-target").value,
     draftRefresh,
+    persistedAttachment,
   };
 })()`;
 
@@ -1071,6 +1075,7 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
         draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
+        persistedAttachment:"schema:checkout-schema:2",
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, {

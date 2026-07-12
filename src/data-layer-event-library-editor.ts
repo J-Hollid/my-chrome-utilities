@@ -170,6 +170,14 @@ export function setTemplateIdentity(
   return { ...state, template: { ...state.template, [field]: value }, dirty: true };
 }
 
+export function setTemplateSchemaAttachment(
+  state: PropertyEditorState,
+  schemaId: string,
+): PropertyEditorState {
+  const { schemaId: _previous, ...withoutSchema } = state.template;
+  return { ...state, template: schemaId ? { ...withoutSchema, schemaId } : withoutSchema, dirty: true };
+}
+
 export function templateIdentityValidation(state: PropertyEditorState): Pick<NewEventValidation, "name" | "eventName"> {
   return {
     ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),
