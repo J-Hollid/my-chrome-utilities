@@ -10,7 +10,7 @@ assert.equal(validateEvent({ sourceId: "history", eventName: "offer_view", paylo
 assert.deepEqual(validationSummary([valid, invalid, { state: "Not checked", issues: [] }]), { Valid: 1, Issues: 1, "Not checked": 1 });
 assert.equal(filterByValidation([{ validation: "Valid" }, { validation: "2 issues" }], "2 issues").length, 1);
 assert.equal(searchSchemas([schema], "history").length, 1); assert.deepEqual(importSchema(exportSchema(schema)), schema);
-const revised = reviseSchema(schema, { type: "object", required: ["revenue"] }); assert.equal(revised.version, 3); assert.equal(revalidateExplicitly({ sourceId: "history", eventName: "purchase", payload: {}, rawInput: [] }, [schema, revised], 2).schema.version, 2);
+const revised = reviseSchema(schema, { type: "object", required: ["revenue"] }); assert.equal(revised.version, 3); assert.equal(revised.revisionHistory?.[0]?.version, 2); assert.equal(revalidateExplicitly({ sourceId: "history", eventName: "purchase", payload: {}, rawInput: [] }, [schema, revised], 2).schema.version, 2);
 assert.equal(duplicateSchema(schema, "Purchase copy").name, "Purchase copy");
 const generic = assignSchema(createSchema("Generic page view", 4, { type:"object" }), { id:"generic", name:"generic-page-view", sourceId:"history", eventName:"page_view", target:"payload", priority:10, enabled:true });
 const order = assignSchema(createSchema("Order confirmation", 2, { type:"object" }), { id:"order", name:"order-confirmation", sourceId:"history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", enabled:true });
