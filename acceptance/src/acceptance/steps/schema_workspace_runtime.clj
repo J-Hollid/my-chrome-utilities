@@ -372,44 +372,58 @@
 
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
+(def visibility-entry-steps
+  #{"Data Layer view <view_name> is active"
+    "the Schema workspace Rule Library subview is displayed"})
+
+(defn- begin-visibility-observation [world example text]
+  (if (contains? visibility-entry-steps text)
+    (assoc (browser-workspace! world example) :schema-rule-visibility? true)
+    world))
+
+(defn- activate-visibility-view [world example _observation]
+  (let [view-name (support/example-value example "view_name")]
+    (support/assert! (contains? #{"Live" "Library" "Sessions" "Schemas"} view-name)
+                     "Unsupported Data Layer view." {:view view-name})
+    (assoc world :active-schema-rule-visibility-view view-name)))
+
+(defn- assert-rule-configuration-hidden [world example observation message]
+  (let [view-name (support/example-value example "view_name")]
+    (support/assert! (true? (get-in observation [:hiddenByView (keyword view-name)]))
+                     message
+                     {:view view-name :observation observation})
+    world))
+
+(defn- assert-rule-configuration-visible [world _example observation]
+  (support/assert! (and (true? (:editorVisible observation))
+                        (true? (:configurationVisible observation))
+                        (true? (:configurationInsideEditor observation)))
+                   "Rule configuration is not visible inside the reusable rule editor."
+                   {:observation observation})
+  world)
+
+(def visibility-transitions
+  {"Data Layer view <view_name> is active" activate-visibility-view
+   "no reusable rule editor is open"
+   (fn [world example observation]
+     (assert-rule-configuration-hidden
+      world example observation
+      "Rule configuration is visible while the reusable rule editor is closed."))
+   "the active view is displayed" (fn [world _example _observation] world)
+   "Rule configuration is not visible"
+   (fn [world example observation]
+     (assert-rule-configuration-hidden
+      world example observation
+      "Rule configuration is visible outside the reusable rule editor."))
+   "the Schema workspace Rule Library subview is displayed" (fn [world _example _observation] world)
+   "the operator opens the reusable rule editor" (fn [world _example _observation] world)
+   "Rule configuration is visible inside the reusable rule editor" assert-rule-configuration-visible})
+
 (defn- visibility-transition [world example _captures {:keys [text]}]
-  (let [world (if (contains? #{"Data Layer view <view_name> is active"
-                               "the Schema workspace Rule Library subview is displayed"} text)
-                (assoc (browser-workspace! world example) :schema-rule-visibility? true)
-                world)
-        observation (get-in world [:browser-observation :ruleEditorVisibility])
-        view-name (support/example-value example "view_name")]
-    (case text
-      "Data Layer view <view_name> is active"
-      (do (support/assert! (contains? #{"Live" "Library" "Sessions" "Schemas"} view-name)
-                           "Unsupported Data Layer view." {:view view-name})
-          (assoc world :active-schema-rule-visibility-view view-name))
-
-      "no reusable rule editor is open"
-      (do (support/assert! (true? (get-in observation [:hiddenByView (keyword view-name)]))
-                           "Rule configuration is visible while the reusable rule editor is closed."
-                           {:view view-name :observation observation})
-          world)
-
-      "the active view is displayed" world
-
-      "Rule configuration is not visible"
-      (do (support/assert! (true? (get-in observation [:hiddenByView (keyword view-name)]))
-                           "Rule configuration is visible outside the reusable rule editor."
-                           {:view view-name :observation observation})
-          world)
-
-      "the Schema workspace Rule Library subview is displayed" world
-      "the operator opens the reusable rule editor" world
-
-      "Rule configuration is visible inside the reusable rule editor"
-      (do (support/assert! (and (true? (:editorVisible observation))
-                                (true? (:configurationVisible observation))
-                                (true? (:configurationInsideEditor observation)))
-                           "Rule configuration is not visible inside the reusable rule editor."
-                           {:observation observation})
-          world)
-
+  (let [world (begin-visibility-observation world example text)
+        observation (get-in world [:browser-observation :ruleEditorVisibility])]
+    (if-let [transition (get visibility-transitions text)]
+      (transition world example observation)
       (throw (ex-info "Unsupported schema rule visibility step." {:step text})))))
 
 (def runtime-handlers
