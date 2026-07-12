@@ -210,11 +210,12 @@ const schemaAssignmentRuntime = `(() => {
   q("#data-layer-view-schemas").click();
   q("#schema-subview-schemas").click();
   input("#schema-search", "");
-  for (;;) { const remove = Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Delete"); if (!remove) break; remove.click(); }
+  for (;;) { const remove = Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Delete"); if (!remove) break; remove.click(); q("#confirm-schema-delete").click(); }
   q("#create-schema").click();
   input("#schema-editor-name", "Checkout schema");
   q("#add-schema-rule").click();
   q("#save-schema").click();
+  q("#confirm-schema-revision").click();
   q("#schema-subview-rules").click();
   q("#create-schema-rule").click();
   input("#schema-rule-name", "Known page types");

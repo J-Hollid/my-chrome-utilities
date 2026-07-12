@@ -242,6 +242,7 @@ let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_K
 let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
+let editingSchemaAssignment;
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 let schemaValidationRecords = (() => { try {
     const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
@@ -811,7 +812,36 @@ function renderSchemaWorkflowRows() {
         schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
     schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => Object.assign(document.createElement("li"), { textContent: `${rule.name} · ${rule.kind}` })));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
-    schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => Object.assign(document.createElement("li"), { textContent: `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}` })));
+    schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
+        const item = document.createElement("li");
+        const summary = document.createElement("span");
+        summary.textContent = `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}`;
+        const edit = document.createElement("button");
+        const duplicate = document.createElement("button");
+        const disable = document.createElement("button");
+        const remove = document.createElement("button");
+        edit.type = duplicate.type = disable.type = remove.type = "button";
+        edit.textContent = "Edit";
+        duplicate.textContent = "Duplicate";
+        disable.textContent = assignment.enabled === false ? "Enable" : "Disable";
+        remove.textContent = "Delete";
+        edit.addEventListener("click", () => { editingSchemaAssignment = assignment.id ? { schemaId: schema.id, assignmentId: assignment.id } : { schemaId: schema.id }; if (schemaAssignmentSchema)
+            schemaAssignmentSchema.value = schema.id; if (schemaAssignmentSource)
+            schemaAssignmentSource.value = assignment.sourceId; if (schemaAssignmentEvent)
+            schemaAssignmentEvent.value = assignment.eventName; if (schemaAssignmentTarget)
+            schemaAssignmentTarget.value = assignment.target; if (schemaAssignmentDomain)
+            schemaAssignmentDomain.value = assignment.domainCondition ?? ""; if (schemaAssignmentPathname)
+            schemaAssignmentPathname.value = assignment.pathnameCondition ?? ""; if (schemaAssignmentPriority)
+            schemaAssignmentPriority.value = String(assignment.priority ?? 0); if (schemaAssignmentVersionPolicy)
+            schemaAssignmentVersionPolicy.value = assignment.versionPolicy ?? "pinned"; if (schemaAssignmentEnabled)
+            schemaAssignmentEnabled.checked = assignment.enabled !== false; if (schemaAssignmentEditor)
+            schemaAssignmentEditor.hidden = false; });
+        duplicate.addEventListener("click", () => { schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, { ...assignment, id: `${assignment.id ?? "assignment"}:copy`, name: `${assignment.name ?? "Assignment"} copy` }] } : candidate); persistSchemaLibrary(); renderSchemaWorkflowRows(); });
+        disable.addEventListener("click", () => { schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: candidate.assignments.map((item) => item === assignment ? { ...item, enabled: item.enabled === false } : item) } : candidate); persistSchemaLibrary(); renderSchemaWorkflowRows(); });
+        remove.addEventListener("click", () => { schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: candidate.assignments.filter((item) => item !== assignment) } : candidate); persistSchemaLibrary(); renderSchemaWorkflowRows(); });
+        item.append(summary, edit, duplicate, disable, remove);
+        return item;
+    }));
     const collisions = new Map();
     for (const { schema, assignment } of assignments.filter(({ assignment }) => assignment.enabled !== false)) {
         const key = [assignment.sourceId, assignment.eventName, assignment.target, assignment.priority ?? 0, assignment.domainCondition ?? "any", assignment.pathnameCondition ?? "any"].join("|");
@@ -1903,7 +1933,9 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
     const target = schemaAssignmentTarget?.value === "raw input" ? "raw input" : "payload";
     const domainCondition = schemaAssignmentDomain?.value.trim();
     const pathnameCondition = schemaAssignmentPathname?.value.trim();
-    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, { sourceId, eventName, target, id: `assignment:${candidate.id}:${eventName}`, name: `${candidate.name} automatic`, priority, ...(domainCondition ? { domainCondition } : {}), ...(pathnameCondition ? { pathnameCondition } : {}), versionPolicy: schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled: schemaAssignmentEnabled?.checked ?? true }] } : candidate);
+    const next = { sourceId, eventName, target, id: editingSchemaAssignment?.assignmentId ?? `assignment:${schema.id}:${eventName}`, name: `${schema.name} automatic`, priority, ...(domainCondition ? { domainCondition } : {}), ...(pathnameCondition ? { pathnameCondition } : {}), versionPolicy: schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled: schemaAssignmentEnabled?.checked ?? true };
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: editingSchemaAssignment?.schemaId === schema.id ? candidate.assignments.map((assignment) => assignment.id === editingSchemaAssignment?.assignmentId ? next : assignment) : [...candidate.assignments, next] } : candidate);
+    editingSchemaAssignment = undefined;
     persistSchemaLibrary();
     renderSchemas();
     renderSchemaWorkflowRows();
