@@ -111,9 +111,13 @@ function ruleIssuesFor(value, schema, schemas, rules, result) {
         const missing = value === undefined || value === null || (typeof value === "string" && value.trim() === "");
         const allowed = rule.parameters.split(",").map((parameter) => parameter.trim()).filter(Boolean);
         const pattern = rule.operator === "matches-pattern" ? safeRegex(rule.parameters) : undefined;
-        const fails = rule.operator === "required" ? missing : rule.operator === "allowed-values" ? allowed.length > 0 && !allowed.includes(String(value)) : rule.operator === "matches-pattern" ? !pattern || !pattern.test(String(value)) : false;
+        const [parsedMinimum, parsedMaximum] = rule.parameters.split(",").map((parameter) => Number(parameter.trim()));
+        const minimum = parsedMinimum ?? Number.NaN;
+        const maximum = parsedMaximum ?? Number.NaN;
+        const undeclared = schema.document.type === "object" && value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value).filter((key) => !(key in (schema.document.properties ?? {}))) : [];
+        const fails = rule.operator === "required" ? missing : rule.operator === "allowed-values" ? allowed.length > 0 && !allowed.includes(String(value)) : rule.operator === "forbidden-values" ? allowed.includes(String(value)) : rule.operator === "number-range" ? typeof value !== "number" || !Number.isFinite(minimum) || !Number.isFinite(maximum) || value < minimum || value > maximum : rule.operator === "declared-only" ? undeclared.length > 0 : rule.operator === "matches-pattern" ? !pattern || !pattern.test(String(value)) : false;
         if (fails)
-            result.push({ instancePath: "", message: rule.operator === "matches-pattern" && !pattern ? "Invalid safe regex" : rule.message || rule.name, expected: rule.operator === "matches-pattern" ? rule.parameters || "a safe regex" : expected, actual: missing ? "missing" : String(value), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location, ...(rule.severity ? { severity: rule.severity } : {}) });
+            result.push({ instancePath: "", message: rule.operator === "matches-pattern" && !pattern ? "Invalid safe regex" : rule.message || rule.name, expected: rule.operator === "matches-pattern" ? rule.parameters || "a safe regex" : rule.operator === "forbidden-values" ? `not one of ${rule.parameters}` : rule.operator === "number-range" ? rule.parameters : rule.operator === "declared-only" ? "declared fields only" : expected, actual: rule.operator === "declared-only" ? undeclared.join(", ") : missing ? "missing" : String(value), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location, ...(rule.severity ? { severity: rule.severity } : {}) });
     }
 }
 function validationFor(schema, assignment, event, schemas, rules) {

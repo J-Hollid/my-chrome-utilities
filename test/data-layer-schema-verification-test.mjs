@@ -35,5 +35,14 @@ const regexSchema = { ...assignSchema(createSchema("Regex rule", 1, {}), { sourc
 assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"ORD-42", rawInput:null }, [regexSchema], undefined, [regexRule]).state, "Valid");
 assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"42", rawInput:null }, [regexSchema], undefined, [regexRule]).issues[0].message, "Use an order id");
 assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"ORD-42", rawInput:null }, [regexSchema], undefined, [{ ...regexRule, parameters:"[" }]).issues[0].message, "Invalid safe regex");
+const rangeRule = { id:"rule:range:1", version:1, name:"Range", applicableTypes:"number", operator:"number-range", parameters:"1,10" };
+const rangeSchema = { ...assignSchema(createSchema("Range rule", 1, {}), { sourceId:"history", eventName:"range_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:rangeRule.id, version:rangeRule.version }] };
+assert.equal(validateEvent({ sourceId:"history", eventName:"range_rule_test", payload:11, rawInput:null }, [rangeSchema], undefined, [rangeRule]).state, "1 issues");
+const forbiddenRule = { id:"rule:forbidden:1", version:1, name:"Forbidden", applicableTypes:"string", operator:"forbidden-values", parameters:"unknown,unset" };
+const forbiddenSchema = { ...assignSchema(createSchema("Forbidden rule", 1, {}), { sourceId:"history", eventName:"forbidden_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:forbiddenRule.id, version:forbiddenRule.version }] };
+assert.equal(validateEvent({ sourceId:"history", eventName:"forbidden_rule_test", payload:"unknown", rawInput:null }, [forbiddenSchema], undefined, [forbiddenRule]).state, "1 issues");
+const declaredRule = { id:"rule:declared:1", version:1, name:"Declared", applicableTypes:"object", operator:"declared-only", parameters:"" };
+const declaredSchema = { ...assignSchema(createSchema("Declared rule", 1, { type:"object", properties:{ known:{ type:"string" } } }), { sourceId:"history", eventName:"declared_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:declaredRule.id, version:declaredRule.version }] };
+assert.equal(validateEvent({ sourceId:"history", eventName:"declared_rule_test", payload:{ known:"yes", extra:true }, rawInput:null }, [declaredSchema], undefined, [declaredRule]).issues[0].actual, "extra");
 const inheritedRuleSchema = { ...assignSchema(createSchema("Inherited rule", 1, { type:"string" }), { sourceId:"history", eventName:"inherited_rule_test", target:"payload" }), parentId:ruleSchema.id };
 assert.equal(validateEvent({ sourceId:"history", eventName:"inherited_rule_test", payload:"other", rawInput:null }, [ruleSchema, inheritedRuleSchema], undefined, [pinnedRule]).state, "1 issues");
