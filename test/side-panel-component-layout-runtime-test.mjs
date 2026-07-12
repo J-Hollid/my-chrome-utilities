@@ -340,6 +340,26 @@ const schemaLibraryTransferRuntime = `(async () => {
   };
 })()`;
 
+const schemaLiveValidationRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:17, windowId:3, url:"https://shop.example/order-confirmation", title:"Checkout", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout" }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  const event = q("#live-event-feed button"); event.click();
+  const validate = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Validate");
+  if (!validate) throw new Error("Missing Validate action");
+  validate.click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const validationTerm = q('#live-event-inspector dt[data-field="validation"]');
+  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "" };
+})()`;
+
 const naturalLibraryActionsRuntime = `(() => {
   const editor = document.querySelector("#event-property-editor");
   const actions = ["#add-new-event", "#import-event-library", "#export-event-library", "#clear-event-library"].map((selector) => {
@@ -986,6 +1006,8 @@ try {
         review:true,
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
       }, "Schema Library export/import controls did not drive the production transfer flow");
+      const liveValidation = await evaluate(socket, schemaLiveValidationRuntime);
+      assert.match(liveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
