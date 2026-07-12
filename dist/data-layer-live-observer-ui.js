@@ -200,7 +200,7 @@ export function updateLiveInspectorValidation(elements, validation, issues = [])
     const heading = document.createElement("h5");
     heading.textContent = "Validation details";
     const list = document.createElement("ul");
-    list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion} · ${issue.schemaLocation}` })));
+    list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation}` })));
     details.append(heading, list);
     existing?.replaceWith(details) ?? elements.eventInspector?.append(details);
 }

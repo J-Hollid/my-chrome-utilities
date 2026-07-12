@@ -1004,7 +1004,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
-        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · Order confirmation v2 · #/properties/commerce",
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
