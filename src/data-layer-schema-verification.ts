@@ -106,10 +106,13 @@ function issuesFor(value: unknown, schema: JsonSchema, path: string, schemaPath:
 
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[]): void {
   for (const rule of schema.attachedRules ?? []) {
-    if (rule.enabled === false || rule.operator !== "required") continue;
-    for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) {
-      if (!value || typeof value !== "object" || Array.isArray(value) || !(property in (value as Record<string, unknown>))) result.push({ instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing", schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
-    }
+    if (rule.enabled === false) continue;
+    const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+    if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push({ instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing", schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
+    const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
+    if (!record || !property || !(property in record)) continue;
+    if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
+    if (rule.operator === "regular-expression" && constraint && !new RegExp(constraint).test(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
   }
 }
 
