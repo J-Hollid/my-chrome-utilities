@@ -396,6 +396,7 @@ const schemaAssignmentPathname = document.querySelector<HTMLInputElement>("#sche
 const schemaAssignmentVersionPolicy = document.querySelector<HTMLSelectElement>("#schema-assignment-version-policy");
 const schemaAssignmentEnabled = document.querySelector<HTMLInputElement>("#schema-assignment-enabled");
 const schemaAssignmentList = document.querySelector<HTMLElement>("#schema-assignment-list");
+const schemaAssignmentConflicts = document.querySelector<HTMLElement>("#schema-assignment-conflicts");
 const schemaAssignmentSchema = document.querySelector<HTMLSelectElement>("#schema-assignment-schema");
 const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
@@ -1080,6 +1081,13 @@ function renderSchemaWorkflowRows(): void {
   schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => Object.assign(document.createElement("li"), { textContent: `${rule.name} · ${rule.kind}` })));
   const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
   schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => Object.assign(document.createElement("li"), { textContent: `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}` })));
+  const collisions = new Map<string, string[]>();
+  for (const { schema, assignment } of assignments.filter(({ assignment }) => assignment.enabled !== false)) {
+    const key = [assignment.sourceId, assignment.eventName, assignment.target, assignment.priority ?? 0, assignment.domainCondition ?? "any", assignment.pathnameCondition ?? "any"].join("|");
+    collisions.set(key, [...(collisions.get(key) ?? []), `${schema.name}/${assignment.name ?? assignment.id ?? "unnamed"}`]);
+  }
+  const conflicts = [...collisions.values()].filter((matches) => matches.length > 1);
+  if (schemaAssignmentConflicts) schemaAssignmentConflicts.textContent = conflicts.length ? `Assignment conflict: ${conflicts.map((matches) => matches.join(", ")).join("; ")}. Edit priorities before validation.` : "";
 }
 
 function recheckCapturedSchemaValidation(): void {
