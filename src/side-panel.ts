@@ -427,6 +427,8 @@ const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-sc
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
 const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>("#recheck-schema-validation");
+const schemaValidationIssues = document.querySelector<HTMLElement>("#schema-validation-issues");
+const schemaInheritanceProvenance = document.querySelector<HTMLElement>("#schema-inheritance-provenance");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
@@ -1016,6 +1018,8 @@ function renderSchemaDraft(): void {
     schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"No parent" }), ...parents.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` })));
     schemaEditorParent.value = draft.parentSchemaId ?? "";
   }
+  const parent = draft.parentSchemaId ? schemas.find((schema) => schema.id === draft.parentSchemaId) : undefined;
+  if (schemaInheritanceProvenance) schemaInheritanceProvenance.textContent = parent ? `Inherited rules originate in ${parent.name} v${parent.version}. Local rules override only after conflicts are resolved.` : "Local schema only";
   const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
   const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
   const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
@@ -1049,15 +1053,18 @@ function recheckCapturedSchemaValidation(): void {
   const events = liveObserverState.events;
   if (!events.length) { if (schemaResult) schemaResult.textContent = "No captured events are available to recheck."; return; }
   let checked = 0;
+  const issueRows: HTMLLIElement[] = [];
   liveObserverState = {
     ...liveObserverState,
     events: events.map((event) => {
       const validation = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);
       if (validation.state !== "Not checked") checked += 1;
+      issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion}` })));
       return { ...event, validation:validation.state };
     }),
   };
   renderLiveObserver();
+  schemaValidationIssues?.replaceChildren(...issueRows);
   if (schemaResult) schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
 }
 
