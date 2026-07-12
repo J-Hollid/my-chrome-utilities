@@ -89,7 +89,6 @@ export function resolveSchemaAssignment(
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
 export function serializeSchemaLibrary(schemas: readonly SchemaDefinition[]): string { return JSON.stringify(schemas); }
 export interface SchemaLibraryExport<TRule> { version: 1; schemas: SchemaDefinition[]; rules: TRule[]; }
-export function schemaLibraryExportIdentitySnapshot<T extends { id: string }>(items: readonly T[]): string[] { return items.map(({ id }) => id); }
 export function createSchemaLibraryExport<TRule>(schemas: readonly SchemaDefinition[], rules: readonly TRule[]): SchemaLibraryExport<TRule> {
   return { version:1, schemas:schemas.map(clone), rules:rules.map(clone) };
 }

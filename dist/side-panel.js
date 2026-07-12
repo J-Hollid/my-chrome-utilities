@@ -32,7 +32,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, createSchemaLibraryExport, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -2412,8 +2412,8 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
     }
     schemaLibraryImportFile.value = "";
 });
-exportSchemaButton?.addEventListener("click", () => { const archive = createSchemaLibraryExport(schemas, reusableSchemaRules); const schemaIds = schemaLibraryExportIdentitySnapshot(archive.schemas); const ruleIds = schemaLibraryExportIdentitySnapshot(archive.rules); const blob = new Blob([`${JSON.stringify(archive, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-library-v1.json"; link.click(); URL.revokeObjectURL(url); if (schemaResult)
-    schemaResult.textContent = `Exported ${schemaIds.length} schemas and ${ruleIds.length} rules.`; });
+exportSchemaButton?.addEventListener("click", () => { const blob = new Blob([serializeSchemaLibraryExport(schemas, reusableSchemaRules)], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-library-v1.json"; link.click(); URL.revokeObjectURL(url); if (schemaResult)
+    schemaResult.textContent = `Exported ${schemas.length} schemas and ${reusableSchemaRules.length} rules.`; });
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
 replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
     return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
