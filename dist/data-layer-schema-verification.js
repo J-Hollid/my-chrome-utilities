@@ -32,6 +32,15 @@ export function resolveSchemaAssignment(event, pageUrl, schemas) {
     return selected[0] ?? {};
 }
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
+export const SCHEMA_VALIDATION_RECORDS_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
+export function saveSchemaValidationRecord(records, eventId, result, validatedAt = new Date().toISOString()) { return [...records, { eventId, validatedAt, result: clone(result) }]; }
+export function restoreSchemaValidationRecords(serialized) { try {
+    const records = JSON.parse(serialized ?? "[]");
+    return Array.isArray(records) ? records.filter((record) => !!record && typeof record.eventId === "string" && typeof record.validatedAt === "string" && !!record.result).map(clone) : [];
+}
+catch {
+    return [];
+} }
 export function serializeSchemaLibrary(schemas) { return JSON.stringify(schemas); }
 export function restoreSchemaLibrary(serialized) {
     if (!serialized)

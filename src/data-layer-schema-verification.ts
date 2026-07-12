@@ -17,6 +17,7 @@ export interface SchemaAssignment {
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; }
+export interface SchemaValidationRecord { eventId: string; validatedAt: string; result: ValidationResult; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
 
@@ -59,6 +60,9 @@ export function resolveSchemaAssignment(
 }
 
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
+export const SCHEMA_VALIDATION_RECORDS_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
+export function saveSchemaValidationRecord(records: readonly SchemaValidationRecord[], eventId: string, result: ValidationResult, validatedAt = new Date().toISOString()): SchemaValidationRecord[] { return [...records, { eventId, validatedAt, result: clone(result) }]; }
+export function restoreSchemaValidationRecords(serialized: string | null): SchemaValidationRecord[] { try { const records = JSON.parse(serialized ?? "[]"); return Array.isArray(records) ? records.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.validatedAt === "string" && !!record.result).map(clone) : []; } catch { return []; } }
 export function serializeSchemaLibrary(schemas: readonly SchemaDefinition[]): string { return JSON.stringify(schemas); }
 export function restoreSchemaLibrary(serialized: string | null): SchemaDefinition[] {
   if (!serialized) return [];
