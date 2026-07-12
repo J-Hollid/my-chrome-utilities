@@ -121,3 +121,10 @@ Feature: Data layer schema workspace runtime completion
       | schema_count | rule_count | fixture |
       | 1            | 3          | 1:3     |
       | 2            | 4          | 2:4     |
+
+  # Data layer schema workspace runtime completion 012
+  Scenario: Data layer schema workspace runtime completion 012
+    Given shared schema export verification compares identity collections separately from envelope metadata
+    When outlined export verification checks that every schema and rule identity is present
+    Then it uses the same shared export verification as browser preflight
+    And no identity-coverage step directly compares an identity snapshot with the complete export envelope
