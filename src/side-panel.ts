@@ -366,7 +366,7 @@ const schemaRevisionReviewSummary = document.querySelector<HTMLElement>("#schema
 const confirmSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#confirm-schema-revision");
 const cancelSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#cancel-schema-revision");
 const schemaCloseReview = document.querySelector<HTMLDialogElement>("#close-schema-editor-review");
-const schemaCloseReviewSummary = document.querySelector<HTMLElement>("#close-schema-editor-review-summary");
+const schemaCloseReviewSummary = document.querySelector<HTMLElement>("#schema-close-review-summary");
 const discardSchemaDraftButton = document.querySelector<HTMLButtonElement>("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector<HTMLButtonElement>("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector<HTMLButtonElement>("#close-schema-editor");
@@ -444,6 +444,7 @@ const confirmTemplateRenameButton = document.querySelector<HTMLButtonElement>("#
 const cancelTemplateRenameReviewButton = document.querySelector<HTMLButtonElement>("#cancel-template-rename-review");
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
+const schemaLibraryImportFile = document.querySelector<HTMLInputElement>("#schema-library-import-file");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
 const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>("#recheck-schema-validation");
 const schemaValidationIssues = document.querySelector<HTMLElement>("#schema-validation-issues");
@@ -453,13 +454,15 @@ const schemaRuleOverrides = document.querySelector<HTMLElement>("#schema-rule-ov
 const schemaRuleOverrideList = document.querySelector<HTMLElement>("#schema-rule-override-list");
 const schemaImportReview = document.querySelector<HTMLDialogElement>("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector<HTMLElement>("#schema-import-review-summary");
-const confirmSchemaImportButton = document.querySelector<HTMLButtonElement>("#confirm-schema-import");
+const replaceSchemaLibraryButton = document.querySelector<HTMLButtonElement>("#replace-schema-library");
+const appendSchemaLibraryButton = document.querySelector<HTMLButtonElement>("#append-schema-library");
 const cancelSchemaImportButton = document.querySelector<HTMLButtonElement>("#cancel-schema-import");
 const schemaDeleteReview = document.querySelector<HTMLDialogElement>("#schema-delete-review");
 const schemaDeleteReviewSummary = document.querySelector<HTMLElement>("#schema-delete-review-summary");
 const confirmSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-schema-delete");
 const cancelSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
+const schemaOnlyDeclaredProperties = document.querySelector<HTMLInputElement>("#schema-only-declared-properties");
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
@@ -498,7 +501,7 @@ let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft: SchemaDefinition | undefined;
-let pendingSchemaImport: SchemaDefinition[] | undefined;
+let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
 let editingSchemaAssignment: { schemaId: string; assignmentId?: string } | undefined;
 let editingReusableSchemaRuleId: string | undefined;
@@ -1073,6 +1076,7 @@ function renderSchemaDraft(): void {
   if (!draft) return;
   if (schemaEditorName) schemaEditorName.value = draft.name;
   if (schemaEditorTarget) schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+  if (schemaOnlyDeclaredProperties) schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
   const paths = (document: SchemaDefinition["document"], prefix = ""): string[] => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
     const path = prefix ? `${prefix}.${name}` : name;
     return [path, ...paths(child, path)];
@@ -2397,6 +2401,7 @@ schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSu
 schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, name: schemaEditorName.value }; renderSchemaDraft(); } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
 schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) { schemaDraft = withSchemaParent(schemaDraft, schemaEditorParent.value || undefined); renderSchemaDraft(); } });
+schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft) { const { additionalProperties: _previous, ...document } = schemaDraft.document; schemaDraft = { ...schemaDraft, document:schemaOnlyDeclaredProperties.checked ? { ...document, additionalProperties:false } : document }; renderSchemaDraft(); } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
@@ -2459,10 +2464,25 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
   schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:editingSchemaAssignment?.schemaId === schema.id ? candidate.assignments.map((assignment) => assignment.id === editingSchemaAssignment?.assignmentId ? next : assignment) : [...candidate.assignments, next] } : candidate);
   editingSchemaAssignment = undefined; persistSchemaLibrary(); renderSchemas(); renderSchemaWorkflowRows(); if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
-importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported]; const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates); if (inheritanceError) throw new Error(inheritanceError); pendingSchemaImport = candidates; if (schemaImportReviewSummary) schemaImportReviewSummary.textContent = `${imported.name} v${imported.version} will ${schemas.some((schema) => schema.id === imported.id) ? "replace the saved version" : "be added to the schema library"}.`; if (schemaImportReview) { schemaImportReview.hidden = false; schemaImportReview.showModal(); } } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON."; } });
-exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
+importSchemaButton?.addEventListener("click", () => schemaLibraryImportFile?.click());
+schemaLibraryImportFile?.addEventListener("change", async () => {
+  const file = schemaLibraryImportFile.files?.[0]; if (!file) return;
+  try {
+    const archive = JSON.parse(await file.text()) as { version?: number; schemas?: unknown; rules?: unknown };
+    if (archive.version !== 1 || !Array.isArray(archive.schemas) || !Array.isArray(archive.rules)) throw new Error("Choose a version 1 Schema Library export.");
+    const importedSchemas = archive.schemas.map((schema) => importSchema(JSON.stringify(schema)));
+    const candidates = [...schemas.filter((schema) => !importedSchemas.some((item) => item.id === schema.id)), ...importedSchemas];
+    for (const schema of importedSchemas) { const issue = schemaInheritanceError(schema, candidates) ?? schemaInheritanceConflict(schema, candidates); if (issue) throw new Error(issue); }
+    pendingSchemaImport = { schemas:importedSchemas, rules:archive.rules as ReusableSchemaRule[] };
+    if (schemaImportReviewSummary) schemaImportReviewSummary.textContent = `${importedSchemas.length} schemas and ${pendingSchemaImport.rules.length} reusable rules are ready to import.`;
+    if (schemaImportReview) { schemaImportReview.hidden = false; schemaImportReview.showModal(); }
+  } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema Library import failed."; }
+  schemaLibraryImportFile.value = "";
+});
+exportSchemaButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify({ version:1, schemas, rules:reusableSchemaRules }, null, 2)}\n`], { type:"application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-library-v1.json"; link.click(); URL.revokeObjectURL(url); if (schemaResult) schemaResult.textContent = `Exported ${schemas.length} schemas and ${reusableSchemaRules.length} rules.`; });
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
-confirmSchemaImportButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = pendingSchemaImport; pendingSchemaImport = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema import completed."; });
+replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library replaced."; });
+appendSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = [...schemas.filter((schema) => !pendingSchemaImport!.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport!.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library appended."; });
 cancelSchemaImportButton?.addEventListener("click", () => { pendingSchemaImport = undefined; if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; });
 confirmSchemaDeleteButton?.addEventListener("click", () => { const schema = pendingSchemaDeletion; if (!schema) return; schemas = schemas.filter(({ id }) => id !== schema.id); pendingSchemaDeletion = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`; });
 cancelSchemaDeleteButton?.addEventListener("click", () => { pendingSchemaDeletion = undefined; if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; });

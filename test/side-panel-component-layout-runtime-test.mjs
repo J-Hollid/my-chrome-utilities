@@ -268,7 +268,7 @@ const schemaAssignmentRuntime = `(() => {
   q("#create-schema").click();
   input("#schema-editor-name", "Unsaved schema");
   q("#close-schema-editor").click();
-  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#close-schema-editor-review-summary").textContent };
+  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#schema-close-review-summary").textContent };
   q("#discard-schema-draft").click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
