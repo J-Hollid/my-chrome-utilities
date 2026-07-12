@@ -171,6 +171,7 @@
       </section>
       <dialog id="schema-revision-review" aria-labelledby="schema-revision-review-heading" hidden><h4 id="schema-revision-review-heading">Review schema revision</h4><output id="schema-revision-review-summary"></output><button id="confirm-schema-revision" type="button">Save revision</button><button id="cancel-schema-revision" type="button">Cancel</button></dialog><dialog id="schema-close-review" aria-labelledby="schema-close-review-heading" hidden><h4 id="schema-close-review-heading">Discard schema changes?</h4><button id="keep-editing-schema" type="button">Keep editing</button><button id="discard-schema-draft" type="button">Discard changes</button></dialog>
       <button id="close-schema-editor" type="button" hidden>Close schema editor</button>
+      <select id="schema-rule-types" hidden><option>Required</option><option>Allowed values</option><option>Regular expression</option></select><select id="schema-rule-operator" hidden><option value="required">Required</option><option value="allowed-values">Allowed values</option></select><select id="schema-rule-severity" hidden><option value="error">Error</option><option value="warning">Warning</option></select><input id="schema-rule-message" hidden />
       <section id="data-layer-session" aria-label="Data layer testing session">
         <output id="session-history-path"></output>
         <button id="restart-observation" type="button">Restart observation</button>
