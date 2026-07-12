@@ -721,7 +721,7 @@ function renderSchemaRules() {
         item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity} · ${rule.enabled ? "enabled" : "disabled"}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
         override.type = "button";
         override.textContent = "Duplicate override";
-        override.addEventListener("click", () => { const copy = { ...rule, id: `${rule.id}:override:${reusableRules.length + 1}`, name: `${rule.name} override`, version: 1 }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
+        override.addEventListener("click", () => { const version = Math.max(0, ...reusableRules.filter((candidate) => candidate.name === rule.name).map((candidate) => candidate.version)) + 1; const copy = { ...rule, id: `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`, version }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
         toggle.type = remove.type = "button";
         toggle.textContent = rule.enabled ? "Disable" : "Enable";
         remove.textContent = "Delete";
