@@ -356,6 +356,44 @@ export function schemaDestinationOptions(
   });
 }
 
+export function assignmentScopeSummary(assignments: GuidedSchemaCandidate["assignments"]): string {
+  const assignment = assignments?.find(({ enabled }) => enabled !== false);
+  if (!assignment) return "No assignments";
+  const paths = assignment.pathConditions?.map(({ expression }) => expression)
+    ?? (assignment.pathnameCondition ? [assignment.pathnameCondition] : []);
+  const summary = [assignment.eventName, assignment.domainCondition ?? "every domain", ...paths].join(" · ");
+  const additional = (assignments?.filter(({ enabled }) => enabled !== false).length ?? 1) - 1;
+  return additional > 0 ? `${summary} · ${additional} more` : summary;
+}
+
+export function searchSchemaDestinationOptions(
+  draft: GuidedValidationDraft,
+  candidates: readonly GuidedSchemaCandidate[],
+  query: string,
+): GuidedSchemaDestinationOption[] {
+  const normalized = query.trim().toLowerCase();
+  const options = schemaDestinationOptions(draft, candidates);
+  if (!normalized) return options;
+  return options.filter((candidate) => {
+    const searchable = [
+      candidate.name,
+      `version ${candidate.version}`,
+      candidate.target,
+      ...Object.keys(candidate.propertyTypes),
+      ...(candidate.assignments ?? []).flatMap((assignment) => [
+        assignment.name,
+        assignment.sourceId,
+        assignment.eventName,
+        assignment.target,
+        assignment.domainCondition,
+        assignment.pathnameCondition,
+        ...(assignment.pathConditions?.map(({ expression }) => expression) ?? []),
+      ]),
+    ].filter((value): value is string => Boolean(value)).join(" ").toLowerCase();
+    return searchable.includes(normalized);
+  });
+}
+
 export function setGuidedSchemaDestination(
   draft: GuidedValidationDraft,
   destination: GuidedSchemaDestination,

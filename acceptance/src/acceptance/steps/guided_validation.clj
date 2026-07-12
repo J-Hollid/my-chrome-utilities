@@ -10,7 +10,8 @@
    "features/data-layer-guided-validation-creation.feature"
    "features/data-layer-guided-validation-form-assistance.feature"
    "features/data-layer-guided-validation-path-scope.feature"
-   "features/data-layer-guided-validation-schema-destination.feature"])
+   "features/data-layer-guided-validation-schema-destination.feature"
+   "features/data-layer-guided-validation-schema-picker-dialog.feature"])
 
 (def ^:private entry-modes
   {"captured event pageview from http://127.0.0.1:4173/ is selected in Live" :creation
@@ -18,7 +19,8 @@
    "the guided validation flow is displayed" :form
    "a guided validation draft is open for pageview from http://127.0.0.1:4173/" :path
    "a guided validation draft defines an allowed-values rule for property page_type" :destination
-   "a guided validation draft has selected payload property page_type" :destination})
+   "a guided validation draft has selected payload property page_type" :destination
+   "the guided validation schema destination stage is displayed at 320 CSS px wide" :picker})
 
 (defonce ^:private browser-observation (atom nil))
 
@@ -28,7 +30,8 @@
                               "node" "test/side-panel-component-layout-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         payload (when line (json/parse-string line true))
-        observation (:guidedValidation payload)]
+        observation (when-let [guided (:guidedValidation payload)]
+                      (assoc guided :schemaPicker (:guidedSchemaPicker payload)))]
     (support/assert! (zero? (:exit result))
                      "Guided validation browser runtime verification failed."
                      {:out (:out result) :err (:err result)})

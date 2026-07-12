@@ -1,6 +1,7 @@
 (ns acceptance.steps.guided-validation-assertions
   (:require [acceptance.steps.guided-validation-path-assertions :as path]
             [acceptance.steps.guided-validation-destination-assertions :as destination]
+            [acceptance.steps.guided-validation-picker-assertions :as picker]
             [acceptance.steps.guided-validation-step-assertions :as steps]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
@@ -255,14 +256,16 @@
    :constraint constraint-assertions
    :form form-assertions
    :path path/assertions
-   :destination destination/assertions})
+   :destination destination/assertions
+   :picker picker/assertions})
 
 (def mode-defaults
   {:creation creation-default
    :constraint constraint-default
    :form form-default
    :path path/default-assertion
-   :destination destination/default-assertion})
+   :destination destination/default-assertion
+   :picker picker/default-assertion})
 
 (defn assert-mode! [mode text example observation]
   (if-some [assertion (get (get mode-assertions mode) text)]

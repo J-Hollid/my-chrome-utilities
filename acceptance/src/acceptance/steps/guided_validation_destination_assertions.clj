@@ -156,6 +156,7 @@
    #{"Add to an existing schema is chosen"
      "schema <schema_name> has target <schema_target> and page_type state <property_state>"
      "available schemas are displayed for payload property page_type with expected type String"
+     "available schemas are displayed in the schema-picker dialog for payload property page_type with expected type String"
      "schema <schema_name> has availability <availability>"
      "its compatibility explanation is <explanation>"}
    existing-option

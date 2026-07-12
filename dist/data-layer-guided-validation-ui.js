@@ -1,4 +1,4 @@
-import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, schemaDestinationOptions, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, applyGuidedSchemaCandidate, assignmentScopeSummary, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, searchSchemaDestinationOptions, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
 const stageLabels = {
     property: "Choose properties",
     requirement: "Define requirement",
@@ -40,6 +40,9 @@ export function createGuidedValidationFlow(root, effects) {
     let status = "";
     let testPath = "";
     let testPathStatus = "";
+    let schemaPickerOpen = false;
+    let schemaPickerQuery = "";
+    let schemaPickerReturnId = "guided-existing-schema-picker";
     function announce(message) { status = message; render(); }
     function setDraft(next, message) {
         draft = next;
@@ -338,6 +341,105 @@ export function createGuidedValidationFlow(root, effects) {
         container.append(prefill, choices);
         renderPathConditions(container);
     }
+    function closeSchemaPicker(restoreFocus = true) {
+        schemaPickerOpen = false;
+        schemaPickerQuery = "";
+        render();
+        if (restoreFocus)
+            root?.querySelector(`#${schemaPickerReturnId}`)?.focus({ preventScroll: true });
+    }
+    function openSchemaPicker(returnId) {
+        schemaPickerOpen = true;
+        schemaPickerQuery = "";
+        schemaPickerReturnId = returnId;
+        render();
+    }
+    function selectSchemaCandidate(candidate) {
+        if (!draft)
+            return;
+        draft = applyGuidedSchemaCandidate(draft, candidate);
+        errors = [];
+        status = `${candidate.name} version ${candidate.version} selected.`;
+        schemaPickerOpen = false;
+        schemaPickerQuery = "";
+        render();
+        root?.querySelector("#guided-change-existing-schema")?.focus({ preventScroll: true });
+    }
+    function renderSchemaPicker(container, candidates) {
+        if (!draft || !schemaPickerOpen)
+            return;
+        const options = searchSchemaDestinationOptions(draft, candidates, schemaPickerQuery);
+        const dialog = element("dialog");
+        dialog.id = "guided-schema-picker";
+        dialog.setAttribute("aria-labelledby", "guided-schema-picker-heading");
+        const heading = element("h5", "Choose an existing schema");
+        heading.id = "guided-schema-picker-heading";
+        const close = element("button", "Close schema picker");
+        close.type = "button";
+        close.addEventListener("click", () => closeSchemaPicker());
+        const search = labelledInput("guided-schema-search", "Schema search", schemaPickerQuery, "Search schema names, versions, targets, properties, events, domains, and paths.");
+        search.input.type = "search";
+        search.input.addEventListener("input", () => { schemaPickerQuery = search.input.value; render(); });
+        const count = element("output", `${options.length} of ${candidates.length} schemas`);
+        count.id = "guided-schema-result-count";
+        count.setAttribute("aria-live", "polite");
+        const results = element("section");
+        results.id = "guided-schema-results";
+        results.setAttribute("aria-label", "Matching schemas");
+        if (!options.length) {
+            const empty = element("p", "No schemas match the current search.");
+            empty.id = "guided-schema-empty-result";
+            const clear = element("button", "Clear search");
+            clear.type = "button";
+            clear.addEventListener("click", () => { schemaPickerQuery = ""; render(); });
+            results.append(empty, clear);
+        }
+        else {
+            for (const option of options) {
+                const result = element("article");
+                result.className = "guided-schema-result";
+                result.dataset.available = String(option.available);
+                const title = element("h6", `${option.name} version ${option.version}`);
+                const target = element("p", `Target: ${option.target}`);
+                const compatibility = element("p", `Property compatibility: ${option.explanation}`);
+                const assignment = element("p", `Assignment scope: ${assignmentScopeSummary(option.assignments)}`);
+                const select = element("button", `Select ${option.name} version ${option.version}`);
+                select.type = "button";
+                select.disabled = !option.available;
+                if (!option.available)
+                    select.setAttribute("aria-disabled", "true");
+                select.addEventListener("click", () => selectSchemaCandidate(option));
+                select.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        selectSchemaCandidate(option);
+                        return;
+                    }
+                    if (event.key !== "ArrowDown" && event.key !== "ArrowUp")
+                        return;
+                    const selectable = Array.from(dialog.querySelectorAll(".guided-schema-result button:not(:disabled)"));
+                    const current = selectable.indexOf(select);
+                    const offset = event.key === "ArrowDown" ? 1 : -1;
+                    selectable[(current + offset + selectable.length) % selectable.length]?.focus();
+                    event.preventDefault();
+                });
+                result.append(title, target, compatibility, assignment, select);
+                results.append(result);
+            }
+        }
+        dialog.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeSchemaPicker();
+            }
+        });
+        dialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSchemaPicker(); });
+        dialog.append(heading, close, search.wrapper, count, results);
+        container.append(dialog);
+        dialog.showModal();
+        search.input.focus({ preventScroll: true });
+        search.input.setSelectionRange(search.input.value.length, search.input.value.length);
+    }
     function renderDestinationStage(container) {
         if (!draft)
             return;
@@ -351,15 +453,18 @@ export function createGuidedValidationFlow(root, effects) {
         createNew.name = "guided-schema-destination";
         createNew.value = "new";
         createNew.checked = draft.destination?.kind === "new";
-        createNew.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft, { kind: "new", schemaName: "" }), "Create a new schema selected."));
+        createNew.addEventListener("change", () => { schemaPickerOpen = false; setDraft(setGuidedSchemaDestination(draft, { kind: "new", schemaName: "" }), "Create a new schema selected."); });
         newLabel.append(createNew, " Create a new schema");
         const existingLabel = element("label");
         const useExisting = element("input");
+        useExisting.id = "guided-existing-schema-picker";
         useExisting.type = "radio";
         useExisting.name = "guided-schema-destination";
         useExisting.value = "existing";
         useExisting.checked = draft.destination?.kind === "existing";
-        useExisting.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft, { kind: "existing", schemaId: "", schemaName: "", schemaVersion: 0, matchingAssignment: false }), "Add to an existing schema selected."));
+        useExisting.setAttribute("aria-haspopup", "dialog");
+        useExisting.setAttribute("aria-controls", "guided-schema-picker");
+        useExisting.addEventListener("change", () => openSchemaPicker(useExisting.id));
         existingLabel.append(useExisting, " Add to an existing schema");
         choices.append(newLabel, existingLabel);
         container.append(choices);
@@ -377,28 +482,18 @@ export function createGuidedValidationFlow(root, effects) {
             update();
             container.append(field.wrapper, assistance);
         }
-        if (draft.destination?.kind === "existing") {
-            const list = element("fieldset");
-            list.id = "guided-existing-schemas";
-            list.append(element("legend", "Available schemas"));
-            for (const option of schemaDestinationOptions(draft, candidates)) {
-                const row = element("div");
-                const label = element("label");
-                const input = element("input");
-                input.type = "radio";
-                input.name = "guided-existing-schema";
-                input.value = option.id;
-                input.disabled = !option.available;
-                input.checked = draft.destination.schemaId === option.id;
-                input.addEventListener("change", () => setDraft(applyGuidedSchemaCandidate(draft, option), `${option.name} selected.`));
-                label.append(input, ` ${option.name} version ${option.version}`);
-                const explanation = element("p", option.explanation);
-                explanation.id = `guided-existing-schema-${option.id.replace(/[^a-z0-9]+/gi, "-")}-explanation`;
-                input.setAttribute("aria-describedby", explanation.id);
-                row.append(label, explanation);
-                list.append(row);
-            }
-            container.append(list);
+        if (draft.destination?.kind === "existing" && draft.destination.schemaId) {
+            const summary = element("section");
+            summary.id = "guided-existing-schema-summary";
+            summary.append(element("p", `${draft.destination.schemaName} version ${draft.destination.schemaVersion}`));
+            const change = element("button", "Change existing schema");
+            change.id = "guided-change-existing-schema";
+            change.type = "button";
+            change.setAttribute("aria-haspopup", "dialog");
+            change.setAttribute("aria-controls", "guided-schema-picker");
+            change.addEventListener("click", () => openSchemaPicker(change.id));
+            summary.append(change);
+            container.append(summary);
         }
         if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
             const assignments = element("fieldset");
@@ -437,6 +532,7 @@ export function createGuidedValidationFlow(root, effects) {
             review.append(list, keep, accept);
             container.append(review);
         }
+        renderSchemaPicker(container, candidates);
     }
     function updateAdvanced(field, value) {
         if (!draft)
@@ -542,8 +638,8 @@ export function createGuidedValidationFlow(root, effects) {
         root.append(statusElement);
     }
     const api = {
-        open(event) { draft = createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
-        close() { draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; render(); effects.close?.(); },
+        open(event) { draft = createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
+        close() { draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
         currentDraft() { return draft; },
     };
     return api;

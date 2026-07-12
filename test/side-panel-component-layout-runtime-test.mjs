@@ -8,6 +8,7 @@ import path from "node:path";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
+let guidedSchemaPickerObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -411,12 +412,12 @@ const guidedValidationRuntime = `(async () => {
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   clickButton(flow, "Continue");
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
-  const existingOptions = Array.from(q("#guided-existing-schemas").querySelectorAll(":scope > div")).map((row) => ({
-    label:row.querySelector("label").textContent.trim(),
-    disabled:row.querySelector("input").disabled,
-    explanation:row.querySelector("p").textContent,
+  const existingOptions = Array.from(q("#guided-schema-results").querySelectorAll(":scope > article")).map((row) => ({
+    label:row.querySelector("h6").textContent,
+    disabled:row.querySelector("button").disabled,
+    explanation:row.querySelectorAll("p")[1].textContent.replace("Property compatibility: ", ""),
   }));
-  q('#guided-existing-schemas input[value="schema:product-listing:3"]').click();
+  clickButton(q("#guided-schema-picker"), "Select Product listing version 3");
   clickButton(flow, "Continue");
   q("#guided-requirement").value = "Must be one of these values";
   q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
@@ -444,7 +445,7 @@ const guidedValidationRuntime = `(async () => {
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   clickButton(flow, "Continue");
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
-  q('#guided-existing-schemas input[value="schema:generic-pageview:4"]').click();
+  clickButton(q("#guided-schema-picker"), "Select Generic pageview version 4");
   clickButton(flow, "Continue");
   const schemaPrefillRequirement = {
     expectedType:q("#guided-expected-type").value,
@@ -467,14 +468,16 @@ const guidedValidationRuntime = `(async () => {
   q("#guided-scope-domain").dispatchEvent(new Event("change", { bubbles:true }));
   clickButton(flow, "Back");
   clickButton(flow, "Back");
-  q('#guided-existing-schemas input[value="schema:product-listing:3"]').click();
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Select Product listing version 3");
   const replacementReview = {
     items:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("li")).map((item) => item.textContent),
     actions:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("button")).map((button) => button.textContent),
   };
   clickButton(q("#guided-prefill-replacement-review"), "Keep current values");
   const keptStatus = q("#guided-validation-status").textContent;
-  q('#guided-existing-schemas input[value="schema:generic-pageview:4"]').click();
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Select Generic pageview version 4");
   clickButton(q("#guided-prefill-replacement-review"), "Accept schema-derived values");
   const acceptedStatus = q("#guided-validation-status").textContent;
   const core = await import("/data-layer-guided-validation.js");
@@ -526,6 +529,102 @@ const guidedValidationRuntime = `(async () => {
   localStorage.clear();
   for (const [key, value] of Object.entries(storedState)) localStorage.setItem(key, value);
   return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, destinationInitial, blankNameAssistance, duplicateNameAssistance, newNameAssistance, reviewBeforeBack, reviewStages, retainedDestination, retainedScope, advanced, saveFailure, saved, published, existingOptions, existingReview, existingSaved, schemaPrefillRequirement, schemaPrefillScope, replacementReview, keptStatus, acceptedStatus, production };
+})()`;
+
+const guidedSchemaPickerRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const clickButton = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"pageview", page_type:"product_list" }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  clickButton(q("#live-event-inspector"), "Create validation from this event");
+  const flow = q("#guided-validation-flow");
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  clickButton(flow, "Continue");
+  const closed = {
+    searchAbsent:!document.querySelector("#guided-schema-search"),
+    resultsAbsent:!document.querySelector("#guided-schema-results"),
+    scrollHeight:flow.scrollHeight,
+  };
+  q("#guided-existing-schema-picker").click();
+  let dialog = q("#guided-schema-picker");
+  const search = q("#guided-schema-search");
+  const opened = {
+    modal:dialog.matches(":modal"),
+    searchFocused:document.activeElement === search,
+    resultCount:q("#guided-schema-results").querySelectorAll(":scope > article").length,
+    count:q("#guided-schema-result-count").textContent,
+    listScrolls:q("#guided-schema-results").scrollHeight > q("#guided-schema-results").clientHeight,
+    dialogBounded:dialog.getBoundingClientRect().width <= innerWidth && dialog.getBoundingClientRect().height <= innerHeight,
+    flowUnexpanded:Math.abs(flow.scrollHeight - closed.scrollHeight) <= 2,
+  };
+  q("#guided-validation-heading").focus();
+  opened.backgroundExcluded = dialog.contains(document.activeElement);
+  const searchFor = (query) => {
+    const field = q("#guided-schema-search"); field.value = query; field.dispatchEvent(new Event("input", { bubbles:true }));
+    return {
+      names:Array.from(q("#guided-schema-results").querySelectorAll("h6")).map((node) => node.textContent),
+      targets:Array.from(q("#guided-schema-results").querySelectorAll(".guided-schema-result > p:first-of-type")).map((node) => node.textContent),
+      count:q("#guided-schema-result-count").textContent,
+    };
+  };
+  const searches = {
+    name:searchFor("Product listing"),
+    version:searchFor("version 4"),
+    target:searchFor("payload"),
+    property:searchFor("page_type"),
+    domain:searchFor("shop.example"),
+    path:searchFor("/products/*"),
+  };
+  const missing = searchFor("missing-schema");
+  const empty = { message:q("#guided-schema-empty-result").textContent, selected:flow.querySelector('input[name="guided-schema-destination"]:checked')?.value ?? null };
+  clickButton(q("#guided-schema-results"), "Clear search");
+  empty.restoredCount = q("#guided-schema-result-count").textContent;
+  const rows = Array.from(q("#guided-schema-results").querySelectorAll(":scope > article"));
+  const productRow = rows.find((row) => row.querySelector("h6").textContent === "Product listing version 3");
+  const rawRow = rows.find((row) => row.querySelector("h6").textContent === "Raw event version 2");
+  const resultPresentation = {
+    product:Array.from(productRow.querySelectorAll("h6,p")).map((node) => node.textContent),
+    incompatible:Array.from(rawRow.querySelectorAll("h6,p")).map((node) => node.textContent),
+    incompatibleDisabled:rawRow.querySelector("button").disabled,
+  };
+  productRow.querySelector("button").focus();
+  productRow.querySelector("button").dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowDown", bubbles:true }));
+  resultPresentation.skippedIncompatible = document.activeElement !== rawRow.querySelector("button") && !document.activeElement.disabled;
+  productRow.querySelector("button").focus();
+  productRow.querySelector("button").dispatchEvent(new KeyboardEvent("keydown", { key:"Enter", bubbles:true }));
+  const enterSelection = {
+    dialogClosed:!document.querySelector("#guided-schema-picker"),
+    summary:q("#guided-existing-schema-summary p").textContent,
+    changeFocused:document.activeElement === q("#guided-change-existing-schema"),
+    target:q("#guided-target").value,
+  };
+  clickButton(flow, "Continue");
+  enterSelection.expectedTypeSource = q("#guided-expected-type-hint").textContent;
+  clickButton(flow, "Back");
+  clickButton(flow, "Change existing schema");
+  dialog = q("#guided-schema-picker");
+  const unchangedBefore = [q("#guided-existing-schema-summary p").textContent, q("#guided-target").value];
+  dialog.dispatchEvent(new Event("cancel", { cancelable:true }));
+  const escapeDismissal = {
+    dialogClosed:!document.querySelector("#guided-schema-picker"),
+    unchanged:JSON.stringify(unchangedBefore) === JSON.stringify([q("#guided-existing-schema-summary p").textContent, q("#guided-target").value]),
+    restored:document.activeElement === q("#guided-change-existing-schema"),
+  };
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Close schema picker");
+  const closeDismissal = { dialogClosed:!document.querySelector("#guided-schema-picker"), restored:document.activeElement === q("#guided-change-existing-schema") };
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Select Product listing version 3");
+  const buttonSelection = { summary:q("#guided-existing-schema-summary p").textContent, changeFocused:document.activeElement === q("#guided-change-existing-schema") };
+  return { closed, opened, searches, missing, empty, resultPresentation, enterSelection, escapeDismissal, closeDismissal, buttonSelection };
 })()`;
 
 const schemaAssignmentRuntime = `(() => {
@@ -1224,7 +1323,7 @@ const overlaps = (left, right) => left.x < right.right && left.right > right.x &
 
 try {
   const port = await debuggingPort();
-  for (const width of [360, 520, 720]) {
+  for (const width of [320, 360, 520, 720]) {
     const socket = await openPanel(port, width);
     const schemaRuleEditorVisibility = await evaluate(socket, schemaRuleEditorVisibilityRuntime);
     assert.deepEqual(schemaRuleEditorVisibility, {
@@ -1234,6 +1333,56 @@ try {
       configurationInsideEditor:true,
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
+    if (width === 320) {
+      const previousPickerStorage = await evaluate(socket, `(() => {
+        const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
+        const schemas = [
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product", name:"Product pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true }] },
+          { id:"schema:raw-event:2", name:"Raw event", version:2, document:{ type:"object" }, assignments:[{ id:"assignment:raw", name:"Raw pages", sourceId:"event-history", eventName:"pageview", target:"raw input", enabled:true }] },
+          { id:"schema:product-archive:4", name:"Product archive", version:4, document:{ type:"object", properties:{ archived:{ type:"boolean" } } }, assignments:[{ id:"assignment:archive", name:"Archive pages", sourceId:"event-history", eventName:"archive", target:"payload", domainCondition:"archive.example", enabled:true }] },
+          { id:"schema:numeric:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ id:"assignment:numeric", name:"Numeric pages", sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          ...Array.from({ length:46 }, (_, index) => ({ id:"schema:filler:" + index, name:"Reference schema " + String(index + 1).padStart(2, "0"), version:1, document:{ type:"object", properties:{ reference:{ type:"string" } } }, assignments:[{ id:"assignment:filler:" + index, name:"Reference assignment " + index, sourceId:"event-history", eventName:"reference_" + index, target:"payload", domainCondition:"reference-" + index + ".example", enabled:true }] })),
+        ];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return previous;
+      })()`);
+      await reloadPanel(socket);
+      guidedSchemaPickerObservation = await evaluate(socket, guidedSchemaPickerRuntime);
+      assert.deepEqual({
+        closed:[guidedSchemaPickerObservation.closed.searchAbsent, guidedSchemaPickerObservation.closed.resultsAbsent],
+        opened:{ ...guidedSchemaPickerObservation.opened, resultCount:guidedSchemaPickerObservation.opened.resultCount },
+        searchNames:{
+          name:guidedSchemaPickerObservation.searches.name.names,
+          version:guidedSchemaPickerObservation.searches.version.names,
+          property:guidedSchemaPickerObservation.searches.property.names,
+          domain:guidedSchemaPickerObservation.searches.domain.names,
+          path:guidedSchemaPickerObservation.searches.path.names,
+        },
+        targetOnly:guidedSchemaPickerObservation.searches.target.targets.every((value) => value === "Target: payload"),
+        empty:[guidedSchemaPickerObservation.empty.message, guidedSchemaPickerObservation.empty.selected, guidedSchemaPickerObservation.empty.restoredCount],
+        presentation:[guidedSchemaPickerObservation.resultPresentation.incompatibleDisabled, guidedSchemaPickerObservation.resultPresentation.skippedIncompatible],
+        enter:guidedSchemaPickerObservation.enterSelection,
+        escape:guidedSchemaPickerObservation.escapeDismissal,
+        close:guidedSchemaPickerObservation.closeDismissal,
+        button:guidedSchemaPickerObservation.buttonSelection,
+      }, {
+        closed:[true,true],
+        opened:{ modal:true, searchFocused:true, resultCount:50, count:"50 of 50 schemas", listScrolls:true, dialogBounded:true, flowUnexpanded:true, backgroundExcluded:true },
+        searchNames:{ name:["Product listing version 3"], version:["Product archive version 4"], property:["Product listing version 3", "Numeric page types version 1"], domain:["Product listing version 3"], path:["Product listing version 3"] },
+        targetOnly:true,
+        empty:["No schemas match the current search.", null, "50 of 50 schemas"],
+        presentation:[true,true],
+        enter:{ dialogClosed:true, summary:"Product listing version 3", changeFocused:true, target:"payload", expectedTypeSource:"String — Product listing version 3" },
+        escape:{ dialogClosed:true, unchanged:true, restored:true },
+        close:{ dialogClosed:true, restored:true },
+        button:{ summary:"Product listing version 3", changeFocused:true },
+      }, "Guided schema picker violated its 320px browser contract");
+      await evaluate(socket, `(previous => { localStorage.clear(); for (const [key, value] of Object.entries(previous)) localStorage.setItem(key, value); })(${JSON.stringify(previousPickerStorage)})`);
+      await reloadPanel(socket);
+      socket.close();
+      continue;
+    }
     if (width === 720) {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
@@ -1611,7 +1760,7 @@ try {
     console.log(JSON.stringify({ schemaWorkspace:schemaWorkspaceAdapterObservations.at(-1) }));
   }
   if (process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1") {
-    console.log(JSON.stringify({ guidedValidation:guidedValidationObservation }));
+    console.log(JSON.stringify({ guidedValidation:guidedValidationObservation, guidedSchemaPicker:guidedSchemaPickerObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

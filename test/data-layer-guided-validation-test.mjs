@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   addAllowedValue,
   applyGuidedSchemaCandidate,
+  assignmentScopeSummary,
   advanceGuidedValidation,
   compatibleRequirements,
   createGuidedValidationDraft,
@@ -18,6 +19,7 @@ import {
   setGuidedSchemaDestination,
   setGuidedScope,
   schemaDestinationOptions,
+  searchSchemaDestinationOptions,
   validateNewSchemaName,
   validateAllowedValues,
 } from "../dist/data-layer-guided-validation.js";
@@ -109,6 +111,27 @@ const candidates = [
   { id:"schema:numeric:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
   { id:"schema:raw:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
 ];
+const searchableCandidate = {
+  id:"schema:searchable:4",
+  name:"Product listing",
+  version:4,
+  target:"payload",
+  propertyTypes:{ page_type:"String" },
+  assignments:[{
+    sourceId:"event-history",
+    eventName:"pageview",
+    target:"payload",
+    domainCondition:"shop.example",
+    pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }],
+    enabled:true,
+  }],
+};
+for (const query of ["Product listing", "version 4", "payload", "page_type", "pageview", "shop.example", "/products/*"]) {
+  assert.deepEqual(searchSchemaDestinationOptions(destinationStage, [searchableCandidate, { id:"schema:other:1", name:"Other", version:1, target:"raw input", propertyTypes:{ count:"Number" }, assignments:[] }], query).map(({ id }) => id), ["schema:searchable:4"]);
+}
+assert.deepEqual(searchSchemaDestinationOptions(destinationStage, [searchableCandidate], "missing-schema"), []);
+assert.equal(assignmentScopeSummary(searchableCandidate.assignments), "pageview · shop.example · /products/*");
+assert.equal(assignmentScopeSummary([]), "No assignments");
 
 const schemaWithOneAssignment = {
   id:"schema:generic:4",
