@@ -1,0 +1,44 @@
+Feature: Data layer guided validation creation
+
+  Background:
+    Given captured event pageview from http://127.0.0.1:4173/ is selected in Live
+
+  # Data layer guided validation creation 001
+  Scenario: Data layer guided validation creation 001
+    When the operator activates Create validation from this event
+    Then a guided validation draft opens at property selection
+    And the draft retains event pageview, its captured source, payload, domain 127.0.0.1, and pathname /
+    And no schema, rule, or assignment is persisted
+
+  # Data layer guided validation creation 002
+  Scenario: Data layer guided validation creation 002
+    Given the operator selects property page_type
+    And configures Must be one of these values with product_list and homepage
+    And chooses This domain on all paths
+    When the review is displayed
+    Then it states that pageview on 127.0.0.1 requires page_type to be product_list or homepage
+    And it identifies the current event as passing or explains why it fails
+    And the operator can return to and correct each completed stage without losing the draft
+
+  # Data layer guided validation creation 003
+  Scenario: Data layer guided validation creation 003
+    Given a complete guided validation draft uses a local rule
+    When the operator saves the validation
+    Then its schema, local rule, and enabled assignment are persisted together
+    And validation uses the captured source, event pageview, payload target, and reviewed scope
+    And the completed validation is displayed as one readable requirement
+
+  # Data layer guided validation creation 004
+  Scenario: Data layer guided validation creation 004
+    Given the validation is ready to publish its rule for reuse
+    When publication details appear
+    Then Rule Library reuse is stated
+    And saving persists one reusable rule attached to the new schema
+
+  # Data layer guided validation creation 005
+  Scenario: Data layer guided validation creation 005
+    When the guided validation draft is displayed
+    Then schema name, rule name, severity, custom message, source, target, priority, and version policy are absent from the primary flow
+    And Edit advanced settings exposes those fields without clearing inferred values
+    And schema name, rule name, message, source, and target are generated from the selected event
+    And severity is Error and version policy is Pinned by default
