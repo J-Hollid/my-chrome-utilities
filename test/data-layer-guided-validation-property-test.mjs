@@ -1,0 +1,69 @@
+import assert from "node:assert/strict";
+
+import {
+  addAllowedValue,
+  advanceGuidedValidation,
+  backGuidedValidation,
+  createGuidedValidationDraft,
+  pathConditionResult,
+  selectGuidedProperty,
+  setAllowedValue,
+  setGuidedRequirement,
+  validateAllowedValues,
+} from "../dist/data-layer-guided-validation.js";
+
+let seed = 0x6d2b79f5;
+
+function nextToken() {
+  seed = (seed * 1664525 + 1013904223) >>> 0;
+  return seed.toString(36);
+}
+
+for (let sample = 0; sample < 200; sample += 1) {
+  const segment = `product-${nextToken()}`;
+  const pathname = `/products/${segment}`;
+  const url = `https://shop.example${pathname}?sample=${sample}#details`;
+
+  assert.deepEqual(
+    pathConditionResult({ matchType:"Exact path", expression:pathname }, url),
+    { valid:true, matches:true },
+  );
+  assert.equal(
+    pathConditionResult({ matchType:"Exact path", expression:"/products" }, url).matches,
+    false,
+  );
+  assert.equal(
+    pathConditionResult({ matchType:"Path pattern", expression:"/products/*" }, url).matches,
+    true,
+  );
+
+  const values = [`value-${sample}`, `value-${nextToken()}`];
+  assert.deepEqual(validateAllowedValues(values), { valid:true, assistance:"2 allowed values" });
+  assert.equal(validateAllowedValues([values[0], values[0]]).valid, false);
+  assert.equal(validateAllowedValues([values[0], " "]).valid, false);
+
+  const initial = createGuidedValidationDraft({
+    id:`event:${sample}`,
+    name:"pageview",
+    sourceId:"event-history",
+    pageUrl:url,
+    payload:{ page_type:values[0] },
+  });
+  const selected = selectGuidedProperty(initial, "page_type");
+  const configured = setGuidedRequirement(selected, "Must be one of these values");
+  const withBlank = addAllowedValue(configured);
+  const completed = setAllowedValue(withBlank, 1, values[1]);
+
+  assert.deepEqual(configured.allowedValues, [values[0]]);
+  assert.deepEqual(completed.allowedValues, values);
+  assert.equal(backGuidedValidation(initial).stage, "property");
+
+  const requirement = advanceGuidedValidation(selected);
+  const scope = advanceGuidedValidation(requirement);
+  const review = advanceGuidedValidation(scope);
+  assert.deepEqual(
+    [requirement.stage, scope.stage, review.stage, advanceGuidedValidation(review).stage],
+    ["requirement", "scope", "review", "review"],
+  );
+  assert.equal(backGuidedValidation(review).stage, "scope");
+}
