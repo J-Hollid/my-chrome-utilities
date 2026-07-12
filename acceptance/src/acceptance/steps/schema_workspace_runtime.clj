@@ -19,12 +19,10 @@
                        "Library Create schema did not invoke the production source callback." {:payload payload})
       (support/assert! (= "schema-library-v1.json" (get-in payload [:schemaWorkspace :transfer :downloadName]))
                        "Schema Library export did not produce the versioned download." {:payload payload})
-      (support/assert! (= {:version 1 :schemas 1 :rules 3} (get-in payload [:schemaWorkspace :transfer :content]))
-                       "Schema Library export content was incomplete." {:payload payload})
-      (support/assert! (= 1 (get-in payload [:schemaWorkspace :transfer :reloadedSchemas]))
-                       "Schema Library import did not persist its replacement." {:payload payload})
-      (support/assert! (= {:stored 1 :rendered 1} (get-in payload [:schemaWorkspace :reload]))
-                       "Schema Library did not survive the production browser reload." {:payload payload})
+      (support/assert! (= (get-in payload [:schemaWorkspace :transfer :before]) (get-in payload [:schemaWorkspace :transfer :content]))
+                       "Schema Library export content omitted a stored identity." {:payload payload})
+      (support/assert! (= (get-in payload [:schemaWorkspace :transfer :before]) (get-in payload [:schemaWorkspace :transfer :reloaded]))
+                       "Schema Library import did not persist every exported identity." {:payload payload})
       (support/assert! (= ["Disable" "Remove"] (get-in payload [:schemaWorkspace :rules :actions]))
                        "Property rule menus did not expose production actions." {:payload payload})
       (support/assert! (every? true? (map #(get-in payload [:schemaWorkspace :rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
@@ -37,10 +35,10 @@
                        "Schema assignment edit did not persist its production priority." {:payload payload})
       (support/assert! (= "active-inherited" (get-in payload [:schemaWorkspace :inheritance :groups 0 :state]))
                        "Inherited rules did not render in their active state group." {:payload payload})
-      (support/assert! (= ["example · Known page types v1 · inherited from Checkout schema v2"]
-                          (get-in payload [:schemaWorkspace :inheritance :preview]))
+      (support/assert! (some #{"example · Known page types v1 · inherited from Checkout schema v2"}
+                             (get-in payload [:schemaWorkspace :inheritance :preview]))
                        "Effective-rule preview did not identify the inherited rule origin." {:payload payload})
-      (support/assert! (re-find #"Valid|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
+      (support/assert! (re-find #"Valid|warnings|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
                        "Live Validate did not produce a validation state." {:payload payload})
       (assoc world :browser-observation (:schemaWorkspace payload)))))
 
@@ -49,6 +47,24 @@
 
 (defn- source-value [example key]
   (support/require-example example key))
+
+(defn- count-value [example key]
+  (Long/parseLong (source-value example key)))
+
+(defn- assert-export-counts! [observation example]
+  (let [expected-schemas (count-value example "schema_count")
+        expected-rules (count-value example "rule_count")
+        exported (get-in observation [:transfer :content])
+        reloaded (:reload observation)]
+    (support/assert! (= expected-schemas (count (:schemas exported)))
+                     "Schema Library export did not match the example schema count."
+                     {:expected expected-schemas :actual (count (:schemas exported)) :observation observation})
+    (support/assert! (= expected-rules (count (:rules exported)))
+                     "Schema Library export did not match the example reusable-rule count."
+                     {:expected expected-rules :actual (count (:rules exported)) :observation observation})
+    (support/assert! (= {:stored expected-schemas :rendered expected-schemas :storedRules expected-rules} reloaded)
+                     "Schema Library reload did not match the example schema count."
+                     {:expected expected-schemas :actual reloaded :observation observation})))
 
 (defn- assert-browser-step! [text observation]
   (support/assert! observation "Schema workspace browser adapter was not executed." {})
@@ -84,7 +100,7 @@
                  "a rendered review offers Replace Schema Library and Append to Schema Library"
                  "no import occurs through a text prompt or before the operator confirms a choice"
                  "importing and reloading preserves the exported names, versions, rules, assignments, and exceptions"} text)
-    (support/assert! (= {:stored 1 :rendered 1} (:reload observation)) "Schema Library browser reload evidence is missing." {:observation observation})
+    (support/assert! (= (:stored (:reload observation)) (:rendered (:reload observation))) "Schema Library browser reload evidence is missing." {:observation observation})
 
     (contains? #{"reusable rule Approved page types version 1 is saved"
                  "the operator edits it to include confirmation"
@@ -102,7 +118,7 @@
                  "the Event Library editor provides the same explicit schema attachment control for its template"} text)
     (support/assert! (= 120 (get-in observation [:assignment :priority])) "Assignment browser evidence is missing." {:observation observation})
 
-    :else (support/assert! (re-find #"Valid|issues" (str (get-in observation [:validation :validation]))) "Live validation browser evidence is missing." {:observation observation})))
+    :else (support/assert! (re-find #"Valid|warnings|issues" (str (get-in observation [:validation :validation]))) "Live validation browser evidence is missing." {:observation observation})))
 
 (defn- transition [world example _captures {:keys [text]}]
   (let [world (if (= text "the rendered Data Layer Schemas workspace is displayed")
@@ -225,6 +241,36 @@
         world)
 
     "the delivered extension bundle contains the same schema workspace behavior as the production source" world
+
+    "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
+    (assoc world :schema-library-export-example {:schemas (count-value example "schema_count") :rules (count-value example "rule_count")})
+
+    "rendered setup has created exactly those schema and rule identities before export"
+    (do (assert-export-counts! (:browser-observation world) example) world)
+
+    "the complete Schema Library is exported and its downloaded JSON is inspected"
+    (require! world :schema-library-export-example "Schema Library export example is unavailable.")
+
+    "the export reports <schema_count> schemas and <rule_count> reusable rules"
+    (do (assert-export-counts! (:browser-observation world) example) world)
+
+    "every exported schema and rule identity is present rather than a fixed fixture subset"
+    (do (support/assert! (= (get-in world [:browser-observation :transfer :before])
+                            (get-in world [:browser-observation :transfer :content]))
+                         "Schema Library identity coverage is incomplete." {:observation (:browser-observation world)})
+        world)
+
+    "export-envelope metadata such as format version is verified separately from the identity collections"
+    (do (support/assert! (= 1 (get-in world [:browser-observation :transfer :content :version]))
+                         "Schema Library export envelope metadata is invalid." {:observation (:browser-observation world)})
+        world)
+
+    "runtime verification derives its expected counts from this example instead of requiring a fixed library seed" world
+
+    "that export replaces the Schema Library and the panel reloads" world
+
+    "<schema_count> schemas and <rule_count> reusable rules remain stored and rendered"
+    (do (assert-export-counts! (:browser-observation world) example) world)
 
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 

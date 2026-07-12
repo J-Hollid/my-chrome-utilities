@@ -184,7 +184,7 @@ export function renderLiveSessionMessage(elements, message) {
     if (elements.sessionMessage)
         elements.sessionMessage.textContent = message;
 }
-export function updateLiveInspectorValidation(elements, validation, issues = []) {
+export function updateLiveInspectorValidation(elements, validation, issues = [], assignment) {
     const term = elements.eventInspector?.querySelector('dt[data-field="validation"]');
     const description = term?.nextElementSibling;
     if (description instanceof HTMLElement)
@@ -200,7 +200,8 @@ export function updateLiveInspectorValidation(elements, validation, issues = [])
     const heading = document.createElement("h5");
     heading.textContent = "Validation details";
     const list = document.createElement("ul");
-    list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation}` })));
+    const assignmentDetails = assignment ? ` · assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId ?? "any"} · event ${assignment.eventName ?? "any"} · target ${assignment.target ?? "automatic"} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : "";
+    list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation}${assignmentDetails}` })));
     details.append(heading, list);
     existing?.replaceWith(details) ?? elements.eventInspector?.append(details);
 }

@@ -239,6 +239,7 @@ const schemaAssignmentRuntime = `(() => {
   input("#schema-rule-message", "Use a known page type");
   input("#schema-rule-examples", "product, checkout");
   q("#save-schema-rule").click();
+  const initialRuleSeverity = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")).at(-1).severity;
   q("#schema-subview-schemas").click();
   Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
   q("#cancel-schema-revision").click();
@@ -324,7 +325,7 @@ const schemaAssignmentRuntime = `(() => {
     assignment:{ ...persistedSchemas[0].assignments[0], pathnameCondition:persistedSchemas[0].assignments[0].pathnameCondition ?? null },
     propertyRule:{ menuOpen:propertyMenuOpen, returnFocus:propertyReturnFocus, stateReturnFocus:propertyStateReturnFocus, summary:attachedSummary.textContent, actions:propertyRuleActions, reenable, revisionReview:ruleRevisionReview, ruleExportName },
     storedPropertyRule:{ attached:Boolean(storedPropertyRule), version:storedPropertyRule?.version, enabled:storedPropertyRule?.enabled, propertyPath:storedPropertyRule?.propertyPath },
-    rule:{ name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
+    rule:{ initialSeverity:initialRuleSeverity, name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
   };
 })()`;
 
@@ -362,10 +363,22 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
-const schemaInheritanceRuntime = `(() => {
+const schemaInheritanceRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
+  q("#schema-subview-schemas").click();
+  q("#schema-subview-rules").click();
+  q("#create-schema-rule").click();
+  input("#schema-rule-name", "Known channels");
+  q("#schema-rule-operator").value = "allowed-values";
+  input("#schema-rule-parameters", "channel:web,app");
+  q("#schema-rule-severity").value = "warning";
+  input("#schema-rule-message", "Choose a known channel");
+  const parentAttachment = Array.from(q("#schema-rule-attachments").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
+  if (!parentAttachment) throw new Error("Missing parent schema attachment option");
+  parentAttachment.selected = true;
+  q("#save-schema-rule").click();
   q("#schema-subview-schemas").click();
   q("#create-schema").click();
   input("#schema-editor-name", "Order confirmation");
@@ -373,6 +386,18 @@ const schemaInheritanceRuntime = `(() => {
   if (!parent) throw new Error("Missing saved parent schema option");
   q("#schema-editor-parent").value = parent.value;
   q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
+  q("#save-schema").click();
+  q("#confirm-schema-revision").click();
+  const child = Array.from(q("#schema-list").querySelectorAll("li")).find((item) => item.textContent.startsWith("Order confirmation v1"));
+  if (!child) throw new Error("Missing saved child schema");
+  q("#schema-subview-assignments").click();
+  q("#create-schema-assignment").click();
+  q("#schema-assignment-schema").value = Array.from(q("#schema-assignment-schema").options).find((option) => option.textContent.startsWith("Order confirmation v1"))?.value ?? "";
+  input("#schema-assignment-source", "event-history");
+  input("#schema-assignment-event", "page_view");
+  q("#schema-assignment-target").value = "payload";
+  input("#schema-assignment-priority", "200");
+  q("#save-schema-assignment").click();
   return {
     groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
     preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
@@ -392,22 +417,23 @@ const schemaLibraryTransferRuntime = `(async () => {
   HTMLAnchorElement.prototype.click = originalClick;
   URL.createObjectURL = originalCreateObjectURL;
   const exported = JSON.parse(await exportedBlob.text());
-  const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
-  const rules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
-  const file = new File([JSON.stringify({ version:1, schemas, rules })], "schema-library-v1.json", { type:"application/json" });
+  const identities = (items) => items.map((item) => item.id);
+  const before = { schemas:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]")), rules:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]")) };
+  const file = new File([JSON.stringify(exported)], "schema-library-v1.json", { type:"application/json" });
   const input = q("#schema-library-import-file");
   Object.defineProperty(input, "files", { configurable:true, value:[file] });
   input.dispatchEvent(new Event("change", { bubbles:true }));
   await new Promise((resolve) => setTimeout(resolve, 25));
   q("#replace-schema-library").click();
-  const reloaded = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const reloaded = { schemas:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]")), rules:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]")) };
   return {
     downloadName,
-    content:{ version:exported.version, schemas:exported.schemas.length, rules:exported.rules.length },
+    content:{ version:exported.version, schemas:identities(exported.schemas), rules:identities(exported.rules) },
+    before,
     result:q("#schema-result").textContent,
     review:q("#schema-import-review").open,
     actions:Array.from(q("#schema-import-review").querySelectorAll("button")).map((button) => button.textContent),
-    reloadedSchemas:reloaded.length,
+    reloaded,
   };
 })()`;
 
@@ -415,7 +441,7 @@ const schemaLiveValidationRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:17, windowId:3, url:"https://shop.example/order-confirmation", title:"Checkout", active:true }] },
-    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout" }] } } }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout", channel:"email" }] } } }] },
   };
   q("#choose-observation-target").click();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -428,7 +454,9 @@ const schemaLiveValidationRuntime = `(async () => {
   validate.click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const validationTerm = q('#live-event-inspector dt[data-field="validation"]');
-  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "" };
+  q("#live-validation-filter").value = "Warnings";
+  q("#live-validation-filter").dispatchEvent(new Event("change", { bubbles:true }));
+  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), filterOptions:Array.from(q("#live-validation-filter").options).map((option) => option.textContent) };
 })()`;
 
 const naturalLibraryActionsRuntime = `(() => {
@@ -674,7 +702,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
     validationAvailability: () => ({ enabled:true }),
   });
-  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }]);
+  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }], { id:"assignment:checkout", name:"Checkout confirmation", sourceId:"event-history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest", enabled:true });
   const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
   return {
     listInLayout: eventList.getClientRects().length > 0,
@@ -1004,7 +1032,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
-        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce",
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce · assignment id assignment:checkout · name Checkout confirmation · source event-history · event page_view · target payload · priority 100 · domain shop.example · pathname /order-confirmation · policy follow latest · enabled",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
@@ -1059,7 +1087,7 @@ try {
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, pathnameCondition:null, versionPolicy:"pinned", enabled:false },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
-      rule:{ name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
+      rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
     let schemaInheritance;
@@ -1080,30 +1108,33 @@ try {
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, {
         groups:[
-          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+        preview:["example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
-      assert.deepEqual(schemaLibraryTransfer, {
-        downloadName:"schema-library-v1.json",
-        content:{ version:1, schemas:1, rules:3 },
-        result:"Schema Library replaced.",
-        review:false,
-        actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
-        reloadedSchemas:1,
-      }, "Schema Library export/import controls did not drive the production transfer flow");
+      assert.equal(schemaLibraryTransfer.downloadName, "schema-library-v1.json", "Schema Library export did not create the download");
+      assert.equal(schemaLibraryTransfer.content.version, 1, "Schema Library export used an unsupported format");
+      assert.deepEqual(schemaLibraryTransfer.content.schemas, schemaLibraryTransfer.before.schemas, "Schema Library export omitted a schema identity");
+      assert.deepEqual(schemaLibraryTransfer.content.rules, schemaLibraryTransfer.before.rules, "Schema Library export omitted a reusable-rule identity");
+      assert.equal(schemaLibraryTransfer.result, "Schema Library replaced.", "Schema Library replacement did not complete");
+      assert.equal(schemaLibraryTransfer.review, false, "Schema Library replacement review remained open");
+      assert.deepEqual(schemaLibraryTransfer.actions, ["Replace Schema Library", "Append to Schema Library", "Cancel"], "Schema Library replacement actions changed");
+      assert.deepEqual(schemaLibraryTransfer.reloaded, schemaLibraryTransfer.before, "Schema Library replacement did not retain exported identities");
       await reloadPanel(socket);
       schemaReload = await evaluate(socket, `(() => {
         document.querySelector("#data-layer-view-schemas").click();
-        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
+        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length, storedRules:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length };
       })()`);
-      assert.deepEqual(schemaReload, { stored:1, rendered:1 }, "Schema Library did not survive a browser reload");
+      assert.deepEqual(schemaReload, { stored:schemaLibraryTransfer.before.schemas.length, rendered:schemaLibraryTransfer.before.schemas.length, storedRules:schemaLibraryTransfer.before.rules.length }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
-      assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
+      assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
+      assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
+      assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
+      assert.deepEqual(schemaLiveValidation.filterOptions, ["All states", "Not checked", "Valid", "Warnings", "Issues", "Assignment error"], "Live validation filter did not expose all five states");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({

@@ -71,6 +71,8 @@
         <ul id="live-source-statuses" aria-label="Observation sources"></ul>
           <section id="live-event-list" aria-label="Observed event feed">
           <h4>Events</h4>
+          <label for="live-validation-filter">Validation state</label>
+          <select id="live-validation-filter" aria-label="Filter events by validation state"><option value="">All states</option><option value="Not checked">Not checked</option><option value="Valid">Valid</option><option value="Warnings">Warnings</option><option value="Issues">Issues</option><option value="Assignment error">Assignment error</option></select>
           <ul id="live-event-feed"></ul>
           <section id="live-events-empty-state" class="panel-empty-state" aria-live="polite"><h5>No events captured yet</h5><p>Start testing to capture events from the selected target.</p></section>
           <section id="live-source-error-state" class="panel-empty-state" aria-live="assertive" hidden><h5>Source connection failed</h5><p>Restart observation to reconnect the source.</p></section>
