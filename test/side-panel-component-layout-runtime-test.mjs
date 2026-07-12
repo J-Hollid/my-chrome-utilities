@@ -675,7 +675,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
     validationAvailability: () => ({ enabled:true }),
   });
-  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }]);
+  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }], { name:"Checkout confirmation", sourceId:"event-history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation" });
   const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
   return {
     listInLayout: eventList.getClientRects().length > 0,
@@ -1005,7 +1005,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
-        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce",
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce · assignment Checkout confirmation · source event-history · event page_view · target payload · priority 100 · domain shop.example · pathname /order-confirmation",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
