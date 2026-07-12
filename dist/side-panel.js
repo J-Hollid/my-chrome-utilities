@@ -132,6 +132,10 @@ const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
 const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
 const saveSchemaCloseReviewButton = document.querySelector("#save-schema-close-review");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
+const schemaPropertyTree = document.createElement("ul");
+schemaPropertyTree.id = "schema-property-tree";
+addSchemaRuleButton?.after(schemaPropertyTree);
+let selectedSchemaPropertyPath = "example";
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
 const schemaRuleEditor = document.querySelector("#schema-rule-editor");
@@ -783,6 +787,28 @@ function renderSchemaDraft() {
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)
         schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+    const paths = (document, prefix = "") => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
+        const path = prefix ? `${prefix}.${name}` : name;
+        return [path, ...paths(child, path)];
+    });
+    const propertyPaths = paths(draft.document);
+    if (propertyPaths.length === 0)
+        propertyPaths.push("page_type", "page_name", "commerce.order.id");
+    if (!propertyPaths.includes(selectedSchemaPropertyPath))
+        selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
+    schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
+        const item = document.createElement("li");
+        const add = document.createElement("button");
+        const view = document.createElement("button");
+        add.type = view.type = "button";
+        add.textContent = "Add validation rule";
+        view.textContent = "View attached rules";
+        add.addEventListener("click", () => { selectedSchemaPropertyPath = path; addSchemaRuleButton?.click(); });
+        view.addEventListener("click", () => { selectedSchemaPropertyPath = path; if (schemaResult)
+            schemaResult.textContent = `Attached rules for ${path}: ${(draft.attachedRules ?? []).map((rule) => `${rule.id} v${rule.version}`).join(", ") || "none"}`; });
+        item.append(`${path} `, add, view);
+        return item;
+    }));
     const existing = schemas.find((schema) => schema.name === draft.name);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     if (schemaEditorParent) {
@@ -829,6 +855,15 @@ function persistSchemaLibrary() {
 function withSchemaParent(schema, parentSchemaId) {
     const { parentSchemaId: _previousParentSchemaId, ...withoutParent } = schema;
     return parentSchemaId ? { ...withoutParent, parentSchemaId } : withoutParent;
+}
+function defineSchemaProperty(document, path) {
+    const [name, ...rest] = path;
+    if (!name)
+        return document;
+    const properties = document.properties ?? {};
+    if (rest.length === 0)
+        return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: properties[name] ?? { type: "string" } } };
+    return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: defineSchemaProperty(properties[name] ?? { type: "object" }, rest) } };
 }
 function renderSchemaWorkflowRows() {
     if (schemaAssignmentSchema)
@@ -1907,9 +1942,10 @@ createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaRuleButton?.addEventListener("click", () => {
     if (!schemaDraft)
         return;
-    const property = schemaRuleParameters?.value.split(":", 1)[0]?.trim() || "example";
+    const path = selectedSchemaPropertyPath.split(".").filter(Boolean);
+    const property = path.at(-1) || "example";
     const operator = schemaRuleOperator?.value;
-    const document = { ...schemaDraft.document, properties: { ...schemaDraft.document.properties, [property]: { type: "string" } } };
+    const document = defineSchemaProperty(schemaDraft.document, path);
     schemaDraft = { ...schemaDraft, document: operator === "required" ? { ...document, required: [...new Set([...(document.required ?? []), property])] } : document };
     renderSchemaDraft();
 });
