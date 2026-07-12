@@ -126,6 +126,7 @@ import {
   pauseCapture,
   recordLiveEvent,
   resumeCapture,
+  setLiveFilter,
   selectLiveEvent,
   updateLiveSourceStatus,
   type DataLayerView,
@@ -362,6 +363,7 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const liveValidationFilter = document.querySelector<HTMLSelectElement>("#live-validation-filter");
 const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
@@ -2474,6 +2476,11 @@ pauseCaptureButton?.addEventListener("click", () => {
 resumeCaptureButton?.addEventListener("click", () => {
   liveObserverState = resumeCapture(liveObserverState);
   setLiveSessionMessage("Capture resumed");
+  renderLiveObserver();
+});
+
+liveValidationFilter?.addEventListener("change", () => {
+  liveObserverState = setLiveFilter(liveObserverState, liveValidationFilter.value ? { kind:"validation state", value:liveValidationFilter.value } : undefined);
   renderLiveObserver();
 });
 
