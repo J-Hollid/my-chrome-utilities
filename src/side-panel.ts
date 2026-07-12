@@ -369,6 +369,7 @@ const discardSchemaDraftButton = document.querySelector<HTMLButtonElement>("#dis
 const keepEditingSchemaButton = document.querySelector<HTMLButtonElement>("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector<HTMLButtonElement>("#close-schema-editor");
 const saveAndCloseSchemaButton = document.querySelector<HTMLButtonElement>("#save-and-close-schema");
+const saveSchemaCloseReviewButton = document.querySelector<HTMLButtonElement>("#save-schema-close-review");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
@@ -2169,6 +2170,7 @@ discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefi
 keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll:true }); });
 closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) return; if (schemaCloseReview) { schemaCloseReview.hidden = false; schemaCloseReview.showModal(); } });
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
+saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); reusableSchemaRules = [...reusableSchemaRules, { id:`rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll:true }); });

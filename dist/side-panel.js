@@ -128,6 +128,7 @@ const discardSchemaDraftButton = document.querySelector("#discard-schema-draft")
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
 const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
+const saveSchemaCloseReviewButton = document.querySelector("#save-schema-close-review");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
@@ -1740,6 +1741,9 @@ closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
     schemaCloseReview.showModal();
 } });
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
+saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open)
+    schemaCloseReview.close(); if (schemaCloseReview)
+    schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
