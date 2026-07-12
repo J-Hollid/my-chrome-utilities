@@ -187,6 +187,7 @@ const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
 const recheckSchemaValidationButton = document.querySelector("#recheck-schema-validation");
 const schemaValidationIssues = document.querySelector("#schema-validation-issues");
+const schemaValidationRecordList = document.querySelector("#schema-validation-record-list");
 const schemaInheritanceProvenance = document.querySelector("#schema-inheritance-provenance");
 const schemaImportReview = document.querySelector("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector("#schema-import-review-summary");
@@ -236,6 +237,14 @@ let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_K
 let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
+const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
+let schemaValidationRecords = (() => { try {
+    const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored.filter((record) => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : [];
+}
+catch {
+    return [];
+} })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableSchemaRules = (() => { try {
     const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]");
@@ -783,6 +792,8 @@ function recheckCapturedSchemaValidation() {
     }
     let checked = 0;
     const issueRows = [];
+    const checkedAt = new Date().toISOString();
+    const records = [];
     liveObserverState = {
         ...liveObserverState,
         events: events.map((event) => {
@@ -790,13 +801,20 @@ function recheckCapturedSchemaValidation() {
             if (validation.state !== "Not checked")
                 checked += 1;
             issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion}` })));
+            records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), ...(validation.target ? { target: validation.target } : {}) });
             return { ...event, validation: validation.state };
         }),
     };
     renderLiveObserver();
     schemaValidationIssues?.replaceChildren(...issueRows);
+    schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50);
+    localStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
+    renderSchemaValidationRecords();
     if (schemaResult)
         schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
+}
+function renderSchemaValidationRecords() {
+    schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent: `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"} · ${record.checkedAt}` })));
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -2271,6 +2289,7 @@ renderSavedSessions();
 renderEventTemplateLibrary();
 renderSchemas();
 renderSchemaWorkflowRows();
+renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };

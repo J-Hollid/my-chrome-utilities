@@ -428,6 +428,7 @@ const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-sc
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
 const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>("#recheck-schema-validation");
 const schemaValidationIssues = document.querySelector<HTMLElement>("#schema-validation-issues");
+const schemaValidationRecordList = document.querySelector<HTMLElement>("#schema-validation-record-list");
 const schemaInheritanceProvenance = document.querySelector<HTMLElement>("#schema-inheritance-provenance");
 const schemaImportReview = document.querySelector<HTMLDialogElement>("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector<HTMLElement>("#schema-import-review-summary");
@@ -478,6 +479,9 @@ let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHE
 let schemaDraft: SchemaDefinition | undefined;
 let pendingSchemaImport: SchemaDefinition[] | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
+const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
+interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
+let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableSchemaRules: Array<{ id: string; name: string; kind: string }> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 let replaySequences: ReplaySequence[] = [];
@@ -1066,18 +1070,28 @@ function recheckCapturedSchemaValidation(): void {
   if (!events.length) { if (schemaResult) schemaResult.textContent = "No captured events are available to recheck."; return; }
   let checked = 0;
   const issueRows: HTMLLIElement[] = [];
+  const checkedAt = new Date().toISOString();
+  const records: SchemaValidationRecord[] = [];
   liveObserverState = {
     ...liveObserverState,
     events: events.map((event) => {
       const validation = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);
       if (validation.state !== "Not checked") checked += 1;
       issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion}` })));
+      records.push({ eventId:event.id, eventName:event.name, state:validation.state, checkedAt, ...(validation.schema ? { schemaName:validation.schema.name, schemaVersion:validation.schema.version } : {}), ...(validation.target ? { target:validation.target } : {}) });
       return { ...event, validation:validation.state };
     }),
   };
   renderLiveObserver();
   schemaValidationIssues?.replaceChildren(...issueRows);
+  schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50);
+  localStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
+  renderSchemaValidationRecords();
   if (schemaResult) schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
+}
+
+function renderSchemaValidationRecords(): void {
+  schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent:`${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"} · ${record.checkedAt}` })));
 }
 
 function persistEventTemplateLibrary(): void {
@@ -2662,6 +2676,7 @@ renderSavedSessions();
 renderEventTemplateLibrary();
 renderSchemas();
 renderSchemaWorkflowRows();
+renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
 
