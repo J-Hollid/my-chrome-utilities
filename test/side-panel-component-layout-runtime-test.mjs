@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 const schemaWorkspaceAdapterObservations = [];
+const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
 const assetServer = createServer(async (request, response) => {
@@ -368,6 +369,18 @@ const schemaInheritanceRuntime = `(async () => {
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
   q("#schema-subview-schemas").click();
+  if (${JSON.stringify(schemaLibraryExportFixture)} === "1:3") {
+    q("#create-schema").click();
+    input("#schema-editor-name", "Order confirmation");
+    const parent = Array.from(q("#schema-editor-parent").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
+    if (!parent) throw new Error("Missing saved parent schema option");
+    q("#schema-editor-parent").value = parent.value;
+    q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
+    return {
+      groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
+      preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
+    };
+  }
   q("#schema-subview-rules").click();
   q("#create-schema-rule").click();
   input("#schema-rule-name", "Known channels");
@@ -1106,7 +1119,15 @@ try {
         persistedAttachment:"schema:checkout-schema:2",
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
-      assert.deepEqual(schemaInheritance, {
+      assert.deepEqual(schemaInheritance, schemaLibraryExportFixture === "1:3" ? {
+        groups:[
+          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
+          { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
+          { state:"local", text:"Local (0)No local rules." },
+        ],
+        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+      } : {
         groups:[
           { state:"active-inherited", text:"Active inherited (2)Known page types v1 · example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
@@ -1131,13 +1152,18 @@ try {
       })()`);
       assert.deepEqual(schemaReload, { stored:schemaLibraryTransfer.before.schemas.length, rendered:schemaLibraryTransfer.before.schemas.length, storedRules:schemaLibraryTransfer.before.rules.length }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
-      assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
-      assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
-      assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
+      if (schemaLibraryExportFixture === "1:3") {
+        assert.match(schemaLiveValidation.validation, /Not checked|Valid|warnings|issues/, "Live Validate did not render a state for the smaller export fixture");
+      } else {
+        assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
+        assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
+        assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
+      }
       assert.deepEqual(schemaLiveValidation.filterOptions, ["All states", "Not checked", "Valid", "Warnings", "Issues", "Assignment error"], "Live validation filter did not expose all five states");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
+        fixture:schemaLibraryExportFixture,
         mounted:schemaWorkspaceRuntime.schemaMasterVisible,
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
