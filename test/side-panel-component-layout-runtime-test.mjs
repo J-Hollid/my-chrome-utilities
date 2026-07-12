@@ -313,6 +313,29 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
+const schemaLibraryTransferRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  q("#data-layer-view-schemas").click();
+  const originalClick = HTMLAnchorElement.prototype.click;
+  let downloadName = "";
+  HTMLAnchorElement.prototype.click = function () { downloadName = this.download; };
+  q("#export-schema").click();
+  HTMLAnchorElement.prototype.click = originalClick;
+  const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const rules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const file = new File([JSON.stringify({ version:1, schemas, rules })], "schema-library-v1.json", { type:"application/json" });
+  const input = q("#schema-library-import-file");
+  Object.defineProperty(input, "files", { configurable:true, value:[file] });
+  input.dispatchEvent(new Event("change", { bubbles:true }));
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  return {
+    downloadName,
+    result:q("#schema-result").textContent,
+    review:q("#schema-import-review").open,
+    actions:Array.from(q("#schema-import-review").querySelectorAll("button")).map((button) => button.textContent),
+  };
+})()`;
+
 const naturalLibraryActionsRuntime = `(() => {
   const editor = document.querySelector("#event-property-editor");
   const actions = ["#add-new-event", "#import-event-library", "#export-event-library", "#clear-event-library"].map((selector) => {
@@ -952,6 +975,12 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
       }, "Library Create schema did not invoke the production source callback");
+      assert.deepEqual(await evaluate(socket, schemaLibraryTransferRuntime), {
+        downloadName:"schema-library-v1.json",
+        result:"Exported 1 schemas and 3 rules.",
+        review:true,
+        actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
+      }, "Schema Library export/import controls did not drive the production transfer flow");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
