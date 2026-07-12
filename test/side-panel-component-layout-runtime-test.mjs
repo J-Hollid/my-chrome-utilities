@@ -226,6 +226,17 @@ const schemaAssignmentRuntime = `(() => {
   input("#schema-rule-message", "Use a known page type");
   input("#schema-rule-examples", "product, checkout");
   q("#save-schema-rule").click();
+  q("#schema-subview-schemas").click();
+  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
+  const propertyAdd = q("#schema-property-tree button"); propertyAdd.click();
+  const attach = Array.from(q("#schema-property-tree").querySelectorAll("button")).find((button) => button.textContent === "Attach Known page types v1");
+  if (!attach) throw new Error("Missing property rule attachment action");
+  attach.click();
+  const attachedSummary = q("#schema-property-tree summary"); attachedSummary.click();
+  const propertyRuleActions = Array.from(q("#schema-property-tree details").querySelectorAll("button")).map((button) => button.textContent);
+  q("#schema-property-tree details button").click();
+  const reenable = q("#schema-property-tree details button").textContent;
+  q("#cancel-schema-revision").click();
   q("#schema-subview-assignments").click();
   q("#create-schema-assignment").click();
   input("#schema-assignment-source", "event-history");
@@ -257,7 +268,7 @@ const schemaAssignmentRuntime = `(() => {
   q("#create-schema").click();
   input("#schema-editor-name", "Unsaved schema");
   q("#close-schema-editor").click();
-  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#close-schema-editor-review-summary").textContent };
+  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#schema-close-review-summary").textContent };
   q("#discard-schema-draft").click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
@@ -270,6 +281,7 @@ const schemaAssignmentRuntime = `(() => {
     closeReview,
     rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
+    propertyRule:{ summary:attachedSummary.textContent, actions:propertyRuleActions, reenable },
     rule:{ name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
   };
 })()`;
@@ -505,7 +517,7 @@ const hiddenStateRuntime = `(() => {
   component.remove(); return result;
 })()`;
 
-const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
+const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState, updateLiveInspectorValidation }) => {
   const eventList = document.querySelector("#live-event-list");
   const eventFeed = document.querySelector("#live-event-feed");
   const eventInspector = document.querySelector("#live-event-inspector");
@@ -517,6 +529,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
     validationAvailability: () => ({ enabled:true }),
   });
+  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }]);
   const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
   return {
     listInLayout: eventList.getClientRects().length > 0,
@@ -525,6 +538,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     backHasHiddenAncestor: hiddenAncestor(backToEventsButton),
     backInsideList: eventList.contains(backToEventsButton),
     backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
+    validationDetail:eventInspector.querySelector("[data-validation-details]")?.textContent,
   };
 })`;
 
@@ -845,6 +859,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · Order confirmation v2 · #/properties/commerce",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
@@ -895,6 +910,7 @@ try {
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
       rows:["Checkout schema automatic · event-history/page_view · anyany · priority 120 · Checkout schema", "Checkout schema automatic · event-history/page_view · shop.example/order-confirmation · priority 100 · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
+      propertyRule:{ summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
