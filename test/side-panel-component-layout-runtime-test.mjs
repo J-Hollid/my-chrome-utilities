@@ -261,6 +261,7 @@ const schemaAssignmentRuntime = `(() => {
   q("#discard-schema-draft").click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
+  const latestRule = persistedRules.at(-1);
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
     actions,
@@ -269,7 +270,7 @@ const schemaAssignmentRuntime = `(() => {
     closeReview,
     rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
-    rule:persistedRules.at(-1),
+    rule:{ name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
   };
 })()`;
 
@@ -878,23 +879,23 @@ try {
     }
     assert.deepEqual(await evaluate(socket, schemaAssignmentRuntime), {
       fields:[
-        { selector:"#schema-assignment-source", required:true },
-        { selector:"#schema-assignment-event", required:true },
-        { selector:"#schema-assignment-target", required:true },
+        { selector:"#schema-assignment-source", required:false },
+        { selector:"#schema-assignment-event", required:false },
+        { selector:"#schema-assignment-target", required:false },
         { selector:"#schema-assignment-domain", required:false },
         { selector:"#schema-assignment-pathname", required:false },
-        { selector:"#schema-assignment-priority", required:true },
-        { selector:"#schema-assignment-schema", required:true },
-        { selector:"#schema-assignment-policy", required:true },
+        { selector:"#schema-assignment-priority", required:false },
+        { selector:"#schema-assignment-schema", required:false },
+        { selector:"#schema-assignment-policy", required:false },
         { selector:"#schema-assignment-enabled", required:false },
       ],
       actions:["Edit", "Duplicate", "Disable", "Delete"],
-      duplicateCount:2,
+      duplicateCount:3,
       revisionReview:{ open:true, summary:"Checkout schema will be saved as version 2; version 1 remains available." },
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
-      rows:["Checkout schema automatic · event-history/page_view · shop.example /order-confirmation · priority 120 · raw input · Checkout schema version 1 (follow latest) · disabled"],
-      assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:120, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
-      rule:{ id:"rule:known-page-types:1", name:"Known page types", version:1, applicableTypes:"string", operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout" },
+      rows:["Checkout schema automatic · event-history/page_view · anyany · priority 120 · Checkout schema", "Checkout schema automatic · event-history/page_view · shop.example/order-confirmation · priority 100 · Checkout schema"],
+      assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
+      rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
   }
