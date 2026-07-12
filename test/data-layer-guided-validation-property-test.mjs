@@ -6,6 +6,7 @@ import {
   backGuidedValidation,
   createGuidedValidationDraft,
   existingSchemaDestination,
+  guidedAssignmentsMatch,
   pathConditionResult,
   schemaDestinationOptions,
   selectGuidedProperty,
@@ -84,6 +85,10 @@ for (let sample = 0; sample < 200; sample += 1) {
   ]);
   assert.deepEqual(destinationOptions.map(({ available }) => available), [true, false, false]);
   assert.equal(existingSchemaDestination(destination, matchingCandidate).matchingAssignment, true);
+  assert.equal(guidedAssignmentsMatch(
+    matchingCandidate.assignments[0],
+    { ...matchingCandidate.assignments[0], pathnameCondition:pathname },
+  ), false);
 
   const review = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName }));
   assert.deepEqual(

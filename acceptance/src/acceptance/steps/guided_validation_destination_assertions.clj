@@ -26,16 +26,29 @@
     (support/assert! (= assistance (get observation observed))
                      "New schema name assistance did not match the entered name."
                      {:example example :observation observation})
+    (support/assert! (contains? #{"allowed" "blocked"} continuation)
+                     "Schema-name continuation must use the supported result vocabulary."
+                     {:example example})
     (support/assert! (= (= name "Signal Shop pageview") (= continuation "allowed"))
                      "New schema name continuation result was incorrect."
                      {:example example})))
 
 (defn- existing-option [example observation]
   (let [name (example-value example "schema_name")
+        expected-target (example-value example "schema_target")
+        expected-property-state (example-value example "property_state")
         expected-availability (example-value example "availability")
         expected-explanation (example-value example "explanation")
-        option (some #(when (str/starts-with? (:label %) (str name " version")) %) (:existingOptions observation))]
+        option (some #(when (str/starts-with? (:label %) (str name " version")) %) (:existingOptions observation))
+        production-option (some #(when (= name (:name %)) %) (get-in observation [:production :destinationOptions]))]
     (support/assert! option "Specified schema was not displayed." {:example example})
+    (support/assert! (contains? #{"selectable" "unavailable"} expected-availability)
+                     "Schema availability must use the supported result vocabulary."
+                     {:example example})
+    (support/assert! (= [expected-target expected-property-state (= expected-availability "selectable") expected-explanation]
+                        [(:target production-option) (:propertyState production-option) (:available production-option) (:explanation production-option)])
+                     "Production schema destination option did not match its specification row."
+                     {:example example :production-option production-option})
     (support/assert! (= [(= expected-availability "unavailable") expected-explanation]
                         [(:disabled option) (:explanation option)])
                      "Existing schema compatibility did not match its target and property type."
@@ -46,6 +59,9 @@
         expected-action (example-value example "assignment_action")
         key (if (= state "matching exists") :matching :absent)
         result (get-in observation [:production :destinations key])]
+    (support/assert! (contains? #{"matching exists" "matching absent"} state)
+                     "Assignment state must use the supported matching vocabulary."
+                     {:example example})
     (support/assert! (str/includes? (:review result) "Rule attachment path: page_type")
                      "Existing schema review omitted the rule attachment path." {:result result})
     (support/assert! (str/includes? (:review result) "Product listing version 4 will be created while version 3 remains unchanged")
@@ -58,6 +74,9 @@
   (let [destination (example-value example "schema_destination")
         saved-result (example-value example "saved_result")
         result (if (str/starts-with? destination "new ") (:saved observation) (:existingSaved observation))]
+    (support/assert! (contains? #{"new Signal Shop pageview" "existing Product listing v3"} destination)
+                     "Schema destination must identify a supported reviewed destination."
+                     {:example example})
     (support/assert! (= [true true true]
                         [(:flowClosed result) (:inspectorRestored result) (:focusReturned result)])
                      "Successful schema-destination save did not close, restore, and return focus."
@@ -117,3 +136,7 @@
   (support/assert! (:destinationInitial observation)
                    "Guided schema destination browser boundary was not exercised."
                    {:step text}))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-12T23:04:06.459680131+02:00", :module-hash "1928610543", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1678299692"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line nil, :hash "-1416813660"} {:id "defn-/destination-choice", :kind "defn-", :line 9, :end-line nil, :hash "874551229"} {:id "defn-/new-schema-name", :kind "defn-", :line 18, :end-line nil, :hash "-1054318475"} {:id "defn-/existing-option", :kind "defn-", :line 36, :end-line nil, :hash "163001537"} {:id "defn-/revision-review", :kind "defn-", :line 57, :end-line nil, :hash "-1392843527"} {:id "defn-/successful-save", :kind "defn-", :line 73, :end-line nil, :hash "345128981"} {:id "defn-/failed-save", :kind "defn-", :line 88, :end-line nil, :hash "327703264"} {:id "def/assertions", :kind "def", :line 96, :end-line nil, :hash "1016985838"} {:id "defn/default-assertion", :kind "defn", :line 135, :end-line nil, :hash "2057136094"}]}
+;; clj-mutate-manifest-end

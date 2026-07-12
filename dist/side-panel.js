@@ -34,6 +34,7 @@ import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replac
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, createSchemaLibraryExport, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
+import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -1130,6 +1131,7 @@ function guidedSchemaCandidates() {
             target: assignment.target,
             ...(assignment.domainCondition ? { domainCondition: assignment.domainCondition } : {}),
             ...(assignment.pathnameCondition ? { pathnameCondition: assignment.pathnameCondition } : {}),
+            ...(assignment.pathConditions ? { pathConditions: assignment.pathConditions } : {}),
             ...(assignment.enabled !== undefined ? { enabled: assignment.enabled } : {}),
         })),
     }));
@@ -1187,10 +1189,7 @@ function persistPublishedGuidedValidation(result) {
         ? schemas.find(({ id }) => id === result.destination.previousSchemaId)
         : undefined;
     const matchingAssignment = previousSchema?.assignments.find((candidate) => candidate.enabled !== false
-        && candidate.sourceId === assignment.sourceId
-        && candidate.eventName === assignment.eventName
-        && candidate.target === assignment.target
-        && (candidate.domainCondition ?? assignment.domainCondition) === assignment.domainCondition);
+        && guidedAssignmentsMatch(candidate, assignment));
     const schema = {
         id: result.schema.id,
         name: result.schema.name,
@@ -1202,9 +1201,7 @@ function persistPublishedGuidedValidation(result) {
         attachedRules: [...(previousSchema?.attachedRules ?? []), attachedRule],
         ...(previousSchema ? { revisionHistory: [...(previousSchema.revisionHistory ?? []), previousSchema] } : {}),
     };
-    const nextSchemas = result.destination.kind === "existing"
-        ? [...schemas.filter(({ id }) => id !== schema.id), schema]
-        : [...schemas.filter(({ id }) => id !== schema.id), schema];
+    const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
     let nextRules = reusableSchemaRules;
     if (result.reusableRules[0]) {
         const reusable = result.reusableRules[0];

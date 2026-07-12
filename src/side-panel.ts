@@ -193,7 +193,7 @@ import {
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, createSchemaLibraryExport, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
-import type { GuidedValueType, PublishedGuidedValidation } from "./data-layer-guided-validation.js";
+import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -1366,6 +1366,7 @@ function guidedSchemaCandidates() {
       target:assignment.target,
       ...(assignment.domainCondition ? { domainCondition:assignment.domainCondition } : {}),
       ...(assignment.pathnameCondition ? { pathnameCondition:assignment.pathnameCondition } : {}),
+      ...(assignment.pathConditions ? { pathConditions:assignment.pathConditions } : {}),
       ...(assignment.enabled !== undefined ? { enabled:assignment.enabled } : {}),
     })),
   }));
@@ -1429,10 +1430,7 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
     : undefined;
   const matchingAssignment = previousSchema?.assignments.find((candidate) =>
     candidate.enabled !== false
-    && candidate.sourceId === assignment.sourceId
-    && candidate.eventName === assignment.eventName
-    && candidate.target === assignment.target
-    && (candidate.domainCondition ?? assignment.domainCondition) === assignment.domainCondition);
+    && guidedAssignmentsMatch(candidate, assignment));
   const schema: SchemaDefinition = {
     id:result.schema.id,
     name:result.schema.name,
@@ -1444,9 +1442,7 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
     attachedRules:[...(previousSchema?.attachedRules ?? []), attachedRule],
     ...(previousSchema ? { revisionHistory:[...(previousSchema.revisionHistory ?? []), previousSchema] } : {}),
   };
-  const nextSchemas = result.destination.kind === "existing"
-    ? [...schemas.filter(({ id }) => id !== schema.id), schema]
-    : [...schemas.filter(({ id }) => id !== schema.id), schema];
+  const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
   let nextRules = reusableSchemaRules;
   if (result.reusableRules[0]) {
     const reusable = result.reusableRules[0];

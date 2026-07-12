@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8299fbc4ebacfd27f396236b324184ba8d3993604c67c0b8e518dea07d6da624
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T21:04:44.075732131Z","feature_name":"Data layer guided validation schema destination","feature_path":"features/data-layer-guided-validation-schema-destination.feature","background_hash":"413621b4e90e1f27e4eaa87be83e9b77a08021a3d890c47cefdafd9fcecd96ac","implementation_hash":"sha256:guided-schema-destination-architect-v3","scenarios":[{"index":3,"name":"Data layer guided validation schema destination 004","scenario_hash":"06583949d01ba097c276ee5e225208ebe19661453fb303d7d275f491aeb0002d","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-12T21:04:44.075732131Z"},{"index":4,"name":"Data layer guided validation schema destination 005","scenario_hash":"78b751ff9653c66ce40cb3b36253b3e170482ef85a564d611c5a053cf1b0d300","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-12T21:04:44.075732131Z"},{"index":1,"name":"Data layer guided validation schema destination 002","scenario_hash":"74a67f7b0ad4a8f9b2e15ea3646452d6ffe51da37fcc5106b6fc109cfa9c23fa","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-12T21:03:41.421854829Z"},{"index":2,"name":"Data layer guided validation schema destination 003","scenario_hash":"26fe2ef23004c6112eca14dc77892fcea69b060c8edf1bd8db8e7121acf43978","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-12T21:03:41.421854829Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided validation schema destination
 
   Background:

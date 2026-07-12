@@ -5,6 +5,7 @@ import {
   advanceGuidedValidation,
   compatibleRequirements,
   createGuidedValidationDraft,
+  guidedAssignmentsMatch,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
@@ -111,6 +112,14 @@ assert.deepEqual(schemaDestinationOptions(destinationStage, candidates).map(({ n
   { name:"Numeric page types", available:false, explanation:"page_type expects Number" },
   { name:"Raw pageview", available:false, explanation:"schema validates raw input, not payload" },
 ]);
+assert.equal(guidedAssignmentsMatch(
+  candidates[1].assignments[0],
+  { sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1" },
+), true);
+assert.equal(guidedAssignmentsMatch(
+  candidates[1].assignments[0],
+  { sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/products" },
+), false);
 const existingDestination = setGuidedSchemaDestination(destinationStage, { kind:"existing", schemaId:"schema:listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true });
 const reviewed = advanceGuidedValidation(existingDestination);
 assert.equal(reviewed.stage, "review");

@@ -50,8 +50,18 @@ export interface GuidedSchemaCandidate {
     target: "payload" | "raw input";
     domainCondition?: string;
     pathnameCondition?: string;
+    pathConditions?: readonly GuidedPathCondition[];
     enabled?: boolean;
   }[];
+}
+
+export interface GuidedAssignmentIdentity {
+  sourceId: string;
+  eventName: string;
+  target: "payload" | "raw input";
+  domainCondition?: string;
+  pathnameCondition?: string;
+  pathConditions?: readonly GuidedPathCondition[];
 }
 
 export type GuidedSchemaDestination =
@@ -265,13 +275,46 @@ export function validateNewSchemaName(
   return { valid:true, assistance:`New schema ${name} will be created` };
 }
 
+function samePathConditions(
+  left: readonly GuidedPathCondition[] | undefined,
+  right: readonly GuidedPathCondition[] | undefined,
+): boolean {
+  const leftConditions = left ?? [];
+  const rightConditions = right ?? [];
+  return leftConditions.length === rightConditions.length
+    && leftConditions.every((condition, index) =>
+      condition.matchType === rightConditions[index]?.matchType
+      && condition.expression === rightConditions[index]?.expression);
+}
+
+export function guidedAssignmentsMatch(
+  left: GuidedAssignmentIdentity,
+  right: GuidedAssignmentIdentity,
+): boolean {
+  return left.sourceId === right.sourceId
+    && left.eventName === right.eventName
+    && left.target === right.target
+    && left.domainCondition === right.domainCondition
+    && left.pathnameCondition === right.pathnameCondition
+    && samePathConditions(left.pathConditions, right.pathConditions);
+}
+
+function reviewedAssignment(draft: GuidedValidationDraft): GuidedAssignmentIdentity {
+  return {
+    sourceId:draft.event.sourceId,
+    eventName:draft.event.name,
+    target:draft.advanced.target,
+    ...(draft.scope.kind === "everywhere" ? {} : { domainCondition:draft.scope.domain }),
+    ...(draft.scope.kind === "current-path" ? { pathnameCondition:draft.scope.pathname } : {}),
+    ...(draft.scope.kind === "selected-paths" ? { pathConditions:draft.scope.conditions } : {}),
+  };
+}
+
 function matchingAssignment(draft: GuidedValidationDraft, candidate: GuidedSchemaCandidate): boolean {
+  const reviewed = reviewedAssignment(draft);
   return candidate.assignments?.some((assignment) =>
     assignment.enabled !== false
-    && assignment.sourceId === draft.event.sourceId
-    && assignment.eventName === draft.event.name
-    && assignment.target === draft.advanced.target
-    && (assignment.domainCondition ?? draft.scope.domain) === draft.scope.domain) ?? false;
+    && guidedAssignmentsMatch(assignment, reviewed)) ?? false;
 }
 
 export function schemaDestinationOptions(
