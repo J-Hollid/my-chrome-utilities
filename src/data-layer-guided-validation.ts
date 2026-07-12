@@ -1,3 +1,10 @@
+import {
+  pathConditionResult,
+  pathConditionsResult,
+  type PathCondition,
+  type PathMatchType,
+} from "./data-layer-path-conditions.js";
+
 export type GuidedValidationStage = "property" | "requirement" | "scope" | "review";
 export type GuidedValueType = "String" | "Number" | "Array" | "Object" | "Boolean" | "Null";
 export type GuidedRequirement =
@@ -10,12 +17,11 @@ export type GuidedRequirement =
   | "Allow only these properties"
   | "Must equal this value";
 export type GuidedScopeKind = "domain-all-paths" | "current-path" | "selected-paths" | "everywhere";
-export type GuidedPathMatchType = "Exact path" | "Path pattern" | "Regular expression";
+export type GuidedPathMatchType = PathMatchType;
 
-export interface GuidedPathCondition {
-  matchType: GuidedPathMatchType;
-  expression: string;
-}
+export type GuidedPathCondition = PathCondition;
+
+export { pathConditionResult, pathConditionsResult };
 
 export interface GuidedScope {
   kind: GuidedScopeKind;
@@ -211,41 +217,6 @@ export function validateAllowedValues(values: readonly string[]): { valid: boole
   const duplicate = values.find((value, index) => values.indexOf(value) !== index);
   if (duplicate) return { valid:false, assistance:`Remove or change the duplicate ${duplicate}` };
   return { valid:true, assistance:`${values.length} allowed values` };
-}
-
-function pathnameOf(pathOrUrl: string): string {
-  try { return new URL(pathOrUrl).pathname || "/"; }
-  catch { return pathOrUrl.split(/[?#]/, 1)[0] || "/"; }
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function pathConditionResult(condition: GuidedPathCondition, pathOrUrl: string): { valid: boolean; matches: boolean; error?: string } {
-  const pathname = pathnameOf(pathOrUrl);
-  try {
-    const pattern = condition.matchType === "Exact path"
-      ? new RegExp(`^${escapeRegex(condition.expression)}$`)
-      : condition.matchType === "Path pattern"
-        ? new RegExp(`^${condition.expression.split("*").map(escapeRegex).join(".*")}$`)
-        : new RegExp(condition.expression);
-    return { valid:true, matches:pattern.test(pathname) };
-  } catch (error) {
-    return { valid:false, matches:false, error:error instanceof Error ? error.message : "Invalid regular expression" };
-  }
-}
-
-export function pathConditionsResult(
-  conditions: readonly GuidedPathCondition[],
-  pathOrUrl: string,
-): { valid: boolean; matches: boolean; matchingCondition?: GuidedPathCondition; error?: string } {
-  for (const condition of conditions) {
-    const result = pathConditionResult(condition, pathOrUrl);
-    if (!result.valid) return { valid:false, matches:false, ...(result.error ? { error:result.error } : {}) };
-    if (result.matches) return { valid:true, matches:true, matchingCondition:condition };
-  }
-  return { valid:true, matches:false };
 }
 
 export function setGuidedScope(draft: GuidedValidationDraft, scope: GuidedScope): GuidedValidationDraft {

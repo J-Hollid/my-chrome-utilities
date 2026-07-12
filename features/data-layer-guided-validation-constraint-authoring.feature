@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=41d9b8ed219fb05b0fc56fd3d06b1f48e164f2307731c0190223fadee32f7d37
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T20:14:53.153723699Z","feature_name":"Data layer guided validation constraint authoring","feature_path":"features/data-layer-guided-validation-constraint-authoring.feature","background_hash":"a022b940bcd8743b60b0ccdb5c83d65fb1871758285efdc7bda6c8d38a1edb9c","implementation_hash":"sha256:guided-validation-architect-v3","scenarios":[{"index":1,"name":"Data layer guided validation constraint authoring 002","scenario_hash":"9d2bdc940b4a86c4db8373834bddfc295342a8cc117aadebca6c0c072a2d9362","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-12T20:07:50.057265649Z"},{"index":4,"name":"Data layer guided validation constraint authoring 005","scenario_hash":"fc566495ad9cf5c677adda14da7f0d0a0e0a70c969a5eabddb9f106012cdb088","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-12T20:07:50.057265649Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided validation constraint authoring
 
   Background:

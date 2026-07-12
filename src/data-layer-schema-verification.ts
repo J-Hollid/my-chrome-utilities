@@ -1,4 +1,5 @@
 import type { ValidationState } from "./data-layer-source.js";
+import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; }
@@ -12,7 +13,7 @@ export interface SchemaAssignment {
   priority?: number;
   domainCondition?: string;
   pathnameCondition?: string;
-  pathConditions?: readonly { matchType: "Exact path" | "Path pattern" | "Regular expression"; expression: string }[];
+  pathConditions?: readonly PathCondition[];
   enabled?: boolean;
   versionPolicy?: "pinned" | "follow latest";
 }
@@ -73,13 +74,7 @@ function glob(value: string, pattern: string | undefined): boolean {
 
 function assignmentPathMatches(pathname: string, assignment: SchemaAssignment): boolean {
   if (!assignment.pathConditions?.length) return glob(pathname, assignment.pathnameCondition);
-  return assignment.pathConditions.some(({ matchType, expression }) => {
-    try {
-      if (matchType === "Exact path") return pathname === expression;
-      if (matchType === "Path pattern") return glob(pathname, expression);
-      return new RegExp(expression).test(pathname);
-    } catch { return false; }
-  });
+  return assignment.pathConditions.some((condition) => pathConditionResult(condition, pathname).matches);
 }
 
 export function resolveSchemaAssignment(

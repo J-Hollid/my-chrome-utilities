@@ -1,3 +1,4 @@
+import { pathConditionResult } from "./data-layer-path-conditions.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaId(name, version) { return `schema:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`; }
@@ -59,18 +60,7 @@ function glob(value, pattern) {
 function assignmentPathMatches(pathname, assignment) {
     if (!assignment.pathConditions?.length)
         return glob(pathname, assignment.pathnameCondition);
-    return assignment.pathConditions.some(({ matchType, expression }) => {
-        try {
-            if (matchType === "Exact path")
-                return pathname === expression;
-            if (matchType === "Path pattern")
-                return glob(pathname, expression);
-            return new RegExp(expression).test(pathname);
-        }
-        catch {
-            return false;
-        }
-    });
+    return assignment.pathConditions.some((condition) => pathConditionResult(condition, pathname).matches);
 }
 export function resolveSchemaAssignment(event, pageUrl, schemas) {
     const url = new URL(pageUrl);

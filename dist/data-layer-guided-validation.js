@@ -1,3 +1,5 @@
+import { pathConditionResult, pathConditionsResult, } from "./data-layer-path-conditions.js";
+export { pathConditionResult, pathConditionsResult };
 const requirements = {
     String: ["Must be present", "Must be one of these values", "Must match a pattern", "Must have this length"],
     Number: ["Must be present", "Must be one of these values", "Must be within a range"],
@@ -117,41 +119,6 @@ export function validateAllowedValues(values) {
     if (duplicate)
         return { valid: false, assistance: `Remove or change the duplicate ${duplicate}` };
     return { valid: true, assistance: `${values.length} allowed values` };
-}
-function pathnameOf(pathOrUrl) {
-    try {
-        return new URL(pathOrUrl).pathname || "/";
-    }
-    catch {
-        return pathOrUrl.split(/[?#]/, 1)[0] || "/";
-    }
-}
-function escapeRegex(value) {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-export function pathConditionResult(condition, pathOrUrl) {
-    const pathname = pathnameOf(pathOrUrl);
-    try {
-        const pattern = condition.matchType === "Exact path"
-            ? new RegExp(`^${escapeRegex(condition.expression)}$`)
-            : condition.matchType === "Path pattern"
-                ? new RegExp(`^${condition.expression.split("*").map(escapeRegex).join(".*")}$`)
-                : new RegExp(condition.expression);
-        return { valid: true, matches: pattern.test(pathname) };
-    }
-    catch (error) {
-        return { valid: false, matches: false, error: error instanceof Error ? error.message : "Invalid regular expression" };
-    }
-}
-export function pathConditionsResult(conditions, pathOrUrl) {
-    for (const condition of conditions) {
-        const result = pathConditionResult(condition, pathOrUrl);
-        if (!result.valid)
-            return { valid: false, matches: false, ...(result.error ? { error: result.error } : {}) };
-        if (result.matches)
-            return { valid: true, matches: true, matchingCondition: condition };
-    }
-    return { valid: true, matches: false };
 }
 export function setGuidedScope(draft, scope) {
     return { ...draft, scope: { ...scope, conditions: [...scope.conditions] } };

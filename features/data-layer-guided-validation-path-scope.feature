@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=ec37b2cc6b0790055b922befa7ba02600a2789e3a1af12f78001b84bdfd6fdb7
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T20:15:26.710767479Z","feature_name":"Data layer guided validation path scope","feature_path":"features/data-layer-guided-validation-path-scope.feature","background_hash":"8c9c54ab49f99634678e1ab6f9ee97c7b013d31a9a6d91add240d16702eb057f","implementation_hash":"sha256:guided-validation-architect-v3","scenarios":[{"index":5,"name":"Data layer guided validation path scope 006","scenario_hash":"a98255f87e2b8777aa2413c811a26f8b6091aef5426fd1be4ad2828fa959288f","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-12T20:15:26.710767479Z"},{"index":2,"name":"Data layer guided validation path scope 003","scenario_hash":"86246f8f1504c6a4a9c4abaebd6fd1c3340079e8241e8b8f86f54b04e87d48bc","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-12T20:13:22.522686925Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided validation path scope
 
   Background:

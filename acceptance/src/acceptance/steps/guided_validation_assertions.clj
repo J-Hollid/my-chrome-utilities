@@ -1,5 +1,6 @@
 (ns acceptance.steps.guided-validation-assertions
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.steps.guided-validation-path-assertions :as path]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (defn- example-value [example key]
@@ -108,10 +109,14 @@
 
 (defn- constraint-compatible [example observation]
   (let [type (keyword (example-value example "expected_type"))
-        available (set (get-in observation [:production :requirements type]))]
-    (support/assert! (= [true false]
-                        [(contains? available (example-value example "compatible_requirement"))
-                         (contains? available (example-value example "incompatible_requirement"))])
+        compatible (example-value example "compatible_requirement")
+        incompatible (example-value example "incompatible_requirement")
+        available (set (get-in observation [:production :requirements type]))
+        known-requirements (set (mapcat val (get-in observation [:production :requirements])))]
+    (support/assert! (= [true true false]
+                        [(contains? known-requirements incompatible)
+                         (contains? available compatible)
+                         (contains? available incompatible)])
                      "Requirement compatibility did not match the expected type."
                      {:type type :available available :example example})))
 
@@ -139,7 +144,11 @@
 
 (defn- constraint-assistance [example observation]
   (let [index (get configured-value-index (example-value example "configured_values"))
+        continuation (example-value example "continuation_result")
         result (get-in observation [:production :allowedValues index])]
+    (support/assert! (contains? #{"allowed" "blocked"} continuation)
+                     "Continuation result must use the supported result vocabulary."
+                     {:example example})
     (support/assert! (= [(= "allowed" (example-value example "continuation_result"))
                          (example-value example "input_assistance")]
                         [(:valid result) (:assistance result)])
@@ -236,119 +245,23 @@
              "the same status remains available as visible text"}
            (repeat form-status))))
 
-(def path-case-indices
-  {["Exact path" "/products" "/products"] 0
-   ["Exact path" "/products" "/products/field-notebook"] 1
-   ["Path pattern" "/products/*" "/products/field-notebook"] 2
-   ["Regular expression" "^/products/[a-z-]+$" "/products/field-notebook"] 3
-   ["Regular expression" "^/products/[a-z-]+$" "/shop/products/field-notebook"] 4})
-
-(defn- path-case-index [example]
-  (get path-case-indices
-       [(example-value example "match_type")
-        (example-value example "expression")
-        (example-value example "pathname")]))
-
-(defn- path-scope [_example observation]
-  (support/assert! (= [["This domain on all paths" "Only the current path" "Selected paths or patterns" "Every domain and path"]
-                       "This domain on all paths"]
-                      [(get-in observation [:scope :choices])
-                       (get-in observation [:scope :selected])])
-                   "Guided path scope choices or inferred default are incomplete." {:observation observation}))
-
-(defn- path-builder [_example observation]
-  (support/assert! (= {:explanation "This assignment matches when any condition matches."
-                       :conditionLabel "Path condition 1"
-                       :matchType "Exact path"
-                       :expression "/"
-                       :result "/ is a match"
-                       :remove "Remove condition"
-                       :testButton "Test another path"}
-                      (:pathBuilder observation))
-                   "Rendered path builder did not expose its condition controls and match result." {:observation observation}))
-
-(defn- path-condition [example observation]
-  (let [result (get-in observation [:production :paths (path-case-index example)])]
-    (support/assert! (= (= "match" (example-value example "condition_result")) (:matches result))
-                     "Production path condition result did not match the outline example."
-                     {:example example :result result})))
-
-(defn- path-combined [_example observation]
-  (support/assert! (= {:matchType "Path pattern" :expression "/products/*"}
-                      (get-in observation [:production :combined :matchingCondition]))
-                   "Combined production condition did not identify the matching path pattern."
-                   {:production (:production observation)}))
-
-(defn- path-malformed [_example observation]
-  (support/assert! (= [false true "/products/field-notebook is a match"]
-                      [(get-in observation [:production :malformed :valid])
-                       (boolean (seq (get-in observation [:production :malformed :error])))
-                       (:anotherPath observation)])
-                   "Malformed production regular expression was not blocked with an error."
-                   {:production (:production observation)}))
-
-(defn- path-captured-url [example observation]
-  (let [field-notebook? (str/includes? (example-value example "captured_url") "field-notebook")
-        index (get {false 5 true 6} field-notebook?)
-        result (get-in observation [:production :paths index])]
-    (support/assert! (= (= "match" (example-value example "condition_result")) (:matches result))
-                     "Captured URL was not reduced to its pathname before production matching."
-                     {:example example :result result})))
-
-(defn- path-default [text observation]
-  (support/assert! (:scope observation)
-                   "Guided path browser boundary was not exercised." {:step text}))
-
-(def path-assertions
-  (merge
-   (zipmap #{"event scope is displayed"
-             "the operator can choose This domain on all paths, Only the current path, Selected paths or patterns, or Every domain and path"
-             "This domain on all paths is selected by default"
-             "domain 127.0.0.1, event pageview, captured source, and payload target are prefilled"
-             "the operator is not asked to type any"}
-           (repeat path-scope))
-   (zipmap #{"Selected paths or patterns is chosen"
-             "the path condition builder opens"
-             "the current pathname / is offered as an Exact path condition"
-             "each condition has a match type, expression, match result, and Remove condition action"
-             "Add another path condition adds one separately labelled condition"
-             "the scope states that the assignment matches when any condition matches"}
-           (repeat path-builder))
-   (zipmap #{"one <match_type> condition has expression <expression>"
-             "pathname <pathname> is tested"
-             "pathname <pathname> is a <condition_result> for that condition"}
-           (repeat path-condition))
-   (zipmap #{"path conditions are Exact path / and Path pattern /products/*"
-             "pathname /products/field-notebook is tested"
-             "the combined condition result is match"
-             "the matching Path pattern condition is identified"
-             "the Exact path condition is not required to match"}
-           (repeat path-combined))
-   (zipmap #{"a Regular expression condition is being edited"
-             "its expression is malformed"
-             "the condition identifies the syntax error and cannot be saved"
-             "a valid expression is tested against the current pathname without leaving the form"
-             "Test another path accepts a pathname and reports whether the entire pathname matches"}
-           (repeat path-malformed))
-   (zipmap #{"Exact path condition /products is saved"
-             "captured URL <captured_url> is evaluated"
-             "pathname used for matching is <matched_pathname>"
-             "the saved condition returns <condition_result>"}
-           (repeat path-captured-url))))
-
 (def mode-assertions
   {:creation creation-assertions
    :constraint constraint-assertions
    :form form-assertions
-   :path path-assertions})
+   :path path/assertions})
 
 (def mode-defaults
   {:creation creation-default
    :constraint constraint-default
    :form form-default
-   :path path-default})
+   :path path/default-assertion})
 
 (defn assert-mode! [mode text example observation]
   (if-some [assertion (get (get mode-assertions mode) text)]
     (assertion example observation)
     ((get mode-defaults mode) text observation)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-12T22:14:09.498496812+02:00", :module-hash "-1285962152", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1542510928"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line nil, :hash "-1416813660"} {:id "defn-/creation-opened", :kind "defn-", :line 9, :end-line nil, :hash "-1842595073"} {:id "defn-/creation-retained-event", :kind "defn-", :line 13, :end-line nil, :hash "-2018182932"} {:id "defn-/creation-unpersisted", :kind "defn-", :line 18, :end-line nil, :hash "-146017932"} {:id "defn-/creation-allowed-values", :kind "defn-", :line 22, :end-line nil, :hash "1306662319"} {:id "defn-/creation-scope", :kind "defn-", :line 26, :end-line nil, :hash "934676009"} {:id "defn-/creation-review", :kind "defn-", :line 30, :end-line nil, :hash "-1931822491"} {:id "defn-/creation-back-navigation", :kind "defn-", :line 34, :end-line nil, :hash "-1249086609"} {:id "defn-/creation-saved", :kind "defn-", :line 38, :end-line nil, :hash "-2138797715"} {:id "defn-/creation-routing", :kind "defn-", :line 45, :end-line nil, :hash "-1708489616"} {:id "defn-/creation-readable", :kind "defn-", :line 51, :end-line nil, :hash "1902347083"} {:id "defn-/creation-published", :kind "defn-", :line 56, :end-line nil, :hash "-1888218259"} {:id "defn-/creation-advanced", :kind "defn-", :line 64, :end-line nil, :hash "-614371198"} {:id "defn-/creation-default", :kind "defn-", :line 68, :end-line nil, :hash "-93888679"} {:id "def/creation-assertions", :kind "def", :line 72, :end-line nil, :hash "-1502212244"} {:id "defn-/constraint-detected", :kind "defn-", :line 106, :end-line nil, :hash "1533793337"} {:id "defn-/constraint-compatible", :kind "defn-", :line 110, :end-line nil, :hash "-1565552319"} {:id "defn-/constraint-override", :kind "defn-", :line 123, :end-line nil, :hash "-855273779"} {:id "defn-/constraint-allowed-editor", :kind "defn-", :line 132, :end-line nil, :hash "1864469262"} {:id "def/configured-value-index", :kind "def", :line 139, :end-line nil, :hash "2033476858"} {:id "defn-/constraint-assistance", :kind "defn-", :line 145, :end-line nil, :hash "211937582"} {:id "defn-/constraint-default", :kind "defn-", :line 158, :end-line nil, :hash "508742187"} {:id "def/constraint-assertions", :kind "def", :line 162, :end-line nil, :hash "1805305028"} {:id "defn-/form-hint", :kind "defn-", :line 194, :end-line nil, :hash "656017061"} {:id "defn-/form-errors", :kind "defn-", :line 198, :end-line nil, :hash "138431701"} {:id "defn-/form-navigation", :kind "defn-", :line 208, :end-line nil, :hash "1417270198"} {:id "defn-/form-status", :kind "defn-", :line 216, :end-line nil, :hash "41752371"} {:id "defn-/form-default", :kind "defn-", :line 220, :end-line nil, :hash "-1191677373"} {:id "def/form-assertions", :kind "def", :line 224, :end-line nil, :hash "861397822"} {:id "def/mode-assertions", :kind "def", :line 248, :end-line nil, :hash "461014739"} {:id "def/mode-defaults", :kind "def", :line 254, :end-line nil, :hash "660326755"} {:id "defn/assert-mode!", :kind "defn", :line 260, :end-line nil, :hash "-1887265690"}]}
+;; clj-mutate-manifest-end
