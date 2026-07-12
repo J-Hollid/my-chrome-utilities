@@ -71,6 +71,7 @@ export function resolveSchemaAssignment(event, pageUrl, schemas) {
 }
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
 export function serializeSchemaLibrary(schemas) { return JSON.stringify(schemas); }
+export function serializeSchemaLibraryExport(schemas, rules) { return `${JSON.stringify({ version: 1, schemas, rules }, null, 2)}\n`; }
 export function restoreSchemaLibrary(serialized) {
     if (!serialized)
         return [];
