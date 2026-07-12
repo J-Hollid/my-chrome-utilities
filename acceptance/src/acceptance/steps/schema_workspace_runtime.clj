@@ -6,6 +6,11 @@
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
 
+(defn- export-fixture [example]
+  (let [schemas (support/example-value example "schema_count")
+        rules (support/example-value example "rule_count")]
+    (when (and schemas rules) (str schemas ":" rules))))
+
 (defn- assert-export-preflight! [observation]
   (let [transfer (:transfer observation)
         stored (:before transfer)
@@ -24,8 +29,7 @@
 (defn- browser-workspace! [world example]
   (if (:browser-observation world)
     world
-    (let [fixture (when (and (get example "schema_count") (get example "rule_count"))
-                    (str (get example "schema_count") ":" (get example "rule_count")))
+    (let [fixture (export-fixture example)
           environment (cond-> {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}
                         fixture (assoc "SCHEMA_LIBRARY_EXPORT_FIXTURE" fixture))
           result (process/shell (assoc support/build-shell-options :env environment) "node" "test/side-panel-component-layout-runtime-test.mjs")
@@ -151,7 +155,8 @@
 (defn- transition [world example _captures {:keys [text]}]
   (let [world (if (contains? #{"the rendered Data Layer Schemas workspace is displayed"
                                "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
-                               "shared browser setup observes an export envelope with format version, schema identities, and rule identities"} text)
+                               "shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+                               "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"} text)
                 (assoc (browser-workspace! world example) :schema-workspace-runtime? true)
                 world)]
     (require! world :browser-observation "Schema workspace browser adapter was not executed.")
@@ -336,6 +341,23 @@
                          "Shared export preflight unexpectedly required an export-count example." {})
         world)
 
+    "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"
+    (assoc world :schema-library-export-example {:schemas (count-value example "schema_count") :rules (count-value example "rule_count")})
+
+    "the schema export browser fixture is derived from that example" world
+
+    "shared example lookup resolves schema_count as <schema_count> and rule_count as <rule_count>"
+    (do (support/assert! (= {:schemas (count-value example "schema_count") :rules (count-value example "rule_count")}
+                            (:schema-library-export-example world)) "Example lookup did not preserve schema export counts." {}) world)
+
+    "the browser adapter receives fixture <fixture>"
+    (do (support/assert! (= (source-value example "fixture") (get-in world [:browser-observation :fixture])) "Browser fixture did not match the active example." {}) world)
+
+    "the observed export contains <schema_count> schemas and <rule_count> reusable rules"
+    (do (assert-export-counts! (:browser-observation world) example) world)
+
+    "fixture derivation does not silently fall back to another example's counts" world
+
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
 (def handlers
@@ -344,7 +366,8 @@
            :applies? (fn [world]
                        (or (contains? #{"the rendered Data Layer Schemas workspace is displayed"
                                         "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
-                                        "shared browser setup observes an export envelope with format version, schema identities, and rule identities"} (:text spec))
+                                        "shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+                                        "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"} (:text spec))
                            (:schema-workspace-runtime? world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
