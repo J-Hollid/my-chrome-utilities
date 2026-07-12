@@ -124,8 +124,12 @@ const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const schemaRuleEditor = document.querySelector("#schema-rule-editor");
 const schemaRuleName = document.querySelector("#schema-rule-name");
+const schemaRuleTypes = document.querySelector("#schema-rule-types");
 const schemaRuleOperator = document.querySelector("#schema-rule-operator");
 const schemaRuleParameters = document.querySelector("#schema-rule-parameters");
+const schemaRuleSeverity = document.querySelector("#schema-rule-severity");
+const schemaRuleMessage = document.querySelector("#schema-rule-message");
+const schemaRuleExamples = document.querySelector("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector("#save-schema-rule");
 const schemaRuleList = document.querySelector("#schema-rule-list");
 const schemaRuleCount = document.querySelector("#schema-rule-count");
@@ -216,7 +220,7 @@ let editingSchemaAssignment;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableRules = (() => { try {
     const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]");
-    return Array.isArray(rules) ? rules : [];
+    return Array.isArray(rules) ? rules.filter((rule) => typeof rule?.name === "string" && typeof rule?.operator === "string").map((rule) => ({ id: typeof rule.id === "string" ? rule.id : `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name: rule.name, version: typeof rule.version === "number" ? rule.version : 1, applicableTypes: typeof rule.applicableTypes === "string" ? rule.applicableTypes : "any", operator: rule.operator, parameters: typeof rule.parameters === "string" ? rule.parameters : "", severity: typeof rule.severity === "string" ? rule.severity : "error", message: typeof rule.message === "string" ? rule.message : "", examples: typeof rule.examples === "string" ? rule.examples : "" })) : [];
 }
 catch {
     return [];
@@ -677,10 +681,10 @@ function renderSchemas() {
 }
 function renderSchemaRules() {
     const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
-    const visible = reusableRules.filter((rule) => [rule.name, rule.operator, rule.parameters].some((value) => value.toLowerCase().includes(query)));
+    const visible = reusableRules.filter((rule) => [rule.name, rule.applicableTypes, rule.operator, rule.parameters, rule.severity, rule.message, rule.examples, String(rule.version)].some((value) => value.toLowerCase().includes(query)));
     schemaRuleList?.replaceChildren(...visible.map((rule) => {
         const item = document.createElement("li");
-        item.textContent = `${rule.name} · ${rule.operator}${rule.parameters ? ` · ${rule.parameters}` : ""}`;
+        item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity}${rule.parameters ? ` · ${rule.parameters}` : ""}`;
         return item;
     }));
     if (schemaRuleCount)
@@ -1788,7 +1792,7 @@ saveSchemaRuleButton?.addEventListener("click", () => {
     const name = schemaRuleName?.value.trim() ?? "";
     if (!name)
         return;
-    reusableRules = [...reusableRules, { name, operator: schemaRuleOperator?.value ?? "required", parameters: schemaRuleParameters?.value ?? "" }];
+    reusableRules = [...reusableRules, { id: `rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version: 1, applicableTypes: schemaRuleTypes?.value.trim() || "any", operator: schemaRuleOperator?.value ?? "required", parameters: schemaRuleParameters?.value ?? "", severity: schemaRuleSeverity?.value ?? "error", message: schemaRuleMessage?.value.trim() ?? "", examples: schemaRuleExamples?.value.trim() ?? "" }];
     localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules));
     renderSchemaRules();
     if (schemaRuleEditor)

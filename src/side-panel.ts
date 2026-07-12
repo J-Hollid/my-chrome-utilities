@@ -365,8 +365,12 @@ const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-sche
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
 const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
+const schemaRuleTypes = document.querySelector<HTMLInputElement>("#schema-rule-types");
 const schemaRuleOperator = document.querySelector<HTMLSelectElement>("#schema-rule-operator");
 const schemaRuleParameters = document.querySelector<HTMLInputElement>("#schema-rule-parameters");
+const schemaRuleSeverity = document.querySelector<HTMLSelectElement>("#schema-rule-severity");
+const schemaRuleMessage = document.querySelector<HTMLInputElement>("#schema-rule-message");
+const schemaRuleExamples = document.querySelector<HTMLInputElement>("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector<HTMLButtonElement>("#save-schema-rule");
 const schemaRuleList = document.querySelector<HTMLElement>("#schema-rule-list");
 const schemaRuleCount = document.querySelector<HTMLElement>("#schema-rule-count");
@@ -456,7 +460,8 @@ let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHE
 let schemaDraft: SchemaDefinition | undefined;
 let editingSchemaAssignment: { schemaId: string; assignmentIndex: number } | undefined;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-let reusableRules: { name:string; operator:string; parameters:string }[] = (() => { try { const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]"); return Array.isArray(rules) ? rules : []; } catch { return []; } })();
+type ReusableRule = { id: string; name:string; version:number; applicableTypes:string; operator:string; parameters:string; severity:string; message:string; examples:string };
+let reusableRules: ReusableRule[] = (() => { try { const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]"); return Array.isArray(rules) ? rules.filter((rule): rule is Record<string, unknown> & { name:string; operator:string } => typeof rule?.name === "string" && typeof rule?.operator === "string").map((rule) => ({ id:typeof rule.id === "string" ? rule.id : `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name:rule.name, version:typeof rule.version === "number" ? rule.version : 1, applicableTypes:typeof rule.applicableTypes === "string" ? rule.applicableTypes : "any", operator:rule.operator, parameters:typeof rule.parameters === "string" ? rule.parameters : "", severity:typeof rule.severity === "string" ? rule.severity : "error", message:typeof rule.message === "string" ? rule.message : "", examples:typeof rule.examples === "string" ? rule.examples : "" })) : []; } catch { return []; } })();
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -979,10 +984,10 @@ function renderSchemas(): void {
 
 function renderSchemaRules(): void {
   const query = schemaRuleSearch?.value.trim().toLowerCase() ?? "";
-  const visible = reusableRules.filter((rule) => [rule.name, rule.operator, rule.parameters].some((value) => value.toLowerCase().includes(query)));
+  const visible = reusableRules.filter((rule) => [rule.name, rule.applicableTypes, rule.operator, rule.parameters, rule.severity, rule.message, rule.examples, String(rule.version)].some((value) => value.toLowerCase().includes(query)));
   schemaRuleList?.replaceChildren(...visible.map((rule) => {
     const item = document.createElement("li");
-    item.textContent = `${rule.name} · ${rule.operator}${rule.parameters ? ` · ${rule.parameters}` : ""}`;
+    item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity}${rule.parameters ? ` · ${rule.parameters}` : ""}`;
     return item;
   }));
   if (schemaRuleCount) schemaRuleCount.textContent = `${visible.length} rules`;
@@ -2230,7 +2235,7 @@ createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
 saveSchemaRuleButton?.addEventListener("click", () => {
   const name = schemaRuleName?.value.trim() ?? ""; if (!name) return;
-  reusableRules = [...reusableRules, { name, operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "" }];
+  reusableRules = [...reusableRules, { id:`rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version:1, applicableTypes:schemaRuleTypes?.value.trim() || "any", operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "", severity:schemaRuleSeverity?.value ?? "error", message:schemaRuleMessage?.value.trim() ?? "", examples:schemaRuleExamples?.value.trim() ?? "" }];
   localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules));
   renderSchemaRules(); if (schemaRuleEditor) schemaRuleEditor.hidden = true;
 });
