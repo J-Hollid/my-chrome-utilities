@@ -2150,15 +2150,18 @@ addSchemaRuleButton?.addEventListener("click", () => {
 });
 saveSchemaButton?.addEventListener("click", () => {
   if (!schemaDraft || saveSchemaButton.disabled) return;
+  const draft = schemaDraft;
   if (schemaRevisionReview) { schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); return; }
   confirmSchemaRevisionButton?.click();
 });
 confirmSchemaRevisionButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
+  const draft = schemaDraft;
   const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
-  const saved = { ...schemaDraft, id:`schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
-  schemas = [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
-  if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version 1.`;
+  const existing = schemas.find((schema) => schema.name === draft.name);
+  const saved = existing ? reviseSchema(existing, draft.document) : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
+  schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
+  if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version ${saved.version}.`;
   if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;
 });
 cancelSchemaRevisionButton?.addEventListener("click", () => { if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; });
