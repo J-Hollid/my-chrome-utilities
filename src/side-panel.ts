@@ -487,6 +487,7 @@ let editingSchemaAssignment: { schemaId: string; assignmentIndex: number } | und
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 type ReusableRule = { id: string; name:string; version:number; applicableTypes:string; operator:string; parameters:string; severity:string; message:string; examples:string; enabled:boolean };
 let reusableRules: ReusableRule[] = (() => { try { const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]"); return Array.isArray(rules) ? rules.filter((rule): rule is Record<string, unknown> & { name:string; operator:string } => typeof rule?.name === "string" && typeof rule?.operator === "string").map((rule) => ({ id:typeof rule.id === "string" ? rule.id : `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name:rule.name, version:typeof rule.version === "number" ? rule.version : 1, applicableTypes:typeof rule.applicableTypes === "string" ? rule.applicableTypes : "any", operator:rule.operator, parameters:typeof rule.parameters === "string" ? rule.parameters : "", severity:typeof rule.severity === "string" ? rule.severity : "error", message:typeof rule.message === "string" ? rule.message : "", examples:typeof rule.examples === "string" ? rule.examples : "", enabled:rule.enabled !== false })) : []; } catch { return []; } })();
+let editingReusableRule: ReusableRule | undefined;
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -1025,12 +1026,13 @@ function renderSchemaRules(): void {
   schemaRuleList?.replaceChildren(...visible.map((rule) => {
     const item = document.createElement("li");
     const override = document.createElement("button");
-    const toggle = document.createElement("button"); const remove = document.createElement("button"); const exportRule = document.createElement("button");
+    const edit = document.createElement("button"); const toggle = document.createElement("button"); const remove = document.createElement("button"); const exportRule = document.createElement("button");
     item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity} · ${rule.enabled ? "enabled" : "disabled"}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
     override.type = "button"; override.textContent = "Duplicate override";
     override.addEventListener("click", () => { const version = Math.max(0, ...reusableRules.filter((candidate) => candidate.name === rule.name).map((candidate) => candidate.version)) + 1; const copy = { ...rule, id:`rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`, version }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
-    toggle.type = remove.type = "button"; toggle.textContent = rule.enabled ? "Disable" : "Enable"; remove.textContent = "Delete";
+    edit.type = toggle.type = remove.type = "button"; edit.textContent = "Edit"; toggle.textContent = rule.enabled ? "Disable" : "Enable"; remove.textContent = "Delete";
     exportRule.type = "button"; exportRule.textContent = "Export";
+    edit.addEventListener("click", () => { editingReusableRule = rule; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleTypes) schemaRuleTypes.value = rule.applicableTypes; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters; if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity; if (schemaRuleMessage) schemaRuleMessage.value = rule.message; if (schemaRuleExamples) schemaRuleExamples.value = rule.examples; if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
     toggle.addEventListener("click", () => { reusableRules = reusableRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
     remove.addEventListener("click", () => {
       const pinnedBy = schemas.filter((schema) => schema.ruleAttachments?.some((attachment) => attachment.ruleId === rule.id && attachment.version === rule.version));
@@ -1040,7 +1042,7 @@ function renderSchemaRules(): void {
       localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules();
     });
     exportRule.addEventListener("click", () => { if (schemaResult) schemaResult.textContent = JSON.stringify(rule); });
-    item.append(override, toggle, exportRule, remove);
+    item.append(edit, override, toggle, exportRule, remove);
     return item;
   }));
   if (schemaRuleCount) schemaRuleCount.textContent = `${visible.length} rules`;
@@ -2311,12 +2313,15 @@ schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDra
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
 schemaEditorParent?.addEventListener("input", () => { if (schemaDraft) { const { parentId: _, ...draft } = schemaDraft; schemaDraft = schemaEditorParent.value ? { ...draft, parentId:schemaEditorParent.value } : draft; renderSchemaDraft(); } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
-document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
+document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { editingReusableRule = undefined; if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
 saveSchemaRuleButton?.addEventListener("click", () => {
-  const name = schemaRuleName?.value.trim() ?? ""; if (!name) return;
-  reusableRules = [...reusableRules, { id:`rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version:1, applicableTypes:schemaRuleTypes?.value.trim() || "any", operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "", severity:schemaRuleSeverity?.value ?? "error", message:schemaRuleMessage?.value.trim() ?? "", examples:schemaRuleExamples?.value.trim() ?? "", enabled:true }];
+  const name = schemaRuleName?.value.trim() ?? ""; const operator = schemaRuleOperator?.value ?? "required"; const parameters = schemaRuleParameters?.value.trim() ?? "";
+  const invalid = !name || (operator === "matches-pattern" && (() => { try { new RegExp(parameters, "u"); return false; } catch { return true; } })()) || (operator === "number-range" && (() => { const [parsedMinimum, parsedMaximum] = parameters.split(",").map(Number); const minimum = parsedMinimum ?? Number.NaN; const maximum = parsedMaximum ?? Number.NaN; return !Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum; })()) || ((operator === "allowed-values" || operator === "forbidden-values") && parameters.split(",").every((value) => !value.trim()));
+  if (invalid) { if (schemaResult) schemaResult.textContent = "Invalid rule: provide a name and valid operator parameters."; return; }
+  const version = editingReusableRule ? Math.max(0, ...reusableRules.filter((rule) => rule.name === name).map((rule) => rule.version)) + 1 : 1;
+  reusableRules = [...reusableRules, { id:`rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`, name, version, applicableTypes:schemaRuleTypes?.value.trim() || "any", operator, parameters, severity:schemaRuleSeverity?.value ?? "error", message:schemaRuleMessage?.value.trim() ?? "", examples:schemaRuleExamples?.value.trim() ?? "", enabled:editingReusableRule?.enabled ?? true }];
   localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules));
-  renderSchemaRules(); if (schemaRuleEditor) schemaRuleEditor.hidden = true;
+  editingReusableRule = undefined; renderSchemaRules(); if (schemaRuleEditor) schemaRuleEditor.hidden = true;
 });
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;

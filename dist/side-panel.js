@@ -256,6 +256,7 @@ let reusableRules = (() => { try {
 catch {
     return [];
 } })();
+let editingReusableRule;
 let replaySequences = [];
 let observationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId;
@@ -737,6 +738,7 @@ function renderSchemaRules() {
     schemaRuleList?.replaceChildren(...visible.map((rule) => {
         const item = document.createElement("li");
         const override = document.createElement("button");
+        const edit = document.createElement("button");
         const toggle = document.createElement("button");
         const remove = document.createElement("button");
         const exportRule = document.createElement("button");
@@ -744,11 +746,21 @@ function renderSchemaRules() {
         override.type = "button";
         override.textContent = "Duplicate override";
         override.addEventListener("click", () => { const version = Math.max(0, ...reusableRules.filter((candidate) => candidate.name === rule.name).map((candidate) => candidate.version)) + 1; const copy = { ...rule, id: `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`, version }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
-        toggle.type = remove.type = "button";
+        edit.type = toggle.type = remove.type = "button";
+        edit.textContent = "Edit";
         toggle.textContent = rule.enabled ? "Disable" : "Enable";
         remove.textContent = "Delete";
         exportRule.type = "button";
         exportRule.textContent = "Export";
+        edit.addEventListener("click", () => { editingReusableRule = rule; if (schemaRuleName)
+            schemaRuleName.value = rule.name; if (schemaRuleTypes)
+            schemaRuleTypes.value = rule.applicableTypes; if (schemaRuleOperator)
+            schemaRuleOperator.value = rule.operator; if (schemaRuleParameters)
+            schemaRuleParameters.value = rule.parameters; if (schemaRuleSeverity)
+            schemaRuleSeverity.value = rule.severity; if (schemaRuleMessage)
+            schemaRuleMessage.value = rule.message; if (schemaRuleExamples)
+            schemaRuleExamples.value = rule.examples; if (schemaRuleEditor)
+            schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
         toggle.addEventListener("click", () => { reusableRules = reusableRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: !candidate.enabled } : candidate); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
         remove.addEventListener("click", () => {
             const pinnedBy = schemas.filter((schema) => schema.ruleAttachments?.some((attachment) => attachment.ruleId === rule.id && attachment.version === rule.version));
@@ -765,7 +777,7 @@ function renderSchemaRules() {
         });
         exportRule.addEventListener("click", () => { if (schemaResult)
             schemaResult.textContent = JSON.stringify(rule); });
-        item.append(override, toggle, exportRule, remove);
+        item.append(edit, override, toggle, exportRule, remove);
         return item;
     }));
     if (schemaRuleCount)
@@ -1901,14 +1913,28 @@ schemaEditorParent?.addEventListener("input", () => { if (schemaDraft) {
     renderSchemaDraft();
 } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
-document.querySelector("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor)
+document.querySelector("#create-schema-rule")?.addEventListener("click", () => { editingReusableRule = undefined; if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
 saveSchemaRuleButton?.addEventListener("click", () => {
     const name = schemaRuleName?.value.trim() ?? "";
-    if (!name)
+    const operator = schemaRuleOperator?.value ?? "required";
+    const parameters = schemaRuleParameters?.value.trim() ?? "";
+    const invalid = !name || (operator === "matches-pattern" && (() => { try {
+        new RegExp(parameters, "u");
+        return false;
+    }
+    catch {
+        return true;
+    } })()) || (operator === "number-range" && (() => { const [parsedMinimum, parsedMaximum] = parameters.split(",").map(Number); const minimum = parsedMinimum ?? Number.NaN; const maximum = parsedMaximum ?? Number.NaN; return !Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum > maximum; })()) || ((operator === "allowed-values" || operator === "forbidden-values") && parameters.split(",").every((value) => !value.trim()));
+    if (invalid) {
+        if (schemaResult)
+            schemaResult.textContent = "Invalid rule: provide a name and valid operator parameters.";
         return;
-    reusableRules = [...reusableRules, { id: `rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version: 1, applicableTypes: schemaRuleTypes?.value.trim() || "any", operator: schemaRuleOperator?.value ?? "required", parameters: schemaRuleParameters?.value ?? "", severity: schemaRuleSeverity?.value ?? "error", message: schemaRuleMessage?.value.trim() ?? "", examples: schemaRuleExamples?.value.trim() ?? "", enabled: true }];
+    }
+    const version = editingReusableRule ? Math.max(0, ...reusableRules.filter((rule) => rule.name === name).map((rule) => rule.version)) + 1 : 1;
+    reusableRules = [...reusableRules, { id: `rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`, name, version, applicableTypes: schemaRuleTypes?.value.trim() || "any", operator, parameters, severity: schemaRuleSeverity?.value ?? "error", message: schemaRuleMessage?.value.trim() ?? "", examples: schemaRuleExamples?.value.trim() ?? "", enabled: editingReusableRule?.enabled ?? true }];
     localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules));
+    editingReusableRule = undefined;
     renderSchemaRules();
     if (schemaRuleEditor)
         schemaRuleEditor.hidden = true;
