@@ -209,6 +209,7 @@ const schemaAssignmentRuntime = `(() => {
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
   q("#schema-subview-schemas").click();
+  const schemaMasterVisible = q("#schema-master").getClientRects().length > 0 && !q("#schema-master").hidden;
   input("#schema-search", "");
   for (;;) { const remove = Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Delete"); if (!remove) break; remove.click(); q("#confirm-schema-delete").click(); }
   q("#create-schema").click();
@@ -275,6 +276,7 @@ const schemaAssignmentRuntime = `(() => {
   const latestRule = persistedRules.at(-1);
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
+    schemaMasterVisible,
     actions,
     duplicateCount,
     revisionReview,
@@ -904,6 +906,7 @@ try {
         { selector:"#schema-assignment-policy", required:false },
         { selector:"#schema-assignment-enabled", required:false },
       ],
+      schemaMasterVisible:true,
       actions:["Edit", "Duplicate", "Disable", "Delete"],
       duplicateCount:3,
       revisionReview:{ open:true, summary:"Checkout schema will be saved as version 2; version 1 remains available." },
