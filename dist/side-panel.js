@@ -33,6 +33,7 @@ import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateC
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, createSchemaLibraryExport, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -254,6 +255,7 @@ const schemaOnlyDeclaredProperties = document.querySelector("#schema-only-declar
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
 const schemaResult = document.querySelector("#schema-result");
+const guidedValidationRoot = document.querySelector("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
 let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
@@ -319,6 +321,10 @@ let reusableSchemaRules = (() => { try {
 catch {
     return [];
 } })();
+const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
+    publish: persistPublishedGuidedValidation,
+    close: () => renderLiveObserver(),
+});
 let replaySequences = [];
 let observationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId;
@@ -683,6 +689,19 @@ function openLiveInspector(eventId) {
                 payload: selected.payload,
                 label: "Live event",
             }),
+            createValidation: (selected) => {
+                guidedValidationFlow.open({
+                    id: selected.id,
+                    name: selected.name,
+                    sourceId: selected.sourceId,
+                    pageUrl: selected.pageUrl ?? liveObserverState.pageUrl,
+                    payload: selected.payload && typeof selected.payload === "object" && !Array.isArray(selected.payload)
+                        ? selected.payload
+                        : { value: selected.payload },
+                });
+                if (liveObserverElements.eventInspector)
+                    liveObserverElements.eventInspector.hidden = true;
+            },
             validationAvailable: (selected) => Boolean(validateEvent({
                 sourceId: selected.sourceId,
                 eventName: selected.name,
@@ -1063,6 +1082,87 @@ function openNewSchemaEditor() {
 }
 function persistSchemaLibrary() {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+}
+function guidedType(type) {
+    return type === "String" ? "string"
+        : type === "Number" ? "number"
+            : type === "Boolean" ? "boolean"
+                : type === "Array" ? "array"
+                    : type === "Object" ? "object"
+                        : undefined;
+}
+function guidedPropertyDocument(path, type) {
+    const [name, ...rest] = path.split(".");
+    if (!name)
+        return { type: "object" };
+    const leafType = guidedType(type);
+    const child = rest.length
+        ? guidedPropertyDocument(rest.join("."), type)
+        : leafType ? { type: leafType } : {};
+    return { type: "object", properties: { [name]: child } };
+}
+function persistPublishedGuidedValidation(result) {
+    const rule = result.schema.rules[0];
+    if (!rule)
+        return;
+    const assignment = {
+        id: result.assignment.id,
+        name: `${result.schema.name} automatic`,
+        sourceId: result.assignment.sourceId,
+        eventName: result.assignment.eventName,
+        target: result.assignment.target,
+        priority: result.assignment.priority,
+        versionPolicy: result.assignment.versionPolicy,
+        enabled: true,
+        ...(result.assignment.domainCondition ? { domainCondition: result.assignment.domainCondition } : {}),
+        ...(result.assignment.pathnameCondition ? { pathnameCondition: result.assignment.pathnameCondition } : {}),
+        ...(result.assignment.pathConditions ? { pathConditions: result.assignment.pathConditions } : {}),
+    };
+    const operator = rule.requirement === "Must be one of these values" ? "allowed-values"
+        : rule.requirement === "Must match a pattern" ? "regular-expression"
+            : "required";
+    const parameters = operator === "required"
+        ? rule.path
+        : `${rule.path}:${rule.values.join(",")}`;
+    const attachedRule = {
+        id: rule.reusableRuleId ?? `local-rule:${result.schema.id}:${rule.path}`,
+        name: result.reusableRules[0]?.name ?? `${rule.path} requirement`,
+        version: 1,
+        propertyPath: rule.path,
+        operator,
+        parameters,
+        severity: "error",
+        enabled: true,
+    };
+    const schema = {
+        id: result.schema.id,
+        name: result.schema.name,
+        version: result.schema.version,
+        document: guidedPropertyDocument(rule.path, rule.expectedType),
+        assignments: [assignment],
+        attachedRules: [attachedRule],
+    };
+    schemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
+    if (result.reusableRules[0]) {
+        const reusable = result.reusableRules[0];
+        reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== reusable.id), {
+                id: reusable.id,
+                name: reusable.name,
+                kind: reusable.requirement,
+                version: 1,
+                enabled: true,
+                operator,
+                parameters,
+                severity: "error",
+                attachments: [schema.id],
+            }];
+        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    }
+    persistSchemaLibrary();
+    renderSchemas();
+    renderSchemaWorkflowRows();
+    if (schemaResult)
+        schemaResult.textContent = `Saved validation: ${result.readableRequirement}.`;
 }
 function withSchemaParent(schema, parentSchemaId) {
     const { parentSchemaId: _previousParentSchemaId, ...withoutParent } = schema;

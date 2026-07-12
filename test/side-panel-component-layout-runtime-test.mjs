@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 const schemaWorkspaceAdapterObservations = [];
+let guidedValidationObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -234,6 +235,164 @@ const schemaRuleEditorVisibilityRuntime = `(() => {
     configurationVisible:visible(configuration),
     configurationInsideEditor:q("#schema-rule-editor").contains(configuration),
   };
+})()`;
+
+const guidedValidationRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const visible = (element) => element.getClientRects().length > 0 && !element.hidden;
+  const storedState = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"pageview", page_type:"product_list", count:2 }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  const create = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Create validation from this event");
+  if (!create) throw new Error("Missing Create validation from this event action");
+  const before = {
+    schemas:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length,
+    rules:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length,
+  };
+  create.click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const flow = q("#guided-validation-flow");
+  const initial = {
+    visible:visible(flow),
+    heading:q("#guided-validation-heading").textContent,
+    focused:document.activeElement === q("#guided-validation-heading"),
+    stages:Array.from(q("#guided-validation-stages").children).map((item) => [item.textContent, item.dataset.state]),
+    advancedPrimary:!q("#guided-advanced-settings").open && ["#guided-schemaName", "#guided-ruleName", "#guided-message", "#guided-sourceId", "#guided-target", "#guided-priority"].every((selector) => q("#guided-advanced-settings").contains(q(selector))),
+    persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas && JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length === before.rules,
+  };
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const invalid = {
+    focused:document.activeElement === q("#guided-validation-errors"),
+    link:q("#guided-validation-errors a").textContent,
+  };
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const requirement = {
+    heading:q("#guided-validation-heading").textContent,
+    focused:document.activeElement === q("#guided-validation-heading"),
+    detected:q("#guided-expected-type-hint").textContent,
+    incompatible:Array.from(q("#guided-requirement").options).some((option) => option.textContent === "Must be within a range"),
+    oldControls:["#schema-rule-kind", "#schema-rule-types", "#schema-rule-operator"].some((selector) => flow.contains(document.querySelector(selector))),
+  };
+  q("#guided-requirement").value = "Must be one of these values";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Add another value").click();
+  q("#guided-allowed-value-2").value = "homepage";
+  q("#guided-allowed-value-2").focus();
+  q("#guided-allowed-value-2").dispatchEvent(new Event("input", { bubbles:true }));
+  const values = {
+    labels:Array.from(q("#guided-allowed-values").querySelectorAll("label")).map((label) => label.textContent),
+    assistance:q("#guided-validation-status").textContent,
+    focusRetained:document.activeElement === q("#guided-allowed-value-2"),
+    statusRole:q("#guided-validation-status").getAttribute("role"),
+    removeActions:Array.from(q("#guided-allowed-values").querySelectorAll("button")).filter((button) => button.textContent === "Remove value").length,
+  };
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const scope = {
+    heading:q("#guided-validation-heading").textContent,
+    selected:flow.querySelector('input[name="guided-scope"]:checked').parentElement.textContent.trim(),
+    choices:Array.from(flow.querySelectorAll('input[name="guided-scope"]')).map((input) => input.parentElement.textContent.trim()),
+    prefill:flow.querySelector("p").textContent,
+  };
+  flow.querySelector('input[name="guided-scope"][value="selected-paths"]').click();
+  const pathBuilder = {
+    explanation:q("#guided-path-conditions p").textContent,
+    conditionLabel:q('#guided-path-conditions [aria-label="Path condition 1"]').getAttribute("aria-label"),
+    matchType:q("#guided-path-type-0").value,
+    expression:q("#guided-path-expression-0").value,
+    result:q('#guided-path-conditions [aria-label="Path condition 1"] output').textContent,
+    remove:q('#guided-path-conditions [aria-label="Path condition 1"] button').textContent,
+    testButton:Array.from(q("#guided-path-conditions").querySelectorAll("button")).find((button) => button.textContent === "Test another path").textContent,
+  };
+  q("#guided-path-type-0").value = "Path pattern";
+  q("#guided-path-type-0").dispatchEvent(new Event("change", { bubbles:true }));
+  q("#guided-path-expression-0").value = "/products/*";
+  q("#guided-path-expression-0").dispatchEvent(new Event("change", { bubbles:true }));
+  q("#guided-test-path").value = "/products/field-notebook";
+  q("#guided-test-path").dispatchEvent(new Event("input", { bubbles:true }));
+  Array.from(q("#guided-path-conditions").querySelectorAll("button")).find((button) => button.textContent === "Test another path").click();
+  const anotherPath = q("#guided-test-path-result").textContent;
+  q("#guided-path-type-0").value = "Regular expression";
+  q("#guided-path-type-0").dispatchEvent(new Event("change", { bubbles:true }));
+  q("#guided-path-expression-0").value = "[";
+  q("#guided-path-expression-0").dispatchEvent(new Event("change", { bubbles:true }));
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Add another path condition").click();
+  q("#guided-path-type-1").value = "Regular expression";
+  q("#guided-path-type-1").dispatchEvent(new Event("change", { bubbles:true }));
+  q("#guided-path-expression-1").value = "(";
+  q("#guided-path-expression-1").dispatchEvent(new Event("change", { bubbles:true }));
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const multipleInvalid = {
+    focused:document.activeElement === q("#guided-validation-errors"),
+    links:Array.from(q("#guided-validation-errors").querySelectorAll("a")).map((link) => [link.textContent, link.getAttribute("href")]),
+    inline:Array.from(flow.querySelectorAll("[data-inline-error]")).map((error) => error.textContent),
+    described:Array.from(flow.querySelectorAll('[aria-invalid="true"]')).map((field) => field.getAttribute("aria-describedby")),
+  };
+  flow.querySelector('input[name="guided-scope"][value="domain-all-paths"]').click();
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const reviewBeforeBack = q("#guided-validation-review").textContent;
+  const reviewStages = Array.from(q("#guided-validation-stages").children).map((item) => [item.textContent, item.dataset.state]);
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Back").click();
+  const retainedScope = flow.querySelector('input[name="guided-scope"]:checked').value;
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  q("#guided-advanced-settings summary").click();
+  const advanced = {
+    schema:q("#guided-schemaName").value,
+    rule:q("#guided-ruleName").value,
+    source:q("#guided-sourceId").value,
+    target:q("#guided-target").value,
+    defaults:q("#guided-advanced-settings").querySelector(":scope > p").textContent,
+  };
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Save validation").click();
+  const storedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const storedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const saved = {
+    schemas:storedSchemas.length - before.schemas,
+    reusableRules:storedRules.length - before.rules,
+    localRules:storedSchemas.at(-1).attachedRules.length,
+    assignment:storedSchemas.at(-1).assignments[0],
+    status:q("#guided-validation-status").textContent,
+  };
+  q("#guided-publish-rule").checked = true;
+  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Save validation").click();
+  const reusableSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const published = {
+    label:q("#guided-publish-rule").parentElement.textContent.trim(),
+    reusableRules:reusableRules.length - before.rules,
+    attachedRuleId:reusableSchemas.at(-1).attachedRules[0].id,
+    reusableRuleId:reusableRules.at(-1).id,
+  };
+  const core = await import("/data-layer-guided-validation.js");
+  const productionDraft = core.selectGuidedProperty(core.createGuidedValidationDraft({ id:"event:pageview", name:"pageview", sourceId:"event-history", pageUrl:"http://127.0.0.1:4173/", payload:{ page_type:"product_list" } }), "page_type");
+  const overridden = core.setExpectedType(core.setGuidedRequirement(productionDraft, "Must match a pattern"), "Number");
+  const production = {
+    requirements:Object.fromEntries(["String", "Number", "Array", "Object", "Boolean"].map((type) => [type, core.compatibleRequirements(type)])),
+    allowedValues:[[], ["homepage", "homepage"], ["product_list", ""], ["product_list", "homepage"]].map((values) => core.validateAllowedValues(values)),
+    paths:[
+      ["Exact path", "/products", "/products"],
+      ["Exact path", "/products", "/products/field-notebook"],
+      ["Path pattern", "/products/*", "/products/field-notebook"],
+      ["Regular expression", "^/products/[a-z-]+$", "/products/field-notebook"],
+      ["Regular expression", "^/products/[a-z-]+$", "/shop/products/field-notebook"],
+      ["Exact path", "/products", "https://127.0.0.1/products?sort=price#details"],
+      ["Exact path", "/products", "https://127.0.0.1/products/field-notebook?x=1"],
+    ].map(([matchType, expression, pathname]) => core.pathConditionResult({ matchType, expression }, pathname)),
+    combined:core.pathConditionsResult([{ matchType:"Exact path", expression:"/" }, { matchType:"Path pattern", expression:"/products/*" }], "/products/field-notebook"),
+    malformed:core.pathConditionResult({ matchType:"Regular expression", expression:"[" }, "/"),
+    override:{ typeSource:overridden.property.typeSource, currentEventPasses:overridden.preview.currentEventPasses, message:overridden.preview.message, correctionRequired:overridden.requirementCorrectionRequired },
+  };
+  localStorage.clear();
+  for (const [key, value] of Object.entries(storedState)) localStorage.setItem(key, value);
+  return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, reviewBeforeBack, reviewStages, retainedScope, advanced, saved, published, production };
 })()`;
 
 const schemaAssignmentRuntime = `(() => {
@@ -942,6 +1101,61 @@ try {
       configurationInsideEditor:true,
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
+    if (width === 720) {
+      guidedValidationObservation = await evaluate(socket, guidedValidationRuntime);
+      const { production, ...renderedGuidedValidation } = guidedValidationObservation;
+      assert.deepEqual(renderedGuidedValidation, {
+        initial:{
+          visible:true,
+          heading:"Choose properties",
+          focused:true,
+          stages:[["Choose properties","current"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Review validation","upcoming"]],
+          advancedPrimary:true,
+          persistedUnchanged:true,
+        },
+        invalid:{ focused:true, link:"Select at least one property" },
+        requirement:{ heading:"Define requirement", focused:true, detected:"String — detected from this event", incompatible:false, oldControls:false },
+        values:{ labels:["Allowed value 1","Allowed value 2"], assistance:"2 allowed values", focusRetained:true, statusRole:"status", removeActions:2 },
+        scope:{ heading:"Choose event scope", selected:"This domain on all paths", choices:["This domain on all paths", "Only the current path", "Selected paths or patterns", "Every domain and path"], prefill:"Domain 127.0.0.1; event pageview; source event-history; target payload." },
+        pathBuilder:{ explanation:"This assignment matches when any condition matches.", conditionLabel:"Path condition 1", matchType:"Exact path", expression:"/", result:"/ is a match", remove:"Remove condition", testButton:"Test another path" },
+        anotherPath:"/products/field-notebook is a match",
+        multipleInvalid:{ focused:true, links:[["Path condition 1: correct the regular expression: Invalid regular expression: /[/: Unterminated character class","#guided-path-expression-0"],["Path condition 2: correct the regular expression: Invalid regular expression: /(/: Unterminated group","#guided-path-expression-1"]], inline:["Path condition 1: correct the regular expression: Invalid regular expression: /[/: Unterminated character class","Path condition 2: correct the regular expression: Invalid regular expression: /(/: Unterminated group"], described:["guided-path-expression-0-hint guided-path-expression-0-error","guided-path-expression-1-hint guided-path-expression-1-error"] },
+        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String.",
+        reviewStages:[["Choose properties","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
+        retainedScope:"domain-all-paths",
+        advanced:{ schema:"pageview validation", rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
+        saved:{ schemas:1, reusableRules:0, localRules:1, assignment:{ id:"assignment:schema:pageview-validation:pageview", name:"pageview validation automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, status:"Saved page_type must be product_list or homepage." },
+        published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement" },
+      }, "Guided validation browser flow violated its rendered production contract");
+      assert.deepEqual(production, {
+        requirements:{
+          String:["Must be present", "Must be one of these values", "Must match a pattern", "Must have this length"],
+          Number:["Must be present", "Must be one of these values", "Must be within a range"],
+          Array:["Must be present", "Must contain this many items"],
+          Object:["Must be present", "Allow only these properties"],
+          Boolean:["Must be present", "Must equal this value"],
+        },
+        allowedValues:[
+          { valid:false, assistance:"Add at least one allowed value" },
+          { valid:false, assistance:"Remove or change the duplicate homepage" },
+          { valid:false, assistance:"Enter a value or remove the blank item" },
+          { valid:true, assistance:"2 allowed values" },
+        ],
+        paths:[
+          { valid:true, matches:true },
+          { valid:true, matches:false },
+          { valid:true, matches:true },
+          { valid:true, matches:true },
+          { valid:true, matches:false },
+          { valid:true, matches:true },
+          { valid:true, matches:false },
+        ],
+        combined:{ valid:true, matches:true, matchingCondition:{ matchType:"Path pattern", expression:"/products/*" } },
+        malformed:{ valid:false, matches:false, error:production.malformed.error },
+        override:{ typeSource:"explicit override", currentEventPasses:false, message:"page_type was observed as String but Number is expected.", correctionRequired:true },
+      }, "Guided validation production matchers violated their browser-loaded contract");
+      await reloadPanel(socket);
+    }
     assert.deepEqual(await evaluate(socket, openLibraryRuntime), {
       selected:"true",
       panelHidden:false,
@@ -1206,6 +1420,9 @@ try {
   }
   if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaWorkspace:schemaWorkspaceAdapterObservations.at(-1) }));
+  }
+  if (process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ guidedValidation:guidedValidationObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

@@ -7,6 +7,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.event-library-editor :as event-library-editor]
+            [acceptance.steps.guided-validation :as guided-validation]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -43,6 +44,7 @@
                data-layer-timeline/handlers
                timeline-presentations/handlers
                event-library-editor/handlers
+               guided-validation/handlers
                hotkey-keymap/handlers
                workspace-editor/handlers
                saved-sessions/handlers

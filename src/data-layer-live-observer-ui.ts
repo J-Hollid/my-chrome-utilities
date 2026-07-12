@@ -203,6 +203,7 @@ export function renderLiveInspector(
     "Copy payload": async () => actionHandlers.copyPayload(event),
     "Save to Library": async () => actionHandlers.saveToLibrary(event),
     ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
+    ...(actionHandlers.createValidation ? { "Create validation from this event": async () => actionHandlers.createValidation?.(event) } : {}),
     Validate: async () => actionHandlers.validate(event),
   } as const;
   for (const [label, callback] of Object.entries(actionCallbacks)) {

@@ -26,6 +26,7 @@ export function createLiveInspectorActions(effects) {
             effects.onTemplateSaved?.(template);
         },
         ...(effects.createSchema ? { createSchema(event) { effects.createSchema?.(event); } } : {}),
+        ...(effects.createValidation ? { createValidation(event) { effects.createValidation?.(event); } } : {}),
         validationAvailability(event) {
             return effects.validationAvailable?.(event) === false
                 ? { enabled: false, reason: "Select a schema to validate" }
