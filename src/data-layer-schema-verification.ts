@@ -1,7 +1,7 @@
 import type { ValidationState } from "./data-layer-source.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface AttachedSchemaRule { id: string; version: number; operator?: string; parameters?: string; enabled?: boolean; }
+export interface AttachedSchemaRule { id: string; version: number; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; }
 export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; attachedRules?: readonly AttachedSchemaRule[]; parentSchemaId?: string; inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">>; revisionHistory?: readonly SchemaDefinition[]; }
 export interface SchemaAssignment {
   sourceId: string;
