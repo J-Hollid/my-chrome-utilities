@@ -185,6 +185,7 @@ const cancelTemplateRenameReviewButton = document.querySelector("#cancel-templat
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
 const exportSchemaButton = document.querySelector("#export-schema");
+const recheckSchemaValidationButton = document.querySelector("#recheck-schema-validation");
 const schemaEditorParent = document.querySelector("#schema-editor-parent");
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
@@ -672,7 +673,8 @@ function renderSchemas() {
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
             const remove = document.createElement("button");
-            item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+            const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
+            item.textContent = `${schema.name} v${schema.version}${parent ? ` inherits ${parent.name} v${parent.version}` : ""}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
             revise.type = duplicate.type = remove.type = "button";
             revise.textContent = "Edit as new version";
             duplicate.textContent = "Duplicate";
@@ -754,6 +756,27 @@ function renderSchemaWorkflowRows() {
     schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => Object.assign(document.createElement("li"), { textContent: `${rule.name} · ${rule.kind}` })));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
     schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => Object.assign(document.createElement("li"), { textContent: `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}` })));
+}
+function recheckCapturedSchemaValidation() {
+    const events = liveObserverState.events;
+    if (!events.length) {
+        if (schemaResult)
+            schemaResult.textContent = "No captured events are available to recheck.";
+        return;
+    }
+    let checked = 0;
+    liveObserverState = {
+        ...liveObserverState,
+        events: events.map((event) => {
+            const validation = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
+            if (validation.state !== "Not checked")
+                checked += 1;
+            return { ...event, validation: validation.state };
+        }),
+    };
+    renderLiveObserver();
+    if (schemaResult)
+        schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -1826,6 +1849,7 @@ catch (error) {
 } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult)
     schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
+recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
 addNewButton?.addEventListener("click", openNewEventEditor);
 exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
 importEventLibraryButton?.addEventListener("click", () => eventLibraryFile?.click());
