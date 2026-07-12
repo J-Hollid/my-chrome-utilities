@@ -362,10 +362,15 @@ const schemaLibraryTransferRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   q("#data-layer-view-schemas").click();
   const originalClick = HTMLAnchorElement.prototype.click;
+  const originalCreateObjectURL = URL.createObjectURL;
   let downloadName = "";
+  let exportedBlob;
+  URL.createObjectURL = function (blob) { exportedBlob = blob; return originalCreateObjectURL.call(this, blob); };
   HTMLAnchorElement.prototype.click = function () { downloadName = this.download; };
   q("#export-schema").click();
   HTMLAnchorElement.prototype.click = originalClick;
+  URL.createObjectURL = originalCreateObjectURL;
+  const exported = JSON.parse(await exportedBlob.text());
   const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const rules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const file = new File([JSON.stringify({ version:1, schemas, rules })], "schema-library-v1.json", { type:"application/json" });
@@ -373,11 +378,15 @@ const schemaLibraryTransferRuntime = `(async () => {
   Object.defineProperty(input, "files", { configurable:true, value:[file] });
   input.dispatchEvent(new Event("change", { bubbles:true }));
   await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#replace-schema-library").click();
+  const reloaded = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   return {
     downloadName,
+    content:{ version:exported.version, schemas:exported.schemas.length, rules:exported.rules.length },
     result:q("#schema-result").textContent,
     review:q("#schema-import-review").open,
     actions:Array.from(q("#schema-import-review").querySelectorAll("button")).map((button) => button.textContent),
+    reloadedSchemas:reloaded.length,
   };
 })()`;
 
@@ -1057,9 +1066,11 @@ try {
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.deepEqual(schemaLibraryTransfer, {
         downloadName:"schema-library-v1.json",
-        result:"Exported 1 schemas and 3 rules.",
-        review:true,
+        content:{ version:1, schemas:1, rules:3 },
+        result:"Schema Library replaced.",
+        review:false,
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
+        reloadedSchemas:1,
       }, "Schema Library export/import controls did not drive the production transfer flow");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
