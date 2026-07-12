@@ -127,6 +127,7 @@ const schemaCloseReview = document.querySelector("#schema-close-review");
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
+const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
@@ -695,6 +696,8 @@ function renderSchemaDraft() {
         schemaEditor.hidden = !draft;
     if (closeSchemaEditorButton)
         closeSchemaEditorButton.hidden = !draft;
+    if (saveAndCloseSchemaButton)
+        saveAndCloseSchemaButton.hidden = !draft;
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = Boolean(draft);
     if (!draft)
@@ -1733,6 +1736,7 @@ closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
     schemaCloseReview.hidden = false;
     schemaCloseReview.showModal();
 } });
+saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
