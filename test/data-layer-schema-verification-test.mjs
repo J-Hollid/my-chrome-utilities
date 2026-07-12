@@ -26,5 +26,9 @@ const ruleFailure = validateEvent({ sourceId:"history", eventName:"rule_test", p
 assert.equal(ruleFailure.state, "1 issues"); assert.deepEqual(ruleFailure.issues[0], { instancePath:"", message:"Use a known page type", expected:"product, checkout", actual:"other", schemaName:"Pinned rule", schemaVersion:1, schemaLocation:"#/ruleAttachments/rule%3Apage-type%3A2@2", severity:"warning" });
 assert.equal(validateEvent({ sourceId:"history", eventName:"rule_test", payload:"checkout", rawInput:null }, [ruleSchema], undefined, [pinnedRule]).state, "Valid");
 assert.equal(validateEvent({ sourceId:"history", eventName:"rule_test", payload:"checkout", rawInput:null }, [ruleSchema]).issues[0].message, "Pinned rule unavailable");
+const requiredRule = { id:"rule:present:1", version:1, name:"Present value", applicableTypes:"any", operator:"required", parameters:"", message:"A value is required" };
+const requiredSchema = { ...assignSchema(createSchema("Required rule", 1, {}), { sourceId:"history", eventName:"required_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:requiredRule.id, version:requiredRule.version }] };
+assert.equal(validateEvent({ sourceId:"history", eventName:"required_rule_test", payload:null, rawInput:null }, [requiredSchema], undefined, [requiredRule]).issues[0].message, "A value is required");
+assert.equal(validateEvent({ sourceId:"history", eventName:"required_rule_test", payload:"present", rawInput:null }, [requiredSchema], undefined, [requiredRule]).state, "Valid");
 const inheritedRuleSchema = { ...assignSchema(createSchema("Inherited rule", 1, { type:"string" }), { sourceId:"history", eventName:"inherited_rule_test", target:"payload" }), parentId:ruleSchema.id };
 assert.equal(validateEvent({ sourceId:"history", eventName:"inherited_rule_test", payload:"other", rawInput:null }, [ruleSchema, inheritedRuleSchema], undefined, [pinnedRule]).state, "1 issues");
