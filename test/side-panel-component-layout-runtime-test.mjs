@@ -1127,9 +1127,9 @@ try {
       await reloadPanel(socket);
       schemaReload = await evaluate(socket, `(() => {
         document.querySelector("#data-layer-view-schemas").click();
-        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
+        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length, storedRules:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length };
       })()`);
-      assert.deepEqual(schemaReload, { stored:schemaLibraryTransfer.before.schemas.length, rendered:schemaLibraryTransfer.before.schemas.length }, "Schema Library did not survive a browser reload");
+      assert.deepEqual(schemaReload, { stored:schemaLibraryTransfer.before.schemas.length, rendered:schemaLibraryTransfer.before.schemas.length, storedRules:schemaLibraryTransfer.before.rules.length }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
       assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
