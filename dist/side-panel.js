@@ -1978,7 +1978,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     const revision = pendingSchemaRevision;
     if (!revision)
         return;
-    schemas = [...schemas.filter((schema) => schema.name !== revision.name || schema.version !== revision.version - 1), revision];
+    schemas = [...schemas, revision];
     schemaHistory[revision.name] = [...new Set([...(schemaHistory[revision.name] ?? []), revision.version - 1, revision.version])].sort((left, right) => left - right);
     pendingSchemaRevision = undefined;
     persistSchemaLibrary();
