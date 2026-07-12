@@ -252,7 +252,6 @@
 
     "rendered setup has created exactly those schema and rule identities before export"
     (do (assert-export-counts! (:browser-observation world) example) world)
-
     "the complete Schema Library is exported and its downloaded JSON is inspected"
     (require! world :schema-library-export-example "Schema Library export example is unavailable.")
 
@@ -269,7 +268,6 @@
     (do (support/assert! (= 1 (get-in world [:browser-observation :transfer :content :version]))
                          "Schema Library export envelope metadata is invalid." {:observation (:browser-observation world)})
         world)
-
     "runtime verification derives its expected counts from this example instead of requiring a fixed library seed" world
 
     "that export replaces the Schema Library and the panel reloads" world
