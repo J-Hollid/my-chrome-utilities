@@ -1938,7 +1938,10 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
 });
 importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized)
     return; try {
-    schemas = [...schemas, importSchema(serialized)];
+    const imported = importSchema(serialized);
+    if (!globalThis.confirm(`Append imported schema ${imported.name} version ${imported.version}?`))
+        return;
+    schemas = [...schemas, imported];
     persistSchemaLibrary();
     renderSchemas();
 }

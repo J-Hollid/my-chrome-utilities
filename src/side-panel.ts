@@ -2326,7 +2326,7 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
   editingSchemaAssignment = undefined; persistSchemaLibrary(); renderSchemas();
   if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
-importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); if (!globalThis.confirm(`Append imported schema ${imported.name} version ${imported.version}?`)) return; schemas = [...schemas, imported]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
 addNewButton?.addEventListener("click", openNewEventEditor);
