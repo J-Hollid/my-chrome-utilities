@@ -1866,7 +1866,9 @@ saveSchemaRuleButton?.addEventListener("click", () => {
 addSchemaRuleButton?.addEventListener("click", () => {
     if (!schemaDraft)
         return;
-    schemaDraft = { ...schemaDraft, document: { ...schemaDraft.document, properties: { ...schemaDraft.document.properties, example: { type: "string" } } } };
+    const latestRule = reusableRules.filter((rule) => rule.enabled).sort((left, right) => right.version - left.version)[0];
+    const { ruleAttachments: _, ...draft } = schemaDraft;
+    schemaDraft = latestRule ? { ...draft, document: { ...draft.document, properties: { ...draft.document.properties, example: { type: "string" } } }, ruleAttachments: [...(schemaDraft.ruleAttachments ?? []), { ruleId: latestRule.id, version: latestRule.version }] } : { ...draft, document: { ...draft.document, properties: { ...draft.document.properties, example: { type: "string" } } } };
     renderSchemaDraft();
 });
 saveSchemaButton?.addEventListener("click", () => {
