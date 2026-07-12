@@ -1031,7 +1031,13 @@ function renderSchemaRules(): void {
     toggle.type = remove.type = "button"; toggle.textContent = rule.enabled ? "Disable" : "Enable"; remove.textContent = "Delete";
     exportRule.type = "button"; exportRule.textContent = "Export";
     toggle.addEventListener("click", () => { reusableRules = reusableRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
-    remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${rule.name}?`)) return; reusableRules = reusableRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
+    remove.addEventListener("click", () => {
+      const pinnedBy = schemas.filter((schema) => schema.ruleAttachments?.some((attachment) => attachment.ruleId === rule.id && attachment.version === rule.version));
+      if (pinnedBy.length > 0) { if (schemaResult) schemaResult.textContent = `Cannot delete ${rule.name} v${rule.version}; pinned by ${pinnedBy.map((schema) => `${schema.name} v${schema.version}`).join(", ")}.`; return; }
+      if (!globalThis.confirm(`Delete ${rule.name}?`)) return;
+      reusableRules = reusableRules.filter((candidate) => candidate.id !== rule.id);
+      localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules();
+    });
     exportRule.addEventListener("click", () => { if (schemaResult) schemaResult.textContent = JSON.stringify(rule); });
     item.append(override, toggle, exportRule, remove);
     return item;

@@ -242,6 +242,12 @@ const schemaAssignmentRuntime = `(() => {
   updatePinnedRules.click();
   const ruleUpdateReview = { open:q("#schema-revision-review").open, summary:q("#schema-revision-review-summary").textContent };
   q("#confirm-schema-revision").click();
+  q("#schema-subview-rules").click();
+  const updatedRuleRow = Array.from(q("#schema-rule-list").querySelectorAll("li")).find((row) => row.textContent.startsWith("Known page types v2"));
+  const deletePinnedRule = updatedRuleRow && Array.from(updatedRuleRow.querySelectorAll("button")).find((button) => button.textContent === "Delete");
+  if (!deletePinnedRule) throw new Error("Missing attached rule delete action");
+  deletePinnedRule.click();
+  const attachedRuleDelete = q("#schema-result").textContent;
   q("#schema-subview-assignments").click();
   q("#create-schema-assignment").click();
   input("#schema-assignment-source", "event-history");
@@ -289,6 +295,7 @@ const schemaAssignmentRuntime = `(() => {
     pinnedAttachments,
     pinnedSchema:persistedSchemas.find((schema) => schema.name === "Pinned attachment schema").ruleAttachments,
     ruleUpdateReview,
+    attachedRuleDelete,
   };
 })()`;
 
@@ -917,6 +924,7 @@ try {
       pinnedAttachments:"Pinned rules: Known page types v1",
       pinnedSchema:[{ ruleId:"rule:known-page-types:2", version:2 }],
       ruleUpdateReview:{ open:true, summary:"Pinned attachment schema will be saved as version 2 with updated pinned rules." },
+      attachedRuleDelete:"Cannot delete Known page types v2; pinned by Pinned attachment schema v2.",
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
   }
