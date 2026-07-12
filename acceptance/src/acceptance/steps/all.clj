@@ -18,6 +18,7 @@
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
             [acceptance.steps.schema-verification :as schema-verification]
+            [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
@@ -46,6 +47,7 @@
                workspace-editor/handlers
                saved-sessions/handlers
                schema-verification/handlers
+               schema-workspace-runtime/handlers
                session-boundaries/handlers
                sequence-replay/handlers
                operator-interface/priority-handlers
