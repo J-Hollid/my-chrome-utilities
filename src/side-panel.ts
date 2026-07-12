@@ -367,6 +367,8 @@ const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-ed
 const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema");
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
+const schemaRuleAttachment = document.querySelector<HTMLSelectElement>("#schema-rule-attachment");
+const schemaAttachedRules = document.querySelector<HTMLElement>("#schema-attached-rules");
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
 const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
@@ -1133,6 +1135,13 @@ function renderSchemaDraft(): void {
     schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"No parent" }), ...schemas.filter((schema) => schema.id !== draft.id).map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} version ${schema.version}` })));
     schemaEditorParent.value = draft.parentId ?? "";
   }
+  const attachments = draft.ruleAttachments ?? [];
+  if (schemaRuleAttachment) {
+    const attached = new Set(attachments.map((attachment) => `${attachment.ruleId}@${attachment.version}`));
+    const available = reusableRules.filter((rule) => rule.enabled || attached.has(`${rule.id}@${rule.version}`)).sort((left, right) => left.name.localeCompare(right.name) || right.version - left.version);
+    schemaRuleAttachment.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"No reusable rule selected" }), ...available.map((rule) => Object.assign(document.createElement("option"), { value:`${rule.id}@${rule.version}`, textContent:`${rule.name} v${rule.version}` })));
+  }
+  if (schemaAttachedRules) schemaAttachedRules.textContent = attachments.length === 0 ? "No pinned reusable rules" : `Pinned rules: ${attachments.map((attachment) => `${reusableRules.find((rule) => rule.id === attachment.ruleId && rule.version === attachment.version)?.name ?? attachment.ruleId} v${attachment.version}`).join(", ")}`;
   const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length);
   const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
   if (saveSchemaButton) saveSchemaButton.disabled = !ready;
@@ -2284,9 +2293,9 @@ saveSchemaRuleButton?.addEventListener("click", () => {
 });
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
-  const latestRule = reusableRules.filter((rule) => rule.enabled).sort((left, right) => right.version - left.version)[0];
-  const { ruleAttachments: _, ...draft } = schemaDraft;
-  schemaDraft = latestRule ? { ...draft, document:{ ...draft.document, properties:{ ...draft.document.properties, example:{ type:"string" } } }, ruleAttachments:[...(schemaDraft.ruleAttachments ?? []), { ruleId:latestRule.id, version:latestRule.version }] } : { ...draft, document:{ ...draft.document, properties:{ ...draft.document.properties, example:{ type:"string" } } } };
+  const selectedRule = reusableRules.find((rule) => `${rule.id}@${rule.version}` === schemaRuleAttachment?.value);
+  const attachments = schemaDraft.ruleAttachments ?? [];
+  schemaDraft = { ...schemaDraft, document:{ ...schemaDraft.document, properties:{ ...schemaDraft.document.properties, example:{ type:"string" } } }, ...(selectedRule && !attachments.some((attachment) => attachment.ruleId === selectedRule.id && attachment.version === selectedRule.version) ? { ruleAttachments:[...attachments, { ruleId:selectedRule.id, version:selectedRule.version }] } : {}) };
   renderSchemaDraft();
 });
 saveSchemaButton?.addEventListener("click", () => {
