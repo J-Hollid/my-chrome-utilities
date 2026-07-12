@@ -155,6 +155,19 @@ const schemaRuleUpgradeReview = document.querySelector("#schema-rule-upgrade-rev
 const schemaRuleUpgradeReviewSummary = document.querySelector("#schema-rule-upgrade-review-summary");
 const confirmSchemaRuleUpgradeButton = document.querySelector("#confirm-schema-rule-upgrade");
 const cancelSchemaRuleUpgradeButton = document.querySelector("#cancel-schema-rule-upgrade");
+const schemaRuleRevisionReview = document.createElement("dialog");
+schemaRuleRevisionReview.id = "schema-rule-revision-review";
+const schemaRuleRevisionReviewSummary = document.createElement("output");
+schemaRuleRevisionReviewSummary.id = "schema-rule-revision-review-summary";
+const confirmSchemaRuleRevisionButton = document.createElement("button");
+confirmSchemaRuleRevisionButton.id = "confirm-schema-rule-revision-review";
+confirmSchemaRuleRevisionButton.type = "button";
+confirmSchemaRuleRevisionButton.textContent = "Save rule revision";
+const cancelSchemaRuleRevisionButton = document.createElement("button");
+cancelSchemaRuleRevisionButton.type = "button";
+cancelSchemaRuleRevisionButton.textContent = "Cancel";
+schemaRuleRevisionReview.append(Object.assign(document.createElement("h4"), { textContent: "Review rule revision" }), schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton);
+document.body.append(schemaRuleRevisionReview);
 const exportSchemaRulesButton = document.querySelector("#export-schema-rules");
 const schemaRuleDeleteReview = document.querySelector("#schema-rule-delete-review");
 const schemaRuleDeleteReviewSummary = document.querySelector("#schema-rule-delete-review-summary");
@@ -271,6 +284,8 @@ let pendingSchemaDeletion;
 let editingSchemaAssignment;
 let editingReusableSchemaRuleId;
 let pendingReusableSchemaRuleDeletionId;
+let approvedRuleRevisionId;
+let approvedRuleAttachmentUpdateId;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides = (() => { try {
     const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
@@ -2237,15 +2252,47 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemaRuleEditor.hidden = true; });
 saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata)
     return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory: rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity: pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message: pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
+saveSchemaRuleButton?.addEventListener("click", (event) => {
+    const previous = reusableSchemaRules.find((rule) => rule.id === editingReusableSchemaRuleId);
+    if (!previous)
+        return;
+    if (updateSchemaRuleAttachments?.checked && approvedRuleAttachmentUpdateId !== previous.id) {
+        event.stopImmediatePropagation();
+        if (schemaRuleUpgradeReviewSummary)
+            schemaRuleUpgradeReviewSummary.textContent = `Confirm updating pinned attachments for ${previous.name} v${previous.version ?? 1}.`;
+        if (schemaRuleUpgradeReview && !schemaRuleUpgradeReview.open) {
+            schemaRuleUpgradeReview.hidden = false;
+            schemaRuleUpgradeReview.showModal();
+        }
+        return;
+    }
+    if (approvedRuleRevisionId === previous.id) {
+        approvedRuleRevisionId = undefined;
+        return;
+    }
+    event.stopImmediatePropagation();
+    const nextName = schemaRuleName?.value.trim() || previous.name;
+    const nextParameters = schemaRuleParameters?.value.trim() ?? previous.parameters ?? "";
+    schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}.`;
+    schemaRuleRevisionReview.showModal();
+}, true);
+confirmSchemaRuleRevisionButton.addEventListener("click", () => {
+    if (!editingReusableSchemaRuleId)
+        return;
+    approvedRuleRevisionId = editingReusableSchemaRuleId;
+    schemaRuleRevisionReview.close();
+    saveSchemaRuleButton?.click();
+});
+cancelSchemaRuleRevisionButton.addEventListener("click", () => schemaRuleRevisionReview.close());
 schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
-updateSchemaRuleAttachments?.addEventListener("change", () => { if (updateSchemaRuleAttachments.checked && schemaRuleUpgradeReview) {
+updateSchemaRuleAttachments?.addEventListener("change", () => { approvedRuleAttachmentUpdateId = undefined; if (updateSchemaRuleAttachments.checked && schemaRuleUpgradeReview) {
     const affected = Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => { const schema = schemas.find((candidate) => candidate.id === option.value); const pinned = schema?.attachedRules?.find((rule) => rule.id === editingReusableSchemaRuleId)?.version; return `${option.textContent}${pinned ? ` (pinned v${pinned})` : " (new attachment)"}`; });
     if (schemaRuleUpgradeReviewSummary)
         schemaRuleUpgradeReviewSummary.textContent = affected.length ? `Saving will update: ${affected.join(", ")}.` : "Saving will remove this rule from all selected schema attachments.";
     schemaRuleUpgradeReview.hidden = false;
     schemaRuleUpgradeReview.showModal();
 } });
-confirmSchemaRuleUpgradeButton?.addEventListener("click", () => { if (schemaRuleUpgradeReview?.open)
+confirmSchemaRuleUpgradeButton?.addEventListener("click", () => { approvedRuleAttachmentUpdateId = editingReusableSchemaRuleId; if (schemaRuleUpgradeReview?.open)
     schemaRuleUpgradeReview.close(); if (schemaRuleUpgradeReview)
     schemaRuleUpgradeReview.hidden = true; });
 cancelSchemaRuleUpgradeButton?.addEventListener("click", () => { if (updateSchemaRuleAttachments)
