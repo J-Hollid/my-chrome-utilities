@@ -17,6 +17,8 @@ export function schemaInheritanceError(schema, schemas) {
     if (schema.parentSchemaId === schema.id)
         return "A schema cannot inherit from itself";
     const parents = new Map(schemas.map((item) => [item.id, item.parentSchemaId]));
+    if (!parents.has(schema.parentSchemaId))
+        return "The selected parent schema does not exist";
     let current = schema.parentSchemaId;
     while (current) {
         if (current === schema.id)

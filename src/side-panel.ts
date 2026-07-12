@@ -189,7 +189,7 @@ import {
   replaceImportedTemplates,
 } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaDefinition } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -426,6 +426,7 @@ const cancelTemplateRenameReviewButton = document.querySelector<HTMLButtonElemen
 const createSchemaButton = document.querySelector<HTMLButtonElement>("#create-schema");
 const importSchemaButton = document.querySelector<HTMLButtonElement>("#import-schema");
 const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-schema");
+const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
@@ -979,9 +980,13 @@ function renderSchemas(): void {
     const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
     item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
     revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
-    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = [...schemas.filter(({ id }) => id !== schema.id), next]; persistSchemaLibrary(); renderSchemas(); });
+    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = schemas.map((candidate) => candidate.id === schema.id ? next : candidate.parentSchemaId === schema.id ? { ...candidate, parentSchemaId:next.id } : candidate); persistSchemaLibrary(); renderSchemas(); });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
-    remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); }); item.append(revise, duplicate, remove); return item;
+    remove.addEventListener("click", () => {
+      const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
+      if (children.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return; }
+      schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`;
+    }); item.append(revise, duplicate, remove); return item;
   }));
 }
 
@@ -1002,8 +1007,16 @@ function renderSchemaDraft(): void {
   if (!draft) return;
   if (schemaEditorName) schemaEditorName.value = draft.name;
   if (schemaEditorTarget) schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
-  const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length);
-  const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
+  const existing = schemas.find((schema) => schema.name === draft.name);
+  const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
+  if (schemaEditorParent) {
+    const parents = schemas.filter((schema) => schema.id !== candidate.id);
+    schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"No parent" }), ...parents.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` })));
+    schemaEditorParent.value = draft.parentSchemaId ?? "";
+  }
+  const inheritanceError = schemaInheritanceError(candidate, [...schemas.filter((schema) => schema.id !== candidate.id), candidate]);
+  const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
+  const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one validation rule" : inheritanceError ?? "Ready to save";
   if (saveSchemaButton) saveSchemaButton.disabled = !ready;
   if (saveSchemaReason) saveSchemaReason.textContent = reason;
 }
@@ -1015,6 +1028,11 @@ function openNewSchemaEditor(): void {
 
 function persistSchemaLibrary(): void {
   localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+}
+
+function withSchemaParent(schema: SchemaDefinition, parentSchemaId: string | undefined): SchemaDefinition {
+  const { parentSchemaId: _previousParentSchemaId, ...withoutParent } = schema;
+  return parentSchemaId ? { ...withoutParent, parentSchemaId } : withoutParent;
 }
 
 function renderSchemaWorkflowRows(): void {
@@ -2143,6 +2161,7 @@ schemaSearch?.addEventListener("input", renderSchemas);
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls") as "schema-master" | "schema-rule-library" | "schema-assignments")));
 schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, name: schemaEditorName.value }; renderSchemaDraft(); } });
 schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
+schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) { schemaDraft = withSchemaParent(schemaDraft, schemaEditorParent.value || undefined); renderSchemaDraft(); } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
@@ -2160,8 +2179,11 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
   const draft = schemaDraft;
   const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
   const existing = schemas.find((schema) => schema.name === draft.name);
-  const saved = existing ? reviseSchema(existing, draft.document) : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
-  schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
+  const candidate = { ...draft, id:existing?.id ?? createSchema(draft.name, 1, draft.document).id };
+  const inheritanceError = schemaInheritanceError(candidate, [...schemas.filter((schema) => schema.id !== candidate.id), candidate]);
+  if (inheritanceError) { if (schemaResult) schemaResult.textContent = inheritanceError; return; }
+  const saved = existing ? withSchemaParent(reviseSchema(existing, draft.document), draft.parentSchemaId) : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
+  schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema.parentSchemaId === existing.id ? { ...schema, parentSchemaId:saved.id } : schema) : [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
   if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version ${saved.version}.`;
   if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;
 });
@@ -2181,7 +2203,7 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
   schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, { sourceId, eventName, target, id:`assignment:${candidate.id}:${eventName}`, name:`${candidate.name} automatic`, priority, ...(domainCondition ? { domainCondition } : {}), ...(pathnameCondition ? { pathnameCondition } : {}), versionPolicy:schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled:schemaAssignmentEnabled?.checked ?? true }] } : candidate);
   persistSchemaLibrary(); renderSchemas(); renderSchemaWorkflowRows(); if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
-importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { schemas = [...schemas, importSchema(serialized)]; persistSchemaLibrary(); renderSchemas(); } catch { if (schemaResult) schemaResult.textContent = "Schema import must contain valid JSON."; } });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported]; const inheritanceError = schemaInheritanceError(imported, candidates); if (inheritanceError) throw new Error(inheritanceError); schemas = candidates; persistSchemaLibrary(); renderSchemas(); if (schemaResult) schemaResult.textContent = `Imported ${imported.name} v${imported.version}.`; } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 
 addNewButton?.addEventListener("click", openNewEventEditor);

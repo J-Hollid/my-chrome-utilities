@@ -37,7 +37,9 @@ export function duplicateSchema(schema: SchemaDefinition, name: string): SchemaD
 export function schemaInheritanceError(schema: SchemaDefinition, schemas: readonly SchemaDefinition[]): string | undefined {
   if (!schema.parentSchemaId) return undefined;
   if (schema.parentSchemaId === schema.id) return "A schema cannot inherit from itself";
-  const parents = new Map<string, string | undefined>(schemas.map((item) => [item.id, item.parentSchemaId])); let current: string | undefined = schema.parentSchemaId;
+  const parents = new Map<string, string | undefined>(schemas.map((item) => [item.id, item.parentSchemaId]));
+  if (!parents.has(schema.parentSchemaId)) return "The selected parent schema does not exist";
+  let current: string | undefined = schema.parentSchemaId;
   while (current) { if (current === schema.id) return "Schema inheritance cannot contain a cycle"; current = parents.get(current); }
   return undefined;
 }
