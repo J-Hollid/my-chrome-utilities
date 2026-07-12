@@ -482,8 +482,8 @@ const SCHEMA_HISTORY_STORAGE_KEY = "my-chrome-utilities.schema-history.v1";
 let schemaHistory: Record<string, number[]> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_HISTORY_STORAGE_KEY) ?? "{}"); return saved && typeof saved === "object" ? saved as Record<string, number[]> : {}; } catch { return {}; } })();
 let editingSchemaAssignment: { schemaId: string; assignmentIndex: number } | undefined;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-type ReusableRule = { id: string; name:string; version:number; applicableTypes:string; operator:string; parameters:string; severity:string; message:string; examples:string };
-let reusableRules: ReusableRule[] = (() => { try { const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]"); return Array.isArray(rules) ? rules.filter((rule): rule is Record<string, unknown> & { name:string; operator:string } => typeof rule?.name === "string" && typeof rule?.operator === "string").map((rule) => ({ id:typeof rule.id === "string" ? rule.id : `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name:rule.name, version:typeof rule.version === "number" ? rule.version : 1, applicableTypes:typeof rule.applicableTypes === "string" ? rule.applicableTypes : "any", operator:rule.operator, parameters:typeof rule.parameters === "string" ? rule.parameters : "", severity:typeof rule.severity === "string" ? rule.severity : "error", message:typeof rule.message === "string" ? rule.message : "", examples:typeof rule.examples === "string" ? rule.examples : "" })) : []; } catch { return []; } })();
+type ReusableRule = { id: string; name:string; version:number; applicableTypes:string; operator:string; parameters:string; severity:string; message:string; examples:string; enabled:boolean };
+let reusableRules: ReusableRule[] = (() => { try { const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]"); return Array.isArray(rules) ? rules.filter((rule): rule is Record<string, unknown> & { name:string; operator:string } => typeof rule?.name === "string" && typeof rule?.operator === "string").map((rule) => ({ id:typeof rule.id === "string" ? rule.id : `rule:${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name:rule.name, version:typeof rule.version === "number" ? rule.version : 1, applicableTypes:typeof rule.applicableTypes === "string" ? rule.applicableTypes : "any", operator:rule.operator, parameters:typeof rule.parameters === "string" ? rule.parameters : "", severity:typeof rule.severity === "string" ? rule.severity : "error", message:typeof rule.message === "string" ? rule.message : "", examples:typeof rule.examples === "string" ? rule.examples : "", enabled:rule.enabled !== false })) : []; } catch { return []; } })();
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -1010,10 +1010,14 @@ function renderSchemaRules(): void {
   schemaRuleList?.replaceChildren(...visible.map((rule) => {
     const item = document.createElement("li");
     const override = document.createElement("button");
-    item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
+    const toggle = document.createElement("button"); const remove = document.createElement("button");
+    item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity} · ${rule.enabled ? "enabled" : "disabled"}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
     override.type = "button"; override.textContent = "Duplicate override";
     override.addEventListener("click", () => { const copy = { ...rule, id:`${rule.id}:override:${reusableRules.length + 1}`, name:`${rule.name} override`, version:1 }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
-    item.append(override);
+    toggle.type = remove.type = "button"; toggle.textContent = rule.enabled ? "Disable" : "Enable"; remove.textContent = "Delete";
+    toggle.addEventListener("click", () => { reusableRules = reusableRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
+    remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${rule.name}?`)) return; reusableRules = reusableRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
+    item.append(override, toggle, remove);
     return item;
   }));
   if (schemaRuleCount) schemaRuleCount.textContent = `${visible.length} rules`;
@@ -2272,7 +2276,7 @@ createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 document.querySelector<HTMLButtonElement>("#create-schema-rule")?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus(); });
 saveSchemaRuleButton?.addEventListener("click", () => {
   const name = schemaRuleName?.value.trim() ?? ""; if (!name) return;
-  reusableRules = [...reusableRules, { id:`rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version:1, applicableTypes:schemaRuleTypes?.value.trim() || "any", operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "", severity:schemaRuleSeverity?.value ?? "error", message:schemaRuleMessage?.value.trim() ?? "", examples:schemaRuleExamples?.value.trim() ?? "" }];
+  reusableRules = [...reusableRules, { id:`rule:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, name, version:1, applicableTypes:schemaRuleTypes?.value.trim() || "any", operator:schemaRuleOperator?.value ?? "required", parameters:schemaRuleParameters?.value ?? "", severity:schemaRuleSeverity?.value ?? "error", message:schemaRuleMessage?.value.trim() ?? "", examples:schemaRuleExamples?.value.trim() ?? "", enabled:true }];
   localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules));
   renderSchemaRules(); if (schemaRuleEditor) schemaRuleEditor.hidden = true;
 });
