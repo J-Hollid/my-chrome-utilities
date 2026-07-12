@@ -1126,6 +1126,8 @@ function guidedSchemaCandidates() {
         target: schema.assignments[0]?.target ?? "payload",
         propertyTypes: guidedDocumentTypes(schema.document),
         assignments: schema.assignments.map((assignment) => ({
+            ...(assignment.id ? { id: assignment.id } : {}),
+            ...(assignment.name ? { name: assignment.name } : {}),
             sourceId: assignment.sourceId,
             eventName: assignment.eventName,
             target: assignment.target,

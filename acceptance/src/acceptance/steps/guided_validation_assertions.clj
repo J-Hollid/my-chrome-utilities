@@ -239,6 +239,7 @@
              "entered values and completed stages are retained"}
            (repeat form-errors))
    (zipmap #{"the operator moves through property, requirement, scope, schema destination, and review stages"
+             "the operator moves through property, schema destination, requirement, scope, and review stages"
              "the current stage and completed stages are exposed visually and programmatically"
              "stage headings describe the current task"
              "Back returns to the previous stage with its state preserved"

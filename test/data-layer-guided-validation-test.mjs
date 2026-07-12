@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   addAllowedValue,
+  applyGuidedSchemaCandidate,
   advanceGuidedValidation,
   compatibleRequirements,
   createGuidedValidationDraft,
@@ -9,6 +10,7 @@ import {
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
+  resolveGuidedPrefillReplacement,
   selectGuidedProperty,
   setAllowedValue,
   setExpectedType,
@@ -45,6 +47,7 @@ assert.deepEqual(selected.property, {
   expectedType:"String",
   typeSource:"detected from this event",
 });
+assert.equal(advanceGuidedValidation(selected).stage, "destination");
 assert.deepEqual(compatibleRequirements("String"), [
   "Must be present",
   "Must be one of these values",
@@ -94,7 +97,7 @@ const scoped = setGuidedScope(twoValues, {
     { matchType:"Path pattern", expression:"/products/*" },
   ],
 });
-const destinationStage = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(scoped)));
+const destinationStage = advanceGuidedValidation(selected);
 assert.equal(destinationStage.stage, "destination");
 assert.equal(destinationStage.destination, undefined);
 assert.deepEqual(validateNewSchemaName("", ["Existing pageview"]), { valid:false, assistance:"Enter a name for the new schema" });
@@ -106,6 +109,75 @@ const candidates = [
   { id:"schema:numeric:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
   { id:"schema:raw:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
 ];
+
+const schemaWithOneAssignment = {
+  id:"schema:generic:4",
+  name:"Generic pageview",
+  version:4,
+  target:"payload",
+  propertyTypes:{ page_type:"String" },
+  assignments:[{
+    id:"assignment:generic-shop",
+    name:"Generic shop pages",
+    sourceId:"event-history",
+    eventName:"pageview",
+    target:"payload",
+    domainCondition:"shop.example",
+    pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }],
+    enabled:true,
+  }],
+};
+const schemaPrefilled = applyGuidedSchemaCandidate(
+  { ...selected, stage:"destination" },
+  schemaWithOneAssignment,
+);
+assert.equal(schemaPrefilled.assignmentResolution.selection, "the compatible assignment");
+assert.equal(schemaPrefilled.property.expectedType, "String");
+assert.equal(schemaPrefilled.advanced.target, "payload");
+assert.equal(schemaPrefilled.advanced.sourceId, "event-history");
+assert.equal(schemaPrefilled.event.name, "pageview");
+assert.equal(schemaPrefilled.scope.domain, "shop.example");
+assert.deepEqual(schemaPrefilled.scope.conditions, [{ matchType:"Path pattern", expression:"/products/*" }]);
+assert.equal(schemaPrefilled.prefillSources.expectedType, "Generic pageview version 4");
+assert.equal(schemaPrefilled.prefillSources.domain, "Generic shop pages assignment");
+assert.equal(advanceGuidedValidation(schemaPrefilled).stage, "requirement");
+
+const withoutCompatibleAssignment = applyGuidedSchemaCandidate(
+  { ...selected, stage:"destination" },
+  { ...schemaWithOneAssignment, assignments:[] },
+);
+assert.equal(withoutCompatibleAssignment.assignmentResolution.selection, "Create a new assignment");
+assert.equal(withoutCompatibleAssignment.scope.domain, "127.0.0.1");
+
+const withTwoCompatibleAssignments = applyGuidedSchemaCandidate(
+  { ...selected, stage:"destination" },
+  {
+    ...schemaWithOneAssignment,
+    assignments:[
+      schemaWithOneAssignment.assignments[0],
+      { ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-home", name:"Generic home", domainCondition:"home.example" },
+    ],
+  },
+);
+assert.equal(withTwoCompatibleAssignments.assignmentResolution.selection, "required from readable assignment choices");
+assert.equal(withTwoCompatibleAssignments.scope.domain, "127.0.0.1");
+
+const operatorScoped = setGuidedScope(schemaPrefilled, {
+  ...schemaPrefilled.scope,
+  domain:"operator.example",
+});
+const replacementProposed = applyGuidedSchemaCandidate(operatorScoped, {
+  ...schemaWithOneAssignment,
+  id:"schema:generic:5",
+  version:5,
+  assignments:[{ ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-new", name:"Generic replacement", domainCondition:"replacement.example" }],
+});
+assert.equal(replacementProposed.scope.domain, "operator.example");
+assert.deepEqual(replacementProposed.prefillReplacementReview?.map(({ field, currentValue, proposedValue }) => ({ field, currentValue, proposedValue })), [
+  { field:"domain", currentValue:"operator.example", proposedValue:"replacement.example" },
+]);
+assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "keep").scope.domain, "operator.example");
+assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "accept").scope.domain, "replacement.example");
 assert.deepEqual(schemaDestinationOptions(destinationStage, candidates).map(({ name, available, explanation }) => ({ name, available, explanation })), [
   { name:"Generic pageview", available:true, explanation:"page_type will be added" },
   { name:"Product listing", available:true, explanation:"page_type accepts String rules" },
@@ -120,8 +192,8 @@ assert.equal(guidedAssignmentsMatch(
   candidates[1].assignments[0],
   { sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/products" },
 ), false);
-const existingDestination = setGuidedSchemaDestination(destinationStage, { kind:"existing", schemaId:"schema:listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true });
-const reviewed = advanceGuidedValidation(existingDestination);
+const existingDestination = setGuidedSchemaDestination({ ...scoped, stage:"destination" }, { kind:"existing", schemaId:"schema:listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true });
+const reviewed = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(existingDestination)));
 assert.equal(reviewed.stage, "review");
 assert.equal(reviewed.property.path, "page_type");
 assert.match(reviewed.review, /pageview on 127\.0\.0\.1 requires page_type to be product_list or homepage/);

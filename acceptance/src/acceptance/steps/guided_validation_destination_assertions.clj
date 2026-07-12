@@ -93,9 +93,59 @@
                    "Failed persistence did not preserve the review and storage state."
                    {:observation observation}))
 
+(defn- schema-prefill [_example observation]
+  (support/assert! (= [{:expectedType "String"
+                        :expectedTypeSource "String — Generic pageview version 4"
+                        :target "payload"}
+                       {:domain "shop.example"
+                        :domainSource "Generic shop pages assignment"
+                        :eventName "pageview"
+                        :eventNameSource "Generic shop pages assignment"
+                        :source "event-history"
+                        :sourceSource "Generic shop pages assignment"
+                        :pathCondition "/products/*"}]
+                      [(:schemaPrefillRequirement observation) (:schemaPrefillScope observation)])
+                   "Schema and compatible-assignment values were not prefilled with readable provenance."
+                   {:observation observation}))
+
+(defn- assignment-resolution [example observation]
+  (let [count (parse-long (example-value example "compatible_assignment_count"))
+        expected-selection (example-value example "assignment_selection")
+        expected-scope (example-value example "scope_behavior")
+        result (some #(when (= count (:count %)) %) (get-in observation [:production :assignmentResolutions]))
+        scope-correct (case expected-scope
+                        "use captured event values as editable defaults"
+                        (and (= "127.0.0.1" (:domain result)) (empty? (:pathConditions result)))
+
+                        "prefill its domain and path conditions"
+                        (and (= "shop.example" (:domain result)) (seq (:pathConditions result)))
+
+                        "do not prefill scope before the operator chooses"
+                        (and (= "127.0.0.1" (:domain result)) (empty? (:pathConditions result)))
+
+                        false)]
+    (support/assert! (= [expected-selection true] [(:selection result) (boolean scope-correct)])
+                     "Compatible-assignment cardinality produced the wrong selection or scope behavior."
+                     {:example example :result result})))
+
+(defn- replacement-review [_example observation]
+  (support/assert! (= [["Keep current values" "Accept schema-derived values"]
+                       "Current values kept."
+                       "Schema-derived values accepted."
+                       true]
+                      [(get-in observation [:replacementReview :actions])
+                       (:keptStatus observation)
+                       (:acceptedStatus observation)
+                       (every? #(str/includes? % "would be replaced by")
+                               (get-in observation [:replacementReview :items]))])
+                   "Edited schema-derived values were overwritten without an explicit replacement review."
+                   {:observation observation}))
+
 (def assertions
   (steps/step-assertions
-   #{"the schema destination stage is displayed"
+   #{"property selection continues"
+     "the schema destination stage is displayed before requirement and scope"
+     "the schema destination stage is displayed"
      "the operator can choose Create a new schema or Add to an existing schema"
      "no schema destination is selected without operator input"
      "persistence remains unchanged before a destination is reviewed"}
@@ -111,7 +161,9 @@
      "schema <schema_name> has availability <availability>"
      "its compatibility explanation is <explanation>"}
    existing-option
-   #{"existing schema Product listing version 3 is selected"
+   #{"the destination targets existing Product listing version 3"
+     "the draft defines an allowed-values rule for page_type"
+     "existing schema Product listing version 3 is selected"
      "matching assignment state is <assignment_state>"
      "the validation review is displayed"
      "it identifies page_type as the rule attachment path"
@@ -130,7 +182,27 @@
      "the review remains open with the entered draft intact"
      "a specific error explains how to recover"
      "no partial schema, rule, assignment, or revision is persisted"}
-   failed-save))
+   failed-save
+   #{"the destination choice has accepted Generic pageview version 4"
+     "it has one enabled assignment compatible with the captured event"
+     "the requirement stage is displayed"
+     "page_type expected type is prefilled from Generic pageview version 4"
+     "validation target is prefilled from the schema"
+     "event source, event name, domain, and path conditions are prefilled from the compatible assignment"
+     "every prefilled value identifies Generic pageview version 4 or its assignment as its source"
+     "the operator can change each prefilled value before review"}
+   schema-prefill
+   #{"the selected destination has <compatible_assignment_count> compatible assignments"
+     "assignment resolution runs"
+     "assignment selection is <assignment_selection>"
+     "scope behavior is <scope_behavior>"}
+   assignment-resolution
+   #{"the operator has changed a schema-derived scope value"
+     "a different schema destination or assignment is selected"
+     "the changed value is not silently overwritten"
+     "a review identifies each value that would be replaced"
+     "the operator can keep current values or accept the new schema-derived values"}
+   replacement-review))
 
 (defn default-assertion [text observation]
   (support/assert! (:destinationInitial observation)

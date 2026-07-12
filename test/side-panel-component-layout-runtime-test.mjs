@@ -276,6 +276,21 @@ const guidedValidationRuntime = `(async () => {
   };
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const destinationInitial = {
+    heading:q("#guided-validation-heading").textContent,
+    choices:Array.from(flow.querySelectorAll('input[name="guided-schema-destination"]')).map((input) => input.parentElement.textContent.trim()),
+    selected:flow.querySelector('input[name="guided-schema-destination"]:checked')?.value ?? null,
+    persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas,
+  };
+  flow.querySelector('input[name="guided-schema-destination"][value="new"]').click();
+  const blankNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  q("#guided-new-schema-name").value = "Existing pageview";
+  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
+  const duplicateNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  q("#guided-new-schema-name").value = "Signal Shop pageview";
+  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
+  const newNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  clickButton(flow, "Continue");
   const requirement = {
     heading:q("#guided-validation-heading").textContent,
     focused:document.activeElement === q("#guided-validation-heading"),
@@ -301,7 +316,7 @@ const guidedValidationRuntime = `(async () => {
     heading:q("#guided-validation-heading").textContent,
     selected:flow.querySelector('input[name="guided-scope"]:checked').parentElement.textContent.trim(),
     choices:Array.from(flow.querySelectorAll('input[name="guided-scope"]')).map((input) => input.parentElement.textContent.trim()),
-    prefill:flow.querySelector("p").textContent,
+    prefill:"Domain " + q("#guided-scope-domain").value + "; event " + q("#guided-scope-event").value + "; source " + q("#guided-scope-source").value + "; target " + q("#guided-scope-target").value + ".",
   };
   flow.querySelector('input[name="guided-scope"][value="selected-paths"]').click();
   const pathBuilder = {
@@ -339,27 +354,14 @@ const guidedValidationRuntime = `(async () => {
   };
   flow.querySelector('input[name="guided-scope"][value="domain-all-paths"]').click();
   Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
-  const destinationInitial = {
-    heading:q("#guided-validation-heading").textContent,
-    choices:Array.from(flow.querySelectorAll('input[name="guided-schema-destination"]')).map((input) => input.parentElement.textContent.trim()),
-    selected:flow.querySelector('input[name="guided-schema-destination"]:checked')?.value ?? null,
-    persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas,
-  };
-  flow.querySelector('input[name="guided-schema-destination"][value="new"]').click();
-  const blankNameAssistance = q("#guided-new-schema-name-assistance").textContent;
-  q("#guided-new-schema-name").value = "Existing pageview";
-  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
-  const duplicateNameAssistance = q("#guided-new-schema-name-assistance").textContent;
-  q("#guided-new-schema-name").value = "Signal Shop pageview";
-  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
-  const newNameAssistance = q("#guided-new-schema-name-assistance").textContent;
-  clickButton(flow, "Continue");
   const reviewBeforeBack = q("#guided-validation-review").textContent;
   const reviewStages = Array.from(q("#guided-validation-stages").children).map((item) => [item.textContent, item.dataset.state]);
   clickButton(flow, "Back");
-  const retainedDestination = { kind:flow.querySelector('input[name="guided-schema-destination"]:checked').value, name:q("#guided-new-schema-name").value };
-  clickButton(flow, "Back");
   const retainedScope = flow.querySelector('input[name="guided-scope"]:checked').value;
+  clickButton(flow, "Back");
+  clickButton(flow, "Back");
+  const retainedDestination = { kind:flow.querySelector('input[name="guided-schema-destination"]:checked').value, name:q("#guided-new-schema-name").value };
+  clickButton(flow, "Continue");
   clickButton(flow, "Continue");
   clickButton(flow, "Continue");
   q("#guided-advanced-settings summary").click();
@@ -408,13 +410,6 @@ const guidedValidationRuntime = `(async () => {
   clickButton(q("#live-event-inspector"), "Create validation from this event");
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   clickButton(flow, "Continue");
-  q("#guided-requirement").value = "Must be one of these values";
-  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
-  clickButton(flow, "Add another value");
-  q("#guided-allowed-value-2").value = "homepage";
-  q("#guided-allowed-value-2").dispatchEvent(new Event("input", { bubbles:true }));
-  clickButton(flow, "Continue");
-  clickButton(flow, "Continue");
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
   const existingOptions = Array.from(q("#guided-existing-schemas").querySelectorAll(":scope > div")).map((row) => ({
     label:row.querySelector("label").textContent.trim(),
@@ -422,6 +417,13 @@ const guidedValidationRuntime = `(async () => {
     explanation:row.querySelector("p").textContent,
   }));
   q('#guided-existing-schemas input[value="schema:product-listing:3"]').click();
+  clickButton(flow, "Continue");
+  q("#guided-requirement").value = "Must be one of these values";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  clickButton(flow, "Add another value");
+  q("#guided-allowed-value-2").value = "homepage";
+  q("#guided-allowed-value-2").dispatchEvent(new Event("input", { bubbles:true }));
+  clickButton(flow, "Continue");
   clickButton(flow, "Continue");
   const existingReview = q("#guided-validation-review").textContent;
   clickButton(flow, "Save validation");
@@ -438,18 +440,67 @@ const guidedValidationRuntime = `(async () => {
     status:q("#live-session-message").textContent,
     focusReturned:document.activeElement?.dataset.action === "create-validation",
   };
+  clickButton(q("#live-event-inspector"), "Create validation from this event");
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  clickButton(flow, "Continue");
+  flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
+  q('#guided-existing-schemas input[value="schema:generic-pageview:4"]').click();
+  clickButton(flow, "Continue");
+  const schemaPrefillRequirement = {
+    expectedType:q("#guided-expected-type").value,
+    expectedTypeSource:q("#guided-expected-type-hint").textContent,
+    target:q("#guided-target").value,
+  };
+  q("#guided-requirement").value = "Must be present";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  clickButton(flow, "Continue");
+  const schemaPrefillScope = {
+    domain:q("#guided-scope-domain").value,
+    domainSource:q("#guided-scope-domain-hint").textContent,
+    eventName:q("#guided-scope-event").value,
+    eventNameSource:q("#guided-scope-event-hint").textContent,
+    source:q("#guided-scope-source").value,
+    sourceSource:q("#guided-scope-source-hint").textContent,
+    pathCondition:q("#guided-path-expression-0").value,
+  };
+  q("#guided-scope-domain").value = "operator.example";
+  q("#guided-scope-domain").dispatchEvent(new Event("change", { bubbles:true }));
+  clickButton(flow, "Back");
+  clickButton(flow, "Back");
+  q('#guided-existing-schemas input[value="schema:product-listing:3"]').click();
+  const replacementReview = {
+    items:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("li")).map((item) => item.textContent),
+    actions:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("button")).map((button) => button.textContent),
+  };
+  clickButton(q("#guided-prefill-replacement-review"), "Keep current values");
+  const keptStatus = q("#guided-validation-status").textContent;
+  q('#guided-existing-schemas input[value="schema:generic-pageview:4"]').click();
+  clickButton(q("#guided-prefill-replacement-review"), "Accept schema-derived values");
+  const acceptedStatus = q("#guided-validation-status").textContent;
   const core = await import("/data-layer-guided-validation.js");
   const productionDraft = core.selectGuidedProperty(core.createGuidedValidationDraft({ id:"event:pageview", name:"pageview", sourceId:"event-history", pageUrl:"http://127.0.0.1:4173/", payload:{ page_type:"product_list" } }), "page_type");
   const overridden = core.setExpectedType(core.setGuidedRequirement(productionDraft, "Must match a pattern"), "Number");
-  const configuredDestinationDraft = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setAllowedValue(core.addAllowedValue(core.setGuidedRequirement(productionDraft, "Must be one of these values")), 1, "homepage"))));
-  const matchingDestinationReview = core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }));
-  const absentDestinationReview = core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }));
+  const configuredDestinationDraft = { ...core.setAllowedValue(core.addAllowedValue(core.setGuidedRequirement(productionDraft, "Must be one of these values")), 1, "homepage"), stage:"destination" };
+  const matchingDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }))));
+  const absentDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }))));
   const productionDestinationOptions = core.schemaDestinationOptions(configuredDestinationDraft, [
     { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, target:"payload", propertyTypes:{} },
     { id:"schema:product-listing:3", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_type:"String" } },
     { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
     { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
   ]).map(({ name, target, propertyTypes, available, explanation }) => ({ name, target, propertyState:propertyTypes.page_type ?? "absent", available, explanation }));
+  const assignmentTemplate = { id:"assignment:one", name:"Shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true };
+  const assignmentResolutions = [0, 1, 2].map((count) => {
+    const resolved = core.applyGuidedSchemaCandidate({ ...productionDraft, stage:"destination" }, {
+      id:"schema:resolution:" + count,
+      name:"Resolution schema",
+      version:4,
+      target:"payload",
+      propertyTypes:{ page_type:"String" },
+      assignments:Array.from({ length:count }, (_, index) => ({ ...assignmentTemplate, id:"assignment:" + index, name:"Shop pages " + (index + 1), domainCondition:index ? "other.example" : "shop.example" })),
+    });
+    return { count, selection:resolved.assignmentResolution.selection, domain:resolved.scope.domain, pathConditions:resolved.scope.conditions };
+  });
   const production = {
     requirements:Object.fromEntries(["String", "Number", "Array", "Object", "Boolean"].map((type) => [type, core.compatibleRequirements(type)])),
     allowedValues:[[], ["homepage", "homepage"], ["product_list", ""], ["product_list", "homepage"]].map((values) => core.validateAllowedValues(values)),
@@ -466,6 +517,7 @@ const guidedValidationRuntime = `(async () => {
     malformed:core.pathConditionResult({ matchType:"Regular expression", expression:"[" }, "/"),
     override:{ typeSource:overridden.property.typeSource, currentEventPasses:overridden.preview.currentEventPasses, message:overridden.preview.message, correctionRequired:overridden.requirementCorrectionRequired },
     destinationOptions:productionDestinationOptions,
+    assignmentResolutions,
     destinations:{
       matching:{ review:matchingDestinationReview.review, assignmentAction:core.publishGuidedValidation(matchingDestinationReview, false).destination.assignmentAction },
       absent:{ review:absentDestinationReview.review, assignmentAction:core.publishGuidedValidation(absentDestinationReview, false).destination.assignmentAction },
@@ -473,7 +525,7 @@ const guidedValidationRuntime = `(async () => {
   };
   localStorage.clear();
   for (const [key, value] of Object.entries(storedState)) localStorage.setItem(key, value);
-  return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, destinationInitial, blankNameAssistance, duplicateNameAssistance, newNameAssistance, reviewBeforeBack, reviewStages, retainedDestination, retainedScope, advanced, saveFailure, saved, published, existingOptions, existingReview, existingSaved, production };
+  return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, destinationInitial, blankNameAssistance, duplicateNameAssistance, newNameAssistance, reviewBeforeBack, reviewStages, retainedDestination, retainedScope, advanced, saveFailure, saved, published, existingOptions, existingReview, existingSaved, schemaPrefillRequirement, schemaPrefillScope, replacementReview, keptStatus, acceptedStatus, production };
 })()`;
 
 const schemaAssignmentRuntime = `(() => {
@@ -1188,6 +1240,7 @@ try {
         const schemas = [
           { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:generic-pageview:4", name:"Generic pageview", version:4, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:generic-shop", name:"Generic shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true }] },
           { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
@@ -1204,7 +1257,7 @@ try {
           visible:true,
           heading:"Choose properties",
           focused:true,
-          stages:[["Choose properties","current"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Choose schema destination","upcoming"],["Review validation","upcoming"]],
+          stages:[["Choose properties","current"],["Choose schema destination","upcoming"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Review validation","upcoming"]],
           advancedPrimary:true,
           persistedUnchanged:true,
         },
@@ -1220,7 +1273,7 @@ try {
         duplicateNameAssistance:"Choose the existing schema or enter another name",
         newNameAssistance:"New schema Signal Shop pageview will be created",
         reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema Signal Shop pageview will be created.",
-        reviewStages:[["Choose properties","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Choose schema destination","complete"],["Review validation","current"]],
+        reviewStages:[["Choose properties","complete"],["Choose schema destination","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
         retainedDestination:{ kind:"new", name:"Signal Shop pageview" },
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
@@ -1230,6 +1283,7 @@ try {
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
+          { label:"Generic pageview version 4", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
@@ -1237,6 +1291,14 @@ try {
         ],
         existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.",
         existingSaved:{ versions:[3,4], version3Rules:0, version4Rules:1, assignments:1, flowClosed:true, inspectorRestored:true, status:"Saved validation: validation was added to Product listing version 4.", focusReturned:true },
+        schemaPrefillRequirement:{ expectedType:"String", expectedTypeSource:"String — Generic pageview version 4", target:"payload" },
+        schemaPrefillScope:{ domain:"shop.example", domainSource:"Generic shop pages assignment", eventName:"pageview", eventNameSource:"Generic shop pages assignment", source:"event-history", sourceSource:"Generic shop pages assignment", pathCondition:"/products/*" },
+        replacementReview:{
+          items:["domain: operator.example would be replaced by 127.0.0.1", "path conditions: [{\"matchType\":\"Path pattern\",\"expression\":\"/products/*\"}] would be replaced by []"],
+          actions:["Keep current values", "Accept schema-derived values"],
+        },
+        keptStatus:"Current values kept.",
+        acceptedStatus:"Schema-derived values accepted.",
       }, "Guided validation browser flow violated its rendered production contract");
       assert.deepEqual(production, {
         requirements:{
@@ -1269,6 +1331,11 @@ try {
           { name:"Product listing", target:"payload", propertyState:"String", available:true, explanation:"page_type accepts String rules" },
           { name:"Numeric page types", target:"payload", propertyState:"Number", available:false, explanation:"page_type expects Number" },
           { name:"Raw pageview", target:"raw input", propertyState:"absent", available:false, explanation:"schema validates raw input, not payload" },
+        ],
+        assignmentResolutions:[
+          { count:0, selection:"Create a new assignment", domain:"127.0.0.1", pathConditions:[] },
+          { count:1, selection:"the compatible assignment", domain:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }] },
+          { count:2, selection:"required from readable assignment choices", domain:"127.0.0.1", pathConditions:[] },
         ],
         destinations:{
           matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.", assignmentAction:"reuse the matching enabled assignment" },

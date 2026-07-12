@@ -45,6 +45,8 @@ export interface GuidedSchemaCandidate {
   target: "payload" | "raw input";
   propertyTypes: Readonly<Record<string, GuidedValueType>>;
   assignments?: readonly {
+    id?: string;
+    name?: string;
     sourceId: string;
     eventName: string;
     target: "payload" | "raw input";
@@ -56,6 +58,8 @@ export interface GuidedSchemaCandidate {
 }
 
 export interface GuidedAssignmentIdentity {
+  id?: string;
+  name?: string;
   sourceId: string;
   eventName: string;
   target: "payload" | "raw input";
@@ -89,6 +93,18 @@ export interface GuidedValidationDraft {
   requirementCorrectionRequired: boolean;
   scope: GuidedScope;
   destination?: GuidedSchemaDestination;
+  assignmentResolution?: {
+    selection: "Create a new assignment" | "the compatible assignment" | "required from readable assignment choices";
+    compatibleAssignments: readonly GuidedAssignmentIdentity[];
+    selectedAssignmentId?: string;
+  };
+  prefillSources: Readonly<Record<string, string>>;
+  scopeEdited: boolean;
+  prefillReplacementReview?: readonly { field: string; currentValue: string; proposedValue: string }[];
+  pendingPrefill?: {
+    scope: GuidedScope;
+    sources: Readonly<Record<string, string>>;
+  };
   advanced: {
     ruleName: string;
     severity: "Error" | "Warning";
@@ -142,7 +158,7 @@ const requirements: Record<GuidedValueType, readonly GuidedRequirement[]> = {
   Null: ["Must be present"],
 };
 
-const stageOrder: readonly GuidedValidationStage[] = ["property", "requirement", "scope", "destination", "review"];
+const stageOrder: readonly GuidedValidationStage[] = ["property", "destination", "requirement", "scope", "review"];
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -194,6 +210,8 @@ export function createGuidedValidationDraft(event: GuidedValidationDraft["event"
     properties:flattenedProperties(event.payload),
     allowedValues:[],
     requirementCorrectionRequired:false,
+    prefillSources:{},
+    scopeEdited:false,
     scope:{ kind:"domain-all-paths", domain:url.hostname, pathname:url.pathname || "/", conditions:[] },
     advanced:{
       ruleName:`${event.name} requirement`,
@@ -226,7 +244,8 @@ export function setExpectedType(draft: GuidedValidationDraft, expectedType: Guid
   if (!draft.property) return draft;
   const property: GuidedProperty = { ...draft.property, expectedType, typeSource:"explicit override" };
   const correction = draft.requirement !== undefined && !compatibleRequirements(expectedType).includes(draft.requirement);
-  return { ...draft, property, requirementCorrectionRequired:correction, preview:previewFor(property) };
+  const { expectedType: _source, ...prefillSources } = draft.prefillSources;
+  return { ...draft, property, prefillSources, requirementCorrectionRequired:correction, preview:previewFor(property) };
 }
 
 export function setGuidedRequirement(draft: GuidedValidationDraft, requirement: GuidedRequirement): GuidedValidationDraft {
@@ -260,7 +279,8 @@ export function validateAllowedValues(values: readonly string[]): { valid: boole
 }
 
 export function setGuidedScope(draft: GuidedValidationDraft, scope: GuidedScope): GuidedValidationDraft {
-  return { ...draft, scope:{ ...scope, conditions:[...scope.conditions] } };
+  const { domain: _domain, pathname: _pathname, pathConditions: _conditions, ...prefillSources } = draft.prefillSources;
+  return { ...draft, scope:{ ...scope, conditions:[...scope.conditions] }, prefillSources, scopeEdited:true };
 }
 
 export function validateNewSchemaName(
@@ -341,6 +361,140 @@ export function setGuidedSchemaDestination(
   destination: GuidedSchemaDestination,
 ): GuidedValidationDraft {
   return { ...draft, destination };
+}
+
+function assignmentLabel(assignment: GuidedAssignmentIdentity): string {
+  return `${assignment.name ?? assignment.id ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`} assignment`;
+}
+
+function compatibleCapturedAssignments(
+  draft: GuidedValidationDraft,
+  candidate: GuidedSchemaCandidate,
+): GuidedAssignmentIdentity[] {
+  return (candidate.assignments ?? []).filter((assignment) =>
+    assignment.enabled !== false
+    && assignment.sourceId === draft.event.sourceId
+    && assignment.eventName === draft.event.name
+    && assignment.target === candidate.target)
+    .map((assignment) => ({
+      ...assignment,
+      ...(assignment.pathConditions ? { pathConditions:[...assignment.pathConditions] } : {}),
+    }));
+}
+
+function scopeFromAssignment(draft: GuidedValidationDraft, assignment: GuidedAssignmentIdentity): GuidedScope {
+  const conditions = assignment.pathConditions ? [...assignment.pathConditions] : [];
+  const kind: GuidedScopeKind = conditions.length
+    ? "selected-paths"
+    : assignment.pathnameCondition
+      ? "current-path"
+      : assignment.domainCondition
+        ? "domain-all-paths"
+        : "everywhere";
+  return {
+    kind,
+    domain:assignment.domainCondition ?? draft.scope.domain,
+    pathname:assignment.pathnameCondition ?? draft.scope.pathname,
+    conditions,
+  };
+}
+
+function scopeReplacementReview(current: GuidedScope, proposed: GuidedScope): { field: string; currentValue: string; proposedValue: string }[] {
+  const values: readonly [string, string, string][] = [
+    ["domain", current.domain, proposed.domain],
+    ["pathname", current.pathname, proposed.pathname],
+    ["path conditions", JSON.stringify(current.conditions), JSON.stringify(proposed.conditions)],
+  ];
+  return values.flatMap(([field, currentValue, proposedValue]) =>
+    currentValue === proposedValue ? [] : [{ field, currentValue, proposedValue }]);
+}
+
+export function applyGuidedSchemaCandidate(
+  draft: GuidedValidationDraft,
+  candidate: GuidedSchemaCandidate,
+  assignmentId?: string,
+): GuidedValidationDraft {
+  const compatibleAssignments = compatibleCapturedAssignments(draft, candidate);
+  const selectedAssignment = assignmentId
+    ? compatibleAssignments.find((assignment) => assignment.id === assignmentId)
+    : compatibleAssignments.length === 1
+      ? compatibleAssignments[0]
+      : undefined;
+  const selection = compatibleAssignments.length === 0
+    ? "Create a new assignment" as const
+    : selectedAssignment
+      ? "the compatible assignment" as const
+      : "required from readable assignment choices" as const;
+  const schemaSource = `${candidate.name} version ${candidate.version}`;
+  const expectedType = draft.property ? candidate.propertyTypes[draft.property.path] : undefined;
+  const property = draft.property && expectedType
+    ? { ...draft.property, expectedType, typeSource:"explicit override" as const }
+    : draft.property;
+  const schemaSources = {
+    ...draft.prefillSources,
+    target:schemaSource,
+    ...(expectedType ? { expectedType:schemaSource } : {}),
+  };
+  const destination: GuidedSchemaDestination = {
+    kind:"existing",
+    schemaId:candidate.id,
+    schemaName:candidate.name,
+    schemaVersion:candidate.version,
+    matchingAssignment:Boolean(selectedAssignment),
+  };
+  const base: GuidedValidationDraft = {
+    ...draft,
+    ...(property ? { property } : {}),
+    advanced:{ ...draft.advanced, target:candidate.target },
+    destination,
+    assignmentResolution:{
+      selection,
+      compatibleAssignments,
+      ...(selectedAssignment?.id ? { selectedAssignmentId:selectedAssignment.id } : {}),
+    },
+    prefillSources:schemaSources,
+    preview:previewFor(property),
+  };
+  if (!selectedAssignment) {
+    const { prefillReplacementReview: _review, pendingPrefill: _pending, ...withoutProposal } = base;
+    return withoutProposal;
+  }
+  const proposedScope = scopeFromAssignment(draft, selectedAssignment);
+  const source = assignmentLabel(selectedAssignment);
+  const assignmentSources = {
+    ...schemaSources,
+    sourceId:source,
+    eventName:source,
+    domain:source,
+    pathname:source,
+    pathConditions:source,
+  };
+  const proposed = {
+    ...base,
+    event:{ ...base.event, name:selectedAssignment.eventName },
+    advanced:{ ...base.advanced, sourceId:selectedAssignment.sourceId, target:selectedAssignment.target },
+  };
+  const replacementReview = draft.scopeEdited ? scopeReplacementReview(draft.scope, proposedScope) : [];
+  if (replacementReview.length) {
+    return {
+      ...proposed,
+      prefillReplacementReview:replacementReview,
+      pendingPrefill:{ scope:proposedScope, sources:assignmentSources },
+    };
+  }
+  const { prefillReplacementReview: _review, pendingPrefill: _pending, ...withoutProposal } = proposed;
+  return { ...withoutProposal, scope:proposedScope, prefillSources:assignmentSources, scopeEdited:false };
+}
+
+export function resolveGuidedPrefillReplacement(
+  draft: GuidedValidationDraft,
+  choice: "keep" | "accept",
+): GuidedValidationDraft {
+  const { prefillReplacementReview: _review, pendingPrefill, ...rest } = draft;
+  if (choice === "accept" && pendingPrefill) {
+    return { ...rest, scope:pendingPrefill.scope, prefillSources:pendingPrefill.sources, scopeEdited:false };
+  }
+  return rest;
 }
 
 export function existingSchemaDestination(

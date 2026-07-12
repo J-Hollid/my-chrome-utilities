@@ -1,13 +1,14 @@
 import {
   addAllowedValue,
+  applyGuidedSchemaCandidate,
   advanceGuidedValidation,
   backGuidedValidation,
   compatibleRequirements,
   createGuidedValidationDraft,
-  existingSchemaDestination,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
+  resolveGuidedPrefillReplacement,
   removeAllowedValue,
   selectGuidedProperty,
   setAllowedValue,
@@ -126,6 +127,9 @@ export function createGuidedValidationFlow(
         if (!result.valid) return [{ id:"guided-new-schema-name", message:result.assistance }];
       }
       if (draft.destination.kind === "existing" && !draft.destination.schemaId) return [{ id:"guided-existing-schemas", message:"Choose an available existing schema" }];
+      if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
+        return [{ id:"guided-compatible-assignments", message:"Choose a compatible assignment" }];
+      }
     }
     return [];
   }
@@ -139,7 +143,7 @@ export function createGuidedValidationFlow(
 
   function renderStages(container: HTMLElement): void {
     if (!draft) return;
-    const order: readonly GuidedValidationStage[] = ["property", "requirement", "scope", "destination", "review"];
+    const order: readonly GuidedValidationStage[] = ["property", "destination", "requirement", "scope", "review"];
     const current = order.indexOf(draft.stage);
     const list = element("ol"); list.id = "guided-validation-stages"; list.setAttribute("aria-label", "Validation creation stages");
     list.replaceChildren(...order.map((stage, index) => {
@@ -208,7 +212,8 @@ export function createGuidedValidationFlow(
     const type = element("select"); type.id = "guided-expected-type"; type.setAttribute("aria-describedby", "guided-expected-type-hint");
     for (const value of ["String", "Number", "Array", "Object", "Boolean"] as const) type.append(Object.assign(element("option", value), { value, selected:draft.property.expectedType === value }));
     type.addEventListener("change", () => setDraft(setExpectedType(draft!, type.value as GuidedValueType), `${type.value} retained as an explicit override.`));
-    const typeHint = element("p", `${draft.property.detectedType} — ${draft.property.typeSource}`); typeHint.id = "guided-expected-type-hint";
+    const typeSource = draft.prefillSources.expectedType ?? draft.property.typeSource;
+    const typeHint = element("p", `${draft.property.detectedType} — ${typeSource}`); typeHint.id = "guided-expected-type-hint";
     const requirementLabel = element("label", "Requirement"); requirementLabel.htmlFor = "guided-requirement";
     const requirement = element("select"); requirement.id = "guided-requirement"; requirement.setAttribute("aria-describedby", "guided-requirement-hint");
     requirement.append(Object.assign(element("option", "Choose a requirement"), { value:"" }), ...compatibleRequirements(draft.property.expectedType).map((value) => Object.assign(element("option", value), { value, selected:draft!.requirement === value })));
@@ -263,7 +268,26 @@ export function createGuidedValidationFlow(
 
   function renderScopeStage(container: HTMLElement): void {
     if (!draft) return;
-    const prefill = element("p", `Domain ${draft.scope.domain}; event ${draft.event.name}; source ${draft.event.sourceId}; target payload.`);
+    const prefill = element("fieldset"); prefill.id = "guided-routing-prefills"; prefill.append(element("legend", "Event and assignment values"));
+    const domain = labelledInput("guided-scope-domain", "Domain", draft.scope.domain, draft.prefillSources.domain);
+    domain.input.addEventListener("change", () => setDraft(setGuidedScope(draft!, { ...draft!.scope, domain:domain.input.value }), "Domain updated."));
+    const eventName = labelledInput("guided-scope-event", "Event name", draft.event.name, draft.prefillSources.eventName);
+    eventName.input.addEventListener("change", () => {
+      const { eventName: _source, ...prefillSources } = draft!.prefillSources;
+      setDraft({ ...draft!, event:{ ...draft!.event, name:eventName.input.value }, prefillSources }, "Event name updated.");
+    });
+    const source = labelledInput("guided-scope-source", "Event source", draft.advanced.sourceId, draft.prefillSources.sourceId);
+    source.input.addEventListener("change", () => {
+      const { sourceId: _source, ...prefillSources } = draft!.prefillSources;
+      setDraft({ ...draft!, advanced:{ ...draft!.advanced, sourceId:source.input.value }, prefillSources }, "Event source updated.");
+    });
+    const target = labelledInput("guided-scope-target", "Validation target", draft.advanced.target, draft.prefillSources.target);
+    target.input.addEventListener("change", () => {
+      const { target: _source, ...prefillSources } = draft!.prefillSources;
+      const value = target.input.value === "raw input" ? "raw input" : "payload";
+      setDraft({ ...draft!, advanced:{ ...draft!.advanced, target:value }, prefillSources }, "Validation target updated.");
+    });
+    prefill.append(domain.wrapper, eventName.wrapper, source.wrapper, target.wrapper);
     const choices = element("fieldset"); choices.append(element("legend", "Where should this validation apply?"));
     for (const [kind, labelText] of Object.entries(scopeLabels) as [GuidedScopeKind, string][]) {
       const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-scope"; input.value = kind; input.checked = draft.scope.kind === kind; input.addEventListener("change", () => updateScope(kind)); label.append(input, ` ${labelText}`); choices.append(label);
@@ -296,10 +320,34 @@ export function createGuidedValidationFlow(
       const list = element("fieldset"); list.id = "guided-existing-schemas"; list.append(element("legend", "Available schemas"));
       for (const option of schemaDestinationOptions(draft, candidates)) {
         const row = element("div"); const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-existing-schema"; input.value = option.id; input.disabled = !option.available; input.checked = draft.destination.schemaId === option.id;
-        input.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft!, existingSchemaDestination(draft!, option)), `${option.name} selected.`));
+        input.addEventListener("change", () => setDraft(applyGuidedSchemaCandidate(draft!, option), `${option.name} selected.`));
         label.append(input, ` ${option.name} version ${option.version}`); const explanation = element("p", option.explanation); explanation.id = `guided-existing-schema-${option.id.replace(/[^a-z0-9]+/gi, "-")}-explanation`; input.setAttribute("aria-describedby", explanation.id); row.append(label, explanation); list.append(row);
       }
       container.append(list);
+    }
+
+    if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
+      const assignments = element("fieldset"); assignments.id = "guided-compatible-assignments"; assignments.append(element("legend", "Choose a compatible assignment"));
+      for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {
+        const id = assignment.id ?? `compatible-assignment-${index}`;
+        const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-compatible-assignment"; input.value = id;
+        const readable = assignment.name ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`;
+        input.addEventListener("change", () => {
+          const candidate = candidates.find(({ id: candidateId }) => draft!.destination?.kind === "existing" && candidateId === draft!.destination.schemaId);
+          if (candidate) setDraft(applyGuidedSchemaCandidate(draft!, candidate, id), `${readable} selected.`);
+        });
+        label.append(input, ` ${readable}`); assignments.append(label);
+      }
+      container.append(assignments);
+    }
+
+    if (draft.prefillReplacementReview?.length) {
+      const review = element("section"); review.id = "guided-prefill-replacement-review"; review.append(element("h5", "Review schema-derived replacements"));
+      const list = element("ul");
+      list.replaceChildren(...draft.prefillReplacementReview.map(({ field, currentValue, proposedValue }) => element("li", `${field}: ${currentValue} would be replaced by ${proposedValue}`)));
+      const keep = element("button", "Keep current values"); keep.type = "button"; keep.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "keep"), "Current values kept."));
+      const accept = element("button", "Accept schema-derived values"); accept.type = "button"; accept.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "accept"), "Schema-derived values accepted."));
+      review.append(list, keep, accept); container.append(review);
     }
   }
 
