@@ -11,6 +11,20 @@ export function assignSchema(schema, assignment) {
 }
 export function reviseSchema(schema, document) { return { ...schema, id: schemaId(schema.name, schema.version + 1), version: schema.version + 1, document: clone(document), revisionHistory: [...(schema.revisionHistory ?? []), clone(schema)] }; }
 export function duplicateSchema(schema, name) { return { ...clone(schema), id: schemaId(name, schema.version), name }; }
+export function schemaInheritanceError(schema, schemas) {
+    if (!schema.parentSchemaId)
+        return undefined;
+    if (schema.parentSchemaId === schema.id)
+        return "A schema cannot inherit from itself";
+    const parents = new Map(schemas.map((item) => [item.id, item.parentSchemaId]));
+    let current = schema.parentSchemaId;
+    while (current) {
+        if (current === schema.id)
+            return "Schema inheritance cannot contain a cycle";
+        current = parents.get(current);
+    }
+    return undefined;
+}
 export function searchSchemas(schemas, query) { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
 function glob(value, pattern) {
     if (!pattern || pattern === "any")
