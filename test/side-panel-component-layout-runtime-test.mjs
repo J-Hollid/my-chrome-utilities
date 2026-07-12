@@ -363,7 +363,7 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
-const schemaInheritanceRuntime = `(() => {
+const schemaInheritanceRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
@@ -374,9 +374,14 @@ const schemaInheritanceRuntime = `(() => {
   if (!parent) throw new Error("Missing saved parent schema option");
   q("#schema-editor-parent").value = parent.value;
   q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
+  const { validateEvent } = await import("./data-layer-schema-verification.js");
+  const inheritedRuleParent = { id:"schema:inherited-parent:4", name:"Inherited rule parent", version:4, document:{ type:"object" }, assignments:[], attachedRules:[{ id:"rule:channel", name:"Known channels", version:2, propertyPath:"channel", operator:"allowed-values", parameters:"channel:web,app", severity:"warning", message:"Choose a known channel" }] };
+  const inheritedRuleChild = { id:"schema:inherited-child:1", name:"Inherited rule child", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"page_view", target:"payload" }], parentSchemaId:inheritedRuleParent.id };
+  const inheritedValidation = validateEvent({ sourceId:"event-history", eventName:"page_view", payload:{ channel:"email" }, rawInput:[] }, [inheritedRuleParent, inheritedRuleChild]);
   return {
     groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
     preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
+    validation:inheritedValidation.issues.map(({ message, rule, severity, origin }) => ({ message, rule, severity, origin })),
   };
 })()`;
 
@@ -1087,6 +1092,7 @@ try {
           { state:"local", text:"Local (0)No local rules." },
         ],
         preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+        validation:[{ message:"Choose a known channel", rule:"Known channels v2", severity:"warning", origin:"Inherited rule parent v4" }],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.deepEqual(schemaLibraryTransfer, {
