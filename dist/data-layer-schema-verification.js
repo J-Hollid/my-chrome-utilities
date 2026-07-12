@@ -78,27 +78,55 @@ function inheritedDocument(schema, schemas, visited = new Set()) {
     const inherited = inheritedDocument(parent, schemas, visited);
     return { ...inherited, ...schema.document, required: [...new Set([...(inherited.required ?? []), ...(schema.document.required ?? [])])], properties: { ...(inherited.properties ?? {}), ...(schema.document.properties ?? {}) } };
 }
-export function validateEvent(event, schemas, pageUrl) {
+function inheritedRuleAttachments(schema, schemas, visited = new Set()) {
+    if (!schema.parentId || visited.has(schema.id))
+        return schema.ruleAttachments ?? [];
+    visited.add(schema.id);
+    const parent = schemas.find((candidate) => candidate.id === schema.parentId);
+    const attachments = [...(parent ? inheritedRuleAttachments(parent, schemas, visited) : []), ...(schema.ruleAttachments ?? [])];
+    return attachments.filter((attachment, index) => attachments.findIndex((candidate) => candidate.ruleId === attachment.ruleId && candidate.version === attachment.version) === index);
+}
+function ruleIssuesFor(value, schema, schemas, rules, result) {
+    for (const attachment of inheritedRuleAttachments(schema, schemas)) {
+        const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version);
+        const location = `#/ruleAttachments/${encodeURIComponent(attachment.ruleId)}@${attachment.version}`;
+        if (!rule) {
+            result.push({ instancePath: "", message: "Pinned rule unavailable", expected: `${attachment.ruleId} v${attachment.version}`, actual: "unavailable", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location });
+            continue;
+        }
+        const types = rule.applicableTypes.split(",").map((type) => type.trim().toLowerCase()).filter(Boolean);
+        if (types.length > 0 && !types.includes("any") && !types.includes(valueType(value)))
+            continue;
+        const expected = rule.operator === "required" ? "a present value" : rule.parameters || "an allowed value";
+        const missing = value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+        const allowed = rule.parameters.split(",").map((parameter) => parameter.trim()).filter(Boolean);
+        const fails = rule.operator === "required" ? missing : rule.operator === "allowed-values" && allowed.length > 0 && !allowed.includes(String(value));
+        if (fails)
+            result.push({ instancePath: "", message: rule.message || rule.name, expected, actual: missing ? "missing" : String(value), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location, ...(rule.severity ? { severity: rule.severity } : {}) });
+    }
+}
+function validationFor(schema, assignment, event, schemas, rules) {
+    const value = assignment.target === "payload" ? event.payload : event.rawInput;
+    const issues = [];
+    issuesFor(value, inheritedDocument(schema, schemas), "", "#", issues, schema);
+    ruleIssuesFor(value, schema, schemas, rules, issues);
+    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: schema.id, name: schema.name, version: schema.version }, target: assignment.target };
+}
+export function validateEvent(event, schemas, pageUrl, rules = []) {
     if (pageUrl) {
         const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
         if (resolution.error)
             return { state: "Assignment error", issues: [] };
         if (resolution.schema && resolution.assignment) {
-            const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
-            const issues = [];
-            issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
-            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
+            return validationFor(resolution.schema, resolution.assignment, event, schemas, rules);
         }
     }
     const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
     if (!match)
         return { state: "Not checked", issues: [] };
-    const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
-    const issues = [];
-    issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema);
-    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target };
+    return validationFor(match.schema, match.assignment, event, schemas, rules);
 }
 export function validationSummary(results) { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
-export function revalidateExplicitly(event, schemas, version) { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }
+export function revalidateExplicitly(event, schemas, version, rules = []) { return validateEvent(event, schemas.filter((schema) => schema.version === version), undefined, rules); }
 //# sourceMappingURL=data-layer-schema-verification.js.map

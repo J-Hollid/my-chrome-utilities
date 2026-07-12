@@ -615,13 +615,13 @@ function openLiveInspector(eventId) {
                 eventName: selected.name,
                 payload: selected.payload,
                 rawInput: selected.rawInput,
-            }, schemas).schema),
+            }, schemas, undefined, reusableRules).schema),
             validationState: (selected) => validateEvent({
                 sourceId: selected.sourceId,
                 eventName: selected.name,
                 payload: selected.payload,
                 rawInput: selected.rawInput,
-            }, schemas).state,
+            }, schemas, undefined, reusableRules).state,
             updateValidation: (selectedId, validation) => {
                 liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === selectedId ? { ...candidate, validation } : candidate) };
                 renderLiveObserver();

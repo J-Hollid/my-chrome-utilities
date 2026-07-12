@@ -20,3 +20,11 @@ const tied = assignSchema(createSchema("Tied", 1, {}), { id:"tied", name:"tied",
 assert.match(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation", [order, tied]).error, /Assignment error/);
 assert.equal(validateEvent({ sourceId:"history", eventName:"page_view", payload:{}, rawInput:[] }, [order, tied], "https://shop.example/order-confirmation").state, "Assignment error");
 assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([generic, order])), [generic, order]);
+const pinnedRule = { id:"rule:page-type:2", version:2, name:"Known page types", applicableTypes:"string", operator:"allowed-values", parameters:"product, checkout", severity:"warning", message:"Use a known page type" };
+const ruleSchema = { ...assignSchema(createSchema("Pinned rule", 1, { type:"string" }), { sourceId:"history", eventName:"rule_test", target:"payload" }), ruleAttachments:[{ ruleId:pinnedRule.id, version:pinnedRule.version }] };
+const ruleFailure = validateEvent({ sourceId:"history", eventName:"rule_test", payload:"other", rawInput:null }, [ruleSchema], undefined, [pinnedRule]);
+assert.equal(ruleFailure.state, "1 issues"); assert.deepEqual(ruleFailure.issues[0], { instancePath:"", message:"Use a known page type", expected:"product, checkout", actual:"other", schemaName:"Pinned rule", schemaVersion:1, schemaLocation:"#/ruleAttachments/rule%3Apage-type%3A2@2", severity:"warning" });
+assert.equal(validateEvent({ sourceId:"history", eventName:"rule_test", payload:"checkout", rawInput:null }, [ruleSchema], undefined, [pinnedRule]).state, "Valid");
+assert.equal(validateEvent({ sourceId:"history", eventName:"rule_test", payload:"checkout", rawInput:null }, [ruleSchema]).issues[0].message, "Pinned rule unavailable");
+const inheritedRuleSchema = { ...assignSchema(createSchema("Inherited rule", 1, { type:"string" }), { sourceId:"history", eventName:"inherited_rule_test", target:"payload" }), parentId:ruleSchema.id };
+assert.equal(validateEvent({ sourceId:"history", eventName:"inherited_rule_test", payload:"other", rawInput:null }, [ruleSchema, inheritedRuleSchema], undefined, [pinnedRule]).state, "1 issues");
