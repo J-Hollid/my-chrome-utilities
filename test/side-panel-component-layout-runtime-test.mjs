@@ -417,22 +417,23 @@ const schemaLibraryTransferRuntime = `(async () => {
   HTMLAnchorElement.prototype.click = originalClick;
   URL.createObjectURL = originalCreateObjectURL;
   const exported = JSON.parse(await exportedBlob.text());
-  const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
-  const rules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
-  const file = new File([JSON.stringify({ version:1, schemas, rules })], "schema-library-v1.json", { type:"application/json" });
+  const identities = (items) => items.map((item) => item.id);
+  const before = { schemas:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]")), rules:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]")) };
+  const file = new File([JSON.stringify(exported)], "schema-library-v1.json", { type:"application/json" });
   const input = q("#schema-library-import-file");
   Object.defineProperty(input, "files", { configurable:true, value:[file] });
   input.dispatchEvent(new Event("change", { bubbles:true }));
   await new Promise((resolve) => setTimeout(resolve, 25));
   q("#replace-schema-library").click();
-  const reloaded = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const reloaded = { schemas:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]")), rules:identities(JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]")) };
   return {
     downloadName,
-    content:{ version:exported.version, schemas:exported.schemas.length, rules:exported.rules.length },
+    content:{ version:exported.version, schemas:identities(exported.schemas), rules:identities(exported.rules) },
+    before,
     result:q("#schema-result").textContent,
     review:q("#schema-import-review").open,
     actions:Array.from(q("#schema-import-review").querySelectorAll("button")).map((button) => button.textContent),
-    reloadedSchemas:reloaded.length,
+    reloaded,
   };
 })()`;
 
@@ -1115,20 +1116,20 @@ try {
         preview:["example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
-      assert.deepEqual(schemaLibraryTransfer, {
-        downloadName:"schema-library-v1.json",
-        content:{ version:1, schemas:2, rules:4 },
-        result:"Schema Library replaced.",
-        review:false,
-        actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
-        reloadedSchemas:2,
-      }, "Schema Library export/import controls did not drive the production transfer flow");
+      assert.equal(schemaLibraryTransfer.downloadName, "schema-library-v1.json", "Schema Library export did not create the download");
+      assert.equal(schemaLibraryTransfer.content.version, 1, "Schema Library export used an unsupported format");
+      assert.deepEqual(schemaLibraryTransfer.content.schemas, schemaLibraryTransfer.before.schemas, "Schema Library export omitted a schema identity");
+      assert.deepEqual(schemaLibraryTransfer.content.rules, schemaLibraryTransfer.before.rules, "Schema Library export omitted a reusable-rule identity");
+      assert.equal(schemaLibraryTransfer.result, "Schema Library replaced.", "Schema Library replacement did not complete");
+      assert.equal(schemaLibraryTransfer.review, false, "Schema Library replacement review remained open");
+      assert.deepEqual(schemaLibraryTransfer.actions, ["Replace Schema Library", "Append to Schema Library", "Cancel"], "Schema Library replacement actions changed");
+      assert.deepEqual(schemaLibraryTransfer.reloaded, schemaLibraryTransfer.before, "Schema Library replacement did not retain exported identities");
       await reloadPanel(socket);
       schemaReload = await evaluate(socket, `(() => {
         document.querySelector("#data-layer-view-schemas").click();
         return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
       })()`);
-      assert.deepEqual(schemaReload, { stored:2, rendered:2 }, "Schema Library did not survive a browser reload");
+      assert.deepEqual(schemaReload, { stored:schemaLibraryTransfer.before.schemas.length, rendered:schemaLibraryTransfer.before.schemas.length }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
       assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
