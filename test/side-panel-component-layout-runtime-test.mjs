@@ -271,7 +271,7 @@ const schemaAssignmentRuntime = `(() => {
   const originalRuleExportClick = HTMLAnchorElement.prototype.click;
   let ruleExportName = "";
   HTMLAnchorElement.prototype.click = function () { ruleExportName = this.download; };
-  q("#export-schema-rules").click();
+  Array.from(q("#schema-rule-list").querySelectorAll("button")).find((button) => button.textContent === "Export").click();
   HTMLAnchorElement.prototype.click = originalRuleExportClick;
   q("#schema-subview-schemas").click();
   q("#save-schema").click();
@@ -339,6 +339,12 @@ const schemaSourceCreationRuntime = `(() => {
   input("#push-destination-path", "dataLayer");
   input("#event-template-json", JSON.stringify({ page_type:"confirmation", page_name:"Thank you", commerce:{ order:{ id:"O-1" } } }));
   q("#save-template-revision").click();
+  const schemaSelector = q("#library-draft-schema-selector");
+  schemaSelector.value = Array.from(schemaSelector.options).find((option) => option.value)?.value ?? "";
+  schemaSelector.dispatchEvent(new Event("change", { bubbles:true }));
+  const draftBeforeRefresh = q("#event-template-json").value;
+  q("#refresh-library-draft-validation").click();
+  const draftRefresh = { unchanged:draftBeforeRefresh === q("#event-template-json").value, message:q("#event-template-validation").textContent };
   const create = Array.from(q("#event-template-list").querySelectorAll("button")).find((button) => button.textContent === "Create schema");
   if (!create) throw new Error("Missing Library Create schema action");
   create.click();
@@ -348,6 +354,7 @@ const schemaSourceCreationRuntime = `(() => {
     name:q("#schema-editor-name").value,
     paths:Array.from(q("#schema-property-tree").querySelectorAll("strong")).map((row) => row.textContent),
     assignment:q("#schema-editor-target").value,
+    draftRefresh,
   };
 })()`;
 
@@ -1046,7 +1053,7 @@ try {
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
       rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · pinned · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
-      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation." }, ruleExportName:"schema-rules.json" },
+      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
       rule:{ name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
@@ -1063,6 +1070,7 @@ try {
         name:"Order complete schema",
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
+        draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, {

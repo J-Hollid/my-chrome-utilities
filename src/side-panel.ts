@@ -311,6 +311,14 @@ const savedSessionConfirmation = document.querySelector<HTMLElement>("#saved-ses
 const cancelSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
+const libraryDraftSchemaSelector = document.createElement("select");
+libraryDraftSchemaSelector.id = "library-draft-schema-selector";
+libraryDraftSchemaSelector.setAttribute("aria-label", "Schema for Library draft validation");
+const refreshLibraryDraftValidationButton = document.createElement("button");
+refreshLibraryDraftValidationButton.id = "refresh-library-draft-validation";
+refreshLibraryDraftValidationButton.type = "button";
+refreshLibraryDraftValidationButton.textContent = "Refresh validation";
+eventLibraryEditorElements.validation?.after(libraryDraftSchemaSelector, refreshLibraryDraftValidationButton);
 const liveEventsEmptyState = document.querySelector<HTMLElement>("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector<HTMLElement>("#live-source-error-state");
 const templateEmptyStateElements = findPanelEmptyStateElements(
@@ -527,6 +535,7 @@ let approvedRuleRevisionId: string | undefined;
 let approvedRuleAttachmentUpdateId: string | undefined;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
+let libraryDraftSchemaOverrides: Record<string, string> = {};
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
@@ -1055,7 +1064,29 @@ function renderEventTemplateLibrary(): void {
       }),
     },
   );
+  const editor = propertyEditorState;
+  const selectable = Boolean(editor && !editor.isNew);
+  libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
+  if (selectable && editor) {
+    const selected = libraryDraftSchemaOverrides[editor.template.id] ?? "";
+    libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"Automatic schema" }), ...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` })));
+    libraryDraftSchemaSelector.value = selected;
+  }
 }
+
+libraryDraftSchemaSelector.addEventListener("change", () => {
+  const editor = propertyEditorState;
+  if (!editor || editor.isNew) return;
+  libraryDraftSchemaOverrides = { ...libraryDraftSchemaOverrides, [editor.template.id]:libraryDraftSchemaSelector.value };
+});
+refreshLibraryDraftValidationButton.addEventListener("click", () => {
+  const editor = propertyEditorState;
+  if (!editor || editor.isNew) return;
+  const schema = schemas.find((candidate) => candidate.id === libraryDraftSchemaOverrides[editor.template.id]);
+  if (!schema) { setEventLibraryValidation(eventLibraryEditorElements, "Select a schema to refresh Library draft validation."); return; }
+  const result = validateWithSchema({ sourceId:editor.template.sourceId, eventName:editor.template.eventName, payload:editor.draft, rawInput:[] }, schema, schemas);
+  setEventLibraryValidation(eventLibraryEditorElements, `Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`);
+});
 
 function renderSchemas(): void {
   const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
@@ -1314,12 +1345,13 @@ function renderSchemaWorkflowRows(): void {
   const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
   schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
     const item = document.createElement("li"); const summary = document.createElement("span"); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
-    const edit = document.createElement("button"); const duplicate = document.createElement("button"); const disable = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = disable.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; disable.textContent = rule.enabled === false ? "Enable" : "Disable"; remove.textContent = "Delete";
+    const edit = document.createElement("button"); const duplicate = document.createElement("button"); const exportRule = document.createElement("button"); const disable = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = exportRule.type = disable.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; exportRule.textContent = "Export"; disable.textContent = rule.enabled === false ? "Enable" : "Disable"; remove.textContent = "Delete";
     edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleTypes) schemaRuleTypes.value = rule.kind.includes("Allowed values") ? "Allowed values" : rule.kind.includes("Regular expression") ? "Regular expression" : "Required"; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage) schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples) schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) { schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}`, selected:rule.attachments?.includes(schema.id) ?? false }))); } if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
     duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy`, version:1, enabled:true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+    exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type:"application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
     disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
     remove.addEventListener("click", () => { const attached = schemas.filter((schema) => rule.attachments?.includes(schema.id) || JSON.stringify(schema.document).includes(rule.id)); if (attached.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${rule.name}: attached to ${attached.map((schema) => schema.name).join(", ")}.`; return; } pendingReusableSchemaRuleDeletionId = rule.id; if (schemaRuleDeleteReviewSummary) schemaRuleDeleteReviewSummary.textContent = `${rule.name} v${rule.version ?? 1} will be removed.`; if (schemaRuleDeleteReview) { schemaRuleDeleteReview.hidden = false; schemaRuleDeleteReview.showModal(); } });
-    item.append(summary, edit, duplicate, disable, remove); return item;
+    item.append(summary, edit, duplicate, exportRule, disable, remove); return item;
   }));
   const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
   schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
@@ -2558,7 +2590,8 @@ saveSchemaRuleButton?.addEventListener("click", (event) => {
   event.stopImmediatePropagation();
   const nextName = schemaRuleName?.value.trim() || previous.name;
   const nextParameters = schemaRuleParameters?.value.trim() ?? previous.parameters ?? "";
-  schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}.`;
+  const nextExamples = schemaRuleExamples?.value.trim() ?? previous.examples ?? "";
+  schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
   schemaRuleRevisionReview.showModal();
 }, true);
 confirmSchemaRuleRevisionButton.addEventListener("click", () => {
