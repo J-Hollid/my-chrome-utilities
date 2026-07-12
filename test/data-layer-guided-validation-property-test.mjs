@@ -5,11 +5,14 @@ import {
   advanceGuidedValidation,
   backGuidedValidation,
   createGuidedValidationDraft,
+  existingSchemaDestination,
   pathConditionResult,
+  schemaDestinationOptions,
   selectGuidedProperty,
   setAllowedValue,
   setGuidedRequirement,
   setGuidedSchemaDestination,
+  validateNewSchemaName,
   validateAllowedValues,
 } from "../dist/data-layer-guided-validation.js";
 
@@ -62,7 +65,27 @@ for (let sample = 0; sample < 200; sample += 1) {
   const requirement = advanceGuidedValidation(selected);
   const scope = advanceGuidedValidation(requirement);
   const destination = advanceGuidedValidation(scope);
-  const review = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName:`Schema ${sample}` }));
+  const schemaName = `Schema ${sample}`;
+  assert.equal(validateNewSchemaName(schemaName, [`Other ${sample}`]).valid, true);
+  assert.equal(validateNewSchemaName(schemaName, [schemaName.toUpperCase()]).valid, false);
+
+  const matchingCandidate = {
+    id:`schema:${sample}`,
+    name:schemaName,
+    version:sample + 1,
+    target:"payload",
+    propertyTypes:{ page_type:"String" },
+    assignments:[{ sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", enabled:true }],
+  };
+  const destinationOptions = schemaDestinationOptions(destination, [
+    matchingCandidate,
+    { ...matchingCandidate, id:`number:${sample}`, propertyTypes:{ page_type:"Number" } },
+    { ...matchingCandidate, id:`raw:${sample}`, target:"raw input" },
+  ]);
+  assert.deepEqual(destinationOptions.map(({ available }) => available), [true, false, false]);
+  assert.equal(existingSchemaDestination(destination, matchingCandidate).matchingAssignment, true);
+
+  const review = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName }));
   assert.deepEqual(
     [requirement.stage, scope.stage, destination.stage, review.stage, advanceGuidedValidation(review).stage],
     ["requirement", "scope", "destination", "review", "review"],

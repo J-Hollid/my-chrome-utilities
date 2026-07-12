@@ -1,6 +1,7 @@
 (ns acceptance.steps.guided-validation-assertions
   (:require [acceptance.steps.guided-validation-path-assertions :as path]
             [acceptance.steps.guided-validation-destination-assertions :as destination]
+            [acceptance.steps.guided-validation-step-assertions :as steps]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
@@ -162,36 +163,36 @@
                    "Guided constraint browser boundary was not exercised." {:step text}))
 
 (def constraint-assertions
-  (merge
-   (zipmap #{"property page_type has observed value product_list with detected type string"
-             "page_type is selected for validation"
-             "inferred property details appear"
-             "Expected data type is String marked as detected from this event"
-             "one human-readable constraint selector is displayed"
-             "separate Rule kind, Value type, and Operator controls are not displayed"}
-           (repeat constraint-detected))
-   (zipmap #{"property configuration expects <expected_type>"
-             "compatible requirements are displayed"
-             "requirement <compatible_requirement> is available"
-             "requirement <incompatible_requirement> is absent or disabled with an explanation"}
-           (repeat constraint-compatible))
-   (zipmap #{"the operator overrides detected String with Number"
-             "Number is retained as an explicit override"
-             "the original event remains as a failing validation example"
-             "the preview explains that page_type was observed as String but Number is expected"
-             "incompatible configured requirements require correction rather than being silently removed"}
-           (repeat constraint-override))
-   (zipmap #{"the operator selects Must be one of these values"
-             "product_list is added as the first allowed value from the current event"
-             "each allowed value is a separately labelled input with a Remove value action"
-             "Add another value adds a separately labelled input"
-             "serialized parameter syntax is not requested from the operator"}
-           (repeat constraint-allowed-editor))
-   (zipmap #{"the allowed value editor contains <configured_values>"
-             "the operator attempts to continue"
-             "continuation result is <continuation_result>"
-             "input assistance states <input_assistance>"}
-           (repeat constraint-assistance))))
+  (steps/step-assertions
+   #{"property page_type has observed value product_list with detected type string"
+     "page_type is selected for validation"
+     "inferred property details appear"
+     "Expected data type is String marked as detected from this event"
+     "one human-readable constraint selector is displayed"
+     "separate Rule kind, Value type, and Operator controls are not displayed"}
+   constraint-detected
+   #{"property configuration expects <expected_type>"
+     "compatible requirements are displayed"
+     "requirement <compatible_requirement> is available"
+     "requirement <incompatible_requirement> is absent or disabled with an explanation"}
+   constraint-compatible
+   #{"the operator overrides detected String with Number"
+     "Number is retained as an explicit override"
+     "the original event remains as a failing validation example"
+     "the preview explains that page_type was observed as String but Number is expected"
+     "incompatible configured requirements require correction rather than being silently removed"}
+   constraint-override
+   #{"the operator selects Must be one of these values"
+     "product_list is added as the first allowed value from the current event"
+     "each allowed value is a separately labelled input with a Remove value action"
+     "Add another value adds a separately labelled input"
+     "serialized parameter syntax is not requested from the operator"}
+   constraint-allowed-editor
+   #{"the allowed value editor contains <configured_values>"
+     "the operator attempts to continue"
+     "continuation result is <continuation_result>"
+     "input assistance states <input_assistance>"}
+   constraint-assistance))
 
 (defn- form-hint [_example observation]
   (support/assert! (= "String — detected from this event" (get-in observation [:requirement :detected]))

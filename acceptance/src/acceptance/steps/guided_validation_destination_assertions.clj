@@ -1,5 +1,6 @@
 (ns acceptance.steps.guided-validation-destination-assertions
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.steps.guided-validation-step-assertions :as steps]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (defn- example-value [example key]
@@ -74,43 +75,43 @@
                    {:observation observation}))
 
 (def assertions
-  (merge
-   (zipmap #{"the schema destination stage is displayed"
-             "the operator can choose Create a new schema or Add to an existing schema"
-             "no schema destination is selected without operator input"
-             "persistence remains unchanged before a destination is reviewed"}
-           (repeat destination-choice))
-   (zipmap #{"Create a new schema is chosen"
-             "schema name <schema_name> is entered"
-             "continuation result is <continuation_result>"
-             "schema-name assistance states <assistance>"}
-           (repeat new-schema-name))
-   (zipmap #{"Add to an existing schema is chosen"
-             "schema <schema_name> has target <schema_target> and page_type state <property_state>"
-             "available schemas are displayed for payload property page_type with expected type String"
-             "schema <schema_name> has availability <availability>"
-             "its compatibility explanation is <explanation>"}
-           (repeat existing-option))
-   (zipmap #{"existing schema Product listing version 3 is selected"
-             "matching assignment state is <assignment_state>"
-             "the validation review is displayed"
-             "it identifies page_type as the rule attachment path"
-             "it states that Product listing version 4 will be created while version 3 remains unchanged"
-             "assignment action is <assignment_action>"}
-           (repeat revision-review))
-   (zipmap #{"the review has destination <schema_destination>"
-             "the operator activates Save validation and persistence completes"
-             "the review and guided validation flow close"
-             "the originating Live event inspector is restored"
-             "a visible status confirms <saved_result>"
-             "keyboard focus returns to Create validation from this event"}
-           (repeat successful-save))
-   (zipmap #{"a saveable draft is at its final stage"
-             "persistence returns an error"
-             "the review remains open with the entered draft intact"
-             "a specific error explains how to recover"
-             "no partial schema, rule, assignment, or revision is persisted"}
-           (repeat failed-save))))
+  (steps/step-assertions
+   #{"the schema destination stage is displayed"
+     "the operator can choose Create a new schema or Add to an existing schema"
+     "no schema destination is selected without operator input"
+     "persistence remains unchanged before a destination is reviewed"}
+   destination-choice
+   #{"Create a new schema is chosen"
+     "schema name <schema_name> is entered"
+     "continuation result is <continuation_result>"
+     "schema-name assistance states <assistance>"}
+   new-schema-name
+   #{"Add to an existing schema is chosen"
+     "schema <schema_name> has target <schema_target> and page_type state <property_state>"
+     "available schemas are displayed for payload property page_type with expected type String"
+     "schema <schema_name> has availability <availability>"
+     "its compatibility explanation is <explanation>"}
+   existing-option
+   #{"existing schema Product listing version 3 is selected"
+     "matching assignment state is <assignment_state>"
+     "the validation review is displayed"
+     "it identifies page_type as the rule attachment path"
+     "it states that Product listing version 4 will be created while version 3 remains unchanged"
+     "assignment action is <assignment_action>"}
+   revision-review
+   #{"the review has destination <schema_destination>"
+     "the operator activates Save validation and persistence completes"
+     "the review and guided validation flow close"
+     "the originating Live event inspector is restored"
+     "a visible status confirms <saved_result>"
+     "keyboard focus returns to Create validation from this event"}
+   successful-save
+   #{"a saveable draft is at its final stage"
+     "persistence returns an error"
+     "the review remains open with the entered draft intact"
+     "a specific error explains how to recover"
+     "no partial schema, rule, assignment, or revision is persisted"}
+   failed-save))
 
 (defn default-assertion [text observation]
   (support/assert! (:destinationInitial observation)
