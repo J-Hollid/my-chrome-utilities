@@ -141,6 +141,11 @@ function collectSchemaIssues(value: unknown, schema: SchemaDefinition, schemas: 
   inheritedAttachedRuleIssues(value, schema, schemas, result);
 }
 
+function validationStateForIssues(issues: readonly ValidationIssue[]): ValidationState {
+  if (issues.length === 0) return "Valid";
+  return issues.every((issue) => issue.severity === "warning") ? `${issues.length} warnings` : `${issues.length} issues`;
+}
+
 function inheritedDocument(schema: SchemaDefinition, schemas: readonly SchemaDefinition[], visited = new Set<string>()): JsonSchema {
   if (!schema.parentSchemaId || visited.has(schema.id)) return schema.document;
   visited.add(schema.id);
@@ -176,7 +181,7 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
       const issues: ValidationIssue[] = []; collectSchemaIssues(value, resolution.schema, schemas, issues);
       const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-      return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+      return { state: validationStateForIssues(issues), issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
     }
   }
   const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -185,14 +190,14 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
   const issues: ValidationIssue[] = [];
   collectSchemaIssues(value, match.schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
-  return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+  return { state: validationStateForIssues(issues), issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event: ValidatableEvent, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], target: ValidationTarget = schema.assignments[0]?.target ?? "payload"): ValidationResult {
   const value = target === "payload" ? event.payload : event.rawInput;
   const issues: ValidationIssue[] = [];
   collectSchemaIssues(value, schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
-  return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+  return { state: validationStateForIssues(issues), issues, schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results: readonly ValidationResult[]): { Valid: number; Issues: number; "Not checked": number } { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation<T extends { validation: ValidationState }>(events: readonly T[], state: ValidationState): T[] { return events.filter((event) => event.validation === state); }
