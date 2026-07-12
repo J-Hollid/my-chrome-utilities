@@ -1213,7 +1213,7 @@ function recheckCapturedSchemaValidation() {
             const validation = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
             if (validation.state !== "Not checked")
                 checked += 1;
-            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · severity error · ${issue.schemaName} v${issue.schemaVersion} · ${issue.schemaLocation} · assignment ${validation.target ?? "automatic"}` })));
+            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · assignment ${validation.assignment?.name ?? validation.assignment?.id ?? validation.target ?? "automatic"}` })));
             records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), ...(validation.target ? { target: validation.target } : {}) });
             return { ...event, validation: validation.state };
         }),
