@@ -1089,11 +1089,14 @@ function renderSchemaDraft(): void {
   if (!propertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
   schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
     const item = document.createElement("li");
+    item.dataset.schemaPropertyPath = path;
+    item.tabIndex = -1;
     const label = document.createElement("strong"); label.textContent = path;
     const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
     const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
-    const add = document.createElement("button"); add.type = "button"; add.textContent = "Add validation rule";
-    const menu = document.createElement("div"); menu.hidden = true; menu.setAttribute("aria-label", `${path} rule menu`);
+    const menu = document.createElement("details"); menu.dataset.ruleMenu = "true"; menu.setAttribute("aria-label", `${path} rule menu`);
+    const add = document.createElement("summary"); add.textContent = "Add validation rule"; menu.append(add);
+    add.addEventListener("click", (event) => { event.preventDefault(); menu.open = !menu.open; });
     const rules = reusableSchemaRules.filter((rule) => rule.enabled !== false);
     if (rules.length) {
       menu.append(...rules.map((rule) => {
@@ -1104,8 +1107,8 @@ function renderSchemaDraft(): void {
       const create = document.createElement("button"); create.type = "button"; create.textContent = "Create reusable rule";
       create.addEventListener("click", () => { selectedSchemaPropertyPath = path; showSchemaSubview("schema-rule-library"); createSchemaRuleButton?.click(); }); menu.append(create);
     }
-    add.addEventListener("click", () => { selectedSchemaPropertyPath = path; menu.hidden = !menu.hidden; });
-    const view = document.createElement("details"); const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
+    menu.addEventListener("toggle", () => { if (!menu.open) focusSchemaPropertyRow(path); });
+    const view = document.createElement("details"); view.dataset.attachedRules = "true"; const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
     if (!attached.length) view.append("No rules attached to this property.");
     for (const rule of attached) {
       const row = document.createElement("div");
@@ -1210,6 +1213,7 @@ function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
   };
   schemaDraft = { ...schemaDraft, document:defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules:[...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
   renderSchemaDraft();
+  focusSchemaPropertyRow(path);
 }
 
 function updateAttachedRule(path: string, id: string, update: (rule: NonNullable<SchemaDefinition["attachedRules"]>[number]) => NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined): void {
@@ -1221,6 +1225,13 @@ function updateAttachedRule(path: string, id: string, update: (rule: NonNullable
   });
   schemaDraft = { ...schemaDraft, attachedRules };
   renderSchemaDraft();
+  focusSchemaPropertyRow(path);
+}
+
+function focusSchemaPropertyRow(path: string): void {
+  Array.from(schemaPropertyTree.querySelectorAll<HTMLElement>("li[data-schema-property-path]"))
+    .find((row) => row.dataset.schemaPropertyPath === path)
+    ?.focus({ preventScroll:true });
 }
 
 function renderSchemaWorkflowRows(): void {

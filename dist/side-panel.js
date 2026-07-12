@@ -819,17 +819,20 @@ function renderSchemaDraft() {
         selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
     schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
         const item = document.createElement("li");
+        item.dataset.schemaPropertyPath = path;
+        item.tabIndex = -1;
         const label = document.createElement("strong");
         label.textContent = path;
         const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
         const count = document.createElement("span");
         count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
-        const add = document.createElement("button");
-        add.type = "button";
-        add.textContent = "Add validation rule";
-        const menu = document.createElement("div");
-        menu.hidden = true;
+        const menu = document.createElement("details");
+        menu.dataset.ruleMenu = "true";
         menu.setAttribute("aria-label", `${path} rule menu`);
+        const add = document.createElement("summary");
+        add.textContent = "Add validation rule";
+        menu.append(add);
+        add.addEventListener("click", (event) => { event.preventDefault(); menu.open = !menu.open; });
         const rules = reusableSchemaRules.filter((rule) => rule.enabled !== false);
         if (rules.length) {
             menu.append(...rules.map((rule) => {
@@ -847,8 +850,10 @@ function renderSchemaDraft() {
             create.addEventListener("click", () => { selectedSchemaPropertyPath = path; showSchemaSubview("schema-rule-library"); createSchemaRuleButton?.click(); });
             menu.append(create);
         }
-        add.addEventListener("click", () => { selectedSchemaPropertyPath = path; menu.hidden = !menu.hidden; });
+        menu.addEventListener("toggle", () => { if (!menu.open)
+            focusSchemaPropertyRow(path); });
         const view = document.createElement("details");
+        view.dataset.attachedRules = "true";
         const summary = document.createElement("summary");
         summary.textContent = `View attached rules (${attached.length})`;
         view.append(summary);
@@ -971,6 +976,7 @@ function attachReusableRule(path, rule) {
     };
     schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
     renderSchemaDraft();
+    focusSchemaPropertyRow(path);
 }
 function updateAttachedRule(path, id, update) {
     if (!schemaDraft)
@@ -983,6 +989,12 @@ function updateAttachedRule(path, id, update) {
     });
     schemaDraft = { ...schemaDraft, attachedRules };
     renderSchemaDraft();
+    focusSchemaPropertyRow(path);
+}
+function focusSchemaPropertyRow(path) {
+    Array.from(schemaPropertyTree.querySelectorAll("li[data-schema-property-path]"))
+        .find((row) => row.dataset.schemaPropertyPath === path)
+        ?.focus({ preventScroll: true });
 }
 function renderSchemaWorkflowRows() {
     if (schemaAssignmentSchema)

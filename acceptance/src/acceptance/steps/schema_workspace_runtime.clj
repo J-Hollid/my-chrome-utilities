@@ -23,6 +23,8 @@
                        "Schema Library import did not open its review dialog." {:payload payload})
       (support/assert! (= ["Disable" "Remove"] (get-in payload [:schemaWorkspace :rules :actions]))
                        "Property rule menus did not expose production actions." {:payload payload})
+      (support/assert! (every? true? (map #(get-in payload [:schemaWorkspace :rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
+                       "Property rule menu disclosure or focus return failed." {:payload payload})
       (support/assert! (= "Re-enable" (get-in payload [:schemaWorkspace :rules :reenable]))
                        "Property rule disable and re-enable did not persist." {:payload payload})
       (support/assert! (= "event-history" (get-in payload [:schemaWorkspace :assignment :sourceId]))

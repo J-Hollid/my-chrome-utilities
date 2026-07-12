@@ -231,15 +231,26 @@ const schemaAssignmentRuntime = `(() => {
   q("#save-schema-rule").click();
   q("#schema-subview-schemas").click();
   Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
-  const propertyAdd = q("#schema-property-tree button"); propertyAdd.click();
+  q("#cancel-schema-revision").click();
+  const propertyAdd = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "Add validation rule");
+  if (!propertyAdd) throw new Error("Missing expandable property rule menu");
+  const propertyMenu = q("#schema-property-tree details[data-rule-menu]");
+  propertyAdd.click();
+  const propertyMenuOpen = propertyMenu.open;
   const attach = Array.from(q("#schema-property-tree").querySelectorAll("button")).find((button) => button.textContent === "Attach Known page types v1");
   if (!attach) throw new Error("Missing property rule attachment action");
   attach.click();
-  const attachedSummary = q("#schema-property-tree summary"); attachedSummary.click();
-  const propertyRuleActions = Array.from(q("#schema-property-tree details").querySelectorAll("button")).map((button) => button.textContent);
-  q("#schema-property-tree details button").click();
-  const reenable = q("#schema-property-tree details button").textContent;
-  q("#schema-property-tree details button").click();
+  const propertyReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
+  const attachedSummary = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)");
+  if (!attachedSummary) throw new Error("Missing attached-rules disclosure");
+  attachedSummary.click();
+  const attachedRules = q("#schema-property-tree details[data-attached-rules]");
+  const propertyRuleActions = Array.from(attachedRules.querySelectorAll("button")).map((button) => button.textContent);
+  attachedRules.querySelector("button").click();
+  const propertyStateReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
+  Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)").click();
+  const reenable = q("#schema-property-tree details[data-attached-rules] button").textContent;
+  q("#schema-property-tree details[data-attached-rules] button").click();
   q("#save-schema").click();
   q("#confirm-schema-revision").click();
   q("#schema-subview-assignments").click();
@@ -288,7 +299,7 @@ const schemaAssignmentRuntime = `(() => {
     closeReview,
     rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
-    propertyRule:{ summary:attachedSummary.textContent, actions:propertyRuleActions, reenable },
+    propertyRule:{ menuOpen:propertyMenuOpen, returnFocus:propertyReturnFocus, stateReturnFocus:propertyStateReturnFocus, summary:attachedSummary.textContent, actions:propertyRuleActions, reenable },
     storedPropertyRule:{ attached:Boolean(storedPropertyRule), version:storedPropertyRule?.version, enabled:storedPropertyRule?.enabled, propertyPath:storedPropertyRule?.propertyPath },
     rule:{ name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
   };
@@ -986,7 +997,7 @@ try {
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
       rows:["Checkout schema automatic · event-history/page_view · anyany · priority 120 · Checkout schema", "Checkout schema automatic · event-history/page_view · shop.example/order-confirmation · priority 100 · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
-      propertyRule:{ summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
+      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
