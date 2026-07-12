@@ -39,6 +39,8 @@ export function schemaInheritanceConflict(schema, schemas) {
         if (!parent)
             return undefined;
         for (const [property, localRule] of Object.entries(schema.document.properties ?? {})) {
+            if (schema.inheritedRuleOverrides?.[property] === "disabled")
+                continue;
             const inheritedRule = parent.document.properties?.[property];
             if (localRule.type && inheritedRule?.type && localRule.type !== inheritedRule.type)
                 return `Inheritance conflict: ${property} is ${inheritedRule.type} in ${parent.name} but ${localRule.type} locally`;
@@ -103,11 +105,13 @@ function inheritedDocument(schema, schemas, visited = new Set()) {
     if (!parent)
         return schema.document;
     const inherited = inheritedDocument(parent, schemas, visited);
+    const disabled = new Set(Object.entries(schema.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([property]) => property));
+    const inheritedProperties = Object.fromEntries(Object.entries(inherited.properties ?? {}).filter(([property]) => !disabled.has(property)));
     return {
         ...inherited,
         ...schema.document,
-        required: [...new Set([...(inherited.required ?? []), ...(schema.document.required ?? [])])],
-        properties: { ...(inherited.properties ?? {}), ...(schema.document.properties ?? {}) },
+        required: [...new Set([...(inherited.required ?? []).filter((property) => !disabled.has(property)), ...(schema.document.required ?? [])])],
+        properties: { ...inheritedProperties, ...(schema.document.properties ?? {}) },
     };
 }
 function inheritedSchemaProvenance(schema, schemas) {

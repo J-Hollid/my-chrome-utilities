@@ -1,7 +1,7 @@
 import type { ValidationState } from "./data-layer-source.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; parentSchemaId?: string; revisionHistory?: readonly SchemaDefinition[]; }
+export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; parentSchemaId?: string; inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">>; revisionHistory?: readonly SchemaDefinition[]; }
 export interface SchemaAssignment {
   sourceId: string;
   eventName: string;
@@ -53,6 +53,7 @@ export function schemaInheritanceConflict(schema: SchemaDefinition, schemas: rea
     const parent = schemas.find((candidate) => candidate.id === parentId);
     if (!parent) return undefined;
     for (const [property, localRule] of Object.entries(schema.document.properties ?? {})) {
+      if (schema.inheritedRuleOverrides?.[property] === "disabled") continue;
       const inheritedRule = parent.document.properties?.[property];
       if (localRule.type && inheritedRule?.type && localRule.type !== inheritedRule.type) return `Inheritance conflict: ${property} is ${inheritedRule.type} in ${parent.name} but ${localRule.type} locally`;
     }
@@ -108,11 +109,13 @@ function inheritedDocument(schema: SchemaDefinition, schemas: readonly SchemaDef
   const parent = schemas.find((candidate) => candidate.id === schema.parentSchemaId);
   if (!parent) return schema.document;
   const inherited = inheritedDocument(parent, schemas, visited);
+  const disabled = new Set(Object.entries(schema.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([property]) => property));
+  const inheritedProperties = Object.fromEntries(Object.entries(inherited.properties ?? {}).filter(([property]) => !disabled.has(property)));
   return {
     ...inherited,
     ...schema.document,
-    required:[...new Set([...(inherited.required ?? []), ...(schema.document.required ?? [])])],
-    properties:{ ...(inherited.properties ?? {}), ...(schema.document.properties ?? {}) },
+    required:[...new Set([...(inherited.required ?? []).filter((property) => !disabled.has(property)), ...(schema.document.required ?? [])])],
+    properties:{ ...inheritedProperties, ...(schema.document.properties ?? {}) },
   };
 }
 
