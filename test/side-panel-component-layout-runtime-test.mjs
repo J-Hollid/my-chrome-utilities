@@ -368,20 +368,39 @@ const schemaInheritanceRuntime = `(async () => {
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
   q("#schema-subview-schemas").click();
+  q("#schema-subview-rules").click();
+  q("#create-schema-rule").click();
+  input("#schema-rule-name", "Known channels");
+  q("#schema-rule-operator").value = "allowed-values";
+  input("#schema-rule-parameters", "channel:web,app");
+  q("#schema-rule-severity").value = "warning";
+  input("#schema-rule-message", "Choose a known channel");
+  const parentAttachment = Array.from(q("#schema-rule-attachments").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
+  if (!parentAttachment) throw new Error("Missing parent schema attachment option");
+  parentAttachment.selected = true;
+  q("#save-schema-rule").click();
+  q("#schema-subview-schemas").click();
   q("#create-schema").click();
   input("#schema-editor-name", "Order confirmation");
   const parent = Array.from(q("#schema-editor-parent").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
   if (!parent) throw new Error("Missing saved parent schema option");
   q("#schema-editor-parent").value = parent.value;
   q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
-  const { validateEvent } = await import("./data-layer-schema-verification.js");
-  const inheritedRuleParent = { id:"schema:inherited-parent:4", name:"Inherited rule parent", version:4, document:{ type:"object" }, assignments:[], attachedRules:[{ id:"rule:channel", name:"Known channels", version:2, propertyPath:"channel", operator:"allowed-values", parameters:"channel:web,app", severity:"warning", message:"Choose a known channel" }] };
-  const inheritedRuleChild = { id:"schema:inherited-child:1", name:"Inherited rule child", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"page_view", target:"payload" }], parentSchemaId:inheritedRuleParent.id };
-  const inheritedValidation = validateEvent({ sourceId:"event-history", eventName:"page_view", payload:{ channel:"email" }, rawInput:[] }, [inheritedRuleParent, inheritedRuleChild]);
+  q("#save-schema").click();
+  q("#confirm-schema-revision").click();
+  const child = Array.from(q("#schema-list").querySelectorAll("li")).find((item) => item.textContent.startsWith("Order confirmation v1"));
+  if (!child) throw new Error("Missing saved child schema");
+  q("#schema-subview-assignments").click();
+  q("#create-schema-assignment").click();
+  q("#schema-assignment-schema").value = Array.from(q("#schema-assignment-schema").options).find((option) => option.textContent.startsWith("Order confirmation v1"))?.value ?? "";
+  input("#schema-assignment-source", "event-history");
+  input("#schema-assignment-event", "page_view");
+  q("#schema-assignment-target").value = "payload";
+  input("#schema-assignment-priority", "200");
+  q("#save-schema-assignment").click();
   return {
     groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
     preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
-    validation:inheritedValidation.issues.map(({ message, rule, severity, origin }) => ({ message, rule, severity, origin })),
   };
 })()`;
 
@@ -421,7 +440,7 @@ const schemaLiveValidationRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:17, windowId:3, url:"https://shop.example/order-confirmation", title:"Checkout", active:true }] },
-    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout" }] } } }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout", channel:"email" }] } } }] },
   };
   q("#choose-observation-target").click();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1086,31 +1105,31 @@ try {
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, {
         groups:[
-          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
-        validation:[{ message:"Choose a known channel", rule:"Known channels v2", severity:"warning", origin:"Inherited rule parent v4" }],
+        preview:["example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.deepEqual(schemaLibraryTransfer, {
         downloadName:"schema-library-v1.json",
-        content:{ version:1, schemas:1, rules:3 },
+        content:{ version:1, schemas:2, rules:4 },
         result:"Schema Library replaced.",
         review:false,
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
-        reloadedSchemas:1,
+        reloadedSchemas:2,
       }, "Schema Library export/import controls did not drive the production transfer flow");
       await reloadPanel(socket);
       schemaReload = await evaluate(socket, `(() => {
         document.querySelector("#data-layer-view-schemas").click();
         return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
       })()`);
-      assert.deepEqual(schemaReload, { stored:1, rendered:1 }, "Schema Library did not survive a browser reload");
+      assert.deepEqual(schemaReload, { stored:2, rendered:2 }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
-      assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
+      assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
+      assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
