@@ -710,9 +710,9 @@ function renderSchemas() {
             updateRules.addEventListener("click", () => {
                 const attachments = schema.ruleAttachments ?? [];
                 const updated = attachments.map((attachment) => {
-                    const current = reusableRules.find((rule) => rule.id === attachment.ruleId && rule.version === attachment.version);
+                    const current = reusableRules.find((rule) => rule.id === attachment.ruleId && rule.version === attachment.version) ?? attachment.snapshot;
                     const latest = current && reusableRules.filter((rule) => rule.enabled && rule.name === current.name).sort((left, right) => right.version - left.version)[0];
-                    return latest && latest.version > attachment.version ? { ruleId: latest.id, version: latest.version } : attachment;
+                    return latest && latest.version > attachment.version ? { ruleId: latest.id, version: latest.version, snapshot: { id: latest.id, version: latest.version, name: latest.name, applicableTypes: latest.applicableTypes, operator: latest.operator, parameters: latest.parameters, severity: latest.severity, message: latest.message } } : attachment;
                 });
                 if (updated.every((attachment, index) => attachment.ruleId === attachments[index]?.ruleId && attachment.version === attachments[index]?.version)) {
                     if (schemaResult)
@@ -720,8 +720,9 @@ function renderSchemas() {
                     return;
                 }
                 pendingSchemaRevision = { ...reviseSchema(schema, schema.document), ruleAttachments: updated };
+                const upgrades = updated.filter((attachment, index) => attachment.version !== attachments[index]?.version).map((attachment, index) => `${attachments[index]?.snapshot?.name ?? attachments[index]?.ruleId} v${attachments[index]?.version} → v${attachment.version}`);
                 if (schemaRevisionReviewSummary)
-                    schemaRevisionReviewSummary.textContent = `Affected schemas: ${schema.name} v${schema.version} → v${pendingSchemaRevision.version}. Review updated pinned rules before saving.`;
+                    schemaRevisionReviewSummary.textContent = `Affected schemas: ${schema.name} v${schema.version} → v${pendingSchemaRevision.version}. Upgrades: ${upgrades.join(", ")}. Review updated pinned rules before saving.`;
                 showDialog(schemaRevisionReview, schemaRevisionReviewHeading);
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
