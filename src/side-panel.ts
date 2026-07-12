@@ -962,10 +962,14 @@ function openLiveInspector(eventId: string): void {
     manualSchemaChoices: () => schemas.map((schema) => ({ id:schema.id, label:`${schema.name} v${schema.version}` })),
     selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]:schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
     updateValidation: (selectedId, validation) => {
+      const selected = liveObserverState.events.find((candidate) => candidate.id === selectedId);
+      const event = selected && { sourceId:selected.sourceId, eventName:selected.name, payload:selected.payload, rawInput:selected.rawInput };
+      const manual = selected && schemas.find((schema) => schema.id === manualSchemaOverrides[selected.id]);
+      const result = event ? (manual ? validateWithSchema(event, manual, schemas) : validateEvent(event, schemas, selected?.pageUrl)) : undefined;
       liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) =>
         candidate.id === selectedId ? { ...candidate, validation } : candidate) };
       renderLiveObserver();
-      updateLiveInspectorValidation(liveObserverElements, validation);
+      updateLiveInspectorValidation(liveObserverElements, validation, result?.issues);
     },
   }));
   renderLiveObserver();

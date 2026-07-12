@@ -517,7 +517,7 @@ const hiddenStateRuntime = `(() => {
   component.remove(); return result;
 })()`;
 
-const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState }) => {
+const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").then(({ renderLiveInspector, renderLiveObserverState, updateLiveInspectorValidation }) => {
   const eventList = document.querySelector("#live-event-list");
   const eventFeed = document.querySelector("#live-event-feed");
   const eventInspector = document.querySelector("#live-event-inspector");
@@ -529,6 +529,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
     validationAvailability: () => ({ enabled:true }),
   });
+  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }]);
   const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
   return {
     listInLayout: eventList.getClientRects().length > 0,
@@ -537,6 +538,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     backHasHiddenAncestor: hiddenAncestor(backToEventsButton),
     backInsideList: eventList.contains(backToEventsButton),
     backIsFirstHeaderControl: eventInspector.firstElementChild?.firstElementChild === backToEventsButton,
+    validationDetail:eventInspector.querySelector("[data-validation-details]")?.textContent,
   };
 })`;
 
@@ -857,6 +859,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · Order confirmation v2 · #/properties/commerce",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [

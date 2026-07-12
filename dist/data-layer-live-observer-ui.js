@@ -184,10 +184,24 @@ export function renderLiveSessionMessage(elements, message) {
     if (elements.sessionMessage)
         elements.sessionMessage.textContent = message;
 }
-export function updateLiveInspectorValidation(elements, validation) {
+export function updateLiveInspectorValidation(elements, validation, issues = []) {
     const term = elements.eventInspector?.querySelector('dt[data-field="validation"]');
     const description = term?.nextElementSibling;
     if (description instanceof HTMLElement)
         description.textContent = validation;
+    const existing = elements.eventInspector?.querySelector("[data-validation-details]");
+    if (!issues.length) {
+        existing?.remove();
+        return;
+    }
+    const details = document.createElement("section");
+    details.dataset.validationDetails = "true";
+    details.setAttribute("aria-label", "Validation details");
+    const heading = document.createElement("h5");
+    heading.textContent = "Validation details";
+    const list = document.createElement("ul");
+    list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion} · ${issue.schemaLocation}` })));
+    details.append(heading, list);
+    existing?.replaceWith(details) ?? elements.eventInspector?.append(details);
 }
 //# sourceMappingURL=data-layer-live-observer-ui.js.map
