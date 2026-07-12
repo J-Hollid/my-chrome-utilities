@@ -125,6 +125,8 @@ const confirmSchemaRevisionButton = document.querySelector("#confirm-schema-revi
 const cancelSchemaRevisionButton = document.querySelector("#cancel-schema-revision");
 const schemaCloseReview = document.querySelector("#schema-close-review");
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
+const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
+const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
@@ -686,6 +688,8 @@ function renderSchemaDraft() {
     const draft = schemaDraft;
     if (schemaEditor)
         schemaEditor.hidden = !draft;
+    if (closeSchemaEditorButton)
+        closeSchemaEditorButton.hidden = !draft;
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = Boolean(draft);
     if (!draft)
@@ -1716,6 +1720,14 @@ cancelSchemaRevisionButton?.addEventListener("click", () => { if (schemaRevision
 discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; renderSchemaDraft(); if (schemaCloseReview?.open)
     schemaCloseReview.close(); if (schemaCloseReview)
     schemaCloseReview.hidden = true; });
+keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview?.open)
+    schemaCloseReview.close(); if (schemaCloseReview)
+    schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll: true }); });
+closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
+    return; if (schemaCloseReview) {
+    schemaCloseReview.hidden = false;
+    schemaCloseReview.showModal();
+} });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
