@@ -189,7 +189,7 @@ import {
   replaceImportedTemplates,
 } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -485,6 +485,8 @@ let schemaDraft: SchemaDefinition | undefined;
 let pendingSchemaImport: SchemaDefinition[] | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
 let editingSchemaAssignment: { schemaId: string; assignmentId?: string } | undefined;
+const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
+let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
@@ -922,13 +924,14 @@ function openLiveInspector(eventId: string): void {
         eventName: selected.name,
         payload: selected.payload,
         rawInput: selected.rawInput,
-      }, schemas).schema),
-    validationState: (selected) => validateEvent({
-        sourceId: selected.sourceId,
-        eventName: selected.name,
-        payload: selected.payload,
-        rawInput: selected.rawInput,
-      }, schemas).state,
+      }, schemas).schema) || Boolean(manualSchemaOverrides[selected.id]),
+    validationState: (selected) => {
+      const event = { sourceId:selected.sourceId, eventName:selected.name, payload:selected.payload, rawInput:selected.rawInput };
+      const manual = schemas.find((schema) => schema.id === manualSchemaOverrides[selected.id]);
+      return manual ? validateWithSchema(event, manual, schemas).state : validateEvent(event, schemas).state;
+    },
+    manualSchemaChoices: () => schemas.map((schema) => ({ id:schema.id, label:`${schema.name} v${schema.version}` })),
+    selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]:schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
     updateValidation: (selectedId, validation) => {
       liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) =>
         candidate.id === selectedId ? { ...candidate, validation } : candidate) };

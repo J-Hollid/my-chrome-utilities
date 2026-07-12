@@ -38,6 +38,8 @@ export function createLiveInspectorActions(effects) {
             }
             effects.updateValidation(event.id, next);
         },
+        manualSchemaChoices(event) { return effects.manualSchemaChoices?.(event) ?? []; },
+        selectManualSchema(eventId, schemaId) { effects.selectManualSchema?.(eventId, schemaId); },
     };
 }
 export async function runLiveInspectorAction(label, event, action, report) {
