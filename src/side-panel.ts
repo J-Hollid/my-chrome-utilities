@@ -175,6 +175,7 @@ import {
   setPushDestination,
   setNewEventField,
   setTemplateIdentity,
+  setTemplateSchemaAttachment,
   templateIdentityValidation,
   saveNewEvent,
   updateDraftJson,
@@ -535,7 +536,6 @@ let approvedRuleRevisionId: string | undefined;
 let approvedRuleAttachmentUpdateId: string | undefined;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
-let libraryDraftSchemaOverrides: Record<string, string> = {};
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
@@ -1068,7 +1068,7 @@ function renderEventTemplateLibrary(): void {
   const selectable = Boolean(editor && !editor.isNew);
   libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
   if (selectable && editor) {
-    const selected = libraryDraftSchemaOverrides[editor.template.id] ?? "";
+    const selected = editor.template.schemaId ?? "";
     libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"Automatic schema" }), ...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` })));
     libraryDraftSchemaSelector.value = selected;
   }
@@ -1077,16 +1077,18 @@ function renderEventTemplateLibrary(): void {
 libraryDraftSchemaSelector.addEventListener("change", () => {
   const editor = propertyEditorState;
   if (!editor || editor.isNew) return;
-  libraryDraftSchemaOverrides = { ...libraryDraftSchemaOverrides, [editor.template.id]:libraryDraftSchemaSelector.value };
+  propertyEditorState = setTemplateSchemaAttachment(editor, libraryDraftSchemaSelector.value);
+  renderEventTemplateLibrary();
 });
-refreshLibraryDraftValidationButton.addEventListener("click", () => {
+function refreshLibraryDraftValidation(): void {
   const editor = propertyEditorState;
   if (!editor || editor.isNew) return;
-  const schema = schemas.find((candidate) => candidate.id === libraryDraftSchemaOverrides[editor.template.id]);
+  const schema = schemas.find((candidate) => candidate.id === editor.template.schemaId);
   if (!schema) { setEventLibraryValidation(eventLibraryEditorElements, "Select a schema to refresh Library draft validation."); return; }
   const result = validateWithSchema({ sourceId:editor.template.sourceId, eventName:editor.template.eventName, payload:editor.draft, rawInput:[] }, schema, schemas);
   setEventLibraryValidation(eventLibraryEditorElements, `Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`);
-});
+}
+refreshLibraryDraftValidationButton.addEventListener("click", refreshLibraryDraftValidation);
 
 function renderSchemas(): void {
   const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
@@ -2692,6 +2694,7 @@ eventTemplateJson?.addEventListener("input", () => {
   setEventLibraryResult(eventLibraryEditorElements, "");
   propertyEditorState = updateDraftJson(propertyEditorState, eventTemplateJson.value);
   renderEventTemplateLibrary();
+  refreshLibraryDraftValidation();
 });
 
 eventTemplatePushDestination?.addEventListener("input", () => {
