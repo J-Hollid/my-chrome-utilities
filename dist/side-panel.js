@@ -1085,11 +1085,13 @@ function renderSchemaWorkflowRows() {
         summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
         const edit = document.createElement("button");
         const duplicate = document.createElement("button");
+        const exportRule = document.createElement("button");
         const disable = document.createElement("button");
         const remove = document.createElement("button");
-        edit.type = duplicate.type = disable.type = remove.type = "button";
+        edit.type = duplicate.type = exportRule.type = disable.type = remove.type = "button";
         edit.textContent = "Edit";
         duplicate.textContent = "Duplicate";
+        exportRule.textContent = "Export";
         disable.textContent = rule.enabled === false ? "Enable" : "Disable";
         remove.textContent = "Delete";
         edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName)
@@ -1104,6 +1106,7 @@ function renderSchemaWorkflowRows() {
         } if (schemaRuleEditor)
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
         duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
         disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         remove.addEventListener("click", () => { const attached = schemas.filter((schema) => rule.attachments?.includes(schema.id) || JSON.stringify(schema.document).includes(rule.id)); if (attached.length) {
             if (schemaResult)
@@ -1114,7 +1117,7 @@ function renderSchemaWorkflowRows() {
             schemaRuleDeleteReview.hidden = false;
             schemaRuleDeleteReview.showModal();
         } });
-        item.append(summary, edit, duplicate, disable, remove);
+        item.append(summary, edit, duplicate, exportRule, disable, remove);
         return item;
     }));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
@@ -2279,7 +2282,8 @@ saveSchemaRuleButton?.addEventListener("click", (event) => {
     event.stopImmediatePropagation();
     const nextName = schemaRuleName?.value.trim() || previous.name;
     const nextParameters = schemaRuleParameters?.value.trim() ?? previous.parameters ?? "";
-    schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}.`;
+    const nextExamples = schemaRuleExamples?.value.trim() ?? previous.examples ?? "";
+    schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
     schemaRuleRevisionReview.showModal();
 }, true);
 confirmSchemaRuleRevisionButton.addEventListener("click", () => {
