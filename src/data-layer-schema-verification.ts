@@ -1,8 +1,8 @@
 import type { ValidationState } from "./data-layer-source.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface RuleAttachment { ruleId: string; version: number; }
 export interface ReusableSchemaRule { id: string; version: number; name: string; applicableTypes: string; operator: string; parameters: string; severity?: string; message?: string; }
+export interface RuleAttachment { ruleId: string; version: number; snapshot?: ReusableSchemaRule; }
 export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; parentId?: string; ruleAttachments?: readonly RuleAttachment[]; }
 export interface SchemaAssignment {
   sourceId: string;
@@ -112,7 +112,7 @@ function safeRegex(pattern: string): RegExp | undefined {
 
 function ruleIssuesFor(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], rules: readonly ReusableSchemaRule[], result: ValidationIssue[]): void {
   for (const attachment of inheritedRuleAttachments(schema, schemas)) {
-    const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version);
+    const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version) ?? attachment.snapshot;
     const location = `#/ruleAttachments/${encodeURIComponent(attachment.ruleId)}@${attachment.version}`;
     if (!rule) {
       result.push({ instancePath: "", message: "Pinned rule unavailable", expected: `${attachment.ruleId} v${attachment.version}`, actual: "unavailable", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location });

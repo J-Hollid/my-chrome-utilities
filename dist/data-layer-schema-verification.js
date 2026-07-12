@@ -110,7 +110,7 @@ function safeRegex(pattern) {
 }
 function ruleIssuesFor(value, schema, schemas, rules, result) {
     for (const attachment of inheritedRuleAttachments(schema, schemas)) {
-        const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version);
+        const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version) ?? attachment.snapshot;
         const location = `#/ruleAttachments/${encodeURIComponent(attachment.ruleId)}@${attachment.version}`;
         if (!rule) {
             result.push({ instancePath: "", message: "Pinned rule unavailable", expected: `${attachment.ruleId} v${attachment.version}`, actual: "unavailable", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location });
