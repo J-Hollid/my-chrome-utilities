@@ -339,6 +339,12 @@ const schemaSourceCreationRuntime = `(() => {
   input("#push-destination-path", "dataLayer");
   input("#event-template-json", JSON.stringify({ page_type:"confirmation", page_name:"Thank you", commerce:{ order:{ id:"O-1" } } }));
   q("#save-template-revision").click();
+  const schemaSelector = q("#library-draft-schema-selector");
+  schemaSelector.value = Array.from(schemaSelector.options).find((option) => option.value)?.value ?? "";
+  schemaSelector.dispatchEvent(new Event("change", { bubbles:true }));
+  const draftBeforeRefresh = q("#event-template-json").value;
+  q("#refresh-library-draft-validation").click();
+  const draftRefresh = { unchanged:draftBeforeRefresh === q("#event-template-json").value, message:q("#event-template-validation").textContent };
   const create = Array.from(q("#event-template-list").querySelectorAll("button")).find((button) => button.textContent === "Create schema");
   if (!create) throw new Error("Missing Library Create schema action");
   create.click();
@@ -348,6 +354,7 @@ const schemaSourceCreationRuntime = `(() => {
     name:q("#schema-editor-name").value,
     paths:Array.from(q("#schema-property-tree").querySelectorAll("strong")).map((row) => row.textContent),
     assignment:q("#schema-editor-target").value,
+    draftRefresh,
   };
 })()`;
 
@@ -1063,6 +1070,7 @@ try {
         name:"Order complete schema",
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
+        draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, {

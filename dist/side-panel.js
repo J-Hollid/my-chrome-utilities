@@ -87,6 +87,14 @@ const savedSessionConfirmation = document.querySelector("#saved-session-confirma
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
+const libraryDraftSchemaSelector = document.createElement("select");
+libraryDraftSchemaSelector.id = "library-draft-schema-selector";
+libraryDraftSchemaSelector.setAttribute("aria-label", "Schema for Library draft validation");
+const refreshLibraryDraftValidationButton = document.createElement("button");
+refreshLibraryDraftValidationButton.id = "refresh-library-draft-validation";
+refreshLibraryDraftValidationButton.type = "button";
+refreshLibraryDraftValidationButton.textContent = "Refresh validation";
+eventLibraryEditorElements.validation?.after(libraryDraftSchemaSelector, refreshLibraryDraftValidationButton);
 const liveEventsEmptyState = document.querySelector("#live-events-empty-state");
 const liveSourceErrorState = document.querySelector("#live-source-error-state");
 const templateEmptyStateElements = findPanelEmptyStateElements("#event-template-empty-state", "#event-template-empty-recovery");
@@ -294,6 +302,7 @@ let manualSchemaOverrides = (() => { try {
 catch {
     return {};
 } })();
+let libraryDraftSchemaOverrides = {};
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 let schemaValidationRecords = (() => { try {
     const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
@@ -757,7 +766,33 @@ function renderEventTemplateLibrary() {
             label: "Library template",
         }),
     });
+    const editor = propertyEditorState;
+    const selectable = Boolean(editor && !editor.isNew);
+    libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
+    if (selectable && editor) {
+        const selected = libraryDraftSchemaOverrides[editor.template.id] ?? "";
+        libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic schema" }), ...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
+        libraryDraftSchemaSelector.value = selected;
+    }
 }
+libraryDraftSchemaSelector.addEventListener("change", () => {
+    const editor = propertyEditorState;
+    if (!editor || editor.isNew)
+        return;
+    libraryDraftSchemaOverrides = { ...libraryDraftSchemaOverrides, [editor.template.id]: libraryDraftSchemaSelector.value };
+});
+refreshLibraryDraftValidationButton.addEventListener("click", () => {
+    const editor = propertyEditorState;
+    if (!editor || editor.isNew)
+        return;
+    const schema = schemas.find((candidate) => candidate.id === libraryDraftSchemaOverrides[editor.template.id]);
+    if (!schema) {
+        setEventLibraryValidation(eventLibraryEditorElements, "Select a schema to refresh Library draft validation.");
+        return;
+    }
+    const result = validateWithSchema({ sourceId: editor.template.sourceId, eventName: editor.template.eventName, payload: editor.draft, rawInput: [] }, schema, schemas);
+    setEventLibraryValidation(eventLibraryEditorElements, `Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`);
+});
 function renderSchemas() {
     const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
     if (schemaEmptyState)
