@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, createSchema, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, createSchema, createSchemaLibraryExport, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
 const valid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { transaction_id: "test-123", revenue: 49.95 }, rawInput: [] }, [schema]);
@@ -36,4 +36,10 @@ const tied = assignSchema(createSchema("Tied", 1, {}), { id:"tied", name:"tied",
 assert.match(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation", [order, tied]).error, /Assignment error/);
 assert.equal(validateEvent({ sourceId:"history", eventName:"page_view", payload:{}, rawInput:[] }, [order, tied], "https://shop.example/order-confirmation").state, "Assignment error");
 assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([generic, order])), [generic, order]);
+const exportSnapshot = createSchemaLibraryExport([generic], [{ id:"rule:a", parameters:"product" }]);
+generic.name = "Changed after export";
+assert.equal(exportSnapshot.version, 1);
+assert.equal(exportSnapshot.schemas[0].name, "Generic page view");
+assert.notEqual(exportSnapshot.schemas[0], generic);
+assert.deepEqual(exportSnapshot.rules, [{ id:"rule:a", parameters:"product" }]);
 assert.deepEqual(JSON.parse(serializeSchemaLibraryExport([generic, order], [{ id:"rule:a" }, { id:"rule:b" }])), { version:1, schemas:[generic, order], rules:[{ id:"rule:a" }, { id:"rule:b" }] });

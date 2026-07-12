@@ -6,6 +6,21 @@
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
 
+(defn- assert-export-preflight! [observation]
+  (let [transfer (:transfer observation)
+        stored (:before transfer)
+        exported (:content transfer)]
+    (support/assert! (= (:schemas stored) (:schemas exported))
+                     "Schema Library export schema identities do not match stored identities."
+                     {:stored (:schemas stored) :exported (:schemas exported)})
+    (support/assert! (= (:rules stored) (:rules exported))
+                     "Schema Library export rule identities do not match stored identities."
+                     {:stored (:rules stored) :exported (:rules exported)})
+    (support/assert! (= 1 (:version exported))
+                     "Schema Library export format version is invalid."
+                     {:version (:version exported)})
+    observation))
+
 (defn- browser-workspace! [world example]
   (if (:browser-observation world)
     world
@@ -23,8 +38,7 @@
                        "Library Create schema did not invoke the production source callback." {:payload payload})
       (support/assert! (= "schema-library-v1.json" (get-in payload [:schemaWorkspace :transfer :downloadName]))
                        "Schema Library export did not produce the versioned download." {:payload payload})
-      (support/assert! (= (get-in payload [:schemaWorkspace :transfer :before]) (get-in payload [:schemaWorkspace :transfer :content]))
-                       "Schema Library export content omitted a stored identity." {:payload payload})
+      (assert-export-preflight! (:schemaWorkspace payload))
       (support/assert! (= (get-in payload [:schemaWorkspace :transfer :before]) (get-in payload [:schemaWorkspace :transfer :reloaded]))
                        "Schema Library import did not persist every exported identity." {:payload payload})
       (support/assert! (= ["Disable" "Remove"] (get-in payload [:schemaWorkspace :rules :actions]))
@@ -122,11 +136,22 @@
                  "the Event Library editor provides the same explicit schema attachment control for its template"} text)
     (support/assert! (= 120 (get-in observation [:assignment :priority])) "Assignment browser evidence is missing." {:observation observation})
 
+    (contains? #{"shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+                 "it observes the schema and rule identities stored immediately before export"
+                 "shared transfer verification runs for a scenario without export-count examples"
+                 "exported schema identities are compared only with stored schema identities"
+                 "exported rule identities are compared only with stored rule identities"
+                 "format version is verified separately from both identity collections"
+                 "valid envelope metadata does not cause an identity mismatch"
+                 "no scenario-specific library size is required before an export-count example is active"} text)
+    (assert-export-preflight! observation)
+
     :else (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation]))) "Live validation browser evidence is missing." {:observation observation})))
 
 (defn- transition [world example _captures {:keys [text]}]
   (let [world (if (contains? #{"the rendered Data Layer Schemas workspace is displayed"
-                               "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"} text)
+                               "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
+                               "shared browser setup observes an export envelope with format version, schema identities, and rule identities"} text)
                 (assoc (browser-workspace! world example) :schema-workspace-runtime? true)
                 world)]
     (require! world :browser-observation "Schema workspace browser adapter was not executed.")
@@ -275,6 +300,42 @@
     "<schema_count> schemas and <rule_count> reusable rules remain stored and rendered"
     (do (assert-export-counts! (:browser-observation world) example) world)
 
+    "shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+    (assoc world :shared-export-preflight? true)
+
+    "it observes the schema and rule identities stored immediately before export"
+    (require! world :shared-export-preflight? "Shared export preflight was not initialized.")
+
+    "shared transfer verification runs for a scenario without export-count examples"
+    (do (require! world :shared-export-preflight? "Shared export preflight was not initialized.")
+        (assert-export-preflight! (:browser-observation world))
+        world)
+
+    "exported schema identities are compared only with stored schema identities"
+    (do (support/assert! (= (get-in world [:browser-observation :transfer :before :schemas])
+                            (get-in world [:browser-observation :transfer :content :schemas]))
+                         "Shared export preflight did not preserve schema identities." {})
+        world)
+
+    "exported rule identities are compared only with stored rule identities"
+    (do (support/assert! (= (get-in world [:browser-observation :transfer :before :rules])
+                            (get-in world [:browser-observation :transfer :content :rules]))
+                         "Shared export preflight did not preserve reusable-rule identities." {})
+        world)
+
+    "format version is verified separately from both identity collections"
+    (do (support/assert! (= 1 (get-in world [:browser-observation :transfer :content :version]))
+                         "Shared export preflight did not preserve the format version." {})
+        world)
+
+    "valid envelope metadata does not cause an identity mismatch"
+    (do (assert-export-preflight! (:browser-observation world)) world)
+
+    "no scenario-specific library size is required before an export-count example is active"
+    (do (support/assert! (nil? (:schema-library-export-example world))
+                         "Shared export preflight unexpectedly required an export-count example." {})
+        world)
+
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
 (def handlers
@@ -282,7 +343,8 @@
           {:pattern (support/template-pattern (:text spec))
            :applies? (fn [world]
                        (or (contains? #{"the rendered Data Layer Schemas workspace is displayed"
-                                        "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"} (:text spec))
+                                        "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
+                                        "shared browser setup observes an export envelope with format version, schema identities, and rule identities"} (:text spec))
                            (:schema-workspace-runtime? world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
