@@ -149,6 +149,13 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
   const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
   return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
+export function validateWithSchema(event: ValidatableEvent, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], target: ValidationTarget = schema.assignments[0]?.target ?? "payload"): ValidationResult {
+  const value = target === "payload" ? event.payload : event.rawInput;
+  const issues: ValidationIssue[] = [];
+  issuesFor(value, inheritedDocument(schema, schemas), "", "#", issues, schema);
+  const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
+  return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+}
 export function validationSummary(results: readonly ValidationResult[]): { Valid: number; Issues: number; "Not checked": number } { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation<T extends { validation: ValidationState }>(events: readonly T[], state: ValidationState): T[] { return events.filter((event) => event.validation === state); }
 export function revalidateExplicitly(event: ValidatableEvent, schemas: readonly SchemaDefinition[], version: number): ValidationResult { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }

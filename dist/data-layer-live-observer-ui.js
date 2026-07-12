@@ -132,6 +132,17 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     actions.className = "live-inspector-actions";
     const feedback = document.createElement("output");
     feedback.setAttribute("aria-live", "polite");
+    const choices = actionHandlers.manualSchemaChoices?.(event) ?? [];
+    if (choices.length) {
+        const label = document.createElement("label");
+        label.textContent = "Manual schema override: ";
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", "Manual schema override");
+        select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic assignment" }), ...choices.map((choice) => Object.assign(document.createElement("option"), { value: choice.id, textContent: choice.label })));
+        select.addEventListener("change", () => { actionHandlers.selectManualSchema?.(event.id, select.value || undefined); feedback.textContent = select.value ? "Manual schema override recorded." : "Automatic assignment restored."; });
+        label.append(select);
+        actions.append(label);
+    }
     const actionCallbacks = {
         "Copy payload": async () => actionHandlers.copyPayload(event),
         "Save to Library": async () => actionHandlers.saveToLibrary(event),

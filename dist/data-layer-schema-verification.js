@@ -150,6 +150,13 @@ export function validateEvent(event, schemas, pageUrl) {
     const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
     return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
+export function validateWithSchema(event, schema, schemas, target = schema.assignments[0]?.target ?? "payload") {
+    const value = target === "payload" ? event.payload : event.rawInput;
+    const issues = [];
+    issuesFor(value, inheritedDocument(schema, schemas), "", "#", issues, schema);
+    const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
+    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+}
 export function validationSummary(results) { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
 export function revalidateExplicitly(event, schemas, version) { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }

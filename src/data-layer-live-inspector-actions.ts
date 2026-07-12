@@ -10,6 +10,8 @@ export interface LiveInspectorActions {
   saveToLibrary(event: LiveEvent): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
+  manualSchemaChoices(event: LiveEvent): readonly { id: string; label: string }[];
+  selectManualSchema(eventId: string, schemaId: string | undefined): void;
 }
 
 export interface LiveInspectorActionEffects {
@@ -20,6 +22,8 @@ export interface LiveInspectorActionEffects {
   validationAvailable?(event: LiveEvent): boolean;
   validationState(event: LiveEvent): ValidationState;
   updateValidation(eventId: string, state: ValidationState): void;
+  manualSchemaChoices?(event: LiveEvent): readonly { id: string; label: string }[];
+  selectManualSchema?(eventId: string, schemaId: string | undefined): void;
 }
 
 export type LiveInspectorFeedback = (message: string) => void;
@@ -65,6 +69,8 @@ export function createLiveInspectorActions(
       }
       effects.updateValidation(event.id, next);
     },
+    manualSchemaChoices(event) { return effects.manualSchemaChoices?.(event) ?? []; },
+    selectManualSchema(eventId, schemaId) { effects.selectManualSchema?.(eventId, schemaId); },
   };
 }
 
