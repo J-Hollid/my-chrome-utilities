@@ -149,6 +149,7 @@ const schemaAssignmentList = document.querySelector("#schema-assignment-list");
 const schemaAssignmentCount = document.querySelector("#schema-assignment-count");
 const schemaAssignmentSearch = document.querySelector("#schema-assignment-search");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
+const schemaVersionHistory = document.querySelector("#schema-version-history");
 const schemaRevisionReview = document.querySelector("#schema-revision-review");
 const schemaRevisionReviewHeading = document.querySelector("#schema-revision-review-heading");
 const schemaRevisionReviewSummary = document.querySelector("#schema-revision-review-summary");
@@ -227,7 +228,16 @@ let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft;
+let schemaDraftBaseline = "";
 let pendingSchemaRevision;
+const SCHEMA_HISTORY_STORAGE_KEY = "my-chrome-utilities.schema-history.v1";
+let schemaHistory = (() => { try {
+    const saved = JSON.parse(localStorage.getItem(SCHEMA_HISTORY_STORAGE_KEY) ?? "{}");
+    return saved && typeof saved === "object" ? saved : {};
+}
+catch {
+    return {};
+} })();
 let editingSchemaAssignment;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableRules = (() => { try {
@@ -827,14 +837,18 @@ function renderSchemaDraft() {
         saveSchemaButton.disabled = !ready;
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
+    if (schemaVersionHistory)
+        schemaVersionHistory.replaceChildren(...(schemaHistory[draft.name] ?? [draft.version]).map((version) => Object.assign(document.createElement("li"), { textContent: `Version ${version}` })));
 }
 function openNewSchemaEditor() {
     schemaDraft = createSchema("", 1, { type: "object" });
+    schemaDraftBaseline = JSON.stringify(schemaDraft);
     renderSchemaDraft();
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+    localStorage.setItem(SCHEMA_HISTORY_STORAGE_KEY, JSON.stringify(schemaHistory));
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -1821,6 +1835,7 @@ saveSchemaButton?.addEventListener("click", () => {
     if (!schemaDraft || saveSchemaButton.disabled)
         return;
     const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [] };
+    schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
     schemas = [...schemas, saved];
     persistSchemaLibrary();
     schemaDraft = undefined;
@@ -1834,6 +1849,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     if (!revision)
         return;
     schemas = [...schemas.filter((schema) => schema.name !== revision.name || schema.version !== revision.version - 1), revision];
+    schemaHistory[revision.name] = [...new Set([...(schemaHistory[revision.name] ?? []), revision.version - 1, revision.version])].sort((left, right) => left - right);
     pendingSchemaRevision = undefined;
     persistSchemaLibrary();
     hideDialog(schemaRevisionReview);
@@ -1844,6 +1860,11 @@ schemaRevisionReview?.addEventListener("cancel", (event) => { event.preventDefau
 closeSchemaEditorButton?.addEventListener("click", () => {
     if (!schemaDraft)
         return;
+    if (JSON.stringify(schemaDraft) === schemaDraftBaseline) {
+        schemaDraft = undefined;
+        renderSchemaDraft();
+        return;
+    }
     if (closeSchemaEditorReviewSummary)
         closeSchemaEditorReviewSummary.textContent = `Discard unsaved schema ${schemaDraft.name || "draft"}?`;
     showDialog(closeSchemaEditorReview, closeSchemaEditorReviewHeading);

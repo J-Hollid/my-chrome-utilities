@@ -390,6 +390,7 @@ const schemaAssignmentList = document.querySelector<HTMLElement>("#schema-assign
 const schemaAssignmentCount = document.querySelector<HTMLElement>("#schema-assignment-count");
 const schemaAssignmentSearch = document.querySelector<HTMLInputElement>("#schema-assignment-search");
 const closeSchemaEditorButton = document.querySelector<HTMLButtonElement>("#close-schema-editor");
+const schemaVersionHistory = document.querySelector<HTMLElement>("#schema-version-history");
 const schemaRevisionReview = document.querySelector<HTMLDialogElement>("#schema-revision-review");
 const schemaRevisionReviewHeading = document.querySelector<HTMLElement>("#schema-revision-review-heading");
 const schemaRevisionReviewSummary = document.querySelector<HTMLElement>("#schema-revision-review-summary");
@@ -469,7 +470,10 @@ let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft: SchemaDefinition | undefined;
+let schemaDraftBaseline = "";
 let pendingSchemaRevision: SchemaDefinition | undefined;
+const SCHEMA_HISTORY_STORAGE_KEY = "my-chrome-utilities.schema-history.v1";
+let schemaHistory: Record<string, number[]> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_HISTORY_STORAGE_KEY) ?? "{}"); return saved && typeof saved === "object" ? saved as Record<string, number[]> : {}; } catch { return {}; } })();
 let editingSchemaAssignment: { schemaId: string; assignmentIndex: number } | undefined;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 type ReusableRule = { id: string; name:string; version:number; applicableTypes:string; operator:string; parameters:string; severity:string; message:string; examples:string };
@@ -1111,15 +1115,18 @@ function renderSchemaDraft(): void {
   const reason = !draft.name.trim() ? "Enter a schema name" : "Add at least one validation rule";
   if (saveSchemaButton) saveSchemaButton.disabled = !ready;
   if (saveSchemaReason) saveSchemaReason.textContent = reason;
+  if (schemaVersionHistory) schemaVersionHistory.replaceChildren(...(schemaHistory[draft.name] ?? [draft.version]).map((version) => Object.assign(document.createElement("li"), { textContent:`Version ${version}` })));
 }
 
 function openNewSchemaEditor(): void {
   schemaDraft = createSchema("", 1, { type: "object" });
+  schemaDraftBaseline = JSON.stringify(schemaDraft);
   renderSchemaDraft(); schemaEditorName?.focus({ preventScroll: true });
 }
 
 function persistSchemaLibrary(): void {
   localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+  localStorage.setItem(SCHEMA_HISTORY_STORAGE_KEY, JSON.stringify(schemaHistory));
 }
 
 function persistEventTemplateLibrary(): void {
@@ -2259,18 +2266,21 @@ addSchemaRuleButton?.addEventListener("click", () => {
 saveSchemaButton?.addEventListener("click", () => {
   if (!schemaDraft || saveSchemaButton.disabled) return;
   const saved = { ...schemaDraft, id:`schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[] };
+  schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
   schemas = [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
   if (schemaResult) schemaResult.textContent = `Saved ${saved.name} version 1.`;
 });
 confirmSchemaRevisionButton?.addEventListener("click", () => {
   const revision = pendingSchemaRevision; if (!revision) return;
   schemas = [...schemas.filter((schema) => schema.name !== revision.name || schema.version !== revision.version - 1), revision];
+  schemaHistory[revision.name] = [...new Set([...(schemaHistory[revision.name] ?? []), revision.version - 1, revision.version])].sort((left, right) => left - right);
   pendingSchemaRevision = undefined; persistSchemaLibrary(); hideDialog(schemaRevisionReview); renderSchemas();
 });
 cancelSchemaRevisionButton?.addEventListener("click", () => { pendingSchemaRevision = undefined; hideDialog(schemaRevisionReview); });
 schemaRevisionReview?.addEventListener("cancel", (event) => { event.preventDefault(); pendingSchemaRevision = undefined; hideDialog(schemaRevisionReview); });
 closeSchemaEditorButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
+  if (JSON.stringify(schemaDraft) === schemaDraftBaseline) { schemaDraft = undefined; renderSchemaDraft(); return; }
   if (closeSchemaEditorReviewSummary) closeSchemaEditorReviewSummary.textContent = `Discard unsaved schema ${schemaDraft.name || "draft"}?`;
   showDialog(closeSchemaEditorReview, closeSchemaEditorReviewHeading);
 });
