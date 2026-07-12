@@ -32,7 +32,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -727,7 +727,8 @@ function renderSchemaDraft() {
         schemaEditorParent.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "No parent" }), ...parents.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
         schemaEditorParent.value = draft.parentSchemaId ?? "";
     }
-    const inheritanceError = schemaInheritanceError(candidate, [...schemas.filter((schema) => schema.id !== candidate.id), candidate]);
+    const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
+    const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
     const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
     const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one validation rule" : inheritanceError ?? "Ready to save";
     if (saveSchemaButton)
@@ -1743,7 +1744,8 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
     const existing = schemas.find((schema) => schema.name === draft.name);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
-    const inheritanceError = schemaInheritanceError(candidate, [...schemas.filter((schema) => schema.id !== candidate.id), candidate]);
+    const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
+    const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
     if (inheritanceError) {
         if (schemaResult)
             schemaResult.textContent = inheritanceError;
@@ -1809,7 +1811,7 @@ importSchemaButton?.addEventListener("click", () => { const serialized = globalT
     return; try {
     const imported = importSchema(serialized);
     const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported];
-    const inheritanceError = schemaInheritanceError(imported, candidates);
+    const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates);
     if (inheritanceError)
         throw new Error(inheritanceError);
     schemas = candidates;
