@@ -497,6 +497,18 @@ export function resolveGuidedPrefillReplacement(
   return rest;
 }
 
+function selectedAssignmentStillMatches(draft: GuidedValidationDraft): boolean {
+  if (draft.destination?.kind !== "existing") return false;
+  const resolution = draft.assignmentResolution;
+  if (!resolution) return draft.destination.matchingAssignment;
+  const selected = resolution.selectedAssignmentId
+    ? resolution.compatibleAssignments.find(({ id }) => id === resolution.selectedAssignmentId)
+    : resolution.selection === "the compatible assignment" && resolution.compatibleAssignments.length === 1
+      ? resolution.compatibleAssignments[0]
+      : undefined;
+  return selected ? guidedAssignmentsMatch(selected, reviewedAssignment(draft)) : false;
+}
+
 export function existingSchemaDestination(
   draft: GuidedValidationDraft,
   candidate: GuidedSchemaCandidate,
@@ -517,7 +529,7 @@ function reviewText(draft: GuidedValidationDraft): string {
     : draft.requirement.toLowerCase();
   const destination = draft.destination.kind === "new"
     ? `New schema ${draft.destination.schemaName} will be created.`
-    : `${draft.destination.schemaName} version ${draft.destination.schemaVersion + 1} will be created while version ${draft.destination.schemaVersion} remains unchanged. Assignment action: ${draft.destination.matchingAssignment ? "reuse the matching enabled assignment" : "create the reviewed enabled assignment"}.`;
+    : `${draft.destination.schemaName} version ${draft.destination.schemaVersion + 1} will be created while version ${draft.destination.schemaVersion} remains unchanged. Assignment action: ${selectedAssignmentStillMatches(draft) ? "reuse the matching enabled assignment" : "create the reviewed enabled assignment"}.`;
   return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
 }
 
@@ -570,7 +582,7 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
       ...(draft.destination.kind === "existing"
         ? { previousSchemaId:draft.destination.schemaId, previousVersion:draft.destination.schemaVersion }
         : {}),
-      assignmentAction:draft.destination.kind === "existing" && draft.destination.matchingAssignment
+      assignmentAction:draft.destination.kind === "existing" && selectedAssignmentStillMatches(draft)
         ? "reuse the matching enabled assignment"
         : "create the reviewed enabled assignment",
     },

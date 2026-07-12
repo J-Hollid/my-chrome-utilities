@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=4f51e335511fd245cd1dcae5c50cafea94bb9ccd47db7ffa46b0c18b90b78d6c
+# mutation-stamp: sha256=72a1d30959dc59d075fc3de96a9bb80319f7fede8bc9d316ed50b89258c2c30b
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-12T20:58:32.116924710Z","feature_name":"Data layer guided validation form assistance","feature_path":"features/data-layer-guided-validation-form-assistance.feature","background_hash":"47ed210de62720a9cfd338ac98931e0c10cb8342ad4591959de1fd279d7eb78a","implementation_hash":"sha256:guided-schema-destination-architect-v1","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-12T21:44:17.414679696Z","feature_name":"Data layer guided validation form assistance","feature_path":"features/data-layer-guided-validation-form-assistance.feature","background_hash":"47ed210de62720a9cfd338ac98931e0c10cb8342ad4591959de1fd279d7eb78a","implementation_hash":"sha256:guided-schema-order-architect-v1","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer guided validation form assistance

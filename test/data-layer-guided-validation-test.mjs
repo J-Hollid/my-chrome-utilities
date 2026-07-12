@@ -178,6 +178,15 @@ assert.deepEqual(replacementProposed.prefillReplacementReview?.map(({ field, cur
 ]);
 assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "keep").scope.domain, "operator.example");
 assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "accept").scope.domain, "replacement.example");
+const matchedBeforeRoutingEdit = applyGuidedSchemaCandidate({ ...scoped, stage:"destination" }, schemaWithOneAssignment);
+const routingEditedAfterDestination = setGuidedScope(matchedBeforeRoutingEdit, {
+  ...matchedBeforeRoutingEdit.scope,
+  kind:"current-path",
+  pathname:"/operator-selected",
+  conditions:[],
+});
+const editedRoutingReview = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(routingEditedAfterDestination)));
+assert.equal(publishGuidedValidation(editedRoutingReview, false).destination.assignmentAction, "create the reviewed enabled assignment");
 assert.deepEqual(schemaDestinationOptions(destinationStage, candidates).map(({ name, available, explanation }) => ({ name, available, explanation })), [
   { name:"Generic pageview", available:true, explanation:"page_type will be added" },
   { name:"Product listing", available:true, explanation:"page_type accepts String rules" },
