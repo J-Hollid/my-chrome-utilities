@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=20368e47bf14f509c935c841c75f521e5d3e3599ca77f2ecaa70fd8393633300
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T22:26:29.177739908Z","feature_name":"Data layer guided validation schema picker dialog","feature_path":"features/data-layer-guided-validation-schema-picker-dialog.feature","background_hash":"55641602a839f3adc896976d4485e27aaf8c277a851ce681d8b276eeeb013394","implementation_hash":"sha256:guided-schema-picker-architect-v1","scenarios":[{"index":1,"name":"Data layer guided validation schema picker dialog 002","scenario_hash":"70ac376e5b95e86e352a60758f3863f1103a95a5a96c854137c1e5fa2c62e186","mutation_count":1,"result":{"Total":1,"Killed":1,"Survived":0,"Errors":0},"tested_at":"2026-07-12T22:26:29.177739908Z"},{"index":2,"name":"Data layer guided validation schema picker dialog 003","scenario_hash":"c420c5ef50320de27fcc13c857229a51b7a3fa82fc45daf48493ab230ad1ed99","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-12T22:26:29.177739908Z"},{"index":5,"name":"Data layer guided validation schema picker dialog 006","scenario_hash":"c95574841b409c5b6523ee058512f0373271113ffa92df185ccae4fbb86547d4","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-12T22:26:29.177739908Z"},{"index":6,"name":"Data layer guided validation schema picker dialog 007","scenario_hash":"097b3db02c11dd115793b90872234474fc9c62dd4f990239e3e7f844ef642640","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-12T22:26:29.177739908Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided validation schema picker dialog
 
   Background:

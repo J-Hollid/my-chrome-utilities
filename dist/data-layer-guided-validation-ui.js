@@ -1,4 +1,5 @@
-import { addAllowedValue, applyGuidedSchemaCandidate, assignmentScopeSummary, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, searchSchemaDestinationOptions, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
 const stageLabels = {
     property: "Choose properties",
     requirement: "Define requirement",
@@ -365,81 +366,6 @@ export function createGuidedValidationFlow(root, effects) {
         render();
         root?.querySelector("#guided-change-existing-schema")?.focus({ preventScroll: true });
     }
-    function renderSchemaPicker(container, candidates) {
-        if (!draft || !schemaPickerOpen)
-            return;
-        const options = searchSchemaDestinationOptions(draft, candidates, schemaPickerQuery);
-        const dialog = element("dialog");
-        dialog.id = "guided-schema-picker";
-        dialog.setAttribute("aria-labelledby", "guided-schema-picker-heading");
-        const heading = element("h5", "Choose an existing schema");
-        heading.id = "guided-schema-picker-heading";
-        const close = element("button", "Close schema picker");
-        close.type = "button";
-        close.addEventListener("click", () => closeSchemaPicker());
-        const search = labelledInput("guided-schema-search", "Schema search", schemaPickerQuery, "Search schema names, versions, targets, properties, events, domains, and paths.");
-        search.input.type = "search";
-        search.input.addEventListener("input", () => { schemaPickerQuery = search.input.value; render(); });
-        const count = element("output", `${options.length} of ${candidates.length} schemas`);
-        count.id = "guided-schema-result-count";
-        count.setAttribute("aria-live", "polite");
-        const results = element("section");
-        results.id = "guided-schema-results";
-        results.setAttribute("aria-label", "Matching schemas");
-        if (!options.length) {
-            const empty = element("p", "No schemas match the current search.");
-            empty.id = "guided-schema-empty-result";
-            const clear = element("button", "Clear search");
-            clear.type = "button";
-            clear.addEventListener("click", () => { schemaPickerQuery = ""; render(); });
-            results.append(empty, clear);
-        }
-        else {
-            for (const option of options) {
-                const result = element("article");
-                result.className = "guided-schema-result";
-                result.dataset.available = String(option.available);
-                const title = element("h6", `${option.name} version ${option.version}`);
-                const target = element("p", `Target: ${option.target}`);
-                const compatibility = element("p", `Property compatibility: ${option.explanation}`);
-                const assignment = element("p", `Assignment scope: ${assignmentScopeSummary(option.assignments)}`);
-                const select = element("button", `Select ${option.name} version ${option.version}`);
-                select.type = "button";
-                select.disabled = !option.available;
-                if (!option.available)
-                    select.setAttribute("aria-disabled", "true");
-                select.addEventListener("click", () => selectSchemaCandidate(option));
-                select.addEventListener("keydown", (event) => {
-                    if (event.key === "Enter") {
-                        event.preventDefault();
-                        selectSchemaCandidate(option);
-                        return;
-                    }
-                    if (event.key !== "ArrowDown" && event.key !== "ArrowUp")
-                        return;
-                    const selectable = Array.from(dialog.querySelectorAll(".guided-schema-result button:not(:disabled)"));
-                    const current = selectable.indexOf(select);
-                    const offset = event.key === "ArrowDown" ? 1 : -1;
-                    selectable[(current + offset + selectable.length) % selectable.length]?.focus();
-                    event.preventDefault();
-                });
-                result.append(title, target, compatibility, assignment, select);
-                results.append(result);
-            }
-        }
-        dialog.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                event.preventDefault();
-                closeSchemaPicker();
-            }
-        });
-        dialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSchemaPicker(); });
-        dialog.append(heading, close, search.wrapper, count, results);
-        container.append(dialog);
-        dialog.showModal();
-        search.input.focus({ preventScroll: true });
-        search.input.setSelectionRange(search.input.value.length, search.input.value.length);
-    }
     function renderDestinationStage(container) {
         if (!draft)
             return;
@@ -532,7 +458,17 @@ export function createGuidedValidationFlow(root, effects) {
             review.append(list, keep, accept);
             container.append(review);
         }
-        renderSchemaPicker(container, candidates);
+        if (schemaPickerOpen) {
+            renderGuidedSchemaPicker({
+                container,
+                draft,
+                candidates,
+                query: schemaPickerQuery,
+                onQuery(query) { schemaPickerQuery = query; render(); },
+                onClose() { closeSchemaPicker(); },
+                onSelect(candidate) { selectSchemaCandidate(candidate); },
+            });
+        }
     }
     function updateAdvanced(field, value) {
         if (!draft)
