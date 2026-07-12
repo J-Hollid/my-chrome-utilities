@@ -996,12 +996,24 @@ function renderSchemas(): void {
   if (schemaEmptyState) schemaEmptyState.hidden = visible.length > 0;
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
-    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
+    const item = document.createElement("li"); const revise = document.createElement("button"); const updateRules = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
     item.textContent = `${schema.name} v${schema.version}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-    revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+    revise.type = updateRules.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; updateRules.textContent = "Update pinned rules"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
     revise.addEventListener("click", () => { pendingSchemaRevision = reviseSchema(schema, schema.document); if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${pendingSchemaRevision.version}; version ${schema.version} remains available.`; showDialog(schemaRevisionReview, schemaRevisionReviewHeading); });
+    updateRules.addEventListener("click", () => {
+      const attachments = schema.ruleAttachments ?? [];
+      const updated = attachments.map((attachment) => {
+        const current = reusableRules.find((rule) => rule.id === attachment.ruleId && rule.version === attachment.version);
+        const latest = current && reusableRules.filter((rule) => rule.enabled && rule.name === current.name).sort((left, right) => right.version - left.version)[0];
+        return latest && latest.version > attachment.version ? { ruleId:latest.id, version:latest.version } : attachment;
+      });
+      if (updated.every((attachment, index) => attachment.ruleId === attachments[index]?.ruleId && attachment.version === attachments[index]?.version)) { if (schemaResult) schemaResult.textContent = `${schema.name} already uses the latest pinned rules.`; return; }
+      pendingSchemaRevision = { ...reviseSchema(schema, schema.document), ruleAttachments:updated };
+      if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${pendingSchemaRevision.version} with updated pinned rules.`;
+      showDialog(schemaRevisionReview, schemaRevisionReviewHeading);
+    });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
-    remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${schema.name} version ${schema.version}? Validation history remains available.`)) return; schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); }); item.append(revise, duplicate, remove); return item;
+    remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${schema.name} version ${schema.version}? Validation history remains available.`)) return; schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); }); item.append(revise, updateRules, duplicate, remove); return item;
   }));
   renderSchemaAssignments();
 }

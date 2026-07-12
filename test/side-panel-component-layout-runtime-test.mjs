@@ -233,6 +233,15 @@ const schemaAssignmentRuntime = `(() => {
   q("#add-schema-rule").click();
   const pinnedAttachments = q("#schema-attached-rules").textContent;
   q("#save-schema").click();
+  q("#schema-subview-rules").click();
+  Array.from(q("#schema-rule-list").querySelectorAll("button")).find((button) => button.textContent === "Duplicate override").click();
+  q("#schema-subview-schemas").click();
+  const pinnedSchemaRow = Array.from(q("#schema-list").querySelectorAll("li")).find((row) => row.textContent.startsWith("Pinned attachment schema v1"));
+  const updatePinnedRules = pinnedSchemaRow && Array.from(pinnedSchemaRow.querySelectorAll("button")).find((button) => button.textContent === "Update pinned rules");
+  if (!updatePinnedRules) throw new Error("Missing explicit pinned rule update action");
+  updatePinnedRules.click();
+  const ruleUpdateReview = { open:q("#schema-revision-review").open, summary:q("#schema-revision-review-summary").textContent };
+  q("#confirm-schema-revision").click();
   q("#schema-subview-assignments").click();
   q("#create-schema-assignment").click();
   input("#schema-assignment-source", "event-history");
@@ -279,6 +288,7 @@ const schemaAssignmentRuntime = `(() => {
     rule:persistedRules.at(-1),
     pinnedAttachments,
     pinnedSchema:persistedSchemas.find((schema) => schema.name === "Pinned attachment schema").ruleAttachments,
+    ruleUpdateReview,
   };
 })()`;
 
@@ -905,7 +915,8 @@ try {
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:120, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
       rule:{ id:"rule:known-page-types:1", name:"Known page types", version:1, applicableTypes:"string", operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout" },
       pinnedAttachments:"Pinned rules: Known page types v1",
-      pinnedSchema:[{ ruleId:"rule:known-page-types:1", version:1 }],
+      pinnedSchema:[{ ruleId:"rule:known-page-types:2", version:2 }],
+      ruleUpdateReview:{ open:true, summary:"Pinned attachment schema will be saved as version 2 with updated pinned rules." },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
   }
