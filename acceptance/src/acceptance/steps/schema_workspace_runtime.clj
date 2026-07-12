@@ -34,7 +34,7 @@
 (defn- transition [world example _captures {:keys [text]}]
   (cond
     (= text "the rendered Data Layer Schemas workspace is displayed")
-    (browser-workspace! world)
+    (assoc (browser-workspace! world) :schema-workspace-runtime? true)
 
     (str/includes? text "contains nested payload properties")
     (let [kind (source-value example "source_kind") name (source-value example "source_name")]
@@ -114,4 +114,10 @@
     :else (throw (ex-info "Unsupported schema workspace runtime step." {:step text}))))
 
 (def handlers
-  (support/semantic-handlers (support/feature-step-specs [feature-file] #{}) transition))
+  (mapv (fn [spec]
+          {:pattern (support/template-pattern (:text spec))
+           :applies? (fn [world]
+                       (or (= "the rendered Data Layer Schemas workspace is displayed" (:text spec))
+                           (:schema-workspace-runtime? world)))
+           :handler (fn [world example captures] (transition world example captures spec))})
+        (support/feature-step-specs [feature-file] #{})))
