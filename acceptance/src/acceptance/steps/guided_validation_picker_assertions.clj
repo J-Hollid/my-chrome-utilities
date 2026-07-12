@@ -36,19 +36,23 @@
    "shop.example" :domain
    "/products/*" :path})
 
+(def search-result-validations
+  {"schema name" #(= ["Product listing version 3"] (:names %))
+   "schema version" #(= ["Product archive version 4"] (:names %))
+   "validation target" #(= [true true] [(boolean (seq (:targets %)))
+                                          (every? (fn [target] (= "Target: payload" target)) (:targets %))])
+   "property path" #(= #{"Product listing version 3" "Numeric page types version 1"} (set (:names %)))
+   "assignment domain" #(= ["Product listing version 3"] (:names %))
+   "assignment path" #(= ["Product listing version 3"] (:names %))})
+
 (defn- searched [example observation]
   (let [query (support/require-example example "query")
         metadata (support/require-example example "matched_metadata")
         result (get-in (picker observation) [:searches (query-key query)])
-        valid (case metadata
-                "schema name" (= ["Product listing version 3"] (:names result))
-                "schema version" (= ["Product archive version 4"] (:names result))
-                "validation target" (and (seq (:targets result)) (every? #(= "Target: payload" %) (:targets result)))
-                "property path" (= #{"Product listing version 3" "Numeric page types version 1"} (set (:names result)))
-                "assignment domain" (= ["Product listing version 3"] (:names result))
-                "assignment path" (= ["Product listing version 3"] (:names result))
-                false)]
-    (support/assert! (and valid (re-matches #"\d+ of 50 schemas" (:count result)))
+        validator (get search-result-validations metadata (constantly false))]
+    (support/assert! (= [true true]
+                        [(boolean (validator result))
+                         (boolean (re-matches #"\d+ of 50 schemas" (:count result)))])
                      "Schema search did not filter by the requested metadata or report its count."
                      {:example example :result result})))
 
@@ -63,30 +67,41 @@
 
 (defn- compatibility [_example observation]
   (let [result (get-in (picker observation) [:resultPresentation])]
-    (support/assert! (and (= [true true] [(:incompatibleDisabled result) (:skippedIncompatible result)])
-                          (every? #(some (fn [text] (str/includes? text %)) (:product result))
-                                  ["Product listing version 3" "Target: payload" "Property compatibility:" "Assignment scope:"])
-                          (some #(str/includes? % "schema validates raw input, not payload") (:incompatible result)))
+    (support/assert! (= [true true true true]
+                        [(:incompatibleDisabled result)
+                         (:skippedIncompatible result)
+                         (every? #(some (fn [text] (str/includes? text %)) (:product result))
+                                 ["Product listing version 3" "Target: payload" "Property compatibility:" "Assignment scope:"])
+                         (boolean (some #(str/includes? % "schema validates raw input, not payload") (:incompatible result)))])
                      "Schema results omitted metadata, compatibility reasons, or keyboard skipping."
                      {:result result})))
 
+(def selection-result-keys
+  {"Enter" :enterSelection
+   "Select button" :buttonSelection})
+
+(def selection-result-validations
+  {"Enter" #(= ["Product listing version 3" true true "payload" "String — Product listing version 3"]
+                [(:summary %) (:changeFocused %) (:dialogClosed %) (:target %) (:expectedTypeSource %)])
+   "Select button" #(= ["Product listing version 3" true] [(:summary %) (:changeFocused %)])})
+
 (defn- selected [example observation]
   (let [selection-input (support/require-example example "selection_input")
-        result (get (picker observation) (if (= selection-input "Enter") :enterSelection :buttonSelection))]
-    (support/assert! (and (= "Product listing version 3" (:summary result))
-                          (:changeFocused result)
-                          (if (= selection-input "Enter")
-                            (and (:dialogClosed result)
-                                 (= "payload" (:target result))
-                                 (= "String — Product listing version 3" (:expectedTypeSource result)))
-                            true))
+        result (get (picker observation) (get selection-result-keys selection-input))
+        validator (get selection-result-validations selection-input (constantly false))]
+    (support/assert! (validator result)
                      "Schema selection did not close to a focused compact summary with derived prefills."
                      {:example example :result result})))
 
+(def dismissal-result-keys
+  {"Escape" :escapeDismissal
+   "Close button" :closeDismissal})
+
 (defn- dismissed [example observation]
   (let [dismissal (support/require-example example "dismissal")
-        result (get (picker observation) (if (= dismissal "Escape") :escapeDismissal :closeDismissal))]
-    (support/assert! (and (:dialogClosed result) (:restored result) (not= false (:unchanged result)))
+        result (get (picker observation) (get dismissal-result-keys dismissal))]
+    (support/assert! (= [true true true]
+                        [(:dialogClosed result) (:restored result) (not= false (:unchanged result))])
                      "Schema picker dismissal changed the draft or lost keyboard position."
                      {:example example :result result})))
 

@@ -24,14 +24,20 @@
 
 (defonce ^:private browser-observation (atom nil))
 
+(defn- parse-browser-payload [line]
+  (when line (json/parse-string line true)))
+
+(defn- combine-browser-observations [payload]
+  (when-some [guided (:guidedValidation payload)]
+    (assoc guided :schemaPicker (:guidedSchemaPicker payload))))
+
 (defn- load-browser-observation! []
   (let [result (process/shell (assoc support/build-shell-options
                                      :env {"GUIDED_VALIDATION_BROWSER_ADAPTER" "1"})
                               "node" "test/side-panel-component-layout-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        payload (when line (json/parse-string line true))
-        observation (when-let [guided (:guidedValidation payload)]
-                      (assoc guided :schemaPicker (:guidedSchemaPicker payload)))]
+        payload (parse-browser-payload line)
+        observation (combine-browser-observations payload)]
     (support/assert! (zero? (:exit result))
                      "Guided validation browser runtime verification failed."
                      {:out (:out result) :err (:err result)})

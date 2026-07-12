@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import {
   addAllowedValue,
   advanceGuidedValidation,
+  assignmentScopeSummary,
   backGuidedValidation,
   createGuidedValidationDraft,
   existingSchemaDestination,
   guidedAssignmentsMatch,
   pathConditionResult,
+  searchSchemaDestinationOptions,
   schemaDestinationOptions,
   selectGuidedProperty,
   setAllowedValue,
@@ -83,6 +85,24 @@ for (let sample = 0; sample < 200; sample += 1) {
   ]);
   assert.deepEqual(destinationOptions.map(({ available }) => available), [true, false, false]);
   assert.equal(existingSchemaDestination(destination, matchingCandidate).matchingAssignment, true);
+  const pathCandidate = {
+    ...matchingCandidate,
+    id:`path:${sample}`,
+    name:`Path schema ${sample}`,
+    assignments:[{
+      ...matchingCandidate.assignments[0],
+      name:`Products assignment ${sample}`,
+      pathConditions:[{ matchType:"Exact path", expression:pathname }],
+    }],
+  };
+  const searchInventory = [matchingCandidate, pathCandidate];
+  for (const query of [schemaName, `version ${sample + 1}`, "payload", "page_type", "shop.example"]) {
+    assert.ok(searchSchemaDestinationOptions(destination, searchInventory, query).some(({ id }) => id === matchingCandidate.id));
+  }
+  assert.deepEqual(searchSchemaDestinationOptions(destination, searchInventory, pathname).map(({ id }) => id), [pathCandidate.id]);
+  assert.equal(searchSchemaDestinationOptions(destination, searchInventory, `missing-${nextToken()}`).length, 0);
+  assert.equal(searchSchemaDestinationOptions(destination, searchInventory, " ").length, searchInventory.length);
+  assert.match(assignmentScopeSummary(pathCandidate.assignments), /pageview · shop\.example/);
   assert.equal(guidedAssignmentsMatch(
     matchingCandidate.assignments[0],
     { ...matchingCandidate.assignments[0], pathnameCondition:pathname },
