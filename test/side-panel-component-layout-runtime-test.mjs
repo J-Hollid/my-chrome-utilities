@@ -680,7 +680,7 @@ const inspectorNavigationRuntime = `import("./data-layer-live-observer-ui.js").t
     copyPayload: async () => {}, saveToLibrary: () => {}, validate: () => {},
     validationAvailability: () => ({ enabled:true }),
   });
-  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }], { name:"Checkout confirmation", sourceId:"event-history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation" });
+  updateLiveInspectorValidation(elements, "1 issues", [{ instancePath:"/commerce/order/id", message:"Required value", expected:"string", actual:"missing", schemaName:"Order confirmation", schemaVersion:2, schemaLocation:"#/properties/commerce" }], { id:"assignment:checkout", name:"Checkout confirmation", sourceId:"event-history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest", enabled:true });
   const hiddenAncestor = (element) => { for (let current = element; current; current = current.parentElement) if (current.hidden) return true; return false; };
   return {
     listInLayout: eventList.getClientRects().length > 0,
@@ -1010,7 +1010,7 @@ try {
         backHasHiddenAncestor: false,
         backInsideList: false,
         backIsFirstHeaderControl: true,
-        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce · assignment Checkout confirmation · source event-history · event page_view · target payload · priority 100 · domain shop.example · pathname /order-confirmation",
+        validationDetail:"Validation details/commerce/order/id · Required value · expected string, received missing · rule schema · severity error · Order confirmation v2 · #/properties/commerce · assignment id assignment:checkout · name Checkout confirmation · source event-history · event page_view · target payload · priority 100 · domain shop.example · pathname /order-confirmation · policy follow latest · enabled",
       }, "stacked inspector navigation layout violated its browser contract");
       assert.deepEqual(await evaluate(socket, pathnameHeaderRuntime), {
         headers: [
