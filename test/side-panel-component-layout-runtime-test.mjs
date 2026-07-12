@@ -189,6 +189,16 @@ async function evaluate(socket, expression) {
   return result.result.value;
 }
 
+async function reloadPanel(socket) {
+  await socket.call("Page.reload");
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const ready = await evaluate(socket, "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null");
+    if (ready) return;
+    await wait(50);
+  }
+  throw new Error("Side panel did not finish reloading.");
+}
+
 const fixture = `(() => {
   const text = "Long metadata and form content that must wrap within the side panel component without creating document overflow. ".repeat(8);
   for (const selector of ["#data-layer-panel-live", "#data-layer-panel-library", "#data-layer-panel-sessions", "#data-layer-panel-schemas", "#event-property-editor", "#live-event-inspector"]) document.querySelector(selector).hidden = false;
@@ -1043,6 +1053,7 @@ try {
     let schemaSourceCreation;
     let schemaInheritance;
     let schemaLibraryTransfer;
+    let schemaReload;
     let schemaLiveValidation;
     if (width === 720) {
       schemaSourceCreation = await evaluate(socket, schemaSourceCreationRuntime);
@@ -1072,6 +1083,12 @@ try {
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
         reloadedSchemas:1,
       }, "Schema Library export/import controls did not drive the production transfer flow");
+      await reloadPanel(socket);
+      schemaReload = await evaluate(socket, `(() => {
+        document.querySelector("#data-layer-view-schemas").click();
+        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
+      })()`);
+      assert.deepEqual(schemaReload, { stored:1, rendered:1 }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
     }
@@ -1083,6 +1100,7 @@ try {
         sourceCreation:schemaSourceCreation,
         inheritance:schemaInheritance,
         transfer:schemaLibraryTransfer,
+        reload:schemaReload,
         validation:schemaLiveValidation,
       });
     }

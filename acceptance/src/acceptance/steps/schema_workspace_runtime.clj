@@ -23,6 +23,8 @@
                        "Schema Library export content was incomplete." {:payload payload})
       (support/assert! (= 1 (get-in payload [:schemaWorkspace :transfer :reloadedSchemas]))
                        "Schema Library import did not persist its replacement." {:payload payload})
+      (support/assert! (= {:stored 1 :rendered 1} (get-in payload [:schemaWorkspace :reload]))
+                       "Schema Library did not survive the production browser reload." {:payload payload})
       (support/assert! (= ["Disable" "Remove"] (get-in payload [:schemaWorkspace :rules :actions]))
                        "Property rule menus did not expose production actions." {:payload payload})
       (support/assert! (every? true? (map #(get-in payload [:schemaWorkspace :rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
