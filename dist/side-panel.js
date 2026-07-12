@@ -212,6 +212,7 @@ let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft;
+let editingSchemaAssignment;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableRules = (() => { try {
     const rules = JSON.parse(localStorage.getItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY) ?? "[]");
@@ -698,19 +699,90 @@ function renderSchemaAssignments() {
             schemaAssignmentSchema.value = selectedSchemaId;
     }
     const query = schemaAssignmentSearch?.value.trim().toLowerCase() ?? "";
-    const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })))
+    const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment, assignmentIndex) => ({ schema, assignment, assignmentIndex })))
         .filter(({ schema, assignment }) => [assignment.name ?? "", assignment.sourceId, assignment.eventName, assignment.domainCondition ?? "", assignment.pathnameCondition ?? "", schema.name].some((value) => value.toLowerCase().includes(query)))
         .sort((left, right) => (right.assignment.priority ?? 0) - (left.assignment.priority ?? 0) || (left.assignment.name ?? left.schema.name).localeCompare(right.assignment.name ?? right.schema.name));
-    schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
+    schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment, assignmentIndex }) => {
         const item = document.createElement("li");
+        const summary = document.createElement("span");
+        const actions = document.createElement("div");
+        const edit = document.createElement("button");
+        const duplicate = document.createElement("button");
+        const toggle = document.createElement("button");
+        const remove = document.createElement("button");
         const domain = assignment.domainCondition || "any";
         const pathname = assignment.pathnameCondition || "any";
         const name = assignment.name || `${schema.name} automatic`;
-        item.textContent = `${name} · ${assignment.sourceId}/${assignment.eventName} · ${domain} ${pathname} · priority ${assignment.priority ?? 0} · ${assignment.target} · ${schema.name} version ${schema.version} (${assignment.versionPolicy ?? "pinned"}) · ${assignment.enabled === false ? "disabled" : "enabled"}`;
+        summary.textContent = `${name} · ${assignment.sourceId}/${assignment.eventName} · ${domain} ${pathname} · priority ${assignment.priority ?? 0} · ${assignment.target} · ${schema.name} version ${schema.version} (${assignment.versionPolicy ?? "pinned"}) · ${assignment.enabled === false ? "disabled" : "enabled"}`;
+        actions.className = "schema-assignment-actions";
+        actions.setAttribute("aria-label", `${name} actions`);
+        edit.type = duplicate.type = toggle.type = remove.type = "button";
+        edit.textContent = "Edit";
+        duplicate.textContent = "Duplicate";
+        toggle.textContent = assignment.enabled === false ? "Enable" : "Disable";
+        remove.textContent = "Delete";
+        edit.addEventListener("click", () => openSchemaAssignmentEditor(schema, assignmentIndex));
+        duplicate.addEventListener("click", () => duplicateSchemaAssignment(schema, assignmentIndex));
+        toggle.addEventListener("click", () => setSchemaAssignmentEnabled(schema, assignmentIndex, assignment.enabled === false));
+        remove.addEventListener("click", () => deleteSchemaAssignment(schema, assignmentIndex));
+        actions.append(edit, duplicate, toggle, remove);
+        item.append(summary, actions);
         return item;
     }));
     if (schemaAssignmentCount)
         schemaAssignmentCount.textContent = `${assignments.length} assignments`;
+}
+function assignmentAt(schemaId, assignmentIndex) {
+    const schema = schemas.find((candidate) => candidate.id === schemaId);
+    const assignment = schema?.assignments[assignmentIndex];
+    return schema && assignment ? { schema, assignment } : undefined;
+}
+function openSchemaAssignmentEditor(schema, assignmentIndex) {
+    const assignment = schema.assignments[assignmentIndex];
+    if (!assignment)
+        return;
+    editingSchemaAssignment = { schemaId: schema.id, assignmentIndex };
+    renderSchemaAssignments();
+    if (schemaAssignmentSchema)
+        schemaAssignmentSchema.value = schema.id;
+    if (schemaAssignmentSource)
+        schemaAssignmentSource.value = assignment.sourceId;
+    if (schemaAssignmentEvent)
+        schemaAssignmentEvent.value = assignment.eventName;
+    if (schemaAssignmentTarget)
+        schemaAssignmentTarget.value = assignment.target;
+    if (schemaAssignmentDomain)
+        schemaAssignmentDomain.value = assignment.domainCondition ?? "";
+    if (schemaAssignmentPathname)
+        schemaAssignmentPathname.value = assignment.pathnameCondition ?? "";
+    if (schemaAssignmentPriority)
+        schemaAssignmentPriority.value = String(assignment.priority ?? 0);
+    if (schemaAssignmentPolicy)
+        schemaAssignmentPolicy.value = assignment.versionPolicy ?? "pinned";
+    if (schemaAssignmentEnabled)
+        schemaAssignmentEnabled.checked = assignment.enabled !== false;
+    if (schemaAssignmentEditor)
+        schemaAssignmentEditor.hidden = false;
+    schemaAssignmentSource?.focus();
+}
+function duplicateSchemaAssignment(schema, assignmentIndex) {
+    const assignment = schema.assignments[assignmentIndex];
+    if (!assignment)
+        return;
+    const copy = { ...assignment, id: `assignment:${schema.id}:${assignment.sourceId}:${assignment.eventName}:${schema.assignments.length + 1}`, name: `${assignment.name || `${schema.name} automatic`} copy` };
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, copy] } : candidate);
+    persistSchemaLibrary();
+    renderSchemas();
+}
+function setSchemaAssignmentEnabled(schema, assignmentIndex, enabled) {
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: candidate.assignments.map((assignment, index) => index === assignmentIndex ? { ...assignment, enabled } : assignment) } : candidate);
+    persistSchemaLibrary();
+    renderSchemas();
+}
+function deleteSchemaAssignment(schema, assignmentIndex) {
+    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: candidate.assignments.filter((_, index) => index !== assignmentIndex) } : candidate);
+    persistSchemaLibrary();
+    renderSchemas();
 }
 function showSchemaSubview(id) {
     schemaPanels.forEach((panel) => { panel.hidden = panel.id !== id; });
@@ -1746,6 +1818,7 @@ createSchemaAssignmentButton?.addEventListener("click", () => {
             schemaResult.textContent = "Save a schema before creating an assignment.";
         return;
     }
+    editingSchemaAssignment = undefined;
     renderSchemaAssignments();
     if (schemaAssignmentEditor)
         schemaAssignmentEditor.hidden = false;
@@ -1759,8 +1832,14 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
     const priority = Number(schemaAssignmentPriority?.value ?? 0);
     if (!schema || !sourceId || !eventName || !target || !Number.isFinite(priority))
         return;
-    const assignment = { sourceId, eventName, target, id: `assignment:${schema.id}:${sourceId}:${eventName}:${schema.assignments.length + 1}`, name: `${schema.name} automatic`, priority, enabled: schemaAssignmentEnabled?.checked ?? true, domainCondition: schemaAssignmentDomain?.value.trim() || "any", pathnameCondition: schemaAssignmentPathname?.value.trim() || "any", versionPolicy: (schemaAssignmentPolicy?.value === "follow latest" ? "follow latest" : "pinned") };
-    schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments: [...candidate.assignments, assignment] } : candidate);
+    const editingState = editingSchemaAssignment;
+    const editing = editingState && assignmentAt(editingState.schemaId, editingState.assignmentIndex);
+    const assignment = { ...editing?.assignment, sourceId, eventName, target, id: editing?.assignment.id && editing.schema.id === schema.id ? editing.assignment.id : `assignment:${schema.id}:${sourceId}:${eventName}:${schema.assignments.length + 1}`, name: `${schema.name} automatic`, priority, enabled: schemaAssignmentEnabled?.checked ?? true, domainCondition: schemaAssignmentDomain?.value.trim() || "any", pathnameCondition: schemaAssignmentPathname?.value.trim() || "any", versionPolicy: (schemaAssignmentPolicy?.value === "follow latest" ? "follow latest" : "pinned") };
+    schemas = schemas.map((candidate) => {
+        const withoutEdited = editing && candidate.id === editing.schema.id ? candidate.assignments.filter((_, index) => index !== editingState?.assignmentIndex) : candidate.assignments;
+        return candidate.id === schema.id ? { ...candidate, assignments: [...withoutEdited, assignment] } : withoutEdited === candidate.assignments ? candidate : { ...candidate, assignments: withoutEdited };
+    });
+    editingSchemaAssignment = undefined;
     persistSchemaLibrary();
     renderSchemas();
     if (schemaAssignmentEditor)
