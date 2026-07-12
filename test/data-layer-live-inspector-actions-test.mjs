@@ -22,6 +22,7 @@ const selectedEvent = {
 };
 const clipboardWrites = [];
 const storedTemplates = [];
+const schemaSources = [];
 const validationUpdates = [];
 let releaseClipboard;
 const clipboardPending = new Promise((resolve) => { releaseClipboard = resolve; });
@@ -32,6 +33,7 @@ const inspectorActions = createLiveInspectorActions({
     await clipboardPending;
   },
   storeTemplate: (template) => { storedTemplates.push(template); },
+  createSchema: (event) => { schemaSources.push(event.id); },
   validationAvailable: () => false,
   validationState: () => "2 issues",
   updateValidation: (eventId, validation) => {
@@ -66,6 +68,16 @@ await runLiveInspectorAction(
 assert.equal(storedTemplates.length, 1);
 assert.equal(storedTemplates[0].originatingEventId, selectedEvent.id);
 assert.equal(saveFeedback.at(-1), "Save to Library completed for purchase.");
+
+const schemaFeedback = [];
+await runLiveInspectorAction(
+  "Create schema",
+  selectedEvent,
+  inspectorActions.createSchema,
+  (message) => { schemaFeedback.push(message); },
+);
+assert.deepEqual(schemaSources, [selectedEvent.id]);
+assert.equal(schemaFeedback.at(-1), "Create schema completed for purchase.");
 
 const validationFeedback = [];
 await runLiveInspectorAction(

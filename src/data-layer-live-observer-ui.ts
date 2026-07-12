@@ -202,6 +202,7 @@ export function renderLiveInspector(
   const actionCallbacks = {
     "Copy payload": async () => actionHandlers.copyPayload(event),
     "Save to Library": async () => actionHandlers.saveToLibrary(event),
+    ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
     Validate: async () => actionHandlers.validate(event),
   } as const;
   for (const [label, callback] of Object.entries(actionCallbacks)) {
