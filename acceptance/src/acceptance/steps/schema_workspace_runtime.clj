@@ -17,6 +17,12 @@
       (support/assert! (true? (get-in payload [:schemaWorkspace :mounted])) "Production Schema workspace did not mount." {:payload payload})
       (support/assert! (= "Order complete schema" (get-in payload [:schemaWorkspace :sourceCreation :name]))
                        "Library Create schema did not invoke the production source callback." {:payload payload})
+      (support/assert! (= "schema-library-v1.json" (get-in payload [:schemaWorkspace :transfer :downloadName]))
+                       "Schema Library export did not produce the versioned download." {:payload payload})
+      (support/assert! (true? (get-in payload [:schemaWorkspace :transfer :review]))
+                       "Schema Library import did not open its review dialog." {:payload payload})
+      (support/assert! (re-find #"Valid|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
+                       "Live Validate did not produce a validation state." {:payload payload})
       (assoc world :browser-observation (:schemaWorkspace payload)))))
 
 (defn- require! [world key message]

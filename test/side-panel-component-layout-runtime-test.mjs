@@ -991,6 +991,8 @@ try {
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
+    let schemaLibraryTransfer;
+    let schemaLiveValidation;
     if (width === 720) {
       schemaSourceCreation = await evaluate(socket, schemaSourceCreationRuntime);
       assert.deepEqual(schemaSourceCreation, {
@@ -1000,14 +1002,15 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
       }, "Library Create schema did not invoke the production source callback");
-      assert.deepEqual(await evaluate(socket, schemaLibraryTransferRuntime), {
+      schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
+      assert.deepEqual(schemaLibraryTransfer, {
         downloadName:"schema-library-v1.json",
         result:"Exported 1 schemas and 3 rules.",
         review:true,
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
       }, "Schema Library export/import controls did not drive the production transfer flow");
-      const liveValidation = await evaluate(socket, schemaLiveValidationRuntime);
-      assert.match(liveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
+      schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
+      assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
@@ -1015,6 +1018,8 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
+        transfer:schemaLibraryTransfer,
+        validation:schemaLiveValidation,
       });
     }
     socket.close();
