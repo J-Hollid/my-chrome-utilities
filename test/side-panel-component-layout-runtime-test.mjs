@@ -9,6 +9,7 @@ import path from "node:path";
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
 let guidedSchemaPickerObservation;
+let liveValidationVisualsObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -872,14 +873,87 @@ const schemaLiveValidationRuntime = `(async () => {
   q("#start-data-layer-testing").click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   const event = q("#live-event-feed button"); event.click();
-  const validate = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Validate");
+  const validate = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Validate" || button.textContent === "Revalidate");
   if (!validate) throw new Error("Missing Validate action");
   validate.click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const validationTerm = q('#live-event-inspector dt[data-field="validation"]');
   q("#live-validation-filter").value = "Warnings";
   q("#live-validation-filter").dispatchEvent(new Event("change", { bubbles:true }));
-  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), filterOptions:Array.from(q("#live-validation-filter").options).map((option) => option.textContent) };
+  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? document.querySelector("#live-event-validation-issues")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), filterOptions:Array.from(q("#live-validation-filter").options).map((option) => option.textContent) };
+})()`;
+
+const liveValidationVisualsRuntime = `(async () => {
+  const ui = await import("/data-layer-live-observer-ui.js");
+  const host = document.createElement("section"); host.innerHTML = '<section id="data-layer-panel-live"><ul id="live-source-statuses"></ul><section id="live-event-list"><ul id="live-event-feed"></ul></section><section id="live-event-inspector"></section><button id="back-to-events">Back to events</button><output id="live-session-message"></output></section>';
+  document.body.append(host);
+  const elements = ui.findLiveObserverElements(host);
+  const evaluation = (propertyPath, status, message, rule, severity="error") => ({ propertyPath, status, message, expected:"expected value", actual:"actual value", rule, ruleVersion:2, severity, schemaName:"Checkout schema", schemaVersion:4 });
+  const issue = (instancePath, message, severity="error", rule="Schema rule v1", expected="expected value", actual="actual value") => ({ instancePath, message, expected, actual, schemaName:"Checkout schema", schemaVersion:4, schemaLocation:"#/rules", rule, severity, origin:"Checkout schema v4" });
+  const details = {
+    schema:{ id:"schema:checkout:4", name:"Checkout schema", version:4 },
+    assignment:{ id:"assignment:checkout", name:"Checkout pages", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", enabled:true },
+    evaluations:[
+      evaluation("currency", "pass", "Currency is allowed", "Known currencies"), evaluation("currency", "pass", "Currency is ISO", "ISO currencies"),
+      evaluation("page_title", "warning", "Prefer a concise title", "Title guidance", "warning"),
+      evaluation("page_type", "pass", "Page type is present", "Required page type"), evaluation("page_type", "warning", "Prefer checkout", "Page type guidance", "warning"), { ...evaluation("page_type", "error", "Page type is invalid", "Known page types"), expected:"checkout", actual:"legacy" },
+      evaluation("commerce.order.id", "error", "Order id is invalid", "Order id"), evaluation("commerce.order.total", "warning", "Total is unusual", "Order total", "warning"), evaluation("commerce.currency", "warning", "Currency is unusual", "Commerce currency", "warning"),
+    ],
+    issues:[
+      issue("/page_type", "Page type is invalid", "error", "Known page types v2", "checkout", "legacy"),
+      issue("/page_title", "Prefer a concise title", "warning", "Title guidance v2", "short text", "A very long title"),
+      issue("/commerce/order/id", "Order id is invalid", "error", "Order id v2"), issue("/commerce/order/total", "Total is unusual", "warning", "Order total v2"), issue("/commerce/currency", "Currency is unusual", "warning", "Commerce currency v2"),
+      issue("/order_id", "Required property", "error", "Required fields v1", "string", "missing"),
+      issue("", "Assignment requires consent", "error", "Consent pairing v1"), issue("", "Currency conflicts with country", "warning", "Country currency v1"),
+    ],
+  };
+  const base = { sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-13T10:00:00Z", pageUrl:"https://shop.example/checkout", destination:"queue.history", provenance:"captured:event-history", rawInput:[] };
+  const events = [
+    { ...base, id:"valid", name:"pageview", validation:"Valid", payload:{} },
+    { ...base, id:"warning", name:"checkout", validation:"2 warnings", payload:{} },
+    { ...base, id:"error", name:"purchase", validation:"2 errors and 1 warning", payload:{ page_path:"/checkout", currency:"EUR", page_title:"A very long title", page_type:"legacy", commerce:{ order:{ id:"bad", total:999 }, currency:"ZZZ" }, sibling:"safe" }, validationDetails:details },
+    { ...base, id:"neutral", name:"consent", validation:"Not checked", payload:{} },
+    { ...base, id:"assignment", name:"refund", validation:"Assignment error", payload:{} },
+  ];
+  ui.renderLiveObserverState(elements, { view:"Live", status:"Live", pageUrl:base.pageUrl, sources:[], events, inspectorEventId:"error", listVisible:true }, () => {});
+  const rows = Object.fromEntries(Array.from(elements.eventFeed.querySelectorAll("button[data-event-id]")).map((button) => [button.dataset.eventId, { text:button.querySelector(".live-validation-badge").textContent.trim(), symbol:button.querySelector(".live-validation-badge").dataset.symbol, treatment:button.dataset.validationTreatment, name:button.getAttribute("aria-label"), border:getComputedStyle(button).borderInlineStartColor, readable:button.scrollWidth <= button.clientWidth || getComputedStyle(button).overflowWrap === "anywhere" }]));
+  const selected = elements.eventFeed.querySelector('button[data-event-id="error"]'); selected.focus();
+  const rowStates = { selected:selected.getAttribute("aria-pressed"), focused:document.activeElement === selected, eventNameVisible:selected.textContent.includes("purchase"), sourceVisible:selected.textContent.includes("Event history") };
+  const handlers = { copyPayload:async()=>{}, saveToLibrary:()=>{}, validationAvailability:()=>({ enabled:true }), validate:()=>{}, manualSchemaChoices:()=>[{ id:"schema:checkout:4", label:"Checkout schema v4" }], selectManualSchema:()=>{} };
+  ui.renderLiveInspector(elements, events[2], handlers);
+  const inspector = {
+    summary:elements.eventInspector.querySelector("#live-inspector-validation-summary").textContent,
+    schema:Array.from(elements.eventInspector.querySelectorAll("dt")).find((term) => term.textContent === "Assigned schema")?.nextElementSibling?.textContent,
+    actions:Array.from(elements.eventInspector.querySelectorAll("button")).map((button) => button.textContent),
+    changeSchema:elements.eventInspector.querySelector("#live-change-schema")?.getAttribute("aria-label"),
+    presentation:Array.from(elements.eventInspector.children).map((element) => element.getAttribute("aria-label") || element.id || element.tagName),
+    rawJson:elements.eventInspector.querySelector("#live-raw-json summary").textContent,
+  };
+  const property = (path) => elements.eventInspector.querySelector("#live-property-" + path.replace(/[^a-z0-9]+/gi, "-"));
+  const properties = Object.fromEntries(["page_path","currency","page_title","page_type","commerce","commerce.order.id","sibling","order_id"].map((path) => { const row = property(path); return [path, { status:row?.querySelector(":scope > .live-validation-property-row .live-property-status")?.textContent, treatment:row?.dataset.validationTreatment, aggregate:row?.querySelector(":scope > .live-validation-property-row .live-property-aggregate")?.textContent ?? null, missing:row?.querySelector('[data-missing="true"]')?.textContent ?? null }]; }));
+  const statusButton = property("page_type").querySelector(".live-property-status");
+  statusButton.dispatchEvent(new PointerEvent("pointerenter", { bubbles:true }));
+  const pointerPreview = property("page_type").querySelector("[role=tooltip]").textContent;
+  statusButton.dispatchEvent(new PointerEvent("pointerleave", { bubbles:true })); statusButton.focus();
+  const focusPreview = property("page_type").querySelector("[role=tooltip]").textContent;
+  statusButton.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  const escaped = property("page_type").querySelector("[role=tooltip]").hidden;
+  const disclosures = {};
+  for (const [name, event] of [["enter",new KeyboardEvent("keydown", { key:"Enter", bubbles:true })],["space",new KeyboardEvent("keydown", { key:" ", bubbles:true })]]) { if (statusButton.getAttribute("aria-expanded") === "true") statusButton.click(); statusButton.dispatchEvent(event); disclosures[name] = statusButton.getAttribute("aria-expanded"); }
+  if (statusButton.getAttribute("aria-expanded") === "true") statusButton.click(); statusButton.click(); disclosures.click = statusButton.getAttribute("aria-expanded");
+  const evaluationText = property("page_type").querySelector(".live-property-rule-details").textContent;
+  const issueRows = Array.from(elements.eventInspector.querySelectorAll("#live-event-validation-issues li")).map((item) => item.textContent);
+  const issueLink = elements.eventInspector.querySelector("#live-event-validation-issues button"); issueLink.click();
+  const issueFocus = document.activeElement?.id;
+  const originalPayload = JSON.stringify(events[2].payload); elements.eventInspector.querySelector("#live-raw-json").open = true;
+  const unchanged = JSON.stringify(events[2].payload) === originalPayload;
+  const scrollBefore = 37; elements.eventInspector.scrollTop = scrollBefore; statusButton.id = "revalidation-focus"; statusButton.focus();
+  const validEvent = { ...events[2], validation:"Valid", validationDetails:{ ...details, issues:[], evaluations:details.evaluations.filter(({ status }) => status === "pass") } };
+  ui.renderLiveObserverState(elements, { view:"Live", status:"Live", pageUrl:base.pageUrl, sources:[], events:events.map((event) => event.id === "error" ? validEvent : event), inspectorEventId:"error", listVisible:true }, () => {});
+  ui.renderLiveInspector(elements, validEvent, handlers); elements.eventInspector.querySelector(".live-property-status")?.focus({ preventScroll:true }); elements.eventInspector.scrollTop = scrollBefore; ui.setEventValidationUpdateStatus(elements, "Validation changed to Valid.");
+  const revalidation = { inspector:elements.eventInspector.querySelector("#live-inspector-validation-summary").textContent, feed:elements.eventFeed.querySelector('button[data-event-id="error"] .live-validation-badge').textContent.trim(), status:elements.eventInspector.querySelector("#live-validation-update-status").textContent, live:elements.eventInspector.querySelector("#live-validation-update-status").getAttribute("aria-live"), scroll:elements.eventInspector.scrollTop, focused:Boolean(elements.eventInspector.contains(document.activeElement)) };
+  host.remove();
+  return { rows, rowStates, inspector, properties, pointerPreview, focusPreview, escaped, disclosures, evaluationText, issueRows, issueFocus, unchanged, revalidation };
 })()`;
 
 const naturalLibraryActionsRuntime = `(() => {
@@ -1493,6 +1567,39 @@ try {
       }, "Guided validation production matchers violated their browser-loaded contract");
       await evaluate(socket, `(() => { localStorage.clear(); for (const [key, value] of Object.entries(${JSON.stringify(previousGuidedStorage)})) localStorage.setItem(key, value); return true; })()`);
       await reloadPanel(socket);
+      liveValidationVisualsObservation = await evaluate(socket, liveValidationVisualsRuntime);
+      assert.deepEqual(Object.fromEntries(Object.entries(liveValidationVisualsObservation.rows).map(([id, row]) => [id, [row.text, row.symbol, row.treatment, row.name.includes(row.text.replace(/^·\s*/, "")), row.border !== "rgb(217, 222, 229)"]])), {
+        valid:["· Valid","check","pass",true,true], warning:["· 2 warnings","warning","warning",true,true], error:["· 2 errors and 1 warning","error","error",true,true], neutral:["· Not checked","neutral","neutral",true,true], assignment:["· Assignment error","error","assignment-error",true,true],
+      }, "Live validation feed badges did not expose text, symbols, treatments, and accessible state");
+      assert.equal(liveValidationVisualsObservation.inspector.summary, "Validation failed, 2 errors, and 1 warning", "Live inspector omitted error and warning counts");
+      assert.equal(liveValidationVisualsObservation.inspector.schema, "Checkout schema version 4", "Live inspector omitted exact schema version");
+      assert.equal(liveValidationVisualsObservation.inspector.rawJson, "Raw JSON", "Live inspector omitted Raw JSON disclosure");
+      assert.ok(["Show validation issues","Revalidate"].every((label) => liveValidationVisualsObservation.inspector.actions.includes(label)), "Live inspector omitted validation actions");
+      assert.equal(liveValidationVisualsObservation.inspector.changeSchema, "Change schema", "Live inspector omitted Change schema");
+      assert.ok(liveValidationVisualsObservation.inspector.presentation.indexOf("live-event-validation-issues") < liveValidationVisualsObservation.inspector.presentation.indexOf("Properties"), "Event-level issues were not displayed above Properties");
+      assert.deepEqual({
+        pagePath:liveValidationVisualsObservation.properties.page_path,
+        currency:liveValidationVisualsObservation.properties.currency,
+        pageTitle:liveValidationVisualsObservation.properties.page_title,
+        pageType:liveValidationVisualsObservation.properties.page_type,
+        commerce:liveValidationVisualsObservation.properties.commerce,
+        sibling:liveValidationVisualsObservation.properties.sibling,
+        missing:liveValidationVisualsObservation.properties.order_id,
+        escaped:liveValidationVisualsObservation.escaped,
+        disclosures:liveValidationVisualsObservation.disclosures,
+        unchanged:liveValidationVisualsObservation.unchanged,
+        revalidation:liveValidationVisualsObservation.revalidation,
+      }, {
+        pagePath:{ status:"○ No rules", treatment:"neutral", aggregate:null, missing:null },
+        currency:{ status:"✓ 2 rules passed", treatment:"pass", aggregate:null, missing:null },
+        pageTitle:{ status:"⚠ 1 warning", treatment:"warning", aggregate:null, missing:null },
+        pageType:{ status:"! 1 error and 1 warning", treatment:"error", aggregate:null, missing:null },
+        commerce:{ status:"○ No rules", treatment:"neutral", aggregate:"1 error and 2 warnings", missing:null },
+        sibling:{ status:"○ No rules", treatment:"neutral", aggregate:null, missing:null },
+        missing:{ status:"! 1 error", treatment:"error", aggregate:null, missing:"Missing" },
+        escaped:true, disclosures:{ enter:"true", space:"true", click:"true" }, unchanged:true,
+        revalidation:{ inspector:"Validation passed", feed:"· Valid", status:"Validation changed to Valid.", live:"polite", scroll:37, focused:true },
+      }, "Live validation property hierarchy, interaction, or revalidation contract failed");
     }
     assert.deepEqual(await evaluate(socket, openLibraryRuntime), {
       selected:"true",
@@ -1761,6 +1868,9 @@ try {
   }
   if (process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ guidedValidation:guidedValidationObservation, guidedSchemaPicker:guidedSchemaPickerObservation }));
+  }
+  if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

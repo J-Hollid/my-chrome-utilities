@@ -154,7 +154,7 @@ import {
   renderLiveInspector,
   renderLiveObserverState,
   renderLiveSessionMessage,
-  updateLiveInspectorValidation,
+  setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import {
@@ -1017,10 +1017,14 @@ function openLiveInspector(eventId: string): void {
       const event = selected && { sourceId:selected.sourceId, eventName:selected.name, payload:selected.payload, rawInput:selected.rawInput };
       const manual = selected && schemas.find((schema) => schema.id === manualSchemaOverrides[selected.id]);
       const result = event ? (manual ? validateWithSchema(event, manual, schemas) : validateEvent(event, schemas, selected?.pageUrl)) : undefined;
+      const inspectorScroll = liveObserverElements.eventInspector?.scrollTop ?? 0;
+      const focusedId = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
       liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) =>
-        candidate.id === selectedId ? { ...candidate, validation } : candidate) };
+        candidate.id === selectedId ? { ...candidate, validation, ...(result ? { validationDetails:{ issues:result.issues, evaluations:result.evaluations ?? [], ...(result.schema ? { schema:result.schema } : {}), ...(result.assignment ? { assignment:result.assignment } : {}) } } : {}) } : candidate) };
       renderLiveObserver();
-      updateLiveInspectorValidation(liveObserverElements, validation, result?.issues, result?.assignment);
+      if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.scrollTop = inspectorScroll;
+      if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll:true });
+      setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
     },
   }));
   renderLiveObserver();
@@ -2156,8 +2160,11 @@ function syncCapturedEventsToLive(): void {
   presentedSourceEventCount = events.length;
   for (const event of pendingEvents) {
     const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
+    const validation = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);
     liveObserverState = recordLiveEvent(liveObserverState, {
       ...event,
+      validation:validation.state,
+      validationDetails:{ issues:validation.issues, evaluations:validation.evaluations ?? [], ...(validation.schema ? { schema:validation.schema } : {}), ...(validation.assignment ? { assignment:validation.assignment } : {}) },
       sourceName: source?.name ?? event.sourceId,
       ...(dataLayerObserverState.observer
         ? { destination: dataLayerObserverState.observer.historyPath }

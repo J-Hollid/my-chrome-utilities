@@ -1,5 +1,6 @@
 import type { ValidationState } from "./data-layer-source.js";
 import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
+import type { ValidationEvaluation } from "./data-layer-live-validation-presentation.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; }
@@ -19,7 +20,7 @@ export interface SchemaAssignment {
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; }
-export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
+export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
 
@@ -148,6 +149,31 @@ function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, s
   }
 }
 
+function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
+  return rules.filter(({ enabled }) => enabled !== false).flatMap<ValidationEvaluation>((rule): ValidationEvaluation[] => {
+    const issues: ValidationIssue[] = [];
+    attachedRuleIssues(value, schema, issues, [rule]);
+    const propertyPath = rule.propertyPath ?? rule.parameters?.split(":", 1)[0]?.split(",", 1)[0]?.trim() ?? "";
+    const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+    const actual = propertyPath && record && propertyPath in record ? String(record[propertyPath]) : "missing";
+    if (!issues.length) return [{ propertyPath, status:"pass" as const, message:rule.message ?? `${rule.name ?? rule.id} passed`, expected:rule.parameters?.split(":", 2)[1] ?? "rule satisfied", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
+    return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }));
+  });
+}
+
+function validationEvaluations(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[]): ValidationEvaluation[] {
+  const result = attachedRuleEvaluations(value, schema, schema.attachedRules ?? []);
+  const disabled = new Set(Object.entries(schema.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => path));
+  const visited = new Set<string>([schema.id]); let parentId = schema.parentSchemaId;
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId); const parent = schemas.find((candidate) => candidate.id === parentId);
+    if (!parent) break;
+    result.push(...attachedRuleEvaluations(value, parent, (parent.attachedRules ?? []).filter((rule) => !rule.propertyPath || !disabled.has(rule.propertyPath))));
+    parentId = parent.parentSchemaId;
+  }
+  return result;
+}
+
 function collectSchemaIssues(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], result: ValidationIssue[]): void {
   issuesFor(value, inheritedDocument(schema, schemas), "", "#", result, schema);
   attachedRuleIssues(value, schema, result);
@@ -194,7 +220,7 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
       const issues: ValidationIssue[] = []; collectSchemaIssues(value, resolution.schema, schemas, issues);
       const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-      return { state: validationStateForIssues(issues), issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+      return { state: validationStateForIssues(issues), issues, evaluations:validationEvaluations(value, resolution.schema, schemas), schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
     }
   }
   const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -203,14 +229,14 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
   const issues: ValidationIssue[] = [];
   collectSchemaIssues(value, match.schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
-  return { state: validationStateForIssues(issues), issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+  return { state: validationStateForIssues(issues), issues, evaluations:validationEvaluations(value, match.schema, schemas), schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event: ValidatableEvent, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], target: ValidationTarget = schema.assignments[0]?.target ?? "payload"): ValidationResult {
   const value = target === "payload" ? event.payload : event.rawInput;
   const issues: ValidationIssue[] = [];
   collectSchemaIssues(value, schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
-  return { state: validationStateForIssues(issues), issues, schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+  return { state: validationStateForIssues(issues), issues, evaluations:validationEvaluations(value, schema, schemas), schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results: readonly ValidationResult[]): { "Not checked": number; Valid: number; Warnings: number; Issues: number; "Assignment error": number } { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings")).length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation<T extends { validation: ValidationState }>(events: readonly T[], state: ValidationState): T[] { return events.filter((event) => event.validation === state); }

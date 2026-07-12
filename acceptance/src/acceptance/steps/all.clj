@@ -12,6 +12,7 @@
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
+            [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
             [acceptance.steps.operator-interface :as operator-interface]
@@ -41,6 +42,7 @@
                data-layer-session/handlers
                live-observer/handlers
                live-event-presentation/handlers
+               live-validation-visuals/handlers
                data-layer-timeline/handlers
                timeline-presentations/handlers
                event-library-editor/handlers

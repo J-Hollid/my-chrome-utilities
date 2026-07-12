@@ -2,6 +2,7 @@ import { dataLayerViews, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
+import { buildValidationPropertyTree, validationVisual, } from "./data-layer-live-validation-presentation.js";
 export function findLiveObserverElements(root = document) {
     return {
         livePanel: root.querySelector("#data-layer-panel-live"),
@@ -41,9 +42,23 @@ function eventRow(event, selected, openEvent) {
     const pathname = eventPathname(event.pageUrl);
     const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
     const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
-    button.setAttribute("aria-label", [event.name, compactTime, sourceName, pathname, event.validation ?? "Not checked", summaryText].filter(Boolean).join(", "));
+    const validation = event.validation ?? "Not checked";
+    const visual = validationVisual(validation);
+    button.setAttribute("aria-label", [event.name, compactTime, sourceName, pathname, validation, summaryText].filter(Boolean).join(", "));
     button.setAttribute("aria-pressed", String(selected));
-    button.textContent = [event.name, compactTime, sourceName, event.validation ?? "Not checked", summaryText].filter(Boolean).join(" · ");
+    button.dataset.validationTreatment = visual.treatment;
+    const identity = document.createElement("span");
+    identity.className = "live-event-row-identity";
+    identity.textContent = [event.name, compactTime, sourceName].filter(Boolean).join(" · ");
+    const badge = document.createElement("span");
+    badge.className = "live-validation-badge";
+    badge.dataset.symbol = visual.symbolName;
+    badge.setAttribute("aria-label", validation);
+    badge.textContent = ` · ${visual.badgeText}`;
+    const summary = document.createElement("span");
+    summary.className = "live-event-row-summary";
+    summary.textContent = summaryText ? ` · ${summaryText}` : "";
+    button.append(identity, badge, summary);
     button.addEventListener("click", () => openEvent(event.id));
     item.append(button);
     return item;
@@ -94,6 +109,124 @@ export function renderLiveObserverState(elements, state, openEvent) {
         elements.backToEventsButton.hidden = state.listVisible;
     }
 }
+function evaluationText(evaluation) {
+    return `${evaluation.message} · expected ${evaluation.expected} · actual ${evaluation.actual} · rule ${evaluation.rule} v${evaluation.ruleVersion} · severity ${evaluation.severity} · ${evaluation.schemaName} v${evaluation.schemaVersion}`;
+}
+function propertyStatusSymbol(symbol) {
+    return symbol === "check" ? "✓" : symbol === "warning" ? "⚠" : symbol === "error" ? "!" : "○";
+}
+function renderPropertyNode(node) {
+    const item = document.createElement("li");
+    item.className = "live-validation-property";
+    item.id = `live-property-${node.path.replace(/[^a-z0-9]+/gi, "-")}`;
+    item.tabIndex = -1;
+    item.dataset.validationTreatment = node.summary.treatment;
+    const row = document.createElement("div");
+    row.className = "live-validation-property-row";
+    const name = document.createElement("code");
+    name.textContent = node.name;
+    const value = document.createElement("span");
+    value.textContent = node.valueLabel;
+    if (node.missing)
+        value.dataset.missing = "true";
+    const status = document.createElement("button");
+    status.type = "button";
+    status.className = "live-property-status";
+    status.id = `${item.id}-status`;
+    status.setAttribute("aria-expanded", "false");
+    status.textContent = `${propertyStatusSymbol(node.summary.symbolName)} ${node.summary.status}`;
+    const preview = document.createElement("div");
+    preview.className = "live-property-issue-preview";
+    preview.id = `${item.id}-preview`;
+    preview.setAttribute("role", "tooltip");
+    preview.hidden = true;
+    preview.tabIndex = 0;
+    const primary = node.evaluations.find(({ status: state }) => state === "error") ?? node.evaluations.find(({ status: state }) => state === "warning") ?? node.evaluations[0];
+    preview.textContent = primary ? evaluationText(primary) : node.summary.status;
+    status.setAttribute("aria-describedby", preview.id);
+    const disclosure = document.createElement("section");
+    disclosure.className = "live-property-rule-details";
+    disclosure.hidden = true;
+    disclosure.setAttribute("aria-label", `${node.path} rule evaluations`);
+    const evaluationList = document.createElement("ul");
+    evaluationList.replaceChildren(...node.evaluations.map((evaluation) => Object.assign(document.createElement("li"), { textContent: `${evaluation.status}: ${evaluationText(evaluation)}` })));
+    disclosure.append(evaluationList);
+    let previewHovered = false;
+    const showPreview = () => { if (primary)
+        preview.hidden = false; };
+    const hidePreview = () => { if (!previewHovered && document.activeElement !== status && document.activeElement !== preview)
+        preview.hidden = true; };
+    status.addEventListener("pointerenter", showPreview);
+    status.addEventListener("pointerleave", () => globalThis.setTimeout(hidePreview, 0));
+    status.addEventListener("focus", showPreview);
+    status.addEventListener("blur", () => globalThis.setTimeout(hidePreview, 0));
+    preview.addEventListener("pointerenter", () => { previewHovered = true; });
+    preview.addEventListener("pointerleave", () => { previewHovered = false; hidePreview(); });
+    preview.addEventListener("focus", showPreview);
+    preview.addEventListener("blur", hidePreview);
+    preview.addEventListener("keydown", (event) => { if (event.key === "Escape") {
+        preview.hidden = true;
+        status.focus({ preventScroll: true });
+        event.preventDefault();
+    } });
+    status.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            preview.hidden = true;
+            event.preventDefault();
+            return;
+        }
+        if (event.key !== "Enter" && event.key !== " ")
+            return;
+        status.click();
+        event.preventDefault();
+    });
+    status.addEventListener("click", () => { disclosure.hidden = !disclosure.hidden; status.setAttribute("aria-expanded", String(!disclosure.hidden)); });
+    row.append(name, value, status);
+    if (node.aggregate.errors || node.aggregate.warnings) {
+        const aggregate = document.createElement("span");
+        aggregate.className = "live-property-aggregate";
+        aggregate.textContent = [node.aggregate.errors ? `${node.aggregate.errors} error${node.aggregate.errors === 1 ? "" : "s"}` : "", node.aggregate.warnings ? `${node.aggregate.warnings} warning${node.aggregate.warnings === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ");
+        row.append(aggregate);
+    }
+    item.append(row, preview, disclosure);
+    if (node.children.length) {
+        const nested = document.createElement("details");
+        const nestedSummary = document.createElement("summary");
+        nestedSummary.textContent = `Expand ${node.name}`;
+        const list = document.createElement("ul");
+        list.replaceChildren(...node.children.map(renderPropertyNode));
+        nested.append(nestedSummary, list);
+        item.append(nested);
+    }
+    return item;
+}
+function renderEventLevelIssues(event) {
+    const section = document.createElement("section");
+    section.id = "live-event-validation-issues";
+    section.setAttribute("aria-labelledby", "live-event-validation-issues-heading");
+    const heading = document.createElement("h5");
+    heading.id = "live-event-validation-issues-heading";
+    heading.textContent = "Event-level issues";
+    const list = document.createElement("ul");
+    list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue) => {
+        const item = document.createElement("li");
+        const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
+        const text = `${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
+        if (path) {
+            const targetId = `live-property-${path.replace(/[^a-z0-9]+/gi, "-")}`;
+            const link = document.createElement("button");
+            link.type = "button";
+            link.textContent = `${path}: ${text}`;
+            link.addEventListener("click", () => document.getElementById(targetId)?.focus({ preventScroll: false }));
+            item.append(link);
+        }
+        else
+            item.textContent = `Event: ${text}`;
+        return item;
+    }));
+    section.append(heading, list);
+    return section;
+}
 export function renderLiveInspector(elements, event, actionHandlers) {
     if (!elements.eventInspector)
         return;
@@ -107,21 +240,35 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     inspectorHeader.append(heading);
     const source = document.createElement("p");
     source.textContent = `Source: ${event.sourceName ?? event.sourceId}`;
+    const visual = validationVisual(event.validation ?? "Not checked");
     const status = document.createElement("output");
-    status.textContent = event.validation ?? "Not checked";
+    status.id = "live-inspector-validation-summary";
+    status.dataset.validationTreatment = visual.treatment;
+    status.textContent = visual.summary;
     const summary = document.createElement("dl");
     appendSummaryItem(summary, "Capture time", event.captureTime);
     appendSummaryItem(summary, "Page", event.pageUrl);
     appendSummaryItem(summary, "Destination", event.destination);
     appendSummaryItem(summary, "Validation", event.validation ?? "Not checked");
+    if (event.validationDetails?.schema)
+        appendSummaryItem(summary, "Assigned schema", `${event.validationDetails.schema.name} version ${event.validationDetails.schema.version}`);
     appendSummaryItem(summary, "Provenance", event.provenance);
     const payload = document.createElement("section");
-    payload.setAttribute("aria-label", "Payload");
+    payload.setAttribute("aria-label", "Properties");
     const payloadHeading = document.createElement("h5");
-    payloadHeading.textContent = "Payload";
+    payloadHeading.textContent = "Properties";
+    const propertyList = document.createElement("ul");
+    propertyList.id = "live-validation-properties";
+    const propertyTree = buildValidationPropertyTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
+    propertyList.replaceChildren(...propertyTree.map(renderPropertyNode));
+    payload.append(payloadHeading, propertyList);
+    const rawJson = document.createElement("details");
+    rawJson.id = "live-raw-json";
+    const rawJsonSummary = document.createElement("summary");
+    rawJsonSummary.textContent = "Raw JSON";
     const payloadValues = document.createElement("pre");
     payloadValues.textContent = JSON.stringify(event.payload, null, 2);
-    payload.append(payloadHeading, payloadValues);
+    rawJson.append(rawJsonSummary, payloadValues);
     const raw = document.createElement("details");
     const rawSummary = document.createElement("summary");
     rawSummary.textContent = "Raw input";
@@ -132,32 +279,40 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     actions.className = "live-inspector-actions";
     const feedback = document.createElement("output");
     feedback.setAttribute("aria-live", "polite");
+    feedback.id = "live-validation-update-status";
     const choices = actionHandlers.manualSchemaChoices?.(event) ?? [];
     if (choices.length) {
         const label = document.createElement("label");
         label.textContent = "Manual schema override: ";
         const select = document.createElement("select");
-        select.setAttribute("aria-label", "Manual schema override");
+        select.id = "live-change-schema";
+        select.setAttribute("aria-label", "Change schema");
         select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic assignment" }), ...choices.map((choice) => Object.assign(document.createElement("option"), { value: choice.id, textContent: choice.label })));
         select.addEventListener("change", () => { actionHandlers.selectManualSchema?.(event.id, select.value || undefined); feedback.textContent = select.value ? "Manual schema override recorded." : "Automatic assignment restored."; });
         label.append(select);
         actions.append(label);
     }
     const actionCallbacks = {
+        ...(event.validationDetails?.issues.length ? { "Show validation issues": async () => { const issues = elements.eventInspector?.querySelector("#live-event-validation-issues"); if (issues) {
+                issues.hidden = !issues.hidden;
+                if (!issues.hidden)
+                    issues.focus({ preventScroll: false });
+            } } } : {}),
         "Copy payload": async () => actionHandlers.copyPayload(event),
         "Save to Library": async () => actionHandlers.saveToLibrary(event),
         ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
         ...(actionHandlers.createValidation ? { "Create validation from this event": async () => actionHandlers.createValidation?.(event) } : {}),
-        Validate: async () => actionHandlers.validate(event),
+        [event.validation && event.validation !== "Not checked" ? "Revalidate" : "Validate"]: async () => actionHandlers.validate(event),
     };
     for (const [label, callback] of Object.entries(actionCallbacks)) {
         const action = document.createElement("button");
         action.type = "button";
         action.textContent = label;
+        action.id = `live-inspector-action-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
         if (label === "Create validation from this event")
             action.dataset.action = "create-validation";
         action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
-        const availability = label === "Validate"
+        const availability = label === "Validate" || label === "Revalidate"
             ? actionHandlers.validationAvailability(event)
             : { enabled: true };
         if (!availability.enabled) {
@@ -171,7 +326,9 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         actions.append(action);
     }
     actions.append(feedback);
-    elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, payload, raw, actions);
+    const issues = renderEventLevelIssues(event);
+    issues.tabIndex = -1;
+    elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, issues, payload, rawJson, raw, actions);
 }
 function appendSummaryItem(summary, label, value) {
     if (!value)
@@ -186,6 +343,11 @@ function appendSummaryItem(summary, label, value) {
 export function renderLiveSessionMessage(elements, message) {
     if (elements.sessionMessage)
         elements.sessionMessage.textContent = message;
+}
+export function setEventValidationUpdateStatus(elements, message) {
+    const status = elements.eventInspector?.querySelector("#live-validation-update-status");
+    if (status)
+        status.textContent = message;
 }
 export function updateLiveInspectorValidation(elements, validation, issues = [], assignment) {
     const term = elements.eventInspector?.querySelector('dt[data-field="validation"]');
