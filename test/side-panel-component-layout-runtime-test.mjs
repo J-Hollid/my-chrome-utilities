@@ -217,6 +217,25 @@ const fixture = `(() => {
   return true;
 })()`;
 
+const schemaRuleEditorVisibilityRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const visible = (element) => element.getClientRects().length > 0;
+  const configuration = q("#schema-rule-fields");
+  const hiddenByView = {};
+  for (const view of ["Live", "Library", "Sessions", "Schemas"]) {
+    q("#data-layer-view-" + view.toLowerCase()).click();
+    hiddenByView[view] = !visible(configuration);
+  }
+  q("#schema-subview-rules").click();
+  q("#create-schema-rule").click();
+  return {
+    hiddenByView,
+    editorVisible:visible(q("#schema-rule-editor")),
+    configurationVisible:visible(configuration),
+    configurationInsideEditor:q("#schema-rule-editor").contains(configuration),
+  };
+})()`;
+
 const schemaAssignmentRuntime = `(() => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
@@ -915,6 +934,14 @@ try {
   const port = await debuggingPort();
   for (const width of [360, 520, 720]) {
     const socket = await openPanel(port, width);
+    const schemaRuleEditorVisibility = await evaluate(socket, schemaRuleEditorVisibilityRuntime);
+    assert.deepEqual(schemaRuleEditorVisibility, {
+      hiddenByView:{ Live:true, Library:true, Sessions:true, Schemas:true },
+      editorVisible:true,
+      configurationVisible:true,
+      configurationInsideEditor:true,
+    }, `Schema rule configuration visibility violated its ${width}px browser contract`);
+    await reloadPanel(socket);
     assert.deepEqual(await evaluate(socket, openLibraryRuntime), {
       selected:"true",
       panelHidden:false,
@@ -1172,6 +1199,7 @@ try {
         transfer:schemaLibraryTransfer,
         reload:schemaReload,
         validation:schemaLiveValidation,
+        ruleEditorVisibility:schemaRuleEditorVisibility,
       });
     }
     socket.close();

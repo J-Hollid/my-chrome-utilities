@@ -5,6 +5,7 @@
             [clojure.string :as str]))
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
+(def visibility-feature-file "features/data-layer-schema-rule-editor-visibility.feature")
 
 (defn- export-fixture [example]
   (let [schemas (support/example-value example "schema_count")
@@ -371,7 +372,47 @@
 
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
-(def handlers
+(defn- visibility-transition [world example _captures {:keys [text]}]
+  (let [world (if (contains? #{"Data Layer view <view_name> is active"
+                               "the Schema workspace Rule Library subview is displayed"} text)
+                (assoc (browser-workspace! world example) :schema-rule-visibility? true)
+                world)
+        observation (get-in world [:browser-observation :ruleEditorVisibility])
+        view-name (support/example-value example "view_name")]
+    (case text
+      "Data Layer view <view_name> is active"
+      (do (support/assert! (contains? #{"Live" "Library" "Sessions" "Schemas"} view-name)
+                           "Unsupported Data Layer view." {:view view-name})
+          (assoc world :active-schema-rule-visibility-view view-name))
+
+      "no reusable rule editor is open"
+      (do (support/assert! (true? (get-in observation [:hiddenByView (keyword view-name)]))
+                           "Rule configuration is visible while the reusable rule editor is closed."
+                           {:view view-name :observation observation})
+          world)
+
+      "the active view is displayed" world
+
+      "Rule configuration is not visible"
+      (do (support/assert! (true? (get-in observation [:hiddenByView (keyword view-name)]))
+                           "Rule configuration is visible outside the reusable rule editor."
+                           {:view view-name :observation observation})
+          world)
+
+      "the Schema workspace Rule Library subview is displayed" world
+      "the operator opens the reusable rule editor" world
+
+      "Rule configuration is visible inside the reusable rule editor"
+      (do (support/assert! (and (true? (:editorVisible observation))
+                                (true? (:configurationVisible observation))
+                                (true? (:configurationInsideEditor observation)))
+                           "Rule configuration is not visible inside the reusable rule editor."
+                           {:observation observation})
+          world)
+
+      (throw (ex-info "Unsupported schema rule visibility step." {:step text})))))
+
+(def runtime-handlers
   (mapv (fn [spec]
           {:pattern (support/template-pattern (:text spec))
            :applies? (fn [world]
@@ -383,3 +424,16 @@
                            (:schema-workspace-runtime? world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
+
+(def visibility-handlers
+  (mapv (fn [spec]
+          {:pattern (support/template-pattern (:text spec))
+           :applies? (fn [world]
+                       (or (contains? #{"Data Layer view <view_name> is active"
+                                        "the Schema workspace Rule Library subview is displayed"} (:text spec))
+                           (:schema-rule-visibility? world)))
+           :handler (fn [world example captures]
+                      (visibility-transition world example captures spec))})
+        (support/feature-step-specs [visibility-feature-file] #{"the Data Layer workspace is displayed"})))
+
+(def handlers (vec (concat visibility-handlers runtime-handlers)))
