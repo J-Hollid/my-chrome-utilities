@@ -1976,6 +1976,11 @@ saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseRe
 createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaRuleId = undefined; schemaRuleAttachments?.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` }))); if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 let pendingRuleSnapshotMetadata;
+saveSchemaRuleButton?.addEventListener("pointerdown", () => { if (editingReusableSchemaRuleId) {
+    const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId);
+    if (previous)
+        pendingRuleSnapshotMetadata = { id: previous.id, ...(previous.severity ? { severity: previous.severity } : {}), ...(previous.message ? { message: previous.message } : {}) };
+} });
 schemaRuleEditor?.addEventListener("click", (event) => { if (event.target.id === "schema-rule-save" && editingReusableSchemaRuleId) {
     const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId);
     if (previous)
@@ -1986,6 +1991,8 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id: rule.id, version: rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled: rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules: attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
+saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata)
+    return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory: rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity: pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message: pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
 schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
 updateSchemaRuleAttachments?.addEventListener("change", () => { if (updateSchemaRuleAttachments.checked && schemaRuleUpgradeReview) {
     const affected = Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => { const schema = schemas.find((candidate) => candidate.id === option.value); const pinned = schema?.attachedRules?.find((rule) => rule.id === editingReusableSchemaRuleId)?.version; return `${option.textContent}${pinned ? ` (pinned v${pinned})` : " (new attachment)"}`; });
