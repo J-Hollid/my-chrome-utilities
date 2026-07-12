@@ -107,3 +107,17 @@ Feature: Data layer schema workspace runtime completion
     And format version is verified separately from both identity collections
     And valid envelope metadata does not cause an identity mismatch
     And no scenario-specific library size is required before an export-count example is active
+
+  # Data layer schema workspace runtime completion 011
+  Scenario Outline: Data layer schema workspace runtime completion 011
+    Given the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation
+    When the schema export browser fixture is derived from that example
+    Then shared example lookup resolves schema_count as <schema_count> and rule_count as <rule_count>
+    And the browser adapter receives fixture <fixture>
+    And the observed export contains <schema_count> schemas and <rule_count> reusable rules
+    And fixture derivation does not silently fall back to another example's counts
+
+    Examples:
+      | schema_count | rule_count | fixture |
+      | 1            | 3          | 1:3     |
+      | 2            | 4          | 2:4     |
