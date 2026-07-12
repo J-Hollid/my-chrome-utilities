@@ -86,6 +86,7 @@ Feature: Data layer schema workspace runtime completion
     When the complete Schema Library is exported and its downloaded JSON is inspected
     Then the export reports <schema_count> schemas and <rule_count> reusable rules
     And every exported schema and rule identity is present rather than a fixed fixture subset
+    And runtime verification derives its expected counts from this example instead of requiring a fixed library seed
     When that export replaces the Schema Library and the panel reloads
     Then <schema_count> schemas and <rule_count> reusable rules remain stored and rendered
 
