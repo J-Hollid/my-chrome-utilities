@@ -290,6 +290,29 @@ const schemaAssignmentRuntime = `(() => {
   };
 })()`;
 
+const schemaSourceCreationRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
+  q("#data-layer-view-library").click();
+  q("#add-new-event").click();
+  input("#event-template-name", "Order complete");
+  input("#event-template-event-name", "order_complete");
+  q("#event-template-source").value = "event-history"; q("#event-template-source").dispatchEvent(new Event("input", { bubbles:true }));
+  input("#push-destination-path", "dataLayer");
+  input("#event-template-json", JSON.stringify({ page_type:"confirmation", page_name:"Thank you", commerce:{ order:{ id:"O-1" } } }));
+  q("#save-template-revision").click();
+  const create = Array.from(q("#event-template-list").querySelectorAll("button")).find((button) => button.textContent === "Create schema");
+  if (!create) throw new Error("Missing Library Create schema action");
+  create.click();
+  return {
+    schemaView:!q("#data-layer-panel-schemas").hidden,
+    editor:!q("#schema-editor").hidden,
+    name:q("#schema-editor-name").value,
+    paths:Array.from(q("#schema-property-tree").querySelectorAll("strong")).map((row) => row.textContent),
+    assignment:q("#schema-editor-target").value,
+  };
+})()`;
+
 const naturalLibraryActionsRuntime = `(() => {
   const editor = document.querySelector("#event-property-editor");
   const actions = ["#add-new-event", "#import-event-library", "#export-event-library", "#clear-event-library"].map((selector) => {
@@ -919,11 +942,23 @@ try {
       propertyRule:{ summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
+    let schemaSourceCreation;
+    if (width === 720) {
+      schemaSourceCreation = await evaluate(socket, schemaSourceCreationRuntime);
+      assert.deepEqual(schemaSourceCreation, {
+        schemaView:true,
+        editor:true,
+        name:"Order complete schema",
+        paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
+        assignment:"payload",
+      }, "Library Create schema did not invoke the production source callback");
+    }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
         mounted:schemaWorkspaceRuntime.schemaMasterVisible,
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
+        sourceCreation:schemaSourceCreation,
       });
     }
     socket.close();

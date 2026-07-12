@@ -15,6 +15,8 @@
       (support/assert! (zero? (:exit result)) "Schema workspace browser runtime verification failed."
                        {:out (:out result) :err (:err result)})
       (support/assert! (true? (get-in payload [:schemaWorkspace :mounted])) "Production Schema workspace did not mount." {:payload payload})
+      (support/assert! (= "Order complete schema" (get-in payload [:schemaWorkspace :sourceCreation :name]))
+                       "Library Create schema did not invoke the production source callback." {:payload payload})
       (assoc world :browser-observation (:schemaWorkspace payload)))))
 
 (defn- require! [world key message]
@@ -100,7 +102,7 @@
     (str/includes? text "runtime acceptance suite is executed") (browser-workspace! world)
     (str/includes? text "completes schema creation") (require! world :browser-observation "Browser runtime was not executed.")
     (str/includes? text "verifies browser storage") world
-    (str/includes? text "exercises production event capture") (do (support/assert! (get-in world [:browser-observation :mounted]) "Production callbacks were not exercised." {}) world)
+    (str/includes? text "exercises production event capture") (do (support/assert! (seq (get-in world [:browser-observation :sourceCreation :paths])) "Production callbacks were not exercised." {}) world)
     (str/includes? text "delivered extension bundle") world
 
     :else (throw (ex-info "Unsupported schema workspace runtime step." {:step text}))))
