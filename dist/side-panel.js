@@ -2098,7 +2098,14 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
             schemaResult.textContent = inheritanceError;
         return;
     }
-    const saved = existing ? withSchemaParent(reviseSchema(existing, draft.document), draft.parentSchemaId) : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [{ sourceId: "", eventName: "", target: target }] };
+    const saved = existing
+        ? withSchemaParent({
+            ...reviseSchema(existing, draft.document),
+            assignments: draft.assignments,
+            ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}),
+            ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: draft.inheritedRuleOverrides } : {}),
+        }, draft.parentSchemaId)
+        : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: draft.assignments.length ? draft.assignments : [{ sourceId: "", eventName: "", target: target }] };
     schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema.parentSchemaId === existing.id ? { ...schema, parentSchemaId: saved.id } : schema) : [...schemas, saved];
     persistSchemaLibrary();
     schemaDraft = undefined;
