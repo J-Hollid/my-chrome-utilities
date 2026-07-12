@@ -370,6 +370,13 @@ const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-sche
 const schemaRulePath = document.querySelector<HTMLInputElement>("#schema-rule-path");
 const schemaRuleAttachment = document.querySelector<HTMLSelectElement>("#schema-rule-attachment");
 const schemaAttachedRules = document.querySelector<HTMLElement>("#schema-attached-rules");
+const schemaPropertyTree = document.createElement("ul");
+schemaPropertyTree.id = "schema-property-tree";
+schemaRulePath?.before(schemaPropertyTree);
+const schemaRulePathLabel = schemaRulePath?.previousElementSibling;
+if (schemaRulePathLabel instanceof HTMLLabelElement) schemaRulePathLabel.hidden = true;
+if (schemaRulePath) schemaRulePath.hidden = true;
+let selectedSchemaRulePath = "example";
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
 const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
@@ -1161,6 +1168,20 @@ function renderSchemaDraft(): void {
     schemaEditorParent.value = draft.parentId ?? "";
   }
   const attachments = draft.ruleAttachments ?? [];
+  const paths = (document: SchemaDefinition["document"], prefix = ""): string[] => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
+    const path = prefix ? `${prefix}.${name}` : name;
+    return [path, ...paths(child, path)];
+  });
+  const propertyPaths = paths(draft.document);
+  if (propertyPaths.length === 0) propertyPaths.push("page_type", "page_name", "commerce.order.id");
+  if (!propertyPaths.includes(selectedSchemaRulePath)) selectedSchemaRulePath = propertyPaths[0] ?? "example";
+  schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
+    const item = document.createElement("li"); const add = document.createElement("button"); const view = document.createElement("button");
+    add.type = view.type = "button"; add.textContent = "Add validation rule"; view.textContent = "View attached rules";
+    add.addEventListener("click", () => { selectedSchemaRulePath = path; schemaRuleAttachment?.focus(); });
+    view.addEventListener("click", () => { selectedSchemaRulePath = path; schemaAttachedRules?.scrollIntoView({ block:"nearest" }); });
+    item.append(`${path} `, add, view); return item;
+  }));
   if (schemaRuleAttachment) {
     const attached = new Set(attachments.map((attachment) => `${attachment.ruleId}@${attachment.version}`));
     const available = reusableRules.filter((rule) => rule.enabled || attached.has(`${rule.id}@${rule.version}`)).sort((left, right) => left.name.localeCompare(right.name) || right.version - left.version);
@@ -2338,7 +2359,7 @@ addSchemaRuleButton?.addEventListener("click", () => {
   const selectedRule = reusableRules.find((rule) => `${rule.id}@${rule.version}` === schemaRuleAttachment?.value);
   const attachments = schemaDraft.ruleAttachments ?? [];
   const parameters = selectedRule?.parameters.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
-  const path = (schemaRulePath?.value.trim() || "example").split(".").map((part) => part.trim()).filter(Boolean);
+  const path = selectedSchemaRulePath.split(".").filter(Boolean);
   const current = path.reduce<SchemaDefinition["document"] | undefined>((document, name) => document?.properties?.[name], schemaDraft.document) ?? { type:"string" as const };
   const property = !selectedRule ? current : selectedRule.operator === "allowed-values" ? { ...current, type:"string" as const, enum:parameters } : selectedRule.operator === "forbidden-values" ? { ...current, type:"string" as const, forbidden:parameters } : selectedRule.operator === "number-range" ? { ...current, type:"number" as const, minimum:Number(parameters[0]), maximum:Number(parameters[1]) } : selectedRule.operator === "matches-pattern" ? { ...current, type:"string" as const, pattern:selectedRule.parameters } : current;
   const applicable = selectedRule?.applicableTypes.split(",").map((type) => type.trim()).filter(Boolean) ?? [];

@@ -129,6 +129,15 @@ const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const schemaRulePath = document.querySelector("#schema-rule-path");
 const schemaRuleAttachment = document.querySelector("#schema-rule-attachment");
 const schemaAttachedRules = document.querySelector("#schema-attached-rules");
+const schemaPropertyTree = document.createElement("ul");
+schemaPropertyTree.id = "schema-property-tree";
+schemaRulePath?.before(schemaPropertyTree);
+const schemaRulePathLabel = schemaRulePath?.previousElementSibling;
+if (schemaRulePathLabel instanceof HTMLLabelElement)
+    schemaRulePathLabel.hidden = true;
+if (schemaRulePath)
+    schemaRulePath.hidden = true;
+let selectedSchemaRulePath = "example";
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const schemaRuleEditor = document.querySelector("#schema-rule-editor");
 const schemaRuleName = document.querySelector("#schema-rule-name");
@@ -918,6 +927,27 @@ function renderSchemaDraft() {
         schemaEditorParent.value = draft.parentId ?? "";
     }
     const attachments = draft.ruleAttachments ?? [];
+    const paths = (document, prefix = "") => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
+        const path = prefix ? `${prefix}.${name}` : name;
+        return [path, ...paths(child, path)];
+    });
+    const propertyPaths = paths(draft.document);
+    if (propertyPaths.length === 0)
+        propertyPaths.push("page_type", "page_name", "commerce.order.id");
+    if (!propertyPaths.includes(selectedSchemaRulePath))
+        selectedSchemaRulePath = propertyPaths[0] ?? "example";
+    schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
+        const item = document.createElement("li");
+        const add = document.createElement("button");
+        const view = document.createElement("button");
+        add.type = view.type = "button";
+        add.textContent = "Add validation rule";
+        view.textContent = "View attached rules";
+        add.addEventListener("click", () => { selectedSchemaRulePath = path; schemaRuleAttachment?.focus(); });
+        view.addEventListener("click", () => { selectedSchemaRulePath = path; schemaAttachedRules?.scrollIntoView({ block: "nearest" }); });
+        item.append(`${path} `, add, view);
+        return item;
+    }));
     if (schemaRuleAttachment) {
         const attached = new Set(attachments.map((attachment) => `${attachment.ruleId}@${attachment.version}`));
         const available = reusableRules.filter((rule) => rule.enabled || attached.has(`${rule.id}@${rule.version}`)).sort((left, right) => left.name.localeCompare(right.name) || right.version - left.version);
@@ -1959,7 +1989,7 @@ addSchemaRuleButton?.addEventListener("click", () => {
     const selectedRule = reusableRules.find((rule) => `${rule.id}@${rule.version}` === schemaRuleAttachment?.value);
     const attachments = schemaDraft.ruleAttachments ?? [];
     const parameters = selectedRule?.parameters.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
-    const path = (schemaRulePath?.value.trim() || "example").split(".").map((part) => part.trim()).filter(Boolean);
+    const path = selectedSchemaRulePath.split(".").filter(Boolean);
     const current = path.reduce((document, name) => document?.properties?.[name], schemaDraft.document) ?? { type: "string" };
     const property = !selectedRule ? current : selectedRule.operator === "allowed-values" ? { ...current, type: "string", enum: parameters } : selectedRule.operator === "forbidden-values" ? { ...current, type: "string", forbidden: parameters } : selectedRule.operator === "number-range" ? { ...current, type: "number", minimum: Number(parameters[0]), maximum: Number(parameters[1]) } : selectedRule.operator === "matches-pattern" ? { ...current, type: "string", pattern: selectedRule.parameters } : current;
     const applicable = selectedRule?.applicableTypes.split(",").map((type) => type.trim()).filter(Boolean) ?? [];
