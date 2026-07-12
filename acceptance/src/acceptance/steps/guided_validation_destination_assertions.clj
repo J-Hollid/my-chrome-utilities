@@ -6,6 +6,9 @@
 (defn- example-value [example key]
   (support/require-example example key))
 
+(defn- find-first [predicate values]
+  (first (filter predicate values)))
+
 (defn- destination-choice [_example observation]
   (support/assert! (= {:heading "Choose schema destination"
                        :choices ["Create a new schema" "Add to an existing schema"]
@@ -39,8 +42,8 @@
         expected-property-state (example-value example "property_state")
         expected-availability (example-value example "availability")
         expected-explanation (example-value example "explanation")
-        option (some #(when (str/starts-with? (:label %) (str name " version")) %) (:existingOptions observation))
-        production-option (some #(when (= name (:name %)) %) (get-in observation [:production :destinationOptions]))]
+        option (find-first #(str/starts-with? (:label %) (str name " version")) (:existingOptions observation))
+        production-option (find-first #(= name (:name %)) (get-in observation [:production :destinationOptions]))]
     (support/assert! option "Specified schema was not displayed." {:example example})
     (support/assert! (contains? #{"selectable" "unavailable"} expected-availability)
                      "Schema availability must use the supported result vocabulary."
@@ -108,23 +111,18 @@
                    "Schema and compatible-assignment values were not prefilled with readable provenance."
                    {:observation observation}))
 
+(def assignment-scope-expectations
+  {"use captured event values as editable defaults" ["127.0.0.1" false]
+   "prefill its domain and path conditions" ["shop.example" true]
+   "do not prefill scope before the operator chooses" ["127.0.0.1" false]})
+
 (defn- assignment-resolution [example observation]
   (let [count (parse-long (example-value example "compatible_assignment_count"))
         expected-selection (example-value example "assignment_selection")
-        expected-scope (example-value example "scope_behavior")
-        result (some #(when (= count (:count %)) %) (get-in observation [:production :assignmentResolutions]))
-        scope-correct (case expected-scope
-                        "use captured event values as editable defaults"
-                        (and (= "127.0.0.1" (:domain result)) (empty? (:pathConditions result)))
-
-                        "prefill its domain and path conditions"
-                        (and (= "shop.example" (:domain result)) (seq (:pathConditions result)))
-
-                        "do not prefill scope before the operator chooses"
-                        (and (= "127.0.0.1" (:domain result)) (empty? (:pathConditions result)))
-
-                        false)]
-    (support/assert! (= [expected-selection true] [(:selection result) (boolean scope-correct)])
+        expected-scope (get assignment-scope-expectations (example-value example "scope_behavior"))
+        result (find-first #(= count (:count %)) (get-in observation [:production :assignmentResolutions]))
+        observed-scope [(:domain result) (boolean (seq (:pathConditions result)))]]
+    (support/assert! (= [expected-selection expected-scope] [(:selection result) observed-scope])
                      "Compatible-assignment cardinality produced the wrong selection or scope behavior."
                      {:example example :result result})))
 

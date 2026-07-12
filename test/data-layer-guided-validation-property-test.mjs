@@ -63,9 +63,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.deepEqual(completed.allowedValues, values);
   assert.equal(backGuidedValidation(initial).stage, "property");
 
-  const requirement = advanceGuidedValidation(selected);
-  const scope = advanceGuidedValidation(requirement);
-  const destination = advanceGuidedValidation(scope);
+  const destination = advanceGuidedValidation(selected);
   const schemaName = `Schema ${sample}`;
   assert.equal(validateNewSchemaName(schemaName, [`Other ${sample}`]).valid, true);
   assert.equal(validateNewSchemaName(schemaName, [schemaName.toUpperCase()]).valid, false);
@@ -90,10 +88,12 @@ for (let sample = 0; sample < 200; sample += 1) {
     { ...matchingCandidate.assignments[0], pathnameCondition:pathname },
   ), false);
 
-  const review = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName }));
+  const requirement = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName }));
+  const scope = advanceGuidedValidation(requirement);
+  const review = advanceGuidedValidation(scope);
   assert.deepEqual(
-    [requirement.stage, scope.stage, destination.stage, review.stage, advanceGuidedValidation(review).stage],
-    ["requirement", "scope", "destination", "review", "review"],
+    [destination.stage, requirement.stage, scope.stage, review.stage, advanceGuidedValidation(review).stage],
+    ["destination", "requirement", "scope", "review", "review"],
   );
-  assert.equal(backGuidedValidation(review).stage, "destination");
+  assert.equal(backGuidedValidation(review).stage, "scope");
 }
