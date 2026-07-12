@@ -430,6 +430,8 @@ const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>(
 const schemaValidationIssues = document.querySelector<HTMLElement>("#schema-validation-issues");
 const schemaValidationRecordList = document.querySelector<HTMLElement>("#schema-validation-record-list");
 const schemaInheritanceProvenance = document.querySelector<HTMLElement>("#schema-inheritance-provenance");
+const schemaRuleOverrides = document.querySelector<HTMLElement>("#schema-rule-overrides");
+const schemaRuleOverrideList = document.querySelector<HTMLElement>("#schema-rule-override-list");
 const schemaImportReview = document.querySelector<HTMLDialogElement>("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector<HTMLElement>("#schema-import-review-summary");
 const confirmSchemaImportButton = document.querySelector<HTMLButtonElement>("#confirm-schema-import");
@@ -1036,6 +1038,15 @@ function renderSchemaDraft(): void {
   }
   const parent = draft.parentSchemaId ? schemas.find((schema) => schema.id === draft.parentSchemaId) : undefined;
   if (schemaInheritanceProvenance) schemaInheritanceProvenance.textContent = parent ? `Inherited rules originate in ${parent.name} v${parent.version}. Local rules override only after conflicts are resolved.` : "Local schema only";
+  if (schemaRuleOverrides) schemaRuleOverrides.hidden = !parent;
+  if (schemaRuleOverrideList) schemaRuleOverrideList.replaceChildren(...Object.keys(parent?.document.properties ?? {}).map((property) => {
+    const label = document.createElement("label"); const select = document.createElement("select");
+    select.setAttribute("aria-label", `${property} inherited rule override`);
+    select.replaceChildren(...(["inherit", "enabled", "disabled"] as const).map((state) => Object.assign(document.createElement("option"), { value:state, textContent:state === "inherit" ? "Inherit" : state === "enabled" ? "Enabled in this schema" : "Disabled in this schema" })));
+    select.value = draft.inheritedRuleOverrides?.[property] ?? "inherit";
+    select.addEventListener("change", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, inheritedRuleOverrides:{ ...(schemaDraft.inheritedRuleOverrides ?? {}), [property]:select.value as "inherit" | "enabled" | "disabled" } }; renderSchemaDraft(); } });
+    label.append(`${property}: `, select); return label;
+  }));
   const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
   const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
   const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
