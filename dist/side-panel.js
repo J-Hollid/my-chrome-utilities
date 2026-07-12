@@ -846,7 +846,11 @@ function renderSchemaWorkflowRows() {
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
         duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
-        remove.addEventListener("click", () => { pendingReusableSchemaRuleDeletionId = rule.id; if (schemaRuleDeleteReviewSummary)
+        remove.addEventListener("click", () => { const attached = schemas.filter((schema) => JSON.stringify(schema.document).includes(rule.id)); if (attached.length) {
+            if (schemaResult)
+                schemaResult.textContent = `Cannot delete ${rule.name}: attached to ${attached.map((schema) => schema.name).join(", ")}.`;
+            return;
+        } pendingReusableSchemaRuleDeletionId = rule.id; if (schemaRuleDeleteReviewSummary)
             schemaRuleDeleteReviewSummary.textContent = `${rule.name} v${rule.version ?? 1} will be removed.`; if (schemaRuleDeleteReview) {
             schemaRuleDeleteReview.hidden = false;
             schemaRuleDeleteReview.showModal();
