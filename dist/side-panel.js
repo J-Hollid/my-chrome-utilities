@@ -115,6 +115,10 @@ const schemaSearch = document.querySelector("#schema-search");
 const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector("#schema-editor");
+const schemaValidationIssues = document.createElement("output");
+schemaValidationIssues.id = "schema-validation-issues";
+schemaValidationIssues.setAttribute("aria-live", "polite");
+schemaEditor?.prepend(schemaValidationIssues);
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorTarget = document.querySelector("#schema-editor-target");
@@ -844,6 +848,7 @@ function renderSchemaDraft() {
         saveSchemaButton.disabled = !ready;
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
+    schemaValidationIssues.textContent = ready ? "Validation ready" : reason;
     if (schemaVersionHistory)
         schemaVersionHistory.replaceChildren(...(schemaHistory[draft.name] ?? [draft.version]).map((version) => Object.assign(document.createElement("li"), { textContent: `Version ${version}` })));
 }
