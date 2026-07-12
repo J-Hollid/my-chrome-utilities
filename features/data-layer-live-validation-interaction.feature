@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=1bb5631146009995d2ad2a9375dc9aedb5b6af098218f2a2db3e2b03dbf8e04e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T23:50:17.040615987Z","feature_name":"Data layer Live validation interaction","feature_path":"features/data-layer-live-validation-interaction.feature","background_hash":"19373a00d4209a3047eb3512867a8f510913dee393f824d682264a0944c8789b","implementation_hash":"fbcf8baed7351493453785e3e82fa7ea78ab6b0b","scenarios":[{"index":1,"name":"Data layer Live validation interaction 002","scenario_hash":"f048f3b701c0edca99703752107ee9a5be48a4d4e1eafdb010638529ed8dfbc9","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-12T23:50:17.040615987Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live validation interaction
 
   Background:

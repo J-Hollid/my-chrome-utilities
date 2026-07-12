@@ -23,17 +23,32 @@
 
 (defn- feed-example [_text example observation]
   (let [name (support/require-example example "event_name")
+        expected-result (support/require-example example "validation_result")
         expected-badge (support/require-example example "badge_text")
         expected-symbol (support/require-example example "status_symbol")
         expected-treatment (str/replace (support/require-example example "status_treatment") " " "-")
         row (get-in observation [:rows (event-id name)])]
-    (support/assert! (= [(str "· " expected-badge) (symbol-name expected-symbol) expected-treatment]
-                        [(:text row) (:symbol row) (:treatment row)])
+    (support/assert! (= [(str "· " expected-result) expected-result expected-symbol expected-treatment]
+                        [(:text row) expected-badge (:symbol row) (:treatment row)])
                      "Live feed validation badge did not match its result."
                      {:example example :row row})))
 
+(defn- count-text [count singular]
+  (str count " " singular (when (not= count 1) "s")))
+
+(defn- expected-property-status [attached-rules errors warnings]
+  (cond
+    (pos? errors) (str (count-text errors "error")
+                       (when (pos? warnings) (str " and " (count-text warnings "warning"))))
+    (pos? warnings) (count-text warnings "warning")
+    (pos? attached-rules) (str (count-text attached-rules "rule") " passed")
+    :else "No rules"))
+
 (defn- property-example [_text example observation]
   (let [path (keyword (support/require-example example "property_path"))
+        attached-rules (parse-long (support/require-example example "attached_rule_count"))
+        errors (parse-long (support/require-example example "error_count"))
+        warnings (parse-long (support/require-example example "warning_count"))
         expected-status (support/require-example example "property_status")
         expected-symbol (support/require-example example "status_symbol")
         expected-treatment (support/require-example example "visual_treatment")
@@ -41,9 +56,11 @@
         status-text (str (:status row))
         prefix (subs status-text 0 (min 1 (count status-text)))
         symbol (get property-symbol prefix "neutral")
-        status (str/replace-first status-text #"^[✓⚠!○]\s+" "")]
-    (support/assert! (= [expected-status expected-symbol expected-treatment]
-                        [status symbol (:treatment row)])
+        status (str/replace-first status-text #"^[✓⚠!○]\s+" "")
+        counts-valid? (every? #(<= 0 %) [attached-rules errors warnings])]
+    (support/assert! (= [true attached-rules (expected-property-status attached-rules errors warnings)
+                         expected-status expected-symbol expected-treatment]
+                        [counts-valid? (:evaluations row) expected-status status symbol (:treatment row)])
                      "Live property validation status did not match its evaluations."
                      {:example example :row row})))
 
@@ -80,9 +97,12 @@
                    "Pointer and keyboard issue previews diverged or omitted provenance." {:observation observation}))
 
 (defn- activation [_text example observation]
-  (support/assert! (every? #(= "true" %) (vals (:disclosures observation)))
+  (let [activation-key ({"Enter" :enter "Space" :space "pointer click" :click}
+                        (support/require-example example "activation_input"))]
+    (support/assert! (and activation-key
+                          (= "true" (get-in observation [:disclosures activation-key])))
                    "Property rule disclosure did not open for every activation input."
-                   {:example example :observation observation}))
+                   {:example example :observation observation})))
 
 (defn- evaluation-states [_text _example observation]
   (support/assert! (every? #(str/includes? (:evaluationText observation) %) ["pass" "warning" "error"])
@@ -177,3 +197,7 @@
 (defn assert-step! [text example observation]
   (let [[_ assertion] (first (filter (fn [[predicate]] (predicate text example)) assertion-routes))]
     (assertion text example observation)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-13T01:49:05.68986131+02:00", :module-hash "-977520389", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "358302693"} {:id "def/event-id", :kind "def", :line 5, :end-line nil, :hash "-1849201549"} {:id "def/symbol-name", :kind "def", :line 12, :end-line nil, :hash "300334935"} {:id "def/property-symbol", :kind "def", :line 18, :end-line nil, :hash "1581117122"} {:id "defn-/feed-example", :kind "defn-", :line 24, :end-line nil, :hash "-1230382143"} {:id "defn-/count-text", :kind "defn-", :line 36, :end-line nil, :hash "-263870779"} {:id "defn-/expected-property-status", :kind "defn-", :line 39, :end-line nil, :hash "1647004697"} {:id "defn-/property-example", :kind "defn-", :line 47, :end-line nil, :hash "1275550917"} {:id "defn-/error-border", :kind "defn-", :line 67, :end-line nil, :hash "-1380965208"} {:id "defn-/accessible-name", :kind "defn-", :line 71, :end-line nil, :hash "1789208927"} {:id "defn-/row-states", :kind "defn-", :line 75, :end-line nil, :hash "319092353"} {:id "defn-/inspector-summary", :kind "defn-", :line 80, :end-line nil, :hash "1239258495"} {:id "defn-/issue-preview", :kind "defn-", :line 91, :end-line nil, :hash "-1390415059"} {:id "defn-/activation", :kind "defn-", :line 99, :end-line nil, :hash "403991668"} {:id "defn-/evaluation-states", :kind "defn-", :line 107, :end-line nil, :hash "77681982"} {:id "defn-/automatic-validation", :kind "defn-", :line 111, :end-line nil, :hash "-885545002"} {:id "defn-/revalidation", :kind "defn-", :line 117, :end-line nil, :hash "68462194"} {:id "defn-/polite-status", :kind "defn-", :line 127, :end-line nil, :hash "-519299828"} {:id "defn-/structured-properties", :kind "defn-", :line 131, :end-line nil, :hash "-268916428"} {:id "defn-/mixed-severity", :kind "defn-", :line 138, :end-line nil, :hash "-376693056"} {:id "defn-/aggregate", :kind "defn-", :line 145, :end-line nil, :hash "776614194"} {:id "defn-/missing-property", :kind "defn-", :line 151, :end-line nil, :hash "547407736"} {:id "defn-/issue-rows", :kind "defn-", :line 157, :end-line nil, :hash "1461891276"} {:id "defn-/successful-evaluation", :kind "defn-", :line 164, :end-line nil, :hash "-472022518"} {:id "defn-/default-assertion", :kind "defn-", :line 170, :end-line nil, :hash "-237283355"} {:id "defn-/includes-any?", :kind "defn-", :line 173, :end-line nil, :hash "389819641"} {:id "def/assertion-routes", :kind "def", :line 176, :end-line nil, :hash "-767449259"} {:id "defn/assert-step!", :kind "defn", :line 197, :end-line nil, :hash "-1387675813"}]}
+;; clj-mutate-manifest-end

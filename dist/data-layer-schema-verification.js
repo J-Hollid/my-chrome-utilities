@@ -197,7 +197,13 @@ function collectSchemaIssues(value, schema, schemas, result) {
 function validationStateForIssues(issues) {
     if (issues.length === 0)
         return "Valid";
-    return issues.every((issue) => issue.severity === "warning") ? `${issues.length} warnings` : `${issues.length} issues`;
+    const warnings = issues.filter((issue) => issue.severity === "warning").length;
+    const errors = issues.length - warnings;
+    if (!errors)
+        return `${warnings} warnings`;
+    if (!warnings)
+        return `${errors} issues`;
+    return `${errors} ${errors === 1 ? "error" : "errors"} and ${warnings} ${warnings === 1 ? "warning" : "warnings"}`;
 }
 function inheritedDocument(schema, schemas, visited = new Set()) {
     if (!schema.parentSchemaId || visited.has(schema.id))
@@ -259,7 +265,7 @@ export function validateWithSchema(event, schema, schemas, target = schema.assig
     const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
     return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, schema, schemas), schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
-export function validationSummary(results) { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings")).length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
+export function validationSummary(results) { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings") && !result.state.includes("error")).length, Issues: results.filter((result) => result.state.endsWith("issues") || result.state.includes("error") && result.state !== "Assignment error").length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
 export function revalidateExplicitly(event, schemas, version) { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }
 //# sourceMappingURL=data-layer-schema-verification.js.map

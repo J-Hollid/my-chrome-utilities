@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=df5aa02823542122f6a8999d30c55eb40197b2fc2b1e260e371ee5d3bf98ccf4
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T23:49:27.294760857Z","feature_name":"Data layer Live validation feed presentation","feature_path":"features/data-layer-live-validation-feed-presentation.feature","background_hash":"068ccb0a31fc85eb7d5a9d19478fdb599fdff89be144927461c03d9d6fd45ab2","implementation_hash":"fbcf8baed7351493453785e3e82fa7ea78ab6b0b","scenarios":[{"index":0,"name":"Data layer Live validation feed presentation 001","scenario_hash":"130e9fe236d0bcb3a30aa940c6da4fc7a496cc57ae603a318c376852b4c82d08","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-12T23:43:55.452951614Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live validation feed presentation
 
   Background:

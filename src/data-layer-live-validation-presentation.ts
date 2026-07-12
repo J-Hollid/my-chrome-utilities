@@ -1,20 +1,9 @@
 import type { ValidationIssue } from "./data-layer-schema-verification.js";
+import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+
+export type { EvaluationStatus, ValidationEvaluation } from "./data-layer-validation-model.js";
 
 export type ValidationTreatment = "pass" | "warning" | "error" | "neutral" | "assignment-error";
-export type EvaluationStatus = "pass" | "warning" | "error";
-
-export interface ValidationEvaluation {
-  propertyPath: string;
-  status: EvaluationStatus;
-  message: string;
-  expected: string;
-  actual: string;
-  rule: string;
-  ruleVersion: number;
-  severity: string;
-  schemaName: string;
-  schemaVersion: number;
-}
 
 export interface PropertyValidationSummary {
   status: string;

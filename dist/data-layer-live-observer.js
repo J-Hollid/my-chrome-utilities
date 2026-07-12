@@ -52,9 +52,9 @@ export function filteredLiveEvents(state) {
             return event.name.toLowerCase().includes(value);
         if (state.filter?.kind === "validation state") {
             if (value === "warnings")
-                return event.validation?.endsWith("warnings") ?? false;
+                return Boolean(event.validation?.endsWith("warnings") && !event.validation.includes("error"));
             if (value === "issues")
-                return event.validation?.endsWith("issues") ?? false;
+                return Boolean(event.validation?.endsWith("issues") || event.validation?.includes("error") && event.validation !== "Assignment error");
             return event.validation?.toLowerCase().includes(value) ?? false;
         }
         return `${event.name} ${event.sourceName ?? ""} ${event.sourceId} ${JSON.stringify(event.keyProperties ?? event.payload ?? "")}`

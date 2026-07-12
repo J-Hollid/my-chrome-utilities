@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=f85a0cdf1dc47708499aa6c34de205a7698ce0c90ed30eebec2f271df31297a0
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-12T23:50:01.615928563Z","feature_name":"Data layer Live validation property presentation","feature_path":"features/data-layer-live-validation-property-presentation.feature","background_hash":"126057208d41b50aeaf3ecfc5754aaccf7379c638012596e622b12fcee027184","implementation_hash":"fbcf8baed7351493453785e3e82fa7ea78ab6b0b","scenarios":[{"index":1,"name":"Data layer Live validation property presentation 002","scenario_hash":"8b87942741d3c33567b579dbc8edf3c0280c4a6a784e0a019afa546de74deb37","mutation_count":28,"result":{"Total":28,"Killed":28,"Survived":0,"Errors":0},"tested_at":"2026-07-12T23:50:01.615928563Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live validation property presentation
 
   Background:

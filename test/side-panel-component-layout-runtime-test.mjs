@@ -895,7 +895,7 @@ const liveValidationVisualsRuntime = `(async () => {
     assignment:{ id:"assignment:checkout", name:"Checkout pages", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", enabled:true },
     evaluations:[
       evaluation("currency", "pass", "Currency is allowed", "Known currencies"), evaluation("currency", "pass", "Currency is ISO", "ISO currencies"),
-      evaluation("page_title", "warning", "Prefer a concise title", "Title guidance", "warning"),
+      evaluation("page_title", "pass", "Title is present", "Required title"), evaluation("page_title", "warning", "Prefer a concise title", "Title guidance", "warning"),
       evaluation("page_type", "pass", "Page type is present", "Required page type"), evaluation("page_type", "warning", "Prefer checkout", "Page type guidance", "warning"), { ...evaluation("page_type", "error", "Page type is invalid", "Known page types"), expected:"checkout", actual:"legacy" },
       evaluation("commerce.order.id", "error", "Order id is invalid", "Order id"), evaluation("commerce.order.total", "warning", "Total is unusual", "Order total", "warning"), evaluation("commerce.currency", "warning", "Currency is unusual", "Commerce currency", "warning"),
     ],
@@ -930,7 +930,7 @@ const liveValidationVisualsRuntime = `(async () => {
     rawJson:elements.eventInspector.querySelector("#live-raw-json summary").textContent,
   };
   const property = (path) => elements.eventInspector.querySelector("#live-property-" + path.replace(/[^a-z0-9]+/gi, "-"));
-  const properties = Object.fromEntries(["page_path","currency","page_title","page_type","commerce","commerce.order.id","sibling","order_id"].map((path) => { const row = property(path); return [path, { status:row?.querySelector(":scope > .live-validation-property-row .live-property-status")?.textContent, treatment:row?.dataset.validationTreatment, aggregate:row?.querySelector(":scope > .live-validation-property-row .live-property-aggregate")?.textContent ?? null, missing:row?.querySelector('[data-missing="true"]')?.textContent ?? null }]; }));
+  const properties = Object.fromEntries(["page_path","currency","page_title","page_type","commerce","commerce.order.id","sibling","order_id"].map((path) => { const row = property(path); return [path, { status:row?.querySelector(":scope > .live-validation-property-row .live-property-status")?.textContent, treatment:row?.dataset.validationTreatment, evaluations:row?.querySelectorAll(":scope > .live-property-rule-details li").length ?? 0, aggregate:row?.querySelector(":scope > .live-validation-property-row .live-property-aggregate")?.textContent ?? null, missing:row?.querySelector('[data-missing="true"]')?.textContent ?? null }]; }));
   const statusButton = property("page_type").querySelector(".live-property-status");
   statusButton.dispatchEvent(new PointerEvent("pointerenter", { bubbles:true }));
   const pointerPreview = property("page_type").querySelector("[role=tooltip]").textContent;
@@ -1590,13 +1590,13 @@ try {
         unchanged:liveValidationVisualsObservation.unchanged,
         revalidation:liveValidationVisualsObservation.revalidation,
       }, {
-        pagePath:{ status:"○ No rules", treatment:"neutral", aggregate:null, missing:null },
-        currency:{ status:"✓ 2 rules passed", treatment:"pass", aggregate:null, missing:null },
-        pageTitle:{ status:"⚠ 1 warning", treatment:"warning", aggregate:null, missing:null },
-        pageType:{ status:"! 1 error and 1 warning", treatment:"error", aggregate:null, missing:null },
-        commerce:{ status:"○ No rules", treatment:"neutral", aggregate:"1 error and 2 warnings", missing:null },
-        sibling:{ status:"○ No rules", treatment:"neutral", aggregate:null, missing:null },
-        missing:{ status:"! 1 error", treatment:"error", aggregate:null, missing:"Missing" },
+        pagePath:{ status:"○ No rules", treatment:"neutral", evaluations:0, aggregate:null, missing:null },
+        currency:{ status:"✓ 2 rules passed", treatment:"pass", evaluations:2, aggregate:null, missing:null },
+        pageTitle:{ status:"⚠ 1 warning", treatment:"warning", evaluations:2, aggregate:null, missing:null },
+        pageType:{ status:"! 1 error and 1 warning", treatment:"error", evaluations:3, aggregate:null, missing:null },
+        commerce:{ status:"○ No rules", treatment:"neutral", evaluations:0, aggregate:"1 error and 2 warnings", missing:null },
+        sibling:{ status:"○ No rules", treatment:"neutral", evaluations:0, aggregate:null, missing:null },
+        missing:{ status:"! 1 error", treatment:"error", evaluations:1, aggregate:null, missing:"Missing" },
         escaped:true, disclosures:{ enter:"true", space:"true", click:"true" }, unchanged:true,
         revalidation:{ inspector:"Validation passed", feed:"· Valid", status:"Validation changed to Valid.", live:"polite", scroll:37, focused:true },
       }, "Live validation property hierarchy, interaction, or revalidation contract failed");

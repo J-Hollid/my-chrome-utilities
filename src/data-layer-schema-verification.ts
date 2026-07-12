@@ -1,6 +1,6 @@
 import type { ValidationState } from "./data-layer-source.js";
 import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
-import type { ValidationEvaluation } from "./data-layer-live-validation-presentation.js";
+import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; }
@@ -182,7 +182,11 @@ function collectSchemaIssues(value: unknown, schema: SchemaDefinition, schemas: 
 
 function validationStateForIssues(issues: readonly ValidationIssue[]): ValidationState {
   if (issues.length === 0) return "Valid";
-  return issues.every((issue) => issue.severity === "warning") ? `${issues.length} warnings` : `${issues.length} issues`;
+  const warnings = issues.filter((issue) => issue.severity === "warning").length;
+  const errors = issues.length - warnings;
+  if (!errors) return `${warnings} warnings`;
+  if (!warnings) return `${errors} issues`;
+  return `${errors} ${errors === 1 ? "error" : "errors"} and ${warnings} ${warnings === 1 ? "warning" : "warnings"}`;
 }
 
 function inheritedDocument(schema: SchemaDefinition, schemas: readonly SchemaDefinition[], visited = new Set<string>()): JsonSchema {
@@ -238,6 +242,6 @@ export function validateWithSchema(event: ValidatableEvent, schema: SchemaDefini
   const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
   return { state: validationStateForIssues(issues), issues, evaluations:validationEvaluations(value, schema, schemas), schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
-export function validationSummary(results: readonly ValidationResult[]): { "Not checked": number; Valid: number; Warnings: number; Issues: number; "Assignment error": number } { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings")).length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
+export function validationSummary(results: readonly ValidationResult[]): { "Not checked": number; Valid: number; Warnings: number; Issues: number; "Assignment error": number } { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings") && !result.state.includes("error")).length, Issues: results.filter((result) => result.state.endsWith("issues") || result.state.includes("error") && result.state !== "Assignment error").length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation<T extends { validation: ValidationState }>(events: readonly T[], state: ValidationState): T[] { return events.filter((event) => event.validation === state); }
 export function revalidateExplicitly(event: ValidatableEvent, schemas: readonly SchemaDefinition[], version: number): ValidationResult { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }

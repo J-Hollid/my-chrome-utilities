@@ -1,6 +1,6 @@
 import type { SourceEvent } from "./data-layer-source.js";
 import type { ValidationIssue } from "./data-layer-schema-verification.js";
-import type { ValidationEvaluation } from "./data-layer-live-validation-presentation.js";
+import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 
@@ -111,8 +111,8 @@ export function filteredLiveEvents(state: LiveObserverState): LiveEvent[] {
     }
     if (state.filter?.kind === "event name") return event.name.toLowerCase().includes(value);
     if (state.filter?.kind === "validation state") {
-      if (value === "warnings") return event.validation?.endsWith("warnings") ?? false;
-      if (value === "issues") return event.validation?.endsWith("issues") ?? false;
+      if (value === "warnings") return Boolean(event.validation?.endsWith("warnings") && !event.validation.includes("error"));
+      if (value === "issues") return Boolean(event.validation?.endsWith("issues") || event.validation?.includes("error") && event.validation !== "Assignment error");
       return event.validation?.toLowerCase().includes(value) ?? false;
     }
     return `${event.name} ${event.sourceName ?? ""} ${event.sourceId} ${JSON.stringify(event.keyProperties ?? event.payload ?? "")}`
