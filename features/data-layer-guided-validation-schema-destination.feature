@@ -33,7 +33,7 @@ Feature: Data layer guided validation schema destination
   Scenario Outline: Data layer guided validation schema destination 003
     Given Add to an existing schema is chosen
     And schema <schema_name> has target <schema_target> and page_type state <property_state>
-    When available schemas are displayed for payload property page_type with expected type String
+    When available schemas are displayed in the schema-picker dialog for payload property page_type with expected type String
     Then schema <schema_name> has availability <availability>
     And its compatibility explanation is <explanation>
 
