@@ -13,6 +13,7 @@ export interface SchemaAssignment {
   pathnameCondition?: string;
   enabled?: boolean;
   versionPolicy?: "pinned" | "follow latest";
+  manualOverride?: boolean;
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; }
