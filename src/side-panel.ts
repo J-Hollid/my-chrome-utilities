@@ -1010,14 +1010,16 @@ function renderSchemaRules(): void {
   schemaRuleList?.replaceChildren(...visible.map((rule) => {
     const item = document.createElement("li");
     const override = document.createElement("button");
-    const toggle = document.createElement("button"); const remove = document.createElement("button");
+    const toggle = document.createElement("button"); const remove = document.createElement("button"); const exportRule = document.createElement("button");
     item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity} · ${rule.enabled ? "enabled" : "disabled"}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
     override.type = "button"; override.textContent = "Duplicate override";
     override.addEventListener("click", () => { const copy = { ...rule, id:`${rule.id}:override:${reusableRules.length + 1}`, name:`${rule.name} override`, version:1 }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
     toggle.type = remove.type = "button"; toggle.textContent = rule.enabled ? "Disable" : "Enable"; remove.textContent = "Delete";
+    exportRule.type = "button"; exportRule.textContent = "Export";
     toggle.addEventListener("click", () => { reusableRules = reusableRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
     remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${rule.name}?`)) return; reusableRules = reusableRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
-    item.append(override, toggle, remove);
+    exportRule.addEventListener("click", () => { if (schemaResult) schemaResult.textContent = JSON.stringify(rule); });
+    item.append(override, toggle, exportRule, remove);
     return item;
   }));
   if (schemaRuleCount) schemaRuleCount.textContent = `${visible.length} rules`;
