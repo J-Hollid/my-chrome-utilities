@@ -1009,7 +1009,11 @@ function renderSchemaRules(): void {
   const visible = reusableRules.filter((rule) => [rule.name, rule.applicableTypes, rule.operator, rule.parameters, rule.severity, rule.message, rule.examples, String(rule.version)].some((value) => value.toLowerCase().includes(query)));
   schemaRuleList?.replaceChildren(...visible.map((rule) => {
     const item = document.createElement("li");
-    item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity}${rule.parameters ? ` · ${rule.parameters}` : ""}`;
+    const override = document.createElement("button");
+    item.textContent = `${rule.name} v${rule.version} · ${rule.operator} · ${rule.applicableTypes} · ${rule.severity}${rule.parameters ? ` · ${rule.parameters}` : ""} `;
+    override.type = "button"; override.textContent = "Duplicate override";
+    override.addEventListener("click", () => { const copy = { ...rule, id:`${rule.id}:override:${reusableRules.length + 1}`, name:`${rule.name} override`, version:1 }; reusableRules = [...reusableRules, copy]; localStorage.setItem(SCHEMA_RULE_LIBRARY_STORAGE_KEY, JSON.stringify(reusableRules)); renderSchemaRules(); });
+    item.append(override);
     return item;
   }));
   if (schemaRuleCount) schemaRuleCount.textContent = `${visible.length} rules`;
