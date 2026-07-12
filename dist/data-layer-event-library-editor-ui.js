@@ -78,7 +78,7 @@ export function renderEventLibraryEditor(elements, templates, editor, actions) {
         }
         const actionsRow = document.createElement("div");
         actionsRow.className = "event-template-actions";
-        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`), actionButton("Duplicate", () => actions.duplicate(template)), actionButton("Push", () => actions.push(template)));
+        actionsRow.append(actionButton("Edit", () => actions.edit(template), "quiet", template.id), actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`), actionButton("Duplicate", () => actions.duplicate(template)), ...(actions.createSchema ? [actionButton("Create schema", () => actions.createSchema?.(template))] : []), actionButton("Push", () => actions.push(template)));
         item.append(identity, routing, attributes, actionsRow);
         return item;
     }));

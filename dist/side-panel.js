@@ -32,7 +32,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, duplicateSchema, exportSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { createSchema, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -125,7 +125,7 @@ const schemaRevisionReviewSummary = document.querySelector("#schema-revision-rev
 const confirmSchemaRevisionButton = document.querySelector("#confirm-schema-revision");
 const cancelSchemaRevisionButton = document.querySelector("#cancel-schema-revision");
 const schemaCloseReview = document.querySelector("#close-schema-editor-review");
-const schemaCloseReviewSummary = document.querySelector("#close-schema-editor-review-summary");
+const schemaCloseReviewSummary = document.querySelector("#schema-close-review-summary");
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
@@ -203,6 +203,7 @@ const confirmTemplateRenameButton = document.querySelector("#confirm-template-re
 const cancelTemplateRenameReviewButton = document.querySelector("#cancel-template-rename-review");
 const createSchemaButton = document.querySelector("#create-schema");
 const importSchemaButton = document.querySelector("#import-schema");
+const schemaLibraryImportFile = document.querySelector("#schema-library-import-file");
 const exportSchemaButton = document.querySelector("#export-schema");
 const recheckSchemaValidationButton = document.querySelector("#recheck-schema-validation");
 const schemaValidationIssues = document.querySelector("#schema-validation-issues");
@@ -212,13 +213,15 @@ const schemaRuleOverrides = document.querySelector("#schema-rule-overrides");
 const schemaRuleOverrideList = document.querySelector("#schema-rule-override-list");
 const schemaImportReview = document.querySelector("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector("#schema-import-review-summary");
-const confirmSchemaImportButton = document.querySelector("#confirm-schema-import");
+const replaceSchemaLibraryButton = document.querySelector("#replace-schema-library");
+const appendSchemaLibraryButton = document.querySelector("#append-schema-library");
 const cancelSchemaImportButton = document.querySelector("#cancel-schema-import");
 const schemaDeleteReview = document.querySelector("#schema-delete-review");
 const schemaDeleteReviewSummary = document.querySelector("#schema-delete-review-summary");
 const confirmSchemaDeleteButton = document.querySelector("#confirm-schema-delete");
 const cancelSchemaDeleteButton = document.querySelector("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector("#schema-editor-parent");
+const schemaOnlyDeclaredProperties = document.querySelector("#schema-only-declared-properties");
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
 const schemaResult = document.querySelector("#schema-result");
@@ -642,6 +645,13 @@ function openLiveInspector(eventId) {
                 savedInspectorTemplateId = template.id;
                 appendOpenInLibraryAction(event.id, template.name);
             },
+            createSchema: (selected) => openSchemaFromSource({
+                name: selected.name,
+                sourceId: selected.sourceId,
+                eventName: selected.name,
+                payload: selected.payload,
+                label: "Live event",
+            }),
             validationAvailable: (selected) => Boolean(validateEvent({
                 sourceId: selected.sourceId,
                 eventName: selected.name,
@@ -656,9 +666,13 @@ function openLiveInspector(eventId) {
             manualSchemaChoices: () => schemas.map((schema) => ({ id: schema.id, label: `${schema.name} v${schema.version}` })),
             selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]: schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
             updateValidation: (selectedId, validation) => {
+                const selected = liveObserverState.events.find((candidate) => candidate.id === selectedId);
+                const event = selected && { sourceId: selected.sourceId, eventName: selected.name, payload: selected.payload, rawInput: selected.rawInput };
+                const manual = selected && schemas.find((schema) => schema.id === manualSchemaOverrides[selected.id]);
+                const result = event ? (manual ? validateWithSchema(event, manual, schemas) : validateEvent(event, schemas, selected?.pageUrl)) : undefined;
                 liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === selectedId ? { ...candidate, validation } : candidate) };
                 renderLiveObserver();
-                updateLiveInspectorValidation(liveObserverElements, validation);
+                updateLiveInspectorValidation(liveObserverElements, validation, result?.issues);
             },
         }));
     renderLiveObserver();
@@ -713,6 +727,13 @@ function renderEventTemplateLibrary() {
             void pushCurrentTemplateDraft();
         },
         delete: requestEventTemplateDeletion,
+        createSchema: (template) => openSchemaFromSource({
+            name: template.name,
+            sourceId: template.sourceId,
+            eventName: template.eventName,
+            payload: template.payload,
+            label: "Library template",
+        }),
     });
 }
 function renderSchemas() {
@@ -787,26 +808,67 @@ function renderSchemaDraft() {
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)
         schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
+    if (schemaOnlyDeclaredProperties)
+        schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
     const paths = (document, prefix = "") => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
         const path = prefix ? `${prefix}.${name}` : name;
         return [path, ...paths(child, path)];
     });
     const propertyPaths = paths(draft.document);
-    if (propertyPaths.length === 0)
-        propertyPaths.push("page_type", "page_name", "commerce.order.id");
     if (!propertyPaths.includes(selectedSchemaPropertyPath))
         selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
     schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
         const item = document.createElement("li");
+        const label = document.createElement("strong");
+        label.textContent = path;
+        const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
+        const count = document.createElement("span");
+        count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
         const add = document.createElement("button");
-        const view = document.createElement("button");
-        add.type = view.type = "button";
+        add.type = "button";
         add.textContent = "Add validation rule";
-        view.textContent = "View attached rules";
-        add.addEventListener("click", () => { selectedSchemaPropertyPath = path; addSchemaRuleButton?.click(); });
-        view.addEventListener("click", () => { selectedSchemaPropertyPath = path; if (schemaResult)
-            schemaResult.textContent = `Attached rules for ${path}: ${(draft.attachedRules ?? []).map((rule) => `${rule.id} v${rule.version}`).join(", ") || "none"}`; });
-        item.append(`${path} `, add, view);
+        const menu = document.createElement("div");
+        menu.hidden = true;
+        menu.setAttribute("aria-label", `${path} rule menu`);
+        const rules = reusableSchemaRules.filter((rule) => rule.enabled !== false);
+        if (rules.length) {
+            menu.append(...rules.map((rule) => {
+                const attach = document.createElement("button");
+                attach.type = "button";
+                attach.textContent = `Attach ${rule.name} v${rule.version ?? 1}`;
+                attach.addEventListener("click", () => attachReusableRule(path, rule));
+                return attach;
+            }));
+        }
+        else {
+            const create = document.createElement("button");
+            create.type = "button";
+            create.textContent = "Create reusable rule";
+            create.addEventListener("click", () => { selectedSchemaPropertyPath = path; showSchemaSubview("schema-rule-library"); createSchemaRuleButton?.click(); });
+            menu.append(create);
+        }
+        add.addEventListener("click", () => { selectedSchemaPropertyPath = path; menu.hidden = !menu.hidden; });
+        const view = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = `View attached rules (${attached.length})`;
+        view.append(summary);
+        if (!attached.length)
+            view.append("No rules attached to this property.");
+        for (const rule of attached) {
+            const row = document.createElement("div");
+            row.textContent = `${rule.id} v${rule.version} · ${rule.operator ?? "rule"} · ${rule.parameters ?? "no parameters"} · ${rule.severity ?? "error"} · ${rule.enabled === false ? "disabled" : "active"} `;
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.textContent = rule.enabled === false ? "Re-enable" : "Disable";
+            toggle.addEventListener("click", () => updateAttachedRule(path, rule.id, (item) => ({ ...item, enabled: item.enabled === false })));
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.textContent = "Remove";
+            remove.addEventListener("click", () => updateAttachedRule(path, rule.id, () => undefined));
+            row.append(toggle, remove);
+            view.append(row);
+        }
+        item.append(label, count, add, menu, view);
         return item;
     }));
     const existing = schemas.find((schema) => schema.name === draft.name);
@@ -844,6 +906,35 @@ function renderSchemaDraft() {
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
 }
+function schemaDocumentFromValue(value) {
+    if (Array.isArray(value)) {
+        return { type: "array", items: value.length ? schemaDocumentFromValue(value[0]) : {} };
+    }
+    if (value && typeof value === "object") {
+        return {
+            type: "object",
+            properties: Object.fromEntries(Object.entries(value).map(([name, child]) => [name, schemaDocumentFromValue(child)])),
+        };
+    }
+    const primitiveType = typeof value;
+    return { type: primitiveType === "string" || primitiveType === "number" || primitiveType === "boolean" ? primitiveType : "string" };
+}
+function openSchemaFromSource(source) {
+    const document = schemaDocumentFromValue(source.payload);
+    const objectDocument = document.type === "object"
+        ? document
+        : { type: "object", properties: { value: document } };
+    schemaDraft = {
+        ...createSchema(`${source.name} schema`, 1, objectDocument),
+        assignments: [{ sourceId: source.sourceId, eventName: source.eventName, target: "payload" }],
+    };
+    selectedSchemaPropertyPath = Object.keys(objectDocument.properties ?? {})[0] ?? "value";
+    showDataLayerView("Schemas");
+    renderSchemaDraft();
+    if (schemaResult)
+        schemaResult.textContent = `${source.label} fields loaded into a new schema draft.`;
+    schemaEditorName?.focus({ preventScroll: true });
+}
 function openNewSchemaEditor() {
     schemaDraft = createSchema("", 1, { type: "object" });
     renderSchemaDraft();
@@ -864,6 +955,34 @@ function defineSchemaProperty(document, path) {
     if (rest.length === 0)
         return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: properties[name] ?? { type: "string" } } };
     return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: defineSchemaProperty(properties[name] ?? { type: "object" }, rest) } };
+}
+function attachReusableRule(path, rule) {
+    if (!schemaDraft)
+        return;
+    const attachment = {
+        id: rule.id,
+        version: rule.version ?? 1,
+        propertyPath: path,
+        ...(rule.operator ? { operator: rule.operator } : {}),
+        ...(rule.parameters ? { parameters: rule.parameters } : {}),
+        ...(rule.severity ? { severity: rule.severity } : {}),
+        ...(rule.message ? { message: rule.message } : {}),
+        enabled: true,
+    };
+    schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
+    renderSchemaDraft();
+}
+function updateAttachedRule(path, id, update) {
+    if (!schemaDraft)
+        return;
+    const attachedRules = (schemaDraft.attachedRules ?? []).flatMap((rule) => {
+        if (rule.id !== id || rule.propertyPath !== path)
+            return [rule];
+        const next = update(rule);
+        return next ? [next] : [];
+    });
+    schemaDraft = { ...schemaDraft, attachedRules };
+    renderSchemaDraft();
 }
 function renderSchemaWorkflowRows() {
     if (schemaAssignmentSchema)
@@ -1938,16 +2057,22 @@ schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) {
     schemaDraft = withSchemaParent(schemaDraft, schemaEditorParent.value || undefined);
     renderSchemaDraft();
 } });
+schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft) {
+    const { additionalProperties: _previous, ...document } = schemaDraft.document;
+    schemaDraft = { ...schemaDraft, document: schemaOnlyDeclaredProperties.checked ? { ...document, additionalProperties: false } : document };
+    renderSchemaDraft();
+} });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaRuleButton?.addEventListener("click", () => {
     if (!schemaDraft)
         return;
-    const path = selectedSchemaPropertyPath.split(".").filter(Boolean);
-    const property = path.at(-1) || "example";
-    const operator = schemaRuleOperator?.value;
-    const document = defineSchemaProperty(schemaDraft.document, path);
-    schemaDraft = { ...schemaDraft, document: operator === "required" ? { ...document, required: [...new Set([...(document.required ?? []), property])] } : document };
-    renderSchemaDraft();
+    if (!Object.keys(schemaDraft.document.properties ?? {}).length) {
+        selectedSchemaPropertyPath = "example";
+        schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, [selectedSchemaPropertyPath]) };
+        renderSchemaDraft();
+    }
+    if (schemaResult)
+        schemaResult.textContent = "Choose a property row, then attach a reusable rule from its menu.";
 });
 saveSchemaButton?.addEventListener("click", () => {
     if (!schemaDraft || saveSchemaButton.disabled)
@@ -1977,7 +2102,14 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
             schemaResult.textContent = inheritanceError;
         return;
     }
-    const saved = existing ? withSchemaParent(reviseSchema(existing, draft.document), draft.parentSchemaId) : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [{ sourceId: "", eventName: "", target: target }] };
+    const saved = existing
+        ? withSchemaParent({
+            ...reviseSchema(existing, draft.document),
+            assignments: draft.assignments,
+            ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}),
+            ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: draft.inheritedRuleOverrides } : {}),
+        }, draft.parentSchemaId)
+        : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: draft.assignments.length ? draft.assignments : [{ sourceId: "", eventName: "", target: target }] };
     schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema.parentSchemaId === existing.id ? { ...schema, parentSchemaId: saved.id } : schema) : [...schemas, saved];
     persistSchemaLibrary();
     schemaDraft = undefined;
@@ -2073,33 +2205,49 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
     if (schemaAssignmentEditor)
         schemaAssignmentEditor.hidden = true;
 });
-importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized)
-    return; try {
-    const imported = importSchema(serialized);
-    const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported];
-    const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates);
-    if (inheritanceError)
-        throw new Error(inheritanceError);
-    pendingSchemaImport = candidates;
-    if (schemaImportReviewSummary)
-        schemaImportReviewSummary.textContent = `${imported.name} v${imported.version} will ${schemas.some((schema) => schema.id === imported.id) ? "replace the saved version" : "be added to the schema library"}.`;
-    if (schemaImportReview) {
-        schemaImportReview.hidden = false;
-        schemaImportReview.showModal();
+importSchemaButton?.addEventListener("click", () => schemaLibraryImportFile?.click());
+schemaLibraryImportFile?.addEventListener("change", async () => {
+    const file = schemaLibraryImportFile.files?.[0];
+    if (!file)
+        return;
+    try {
+        const archive = JSON.parse(await file.text());
+        if (archive.version !== 1 || !Array.isArray(archive.schemas) || !Array.isArray(archive.rules))
+            throw new Error("Choose a version 1 Schema Library export.");
+        const importedSchemas = archive.schemas.map((schema) => importSchema(JSON.stringify(schema)));
+        const candidates = [...schemas.filter((schema) => !importedSchemas.some((item) => item.id === schema.id)), ...importedSchemas];
+        for (const schema of importedSchemas) {
+            const issue = schemaInheritanceError(schema, candidates) ?? schemaInheritanceConflict(schema, candidates);
+            if (issue)
+                throw new Error(issue);
+        }
+        pendingSchemaImport = { schemas: importedSchemas, rules: archive.rules };
+        if (schemaImportReviewSummary)
+            schemaImportReviewSummary.textContent = `${importedSchemas.length} schemas and ${pendingSchemaImport.rules.length} reusable rules are ready to import.`;
+        if (schemaImportReview) {
+            schemaImportReview.hidden = false;
+            schemaImportReview.showModal();
+        }
     }
-}
-catch (error) {
-    if (schemaResult)
-        schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON.";
-} });
-exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult)
-    schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
+    catch (error) {
+        if (schemaResult)
+            schemaResult.textContent = error instanceof Error ? error.message : "Schema Library import failed.";
+    }
+    schemaLibraryImportFile.value = "";
+});
+exportSchemaButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify({ version: 1, schemas, rules: reusableSchemaRules }, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-library-v1.json"; link.click(); URL.revokeObjectURL(url); if (schemaResult)
+    schemaResult.textContent = `Exported ${schemas.length} schemas and ${reusableSchemaRules.length} rules.`; });
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
-confirmSchemaImportButton?.addEventListener("click", () => { if (!pendingSchemaImport)
-    return; schemas = pendingSchemaImport; pendingSchemaImport = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaImportReview?.open)
+replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
+    return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
     schemaImportReview.close(); if (schemaImportReview)
     schemaImportReview.hidden = true; if (schemaResult)
-    schemaResult.textContent = "Schema import completed."; });
+    schemaResult.textContent = "Schema Library replaced."; });
+appendSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
+    return; schemas = [...schemas.filter((schema) => !pendingSchemaImport.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
+    schemaImportReview.close(); if (schemaImportReview)
+    schemaImportReview.hidden = true; if (schemaResult)
+    schemaResult.textContent = "Schema Library appended."; });
 cancelSchemaImportButton?.addEventListener("click", () => { pendingSchemaImport = undefined; if (schemaImportReview?.open)
     schemaImportReview.close(); if (schemaImportReview)
     schemaImportReview.hidden = true; });
