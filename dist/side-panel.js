@@ -148,6 +148,7 @@ const schemaRuleSearch = document.querySelector("#schema-rule-search");
 const schemaRuleAttachments = document.querySelector("#schema-rule-attachments");
 const updateSchemaRuleAttachments = document.querySelector("#update-schema-rule-attachments");
 const schemaRuleUpgradeReview = document.querySelector("#schema-rule-upgrade-review");
+const schemaRuleUpgradeReviewSummary = document.querySelector("#schema-rule-upgrade-review-summary");
 const confirmSchemaRuleUpgradeButton = document.querySelector("#confirm-schema-rule-upgrade");
 const cancelSchemaRuleUpgradeButton = document.querySelector("#cancel-schema-rule-upgrade");
 const exportSchemaRulesButton = document.querySelector("#export-schema-rules");
@@ -1981,6 +1982,9 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemaRuleEditor.hidden = true; });
 schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
 updateSchemaRuleAttachments?.addEventListener("change", () => { if (updateSchemaRuleAttachments.checked && schemaRuleUpgradeReview) {
+    const affected = Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => { const schema = schemas.find((candidate) => candidate.id === option.value); const pinned = schema?.attachedRules?.find((rule) => rule.id === editingReusableSchemaRuleId)?.version; return `${option.textContent}${pinned ? ` (pinned v${pinned})` : " (new attachment)"}`; });
+    if (schemaRuleUpgradeReviewSummary)
+        schemaRuleUpgradeReviewSummary.textContent = affected.length ? `Saving will update: ${affected.join(", ")}.` : "Saving will remove this rule from all selected schema attachments.";
     schemaRuleUpgradeReview.hidden = false;
     schemaRuleUpgradeReview.showModal();
 } });
