@@ -211,6 +211,13 @@ const schemaValidationRecordList = document.querySelector("#schema-validation-re
 const schemaInheritanceProvenance = document.querySelector("#schema-inheritance-provenance");
 const schemaRuleOverrides = document.querySelector("#schema-rule-overrides");
 const schemaRuleOverrideList = document.querySelector("#schema-rule-override-list");
+const schemaInheritedRuleGroups = document.createElement("section");
+schemaInheritedRuleGroups.id = "schema-inherited-rule-groups";
+schemaInheritedRuleGroups.setAttribute("aria-label", "Inherited rule states");
+const schemaEffectiveRulePreview = document.createElement("section");
+schemaEffectiveRulePreview.id = "schema-effective-rule-preview";
+schemaEffectiveRulePreview.setAttribute("aria-label", "Effective-rule preview");
+schemaRuleOverrides?.after(schemaInheritedRuleGroups, schemaEffectiveRulePreview);
 const schemaImportReview = document.querySelector("#schema-import-review");
 const schemaImportReviewSummary = document.querySelector("#schema-import-review-summary");
 const replaceSchemaLibraryButton = document.querySelector("#replace-schema-library");
@@ -902,6 +909,7 @@ function renderSchemaDraft() {
             label.append(`${property}: `, select);
             return label;
         }));
+    renderSchemaInheritancePresentation(draft);
     const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
     const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
     const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
@@ -910,6 +918,62 @@ function renderSchemaDraft() {
         saveSchemaButton.disabled = !ready;
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
+}
+function renderSchemaInheritancePresentation(draft) {
+    const ancestors = [];
+    const seen = new Set([draft.id]);
+    let parentId = draft.parentSchemaId;
+    while (parentId && !seen.has(parentId)) {
+        seen.add(parentId);
+        const parent = schemas.find((schema) => schema.id === parentId);
+        if (!parent)
+            break;
+        ancestors.push(parent);
+        parentId = parent.parentSchemaId;
+    }
+    const inherited = ancestors.flatMap((origin) => (origin.attachedRules ?? []).map((rule) => {
+        const override = rule.propertyPath ? draft.inheritedRuleOverrides?.[rule.propertyPath] : undefined;
+        return { path: rule.propertyPath ?? "root", rule, origin, state: override === "disabled" ? "disabled-inherited" : override === "enabled" ? "explicitly-reenabled" : "active-inherited" };
+    }));
+    const local = (draft.attachedRules ?? []).map((rule) => ({ path: rule.propertyPath ?? "root", rule, origin: draft, state: "local" }));
+    const groups = {
+        "active-inherited": inherited.filter((entry) => entry.state === "active-inherited" && entry.rule.enabled !== false),
+        "disabled-inherited": inherited.filter((entry) => entry.state === "disabled-inherited" || (entry.state === "active-inherited" && entry.rule.enabled === false)),
+        "explicitly-reenabled": inherited.filter((entry) => entry.state === "explicitly-reenabled"),
+        local,
+    };
+    const labels = {
+        "active-inherited": "Active inherited",
+        "disabled-inherited": "Disabled inherited",
+        "explicitly-reenabled": "Explicitly re-enabled",
+        local: "Local",
+    };
+    schemaInheritedRuleGroups.hidden = ancestors.length === 0;
+    schemaEffectiveRulePreview.hidden = ancestors.length === 0;
+    schemaInheritedRuleGroups.replaceChildren(...["active-inherited", "disabled-inherited", "explicitly-reenabled", "local"].map((state) => {
+        const group = document.createElement("section");
+        group.dataset.inheritedRuleGroup = state;
+        const entries = groups[state];
+        const heading = document.createElement("h5");
+        heading.textContent = `${labels[state]} (${entries.length})`;
+        const list = document.createElement("ul");
+        const empty = state === "local" ? "No local rules." : state === "explicitly-reenabled" ? "No explicitly re-enabled inherited rules." : `No ${labels[state].toLowerCase()} rules.`;
+        list.replaceChildren(...(entries.length ? entries.map((entry) => Object.assign(document.createElement("li"), { textContent: displaySchemaRule(entry) })) : [Object.assign(document.createElement("li"), { textContent: empty })]));
+        group.append(heading, list);
+        return group;
+    }));
+    const effective = [...groups["active-inherited"], ...groups["explicitly-reenabled"], ...groups.local];
+    const previewHeading = document.createElement("h4");
+    previewHeading.textContent = "Effective-rule preview";
+    const previewList = document.createElement("ul");
+    previewList.replaceChildren(...(effective.length ? effective.map((entry) => Object.assign(document.createElement("li"), { textContent: `${entry.path} · ${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.state === "local" ? "local" : `inherited from ${entry.origin.name} v${entry.origin.version}`}` })) : [Object.assign(document.createElement("li"), { textContent: "No effective rules." })]));
+    schemaEffectiveRulePreview.replaceChildren(previewHeading, previewList);
+}
+function displaySchemaRule(entry) {
+    return `${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.path} · ${entry.origin.name} v${entry.origin.version}`;
+}
+function schemaRuleLabel(entry) {
+    return reusableSchemaRules.find((candidate) => candidate.id === entry.rule.id)?.name ?? entry.rule.id;
 }
 function schemaDocumentFromValue(value) {
     if (Array.isArray(value)) {

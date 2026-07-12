@@ -328,6 +328,23 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
+const schemaInheritanceRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
+  q("#data-layer-view-schemas").click();
+  q("#schema-subview-schemas").click();
+  q("#create-schema").click();
+  input("#schema-editor-name", "Order confirmation");
+  const parent = Array.from(q("#schema-editor-parent").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
+  if (!parent) throw new Error("Missing saved parent schema option");
+  q("#schema-editor-parent").value = parent.value;
+  q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
+  return {
+    groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
+    preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
+  };
+})()`;
+
 const schemaLibraryTransferRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   q("#data-layer-view-schemas").click();
@@ -1002,6 +1019,7 @@ try {
       rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
+    let schemaInheritance;
     let schemaLibraryTransfer;
     let schemaLiveValidation;
     if (width === 720) {
@@ -1013,6 +1031,16 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
       }, "Library Create schema did not invoke the production source callback");
+      schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
+      assert.deepEqual(schemaInheritance, {
+        groups:[
+          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
+          { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
+          { state:"local", text:"Local (0)No local rules." },
+        ],
+        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+      }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.deepEqual(schemaLibraryTransfer, {
         downloadName:"schema-library-v1.json",
@@ -1029,6 +1057,7 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
+        inheritance:schemaInheritance,
         transfer:schemaLibraryTransfer,
         validation:schemaLiveValidation,
       });

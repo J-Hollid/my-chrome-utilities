@@ -31,6 +31,11 @@
                        "Schema assignment did not retain its production source." {:payload payload})
       (support/assert! (= 120 (get-in payload [:schemaWorkspace :assignment :priority]))
                        "Schema assignment edit did not persist its production priority." {:payload payload})
+      (support/assert! (= "active-inherited" (get-in payload [:schemaWorkspace :inheritance :groups 0 :state]))
+                       "Inherited rules did not render in their active state group." {:payload payload})
+      (support/assert! (= ["example · Known page types v1 · inherited from Checkout schema v2"]
+                          (get-in payload [:schemaWorkspace :inheritance :preview]))
+                       "Effective-rule preview did not identify the inherited rule origin." {:payload payload})
       (support/assert! (re-find #"Valid|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
                        "Live Validate did not produce a validation state." {:payload payload})
       (assoc world :browser-observation (:schemaWorkspace payload)))))
