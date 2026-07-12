@@ -243,6 +243,7 @@ let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
 let editingSchemaAssignment;
+let editingReusableSchemaRuleId;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides = (() => { try {
     const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
@@ -819,7 +820,25 @@ function withSchemaParent(schema, parentSchemaId) {
 function renderSchemaWorkflowRows() {
     if (schemaAssignmentSchema)
         schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
-    schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => Object.assign(document.createElement("li"), { textContent: `${rule.name} · ${rule.kind}` })));
+    schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => {
+        const item = document.createElement("li");
+        const summary = document.createElement("span");
+        summary.textContent = `${rule.name} · ${rule.kind}`;
+        const edit = document.createElement("button");
+        const duplicate = document.createElement("button");
+        const remove = document.createElement("button");
+        edit.type = duplicate.type = remove.type = "button";
+        edit.textContent = "Edit";
+        duplicate.textContent = "Duplicate";
+        remove.textContent = "Delete";
+        edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName)
+            schemaRuleName.value = rule.name; if (schemaRuleEditor)
+            schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
+        duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        remove.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        item.append(summary, edit, duplicate, remove);
+        return item;
+    }));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
     schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
         const item = document.createElement("li");
@@ -1924,10 +1943,10 @@ saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.cl
 saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open)
     schemaCloseReview.close(); if (schemaCloseReview)
     schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
-createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
+createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaRuleId = undefined; if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
-    return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); reusableSchemaRules = [...reusableSchemaRules, { id: `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
+    return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); const rule = { id: editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor)
