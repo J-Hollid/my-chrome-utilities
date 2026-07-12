@@ -429,6 +429,14 @@ const exportSchemaButton = document.querySelector<HTMLButtonElement>("#export-sc
 const recheckSchemaValidationButton = document.querySelector<HTMLButtonElement>("#recheck-schema-validation");
 const schemaValidationIssues = document.querySelector<HTMLElement>("#schema-validation-issues");
 const schemaInheritanceProvenance = document.querySelector<HTMLElement>("#schema-inheritance-provenance");
+const schemaImportReview = document.querySelector<HTMLDialogElement>("#schema-import-review");
+const schemaImportReviewSummary = document.querySelector<HTMLElement>("#schema-import-review-summary");
+const confirmSchemaImportButton = document.querySelector<HTMLButtonElement>("#confirm-schema-import");
+const cancelSchemaImportButton = document.querySelector<HTMLButtonElement>("#cancel-schema-import");
+const schemaDeleteReview = document.querySelector<HTMLDialogElement>("#schema-delete-review");
+const schemaDeleteReviewSummary = document.querySelector<HTMLElement>("#schema-delete-review-summary");
+const confirmSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#confirm-schema-delete");
+const cancelSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
@@ -468,6 +476,8 @@ let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
 let schemaDraft: SchemaDefinition | undefined;
+let pendingSchemaImport: SchemaDefinition[] | undefined;
+let pendingSchemaDeletion: SchemaDefinition | undefined;
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableSchemaRules: Array<{ id: string; name: string; kind: string }> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 let replaySequences: ReplaySequence[] = [];
@@ -989,7 +999,9 @@ function renderSchemas(): void {
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
       if (children.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return; }
-      schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`;
+      pendingSchemaDeletion = schema;
+      if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
+      if (schemaDeleteReview) { schemaDeleteReview.hidden = false; schemaDeleteReview.showModal(); }
     }); item.append(revise, duplicate, remove); return item;
   }));
 }
@@ -2230,9 +2242,13 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
   schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:[...candidate.assignments, { sourceId, eventName, target, id:`assignment:${candidate.id}:${eventName}`, name:`${candidate.name} automatic`, priority, ...(domainCondition ? { domainCondition } : {}), ...(pathnameCondition ? { pathnameCondition } : {}), versionPolicy:schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled:schemaAssignmentEnabled?.checked ?? true }] } : candidate);
   persistSchemaLibrary(); renderSchemas(); renderSchemaWorkflowRows(); if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true;
 });
-importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported]; const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates); if (inheritanceError) throw new Error(inheritanceError); schemas = candidates; persistSchemaLibrary(); renderSchemas(); if (schemaResult) schemaResult.textContent = `Imported ${imported.name} v${imported.version}.`; } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON."; } });
+importSchemaButton?.addEventListener("click", () => { const serialized = globalThis.prompt("Paste schema JSON"); if (!serialized) return; try { const imported = importSchema(serialized); const candidates = [...schemas.filter((schema) => schema.id !== imported.id), imported]; const inheritanceError = schemaInheritanceError(imported, candidates) ?? schemaInheritanceConflict(imported, candidates); if (inheritanceError) throw new Error(inheritanceError); pendingSchemaImport = candidates; if (schemaImportReviewSummary) schemaImportReviewSummary.textContent = `${imported.name} v${imported.version} will ${schemas.some((schema) => schema.id === imported.id) ? "replace the saved version" : "be added to the schema library"}.`; if (schemaImportReview) { schemaImportReview.hidden = false; schemaImportReview.showModal(); } } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema import must contain valid JSON."; } });
 exportSchemaButton?.addEventListener("click", () => { const schema = schemas[0]; if (schemaResult) schemaResult.textContent = schema ? exportSchema(schema) : "No schema to export."; });
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
+confirmSchemaImportButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = pendingSchemaImport; pendingSchemaImport = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema import completed."; });
+cancelSchemaImportButton?.addEventListener("click", () => { pendingSchemaImport = undefined; if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; });
+confirmSchemaDeleteButton?.addEventListener("click", () => { const schema = pendingSchemaDeletion; if (!schema) return; schemas = schemas.filter(({ id }) => id !== schema.id); pendingSchemaDeletion = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`; });
+cancelSchemaDeleteButton?.addEventListener("click", () => { pendingSchemaDeletion = undefined; if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; });
 
 addNewButton?.addEventListener("click", openNewEventEditor);
 exportEventLibraryButton?.addEventListener("click", downloadEventLibrary);
