@@ -1093,7 +1093,13 @@ function renderSchemaWorkflowRows() {
         disable.textContent = rule.enabled === false ? "Enable" : "Disable";
         remove.textContent = "Delete";
         edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName)
-            schemaRuleName.value = rule.name; if (schemaRuleAttachments) {
+            schemaRuleName.value = rule.name; if (schemaRuleTypes)
+            schemaRuleTypes.value = rule.kind.includes("Allowed values") ? "Allowed values" : rule.kind.includes("Regular expression") ? "Regular expression" : "Required"; if (schemaRuleOperator)
+            schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters)
+            schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity)
+            schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage)
+            schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples)
+            schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) {
             schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}`, selected: rule.attachments?.includes(schema.id) ?? false })));
         } if (schemaRuleEditor)
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
@@ -1115,7 +1121,7 @@ function renderSchemaWorkflowRows() {
     schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
         const item = document.createElement("li");
         const summary = document.createElement("span");
-        summary.textContent = `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${schema.name}`;
+        summary.textContent = `${assignment.name ?? assignment.id ?? "Assignment"} · ${assignment.sourceId}/${assignment.eventName} · ${assignment.target} · ${assignment.domainCondition ?? "any"}${assignment.pathnameCondition ?? "any"} · priority ${assignment.priority ?? 0} · ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"} · ${schema.name}`;
         const edit = document.createElement("button");
         const duplicate = document.createElement("button");
         const disable = document.createElement("button");

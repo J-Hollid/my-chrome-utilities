@@ -254,6 +254,7 @@ const schemaAssignmentRuntime = `(() => {
   q("#schema-subview-rules").click();
   Array.from(q("#schema-rule-list").querySelectorAll("button")).filter((button) => button.textContent === "Edit").at(-1).click();
   input("#schema-rule-parameters", "product,checkout,confirmation");
+  q("#schema-rule-severity").value = "error";
   q("#save-schema-rule").click();
   const ruleRevisionReview = { open:q("#schema-rule-revision-review").open, summary:q("#schema-rule-revision-review-summary").textContent };
   q("#confirm-schema-rule-revision-review").click();
@@ -1024,11 +1025,11 @@ try {
       duplicateCount:3,
       revisionReview:{ open:true, summary:"Checkout schema will be saved as version 3; version 2 remains available." },
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
-      rows:["Checkout schema automatic · event-history/page_view · anyany · priority 120 · Checkout schema", "Checkout schema automatic · event-history/page_view · shop.example/order-confirmation · priority 100 · Checkout schema"],
+      rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · pinned · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation." }, ruleExportName:"schema-rules.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
-      rule:{ name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
+      rule:{ name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
     let schemaInheritance;
