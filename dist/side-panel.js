@@ -698,7 +698,8 @@ function renderSchemas() {
             revise.addEventListener("click", () => { pendingSchemaRevision = reviseSchema(schema, schema.document); if (schemaRevisionReviewSummary)
                 schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${pendingSchemaRevision.version}; version ${schema.version} remains available.`; showDialog(schemaRevisionReview, schemaRevisionReviewHeading); });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
-            remove.addEventListener("click", () => { schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); });
+            remove.addEventListener("click", () => { if (!globalThis.confirm(`Delete ${schema.name} version ${schema.version}? Validation history remains available.`))
+                return; schemas = schemas.filter(({ id }) => id !== schema.id); persistSchemaLibrary(); renderSchemas(); });
             item.append(revise, duplicate, remove);
             return item;
         }));
