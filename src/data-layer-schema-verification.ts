@@ -1,7 +1,7 @@
 import type { ValidationState } from "./data-layer-source.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; revisionHistory?: readonly SchemaDefinition[]; }
+export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; parentSchemaId?: string; revisionHistory?: readonly SchemaDefinition[]; }
 export interface SchemaAssignment {
   sourceId: string;
   eventName: string;
@@ -34,6 +34,13 @@ export function assignSchema(schema: SchemaDefinition, assignment: SchemaAssignm
 }
 export function reviseSchema(schema: SchemaDefinition, document: JsonSchema): SchemaDefinition { return { ...schema, id: schemaId(schema.name, schema.version + 1), version: schema.version + 1, document: clone(document), revisionHistory:[...(schema.revisionHistory ?? []), clone(schema)] }; }
 export function duplicateSchema(schema: SchemaDefinition, name: string): SchemaDefinition { return { ...clone(schema), id: schemaId(name, schema.version), name }; }
+export function schemaInheritanceError(schema: SchemaDefinition, schemas: readonly SchemaDefinition[]): string | undefined {
+  if (!schema.parentSchemaId) return undefined;
+  if (schema.parentSchemaId === schema.id) return "A schema cannot inherit from itself";
+  const parents = new Map<string, string | undefined>(schemas.map((item) => [item.id, item.parentSchemaId])); let current: string | undefined = schema.parentSchemaId;
+  while (current) { if (current === schema.id) return "Schema inheritance cannot contain a cycle"; current = parents.get(current); }
+  return undefined;
+}
 export function searchSchemas(schemas: readonly SchemaDefinition[], query: string): SchemaDefinition[] { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
 
 function glob(value: string, pattern: string | undefined): boolean {
