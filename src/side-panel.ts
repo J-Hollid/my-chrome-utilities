@@ -2281,6 +2281,7 @@ addSchemaRuleButton?.addEventListener("click", () => {
 });
 saveSchemaButton?.addEventListener("click", () => {
   if (!schemaDraft || saveSchemaButton.disabled) return;
+  if (!globalThis.confirm(`Save ${schemaDraft.name} version 1?`)) return;
   const saved = { ...schemaDraft, id:`schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments:[] };
   schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
   schemas = [...schemas, saved]; persistSchemaLibrary(); schemaDraft = undefined; renderSchemaDraft(); renderSchemas();
