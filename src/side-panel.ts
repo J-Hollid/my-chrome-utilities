@@ -1062,6 +1062,8 @@ function renderSchemaAssignments(): void {
     return item;
   }));
   if (schemaAssignmentCount) schemaAssignmentCount.textContent = `${assignments.length} assignments`;
+  const conflicts = assignments.filter(({ assignment }, index) => assignment.enabled !== false && assignments.some(({ assignment: other }, otherIndex) => otherIndex !== index && other.enabled !== false && assignment.sourceId === other.sourceId && assignment.eventName === other.eventName && assignment.domainCondition === other.domainCondition && assignment.pathnameCondition === other.pathnameCondition && (assignment.priority ?? 0) === (other.priority ?? 0)));
+  if (schemaResult && conflicts.length > 0) schemaResult.textContent = `Assignment conflict: ${conflicts.map(({ assignment }) => assignment.name ?? assignment.id ?? "unnamed assignment").join(", ")}. Edit priorities before validation.`;
 }
 
 function assignmentAt(schemaId: string, assignmentIndex: number): { schema: SchemaDefinition; assignment: SchemaDefinition["assignments"][number] } | undefined {
