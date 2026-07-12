@@ -156,6 +156,11 @@ function collectSchemaIssues(value, schema, schemas, result) {
     attachedRuleIssues(value, schema, result);
     inheritedAttachedRuleIssues(value, schema, schemas, result);
 }
+function validationStateForIssues(issues) {
+    if (issues.length === 0)
+        return "Valid";
+    return issues.every((issue) => issue.severity === "warning") ? `${issues.length} warnings` : `${issues.length} issues`;
+}
 function inheritedDocument(schema, schemas, visited = new Set()) {
     if (!schema.parentSchemaId || visited.has(schema.id))
         return schema.document;
@@ -197,7 +202,7 @@ export function validateEvent(event, schemas, pageUrl) {
             const issues = [];
             collectSchemaIssues(value, resolution.schema, schemas, issues);
             const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+            return { state: validationStateForIssues(issues), issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
         }
     }
     const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -207,14 +212,14 @@ export function validateEvent(event, schemas, pageUrl) {
     const issues = [];
     collectSchemaIssues(value, match.schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
-    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+    return { state: validationStateForIssues(issues), issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event, schema, schemas, target = schema.assignments[0]?.target ?? "payload") {
     const value = target === "payload" ? event.payload : event.rawInput;
     const issues = [];
     collectSchemaIssues(value, schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
-    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+    return { state: validationStateForIssues(issues), issues, schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results) { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
