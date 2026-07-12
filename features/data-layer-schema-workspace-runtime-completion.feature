@@ -96,3 +96,14 @@ Feature: Data layer schema workspace runtime completion
       | schema_count | rule_count |
       | 1            | 3          |
       | 2            | 4          |
+
+  # Data layer schema workspace runtime completion 010
+  Scenario: Data layer schema workspace runtime completion 010
+    Given shared browser setup observes an export envelope with format version, schema identities, and rule identities
+    And it observes the schema and rule identities stored immediately before export
+    When shared transfer verification runs for a scenario without export-count examples
+    Then exported schema identities are compared only with stored schema identities
+    And exported rule identities are compared only with stored rule identities
+    And format version is verified separately from both identity collections
+    And valid envelope metadata does not cause an identity mismatch
+    And no scenario-specific library size is required before an export-count example is active
