@@ -75,6 +75,21 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
     if (schema.type === "array" && Array.isArray(value) && schema.items)
         value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata));
 }
+function inheritedDocument(schema, schemas, visited = new Set()) {
+    if (!schema.parentSchemaId || visited.has(schema.id))
+        return schema.document;
+    visited.add(schema.id);
+    const parent = schemas.find((candidate) => candidate.id === schema.parentSchemaId);
+    if (!parent)
+        return schema.document;
+    const inherited = inheritedDocument(parent, schemas, visited);
+    return {
+        ...inherited,
+        ...schema.document,
+        required: [...new Set([...(inherited.required ?? []), ...(schema.document.required ?? [])])],
+        properties: { ...(inherited.properties ?? {}), ...(schema.document.properties ?? {}) },
+    };
+}
 export function validateEvent(event, schemas, pageUrl) {
     if (pageUrl) {
         const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
@@ -83,7 +98,7 @@ export function validateEvent(event, schemas, pageUrl) {
         if (resolution.schema && resolution.assignment) {
             const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
             const issues = [];
-            issuesFor(value, resolution.schema.document, "", "#", issues, resolution.schema);
+            issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
             return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
         }
     }
@@ -92,7 +107,7 @@ export function validateEvent(event, schemas, pageUrl) {
         return { state: "Not checked", issues: [] };
     const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
     const issues = [];
-    issuesFor(value, match.schema.document, "", "#", issues, match.schema);
+    issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema);
     return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target };
 }
 export function validationSummary(results) { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
