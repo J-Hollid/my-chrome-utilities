@@ -32,6 +32,7 @@
                             [acceptance.event-library-editor-steps-test]
                             [acceptance.information-architecture-steps-test]
                         [acceptance.schema-verification-steps-test]
+                        [acceptance.schema-workspace-runtime-steps-test]
                         [acceptance.saved-sessions-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
@@ -57,6 +58,7 @@
                                                 'acceptance.event-library-editor-steps-test
                                                 'acceptance.information-architecture-steps-test
                                                 'acceptance.schema-verification-steps-test
+                                                'acceptance.schema-workspace-runtime-steps-test
                                                 'acceptance.saved-sessions-steps-test
                                                 'acceptance.gherkin-mutation-metadata-test)
                          source-result (process/shell {:out :inherit
