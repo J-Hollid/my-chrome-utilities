@@ -5,7 +5,7 @@ import {
   type PathMatchType,
 } from "./data-layer-path-conditions.js";
 
-export type GuidedValidationStage = "property" | "requirement" | "scope" | "review";
+export type GuidedValidationStage = "property" | "requirement" | "scope" | "destination" | "review";
 export type GuidedValueType = "String" | "Number" | "Array" | "Object" | "Boolean" | "Null";
 export type GuidedRequirement =
   | "Must be present"
@@ -38,6 +38,31 @@ export interface GuidedProperty {
   typeSource: "detected from this event" | "explicit override";
 }
 
+export interface GuidedSchemaCandidate {
+  id: string;
+  name: string;
+  version: number;
+  target: "payload" | "raw input";
+  propertyTypes: Readonly<Record<string, GuidedValueType>>;
+  assignments?: readonly {
+    sourceId: string;
+    eventName: string;
+    target: "payload" | "raw input";
+    domainCondition?: string;
+    pathnameCondition?: string;
+    enabled?: boolean;
+  }[];
+}
+
+export type GuidedSchemaDestination =
+  | { kind: "new"; schemaName: string }
+  | { kind: "existing"; schemaId: string; schemaName: string; schemaVersion: number; matchingAssignment: boolean };
+
+export interface GuidedSchemaDestinationOption extends GuidedSchemaCandidate {
+  available: boolean;
+  explanation: string;
+}
+
 export interface GuidedValidationDraft {
   stage: GuidedValidationStage;
   event: {
@@ -53,8 +78,8 @@ export interface GuidedValidationDraft {
   allowedValues: readonly string[];
   requirementCorrectionRequired: boolean;
   scope: GuidedScope;
+  destination?: GuidedSchemaDestination;
   advanced: {
-    schemaName: string;
     ruleName: string;
     severity: "Error" | "Warning";
     message: string;
@@ -89,6 +114,12 @@ export interface PublishedGuidedValidation {
     versionPolicy: "pinned" | "follow latest";
     enabled: true;
   };
+  destination: {
+    kind: "new" | "existing";
+    previousSchemaId?: string;
+    previousVersion?: number;
+    assignmentAction: "reuse the matching enabled assignment" | "create the reviewed enabled assignment";
+  };
   readableRequirement: string;
 }
 
@@ -101,7 +132,7 @@ const requirements: Record<GuidedValueType, readonly GuidedRequirement[]> = {
   Null: ["Must be present"],
 };
 
-const stageOrder: readonly GuidedValidationStage[] = ["property", "requirement", "scope", "review"];
+const stageOrder: readonly GuidedValidationStage[] = ["property", "requirement", "scope", "destination", "review"];
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -155,7 +186,6 @@ export function createGuidedValidationDraft(event: GuidedValidationDraft["event"
     requirementCorrectionRequired:false,
     scope:{ kind:"domain-all-paths", domain:url.hostname, pathname:url.pathname || "/", conditions:[] },
     advanced:{
-      schemaName:`${event.name} validation`,
       ruleName:`${event.name} requirement`,
       severity:"Error",
       message:`Validate ${event.name} from ${event.sourceId}`,
@@ -223,12 +253,75 @@ export function setGuidedScope(draft: GuidedValidationDraft, scope: GuidedScope)
   return { ...draft, scope:{ ...scope, conditions:[...scope.conditions] } };
 }
 
+export function validateNewSchemaName(
+  schemaName: string,
+  existingNames: readonly string[],
+): { valid: boolean; assistance: string } {
+  const name = schemaName.trim();
+  if (!name) return { valid:false, assistance:"Enter a name for the new schema" };
+  if (existingNames.some((candidate) => candidate.toLowerCase() === name.toLowerCase())) {
+    return { valid:false, assistance:"Choose the existing schema or enter another name" };
+  }
+  return { valid:true, assistance:`New schema ${name} will be created` };
+}
+
+function matchingAssignment(draft: GuidedValidationDraft, candidate: GuidedSchemaCandidate): boolean {
+  return candidate.assignments?.some((assignment) =>
+    assignment.enabled !== false
+    && assignment.sourceId === draft.event.sourceId
+    && assignment.eventName === draft.event.name
+    && assignment.target === draft.advanced.target
+    && (assignment.domainCondition ?? draft.scope.domain) === draft.scope.domain) ?? false;
+}
+
+export function schemaDestinationOptions(
+  draft: GuidedValidationDraft,
+  candidates: readonly GuidedSchemaCandidate[],
+): GuidedSchemaDestinationOption[] {
+  return candidates.map((candidate) => {
+    const propertyType = draft.property ? candidate.propertyTypes[draft.property.path] : undefined;
+    const targetMismatch = candidate.target !== draft.advanced.target;
+    const typeMismatch = Boolean(propertyType && draft.property && propertyType !== draft.property.expectedType);
+    const explanation = targetMismatch
+      ? `schema validates ${candidate.target}, not ${draft.advanced.target}`
+      : typeMismatch
+        ? `${draft.property?.path} expects ${propertyType}`
+        : propertyType
+          ? `${draft.property?.path} accepts ${draft.property?.expectedType} rules`
+          : `${draft.property?.path ?? "property"} will be added`;
+    return { ...candidate, available:!targetMismatch && !typeMismatch, explanation };
+  });
+}
+
+export function setGuidedSchemaDestination(
+  draft: GuidedValidationDraft,
+  destination: GuidedSchemaDestination,
+): GuidedValidationDraft {
+  return { ...draft, destination };
+}
+
+export function existingSchemaDestination(
+  draft: GuidedValidationDraft,
+  candidate: GuidedSchemaCandidate,
+): GuidedSchemaDestination {
+  return {
+    kind:"existing",
+    schemaId:candidate.id,
+    schemaName:candidate.name,
+    schemaVersion:candidate.version,
+    matchingAssignment:matchingAssignment(draft, candidate),
+  };
+}
+
 function reviewText(draft: GuidedValidationDraft): string {
-  if (!draft.property || !draft.requirement) return "Complete the property and requirement stages.";
+  if (!draft.property || !draft.requirement || !draft.destination) return "Complete the property, requirement, scope, and schema destination stages.";
   const requirement = draft.requirement === "Must be one of these values"
     ? `to be ${draft.allowedValues.join(" or ")}`
     : draft.requirement.toLowerCase();
-  return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message}`;
+  const destination = draft.destination.kind === "new"
+    ? `New schema ${draft.destination.schemaName} will be created.`
+    : `${draft.destination.schemaName} version ${draft.destination.schemaVersion + 1} will be created while version ${draft.destination.schemaVersion} remains unchanged. Assignment action: ${draft.destination.matchingAssignment ? "reuse the matching enabled assignment" : "create the reviewed enabled assignment"}.`;
+  return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
 }
 
 export function advanceGuidedValidation(draft: GuidedValidationDraft): GuidedValidationDraft {
@@ -243,8 +336,10 @@ export function backGuidedValidation(draft: GuidedValidationDraft): GuidedValida
 }
 
 export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: boolean): PublishedGuidedValidation {
-  if (!draft.property || !draft.requirement || draft.requirementCorrectionRequired) throw new Error("Guided validation draft is incomplete.");
-  const schemaId = `schema:${slug(draft.advanced.schemaName)}`;
+  if (!draft.property || !draft.requirement || !draft.destination || draft.requirementCorrectionRequired) throw new Error("Guided validation draft is incomplete.");
+  const schemaName = draft.destination.schemaName;
+  const schemaVersion = draft.destination.kind === "existing" ? draft.destination.schemaVersion + 1 : 1;
+  const schemaId = `schema:${slug(schemaName)}:${schemaVersion}`;
   const reusableRuleId = reusable ? `rule:${slug(draft.advanced.ruleName)}` : undefined;
   const rule = {
     path:draft.property.path,
@@ -270,9 +365,18 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
     enabled:true as const,
   };
   return {
-    schema:{ id:schemaId, name:draft.advanced.schemaName, version:1, rules:[rule] },
+    schema:{ id:schemaId, name:schemaName, version:schemaVersion, rules:[rule] },
     reusableRules:reusable && reusableRuleId ? [{ id:reusableRuleId, name:draft.advanced.ruleName, requirement:draft.requirement, values:[...draft.allowedValues] }] : [],
     assignment,
+    destination:{
+      kind:draft.destination.kind,
+      ...(draft.destination.kind === "existing"
+        ? { previousSchemaId:draft.destination.schemaId, previousVersion:draft.destination.schemaVersion }
+        : {}),
+      assignmentAction:draft.destination.kind === "existing" && draft.destination.matchingAssignment
+        ? "reuse the matching enabled assignment"
+        : "create the reviewed enabled assignment",
+    },
     readableRequirement:`${draft.property.path} must be ${draft.allowedValues.join(" or ") || draft.requirement.toLowerCase()}`,
   };
 }

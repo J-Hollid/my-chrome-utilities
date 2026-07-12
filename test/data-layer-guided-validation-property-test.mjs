@@ -9,6 +9,7 @@ import {
   selectGuidedProperty,
   setAllowedValue,
   setGuidedRequirement,
+  setGuidedSchemaDestination,
   validateAllowedValues,
 } from "../dist/data-layer-guided-validation.js";
 
@@ -60,10 +61,11 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   const requirement = advanceGuidedValidation(selected);
   const scope = advanceGuidedValidation(requirement);
-  const review = advanceGuidedValidation(scope);
+  const destination = advanceGuidedValidation(scope);
+  const review = advanceGuidedValidation(setGuidedSchemaDestination(destination, { kind:"new", schemaName:`Schema ${sample}` }));
   assert.deepEqual(
-    [requirement.stage, scope.stage, review.stage, advanceGuidedValidation(review).stage],
-    ["requirement", "scope", "review", "review"],
+    [requirement.stage, scope.stage, destination.stage, review.stage, advanceGuidedValidation(review).stage],
+    ["requirement", "scope", "destination", "review", "review"],
   );
-  assert.equal(backGuidedValidation(review).stage, "scope");
+  assert.equal(backGuidedValidation(review).stage, "destination");
 }

@@ -210,6 +210,7 @@ export function renderLiveInspector(
     const action = document.createElement("button");
     action.type = "button";
     action.textContent = label;
+    if (label === "Create validation from this event") action.dataset.action = "create-validation";
     action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
     const availability = label === "Validate"
       ? actionHandlers.validationAvailability(event)

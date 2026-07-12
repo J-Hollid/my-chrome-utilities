@@ -240,6 +240,7 @@ const schemaRuleEditorVisibilityRuntime = `(() => {
 const guidedValidationRuntime = `(async () => {
   const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
   const visible = (element) => element.getClientRects().length > 0 && !element.hidden;
+  const clickButton = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
   const storedState = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
@@ -265,7 +266,7 @@ const guidedValidationRuntime = `(async () => {
     heading:q("#guided-validation-heading").textContent,
     focused:document.activeElement === q("#guided-validation-heading"),
     stages:Array.from(q("#guided-validation-stages").children).map((item) => [item.textContent, item.dataset.state]),
-    advancedPrimary:!q("#guided-advanced-settings").open && ["#guided-schemaName", "#guided-ruleName", "#guided-message", "#guided-sourceId", "#guided-target", "#guided-priority"].every((selector) => q("#guided-advanced-settings").contains(q(selector))),
+    advancedPrimary:!q("#guided-advanced-settings").open && ["#guided-ruleName", "#guided-message", "#guided-sourceId", "#guided-target", "#guided-priority"].every((selector) => q("#guided-advanced-settings").contains(q(selector))),
     persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas && JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length === before.rules,
   };
   Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
@@ -338,20 +339,53 @@ const guidedValidationRuntime = `(async () => {
   };
   flow.querySelector('input[name="guided-scope"][value="domain-all-paths"]').click();
   Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const destinationInitial = {
+    heading:q("#guided-validation-heading").textContent,
+    choices:Array.from(flow.querySelectorAll('input[name="guided-schema-destination"]')).map((input) => input.parentElement.textContent.trim()),
+    selected:flow.querySelector('input[name="guided-schema-destination"]:checked')?.value ?? null,
+    persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas,
+  };
+  flow.querySelector('input[name="guided-schema-destination"][value="new"]').click();
+  const blankNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  q("#guided-new-schema-name").value = "Existing pageview";
+  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
+  const duplicateNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  q("#guided-new-schema-name").value = "Signal Shop pageview";
+  q("#guided-new-schema-name").dispatchEvent(new Event("input", { bubbles:true }));
+  const newNameAssistance = q("#guided-new-schema-name-assistance").textContent;
+  clickButton(flow, "Continue");
   const reviewBeforeBack = q("#guided-validation-review").textContent;
   const reviewStages = Array.from(q("#guided-validation-stages").children).map((item) => [item.textContent, item.dataset.state]);
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Back").click();
+  clickButton(flow, "Back");
+  const retainedDestination = { kind:flow.querySelector('input[name="guided-schema-destination"]:checked').value, name:q("#guided-new-schema-name").value };
+  clickButton(flow, "Back");
   const retainedScope = flow.querySelector('input[name="guided-scope"]:checked').value;
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  clickButton(flow, "Continue");
+  clickButton(flow, "Continue");
   q("#guided-advanced-settings summary").click();
   const advanced = {
-    schema:q("#guided-schemaName").value,
     rule:q("#guided-ruleName").value,
     source:q("#guided-sourceId").value,
     target:q("#guided-target").value,
     defaults:q("#guided-advanced-settings").querySelector(":scope > p").textContent,
   };
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Save validation").click();
+  const beforeFailure = { schemas:localStorage.getItem("my-chrome-utilities.schema-library.v1"), rules:localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") };
+  const originalSetItem = Storage.prototype.setItem;
+  let failNextSchemaWrite = true;
+  Storage.prototype.setItem = function (key, value) { if (failNextSchemaWrite && key === "my-chrome-utilities.schema-library.v1") { failNextSchemaWrite = false; throw new Error("Fixture storage unavailable"); } return originalSetItem.call(this, key, value); };
+  clickButton(flow, "Save validation");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  Storage.prototype.setItem = originalSetItem;
+  const saveFailure = {
+    flowVisible:visible(flow),
+    review:q("#guided-validation-review").textContent,
+    error:q("#guided-validation-errors a").textContent,
+    unchanged:beforeFailure.schemas === localStorage.getItem("my-chrome-utilities.schema-library.v1") && beforeFailure.rules === localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"),
+  };
+  const publishLabel = q("#guided-publish-rule").parentElement.textContent.trim();
+  q("#guided-publish-rule").checked = true;
+  clickButton(flow, "Save validation");
+  await new Promise((resolve) => setTimeout(resolve, 0));
   const storedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const storedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const saved = {
@@ -359,21 +393,57 @@ const guidedValidationRuntime = `(async () => {
     reusableRules:storedRules.length - before.rules,
     localRules:storedSchemas.at(-1).attachedRules.length,
     assignment:storedSchemas.at(-1).assignments[0],
-    status:q("#guided-validation-status").textContent,
+    flowClosed:!visible(flow),
+    inspectorRestored:visible(q("#live-event-inspector")),
+    status:q("#live-session-message").textContent,
+    focusReturned:document.activeElement?.dataset.action === "create-validation",
   };
-  q("#guided-publish-rule").checked = true;
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Save validation").click();
-  const reusableSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const published = {
-    label:q("#guided-publish-rule").parentElement.textContent.trim(),
+    label:publishLabel,
     reusableRules:reusableRules.length - before.rules,
-    attachedRuleId:reusableSchemas.at(-1).attachedRules[0].id,
+    attachedRuleId:storedSchemas.at(-1).attachedRules[0].id,
     reusableRuleId:reusableRules.at(-1).id,
+  };
+  clickButton(q("#live-event-inspector"), "Create validation from this event");
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  clickButton(flow, "Continue");
+  q("#guided-requirement").value = "Must be one of these values";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  clickButton(flow, "Add another value");
+  q("#guided-allowed-value-2").value = "homepage";
+  q("#guided-allowed-value-2").dispatchEvent(new Event("input", { bubbles:true }));
+  clickButton(flow, "Continue");
+  clickButton(flow, "Continue");
+  flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
+  const existingOptions = Array.from(q("#guided-existing-schemas").querySelectorAll(":scope > div")).map((row) => ({
+    label:row.querySelector("label").textContent.trim(),
+    disabled:row.querySelector("input").disabled,
+    explanation:row.querySelector("p").textContent,
+  }));
+  q('#guided-existing-schemas input[value="schema:product-listing:3"]').click();
+  clickButton(flow, "Continue");
+  const existingReview = q("#guided-validation-review").textContent;
+  clickButton(flow, "Save validation");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const afterExistingSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const productVersions = afterExistingSchemas.filter((schema) => schema.name === "Product listing");
+  const existingSaved = {
+    versions:productVersions.map(({ version }) => version),
+    version3Rules:productVersions.find(({ version }) => version === 3).attachedRules?.length ?? 0,
+    version4Rules:productVersions.find(({ version }) => version === 4).attachedRules?.length ?? 0,
+    assignments:productVersions.find(({ version }) => version === 4).assignments.length,
+    flowClosed:!visible(flow),
+    inspectorRestored:visible(q("#live-event-inspector")),
+    status:q("#live-session-message").textContent,
+    focusReturned:document.activeElement?.dataset.action === "create-validation",
   };
   const core = await import("/data-layer-guided-validation.js");
   const productionDraft = core.selectGuidedProperty(core.createGuidedValidationDraft({ id:"event:pageview", name:"pageview", sourceId:"event-history", pageUrl:"http://127.0.0.1:4173/", payload:{ page_type:"product_list" } }), "page_type");
   const overridden = core.setExpectedType(core.setGuidedRequirement(productionDraft, "Must match a pattern"), "Number");
+  const configuredDestinationDraft = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setAllowedValue(core.addAllowedValue(core.setGuidedRequirement(productionDraft, "Must be one of these values")), 1, "homepage"))));
+  const matchingDestinationReview = core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }));
+  const absentDestinationReview = core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }));
   const production = {
     requirements:Object.fromEntries(["String", "Number", "Array", "Object", "Boolean"].map((type) => [type, core.compatibleRequirements(type)])),
     allowedValues:[[], ["homepage", "homepage"], ["product_list", ""], ["product_list", "homepage"]].map((values) => core.validateAllowedValues(values)),
@@ -389,10 +459,14 @@ const guidedValidationRuntime = `(async () => {
     combined:core.pathConditionsResult([{ matchType:"Exact path", expression:"/" }, { matchType:"Path pattern", expression:"/products/*" }], "/products/field-notebook"),
     malformed:core.pathConditionResult({ matchType:"Regular expression", expression:"[" }, "/"),
     override:{ typeSource:overridden.property.typeSource, currentEventPasses:overridden.preview.currentEventPasses, message:overridden.preview.message, correctionRequired:overridden.requirementCorrectionRequired },
+    destinations:{
+      matching:{ review:matchingDestinationReview.review, assignmentAction:core.publishGuidedValidation(matchingDestinationReview, false).destination.assignmentAction },
+      absent:{ review:absentDestinationReview.review, assignmentAction:core.publishGuidedValidation(absentDestinationReview, false).destination.assignmentAction },
+    },
   };
   localStorage.clear();
   for (const [key, value] of Object.entries(storedState)) localStorage.setItem(key, value);
-  return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, reviewBeforeBack, reviewStages, retainedScope, advanced, saved, published, production };
+  return { initial, invalid, requirement, values, scope, pathBuilder, anotherPath, multipleInvalid, destinationInitial, blankNameAssistance, duplicateNameAssistance, newNameAssistance, reviewBeforeBack, reviewStages, retainedDestination, retainedScope, advanced, saveFailure, saved, published, existingOptions, existingReview, existingSaved, production };
 })()`;
 
 const schemaAssignmentRuntime = `(() => {
@@ -1102,6 +1176,20 @@ try {
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
     if (width === 720) {
+      const previousGuidedStorage = await evaluate(socket, `(() => {
+        const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
+        const schemas = [
+          { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+          { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
+        ];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return previous;
+      })()`);
+      await reloadPanel(socket);
       guidedValidationObservation = await evaluate(socket, guidedValidationRuntime);
       const { production, ...renderedGuidedValidation } = guidedValidationObservation;
       assert.deepEqual(renderedGuidedValidation, {
@@ -1109,7 +1197,7 @@ try {
           visible:true,
           heading:"Choose properties",
           focused:true,
-          stages:[["Choose properties","current"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Review validation","upcoming"]],
+          stages:[["Choose properties","current"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Choose schema destination","upcoming"],["Review validation","upcoming"]],
           advancedPrimary:true,
           persistedUnchanged:true,
         },
@@ -1120,12 +1208,28 @@ try {
         pathBuilder:{ explanation:"This assignment matches when any condition matches.", conditionLabel:"Path condition 1", matchType:"Exact path", expression:"/", result:"/ is a match", remove:"Remove condition", testButton:"Test another path" },
         anotherPath:"/products/field-notebook is a match",
         multipleInvalid:{ focused:true, links:[["Path condition 1: correct the regular expression: Invalid regular expression: /[/: Unterminated character class","#guided-path-expression-0"],["Path condition 2: correct the regular expression: Invalid regular expression: /(/: Unterminated group","#guided-path-expression-1"]], inline:["Path condition 1: correct the regular expression: Invalid regular expression: /[/: Unterminated character class","Path condition 2: correct the regular expression: Invalid regular expression: /(/: Unterminated group"], described:["guided-path-expression-0-hint guided-path-expression-0-error","guided-path-expression-1-hint guided-path-expression-1-error"] },
-        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String.",
-        reviewStages:[["Choose properties","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
+        destinationInitial:{ heading:"Choose schema destination", choices:["Create a new schema","Add to an existing schema"], selected:null, persistedUnchanged:true },
+        blankNameAssistance:"Enter a name for the new schema",
+        duplicateNameAssistance:"Choose the existing schema or enter another name",
+        newNameAssistance:"New schema Signal Shop pageview will be created",
+        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema Signal Shop pageview will be created.",
+        reviewStages:[["Choose properties","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Choose schema destination","complete"],["Review validation","current"]],
+        retainedDestination:{ kind:"new", name:"Signal Shop pageview" },
         retainedScope:"domain-all-paths",
-        advanced:{ schema:"pageview validation", rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
-        saved:{ schemas:1, reusableRules:0, localRules:1, assignment:{ id:"assignment:schema:pageview-validation:pageview", name:"pageview validation automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, status:"Saved page_type must be product_list or homepage." },
+        advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
+        saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema Signal Shop pageview will be created.", error:"Saving failed. Check storage access and try again.", unchanged:true },
+        saved:{ schemas:1, reusableRules:1, localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Saved validation: schema Signal Shop pageview was created.", focusReturned:true },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement" },
+        existingOptions:[
+          { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
+          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
+          { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
+          { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
+          { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
+          { label:"Signal Shop pageview version 1", disabled:false, explanation:"page_type accepts String rules" },
+        ],
+        existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.",
+        existingSaved:{ versions:[3,4], version3Rules:0, version4Rules:1, assignments:1, flowClosed:true, inspectorRestored:true, status:"Saved validation: validation was added to Product listing version 4.", focusReturned:true },
       }, "Guided validation browser flow violated its rendered production contract");
       assert.deepEqual(production, {
         requirements:{
@@ -1153,7 +1257,12 @@ try {
         combined:{ valid:true, matches:true, matchingCondition:{ matchType:"Path pattern", expression:"/products/*" } },
         malformed:{ valid:false, matches:false, error:production.malformed.error },
         override:{ typeSource:"explicit override", currentEventPasses:false, message:"page_type was observed as String but Number is expected.", correctionRequired:true },
+        destinations:{
+          matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.", assignmentAction:"reuse the matching enabled assignment" },
+          absent:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: create the reviewed enabled assignment.", assignmentAction:"create the reviewed enabled assignment" },
+        },
       }, "Guided validation production matchers violated their browser-loaded contract");
+      await evaluate(socket, `(() => { localStorage.clear(); for (const [key, value] of Object.entries(${JSON.stringify(previousGuidedStorage)})) localStorage.setItem(key, value); return true; })()`);
       await reloadPanel(socket);
     }
     assert.deepEqual(await evaluate(socket, openLibraryRuntime), {

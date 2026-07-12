@@ -12,7 +12,10 @@ import {
   setAllowedValue,
   setExpectedType,
   setGuidedRequirement,
+  setGuidedSchemaDestination,
   setGuidedScope,
+  schemaDestinationOptions,
+  validateNewSchemaName,
   validateAllowedValues,
 } from "../dist/data-layer-guided-validation.js";
 
@@ -90,10 +93,30 @@ const scoped = setGuidedScope(twoValues, {
     { matchType:"Path pattern", expression:"/products/*" },
   ],
 });
-const reviewed = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(scoped)));
+const destinationStage = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(scoped)));
+assert.equal(destinationStage.stage, "destination");
+assert.equal(destinationStage.destination, undefined);
+assert.deepEqual(validateNewSchemaName("", ["Existing pageview"]), { valid:false, assistance:"Enter a name for the new schema" });
+assert.deepEqual(validateNewSchemaName("Existing pageview", ["Existing pageview"]), { valid:false, assistance:"Choose the existing schema or enter another name" });
+assert.deepEqual(validateNewSchemaName("Signal Shop pageview", ["Existing pageview"]), { valid:true, assistance:"New schema Signal Shop pageview will be created" });
+const candidates = [
+  { id:"schema:generic:1", name:"Generic pageview", version:1, target:"payload", propertyTypes:{} },
+  { id:"schema:listing:3", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_type:"String" }, assignments:[{ sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+  { id:"schema:numeric:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
+  { id:"schema:raw:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
+];
+assert.deepEqual(schemaDestinationOptions(destinationStage, candidates).map(({ name, available, explanation }) => ({ name, available, explanation })), [
+  { name:"Generic pageview", available:true, explanation:"page_type will be added" },
+  { name:"Product listing", available:true, explanation:"page_type accepts String rules" },
+  { name:"Numeric page types", available:false, explanation:"page_type expects Number" },
+  { name:"Raw pageview", available:false, explanation:"schema validates raw input, not payload" },
+]);
+const existingDestination = setGuidedSchemaDestination(destinationStage, { kind:"existing", schemaId:"schema:listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true });
+const reviewed = advanceGuidedValidation(existingDestination);
 assert.equal(reviewed.stage, "review");
 assert.equal(reviewed.property.path, "page_type");
 assert.match(reviewed.review, /pageview on 127\.0\.0\.1 requires page_type to be product_list or homepage/);
+assert.match(reviewed.review, /Product listing version 4 will be created while version 3 remains unchanged/);
 
 const local = publishGuidedValidation(reviewed, false);
 assert.equal(local.schema.rules.length, 1);
@@ -103,6 +126,9 @@ assert.equal(local.assignment.sourceId, "event-history");
 assert.equal(local.assignment.eventName, "pageview");
 assert.equal(local.assignment.target, "payload");
 assert.equal(local.assignment.versionPolicy, "pinned");
+assert.equal(local.destination.kind, "existing");
+assert.equal(local.destination.assignmentAction, "reuse the matching enabled assignment");
+assert.equal(local.schema.version, 4);
 assert.match(local.readableRequirement, /page_type must be product_list or homepage/);
 
 const reusable = publishGuidedValidation(reviewed, true);

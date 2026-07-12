@@ -1,5 +1,6 @@
 (ns acceptance.steps.guided-validation-assertions
   (:require [acceptance.steps.guided-validation-path-assertions :as path]
+            [acceptance.steps.guided-validation-destination-assertions :as destination]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
@@ -49,8 +50,8 @@
                    "Guided assignment did not preserve reviewed routing." {:observation observation}))
 
 (defn- creation-readable [_example observation]
-  (support/assert! (str/includes? (get-in observation [:saved :status])
-                                  "page_type must be product_list or homepage")
+  (support/assert! (str/includes? (:reviewBeforeBack observation)
+                                  "page_type to be product_list or homepage")
                    "Saved validation was not displayed readably." {:observation observation}))
 
 (defn- creation-published [_example observation]
@@ -62,7 +63,7 @@
                    "Reusable guided rule was not attached and persisted." {:observation observation}))
 
 (defn- creation-advanced [_example observation]
-  (support/assert! (= [true "pageview validation" "Severity Error; version policy Pinned."] [(get-in observation [:initial :advancedPrimary]) (get-in observation [:advanced :schema]) (get-in observation [:advanced :defaults])])
+  (support/assert! (= [true "pageview requirement" "Severity Error; version policy Pinned."] [(get-in observation [:initial :advancedPrimary]) (get-in observation [:advanced :rule]) (get-in observation [:advanced :defaults])])
                    "Advanced guided defaults were not inferred behind disclosure." {:observation observation}))
 
 (defn- creation-default [text observation]
@@ -79,15 +80,16 @@
    (zipmap #{"the operator selects property page_type"
              "configures Must be one of these values with product_list and homepage"}
            (repeat creation-allowed-values))
-   {"chooses This domain on all paths" creation-scope}
+   {"chooses This domain on all paths" creation-scope
+    "chooses a schema destination" creation-review}
    (zipmap #{"the review is displayed"
              "it states that pageview on 127.0.0.1 requires page_type to be product_list or homepage"
              "it identifies the current event as passing or explains why it fails"}
            (repeat creation-review))
    {"the operator can return to and correct each completed stage without losing the draft" creation-back-navigation}
-   (zipmap #{"a complete guided validation draft uses a local rule"
+   (zipmap #{"a complete guided validation draft has a schema destination and local rule"
              "the operator saves the validation"
-             "its schema, local rule, and enabled assignment are persisted together"}
+             "its selected schema destination, local rule, and enabled assignment are persisted together"}
            (repeat creation-saved))
    {"validation uses the captured source, event pageview, payload target, and reviewed scope" creation-routing
     "the completed validation is displayed as one readable requirement" creation-readable}
@@ -97,9 +99,9 @@
              "saving persists one reusable rule attached to the new schema"}
            (repeat creation-published))
    (zipmap #{"the guided validation draft is displayed"
-             "schema name, rule name, severity, custom message, source, target, priority, and version policy are absent from the primary flow"
+             "rule name, severity, custom message, source, target, priority, and version policy are absent from the primary flow"
              "Edit advanced settings exposes those fields without clearing inferred values"
-             "schema name, rule name, message, source, and target are generated from the selected event"
+             "rule name, message, source, and target are generated from the selected event"
              "severity is Error and version policy is Pinned by default"}
            (repeat creation-advanced))))
 
@@ -206,10 +208,11 @@
                    "Guided validation errors were not summarized, linked, and focused." {:observation observation}))
 
 (defn- form-navigation [_example observation]
-  (support/assert! (= ["current" "complete" "domain-all-paths" true]
-                      [(get-in observation [:reviewStages 3 1])
+  (support/assert! (= ["current" "complete" "domain-all-paths" "new" true]
+                      [(get-in observation [:reviewStages 4 1])
                        (get-in observation [:reviewStages 0 1])
                        (:retainedScope observation)
+                       (get-in observation [:retainedDestination :kind])
                        (get-in observation [:requirement :focused])])
                    "Guided stage navigation did not expose progress, focus, and retained state." {:observation observation}))
 
@@ -234,7 +237,7 @@
              "keyboard focus moves to the error summary"
              "entered values and completed stages are retained"}
            (repeat form-errors))
-   (zipmap #{"the operator moves through property, requirement, scope, and review stages"
+   (zipmap #{"the operator moves through property, requirement, scope, schema destination, and review stages"
              "the current stage and completed stages are exposed visually and programmatically"
              "stage headings describe the current task"
              "Back returns to the previous stage with its state preserved"
@@ -249,13 +252,15 @@
   {:creation creation-assertions
    :constraint constraint-assertions
    :form form-assertions
-   :path path/assertions})
+   :path path/assertions
+   :destination destination/assertions})
 
 (def mode-defaults
   {:creation creation-default
    :constraint constraint-default
    :form form-default
-   :path path/default-assertion})
+   :path path/default-assertion
+   :destination destination/default-assertion})
 
 (defn assert-mode! [mode text example observation]
   (if-some [assertion (get (get mode-assertions mode) text)]

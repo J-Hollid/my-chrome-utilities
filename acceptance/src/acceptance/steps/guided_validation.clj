@@ -9,13 +9,15 @@
   ["features/data-layer-guided-validation-constraint-authoring.feature"
    "features/data-layer-guided-validation-creation.feature"
    "features/data-layer-guided-validation-form-assistance.feature"
-   "features/data-layer-guided-validation-path-scope.feature"])
+   "features/data-layer-guided-validation-path-scope.feature"
+   "features/data-layer-guided-validation-schema-destination.feature"])
 
 (def ^:private entry-modes
   {"captured event pageview from http://127.0.0.1:4173/ is selected in Live" :creation
    "a guided validation draft is open for captured event pageview" :constraint
    "the guided validation flow is displayed" :form
-   "a guided validation draft is open for pageview from http://127.0.0.1:4173/" :path})
+   "a guided validation draft is open for pageview from http://127.0.0.1:4173/" :path
+   "a guided validation draft defines an allowed-values rule for property page_type" :destination})
 
 (defonce ^:private browser-observation (atom nil))
 

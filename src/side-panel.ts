@@ -548,8 +548,10 @@ const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; severity?: string; message?: string }[]; }
 let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
+  schemaCandidates: guidedSchemaCandidates,
   publish: persistPublishedGuidedValidation,
   close: () => renderLiveObserver(),
+  saved: finishGuidedValidationSave,
 });
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
@@ -1334,6 +1336,62 @@ function guidedPropertyDocument(path: string, type: GuidedValueType): SchemaDefi
   return { type:"object", properties:{ [name]:child } };
 }
 
+function guidedDocumentTypes(
+  document: SchemaDefinition["document"],
+  prefix = "",
+): Record<string, GuidedValueType> {
+  return Object.entries(document.properties ?? {}).reduce<Record<string, GuidedValueType>>((types, [name, child]) => {
+    const path = prefix ? `${prefix}.${name}` : name;
+    const type = child.type === "string" ? "String"
+      : child.type === "number" ? "Number"
+        : child.type === "boolean" ? "Boolean"
+          : child.type === "array" ? "Array"
+            : child.type === "object" ? "Object"
+              : undefined;
+    if (type) types[path] = type;
+    return { ...types, ...guidedDocumentTypes(child, path) };
+  }, {});
+}
+
+function guidedSchemaCandidates() {
+  return schemas.map((schema) => ({
+    id:schema.id,
+    name:schema.name,
+    version:schema.version,
+    target:schema.assignments[0]?.target ?? "payload" as const,
+    propertyTypes:guidedDocumentTypes(schema.document),
+    assignments:schema.assignments.map((assignment) => ({
+      sourceId:assignment.sourceId,
+      eventName:assignment.eventName,
+      target:assignment.target,
+      ...(assignment.domainCondition ? { domainCondition:assignment.domainCondition } : {}),
+      ...(assignment.pathnameCondition ? { pathnameCondition:assignment.pathnameCondition } : {}),
+      ...(assignment.enabled !== undefined ? { enabled:assignment.enabled } : {}),
+    })),
+  }));
+}
+
+function mergeGuidedDocument(
+  current: SchemaDefinition["document"],
+  addition: SchemaDefinition["document"],
+): SchemaDefinition["document"] {
+  const propertyNames = new Set([...Object.keys(current.properties ?? {}), ...Object.keys(addition.properties ?? {})]);
+  const properties = Object.fromEntries([...propertyNames].map((name) => {
+    const currentChild = current.properties?.[name];
+    const additionChild = addition.properties?.[name];
+    return [name, currentChild && additionChild ? mergeGuidedDocument(currentChild, additionChild) : additionChild ?? currentChild ?? {}];
+  }));
+  return { ...current, ...addition, ...(propertyNames.size ? { properties } : {}) };
+}
+
+function finishGuidedValidationSave(result: PublishedGuidedValidation): void {
+  const message = result.destination.kind === "new"
+    ? `Saved validation: schema ${result.schema.name} was created.`
+    : `Saved validation: validation was added to ${result.schema.name} version ${result.schema.version}.`;
+  setLiveSessionMessage(message);
+  liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>('[data-action="create-validation"]')?.focus({ preventScroll:true });
+}
+
 function persistPublishedGuidedValidation(result: PublishedGuidedValidation): void {
   const rule = result.schema.rules[0];
   if (!rule) return;
@@ -1366,18 +1424,33 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
     severity:"error",
     enabled:true,
   };
+  const previousSchema = result.destination.previousSchemaId
+    ? schemas.find(({ id }) => id === result.destination.previousSchemaId)
+    : undefined;
+  const matchingAssignment = previousSchema?.assignments.find((candidate) =>
+    candidate.enabled !== false
+    && candidate.sourceId === assignment.sourceId
+    && candidate.eventName === assignment.eventName
+    && candidate.target === assignment.target
+    && (candidate.domainCondition ?? assignment.domainCondition) === assignment.domainCondition);
   const schema: SchemaDefinition = {
     id:result.schema.id,
     name:result.schema.name,
     version:result.schema.version,
-    document:guidedPropertyDocument(rule.path, rule.expectedType),
-    assignments:[assignment],
-    attachedRules:[attachedRule],
+    document:mergeGuidedDocument(previousSchema?.document ?? { type:"object" }, guidedPropertyDocument(rule.path, rule.expectedType)),
+    assignments:result.destination.assignmentAction === "reuse the matching enabled assignment" && matchingAssignment
+      ? previousSchema?.assignments ?? [matchingAssignment]
+      : [...(previousSchema?.assignments ?? []), assignment],
+    attachedRules:[...(previousSchema?.attachedRules ?? []), attachedRule],
+    ...(previousSchema ? { revisionHistory:[...(previousSchema.revisionHistory ?? []), previousSchema] } : {}),
   };
-  schemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
+  const nextSchemas = result.destination.kind === "existing"
+    ? [...schemas.filter(({ id }) => id !== schema.id), schema]
+    : [...schemas.filter(({ id }) => id !== schema.id), schema];
+  let nextRules = reusableSchemaRules;
   if (result.reusableRules[0]) {
     const reusable = result.reusableRules[0];
-    reusableSchemaRules = [...reusableSchemaRules.filter(({ id }) => id !== reusable.id), {
+    nextRules = [...reusableSchemaRules.filter(({ id }) => id !== reusable.id), {
       id:reusable.id,
       name:reusable.name,
       kind:reusable.requirement,
@@ -1388,12 +1461,25 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
       severity:"error",
       attachments:[schema.id],
     }];
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
   }
-  persistSchemaLibrary();
+  const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+  const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+  try {
+    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+  } catch (error) {
+    try {
+      if (previousSchemas === null) localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+      else localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+      if (previousRules === null) localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+      else localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+    } catch { /* Preserve the original storage failure. */ }
+    throw error;
+  }
+  schemas = nextSchemas;
+  reusableSchemaRules = nextRules;
   renderSchemas();
   renderSchemaWorkflowRows();
-  if (schemaResult) schemaResult.textContent = `Saved validation: ${result.readableRequirement}.`;
 }
 
 function withSchemaParent(schema: SchemaDefinition, parentSchemaId: string | undefined): SchemaDefinition {

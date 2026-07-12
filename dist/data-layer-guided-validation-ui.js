@@ -1,8 +1,9 @@
-import { addAllowedValue, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedScope, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, existingSchemaDestination, pathConditionResult, pathConditionsResult, publishGuidedValidation, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, schemaDestinationOptions, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
 const stageLabels = {
     property: "Choose properties",
     requirement: "Define requirement",
     scope: "Choose event scope",
+    destination: "Choose schema destination",
     review: "Review validation",
 };
 const scopeLabels = {
@@ -80,6 +81,17 @@ export function createGuidedValidationFlow(root, effects) {
             if (invalid.length)
                 return invalid;
         }
+        if (draft.stage === "destination") {
+            if (!draft.destination)
+                return [{ id: "guided-schema-destination", message: "Choose a schema destination" }];
+            if (draft.destination.kind === "new") {
+                const result = validateNewSchemaName(draft.destination.schemaName, effects.schemaCandidates().map(({ name }) => name));
+                if (!result.valid)
+                    return [{ id: "guided-new-schema-name", message: result.assistance }];
+            }
+            if (draft.destination.kind === "existing" && !draft.destination.schemaId)
+                return [{ id: "guided-existing-schemas", message: "Choose an available existing schema" }];
+        }
         return [];
     }
     function continueFlow() {
@@ -95,7 +107,7 @@ export function createGuidedValidationFlow(root, effects) {
     function renderStages(container) {
         if (!draft)
             return;
-        const order = ["property", "requirement", "scope", "review"];
+        const order = ["property", "requirement", "scope", "destination", "review"];
         const current = order.indexOf(draft.stage);
         const list = element("ol");
         list.id = "guided-validation-stages";
@@ -301,6 +313,69 @@ export function createGuidedValidationFlow(root, effects) {
         container.append(prefill, choices);
         renderPathConditions(container);
     }
+    function renderDestinationStage(container) {
+        if (!draft)
+            return;
+        const candidates = effects.schemaCandidates();
+        const choices = element("fieldset");
+        choices.id = "guided-schema-destination";
+        choices.append(element("legend", "Where should this validation be saved?"));
+        const newLabel = element("label");
+        const createNew = element("input");
+        createNew.type = "radio";
+        createNew.name = "guided-schema-destination";
+        createNew.value = "new";
+        createNew.checked = draft.destination?.kind === "new";
+        createNew.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft, { kind: "new", schemaName: "" }), "Create a new schema selected."));
+        newLabel.append(createNew, " Create a new schema");
+        const existingLabel = element("label");
+        const useExisting = element("input");
+        useExisting.type = "radio";
+        useExisting.name = "guided-schema-destination";
+        useExisting.value = "existing";
+        useExisting.checked = draft.destination?.kind === "existing";
+        useExisting.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft, { kind: "existing", schemaId: "", schemaName: "", schemaVersion: 0, matchingAssignment: false }), "Add to an existing schema selected."));
+        existingLabel.append(useExisting, " Add to an existing schema");
+        choices.append(newLabel, existingLabel);
+        container.append(choices);
+        if (draft.destination?.kind === "new") {
+            const field = labelledInput("guided-new-schema-name", "Schema name", draft.destination.schemaName, "Enter a unique name for the schema this validation will create.");
+            const assistance = element("output");
+            assistance.id = "guided-new-schema-name-assistance";
+            assistance.setAttribute("aria-live", "polite");
+            field.input.setAttribute("aria-describedby", `${field.input.getAttribute("aria-describedby")} ${assistance.id}`);
+            const update = () => {
+                draft = setGuidedSchemaDestination(draft, { kind: "new", schemaName: field.input.value });
+                assistance.textContent = validateNewSchemaName(field.input.value, candidates.map(({ name }) => name)).assistance;
+            };
+            field.input.addEventListener("input", update);
+            update();
+            container.append(field.wrapper, assistance);
+        }
+        if (draft.destination?.kind === "existing") {
+            const list = element("fieldset");
+            list.id = "guided-existing-schemas";
+            list.append(element("legend", "Available schemas"));
+            for (const option of schemaDestinationOptions(draft, candidates)) {
+                const row = element("div");
+                const label = element("label");
+                const input = element("input");
+                input.type = "radio";
+                input.name = "guided-existing-schema";
+                input.value = option.id;
+                input.disabled = !option.available;
+                input.checked = draft.destination.schemaId === option.id;
+                input.addEventListener("change", () => setDraft(setGuidedSchemaDestination(draft, existingSchemaDestination(draft, option)), `${option.name} selected.`));
+                label.append(input, ` ${option.name} version ${option.version}`);
+                const explanation = element("p", option.explanation);
+                explanation.id = `guided-existing-schema-${option.id.replace(/[^a-z0-9]+/gi, "-")}-explanation`;
+                input.setAttribute("aria-describedby", explanation.id);
+                row.append(label, explanation);
+                list.append(row);
+            }
+            container.append(list);
+        }
+    }
     function updateAdvanced(field, value) {
         if (!draft)
             return;
@@ -314,7 +389,7 @@ export function createGuidedValidationFlow(root, effects) {
         const details = element("details");
         details.id = "guided-advanced-settings";
         details.append(element("summary", "Edit advanced settings"));
-        const fields = [["schemaName", "Schema name"], ["ruleName", "Rule name"], ["message", "Custom message"], ["sourceId", "Source"], ["target", "Target"], ["priority", "Priority"]];
+        const fields = [["ruleName", "Rule name"], ["message", "Custom message"], ["sourceId", "Source"], ["target", "Target"], ["priority", "Priority"]];
         for (const [key, label] of fields) {
             const field = labelledInput(`guided-${key}`, label, String(draft.advanced[key]), `Generated from the selected ${draft.event.name} event.`);
             field.input.addEventListener("input", () => updateAdvanced(key, field.input.value));
@@ -335,15 +410,15 @@ export function createGuidedValidationFlow(root, effects) {
         publishLabel.append(publish, " Publish this rule for Rule Library reuse");
         const save = element("button", "Save validation");
         save.type = "button";
-        save.addEventListener("click", () => {
+        save.addEventListener("click", async () => {
             try {
                 const result = publishGuidedValidation(draft, publish.checked);
-                effects.publish(result);
-                status = `Saved ${result.readableRequirement}.`;
-                render();
+                await effects.publish(result);
+                api.close();
+                effects.saved?.(result);
             }
             catch (error) {
-                showErrors([{ id: "guided-validation-review", message: error instanceof Error ? error.message : "Complete the validation draft" }]);
+                showErrors([{ id: "guided-validation-review", message: error instanceof Error && error.message === "Guided validation draft is incomplete." ? error.message : "Saving failed. Check storage access and try again." }]);
             }
         });
         container.append(review, element("p", draft.preview.message), publishLabel, save);
@@ -391,6 +466,8 @@ export function createGuidedValidationFlow(root, effects) {
             renderRequirementStage(root);
         if (draft.stage === "scope")
             renderScopeStage(root);
+        if (draft.stage === "destination")
+            renderDestinationStage(root);
         if (draft.stage === "review")
             renderReviewStage(root);
         renderInlineErrors();
