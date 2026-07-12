@@ -249,12 +249,23 @@ const schemaAssignmentRuntime = `(() => {
   const deleteCopy = copyRow && Array.from(copyRow.querySelectorAll("button")).find((button) => button.textContent === "Delete");
   if (!deleteCopy) throw new Error("Missing duplicate assignment delete action");
   deleteCopy.click();
+  q("#schema-subview-schemas").click();
+  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
+  const revisionReview = { open:q("#schema-revision-review").open, summary:q("#schema-revision-review-summary").textContent };
+  q("#cancel-schema-revision").click();
+  q("#create-schema").click();
+  input("#schema-editor-name", "Unsaved schema");
+  q("#close-schema-editor").click();
+  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#close-schema-editor-review-summary").textContent };
+  q("#discard-schema-draft").click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
     actions,
     duplicateCount,
+    revisionReview,
+    closeReview,
     rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
     rule:persistedRules.at(-1),
@@ -878,6 +889,8 @@ try {
       ],
       actions:["Edit", "Duplicate", "Disable", "Delete"],
       duplicateCount:2,
+      revisionReview:{ open:true, summary:"Checkout schema will be saved as version 2; version 1 remains available." },
+      closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
       rows:["Checkout schema automatic · event-history/page_view · shop.example /order-confirmation · priority 120 · raw input · Checkout schema version 1 (follow latest) · disabled"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:120, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
       rule:{ id:"rule:known-page-types:1", name:"Known page types", version:1, applicableTypes:"string", operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout" },
