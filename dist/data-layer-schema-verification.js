@@ -113,8 +113,8 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
 function issueFromAttachedRule(rule, schema, issue) {
     return { ...issue, message: rule.message ?? issue.message, schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: `${rule.name ?? rule.id} v${rule.version}`, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` };
 }
-function attachedRuleIssues(value, schema, result) {
-    for (const rule of schema.attachedRules ?? []) {
+function attachedRuleIssues(value, schema, result, rules = schema.attachedRules ?? []) {
+    for (const rule of rules) {
         if (rule.enabled === false)
             continue;
         const record = value && typeof value === "object" && !Array.isArray(value) ? value : undefined;
@@ -137,6 +137,24 @@ function attachedRuleIssues(value, schema, result) {
             }
         }
     }
+}
+function inheritedAttachedRuleIssues(value, schema, schemas, result) {
+    const disabled = new Set(Object.entries(schema.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => path));
+    const visited = new Set([schema.id]);
+    let parentId = schema.parentSchemaId;
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = schemas.find((candidate) => candidate.id === parentId);
+        if (!parent)
+            break;
+        attachedRuleIssues(value, parent, result, (parent.attachedRules ?? []).filter((rule) => !rule.propertyPath || !disabled.has(rule.propertyPath)));
+        parentId = parent.parentSchemaId;
+    }
+}
+function collectSchemaIssues(value, schema, schemas, result) {
+    issuesFor(value, inheritedDocument(schema, schemas), "", "#", result, schema);
+    attachedRuleIssues(value, schema, result);
+    inheritedAttachedRuleIssues(value, schema, schemas, result);
 }
 function inheritedDocument(schema, schemas, visited = new Set()) {
     if (!schema.parentSchemaId || visited.has(schema.id))
@@ -177,8 +195,7 @@ export function validateEvent(event, schemas, pageUrl) {
         if (resolution.schema && resolution.assignment) {
             const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
             const issues = [];
-            issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
-            attachedRuleIssues(value, resolution.schema, issues);
+            collectSchemaIssues(value, resolution.schema, schemas, issues);
             const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
             return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
         }
@@ -188,16 +205,14 @@ export function validateEvent(event, schemas, pageUrl) {
         return { state: "Not checked", issues: [] };
     const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
     const issues = [];
-    issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema);
-    attachedRuleIssues(value, match.schema, issues);
+    collectSchemaIssues(value, match.schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
     return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event, schema, schemas, target = schema.assignments[0]?.target ?? "payload") {
     const value = target === "payload" ? event.payload : event.rawInput;
     const issues = [];
-    issuesFor(value, inheritedDocument(schema, schemas), "", "#", issues, schema);
-    attachedRuleIssues(value, schema, issues);
+    collectSchemaIssues(value, schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
     return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }

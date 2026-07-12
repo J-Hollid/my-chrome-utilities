@@ -111,8 +111,8 @@ function issueFromAttachedRule(rule: AttachedSchemaRule, schema: SchemaDefinitio
   return { ...issue, message:rule.message ?? issue.message, schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:`${rule.name ?? rule.id} v${rule.version}`, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` };
 }
 
-function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[]): void {
-  for (const rule of schema.attachedRules ?? []) {
+function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {
+  for (const rule of rules) {
     if (rule.enabled === false) continue;
     const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
     if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing" }));
@@ -121,6 +121,24 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
     if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]) }));
     if (rule.operator === "regular-expression" && constraint) { try { if (!new RegExp(constraint).test(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]) })); } catch { result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Invalid regular expression", expected:constraint, actual:String(record[property]) })); } }
   }
+}
+
+function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], result: ValidationIssue[]): void {
+  const disabled = new Set(Object.entries(schema.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => path));
+  const visited = new Set<string>([schema.id]); let parentId = schema.parentSchemaId;
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const parent = schemas.find((candidate) => candidate.id === parentId);
+    if (!parent) break;
+    attachedRuleIssues(value, parent, result, (parent.attachedRules ?? []).filter((rule) => !rule.propertyPath || !disabled.has(rule.propertyPath)));
+    parentId = parent.parentSchemaId;
+  }
+}
+
+function collectSchemaIssues(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], result: ValidationIssue[]): void {
+  issuesFor(value, inheritedDocument(schema, schemas), "", "#", result, schema);
+  attachedRuleIssues(value, schema, result);
+  inheritedAttachedRuleIssues(value, schema, schemas, result);
 }
 
 function inheritedDocument(schema: SchemaDefinition, schemas: readonly SchemaDefinition[], visited = new Set<string>()): JsonSchema {
@@ -156,7 +174,7 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
     if (resolution.error) return { state: "Assignment error", issues: [] };
     if (resolution.schema && resolution.assignment) {
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
-      const issues: ValidationIssue[] = []; issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema); attachedRuleIssues(value, resolution.schema, issues);
+      const issues: ValidationIssue[] = []; collectSchemaIssues(value, resolution.schema, schemas, issues);
       const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
       return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
     }
@@ -165,14 +183,14 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
   if (!match) return { state: "Not checked", issues: [] };
   const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
   const issues: ValidationIssue[] = [];
-  issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema); attachedRuleIssues(value, match.schema, issues);
+  collectSchemaIssues(value, match.schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
   return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event: ValidatableEvent, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], target: ValidationTarget = schema.assignments[0]?.target ?? "payload"): ValidationResult {
   const value = target === "payload" ? event.payload : event.rawInput;
   const issues: ValidationIssue[] = [];
-  issuesFor(value, inheritedDocument(schema, schemas), "", "#", issues, schema); attachedRuleIssues(value, schema, issues);
+  collectSchemaIssues(value, schema, schemas, issues);
   const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
   return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema:{ id:schema.id, name:schema.name, version:schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
