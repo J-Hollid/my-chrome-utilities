@@ -100,6 +100,11 @@ function inheritedRuleAttachments(schema: SchemaDefinition, schemas: readonly Sc
   return attachments.filter((attachment, index) => attachments.findIndex((candidate) => candidate.ruleId === attachment.ruleId && candidate.version === attachment.version) === index);
 }
 
+function safeRegex(pattern: string): RegExp | undefined {
+  if (pattern.length > 200 || /\\[1-9]|\\k<|\(\?<?[=!]/.test(pattern) || /\([^)]*[+*][^)]*\)[+*{]/.test(pattern)) return undefined;
+  try { return new RegExp(pattern, "u"); } catch { return undefined; }
+}
+
 function ruleIssuesFor(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], rules: readonly ReusableSchemaRule[], result: ValidationIssue[]): void {
   for (const attachment of inheritedRuleAttachments(schema, schemas)) {
     const rule = rules.find((candidate) => candidate.id === attachment.ruleId && candidate.version === attachment.version);
@@ -113,8 +118,9 @@ function ruleIssuesFor(value: unknown, schema: SchemaDefinition, schemas: readon
     const expected = rule.operator === "required" ? "a present value" : rule.parameters || "an allowed value";
     const missing = value === undefined || value === null || (typeof value === "string" && value.trim() === "");
     const allowed = rule.parameters.split(",").map((parameter) => parameter.trim()).filter(Boolean);
-    const fails = rule.operator === "required" ? missing : rule.operator === "allowed-values" && allowed.length > 0 && !allowed.includes(String(value));
-    if (fails) result.push({ instancePath: "", message: rule.message || rule.name, expected, actual: missing ? "missing" : String(value), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location, ...(rule.severity ? { severity:rule.severity } : {}) });
+    const pattern = rule.operator === "matches-pattern" ? safeRegex(rule.parameters) : undefined;
+    const fails = rule.operator === "required" ? missing : rule.operator === "allowed-values" ? allowed.length > 0 && !allowed.includes(String(value)) : rule.operator === "matches-pattern" ? !pattern || !pattern.test(String(value)) : false;
+    if (fails) result.push({ instancePath: "", message: rule.operator === "matches-pattern" && !pattern ? "Invalid safe regex" : rule.message || rule.name, expected:rule.operator === "matches-pattern" ? rule.parameters || "a safe regex" : expected, actual: missing ? "missing" : String(value), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: location, ...(rule.severity ? { severity:rule.severity } : {}) });
   }
 }
 

@@ -30,5 +30,10 @@ const requiredRule = { id:"rule:present:1", version:1, name:"Present value", app
 const requiredSchema = { ...assignSchema(createSchema("Required rule", 1, {}), { sourceId:"history", eventName:"required_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:requiredRule.id, version:requiredRule.version }] };
 assert.equal(validateEvent({ sourceId:"history", eventName:"required_rule_test", payload:null, rawInput:null }, [requiredSchema], undefined, [requiredRule]).issues[0].message, "A value is required");
 assert.equal(validateEvent({ sourceId:"history", eventName:"required_rule_test", payload:"present", rawInput:null }, [requiredSchema], undefined, [requiredRule]).state, "Valid");
+const regexRule = { id:"rule:order-id:1", version:1, name:"Order id", applicableTypes:"string", operator:"matches-pattern", parameters:"^ORD-[0-9]+$", message:"Use an order id" };
+const regexSchema = { ...assignSchema(createSchema("Regex rule", 1, {}), { sourceId:"history", eventName:"regex_rule_test", target:"payload" }), ruleAttachments:[{ ruleId:regexRule.id, version:regexRule.version }] };
+assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"ORD-42", rawInput:null }, [regexSchema], undefined, [regexRule]).state, "Valid");
+assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"42", rawInput:null }, [regexSchema], undefined, [regexRule]).issues[0].message, "Use an order id");
+assert.equal(validateEvent({ sourceId:"history", eventName:"regex_rule_test", payload:"ORD-42", rawInput:null }, [regexSchema], undefined, [{ ...regexRule, parameters:"[" }]).issues[0].message, "Invalid safe regex");
 const inheritedRuleSchema = { ...assignSchema(createSchema("Inherited rule", 1, { type:"string" }), { sourceId:"history", eventName:"inherited_rule_test", target:"payload" }), parentId:ruleSchema.id };
 assert.equal(validateEvent({ sourceId:"history", eventName:"inherited_rule_test", payload:"other", rawInput:null }, [ruleSchema, inheritedRuleSchema], undefined, [pinnedRule]).state, "1 issues");
