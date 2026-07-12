@@ -18,9 +18,9 @@ Feature: Data layer guided validation creation
   # Data layer guided validation creation 002
   Scenario: Data layer guided validation creation 002
     Given the operator selects property page_type
+    And chooses a schema destination
     And configures Must be one of these values with product_list and homepage
     And chooses This domain on all paths
-    And chooses a schema destination
     When the review is displayed
     Then it states that pageview on 127.0.0.1 requires page_type to be product_list or homepage
     And it identifies the current event as passing or explains why it fails

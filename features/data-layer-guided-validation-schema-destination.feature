@@ -6,12 +6,13 @@
 Feature: Data layer guided validation schema destination
 
   Background:
-    Given a guided validation draft defines an allowed-values rule for property page_type
+    Given a guided validation draft has selected payload property page_type
 
   # Data layer guided validation schema destination 001
   Scenario: Data layer guided validation schema destination 001
-    When the schema destination stage is displayed
-    Then the operator can choose Create a new schema or Add to an existing schema
+    When property selection continues
+    Then the schema destination stage is displayed before requirement and scope
+    And the operator can choose Create a new schema or Add to an existing schema
     And no schema destination is selected without operator input
     And persistence remains unchanged before a destination is reviewed
 
@@ -45,7 +46,8 @@ Feature: Data layer guided validation schema destination
 
   # Data layer guided validation schema destination 004
   Scenario Outline: Data layer guided validation schema destination 004
-    Given existing schema Product listing version 3 is selected
+    Given the destination targets existing Product listing version 3
+    And the draft defines an allowed-values rule for page_type
     And matching assignment state is <assignment_state>
     When the validation review is displayed
     Then it identifies page_type as the rule attachment path
@@ -78,3 +80,35 @@ Feature: Data layer guided validation schema destination
     Then the review remains open with the entered draft intact
     And a specific error explains how to recover
     And no partial schema, rule, assignment, or revision is persisted
+
+  # Data layer guided validation schema destination 007
+  Scenario: Data layer guided validation schema destination 007
+    Given the destination choice has accepted Generic pageview version 4
+    And it has one enabled assignment compatible with the captured event
+    When the requirement stage is displayed
+    Then page_type expected type is prefilled from Generic pageview version 4
+    And validation target is prefilled from the schema
+    And event source, event name, domain, and path conditions are prefilled from the compatible assignment
+    And every prefilled value identifies Generic pageview version 4 or its assignment as its source
+    And the operator can change each prefilled value before review
+
+  # Data layer guided validation schema destination 008
+  Scenario Outline: Data layer guided validation schema destination 008
+    Given the selected destination has <compatible_assignment_count> compatible assignments
+    When assignment resolution runs
+    Then assignment selection is <assignment_selection>
+    And scope behavior is <scope_behavior>
+
+    Examples:
+      | compatible_assignment_count | assignment_selection                      | scope_behavior                                      |
+      | 0                           | Create a new assignment                   | use captured event values as editable defaults      |
+      | 1                           | the compatible assignment                 | prefill its domain and path conditions               |
+      | 2                           | required from readable assignment choices | do not prefill scope before the operator chooses     |
+
+  # Data layer guided validation schema destination 009
+  Scenario: Data layer guided validation schema destination 009
+    Given the operator has changed a schema-derived scope value
+    When a different schema destination or assignment is selected
+    Then the changed value is not silently overwritten
+    And a review identifies each value that would be replaced
+    And the operator can keep current values or accept the new schema-derived values
