@@ -145,6 +145,11 @@ const schemaRuleExamples = document.querySelector("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector("#save-schema-rule");
 const schemaRuleList = document.querySelector("#schema-rule-list");
 const schemaRuleSearch = document.querySelector("#schema-rule-search");
+const exportSchemaRulesButton = document.querySelector("#export-schema-rules");
+const schemaRuleDeleteReview = document.querySelector("#schema-rule-delete-review");
+const schemaRuleDeleteReviewSummary = document.querySelector("#schema-rule-delete-review-summary");
+const confirmSchemaRuleDeleteButton = document.querySelector("#confirm-schema-rule-delete");
+const cancelSchemaRuleDeleteButton = document.querySelector("#cancel-schema-rule-delete");
 const schemaAssignmentEditor = document.querySelector("#schema-assignment-editor");
 const schemaAssignmentSource = document.querySelector("#schema-assignment-source");
 const schemaAssignmentEvent = document.querySelector("#schema-assignment-event");
@@ -245,6 +250,7 @@ let pendingSchemaImport;
 let pendingSchemaDeletion;
 let editingSchemaAssignment;
 let editingReusableSchemaRuleId;
+let pendingReusableSchemaRuleDeletionId;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides = (() => { try {
     const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
@@ -840,7 +846,11 @@ function renderSchemaWorkflowRows() {
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
         duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
-        remove.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        remove.addEventListener("click", () => { pendingReusableSchemaRuleDeletionId = rule.id; if (schemaRuleDeleteReviewSummary)
+            schemaRuleDeleteReviewSummary.textContent = `${rule.name} v${rule.version ?? 1} will be removed.`; if (schemaRuleDeleteReview) {
+            schemaRuleDeleteReview.hidden = false;
+            schemaRuleDeleteReview.showModal();
+        } });
         item.append(summary, edit, duplicate, disable, remove);
         return item;
     }));
@@ -1955,6 +1965,14 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
 schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
+exportSchemaRulesButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(reusableSchemaRules, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-rules.json"; link.click(); URL.revokeObjectURL(url); });
+confirmSchemaRuleDeleteButton?.addEventListener("click", () => { if (!pendingReusableSchemaRuleDeletionId)
+    return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open)
+    schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview)
+    schemaRuleDeleteReview.hidden = true; });
+cancelSchemaRuleDeleteButton?.addEventListener("click", () => { pendingReusableSchemaRuleDeletionId = undefined; if (schemaRuleDeleteReview?.open)
+    schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview)
+    schemaRuleDeleteReview.hidden = true; });
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor)
     schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll: true }); });
 saveSchemaAssignmentButton?.addEventListener("click", () => {
