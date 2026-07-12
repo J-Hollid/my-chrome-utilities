@@ -218,8 +218,12 @@ const schemaAssignmentRuntime = `(() => {
   q("#schema-subview-rules").click();
   q("#create-schema-rule").click();
   input("#schema-rule-name", "Known page types");
+  input("#schema-rule-types", "string");
   q("#schema-rule-operator").value = "allowed-values";
   input("#schema-rule-parameters", "product,checkout");
+  q("#schema-rule-severity").value = "warning";
+  input("#schema-rule-message", "Use a known page type");
+  input("#schema-rule-examples", "product, checkout");
   q("#save-schema-rule").click();
   q("#schema-subview-assignments").click();
   q("#create-schema-assignment").click();
@@ -876,7 +880,7 @@ try {
       duplicateCount:2,
       rows:["Checkout schema automatic · event-history/page_view · shop.example /order-confirmation · priority 120 · raw input · Checkout schema version 1 (follow latest) · disabled"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:120, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
-      rule:{ name:"Known page types", operator:"allowed-values", parameters:"product,checkout" },
+      rule:{ id:"rule:known-page-types:1", name:"Known page types", version:1, applicableTypes:"string", operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout" },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
   }
