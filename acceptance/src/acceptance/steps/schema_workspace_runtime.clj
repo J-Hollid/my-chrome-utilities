@@ -156,6 +156,7 @@
   (let [world (if (contains? #{"the rendered Data Layer Schemas workspace is displayed"
                                "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
                                "shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+                               "shared schema export verification compares identity collections separately from envelope metadata"
                                "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"} text)
                 (assoc (browser-workspace! world example) :schema-workspace-runtime? true)
                 world)]
@@ -289,10 +290,7 @@
     (do (assert-export-counts! (:browser-observation world) example) world)
 
     "every exported schema and rule identity is present rather than a fixed fixture subset"
-    (do (support/assert! (= (get-in world [:browser-observation :transfer :before])
-                            (get-in world [:browser-observation :transfer :content]))
-                         "Schema Library identity coverage is incomplete." {:observation (:browser-observation world)})
-        world)
+    (do (assert-export-preflight! (:browser-observation world)) world)
 
     "export-envelope metadata such as format version is verified separately from the identity collections"
     (do (support/assert! (= 1 (get-in world [:browser-observation :transfer :content :version]))
@@ -358,6 +356,19 @@
 
     "fixture derivation does not silently fall back to another example's counts" world
 
+    "shared schema export verification compares identity collections separately from envelope metadata"
+    (assoc world :shared-export-preflight? true)
+
+    "outlined export verification checks that every schema and rule identity is present"
+    (do (require! world :shared-export-preflight? "Shared export preflight was not initialized.")
+        (assert-export-preflight! (:browser-observation world)) world)
+
+    "it uses the same shared export verification as browser preflight"
+    (do (assert-export-preflight! (:browser-observation world)) world)
+
+    "no identity-coverage step directly compares an identity snapshot with the complete export envelope"
+    (do (assert-export-preflight! (:browser-observation world)) world)
+
     (throw (ex-info "Unsupported schema workspace runtime step." {:step text})))))
 
 (def handlers
@@ -367,6 +378,7 @@
                        (or (contains? #{"the rendered Data Layer Schemas workspace is displayed"
                                         "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
                                         "shared browser setup observes an export envelope with format version, schema identities, and rule identities"
+                                        "shared schema export verification compares identity collections separately from envelope metadata"
                                         "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"} (:text spec))
                            (:schema-workspace-runtime? world)))
            :handler (fn [world example captures] (transition world example captures spec))})
