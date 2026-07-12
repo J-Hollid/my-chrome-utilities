@@ -453,7 +453,9 @@ const schemaLiveValidationRuntime = `(async () => {
   validate.click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const validationTerm = q('#live-event-inspector dt[data-field="validation"]');
-  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "" };
+  q("#live-validation-filter").value = "Warnings";
+  q("#live-validation-filter").dispatchEvent(new Event("change", { bubbles:true }));
+  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), filterOptions:Array.from(q("#live-validation-filter").options).map((option) => option.textContent) };
 })()`;
 
 const naturalLibraryActionsRuntime = `(() => {
@@ -1130,6 +1132,8 @@ try {
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
       assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
+      assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
+      assert.deepEqual(schemaLiveValidation.filterOptions, ["All states", "Not checked", "Valid", "Warnings", "Issues", "Assignment error"], "Live validation filter did not expose all five states");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({
