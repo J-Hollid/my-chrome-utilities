@@ -16,8 +16,8 @@ export interface SchemaAssignment {
   versionPolicy?: "pinned" | "follow latest";
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
-export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; }
-export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
+export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; }
+export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "priority" | "domainCondition" | "pathnameCondition">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
 
@@ -111,11 +111,11 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
   for (const rule of schema.attachedRules ?? []) {
     if (rule.enabled === false) continue;
     const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
-    if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push({ instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing", schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
+    if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push({ instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing", schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:rule.id, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` });
     const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
     if (!record || !property || !(property in record)) continue;
-    if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` });
-    if (rule.operator === "regular-expression" && constraint) { try { if (!new RegExp(constraint).test(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` }); } catch { result.push({ instancePath:`/${property}`, message:"Invalid regular expression", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}` }); } }
+    if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:rule.id, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` });
+    if (rule.operator === "regular-expression" && constraint) { try { if (!new RegExp(constraint).test(String(record[property]))) result.push({ instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:rule.id, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` }); } catch { result.push({ instancePath:`/${property}`, message:"Invalid regular expression", expected:constraint, actual:String(record[property]), schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:rule.id, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` }); } }
   }
 }
 
@@ -154,7 +154,7 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
       const issues: ValidationIssue[] = []; issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema); attachedRuleIssues(value, resolution.schema, issues);
       const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-      return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+      return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment:resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
     }
   }
   const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);

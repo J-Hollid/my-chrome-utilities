@@ -118,19 +118,19 @@ function attachedRuleIssues(value, schema, result) {
         if (rule.operator === "required")
             for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [])
                 if (!record || !(property in record))
-                    result.push({ instancePath: `/${property}`, message: "Required value", expected: "value", actual: "missing", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+                    result.push({ instancePath: `/${property}`, message: "Required value", expected: "value", actual: "missing", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: rule.id, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` });
         const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
         if (!record || !property || !(property in record))
             continue;
         if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property])))
-            result.push({ instancePath: `/${property}`, message: "Value is not allowed", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+            result.push({ instancePath: `/${property}`, message: "Value is not allowed", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: rule.id, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` });
         if (rule.operator === "regular-expression" && constraint) {
             try {
                 if (!new RegExp(constraint).test(String(record[property])))
-                    result.push({ instancePath: `/${property}`, message: "Value does not match pattern", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+                    result.push({ instancePath: `/${property}`, message: "Value does not match pattern", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: rule.id, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` });
             }
             catch {
-                result.push({ instancePath: `/${property}`, message: "Invalid regular expression", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+                result.push({ instancePath: `/${property}`, message: "Invalid regular expression", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: rule.id, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` });
             }
         }
     }
@@ -177,7 +177,7 @@ export function validateEvent(event, schemas, pageUrl) {
             issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
             attachedRuleIssues(value, resolution.schema, issues);
             const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
         }
     }
     const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
