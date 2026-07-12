@@ -25,6 +25,26 @@ export function schemaInheritanceError(schema, schemas) {
             return "Schema inheritance cannot contain a cycle";
         current = parents.get(current);
     }
+    const parent = schemas.find((candidate) => candidate.id === schema.parentSchemaId);
+    const childTarget = schema.assignments[0]?.target;
+    const parentTarget = parent?.assignments[0]?.target;
+    if (childTarget && parentTarget && childTarget !== parentTarget)
+        return "Parent and child validation targets must match";
+    return undefined;
+}
+export function schemaInheritanceConflict(schema, schemas) {
+    let parentId = schema.parentSchemaId;
+    while (parentId) {
+        const parent = schemas.find((candidate) => candidate.id === parentId);
+        if (!parent)
+            return undefined;
+        for (const [property, localRule] of Object.entries(schema.document.properties ?? {})) {
+            const inheritedRule = parent.document.properties?.[property];
+            if (localRule.type && inheritedRule?.type && localRule.type !== inheritedRule.type)
+                return `Inheritance conflict: ${property} is ${inheritedRule.type} in ${parent.name} but ${localRule.type} locally`;
+        }
+        parentId = parent.parentSchemaId;
+    }
     return undefined;
 }
 export function searchSchemas(schemas, query) { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
@@ -90,6 +110,20 @@ function inheritedDocument(schema, schemas, visited = new Set()) {
         properties: { ...(inherited.properties ?? {}), ...(schema.document.properties ?? {}) },
     };
 }
+function inheritedSchemaProvenance(schema, schemas) {
+    const parents = [];
+    const visited = new Set([schema.id]);
+    let parentId = schema.parentSchemaId;
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = schemas.find((candidate) => candidate.id === parentId);
+        if (!parent)
+            break;
+        parents.push({ id: parent.id, name: parent.name, version: parent.version });
+        parentId = parent.parentSchemaId;
+    }
+    return parents;
+}
 export function validateEvent(event, schemas, pageUrl) {
     if (pageUrl) {
         const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
@@ -99,7 +133,8 @@ export function validateEvent(event, schemas, pageUrl) {
             const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
             const issues = [];
             issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
-            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
+            const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
+            return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
         }
     }
     const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -108,7 +143,8 @@ export function validateEvent(event, schemas, pageUrl) {
     const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
     const issues = [];
     issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema);
-    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target };
+    const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
+    return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results) { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }

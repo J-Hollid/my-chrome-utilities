@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, createSchema, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, createSchema, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
 const valid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { transaction_id: "test-123", revenue: 49.95 }, rawInput: [] }, [schema]);
@@ -19,6 +19,8 @@ assert.match(schemaInheritanceError({ ...parent, parentSchemaId:parent.id }, [pa
 const inheritedParent = createSchema("Inherited parent", 1, { type:"object", required:["account_id"], properties:{ account_id:{ type:"string" } } });
 const inheritedChild = { ...assignSchema(createSchema("Inherited child", 1, { type:"object", properties:{ amount:{ type:"number" } } }), { sourceId:"history", eventName:"inherited", target:"payload" }), parentSchemaId:inheritedParent.id };
 assert.equal(validateEvent({ sourceId:"history", eventName:"inherited", payload:{ amount:1 }, rawInput:[] }, [inheritedParent, inheritedChild]).state, "1 issues");
+assert.deepEqual(validateEvent({ sourceId:"history", eventName:"inherited", payload:{ amount:1 }, rawInput:[] }, [inheritedParent, inheritedChild]).inheritedFrom, [{ id:inheritedParent.id, name:"Inherited parent", version:1 }]);
+assert.match(schemaInheritanceConflict({ ...inheritedChild, document:{ type:"object", properties:{ account_id:{ type:"number" } } } }, [inheritedParent]), /Inheritance conflict/);
 const generic = assignSchema(createSchema("Generic page view", 4, { type:"object" }), { id:"generic", name:"generic-page-view", sourceId:"history", eventName:"page_view", target:"payload", priority:10, enabled:true });
 const order = assignSchema(createSchema("Order confirmation", 2, { type:"object" }), { id:"order", name:"order-confirmation", sourceId:"history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", enabled:true });
 assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation?order=42#done", [generic, order]).schema.name, "Order confirmation");

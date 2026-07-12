@@ -16,7 +16,7 @@ export interface SchemaAssignment {
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; }
-export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; }
+export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
 
@@ -41,6 +41,23 @@ export function schemaInheritanceError(schema: SchemaDefinition, schemas: readon
   if (!parents.has(schema.parentSchemaId)) return "The selected parent schema does not exist";
   let current: string | undefined = schema.parentSchemaId;
   while (current) { if (current === schema.id) return "Schema inheritance cannot contain a cycle"; current = parents.get(current); }
+  const parent = schemas.find((candidate) => candidate.id === schema.parentSchemaId);
+  const childTarget = schema.assignments[0]?.target;
+  const parentTarget = parent?.assignments[0]?.target;
+  if (childTarget && parentTarget && childTarget !== parentTarget) return "Parent and child validation targets must match";
+  return undefined;
+}
+export function schemaInheritanceConflict(schema: SchemaDefinition, schemas: readonly SchemaDefinition[]): string | undefined {
+  let parentId = schema.parentSchemaId;
+  while (parentId) {
+    const parent = schemas.find((candidate) => candidate.id === parentId);
+    if (!parent) return undefined;
+    for (const [property, localRule] of Object.entries(schema.document.properties ?? {})) {
+      const inheritedRule = parent.document.properties?.[property];
+      if (localRule.type && inheritedRule?.type && localRule.type !== inheritedRule.type) return `Inheritance conflict: ${property} is ${inheritedRule.type} in ${parent.name} but ${localRule.type} locally`;
+    }
+    parentId = parent.parentSchemaId;
+  }
   return undefined;
 }
 export function searchSchemas(schemas: readonly SchemaDefinition[], query: string): SchemaDefinition[] { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
@@ -99,6 +116,17 @@ function inheritedDocument(schema: SchemaDefinition, schemas: readonly SchemaDef
   };
 }
 
+function inheritedSchemaProvenance(schema: SchemaDefinition, schemas: readonly SchemaDefinition[]): Pick<SchemaDefinition, "id" | "name" | "version">[] {
+  const parents: Pick<SchemaDefinition, "id" | "name" | "version">[] = [];
+  const visited = new Set<string>([schema.id]); let parentId = schema.parentSchemaId;
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId); const parent = schemas.find((candidate) => candidate.id === parentId);
+    if (!parent) break;
+    parents.push({ id:parent.id, name:parent.name, version:parent.version }); parentId = parent.parentSchemaId;
+  }
+  return parents;
+}
+
 export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaDefinition[], pageUrl?: string): ValidationResult {
   if (pageUrl) {
     const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
@@ -106,7 +134,8 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
     if (resolution.schema && resolution.assignment) {
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
       const issues: ValidationIssue[] = []; issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
-      return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
+      const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
+      return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
     }
   }
   const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -114,7 +143,8 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
   const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
   const issues: ValidationIssue[] = [];
   issuesFor(value, inheritedDocument(match.schema, schemas), "", "#", issues, match.schema);
-  return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target };
+  const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
+  return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results: readonly ValidationResult[]): { Valid: number; Issues: number; "Not checked": number } { return { Valid: results.filter((result) => result.state === "Valid").length, Issues: results.filter((result) => result.state.endsWith("issues")).length, "Not checked": results.filter((result) => result.state === "Not checked").length }; }
 export function filterByValidation<T extends { validation: ValidationState }>(events: readonly T[], state: ValidationState): T[] { return events.filter((event) => event.validation === state); }
