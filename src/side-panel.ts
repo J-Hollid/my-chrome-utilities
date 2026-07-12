@@ -362,9 +362,11 @@ const schemaEditorTarget = document.querySelector<HTMLSelectElement>("#schema-ed
 const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema");
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
 const schemaRevisionReview = document.querySelector<HTMLDialogElement>("#schema-revision-review");
+const schemaRevisionReviewSummary = document.querySelector<HTMLElement>("#schema-revision-review-summary");
 const confirmSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#confirm-schema-revision");
 const cancelSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#cancel-schema-revision");
-const schemaCloseReview = document.querySelector<HTMLDialogElement>("#schema-close-review");
+const schemaCloseReview = document.querySelector<HTMLDialogElement>("#close-schema-editor-review");
+const schemaCloseReviewSummary = document.querySelector<HTMLElement>("#close-schema-editor-review-summary");
 const discardSchemaDraftButton = document.querySelector<HTMLButtonElement>("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector<HTMLButtonElement>("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector<HTMLButtonElement>("#close-schema-editor");
@@ -1000,7 +1002,11 @@ function renderSchemas(): void {
     const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
     item.textContent = `${schema.name} v${schema.version}${parent ? ` inherits ${parent.name} v${parent.version}` : ""}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
     revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit as new version"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
-    revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = schemas.map((candidate) => candidate.id === schema.id ? next : candidate.parentSchemaId === schema.id ? { ...candidate, parentSchemaId:next.id } : candidate); persistSchemaLibrary(); renderSchemas(); });
+    revise.addEventListener("click", () => {
+      schemaDraft = structuredClone(schema); renderSchemaDraft();
+      if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${schema.version + 1}; version ${schema.version} remains available.`;
+      if (schemaRevisionReview) { schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); }
+    });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -2234,7 +2240,11 @@ addSchemaRuleButton?.addEventListener("click", () => {
 saveSchemaButton?.addEventListener("click", () => {
   if (!schemaDraft || saveSchemaButton.disabled) return;
   const draft = schemaDraft;
-  if (schemaRevisionReview) { schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); return; }
+  if (schemaRevisionReview) {
+    const existing = schemas.find((schema) => schema.name === draft.name);
+    if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = existing ? `${draft.name} will be saved as version ${existing.version + 1}; version ${existing.version} remains available.` : `${draft.name} will be created as version 1.`;
+    schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); return;
+  }
   confirmSchemaRevisionButton?.click();
 });
 confirmSchemaRevisionButton?.addEventListener("click", () => {
@@ -2254,7 +2264,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
 cancelSchemaRevisionButton?.addEventListener("click", () => { if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; });
 discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; renderSchemaDraft(); if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; });
 keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll:true }); });
-closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) return; if (schemaCloseReview) { schemaCloseReview.hidden = false; schemaCloseReview.showModal(); } });
+closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) return; if (schemaCloseReviewSummary) schemaCloseReviewSummary.textContent = `Discard unsaved schema ${schemaDraft.name || "draft"}?`; if (schemaCloseReview) { schemaCloseReview.hidden = false; schemaCloseReview.showModal(); } });
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
 saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });

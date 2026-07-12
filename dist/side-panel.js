@@ -121,9 +121,11 @@ const schemaEditorTarget = document.querySelector("#schema-editor-target");
 const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
 const schemaRevisionReview = document.querySelector("#schema-revision-review");
+const schemaRevisionReviewSummary = document.querySelector("#schema-revision-review-summary");
 const confirmSchemaRevisionButton = document.querySelector("#confirm-schema-revision");
 const cancelSchemaRevisionButton = document.querySelector("#cancel-schema-revision");
-const schemaCloseReview = document.querySelector("#schema-close-review");
+const schemaCloseReview = document.querySelector("#close-schema-editor-review");
+const schemaCloseReviewSummary = document.querySelector("#close-schema-editor-review-summary");
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
@@ -702,7 +704,16 @@ function renderSchemas() {
             revise.textContent = "Edit as new version";
             duplicate.textContent = "Duplicate";
             remove.textContent = "Delete";
-            revise.addEventListener("click", () => { const next = reviseSchema(schema, schema.document); schemas = schemas.map((candidate) => candidate.id === schema.id ? next : candidate.parentSchemaId === schema.id ? { ...candidate, parentSchemaId: next.id } : candidate); persistSchemaLibrary(); renderSchemas(); });
+            revise.addEventListener("click", () => {
+                schemaDraft = structuredClone(schema);
+                renderSchemaDraft();
+                if (schemaRevisionReviewSummary)
+                    schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${schema.version + 1}; version ${schema.version} remains available.`;
+                if (schemaRevisionReview) {
+                    schemaRevisionReview.hidden = false;
+                    schemaRevisionReview.showModal();
+                }
+            });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
             remove.addEventListener("click", () => {
                 const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -1810,6 +1821,9 @@ saveSchemaButton?.addEventListener("click", () => {
         return;
     const draft = schemaDraft;
     if (schemaRevisionReview) {
+        const existing = schemas.find((schema) => schema.name === draft.name);
+        if (schemaRevisionReviewSummary)
+            schemaRevisionReviewSummary.textContent = existing ? `${draft.name} will be saved as version ${existing.version + 1}; version ${existing.version} remains available.` : `${draft.name} will be created as version 1.`;
         schemaRevisionReview.hidden = false;
         schemaRevisionReview.showModal();
         return;
@@ -1853,7 +1867,8 @@ keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview
     schemaCloseReview.close(); if (schemaCloseReview)
     schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll: true }); });
 closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
-    return; if (schemaCloseReview) {
+    return; if (schemaCloseReviewSummary)
+    schemaCloseReviewSummary.textContent = `Discard unsaved schema ${schemaDraft.name || "draft"}?`; if (schemaCloseReview) {
     schemaCloseReview.hidden = false;
     schemaCloseReview.showModal();
 } });
