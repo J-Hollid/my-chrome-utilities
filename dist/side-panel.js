@@ -133,6 +133,11 @@ const createSchemaRuleButton = document.querySelector("#create-schema-rule");
 const schemaRuleEditor = document.querySelector("#schema-rule-editor");
 const schemaRuleName = document.querySelector("#schema-rule-name");
 const schemaRuleParameters = document.querySelector("#schema-rule-parameters");
+const schemaRuleTypes = document.querySelector("#schema-rule-types");
+const schemaRuleOperator = document.querySelector("#schema-rule-operator");
+const schemaRuleSeverity = document.querySelector("#schema-rule-severity");
+const schemaRuleMessage = document.querySelector("#schema-rule-message");
+const schemaRuleExamples = document.querySelector("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector("#save-schema-rule");
 const schemaRuleList = document.querySelector("#schema-rule-list");
 const schemaAssignmentEditor = document.querySelector("#schema-assignment-editor");
@@ -1731,7 +1736,7 @@ closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
 createSchemaRuleButton?.addEventListener("click", () => { if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
-    return; const parameters = schemaRuleParameters?.value.trim(); reusableSchemaRules = [...reusableSchemaRules, { id: `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
+    return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); reusableSchemaRules = [...reusableSchemaRules, { id: `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor)
