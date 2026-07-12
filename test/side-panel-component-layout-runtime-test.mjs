@@ -208,6 +208,9 @@ const schemaAssignmentRuntime = `(() => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   q("#data-layer-view-schemas").click();
+  q("#schema-subview-schemas").click();
+  input("#schema-search", "");
+  for (;;) { const remove = Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Delete"); if (!remove) break; remove.click(); }
   q("#create-schema").click();
   input("#schema-editor-name", "Checkout schema");
   q("#add-schema-rule").click();
@@ -227,15 +230,30 @@ const schemaAssignmentRuntime = `(() => {
   input("#schema-assignment-pathname", "/order-confirmation");
   input("#schema-assignment-priority", "100");
   q("#schema-assignment-policy").value = "follow latest";
-  q("#schema-assignment-enabled").checked = false;
+  q("#schema-assignment-enabled").checked = true;
   q("#save-schema-assignment").click();
+  const firstRow = () => q("#schema-assignment-list li");
+  const action = (label) => { const button = Array.from(firstRow().querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!button) throw new Error("Missing " + label + "; found " + Array.from(firstRow().querySelectorAll("button")).map((candidate) => candidate.textContent).join(", ")); return button; };
+  const actions = Array.from(firstRow().querySelectorAll("button")).map((button) => button.textContent);
+  action("Edit").click();
+  input("#schema-assignment-priority", "120");
+  q("#save-schema-assignment").click();
+  action("Duplicate").click();
+  action("Disable").click();
+  const duplicateCount = document.querySelectorAll("#schema-assignment-list li").length;
+  const copyRow = Array.from(document.querySelectorAll("#schema-assignment-list li")).find((row) => row.querySelector("span")?.textContent.startsWith("Checkout schema automatic copy"));
+  const deleteCopy = copyRow && Array.from(copyRow.querySelectorAll("button")).find((button) => button.textContent === "Delete");
+  if (!deleteCopy) throw new Error("Missing duplicate assignment delete action");
+  deleteCopy.click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
-    row:q("#schema-assignment-list li").textContent,
+    actions,
+    duplicateCount,
+    rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
-    rule:persistedRules[0],
+    rule:persistedRules.at(-1),
   };
 })()`;
 
@@ -854,8 +872,10 @@ try {
         { selector:"#schema-assignment-policy", required:true },
         { selector:"#schema-assignment-enabled", required:false },
       ],
-      row:"Checkout schema automatic · event-history/page_view · shop.example /order-confirmation · priority 100 · raw input · Checkout schema version 1 (follow latest) · disabled",
-      assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:100, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
+      actions:["Edit", "Duplicate", "Disable", "Delete"],
+      duplicateCount:2,
+      rows:["Checkout schema automatic · event-history/page_view · shop.example /order-confirmation · priority 120 · raw input · Checkout schema version 1 (follow latest) · disabled"],
+      assignment:{ sourceId:"event-history", eventName:"page_view", target:"raw input", id:"assignment:schema:checkout-schema:1:event-history:page_view:1", name:"Checkout schema automatic", priority:120, enabled:false, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", versionPolicy:"follow latest" },
       rule:{ name:"Known page types", operator:"allowed-values", parameters:"product,checkout" },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     socket.close();
