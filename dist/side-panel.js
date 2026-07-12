@@ -126,6 +126,7 @@ const schemaEditorParent = document.querySelector("#schema-editor-parent");
 const saveSchemaButton = document.querySelector("#save-schema");
 const saveSchemaReason = document.querySelector("#save-schema-reason");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
+const schemaRulePath = document.querySelector("#schema-rule-path");
 const schemaRuleAttachment = document.querySelector("#schema-rule-attachment");
 const schemaAttachedRules = document.querySelector("#schema-attached-rules");
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
@@ -918,6 +919,15 @@ function openNewSchemaEditor() {
     schemaDraftBaseline = JSON.stringify(schemaDraft);
     renderSchemaDraft();
     schemaEditorName?.focus({ preventScroll: true });
+}
+function defineSchemaProperty(document, path, property, required) {
+    const [name, ...rest] = path;
+    if (!name)
+        return document;
+    const properties = document.properties ?? {};
+    if (rest.length === 0)
+        return { ...document, type: document.type ?? "object", ...(required ? { required: [...new Set([...(document.required ?? []), name])] } : {}), properties: { ...properties, [name]: property } };
+    return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: defineSchemaProperty(properties[name] ?? { type: "object" }, rest, property, required) } };
 }
 function persistSchemaLibrary() {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
@@ -1909,10 +1919,11 @@ addSchemaRuleButton?.addEventListener("click", () => {
     const selectedRule = reusableRules.find((rule) => `${rule.id}@${rule.version}` === schemaRuleAttachment?.value);
     const attachments = schemaDraft.ruleAttachments ?? [];
     const parameters = selectedRule?.parameters.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
-    const current = schemaDraft.document.properties?.example ?? { type: "string" };
+    const path = (schemaRulePath?.value.trim() || "example").split(".").map((part) => part.trim()).filter(Boolean);
+    const current = path.reduce((document, name) => document?.properties?.[name], schemaDraft.document) ?? { type: "string" };
     const property = !selectedRule ? current : selectedRule.operator === "allowed-values" ? { ...current, type: "string", enum: parameters } : selectedRule.operator === "forbidden-values" ? { ...current, type: "string", forbidden: parameters } : selectedRule.operator === "number-range" ? { ...current, type: "number", minimum: Number(parameters[0]), maximum: Number(parameters[1]) } : selectedRule.operator === "matches-pattern" ? { ...current, type: "string", pattern: selectedRule.parameters } : current;
-    const required = selectedRule?.operator === "required" ? [...new Set([...(schemaDraft.document.required ?? []), "example"])] : schemaDraft.document.required;
-    schemaDraft = { ...schemaDraft, document: { ...schemaDraft.document, ...(required ? { required } : {}), ...(selectedRule?.operator === "declared-only" ? { additionalProperties: false } : {}), properties: { ...schemaDraft.document.properties, example: property } }, ...(selectedRule && !attachments.some((attachment) => attachment.ruleId === selectedRule.id && attachment.version === selectedRule.version) ? { ruleAttachments: [...attachments, { ruleId: selectedRule.id, version: selectedRule.version, snapshot: { id: selectedRule.id, version: selectedRule.version, name: selectedRule.name, applicableTypes: selectedRule.applicableTypes, operator: selectedRule.operator, parameters: selectedRule.parameters, severity: selectedRule.severity, message: selectedRule.message } }] } : {}) };
+    const document = defineSchemaProperty(schemaDraft.document, path, property, selectedRule?.operator === "required");
+    schemaDraft = { ...schemaDraft, document: { ...document, ...(selectedRule?.operator === "declared-only" ? { additionalProperties: false } : {}) }, ...(selectedRule && !attachments.some((attachment) => attachment.ruleId === selectedRule.id && attachment.version === selectedRule.version) ? { ruleAttachments: [...attachments, { ruleId: selectedRule.id, version: selectedRule.version, snapshot: { id: selectedRule.id, version: selectedRule.version, name: selectedRule.name, applicableTypes: selectedRule.applicableTypes, operator: selectedRule.operator, parameters: selectedRule.parameters, severity: selectedRule.severity, message: selectedRule.message } }] } : {}) };
     renderSchemaDraft();
 });
 saveSchemaButton?.addEventListener("click", () => {
