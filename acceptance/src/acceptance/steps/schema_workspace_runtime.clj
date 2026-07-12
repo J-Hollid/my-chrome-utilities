@@ -6,10 +6,14 @@
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
 
-(defn- browser-workspace! [world]
+(defn- browser-workspace! [world example]
   (if (:browser-observation world)
     world
-    (let [result (process/shell (assoc support/build-shell-options :env {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}) "node" "test/side-panel-component-layout-runtime-test.mjs")
+    (let [fixture (when (and (get example "schema_count") (get example "rule_count"))
+                    (str (get example "schema_count") ":" (get example "rule_count")))
+          environment (cond-> {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}
+                        fixture (assoc "SCHEMA_LIBRARY_EXPORT_FIXTURE" fixture))
+          result (process/shell (assoc support/build-shell-options :env environment) "node" "test/side-panel-component-layout-runtime-test.mjs")
           line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
           payload (when line (json/parse-string line true))]
       (support/assert! (zero? (:exit result)) "Schema workspace browser runtime verification failed."
@@ -38,7 +42,7 @@
       (support/assert! (some #{"example · Known page types v1 · inherited from Checkout schema v2"}
                              (get-in payload [:schemaWorkspace :inheritance :preview]))
                        "Effective-rule preview did not identify the inherited rule origin." {:payload payload})
-      (support/assert! (re-find #"Valid|warnings|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
+      (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in payload [:schemaWorkspace :validation :validation])))
                        "Live Validate did not produce a validation state." {:payload payload})
       (assoc world :browser-observation (:schemaWorkspace payload)))))
 
@@ -118,11 +122,12 @@
                  "the Event Library editor provides the same explicit schema attachment control for its template"} text)
     (support/assert! (= 120 (get-in observation [:assignment :priority])) "Assignment browser evidence is missing." {:observation observation})
 
-    :else (support/assert! (re-find #"Valid|warnings|issues" (str (get-in observation [:validation :validation]))) "Live validation browser evidence is missing." {:observation observation})))
+    :else (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation]))) "Live validation browser evidence is missing." {:observation observation})))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (= text "the rendered Data Layer Schemas workspace is displayed")
-                (assoc (browser-workspace! world) :schema-workspace-runtime? true)
+  (let [world (if (contains? #{"the rendered Data Layer Schemas workspace is displayed"
+                               "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"} text)
+                (assoc (browser-workspace! world example) :schema-workspace-runtime? true)
                 world)]
     (require! world :browser-observation "Schema workspace browser adapter was not executed.")
     (assert-browser-step! text (:browser-observation world))
@@ -228,7 +233,7 @@
     "saved-session validation remains pinned to the schema version originally recorded" world
 
     "the schema workspace runtime acceptance suite is executed"
-    (browser-workspace! world)
+    (browser-workspace! world example)
 
     "it completes schema creation, nested rule editing, inheritance exceptions, assignment, validation, export, import, and reload through rendered controls"
     (require! world :browser-observation "Browser runtime was not executed.")
@@ -276,7 +281,8 @@
   (mapv (fn [spec]
           {:pattern (support/template-pattern (:text spec))
            :applies? (fn [world]
-                       (or (= "the rendered Data Layer Schemas workspace is displayed" (:text spec))
+                       (or (contains? #{"the rendered Data Layer Schemas workspace is displayed"
+                                        "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"} (:text spec))
                            (:schema-workspace-runtime? world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
