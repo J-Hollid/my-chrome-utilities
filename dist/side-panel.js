@@ -147,6 +147,9 @@ const schemaRuleList = document.querySelector("#schema-rule-list");
 const schemaRuleSearch = document.querySelector("#schema-rule-search");
 const schemaRuleAttachments = document.querySelector("#schema-rule-attachments");
 const updateSchemaRuleAttachments = document.querySelector("#update-schema-rule-attachments");
+const schemaRuleUpgradeReview = document.querySelector("#schema-rule-upgrade-review");
+const confirmSchemaRuleUpgradeButton = document.querySelector("#confirm-schema-rule-upgrade");
+const cancelSchemaRuleUpgradeButton = document.querySelector("#cancel-schema-rule-upgrade");
 const exportSchemaRulesButton = document.querySelector("#export-schema-rules");
 const schemaRuleDeleteReview = document.querySelector("#schema-rule-delete-review");
 const schemaRuleDeleteReviewSummary = document.querySelector("#schema-rule-delete-review-summary");
@@ -1974,6 +1977,17 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
 schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
+updateSchemaRuleAttachments?.addEventListener("change", () => { if (updateSchemaRuleAttachments.checked && schemaRuleUpgradeReview) {
+    schemaRuleUpgradeReview.hidden = false;
+    schemaRuleUpgradeReview.showModal();
+} });
+confirmSchemaRuleUpgradeButton?.addEventListener("click", () => { if (schemaRuleUpgradeReview?.open)
+    schemaRuleUpgradeReview.close(); if (schemaRuleUpgradeReview)
+    schemaRuleUpgradeReview.hidden = true; });
+cancelSchemaRuleUpgradeButton?.addEventListener("click", () => { if (updateSchemaRuleAttachments)
+    updateSchemaRuleAttachments.checked = false; if (schemaRuleUpgradeReview?.open)
+    schemaRuleUpgradeReview.close(); if (schemaRuleUpgradeReview)
+    schemaRuleUpgradeReview.hidden = true; });
 exportSchemaRulesButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(reusableSchemaRules, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-rules.json"; link.click(); URL.revokeObjectURL(url); });
 confirmSchemaRuleDeleteButton?.addEventListener("click", () => { if (!pendingReusableSchemaRuleDeletionId)
     return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open)
