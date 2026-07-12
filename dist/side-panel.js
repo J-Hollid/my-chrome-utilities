@@ -247,6 +247,14 @@ let schemaHistory = (() => { try {
 catch {
     return {};
 } })();
+const SCHEMA_HISTORY_METADATA_STORAGE_KEY = "my-chrome-utilities.schema-history-metadata.v1";
+let schemaHistoryMetadata = (() => { try {
+    const saved = JSON.parse(localStorage.getItem(SCHEMA_HISTORY_METADATA_STORAGE_KEY) ?? "{}");
+    return saved && typeof saved === "object" ? saved : {};
+}
+catch {
+    return {};
+} })();
 let editingSchemaAssignment;
 const SCHEMA_RULE_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 let reusableRules = (() => { try {
@@ -945,6 +953,11 @@ function defineSchemaProperty(document, path, property, required) {
 function persistSchemaLibrary() {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
     localStorage.setItem(SCHEMA_HISTORY_STORAGE_KEY, JSON.stringify(schemaHistory));
+    localStorage.setItem(SCHEMA_HISTORY_METADATA_STORAGE_KEY, JSON.stringify(schemaHistoryMetadata));
+}
+function captureSchemaHistory(schema) {
+    const metadata = { version: schema.version, savedAt: new Date().toISOString(), attachedRules: (schema.ruleAttachments ?? []).map(({ ruleId, version }) => ({ ruleId, version })) };
+    schemaHistoryMetadata[schema.name] = [...(schemaHistoryMetadata[schema.name] ?? []).filter((item) => item.version !== schema.version), metadata].sort((left, right) => left.version - right.version);
 }
 function persistEventTemplateLibrary() {
     localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
@@ -1966,6 +1979,7 @@ saveSchemaButton?.addEventListener("click", () => {
         return;
     const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [] };
     schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
+    captureSchemaHistory(saved);
     schemas = [...schemas, saved];
     persistSchemaLibrary();
     schemaDraft = undefined;
@@ -1980,6 +1994,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
         return;
     schemas = [...schemas, revision];
     schemaHistory[revision.name] = [...new Set([...(schemaHistory[revision.name] ?? []), revision.version - 1, revision.version])].sort((left, right) => left - right);
+    captureSchemaHistory(revision);
     pendingSchemaRevision = undefined;
     persistSchemaLibrary();
     hideDialog(schemaRevisionReview);
@@ -2006,6 +2021,7 @@ saveAndCloseSchemaButton?.addEventListener("click", () => {
         return;
     const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [] };
     schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
+    captureSchemaHistory(saved);
     schemas = [...schemas, saved];
     schemaDraft = undefined;
     persistSchemaLibrary();
