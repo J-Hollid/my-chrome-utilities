@@ -2279,7 +2279,10 @@ schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) { schema
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaRuleButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
-  schemaDraft = { ...schemaDraft, document:{ ...schemaDraft.document, properties:{ ...schemaDraft.document.properties, example:{ type:"string" } } } };
+  const property = schemaRuleParameters?.value.split(":", 1)[0]?.trim() || "example";
+  const operator = schemaRuleOperator?.value;
+  const document = { ...schemaDraft.document, properties:{ ...schemaDraft.document.properties, [property]:{ type:"string" as const } } };
+  schemaDraft = { ...schemaDraft, document:operator === "required" ? { ...document, required:[...new Set([...(document.required ?? []), property])] } : document };
   renderSchemaDraft();
 });
 saveSchemaButton?.addEventListener("click", () => {
