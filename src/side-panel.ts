@@ -385,6 +385,7 @@ const schemaRuleMessage = document.querySelector<HTMLInputElement>("#schema-rule
 const schemaRuleExamples = document.querySelector<HTMLInputElement>("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector<HTMLButtonElement>("#save-schema-rule");
 const schemaRuleList = document.querySelector<HTMLElement>("#schema-rule-list");
+const schemaRuleSearch = document.querySelector<HTMLInputElement>("#schema-rule-search");
 const schemaAssignmentEditor = document.querySelector<HTMLElement>("#schema-assignment-editor");
 const schemaAssignmentSource = document.querySelector<HTMLInputElement>("#schema-assignment-source");
 const schemaAssignmentEvent = document.querySelector<HTMLInputElement>("#schema-assignment-event");
@@ -492,7 +493,7 @@ const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validat
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-let reusableSchemaRules: Array<{ id: string; name: string; kind: string }> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
+let reusableSchemaRules: Array<{ id: string; name: string; kind: string; version?: number; enabled?: boolean }> = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 let replaySequences: ReplaySequence[] = [];
 let observationTargetState: ObservationTargetState = restoredObservationTargetState();
 let pendingObservationTargetSwitchId: string | undefined;
@@ -1083,13 +1084,15 @@ function withSchemaParent(schema: SchemaDefinition, parentSchemaId: string | und
 
 function renderSchemaWorkflowRows(): void {
   if (schemaAssignmentSchema) schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} version ${schema.version}` })));
-  schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => {
-    const item = document.createElement("li"); const summary = document.createElement("span"); summary.textContent = `${rule.name} · ${rule.kind}`;
-    const edit = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+  const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
+  schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
+    const item = document.createElement("li"); const summary = document.createElement("span"); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.enabled === false ? " · disabled" : ""}`;
+    const edit = document.createElement("button"); const duplicate = document.createElement("button"); const disable = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = disable.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; disable.textContent = rule.enabled === false ? "Enable" : "Disable"; remove.textContent = "Delete";
     edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
-    duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+    duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy`, version:1, enabled:true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+    disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
     remove.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
-    item.append(summary, edit, duplicate, remove); return item;
+    item.append(summary, edit, duplicate, disable, remove); return item;
   }));
   const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
   schemaAssignmentList?.replaceChildren(...assignments.map(({ schema, assignment }) => {
@@ -2298,7 +2301,8 @@ closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) ret
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
 saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaRuleId = undefined; if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
-saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); const rule = { id:editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
+saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule = { id:editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
+schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll:true }); });
 saveSchemaAssignmentButton?.addEventListener("click", () => {
   const schema = schemas.find((candidate) => candidate.id === schemaAssignmentSchema?.value) ?? schemas[0]; if (!schema) return;
