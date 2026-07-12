@@ -62,7 +62,7 @@
     (support/assert! (= expected-rules (count (:rules exported)))
                      "Schema Library export did not match the example reusable-rule count."
                      {:expected expected-rules :actual (count (:rules exported)) :observation observation})
-    (support/assert! (= {:stored expected-schemas :rendered expected-schemas} reloaded)
+    (support/assert! (= {:stored expected-schemas :rendered expected-schemas :storedRules expected-rules} reloaded)
                      "Schema Library reload did not match the example schema count."
                      {:expected expected-schemas :actual reloaded :observation observation})))
 
@@ -245,6 +245,8 @@
     "the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules"
     (assoc world :schema-library-export-example {:schemas (count-value example "schema_count") :rules (count-value example "rule_count")})
 
+    "rendered setup has created exactly those schema and rule identities before export"
+    (do (assert-export-counts! (:browser-observation world) example) world)
     "the complete Schema Library is exported and its downloaded JSON is inspected"
     (require! world :schema-library-export-example "Schema Library export example is unavailable.")
 
@@ -257,6 +259,10 @@
                          "Schema Library identity coverage is incomplete." {:observation (:browser-observation world)})
         world)
 
+    "export-envelope metadata such as format version is verified separately from the identity collections"
+    (do (support/assert! (= 1 (get-in world [:browser-observation :transfer :content :version]))
+                         "Schema Library export envelope metadata is invalid." {:observation (:browser-observation world)})
+        world)
     "runtime verification derives its expected counts from this example instead of requiring a fixed library seed" world
 
     "that export replaces the Schema Library and the panel reloads" world
