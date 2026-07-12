@@ -91,7 +91,7 @@ export function validateEvent(event: ValidatableEvent, schemas: readonly SchemaD
     if (resolution.error) return { state: "Assignment error", issues: [] };
     if (resolution.schema && resolution.assignment) {
       const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
-      const issues: ValidationIssue[] = []; issuesFor(value, resolution.schema.document, "", "#", issues, resolution.schema);
+      const issues: ValidationIssue[] = []; issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
       return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
     }
   }

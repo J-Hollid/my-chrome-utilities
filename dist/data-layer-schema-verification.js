@@ -77,7 +77,7 @@ export function validateEvent(event, schemas, pageUrl) {
         if (resolution.schema && resolution.assignment) {
             const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
             const issues = [];
-            issuesFor(value, resolution.schema.document, "", "#", issues, resolution.schema);
+            issuesFor(value, inheritedDocument(resolution.schema, schemas), "", "#", issues, resolution.schema);
             return { state: issues.length === 0 ? "Valid" : `${issues.length} issues`, issues, schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target };
         }
     }
