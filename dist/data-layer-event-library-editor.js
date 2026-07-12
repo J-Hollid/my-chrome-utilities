@@ -99,6 +99,10 @@ export function setNewEventField(state, field, value) {
 export function setTemplateIdentity(state, field, value) {
     return { ...state, template: { ...state.template, [field]: value }, dirty: true };
 }
+export function setTemplateSchemaAttachment(state, schemaId) {
+    const { schemaId: _previous, ...withoutSchema } = state.template;
+    return { ...state, template: schemaId ? { ...withoutSchema, schemaId } : withoutSchema, dirty: true };
+}
 export function templateIdentityValidation(state) {
     return {
         ...(state.template.name.trim() ? {} : { name: "Enter a template name" }),

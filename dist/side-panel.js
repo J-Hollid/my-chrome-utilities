@@ -29,7 +29,7 @@ import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, ren
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
-import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
+import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { createSchema, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
@@ -302,7 +302,6 @@ let manualSchemaOverrides = (() => { try {
 catch {
     return {};
 } })();
-let libraryDraftSchemaOverrides = {};
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 let schemaValidationRecords = (() => { try {
     const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
@@ -770,7 +769,7 @@ function renderEventTemplateLibrary() {
     const selectable = Boolean(editor && !editor.isNew);
     libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
     if (selectable && editor) {
-        const selected = libraryDraftSchemaOverrides[editor.template.id] ?? "";
+        const selected = editor.template.schemaId ?? "";
         libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic schema" }), ...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
         libraryDraftSchemaSelector.value = selected;
     }
@@ -779,20 +778,22 @@ libraryDraftSchemaSelector.addEventListener("change", () => {
     const editor = propertyEditorState;
     if (!editor || editor.isNew)
         return;
-    libraryDraftSchemaOverrides = { ...libraryDraftSchemaOverrides, [editor.template.id]: libraryDraftSchemaSelector.value };
+    propertyEditorState = setTemplateSchemaAttachment(editor, libraryDraftSchemaSelector.value);
+    renderEventTemplateLibrary();
 });
-refreshLibraryDraftValidationButton.addEventListener("click", () => {
+function refreshLibraryDraftValidation() {
     const editor = propertyEditorState;
     if (!editor || editor.isNew)
         return;
-    const schema = schemas.find((candidate) => candidate.id === libraryDraftSchemaOverrides[editor.template.id]);
+    const schema = schemas.find((candidate) => candidate.id === editor.template.schemaId);
     if (!schema) {
         setEventLibraryValidation(eventLibraryEditorElements, "Select a schema to refresh Library draft validation.");
         return;
     }
     const result = validateWithSchema({ sourceId: editor.template.sourceId, eventName: editor.template.eventName, payload: editor.draft, rawInput: [] }, schema, schemas);
     setEventLibraryValidation(eventLibraryEditorElements, `Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`);
-});
+}
+refreshLibraryDraftValidationButton.addEventListener("click", refreshLibraryDraftValidation);
 function renderSchemas() {
     const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
     if (schemaEmptyState)
@@ -1212,7 +1213,7 @@ function recheckCapturedSchemaValidation() {
             const validation = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
             if (validation.state !== "Not checked")
                 checked += 1;
-            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · ${issue.schemaName} v${issue.schemaVersion}` })));
+            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · severity error · ${issue.schemaName} v${issue.schemaVersion} · ${issue.schemaLocation} · assignment ${validation.target ?? "automatic"}` })));
             records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), ...(validation.target ? { target: validation.target } : {}) });
             return { ...event, validation: validation.state };
         }),
@@ -2480,6 +2481,7 @@ eventTemplateJson?.addEventListener("input", () => {
     setEventLibraryResult(eventLibraryEditorElements, "");
     propertyEditorState = updateDraftJson(propertyEditorState, eventTemplateJson.value);
     renderEventTemplateLibrary();
+    refreshLibraryDraftValidation();
 });
 eventTemplatePushDestination?.addEventListener("input", () => {
     if (!propertyEditorState)
