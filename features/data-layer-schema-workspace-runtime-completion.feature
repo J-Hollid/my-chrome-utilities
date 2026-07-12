@@ -79,3 +79,17 @@ Feature: Data layer schema workspace runtime completion
     And it verifies browser storage, downloaded content, dialog visibility, focus restoration, and rendered validation details
     And it exercises production event capture and validation callbacks rather than acceptance-world flags or source-string assertions
     And the delivered extension bundle contains the same schema workspace behavior as the production source
+
+  # Data layer schema workspace runtime completion 009
+  Scenario Outline: Data layer schema workspace runtime completion 009
+    Given the current Schema Library contains <schema_count> schemas and <rule_count> reusable rules
+    When the complete Schema Library is exported and its downloaded JSON is inspected
+    Then the export reports <schema_count> schemas and <rule_count> reusable rules
+    And every exported schema and rule identity is present rather than a fixed fixture subset
+    When that export replaces the Schema Library and the panel reloads
+    Then <schema_count> schemas and <rule_count> reusable rules remain stored and rendered
+
+    Examples:
+      | schema_count | rule_count |
+      | 1            | 3          |
+      | 2            | 4          |
