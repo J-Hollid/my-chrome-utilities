@@ -189,6 +189,16 @@ async function evaluate(socket, expression) {
   return result.result.value;
 }
 
+async function reloadPanel(socket) {
+  await socket.call("Page.reload");
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const ready = await evaluate(socket, "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null");
+    if (ready) return;
+    await wait(50);
+  }
+  throw new Error("Side panel did not finish reloading.");
+}
+
 const fixture = `(() => {
   const text = "Long metadata and form content that must wrap within the side panel component without creating document overflow. ".repeat(8);
   for (const selector of ["#data-layer-panel-live", "#data-layer-panel-library", "#data-layer-panel-sessions", "#data-layer-panel-schemas", "#event-property-editor", "#live-event-inspector"]) document.querySelector(selector).hidden = false;
@@ -231,15 +241,39 @@ const schemaAssignmentRuntime = `(() => {
   q("#save-schema-rule").click();
   q("#schema-subview-schemas").click();
   Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
-  const propertyAdd = q("#schema-property-tree button"); propertyAdd.click();
+  q("#cancel-schema-revision").click();
+  const propertyAdd = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "Add validation rule");
+  if (!propertyAdd) throw new Error("Missing expandable property rule menu");
+  const propertyMenu = q("#schema-property-tree details[data-rule-menu]");
+  propertyAdd.click();
+  const propertyMenuOpen = propertyMenu.open;
   const attach = Array.from(q("#schema-property-tree").querySelectorAll("button")).find((button) => button.textContent === "Attach Known page types v1");
   if (!attach) throw new Error("Missing property rule attachment action");
   attach.click();
-  const attachedSummary = q("#schema-property-tree summary"); attachedSummary.click();
-  const propertyRuleActions = Array.from(q("#schema-property-tree details").querySelectorAll("button")).map((button) => button.textContent);
-  q("#schema-property-tree details button").click();
-  const reenable = q("#schema-property-tree details button").textContent;
-  q("#schema-property-tree details button").click();
+  const propertyReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
+  const attachedSummary = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)");
+  if (!attachedSummary) throw new Error("Missing attached-rules disclosure");
+  attachedSummary.click();
+  const attachedRules = q("#schema-property-tree details[data-attached-rules]");
+  const propertyRuleActions = Array.from(attachedRules.querySelectorAll("button")).map((button) => button.textContent);
+  attachedRules.querySelector("button").click();
+  const propertyStateReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
+  Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)").click();
+  const reenable = q("#schema-property-tree details[data-attached-rules] button").textContent;
+  q("#schema-property-tree details[data-attached-rules] button").click();
+  q("#schema-subview-rules").click();
+  Array.from(q("#schema-rule-list").querySelectorAll("button")).filter((button) => button.textContent === "Edit").at(-1).click();
+  input("#schema-rule-parameters", "product,checkout,confirmation");
+  q("#schema-rule-severity").value = "error";
+  q("#save-schema-rule").click();
+  const ruleRevisionReview = { open:q("#schema-rule-revision-review").open, summary:q("#schema-rule-revision-review-summary").textContent };
+  q("#confirm-schema-rule-revision-review").click();
+  const originalRuleExportClick = HTMLAnchorElement.prototype.click;
+  let ruleExportName = "";
+  HTMLAnchorElement.prototype.click = function () { ruleExportName = this.download; };
+  q("#export-schema-rules").click();
+  HTMLAnchorElement.prototype.click = originalRuleExportClick;
+  q("#schema-subview-schemas").click();
   q("#save-schema").click();
   q("#confirm-schema-revision").click();
   q("#schema-subview-assignments").click();
@@ -288,7 +322,7 @@ const schemaAssignmentRuntime = `(() => {
     closeReview,
     rows:Array.from(document.querySelectorAll("#schema-assignment-list li > span")).map((row) => row.textContent),
     assignment:persistedSchemas[0].assignments[0],
-    propertyRule:{ summary:attachedSummary.textContent, actions:propertyRuleActions, reenable },
+    propertyRule:{ menuOpen:propertyMenuOpen, returnFocus:propertyReturnFocus, stateReturnFocus:propertyStateReturnFocus, summary:attachedSummary.textContent, actions:propertyRuleActions, reenable, revisionReview:ruleRevisionReview, ruleExportName },
     storedPropertyRule:{ attached:Boolean(storedPropertyRule), version:storedPropertyRule?.version, enabled:storedPropertyRule?.enabled, propertyPath:storedPropertyRule?.propertyPath },
     rule:{ name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
   };
@@ -317,14 +351,36 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
+const schemaInheritanceRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
+  q("#data-layer-view-schemas").click();
+  q("#schema-subview-schemas").click();
+  q("#create-schema").click();
+  input("#schema-editor-name", "Order confirmation");
+  const parent = Array.from(q("#schema-editor-parent").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
+  if (!parent) throw new Error("Missing saved parent schema option");
+  q("#schema-editor-parent").value = parent.value;
+  q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
+  return {
+    groups:Array.from(q("#schema-inherited-rule-groups").querySelectorAll("[data-inherited-rule-group]")).map((group) => ({ state:group.dataset.inheritedRuleGroup, text:group.textContent })),
+    preview:Array.from(q("#schema-effective-rule-preview").querySelectorAll("li")).map((item) => item.textContent),
+  };
+})()`;
+
 const schemaLibraryTransferRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   q("#data-layer-view-schemas").click();
   const originalClick = HTMLAnchorElement.prototype.click;
+  const originalCreateObjectURL = URL.createObjectURL;
   let downloadName = "";
+  let exportedBlob;
+  URL.createObjectURL = function (blob) { exportedBlob = blob; return originalCreateObjectURL.call(this, blob); };
   HTMLAnchorElement.prototype.click = function () { downloadName = this.download; };
   q("#export-schema").click();
   HTMLAnchorElement.prototype.click = originalClick;
+  URL.createObjectURL = originalCreateObjectURL;
+  const exported = JSON.parse(await exportedBlob.text());
   const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const rules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const file = new File([JSON.stringify({ version:1, schemas, rules })], "schema-library-v1.json", { type:"application/json" });
@@ -332,11 +388,15 @@ const schemaLibraryTransferRuntime = `(async () => {
   Object.defineProperty(input, "files", { configurable:true, value:[file] });
   input.dispatchEvent(new Event("change", { bubbles:true }));
   await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#replace-schema-library").click();
+  const reloaded = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   return {
     downloadName,
+    content:{ version:exported.version, schemas:exported.schemas.length, rules:exported.rules.length },
     result:q("#schema-result").textContent,
     review:q("#schema-import-review").open,
     actions:Array.from(q("#schema-import-review").querySelectorAll("button")).map((button) => button.textContent),
+    reloadedSchemas:reloaded.length,
   };
 })()`;
 
@@ -984,14 +1044,16 @@ try {
       duplicateCount:3,
       revisionReview:{ open:true, summary:"Checkout schema will be saved as version 3; version 2 remains available." },
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
-      rows:["Checkout schema automatic · event-history/page_view · anyany · priority 120 · Checkout schema", "Checkout schema automatic · event-history/page_view · shop.example/order-confirmation · priority 100 · Checkout schema"],
+      rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · pinned · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false },
-      propertyRule:{ summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable" },
+      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation." }, ruleExportName:"schema-rules.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
-      rule:{ name:"Known page types", version:1, enabled:true, operator:"allowed-values", parameters:"product,checkout", severity:"warning", message:"Use a known page type", examples:"product, checkout", attachments:[] },
+      rule:{ name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
+    let schemaInheritance;
     let schemaLibraryTransfer;
+    let schemaReload;
     let schemaLiveValidation;
     if (width === 720) {
       schemaSourceCreation = await evaluate(socket, schemaSourceCreationRuntime);
@@ -1002,13 +1064,31 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
       }, "Library Create schema did not invoke the production source callback");
+      schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
+      assert.deepEqual(schemaInheritance, {
+        groups:[
+          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
+          { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
+          { state:"local", text:"Local (0)No local rules." },
+        ],
+        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+      }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.deepEqual(schemaLibraryTransfer, {
         downloadName:"schema-library-v1.json",
-        result:"Exported 1 schemas and 3 rules.",
-        review:true,
+        content:{ version:1, schemas:1, rules:3 },
+        result:"Schema Library replaced.",
+        review:false,
         actions:["Replace Schema Library", "Append to Schema Library", "Cancel"],
+        reloadedSchemas:1,
       }, "Schema Library export/import controls did not drive the production transfer flow");
+      await reloadPanel(socket);
+      schemaReload = await evaluate(socket, `(() => {
+        document.querySelector("#data-layer-view-schemas").click();
+        return { stored:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length, rendered:document.querySelectorAll("#schema-list li").length };
+      })()`);
+      assert.deepEqual(schemaReload, { stored:1, rendered:1 }, "Schema Library did not survive a browser reload");
       schemaLiveValidation = await evaluate(socket, schemaLiveValidationRuntime);
       assert.match(schemaLiveValidation.validation, /Valid|issues/, "Live Validate did not report a production validation state");
     }
@@ -1018,7 +1098,9 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
+        inheritance:schemaInheritance,
         transfer:schemaLibraryTransfer,
+        reload:schemaReload,
         validation:schemaLiveValidation,
       });
     }
