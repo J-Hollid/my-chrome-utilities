@@ -144,6 +144,7 @@ const schemaRuleMessage = document.querySelector("#schema-rule-message");
 const schemaRuleExamples = document.querySelector("#schema-rule-examples");
 const saveSchemaRuleButton = document.querySelector("#save-schema-rule");
 const schemaRuleList = document.querySelector("#schema-rule-list");
+const schemaRuleSearch = document.querySelector("#schema-rule-search");
 const schemaAssignmentEditor = document.querySelector("#schema-assignment-editor");
 const schemaAssignmentSource = document.querySelector("#schema-assignment-source");
 const schemaAssignmentEvent = document.querySelector("#schema-assignment-event");
@@ -820,23 +821,27 @@ function withSchemaParent(schema, parentSchemaId) {
 function renderSchemaWorkflowRows() {
     if (schemaAssignmentSchema)
         schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
-    schemaRuleList?.replaceChildren(...reusableSchemaRules.map((rule) => {
+    const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
+    schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
         const item = document.createElement("li");
         const summary = document.createElement("span");
-        summary.textContent = `${rule.name} · ${rule.kind}`;
+        summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.enabled === false ? " · disabled" : ""}`;
         const edit = document.createElement("button");
         const duplicate = document.createElement("button");
+        const disable = document.createElement("button");
         const remove = document.createElement("button");
-        edit.type = duplicate.type = remove.type = "button";
+        edit.type = duplicate.type = disable.type = remove.type = "button";
         edit.textContent = "Edit";
         duplicate.textContent = "Duplicate";
+        disable.textContent = rule.enabled === false ? "Enable" : "Disable";
         remove.textContent = "Delete";
         edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName)
             schemaRuleName.value = rule.name; if (schemaRuleEditor)
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
-        duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy` }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         remove.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.filter((candidate) => candidate.id !== rule.id); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
-        item.append(summary, edit, duplicate, remove);
+        item.append(summary, edit, duplicate, disable, remove);
         return item;
     }));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
@@ -1946,9 +1951,10 @@ saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseRe
 createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaRuleId = undefined; if (schemaRuleEditor)
     schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
-    return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); const rule = { id: editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}` }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
+    return; const parameters = schemaRuleParameters?.value.trim(); const metadata = [schemaRuleTypes?.value, schemaRuleOperator?.value, schemaRuleSeverity?.value, schemaRuleMessage?.value.trim(), schemaRuleExamples?.value.trim()].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule = { id: editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version: (previous?.version ?? 0) + 1, enabled: previous?.enabled ?? true }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
+schemaRuleSearch?.addEventListener("input", renderSchemaWorkflowRows);
 createSchemaAssignmentButton?.addEventListener("click", () => { if (schemaAssignmentEditor)
     schemaAssignmentEditor.hidden = false; schemaAssignmentSource?.focus({ preventScroll: true }); });
 saveSchemaAssignmentButton?.addEventListener("click", () => {
