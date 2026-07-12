@@ -99,12 +99,20 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
 }
 function attachedRuleIssues(value, schema, result) {
     for (const rule of schema.attachedRules ?? []) {
-        if (rule.enabled === false || rule.operator !== "required")
+        if (rule.enabled === false)
             continue;
-        for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) {
-            if (!value || typeof value !== "object" || Array.isArray(value) || !(property in value))
-                result.push({ instancePath: `/${property}`, message: "Required value", expected: "value", actual: "missing", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
-        }
+        const record = value && typeof value === "object" && !Array.isArray(value) ? value : undefined;
+        if (rule.operator === "required")
+            for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [])
+                if (!record || !(property in record))
+                    result.push({ instancePath: `/${property}`, message: "Required value", expected: "value", actual: "missing", schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+        const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
+        if (!record || !property || !(property in record))
+            continue;
+        if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property])))
+            result.push({ instancePath: `/${property}`, message: "Value is not allowed", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
+        if (rule.operator === "regular-expression" && constraint && !new RegExp(constraint).test(String(record[property])))
+            result.push({ instancePath: `/${property}`, message: "Value does not match pattern", expected: constraint, actual: String(record[property]), schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}` });
     }
 }
 function inheritedDocument(schema, schemas, visited = new Set()) {
