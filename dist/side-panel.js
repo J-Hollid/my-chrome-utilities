@@ -158,6 +158,7 @@ const cancelSchemaRevisionButton = document.querySelector("#cancel-schema-revisi
 const closeSchemaEditorReview = document.querySelector("#close-schema-editor-review");
 const closeSchemaEditorReviewHeading = document.querySelector("#close-schema-editor-review-heading");
 const closeSchemaEditorReviewSummary = document.querySelector("#close-schema-editor-review-summary");
+const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const pushDraftReview = document.querySelector("#push-draft-review");
@@ -1871,6 +1872,20 @@ closeSchemaEditorButton?.addEventListener("click", () => {
 });
 keepEditingSchemaButton?.addEventListener("click", () => hideDialog(closeSchemaEditorReview));
 discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; hideDialog(closeSchemaEditorReview); renderSchemaDraft(); });
+saveAndCloseSchemaButton?.addEventListener("click", () => {
+    if (!schemaDraft || !schemaDraft.name.trim() || Object.keys(schemaDraft.document.properties ?? {}).length === 0)
+        return;
+    const saved = { ...schemaDraft, id: `schema:${schemaDraft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: [] };
+    schemaHistory[saved.name] = [...new Set([...(schemaHistory[saved.name] ?? []), saved.version])].sort((left, right) => left - right);
+    schemas = [...schemas, saved];
+    schemaDraft = undefined;
+    persistSchemaLibrary();
+    hideDialog(closeSchemaEditorReview);
+    renderSchemaDraft();
+    renderSchemas();
+    if (schemaResult)
+        schemaResult.textContent = `Saved ${saved.name} version 1.`;
+});
 closeSchemaEditorReview?.addEventListener("cancel", (event) => { event.preventDefault(); hideDialog(closeSchemaEditorReview); });
 createSchemaAssignmentButton?.addEventListener("click", () => {
     if (schemas.length === 0) {
