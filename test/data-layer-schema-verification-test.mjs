@@ -7,7 +7,7 @@ assert.equal(valid.state, "Valid");
 const invalid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { revenue: "bad" }, rawInput: [] }, [schema]);
 assert.equal(invalid.state, "2 issues"); assert.deepEqual(invalid.issues[0], { instancePath: "/transaction_id", message: "Required value", expected: "string", actual: "missing", schemaName: "Purchase event", schemaVersion: 2, schemaLocation: "#/required" });
 assert.equal(validateEvent({ sourceId: "history", eventName: "offer_view", payload: {}, rawInput: [] }, [schema]).state, "Not checked");
-assert.deepEqual(validationSummary([valid, invalid, { state: "Not checked", issues: [] }]), { Valid: 1, Issues: 1, "Not checked": 1 });
+assert.deepEqual(validationSummary([valid, invalid, { state: "1 warnings", issues: [] }, { state: "Not checked", issues: [] }, { state: "Assignment error", issues: [] }]), { "Not checked": 1, Valid: 1, Warnings: 1, Issues: 1, "Assignment error": 1 });
 assert.equal(filterByValidation([{ validation: "Valid" }, { validation: "2 issues" }], "2 issues").length, 1);
 assert.equal(searchSchemas([schema], "history").length, 1); assert.deepEqual(importSchema(exportSchema(schema)), schema);
 const revised = reviseSchema(schema, { type: "object", required: ["revenue"] }); assert.equal(revised.version, 3); assert.equal(revised.revisionHistory?.[0]?.version, 2); assert.equal(revalidateExplicitly({ sourceId: "history", eventName: "purchase", payload: {}, rawInput: [] }, [schema, revised], 2).schema.version, 2);
