@@ -19,7 +19,7 @@ export interface SchemaAssignment {
   versionPolicy?: "pinned" | "follow latest";
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
-export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; }
+export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
@@ -122,7 +122,20 @@ function issuesFor(value: unknown, schema: JsonSchema, path: string, schemaPath:
 }
 
 function issueFromAttachedRule(rule: AttachedSchemaRule, schema: SchemaDefinition, issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual">): ValidationIssue {
-  return { ...issue, message:rule.message ?? issue.message, schemaName:schema.name, schemaVersion:schema.version, schemaLocation:`#/attachedRules/${rule.id}`, rule:`${rule.name ?? rule.id} v${rule.version}`, severity:rule.severity ?? "error", origin:`${schema.name} v${schema.version}` };
+  const allowedValues = rule.operator === "allowed-values"
+    ? rule.parameters?.split(":", 2)[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? []
+    : [];
+  return {
+    ...issue,
+    message:rule.message ?? issue.message,
+    schemaName:schema.name,
+    schemaVersion:schema.version,
+    schemaLocation:`#/attachedRules/${rule.id}`,
+    rule:`${rule.name ?? rule.id} v${rule.version}`,
+    severity:rule.severity ?? "error",
+    origin:`${schema.name} v${schema.version}`,
+    ...(allowedValues.length ? { allowedValues } : {}),
+  };
 }
 
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {

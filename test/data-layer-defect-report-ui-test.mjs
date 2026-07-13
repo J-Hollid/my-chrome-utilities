@@ -6,6 +6,7 @@ import {
   createLiveDefectReportNavigation,
   renderDefectReportBuilder,
 } from "../dist/data-layer-defect-report-ui.js";
+import { validateEvent } from "../dist/data-layer-schema-verification.js";
 
 class FakeElement {
   constructor(tagName) {
@@ -374,6 +375,46 @@ assert.equal(browserWrites.length, 1);
 assert.deepEqual(Object.keys(browserWrites[0][0].items).sort(), ["text/html", "text/plain"]);
 assert.deepEqual(browserTextWrites, ["fallback"]);
 
+const productPayload = { page_type: "product test" };
+const productSchema = {
+  id: "schema:product:1",
+  name: "Product",
+  version: 1,
+  document: { type: "object" },
+  assignments: [{ sourceId: "dataLayer", eventName: "product", target: "payload" }],
+  attachedRules: [{ id: "rule:page-type", name: "Known page types", version: 1, operator: "allowed-values", parameters: "page_type:product,content" }],
+};
+const productValidation = validateEvent({ sourceId: "dataLayer", eventName: "product", payload: productPayload, rawInput: [] }, [productSchema]);
+const productRoot = new FakeElement("section");
+renderDefectReportBuilder(productRoot, {
+  id: "product",
+  name: "product",
+  sourceId: "dataLayer",
+  sourceName: "Data layer",
+  captureTime: "2026-07-13T00:00:24Z",
+  pageUrl: "https://shop.test/product",
+  payload: productPayload,
+  validation: productValidation.state,
+  validationDetails: { issues: productValidation.issues, evaluations: productValidation.evaluations, schema: productValidation.schema },
+});
+const productPreview = element(productRoot, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
+const productIssueText = element(productRoot, ({ textContent }) => textContent.includes("/page_type — product,content")).textContent;
+const productSchemaResponses = descendants(productRoot)
+  .filter(({ name, value }) => name === "defect-response-page_type" && value)
+  .map(({ value }) => value);
+const productGenericInline = productPreview.innerHTML;
+const productComment = element(productRoot, ({ dataset }) => dataset.allowedValuesComment === "page_type");
+const productResponse = element(productRoot, ({ name, value }) => name === "defect-response-page_type" && value === "product");
+productResponse.checked = true;
+productResponse.dispatch("change");
+productComment.checked = true;
+productComment.dispatch("change");
+const productCommentedInline = productPreview.innerHTML;
+assert.deepEqual(productSchemaResponses, ["product", "content"]);
+assert.match(productGenericInline, /page_type: product OR content/);
+assert.match(productCommentedInline, /page_type: &quot;product&quot;, \/\/ must be of type product or content/);
+assert.deepEqual(productPayload, { page_type: "product test" });
+
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
     headings,
@@ -423,6 +464,14 @@ process.stdout.write(`${JSON.stringify({
       schemaInline: pageTypeSchemaInline,
       commentedInline: pageTypeCommentedInline,
       clearedInline: pageTypeClearedInline,
+    },
+    productAllowedValues: {
+      issueText: productIssueText,
+      schemaResponses: productSchemaResponses,
+      genericInline: productGenericInline,
+      commentAvailable: Boolean(productComment),
+      commentedInline: productCommentedInline,
+      original: productPayload,
     },
     schemaResponses,
     customWarning: customWarning.textContent,

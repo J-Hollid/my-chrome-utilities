@@ -106,6 +106,7 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
       actual: issue.actual,
       rule: issue.rule ?? issue.schemaLocation,
       ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),
+      ...(issue.allowedValues?.length ? { allowedValues: [...issue.allowedValues] } : {}),
     })),
   };
 }

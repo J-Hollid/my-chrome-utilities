@@ -17,7 +17,7 @@ import {
   saveTimelineSelection,
   validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
-import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
+import { defectCapturedEvent, defectReportContext } from "../dist/data-layer-defect-report-ui.js";
 
 const capturedPayload = {
   commerce: { currency: "GBP", total: -1, debug: true },
@@ -128,6 +128,50 @@ assert.match(genericPageTypePreview.text, /page_type response source: schema con
 assert.match(genericPageTypePreview.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/page_type"/);
 assert.equal(JSON.parse(genericPageTypePreview.expectedJson).page_type, "unknown");
 assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
+
+const rawAllowedValuesEvent = defectCapturedEvent({
+  id: "event-product",
+  name: "product",
+  sourceId: "history",
+  captureTime: "2026-07-13T00:00:05Z",
+  pageUrl: "https://shop.example.test/product",
+  payload: { page_type: "product test" },
+  validationDetails: {
+    schema: { id: "schema:product:1", name: "Product", version: 1 },
+    evaluations: [],
+    issues: [{
+      instancePath: "/page_type",
+      message: "Value is not allowed",
+      expected: "product,content",
+      actual: "product test",
+      schemaName: "Product",
+      schemaVersion: 1,
+      schemaLocation: "#/attachedRules/rule:page-type",
+      rule: "Known page types v1",
+      severity: "error",
+      allowedValues: ["product", "content"],
+    }],
+  },
+});
+assert.deepEqual(rawAllowedValuesEvent.issues[0].allowedValues, ["product", "content"]);
+const rawAllowedValuesReport = createDefectReport(rawAllowedValuesEvent);
+assert.deepEqual(expectedResultAssistance(rawAllowedValuesReport.issues[0]).schemaValues, ["product", "content"]);
+const genericRawAllowedValues = applyExpectedResult(rawAllowedValuesReport, [{
+  issueId: "page_type",
+  method: "keep the rule generic",
+  responseSource: "schema constraint",
+}]);
+assert.match(renderJiraReport(generateReportDetails(genericRawAllowedValues)).text, /page_type: product OR content/);
+const commentedRawAllowedValues = applyExpectedResult(rawAllowedValuesReport, [{
+  issueId: "page_type",
+  method: "choose an allowed value",
+  response: "product",
+  responseSource: "schema-provided value",
+  includeAllowedValuesComment: true,
+}]);
+const commentedRawAllowedValuesPreview = renderJiraReport(generateReportDetails(commentedRawAllowedValues));
+assert.match(commentedRawAllowedValuesPreview.text, /page_type: "product", \/\/ must be of type product or content/);
+assert.deepEqual(JSON.parse(commentedRawAllowedValuesPreview.expectedJson), { page_type: "product" });
 
 const commentedPageType = applyExpectedResult(pageTypeReport, [{
   issueId: "page_type",

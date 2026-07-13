@@ -122,7 +122,20 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
         value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata));
 }
 function issueFromAttachedRule(rule, schema, issue) {
-    return { ...issue, message: rule.message ?? issue.message, schemaName: schema.name, schemaVersion: schema.version, schemaLocation: `#/attachedRules/${rule.id}`, rule: `${rule.name ?? rule.id} v${rule.version}`, severity: rule.severity ?? "error", origin: `${schema.name} v${schema.version}` };
+    const allowedValues = rule.operator === "allowed-values"
+        ? rule.parameters?.split(":", 2)[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? []
+        : [];
+    return {
+        ...issue,
+        message: rule.message ?? issue.message,
+        schemaName: schema.name,
+        schemaVersion: schema.version,
+        schemaLocation: `#/attachedRules/${rule.id}`,
+        rule: `${rule.name ?? rule.id} v${rule.version}`,
+        severity: rule.severity ?? "error",
+        origin: `${schema.name} v${schema.version}`,
+        ...(allowedValues.length ? { allowedValues } : {}),
+    };
 }
 function attachedRuleIssues(value, schema, result, rules = schema.attachedRules ?? []) {
     for (const rule of rules) {

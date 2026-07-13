@@ -8,6 +8,7 @@ export interface DefectIssue {
   actual: unknown;
   rule: string;
   ruleVersion: number;
+  allowedValues?: readonly string[];
 }
 
 export interface DefectCapturedEvent {

@@ -110,6 +110,23 @@
   (support/assert! (str/includes? (get-in observation [:custom :validation :warning]) "does not satisfy") "Invalid custom response warning is missing." observation)
   (support/assert! (true? (get-in observation [:custom :correction :operatorProvided])) "Kept custom override lacks operator provenance." observation))
 
+(defn- assert-raw-allowed-values! [observation]
+  (let [runtime-values (:productAllowedValues observation)
+        ui-values (get-in observation [:ui :productAllowedValues])
+        expected-json (json/parse-string (:expectedJson runtime-values) true)]
+    (support/assert! (= "product,content" (:displayedExpected runtime-values)) "The production validator did not expose the raw allowed-values expectation." runtime-values)
+    (support/assert! (not (str/includes? (:displayedExpected runtime-values) "one of")) "The regression fixture still relies on prose parsing." runtime-values)
+    (support/assert! (= ["product" "content"] (:ruleValues runtime-values)) "Assigned schema rule values were not preserved on the captured issue." runtime-values)
+    (support/assert! (= ["product" "content"] (:schemaValues runtime-values)) "Defect assistance did not derive separate schema choices." runtime-values)
+    (support/assert! (str/includes? (:issueText ui-values) "/page_type — product,content") "The product validation issue did not display the raw expectation." ui-values)
+    (support/assert! (= ["product" "content"] (:schemaResponses ui-values)) "The product report did not render separate schema-provided values." ui-values)
+    (support/assert! (str/includes? (:genericInline ui-values) "page_type: product OR content") "The raw allowed-values rule did not render a generic inline response." ui-values)
+    (support/assert! (true? (:commentAvailable ui-values)) "The raw allowed-values rule omitted the comment control." ui-values)
+    (support/assert! (str/includes? (:commentedInline ui-values) "page_type: &quot;product&quot;, // must be of type product or content") "The selected product response omitted its allowed-values comment." ui-values)
+    (support/assert! (= "product" (:page_type expected-json)) "The expected JSON payload lost the selected product value." expected-json)
+    (support/assert! (not (str/includes? (:expectedJson runtime-values) "must be of type")) "Presentation metadata leaked into expected JSON." runtime-values)
+    (support/assert! (= {:page_type "product test"} (:original runtime-values) (:original ui-values)) "Defect assistance mutated the captured product event." {:runtime runtime-values :ui ui-values})))
+
 (defn- assert-reproduction-and-timeline! [observation]
   (support/assert! (= ["/products" "/checkout" "/products" "/checkout"] (mapv :pathname (:steps observation))) "Pathname skeleton is not visit-ordered." observation)
   (support/assert! (= "Open the selected product" (get-in observation [:steps 0 :text])) "Operator reproduction edits were lost." observation)
@@ -159,6 +176,7 @@
   (assert-assistance! observation)
   (assert-inline-delivery! observation)
   (assert-custom-override! observation)
+  (assert-raw-allowed-values! observation)
   (assert-reproduction-and-timeline! observation)
   (assert-preview-and-copy! observation)
   (timeline-assertions/assert-timeline-composer! observation)

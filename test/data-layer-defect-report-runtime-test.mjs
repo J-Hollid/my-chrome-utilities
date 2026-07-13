@@ -13,6 +13,8 @@ import {
   toggleReportIssue,
   validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
+import { defectCapturedEvent } from "../dist/data-layer-defect-report-ui.js";
+import { validateEvent } from "../dist/data-layer-schema-verification.js";
 
 const original = { commerce: { currency: "GBP", total: -1, debug: true } };
 const captured = {
@@ -123,6 +125,59 @@ for (const item of [inlineCases[0], commentCases[0]]) {
 const pageTypeAssistance = expectedResultAssistance(pageTypeReport.issues[0]);
 const pageTypeCustomValidation = validateAssistedResponse(pageTypeReport.issues[0], "category landing");
 
+const productOriginal = { page_type: "product test" };
+const productSchema = {
+  id: "schema:product:1",
+  name: "Product",
+  version: 1,
+  document: { type: "object" },
+  assignments: [{ sourceId: "dataLayer", eventName: "product", target: "payload" }],
+  attachedRules: [{
+    id: "rule:page-type",
+    name: "Known page types",
+    version: 1,
+    operator: "allowed-values",
+    parameters: "page_type:product,content",
+  }],
+};
+const productValidation = validateEvent({
+  sourceId: "dataLayer",
+  eventName: "product",
+  payload: productOriginal,
+  rawInput: [],
+}, [productSchema]);
+const productCaptured = defectCapturedEvent({
+  id: "product-1",
+  name: "product",
+  sourceId: "dataLayer",
+  captureTime: "05",
+  pageUrl: "https://shop.test/product",
+  payload: productOriginal,
+  validation: productValidation.state,
+  validationDetails: {
+    issues: productValidation.issues,
+    evaluations: productValidation.evaluations ?? [],
+    schema: productValidation.schema,
+  },
+});
+const productReport = createDefectReport(productCaptured);
+const productAssistance = expectedResultAssistance(productReport.issues[0]);
+const productGeneric = applyExpectedResult(productReport, [{
+  issueId: "page_type",
+  method: "keep the rule generic",
+  responseSource: "schema constraint",
+}]);
+const productCommented = applyExpectedResult(productReport, [{
+  issueId: "page_type",
+  method: "choose an allowed value",
+  response: "product",
+  responseSource: "schema-provided value",
+  includeAllowedValuesComment: true,
+}]);
+const productGenericPreview = renderJiraReport(generateReportDetails(productGeneric));
+const productCommentedPreview = renderJiraReport(generateReportDetails(productCommented));
+assert.deepEqual(productOriginal, { page_type: "product test" });
+
 report = applyExpectedResult(report, [
   { issueId: "currency", method: "choose an allowed value", response: "EUR" },
   { issueId: "debug", method: "apply the rule" },
@@ -180,6 +235,16 @@ process.stdout.write(`${JSON.stringify({
       inlineCases,
       commentCases,
       inlineRichWrites,
+    },
+    productAllowedValues: {
+      displayedExpected: productValidation.issues[0].expected,
+      ruleValues: productCaptured.issues[0].allowedValues,
+      schemaValues: productAssistance.schemaValues,
+      genericInline: expectedResponseLine(productGeneric.expected.corrections[0]),
+      commentedInline: expectedResponseLine(productCommented.expected.corrections[0]),
+      expectedJson: productCommentedPreview.expectedJson,
+      genericPreview: productGenericPreview,
+      original: productOriginal,
     },
     steps,
     timelineInitialSelection: [],

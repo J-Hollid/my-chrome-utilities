@@ -2,21 +2,30 @@ import { cloneValue, pointerSegments, pointerValue, updatePointer } from "./data
 function normalizedConstraint(constraint) {
     return /^must\b/i.test(constraint) ? constraint : `must be ${constraint}`;
 }
-function allowedValues(constraint) {
-    const match = constraint.match(/(?:must\s+be\s+)?one\s+of\s+(.+)$/i);
+function allowedValues(issue) {
+    if (issue.allowedValues?.length)
+        return [...issue.allowedValues];
+    const match = issue.constraint.match(/(?:must\s+be\s+)?one\s+of\s+(.+)$/i);
     if (!match?.[1])
         return [];
     return match[1].split(/\s*(?:,|\bor\b)\s*/i).map((value) => value.trim()).filter(Boolean);
 }
+function assistanceConstraint(issue) {
+    const values = allowedValues(issue);
+    if (!values.length || /\bone\s+of\b/i.test(issue.constraint))
+        return normalizedConstraint(issue.constraint);
+    const last = values.at(-1);
+    return `must be one of ${values.length === 1 ? last : `${values.slice(0, -1).join(", ")} or ${last}`}`;
+}
 export function expectedResultAssistance(issue) {
     return {
-        genericConstraint: `${issue.pointer} ${normalizedConstraint(issue.constraint)}`,
-        schemaValues: allowedValues(issue.constraint).filter((value) => value !== String(issue.actual)),
+        genericConstraint: `${issue.pointer} ${assistanceConstraint(issue)}`,
+        schemaValues: allowedValues(issue).filter((value) => value !== String(issue.actual)),
         customAvailable: true,
     };
 }
 export function validateAssistedResponse(issue, response) {
-    const values = allowedValues(issue.constraint);
+    const values = allowedValues(issue);
     if (!values.length || values.includes(String(response)))
         return { valid: true };
     return { valid: false, warning: `${String(response)} does not satisfy the current schema constraint.` };
@@ -26,7 +35,7 @@ function issueName(issue) {
 }
 function responsePresentation(issue, choice) {
     const property = issueName(issue);
-    const values = allowedValues(issue.constraint);
+    const values = allowedValues(issue);
     if (choice.method === "keep the rule generic") {
         return values.length ? { kind: "constraint", property, allowedValues: values } : undefined;
     }
@@ -93,7 +102,7 @@ export function applyExpectedResult(report, choices) {
                 ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
                 ...(presentation ? { responsePresentation: presentation } : {}),
             });
-            explanations.push(allowedValues(issue.constraint).length
+            explanations.push(allowedValues(issue).length
                 ? expectedResultAssistance(issue).genericConstraint
                 : `${name} satisfies its validation rule`);
             continue;
