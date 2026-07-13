@@ -100,6 +100,37 @@ export function appendTimelineControls(composer, entries, context, state) {
         const explanation = document.createElement("p");
         explanation.textContent = "Select one captured event to configure its timeline evidence.";
         stageRoot.append(explanation);
+        const choices = document.createElement("div");
+        choices.className = "defect-timeline-event-choices";
+        choices.setAttribute("aria-label", "Captured event choices");
+        const older = document.createElement("button");
+        older.type = "button";
+        older.textContent = "Load older matches";
+        const renderChoices = () => {
+            const page = timelineEventChoices(context.timeline, filter, selections.map(({ eventId }) => eventId), visibleResults);
+            choices.replaceChildren(...page.choices.map(({ event, alreadyAdded }) => {
+                const label = document.createElement("label");
+                const choice = document.createElement("input");
+                choice.type = "radio";
+                choice.name = "defect-timeline-event";
+                choice.dataset.timelineEventId = event.id;
+                choice.disabled = alreadyAdded;
+                if (alreadyAdded)
+                    choice.dataset.alreadyAdded = "true";
+                choice.addEventListener("change", () => {
+                    if (!choice.checked || alreadyAdded)
+                        return;
+                    draft = { eventId: event.id };
+                    stage = "configure";
+                    renderComposer();
+                });
+                const summary = document.createElement("span");
+                summary.textContent = `${event.captureTime} ${event.name} · ${event.source} · ${event.pathname} · ${event.validation}${alreadyAdded ? " · Already added" : ""}`;
+                label.append(choice, summary);
+                return label;
+            }));
+            older.hidden = !page.hasOlder;
+        };
         for (const [field, labelText] of [["search", "Search"], ["name", "Event name"], ["source", "Source"], ["pathname", "Pathname"], ["validation", "Validation state"]]) {
             const label = document.createElement("label");
             label.textContent = `${labelText} `;
@@ -111,44 +142,14 @@ export function appendTimelineControls(composer, entries, context, state) {
                 if (!input.value)
                     delete filter[field];
                 visibleResults = resultWindowSize;
-                renderComposer();
+                renderChoices();
             });
             label.append(input);
             stageRoot.append(label);
         }
-        const choices = document.createElement("div");
-        choices.className = "defect-timeline-event-choices";
-        choices.setAttribute("aria-label", "Captured event choices");
-        const page = timelineEventChoices(context.timeline, filter, selections.map(({ eventId }) => eventId), visibleResults);
-        for (const { event, alreadyAdded } of page.choices) {
-            const label = document.createElement("label");
-            const choice = document.createElement("input");
-            choice.type = "radio";
-            choice.name = "defect-timeline-event";
-            choice.dataset.timelineEventId = event.id;
-            choice.disabled = alreadyAdded;
-            if (alreadyAdded)
-                choice.dataset.alreadyAdded = "true";
-            choice.addEventListener("change", () => {
-                if (!choice.checked || alreadyAdded)
-                    return;
-                draft = { eventId: event.id };
-                stage = "configure";
-                renderComposer();
-            });
-            const summary = document.createElement("span");
-            summary.textContent = `${event.captureTime} ${event.name} · ${event.source} · ${event.pathname} · ${event.validation}${alreadyAdded ? " · Already added" : ""}`;
-            label.append(choice, summary);
-            choices.append(label);
-        }
-        stageRoot.append(choices);
-        if (page.hasOlder) {
-            const older = document.createElement("button");
-            older.type = "button";
-            older.textContent = "Load older matches";
-            older.addEventListener("click", () => { visibleResults += resultWindowSize; renderComposer(); });
-            stageRoot.append(older);
-        }
+        older.addEventListener("click", () => { visibleResults += resultWindowSize; renderChoices(); });
+        renderChoices();
+        stageRoot.append(choices, older);
         const cancelButton = document.createElement("button");
         cancelButton.type = "button";
         cancelButton.textContent = "Cancel";

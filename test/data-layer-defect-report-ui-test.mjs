@@ -244,9 +244,9 @@ for (const field of timelineFilterFields) {
 let timelineSearch = element(root, ({ dataset }) => dataset.timelineFilter === "search");
 timelineSearch.value = "PURCHASE";
 timelineSearch.dispatch("input");
+assert.equal(element(root, ({ dataset }) => dataset.timelineFilter === "search"), timelineSearch);
 const searchResultIds = descendants(root).filter(({ dataset }) => dataset.timelineEventId).map(({ dataset }) => dataset.timelineEventId);
 assert.deepEqual(searchResultIds, ["purchase"]);
-timelineSearch = element(root, ({ dataset }) => dataset.timelineFilter === "search");
 timelineSearch.value = "";
 timelineSearch.dispatch("input");
 assert.equal(descendants(root).filter(({ dataset }) => dataset.timelineEventId).length, 20);

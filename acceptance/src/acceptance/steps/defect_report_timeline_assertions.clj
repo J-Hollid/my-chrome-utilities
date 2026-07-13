@@ -36,3 +36,7 @@
     (support/assert! (= {:preventScroll true} (:adjustFocusRestored composer)) "Saving an adjustment did not restore focus." composer)
     (support/assert! (= ["pageview" "purchase"] (:chronologicalEntries composer)) "Timeline entries do not remain in capture chronology." composer)
     (support/assert! (and (:emptyAfterRemove composer) (= 22 (:capturedEventsRetained composer))) "Removing timeline entries changed the captured session or missed the empty state." composer)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-13T12:31:58.959440544+02:00", :module-hash "-1421453120", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "283128960"} {:id "defn/assert-timeline-composer!", :kind "defn", :line 5, :end-line nil, :hash "-596562387"}]}
+;; clj-mutate-manifest-end
