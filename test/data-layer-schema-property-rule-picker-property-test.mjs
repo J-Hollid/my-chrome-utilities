@@ -8,8 +8,11 @@ import {
 
 const compatibility = {
   Required:["string", "number", "array", "object", "boolean"],
+  "Exact value":["string", "number", "boolean"],
   "Allowed values":["string", "number", "boolean"],
   "Regular expression":["string"],
+  "Text length":["string"],
+  "Digits only":["string"],
   "Numeric range":["number"],
   "Item count":["array"],
 };
