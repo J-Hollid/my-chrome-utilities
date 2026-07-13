@@ -1,6 +1,7 @@
 import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
-import { appendDetailControls, appendReproductionControls, } from "./data-layer-defect-report-ui-controls.js";
+import { appendDetailControls, } from "./data-layer-defect-report-ui-controls.js";
+import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";

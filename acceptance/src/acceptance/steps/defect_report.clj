@@ -1,5 +1,6 @@
 (ns acceptance.steps.defect-report
   (:require [acceptance.steps.defect-report-timeline-assertions :as timeline-assertions]
+            [acceptance.steps.defect-report-reproduction-assertions :as reproduction-assertions]
             [acceptance.steps.support :as support]
             [babashka.process :as process]
             [cheshire.core :as json]
@@ -8,6 +9,7 @@
 (def feature-files
   ["features/data-layer-defect-report-builder.feature"
    "features/data-layer-defect-report-jira-cloud-export.feature"
+   "features/data-layer-defect-report-reproduction-step-composer.feature"
    "features/data-layer-defect-report-reproduction.feature"])
 
 (defonce ^:private runtime-observation (atom nil))
@@ -15,6 +17,7 @@
 (def ^:private entry-steps
   #{"captured event purchase is invalid under Checkout schema version 4"
     "a completed defect report is previewed for Jira Cloud"
+    "a defect report has numbered pathname step 1 Visit /products and step 2 Visit /checkout"
     "a defect report is being built from invalid event purchase"})
 
 (defn- load-observation! []
@@ -179,6 +182,7 @@
   (assert-raw-allowed-values! observation)
   (assert-reproduction-and-timeline! observation)
   (assert-preview-and-copy! observation)
+  (reproduction-assertions/assert-reproduction-composer! observation)
   (timeline-assertions/assert-timeline-composer! observation)
   (assert-production-ui! observation)
   true)

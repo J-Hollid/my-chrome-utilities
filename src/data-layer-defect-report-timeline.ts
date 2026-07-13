@@ -17,6 +17,7 @@ export function generatePathnameSkeleton(
   const end = visits.findIndex(({ id }) => id === defectVisitId);
   if (start < 0 || end < start) throw new Error("The reproduction visit range is invalid.");
   return visits.slice(start, end + 1).map((visit, index) => ({
+    kind: "pathname",
     visitId: visit.id,
     pathname: visit.pathname,
     text: `${index + 1}. Visit ${visit.pathname}`,

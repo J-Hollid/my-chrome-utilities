@@ -214,6 +214,132 @@ keepOverride.dispatch("click");
 element(root, ({ textContent }) => textContent === "Generate pathname steps").dispatch("click");
 const reproduction = element(root, ({ tagName }) => tagName === "OL");
 assert.equal(reproduction.children.length, 2);
+const initialReproductionStepCount = reproduction.children.length;
+element(root, ({ dataset }) => dataset.selectReproductionSegment === "visit-1").dispatch("click");
+let addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
+assert.equal(descendants(root).filter(({ dataset }) => dataset.addReproductionStep).length, 1);
+assert.equal(descendants(root).some(({ textContent }) => textContent === "Click component"), false);
+addReproductionStep.dispatch("click");
+const reproductionTemplateActions = descendants(root)
+  .filter(({ tagName, textContent }) => tagName === "BUTTON" && ["Click component", "Log in as user", "Scroll", "Custom step"].includes(textContent))
+  .map(({ textContent }) => textContent);
+assert.deepEqual(reproductionTemplateActions, ["Click component", "Log in as user", "Scroll", "Custom step"]);
+assert.equal(reproduction.children.length, 2);
+element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
+let componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
+let componentDescription = element(root, ({ dataset }) => dataset.reproductionField === "description");
+const reproductionBusinessFields = [componentName.dataset.reproductionField, componentDescription.dataset.reproductionField];
+let reproductionSubmit = element(root, ({ textContent }) => textContent === "Add step");
+assert.equal(reproductionSubmit.disabled, true);
+componentName.value = "Checkout"; componentName.dispatch("input");
+componentDescription.value = "sticky footer button"; componentDescription.dispatch("input");
+const clickPreview = element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent;
+assert.equal(clickPreview, "Click Checkout — sticky footer button");
+reproductionSubmit.dispatch("click");
+assert.deepEqual(reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value), [
+  "1. Visit /products", "2. Click Checkout — sticky footer button", "3. Visit /checkout",
+]);
+let manualClick = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-1");
+const manualActions = descendants(manualClick).filter(({ tagName }) => tagName === "BUTTON").map(({ textContent }) => textContent);
+assert.deepEqual(manualActions, ["Adjust", "Remove", "Move earlier", "Move later"]);
+
+element(manualClick, ({ textContent }) => textContent === "Adjust").dispatch("click");
+componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
+componentDescription = element(root, ({ dataset }) => dataset.reproductionField === "description");
+assert.equal(componentName.value, "Checkout");
+assert.equal(componentDescription.value, "sticky footer button");
+componentDescription.value = "primary checkout action"; componentDescription.dispatch("input");
+element(root, ({ textContent }) => textContent === "Save changes").dispatch("click");
+manualClick = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-1");
+assert.match(manualClick.children[0].textContent, /Click Checkout — primary checkout action/);
+assert.equal(descendants(reproduction).filter(({ dataset }) => dataset.reproductionStepId === "manual-1").length, 1);
+const adjustedReproductionCount = descendants(reproduction).filter(({ dataset }) => dataset.reproductionStepId === "manual-1").length;
+const adjustFocusRestoredForReproduction = element(manualClick, ({ textContent }) => textContent === "Adjust").focusOptions;
+assert.deepEqual(adjustFocusRestoredForReproduction, { preventScroll: true });
+element(manualClick, ({ textContent }) => textContent === "Remove").dispatch("click");
+const anchorsAfterManualRemove = reproduction.children.map(({ dataset }) => dataset.reproductionStepKind);
+assert.deepEqual(anchorsAfterManualRemove, ["pathname", "pathname"]);
+
+const previewTemplate = (templateText, configure) => {
+  element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+  element(root, ({ textContent }) => textContent === templateText).dispatch("click");
+  configure();
+  const text = element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent;
+  element(root, ({ textContent }) => textContent === "Cancel").dispatch("click");
+  return text;
+};
+let reproductionSecretFieldsAbsent = false;
+const loginPreview = previewTemplate("Log in as user", () => {
+  const persona = element(root, ({ dataset }) => dataset.reproductionField === "persona");
+  persona.value = "returning customer"; persona.dispatch("input");
+  reproductionSecretFieldsAbsent = !descendants(root).some(({ dataset }) => /password|token/i.test(dataset.reproductionField ?? ""));
+  assert.equal(reproductionSecretFieldsAbsent, true);
+});
+const scrollPreviews = [];
+element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+element(root, ({ textContent }) => textContent === "Scroll").dispatch("click");
+scrollPreviews.push(element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent);
+let scrollTarget = element(root, ({ dataset }) => dataset.reproductionField === "scrollTarget");
+scrollTarget.value = "top"; scrollTarget.dispatch("change");
+scrollPreviews.push(element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent);
+scrollTarget = element(root, ({ dataset }) => dataset.reproductionField === "scrollTarget");
+scrollTarget.value = "component"; scrollTarget.dispatch("change");
+let scrollDetail = element(root, ({ dataset }) => dataset.reproductionField === "scrollDetail");
+scrollDetail.value = "Order summary"; scrollDetail.dispatch("input");
+scrollPreviews.push(element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent);
+scrollTarget = element(root, ({ dataset }) => dataset.reproductionField === "scrollTarget");
+scrollTarget.value = "custom"; scrollTarget.dispatch("change");
+scrollDetail = element(root, ({ dataset }) => dataset.reproductionField === "scrollDetail");
+scrollDetail.value = "middle of results"; scrollDetail.dispatch("input");
+scrollPreviews.push(element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent);
+element(root, ({ textContent }) => textContent === "Cancel").dispatch("click");
+let customBlankSubmissionUnavailable = false;
+const customPreview = previewTemplate("Custom step", () => {
+  const custom = element(root, ({ dataset }) => dataset.reproductionField === "customText");
+  customBlankSubmissionUnavailable = element(root, ({ textContent }) => textContent === "Add step").disabled;
+  assert.equal(customBlankSubmissionUnavailable, true);
+  custom.value = "Apply the free delivery filter"; custom.dispatch("input");
+});
+assert.equal(loginPreview, "Log in as returning customer");
+assert.deepEqual(scrollPreviews, ["Scroll to the bottom of the page", "Scroll to the top of the page", "Scroll to Order summary", "Scroll to the middle of results"]);
+assert.equal(customPreview, "Apply the free delivery filter");
+
+const addClickStep = (description = "") => {
+  element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+  element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
+  const name = element(root, ({ dataset }) => dataset.reproductionField === "componentName"); name.value = "Checkout"; name.dispatch("input");
+  if (description) { const details = element(root, ({ dataset }) => dataset.reproductionField === "description"); details.value = description; details.dispatch("input"); }
+  element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
+};
+addClickStep();
+element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+element(root, ({ textContent }) => textContent === "Scroll").dispatch("click");
+element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
+let manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispatch("click");
+const reproductionOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
+assert.deepEqual(reproductionOrder, ["1. Visit /products", "2. Scroll to the bottom of the page", "3. Click Checkout", "4. Visit /checkout"]);
+manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+const crossAnchorMoveDisabled = element(manualScroll, ({ textContent }) => textContent === "Move earlier").disabled;
+assert.equal(crossAnchorMoveDisabled, true);
+assert.match(element(manualScroll, ({ tagName }) => tagName === "SMALL").textContent, /choose another pathname segment/);
+const finalReproductionPreview = preview.innerHTML;
+assert.ok(finalReproductionPreview.indexOf("Visit /products") < finalReproductionPreview.indexOf("Scroll to the bottom of the page"));
+assert.ok(finalReproductionPreview.indexOf("Scroll to the bottom of the page") < finalReproductionPreview.indexOf("Click Checkout"));
+assert.ok(finalReproductionPreview.indexOf("Click Checkout") < finalReproductionPreview.indexOf("Visit /checkout"));
+assert.doesNotMatch(finalReproductionPreview, /componentName|scrollTarget|sticky footer button/);
+
+addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
+const beforeCancelOrder = [...reproductionOrder];
+addReproductionStep.dispatch("click");
+element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
+componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName"); componentName.value = "Abandoned"; componentName.dispatch("input");
+element(root, ({ textContent }) => textContent === "Cancel").dispatch("click");
+const afterCancelOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
+assert.deepEqual(afterCancelOrder, beforeCancelOrder);
+addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
+assert.deepEqual(addReproductionStep.focusOptions, { preventScroll: true });
+const reproductionCancelFocus = addReproductionStep.focusOptions;
 const firstReproductionInput = element(reproduction.children[0], ({ tagName }) => tagName === "INPUT");
 firstReproductionInput.value = "Open a product";
 firstReproductionInput.dispatch("input");
@@ -345,6 +471,9 @@ assert.match(timeline.children[0].textContent, /No events added/);
 element(root, ({ textContent }) => textContent === "Add event to timeline").dispatch("click");
 assert.equal(element(root, ({ dataset }) => dataset.timelineEventId === "purchase").disabled, false);
 element(root, ({ textContent }) => textContent === "Cancel").dispatch("click");
+const pathnameEditAfterTimeline = firstReproductionInput.value;
+firstReproductionInput.value = "1. Visit /products";
+firstReproductionInput.dispatch("input");
 
 const summary = element(root, ({ dataset }) => dataset.reportField === "summary");
 summary.value = "Checkout purchase has invalid currency";
@@ -418,7 +547,31 @@ assert.deepEqual(productPayload, { page_type: "product test" });
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
     headings,
-    reproductionSteps: reproduction.children.length,
+    reproductionSteps: initialReproductionStepCount,
+    reproductionComposer: {
+      contextualActionCount: 1,
+      templateActions: reproductionTemplateActions,
+      noStepBeforeSubmit: initialReproductionStepCount === 2,
+      clickPreview,
+      businessFields: reproductionBusinessFields,
+      loginPreview,
+      secretFieldsAbsent: reproductionSecretFieldsAbsent,
+      scrollPreviews,
+      customPreview,
+      customBlankSubmissionUnavailable,
+      manualActions,
+      adjustedText: "Click Checkout — primary checkout action",
+      adjustedCount: adjustedReproductionCount,
+      adjustFocusRestored: adjustFocusRestoredForReproduction,
+      anchorsAfterRemove: anchorsAfterManualRemove,
+      order: reproductionOrder,
+      crossAnchorMoveDisabled,
+      cancelPreserved: JSON.stringify(afterCancelOrder) === JSON.stringify(beforeCancelOrder),
+      cancelFocusRestored: reproductionCancelFocus,
+      finalPreview: finalReproductionPreview,
+      jiraText: richWrites[0]?.text,
+      finalStepCount: reproduction.children.length,
+    },
     timelineEntries: 0,
     timelineComposer: {
       initialEmptyState: initialTimelineEmptyState,
@@ -446,7 +599,7 @@ process.stdout.write(`${JSON.stringify({
       adjustedPurchaseCount,
       adjustFocusRestored,
       chronologicalEntries: chronologicalTimelineEntries,
-      pathnameEdit: firstReproductionInput.value,
+      pathnameEdit: pathnameEditAfterTimeline,
       capturedEventsRetained: sessionEvents.length,
       emptyAfterRemove: timeline.children.length === 1,
     },

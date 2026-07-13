@@ -76,7 +76,19 @@ export interface ExpectedResultAssistance {
 }
 
 export interface PathnameVisit { id: string; pathname: string; eventIds: readonly string[] }
-export interface ReproductionStep { visitId: string; pathname: string; text: string }
+export type ReproductionStepTemplate =
+  | { kind: "click"; componentName: string; description?: string }
+  | { kind: "login"; persona: string }
+  | { kind: "scroll"; target: "bottom" | "top" | "component" | "custom"; detail?: string }
+  | { kind: "custom"; text: string };
+export interface ReproductionStep {
+  visitId: string;
+  pathname: string;
+  text: string;
+  kind?: "pathname" | "manual";
+  id?: string;
+  template?: ReproductionStepTemplate;
+}
 
 export interface TimelineEvent {
   id: string;

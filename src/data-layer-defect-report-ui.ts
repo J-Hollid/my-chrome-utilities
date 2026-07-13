@@ -17,9 +17,9 @@ import {
 } from "./data-layer-defect-report-browser.js";
 import {
   appendDetailControls,
-  appendReproductionControls,
   type DefectReportBuilderState,
 } from "./data-layer-defect-report-ui-controls.js";
+import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
