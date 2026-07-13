@@ -53,24 +53,31 @@
 (def ^:private expected-reload
   {:context "Checkout working draft" :heading "Define requirement" :destinationAbsent true})
 
-(defn- assert-examples! [example observation]
+(def ^:private assignment-expectations
+  {"0" {:feature "create a pending assignment from event defaults"
+        :path [:interaction :assignmentResolution :none]
+        :runtime "Create a new assignment"}
+   "2" {:feature "require a choice between readable assignments"
+        :path [:interaction :assignmentResolution :multiple]
+        :runtime "required from readable assignment choices"}})
+
+(defn- assert-assignment-example! [example observation]
   (when-let [count (support/example-value example "compatible_assignment_count")]
-    (let [expected (case count
-                     "0" "create a pending assignment from event defaults"
-                     "2" "require a choice between readable assignments")
-          observed (if (= count "0")
-                     (get-in observation [:interaction :assignmentResolution :none])
-                     (get-in observation [:interaction :assignmentResolution :multiple]))]
-      (support/assert! (= expected (support/example-value example "assignment_behavior"))
+    (let [{:keys [feature path runtime]} (get assignment-expectations count)]
+      (support/assert! (= feature (support/example-value example "assignment_behavior"))
                        "Assignment-resolution example changed." {:example example})
-      (support/assert! (if (= count "0")
-                         (= observed "Create a new assignment")
-                         (= observed "required from readable assignment choices"))
+      (support/assert! (= runtime (get-in observation path))
                        "Assignment-resolution behavior did not use the selected continuation schema."
-                       {:example example :observed observed})))
+                       {:example example :observed (get-in observation path)}))))
+
+(defn- assert-draft-action-example! [example]
   (when-let [action (support/example-value example "draft_action")]
     (support/assert! (contains? #{"Review draft" "Publish revision"} action)
                      "Draft action example is not supported." {:example example})))
+
+(defn- assert-examples! [example observation]
+  (assert-assignment-example! example observation)
+  (assert-draft-action-example! example))
 
 (defn- assert-continuation! [example observation]
   (support/assert! (= expected-initial (:initial observation))
@@ -81,10 +88,15 @@
                    "The selected continuation context did not survive reload." observation)
   (assert-examples! example observation))
 
+(defn- with-continuation-observation [world text]
+  (if (entry-steps text)
+    (assoc world :guided-draft-continuation (observation!))
+    world))
+
 (defn- transition [world example _captures {:keys [text]}]
   (if (= shared-background-step text)
     world
-    (let [world (if (entry-steps text) (assoc world :guided-draft-continuation (observation!)) world)
+    (let [world (with-continuation-observation world text)
           observation (:guided-draft-continuation world)]
       (support/assert! observation "Guided draft continuation browser adapter was not executed." {:step text})
       (assert-continuation! example observation)
