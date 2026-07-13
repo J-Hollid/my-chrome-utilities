@@ -70,12 +70,13 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.equal(validateAssistedResponse(assistedIssue, `outside-${iteration}`).valid, false);
   const rawAllowedIssue = {
     ...assistedIssue,
-    constraint: `stored expectation ${iteration}`,
+    constraint: `one of stale-${iteration}`,
     allowedValues: [...allowed],
   };
   const rawAssistance = expectedResultAssistance(rawAllowedIssue);
   assert.deepEqual(rawAssistance.schemaValues, allowed.filter((value) => value !== actualAllowed));
   assert.match(rawAssistance.genericConstraint, /must be one of/);
+  assert.doesNotMatch(rawAssistance.genericConstraint, /stale-/);
   assert.equal(allowed.every((value) => rawAssistance.genericConstraint.includes(value)), true);
   assert.equal(allowed.every((value) => validateAssistedResponse(rawAllowedIssue, value).valid), true);
   assert.equal(validateAssistedResponse(rawAllowedIssue, `outside-${iteration}`).valid, false);

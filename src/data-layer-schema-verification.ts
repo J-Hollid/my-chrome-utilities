@@ -121,10 +121,12 @@ function issuesFor(value: unknown, schema: JsonSchema, path: string, schemaPath:
   if (schema.type === "array" && Array.isArray(value) && schema.items) value.forEach((item, index) => issuesFor(item, schema.items as JsonSchema, `${path}/${index}`, `${schemaPath}/items`, result, metadata));
 }
 
-function issueFromAttachedRule(rule: AttachedSchemaRule, schema: SchemaDefinition, issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual">): ValidationIssue {
-  const allowedValues = rule.operator === "allowed-values"
-    ? rule.parameters?.split(":", 2)[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? []
-    : [];
+function issueFromAttachedRule(
+  rule: AttachedSchemaRule,
+  schema: SchemaDefinition,
+  issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual">,
+  allowedValues: readonly string[] = [],
+): ValidationIssue {
   return {
     ...issue,
     message:rule.message ?? issue.message,
@@ -145,7 +147,10 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
     if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing" }));
     const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
     if (!record || !property || !(property in record)) continue;
-    if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]) }));
+    const allowedValues = rule.operator === "allowed-values" && constraint
+      ? constraint.split(",").map((item) => item.trim()).filter(Boolean)
+      : [];
+    if (rule.operator === "allowed-values" && constraint && !allowedValues.includes(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]) }, allowedValues));
     if (rule.operator === "regular-expression" && constraint) { try { if (!new RegExp(constraint).test(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]) })); } catch { result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Invalid regular expression", expected:constraint, actual:String(record[property]) })); } }
   }
 }

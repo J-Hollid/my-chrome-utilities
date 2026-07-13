@@ -24,7 +24,7 @@ function allowedValues(issue: Pick<DefectIssue, "constraint" | "allowedValues">)
 
 function assistanceConstraint(issue: DefectIssue): string {
   const values = allowedValues(issue);
-  if (!values.length || /\bone\s+of\b/i.test(issue.constraint)) return normalizedConstraint(issue.constraint);
+  if (!values.length || (!issue.allowedValues?.length && /\bone\s+of\b/i.test(issue.constraint))) return normalizedConstraint(issue.constraint);
   const last = values.at(-1);
   return `must be one of ${values.length === 1 ? last : `${values.slice(0, -1).join(", ")} or ${last}`}`;
 }

@@ -121,10 +121,7 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
     if (schema.type === "array" && Array.isArray(value) && schema.items)
         value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata));
 }
-function issueFromAttachedRule(rule, schema, issue) {
-    const allowedValues = rule.operator === "allowed-values"
-        ? rule.parameters?.split(":", 2)[1]?.split(",").map((value) => value.trim()).filter(Boolean) ?? []
-        : [];
+function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
     return {
         ...issue,
         message: rule.message ?? issue.message,
@@ -149,8 +146,11 @@ function attachedRuleIssues(value, schema, result, rules = schema.attachedRules 
         const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
         if (!record || !property || !(property in record))
             continue;
-        if (rule.operator === "allowed-values" && constraint && !constraint.split(",").map((item) => item.trim()).includes(String(record[property])))
-            result.push(issueFromAttachedRule(rule, schema, { instancePath: `/${property}`, message: "Value is not allowed", expected: constraint, actual: String(record[property]) }));
+        const allowedValues = rule.operator === "allowed-values" && constraint
+            ? constraint.split(",").map((item) => item.trim()).filter(Boolean)
+            : [];
+        if (rule.operator === "allowed-values" && constraint && !allowedValues.includes(String(record[property])))
+            result.push(issueFromAttachedRule(rule, schema, { instancePath: `/${property}`, message: "Value is not allowed", expected: constraint, actual: String(record[property]) }, allowedValues));
         if (rule.operator === "regular-expression" && constraint) {
             try {
                 if (!new RegExp(constraint).test(String(record[property])))
