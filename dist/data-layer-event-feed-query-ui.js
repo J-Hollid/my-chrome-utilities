@@ -5,9 +5,12 @@ function button(text) {
     control.textContent = text;
     return control;
 }
-export function renderEventFeedQueryBuilder(root, events, query, update) {
-    root.replaceChildren();
-    root.className = query.conditions.length ? "event-feed-query active" : "event-feed-query empty";
+function clearButton(query, update) {
+    const clear = button("Clear all");
+    clear.addEventListener("click", () => update(clearEventFeedQuery(query)));
+    return clear;
+}
+function renderToolbar(events, query) {
     const toolbar = document.createElement("div");
     toolbar.className = "event-feed-query-toolbar";
     const add = button("Add filter");
@@ -15,9 +18,12 @@ export function renderEventFeedQueryBuilder(root, events, query, update) {
     const count = document.createElement("output");
     count.id = "live-event-query-count";
     count.setAttribute("aria-live", "polite");
-    const visible = filterEventsByQuery(events, query).length;
-    count.textContent = `${visible} of ${events.length} events`;
+    const visibleCount = filterEventsByQuery(events, query).length;
+    count.textContent = `${visibleCount} of ${events.length} events`;
     toolbar.append(add, count);
+    return { toolbar, add, visibleCount };
+}
+function renderActiveFilters(root, query, update) {
     const active = document.createElement("section");
     active.id = "active-event-feed-filters";
     active.setAttribute("aria-label", "Active event feed filters");
@@ -38,15 +44,18 @@ export function renderEventFeedQueryBuilder(root, events, query, update) {
         item.append(text, remove);
         summaries.append(item);
     }
-    const clear = button("Clear all");
-    clear.addEventListener("click", () => update(clearEventFeedQuery(query)));
-    active.append(querySummary, summaries, clear);
+    active.append(querySummary, summaries, clearButton(query, update));
+    return active;
+}
+function renderNoMatches(query, visibleCount, update) {
     const noMatches = document.createElement("section");
     noMatches.className = "event-feed-query-empty";
     noMatches.setAttribute("aria-live", "polite");
-    noMatches.hidden = query.conditions.length === 0 || visible > 0;
-    noMatches.append(Object.assign(document.createElement("p"), { textContent: "No events match the active filters." }), button("Clear all"));
-    noMatches.children[1].addEventListener("click", () => update(clearEventFeedQuery(query)));
+    noMatches.hidden = query.conditions.length === 0 || visibleCount > 0;
+    noMatches.append(Object.assign(document.createElement("p"), { textContent: "No events match the active filters." }), clearButton(query, update));
+    return noMatches;
+}
+function renderConditionEditor(events, query, update, add) {
     const editor = document.createElement("section");
     editor.className = "event-feed-condition-editor";
     editor.setAttribute("aria-label", "Add event feed condition");
@@ -99,6 +108,12 @@ export function renderEventFeedQueryBuilder(root, events, query, update) {
         update(applyQueryCondition(query, condition)); });
     add.addEventListener("click", () => { editor.hidden = false; field.focus({ preventScroll: true }); });
     editor.append(fieldLabel, operatorLabel, valueLabel, apply, cancel);
-    root.append(toolbar, active, noMatches, editor);
+    return editor;
+}
+export function renderEventFeedQueryBuilder(root, events, query, update) {
+    root.replaceChildren();
+    root.className = query.conditions.length ? "event-feed-query active" : "event-feed-query empty";
+    const { toolbar, add, visibleCount } = renderToolbar(events, query);
+    root.append(toolbar, renderActiveFilters(root, query, update), renderNoMatches(query, visibleCount, update), renderConditionEditor(events, query, update, add));
 }
 //# sourceMappingURL=data-layer-event-feed-query-ui.js.map
