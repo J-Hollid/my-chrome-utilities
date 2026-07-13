@@ -20,11 +20,13 @@ let guidedDraftContinuationObservation;
 let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
+let schemaManualPropertyObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
     : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
@@ -193,7 +195,7 @@ async function openPanel(port, width, height = 900) {
   let loaded = false;
   for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await socket.call("Runtime.evaluate", {
-      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null",
+      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null && document.querySelector('#save-and-close-schema') !== null",
       returnByValue: true,
     });
     if (ready.result.value === true) {
@@ -944,7 +946,9 @@ const schemaAssignmentRuntime = `(() => {
   for (;;) { const remove = Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Delete"); if (!remove) break; remove.click(); q("#confirm-schema-delete").click(); }
   q("#create-schema").click();
   input("#schema-editor-name", "Checkout schema");
-  q("#add-schema-rule").click();
+  q("#add-schema-property").click();
+  input("#schema-manual-property-path", "example");
+  Array.from(q("#schema-manual-property-dialog").querySelectorAll("button")).find((button) => button.textContent === "Add property").click();
   q("#save-schema").click();
   q("#confirm-schema-revision").click();
   q("#schema-subview-rules").click();
@@ -1242,7 +1246,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   trigger.click();
   click(q("#schema-property-rule-picker"), "Approved pages version 2");
   const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
-  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span:not(.schema-property-metadata)').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
   const triggerAfter = q('#schema-property-tree button[aria-label="Add rule for page_type"]'); triggerAfter.click();
   const already = Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find(({ textContent }) => textContent.includes("Approved pages version 2"));
   const beforeEmpty = localStorage.getItem("my-chrome-utilities.schema-library.v1");
@@ -1257,6 +1261,99 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   const model = await import("/data-layer-schema-property-rule-picker.js");
   const availability = Object.fromEntries([["string","Required"],["string","Regular expression"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
   return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard };
+})()`;
+
+const schemaManualPropertyRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const input = (selector, value, eventName = "input") => { const element = q(selector); element.value = value; element.dispatchEvent(new Event(eventName, { bubbles:true })); };
+  q("#data-layer-view-schemas").click();
+  const pageViewRow = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view"));
+  click(pageViewRow, "Edit working draft");
+  const addProperty = q("#add-schema-property");
+  const tree = q("#schema-property-tree");
+  const initial = {
+    addProperty:addProperty.textContent,
+    aboveTree:Boolean(addProperty.compareDocumentPosition(tree) & Node.DOCUMENT_POSITION_FOLLOWING),
+    noGlobalValidationRule:!Array.from(q("#schema-editor").querySelectorAll("button")).some(({ textContent }) => textContent === "Add validation rule"),
+    rowRule:Array.from(tree.querySelectorAll("button")).some(({ textContent }) => textContent === "Add rule"),
+  };
+  addProperty.click();
+  const dialog = q("#schema-manual-property-dialog");
+  const opened = {
+    open:dialog.open,
+    pathFocused:document.activeElement === q("#schema-manual-property-path"),
+    types:Array.from(q("#schema-manual-property-type").options).map(({ value }) => value),
+    arrayTypeHidden:q("#schema-manual-array-item-type").parentElement.hidden,
+    actions:Array.from(dialog.querySelectorAll("button")).map(({ textContent }) => textContent),
+  };
+  const setForm = (path, type = "string", itemType = "") => {
+    input("#schema-manual-property-path", path);
+    input("#schema-manual-property-type", type, "change");
+    if (type === "array") input("#schema-manual-array-item-type", itemType, "change");
+    return { preview:q("#schema-manual-property-preview").textContent, assistance:q("#schema-manual-property-assistance").textContent, blocked:q('#schema-manual-property-dialog button[type="submit"]').disabled };
+  };
+  const pathPreviews = { page_category:setForm("page_category"), "commerce.order.id":setForm("commerce.order.id") };
+  const manualModel = await import("/data-layer-schema-manual-property.js");
+  const baseDocument = { type:"object", properties:{ page_type:{ type:"string" } } };
+  const inheritedDocument = { type:"object", properties:{ page_name:{ type:"string" } } };
+  const validationDefinitions = [
+    ["empty path", baseDocument, { path:"", type:"string" }],
+    ["commerce..id as string", baseDocument, { path:"commerce..id", type:"string" }],
+    ["existing page_type as string", baseDocument, { path:"page_type", type:"string" }],
+    ["commerce.order under string commerce", { type:"object", properties:{ commerce:{ type:"string" } } }, { path:"commerce.order", type:"string" }],
+    ["inherited page_name as string", baseDocument, { path:"page_name", type:"string" }],
+    ["items as array without item type", baseDocument, { path:"items", type:"array" }],
+  ];
+  const validation = Object.fromEntries(validationDefinitions.map(([name, document, definition]) => {
+    const inspected = manualModel.inspectManualProperty(document, [inheritedDocument], definition);
+    return [name, { result:inspected.result === "ready" ? "added" : "blocked", assistance:inspected.assistance ?? "Ready to add" }];
+  }));
+  const arrayItems = {};
+  for (const itemType of ["string", "number", "boolean", "object"]) {
+    const state = setForm("items", "array", itemType); arrayItems[itemType] = { preview:state.preview, canAdd:!state.blocked };
+  }
+  click(dialog, "Cancel");
+  addProperty.click(); setForm("page_type");
+  const beforeDuplicate = localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  click(dialog, "Go to existing property page_type");
+  const pageTypeRow = q('#schema-property-tree [data-schema-property-path="page_type"]');
+  const duplicate = { closed:!dialog.open, unchanged:beforeDuplicate === localStorage.getItem("my-chrome-utilities.schema-library.v1"), selected:pageTypeRow.getAttribute("aria-current") === "true", visible:pageTypeRow.getClientRects().length > 0, focused:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type" };
+  addProperty.click(); setForm("unsaved_property");
+  const beforeCancel = localStorage.getItem("my-chrome-utilities.schema-library.v1"); click(dialog, "Cancel");
+  const cancelled = { closed:!dialog.open, unchanged:beforeCancel === localStorage.getItem("my-chrome-utilities.schema-library.v1"), focusReturned:document.activeElement === addProperty };
+  addProperty.click(); setForm("commerce.order.id", "string"); click(dialog, "Add property");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const pageView = stored.find(({ name }) => name === "Page view");
+  const manualRow = q('#schema-property-tree [data-schema-property-path="commerce.order.id"]');
+  const currentHasCommerce = Boolean(pageView.document.properties?.commerce);
+  const workingLeaf = pageView.workingDraft.document.properties.commerce.properties.order.properties.id;
+  const added = {
+    closed:!dialog.open,
+    missingObjects:[pageView.workingDraft.document.properties.commerce.type, pageView.workingDraft.document.properties.commerce.properties.order.type],
+    leaf:workingLeaf,
+    selected:manualRow.getAttribute("aria-current") === "true",
+    metadata:manualRow.querySelector(".schema-property-metadata").textContent,
+    activeCount:manualRow.querySelector("span:not(.schema-property-metadata)").textContent,
+    addRule:Boolean(manualRow.querySelector('button[aria-label="Add rule for commerce.order.id"]')),
+    currentVersion:pageView.version,
+    currentUnchanged:!currentHasCommerce,
+  };
+  const schemaModel = await import("/data-layer-schema-verification.js");
+  const draftSchema = { ...pageView, document:pageView.workingDraft.document, attachedRules:pageView.workingDraft.attachedRules ?? [] };
+  const preview = schemaModel.validateWithSchema({ sourceId:"manual", eventName:"page_view", payload:{ page_type:"home", commerce:{ order:{ id:42 } } }, rawInput:[] }, draftSchema, [stored.find(({ name }) => name === "Base schema"), draftSchema]);
+  const model = { pathType:workingLeaf.type, attachedRules:(pageView.workingDraft.attachedRules ?? []).length, issueCount:preview.issues.length, expected:preview.issues[0]?.expected, issuePath:preview.issues[0]?.instancePath };
+  return { initial, opened, pathPreviews, validation, arrayItems, duplicate, cancelled, added, model };
+})()`;
+
+const schemaManualPropertyReloadRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  q("#data-layer-view-schemas").click();
+  const pageViewRow = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view"));
+  Array.from(pageViewRow.querySelectorAll("button")).find(({ textContent }) => textContent === "Edit working draft").click();
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Page view");
+  const row = q('#schema-property-tree [data-schema-property-path="commerce.order.id"]');
+  return { present:true, metadata:row.querySelector(".schema-property-metadata").textContent, activeCount:row.querySelector("span:not(.schema-property-metadata)").textContent, currentVersion:stored.version, currentUnchanged:!stored.document.properties?.commerce };
 })()`;
 
 const schemaRevisionLifecycleUiRuntime = `(() => {
@@ -2103,6 +2200,20 @@ try {
         close:{ dialogClosed:true, restored:true },
         button:{ summary:"Product listing version 3", changeFocused:true },
       }, "Guided schema picker violated its 320px browser contract");
+      if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
+        await evaluate(socket, `(() => {
+          const base = { id:"schema-base", name:"Base schema", version:1, published:true, document:{ type:"object", properties:{ page_name:{ type:"string" } } }, assignments:[] };
+          const current = { id:"schema-page-view", name:"Page view", version:3, published:true, parentSchemaId:"schema-base", document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, parentSchemaId:"schema-base", document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], attachedRules:[], pendingChanges:[] } };
+          localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([base, current]));
+          localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+          return true;
+        })()`);
+        await reloadPanel(socket);
+        const interaction = await evaluate(socket, schemaManualPropertyRuntime);
+        await reloadPanel(socket);
+        const reload = await evaluate(socket, schemaManualPropertyReloadRuntime);
+        schemaManualPropertyObservation = { interaction, reload };
+      }
       if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
         await evaluate(socket, `(() => {
           const current = { id:"schema-page-view", name:"Page view", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], attachedRules:[], pendingChanges:[] } };
@@ -2654,6 +2765,9 @@ try {
   }
   if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPropertyRulePicker:schemaPropertyRulePickerObservation }));
+  }
+  if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
