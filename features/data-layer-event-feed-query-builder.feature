@@ -14,7 +14,8 @@ Feature: Data layer event feed query builder
     Given captured events differ by event name, source, adapter kind, pathname, and validation result
     When the operator activates Add filter
     Then one condition editor offers Field, Operator, and Value in that order
-    And Event name, Source, Adapter kind, Pathname, captured payload properties, Validation state, Schema, Validation rule, Rule severity, and Affected property are available fields
+    And Event name, Source, Adapter kind, Pathname, Payload property, Validation state, Schema, Validation rule, Rule severity, and Affected property are available fields
+    And individual observed payload paths are absent from the field list
     And an incomplete condition cannot be applied
     And the previous standalone validation-state filter is absent
 
@@ -68,7 +69,7 @@ Feature: Data layer event feed query builder
     Then event names, sources, adapter kinds, and pathnames are suggested from the captured session
     And schemas, validation rules, severities, and affected properties are suggested from validation metadata
     And duplicate suggestions are shown once
-    And captured payload property paths are available as fields with suggested and custom values
+    And Payload property opens a separate property-path selection stage
 
   # Data layer event feed query builder 006
   Scenario: Data layer event feed query builder 006
@@ -117,7 +118,46 @@ Feature: Data layer event feed query builder
   # Data layer event feed query builder 011
   Scenario: Data layer event feed query builder 011
     Given keyboard focus is on Add filter
-    When the condition editor is opened and a condition is applied
+    When the condition editor is opened and an Event name condition is applied
     Then focus moves through Field, Operator, Value, and Apply condition in that order
     And the applied condition has an accessible remove action
     And removing it returns focus to Add filter
+
+  # Data layer event feed query builder 012
+  Scenario: Data layer event feed query builder 012
+    Given captured payloads contain currency, commerce.total, commerce.order.id, and user.status
+    When the operator selects Payload property as the field
+    Then a property-path stage replaces the operator and value controls
+    And Search observed payload paths and Enter custom path are available
+    And distinct observed paths are shown in a bounded scrollable result list
+    And the top-level field choices are not repeated in the property-path stage
+    When the operator searches observed payload paths for commerce
+    Then commerce.total and commerce.order.id are displayed
+    And currency and user.status are not displayed
+    When the operator selects commerce.total
+    Then selected field Payload · commerce.total is identified
+    And the operator and value controls are displayed for commerce.total
+    And observed values for commerce.total are suggested
+
+  # Data layer event feed query builder 013
+  Scenario: Data layer event feed query builder 013
+    Given payload path commerce.coupon.code has not been observed
+    When the operator chooses Enter custom path
+    And enters commerce.coupon.code
+    And activates Add property path
+    Then selected field Payload · commerce.coupon.code is identified
+    And operator and value controls are displayed without applying a condition
+    And a blank custom path cannot be added
+    When condition Payload · commerce.coupon.code is SUMMER is applied
+    Then current events without that path do not match
+    And a later captured event with commerce.coupon.code SUMMER matches
+
+  # Data layer event feed query builder 014
+  Scenario: Data layer event feed query builder 014
+    Given the Payload property path stage is displayed
+    When the operator activates Back to fields
+    Then the field choices are displayed without an applied condition
+    And keyboard focus returns to Payload property
+    When the operator reopens the property-path stage
+    Then keyboard focus moves to Search observed payload paths
+    And each observed path result has its complete path as an accessible name
