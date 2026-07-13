@@ -68,10 +68,21 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(assistance.schemaValues, allowed.filter((value) => value !== actualAllowed));
   assert.equal(allowed.every((value) => validateAssistedResponse(assistedIssue, value).valid), true);
   assert.equal(validateAssistedResponse(assistedIssue, `outside-${iteration}`).valid, false);
+  const rawAllowedIssue = {
+    ...assistedIssue,
+    constraint: `stored expectation ${iteration}`,
+    allowedValues: [...allowed],
+  };
+  const rawAssistance = expectedResultAssistance(rawAllowedIssue);
+  assert.deepEqual(rawAssistance.schemaValues, allowed.filter((value) => value !== actualAllowed));
+  assert.match(rawAssistance.genericConstraint, /must be one of/);
+  assert.equal(allowed.every((value) => rawAssistance.genericConstraint.includes(value)), true);
+  assert.equal(allowed.every((value) => validateAssistedResponse(rawAllowedIssue, value).valid), true);
+  assert.equal(validateAssistedResponse(rawAllowedIssue, `outside-${iteration}`).valid, false);
   const inlineEvent = {
     ...event,
     payload: { choice: actualAllowed },
-    issues: [{ ...assistedIssue, id: "choice", pointer: "/choice" }],
+    issues: [{ ...rawAllowedIssue, id: "choice", pointer: "/choice" }],
   };
   const inlineReport = createDefectReport(inlineEvent);
   const genericInline = applyExpectedResult(inlineReport, [{
