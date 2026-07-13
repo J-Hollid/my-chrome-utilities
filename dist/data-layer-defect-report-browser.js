@@ -1,3 +1,12 @@
+export function createDefectReportNavigation(effects) {
+    return {
+        backToCapturedEvent() {
+            effects.showCapturedEvent();
+            effects.focusCreateDefectReport();
+        },
+        backToLiveFeed() { effects.closeToLiveFeed(); },
+    };
+}
 function issueId(pointer, index) {
     return pointer.split("/").filter(Boolean).at(-1) ?? `issue-${index + 1}`;
 }

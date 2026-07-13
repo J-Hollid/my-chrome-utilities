@@ -1,13 +1,13 @@
 import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
 import { appendDetailControls, appendIssueControls, appendReproductionControls, appendTimelineControls, } from "./data-layer-defect-report-ui-controls.js";
-export { browserDefectReportClipboard, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
+export { browserDefectReportClipboard, createDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
 function heading(level, text) {
     const element = document.createElement(level);
     element.textContent = text;
     return element;
 }
-export function renderDefectReportBuilder(root, event, clipboard = browserDefectReportClipboard(), sessionEvents = [event]) {
+export function renderDefectReportBuilder(root, event, clipboard = browserDefectReportClipboard(), sessionEvents = [event], navigation) {
     let report = createDefectReport(defectCapturedEvent(event));
     const context = defectReportContext(sessionEvents, event.id);
     const selectedChoices = new Map();
@@ -30,6 +30,21 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     copy.dataset.actionVariant = "primary";
     const title = heading("h4", `Defect report: ${event.name}`);
     title.tabIndex = -1;
+    const builderHeader = document.createElement("header");
+    builderHeader.className = "detail-view-header";
+    const backToEvent = document.createElement("button");
+    backToEvent.type = "button";
+    backToEvent.textContent = "Back to captured event";
+    backToEvent.dataset.actionVariant = "quiet";
+    const backToFeed = document.createElement("button");
+    backToFeed.type = "button";
+    backToFeed.textContent = "Back to Live feed";
+    backToFeed.dataset.actionVariant = "quiet";
+    backToEvent.disabled = !navigation;
+    backToFeed.disabled = !navigation;
+    backToEvent.addEventListener("click", () => navigation?.backToCapturedEvent());
+    backToFeed.addEventListener("click", () => navigation?.backToLiveFeed());
+    builderHeader.append(backToEvent, backToFeed, title);
     let lastGenerated = generateReportDetails(report);
     const refresh = () => {
         let corrected = report;
@@ -58,7 +73,7 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     appendReproductionControls(reproductionControls, reproductionSteps, context, state);
     appendTimelineControls(timelineFilters, timelineList, context, state);
     appendDetailControls(detailControls, detailEdits, refresh);
-    root.replaceChildren(title, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, feedback);
+    root.replaceChildren(builderHeader, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, feedback);
     refresh();
     title.focus({ preventScroll: true });
 }

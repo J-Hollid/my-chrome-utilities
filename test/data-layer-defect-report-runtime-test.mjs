@@ -3,12 +3,14 @@ import {
   applyExpectedResult,
   copyDefectReportForJira,
   createDefectReport,
+  expectedResultAssistance,
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
   renderJiraReport,
   supportingTimeline,
   toggleReportIssue,
+  validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
 
 const original = { commerce: { currency: "GBP", total: -1, debug: true } };
@@ -29,26 +31,31 @@ const initial = Object.fromEntries(report.issues.map(({ id, selected }) => [id, 
 const toggled = toggleReportIssue(toggleReportIssue(report, "coupon"), "currency");
 
 const cases = [
-  ["currency", "choose an allowed value", "EUR", "currency is EUR", "replace"],
-  ["currency", "enter a valid response", "USD", "currency is USD", "replace"],
-  ["order_id", "enter a valid response", "A-123", "order_id is A-123", "add"],
-  ["debug", "apply the rule", undefined, "debug is absent", "remove"],
-  ["total", "keep the rule generic", undefined, "total satisfies its validation rule", "none"],
-].map(([issueId, method, response, outcome, operation]) => {
-  const result = applyExpectedResult(report, [{ issueId, method, ...(response !== undefined ? { response } : {}) }]);
+  ["currency", "choose an allowed value", "EUR", "Checkout schema", "currency is EUR", "replace"],
+  ["order_id", "enter a valid response", "A-123", "Custom value or response", "order_id is A-123", "add"],
+  ["debug", "apply the rule", "remove", "validation rule", "debug is absent", "remove"],
+].map(([issueId, method, response, responseSource, outcome, operation]) => {
+  const result = applyExpectedResult(report, [{ issueId, method, ...(method !== "apply the rule" ? { response } : {}), responseSource }]);
   assert.equal(result.expected.explanations[0], outcome);
   assert.equal(result.expected.corrections[0].operation, operation);
+  assert.equal(result.expected.corrections[0].responseSource, responseSource);
   const constraint = captured.issues.find(({ id }) => id === issueId)?.constraint;
   return {
     issueId,
     constraint,
     method,
     response: response ?? "none",
+    responseSource,
     outcome,
     operation,
     jsonOperation: operation === "none" ? "none" : `${operation} ${issueId}`,
   };
 });
+
+const assistance = expectedResultAssistance(report.issues.find(({ id }) => id === "currency"));
+const generic = applyExpectedResult(report, [{ issueId: "currency", method: "keep the rule generic" }]);
+const customValidation = validateAssistedResponse(report.issues.find(({ id }) => id === "currency"), "CAD");
+const customOverride = applyExpectedResult(report, [{ issueId: "currency", method: "enter a valid response", response: "CAD", responseSource: "Custom value or response", operatorProvided: true }]);
 
 report = applyExpectedResult(report, [
   { issueId: "currency", method: "choose an allowed value", response: "EUR" },
@@ -79,6 +86,10 @@ const plainWrites = [];
 const plainCopy = await copyDefectReportForJira(detailed, { writeText: async (text) => plainWrites.push(text) });
 const failedCopy = await copyDefectReportForJira(detailed, { writeRich: async () => { throw new Error("denied"); }, writeText: async () => { throw new Error("denied"); } });
 
+const channel = (hex) => { const value = Number.parseInt(hex, 16) / 255; return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4; };
+const luminance = (hex) => 0.2126 * channel(hex.slice(1, 3)) + 0.7152 * channel(hex.slice(3, 5)) + 0.0722 * channel(hex.slice(5, 7));
+const contrast = (left, right) => { const values = [luminance(left), luminance(right)].sort((a, b) => b - a); return (values[0] + 0.05) / (values[1] + 0.05); };
+
 assert.deepEqual(original, { commerce: { currency: "GBP", total: -1, debug: true } });
 assert.equal(richWrites.length, 1);
 assert.equal(plainWrites.length, 1);
@@ -93,6 +104,9 @@ process.stdout.write(`${JSON.stringify({
     expected: report.expected,
     original,
     cases,
+    assistance,
+    generic: { explanation: generic.expected.explanations[0], payload: generic.expected.payload, corrections: generic.expected.corrections },
+    custom: { validation: customValidation, explanation: customOverride.expected.explanations[0], correction: customOverride.expected.corrections[0] },
     steps,
     timelineInitialSelection: [],
     filteredTimelineCount: filterTimelineEvents(timelineEvents, { name: "purchase", source: "dataLayer", pathname: "/checkout", validation: "Invalid" }).length,
@@ -100,5 +114,6 @@ process.stdout.write(`${JSON.stringify({
     details: detailed,
     preview,
     copies: { richCopy, plainCopy, failedCopy, richWrites: richWrites.length, plainWrites: plainWrites.length },
+    contrast: Math.min(contrast("#1f1f1f", "#ffd7d7"), contrast("#1f1f1f", "#d9f7d9")),
   },
 })}\n`);

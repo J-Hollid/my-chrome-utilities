@@ -34,6 +34,8 @@ export interface ExpectedCorrection {
   pointer: string;
   operation: "add" | "replace" | "remove" | "none";
   response?: unknown;
+  responseSource?: string;
+  operatorProvided?: boolean;
   marker?: "+";
 }
 
@@ -50,6 +52,14 @@ export interface ExpectedResultChoice {
   issueId: string;
   method: "choose an allowed value" | "enter a valid response" | "apply the rule" | "keep the rule generic";
   response?: unknown;
+  responseSource?: string;
+  operatorProvided?: boolean;
+}
+
+export interface ExpectedResultAssistance {
+  genericConstraint: string;
+  schemaValues: string[];
+  customAvailable: true;
 }
 
 export interface PathnameVisit { id: string; pathname: string; eventIds: readonly string[] }

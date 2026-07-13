@@ -157,7 +157,7 @@ import {
   setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { createDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
@@ -953,11 +953,13 @@ function closeInspectorAndReturnToEvents(): void {
   inspectorReturnSnapshot = undefined;
 }
 
-function openLiveInspector(eventId: string): void {
-  inspectorReturnSnapshot = captureInspectorReturn(
-    eventId,
-    liveObserverElements.eventList?.scrollTop ?? 0,
-  );
+function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
+  if (!preserveReturnSnapshot) {
+    inspectorReturnSnapshot = captureInspectorReturn(
+      eventId,
+      liveObserverElements.eventList?.scrollTop ?? 0,
+    );
+  }
   const split = globalThis.innerWidth >= 700;
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   const event = liveObserverState.events.find(({ id }) => id === eventId);
@@ -1002,7 +1004,23 @@ function openLiveInspector(eventId: string): void {
     },
     startDefectReport: (selected) => {
       if (liveObserverElements.eventInspector) {
-        renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events);
+        renderDefectReportBuilder(
+          liveObserverElements.eventInspector,
+          selected,
+          undefined,
+          liveObserverState.events,
+          createDefectReportNavigation({
+            showCapturedEvent: () => {
+              openLiveInspector(selected.id, true);
+            },
+            focusCreateDefectReport: () => {
+              liveObserverElements.eventInspector
+                ?.querySelector<HTMLButtonElement>("#live-inspector-action-create-defect-report")
+                ?.focus({ preventScroll: true });
+            },
+            closeToLiveFeed: closeInspectorAndReturnToEvents,
+          }),
+        );
       }
     },
     validationAvailable: (selected) => Boolean(validateEvent({

@@ -1,4 +1,26 @@
 import { cloneValue, pointerSegments, pointerValue, updatePointer } from "./data-layer-defect-report-json.js";
+function normalizedConstraint(constraint) {
+    return /^must\b/i.test(constraint) ? constraint : `must be ${constraint}`;
+}
+function allowedValues(constraint) {
+    const match = constraint.match(/(?:must\s+be\s+)?one\s+of\s+(.+)$/i);
+    if (!match?.[1])
+        return [];
+    return match[1].split(/\s*(?:,|\bor\b)\s*/i).map((value) => value.trim()).filter(Boolean);
+}
+export function expectedResultAssistance(issue) {
+    return {
+        genericConstraint: `${issue.pointer} ${normalizedConstraint(issue.constraint)}`,
+        schemaValues: allowedValues(issue.constraint).filter((value) => value !== String(issue.actual)),
+        customAvailable: true,
+    };
+}
+export function validateAssistedResponse(issue, response) {
+    const values = allowedValues(issue.constraint);
+    if (!values.length || values.includes(String(response)))
+        return { valid: true };
+    return { valid: false, warning: `${String(response)} does not satisfy the current schema constraint.` };
+}
 function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
@@ -48,14 +70,16 @@ export function applyExpectedResult(report, choices) {
         const name = issueName(issue);
         if (choice.method === "keep the rule generic") {
             corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "none" });
-            explanations.push(`${name} satisfies its validation rule`);
+            explanations.push(allowedValues(issue.constraint).length
+                ? expectedResultAssistance(issue).genericConstraint
+                : `${name} satisfies its validation rule`);
             continue;
         }
         if (choice.method === "apply the rule") {
             if (!/forbidden/i.test(issue.constraint))
                 throw new Error(`The ${issue.id} rule cannot be applied without a response.`);
             updatePointer(payload, issue.pointer, "remove");
-            corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "remove", marker: "+" });
+            corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "remove", marker: "+", ...(choice.responseSource ? { responseSource: choice.responseSource } : {}) });
             explanations.push(`${name} is absent`);
             continue;
         }
@@ -64,8 +88,16 @@ export function applyExpectedResult(report, choices) {
         }
         const operation = pointerValue(payload, issue.pointer) === undefined ? "add" : "replace";
         updatePointer(payload, issue.pointer, operation, choice.response);
-        corrections.push({ issueId: issue.id, pointer: issue.pointer, operation, response: cloneValue(choice.response), marker: "+" });
-        explanations.push(`${name} is ${String(choice.response)}`);
+        corrections.push({
+            issueId: issue.id,
+            pointer: issue.pointer,
+            operation,
+            response: cloneValue(choice.response),
+            marker: "+",
+            ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
+            ...(choice.operatorProvided ? { operatorProvided: true } : {}),
+        });
+        explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
     }
     return { ...report, expected: { payload, corrections, explanations } };
 }
