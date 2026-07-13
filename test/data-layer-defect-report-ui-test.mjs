@@ -270,6 +270,11 @@ assert.equal(afterFirstAddActionCount, 3);
 let manualClick = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-1");
 const manualActions = descendants(manualClick).filter(({ tagName, dataset }) => tagName === "BUTTON" && !dataset.addReproductionStep).map(({ textContent }) => textContent);
 assert.deepEqual(manualActions, ["Adjust", "Remove", "Move earlier", "Move later"]);
+const manualActionRow = element(manualClick, ({ className }) => className === "defect-reproduction-step-actions");
+assert.deepEqual(manualActionRow.children.map(({ textContent }) => textContent), ["+", "Adjust", "Remove", "Move earlier", "Move later"]);
+assert.equal(manualClick.children[0].className, "defect-reproduction-step-text");
+assert.equal(manualClick.children[1], manualActionRow);
+assert.equal(manualClick.children[2].className, "defect-reproduction-step-guidance");
 
 element(manualClick, ({ textContent }) => textContent === "Adjust").dispatch("click");
 componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
@@ -394,7 +399,9 @@ element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispa
 manualScroll = manualRowWithText("Scroll to the bottom of the page");
 const crossAnchorMoveDisabled = element(manualScroll, ({ textContent }) => textContent === "Move earlier").disabled;
 assert.equal(crossAnchorMoveDisabled, true);
-assert.match(element(manualScroll, ({ tagName }) => tagName === "SMALL").textContent, /choose another pathname segment/);
+const crossAnchorGuidance = element(manualScroll, ({ tagName }) => tagName === "SMALL").textContent;
+assert.equal(crossAnchorGuidance, "Reordering stays within /products.");
+assert.doesNotMatch(crossAnchorGuidance, /choose another pathname segment/);
 const finalReproductionPreview = preview.innerHTML;
 assert.ok(finalReproductionPreview.indexOf("Visit /products") < finalReproductionPreview.indexOf("Scroll to the bottom of the page"));
 assert.ok(finalReproductionPreview.indexOf("Scroll to the bottom of the page") < finalReproductionPreview.indexOf("Click Checkout"));
@@ -647,12 +654,15 @@ process.stdout.write(`${JSON.stringify({
       customPreview,
       customBlankSubmissionUnavailable,
       manualActions,
+      manualActionRow: manualActionRow.children.map(({ textContent }) => textContent),
+      manualRowStructure: manualClick.children.slice(0, 3).map(({ className }) => className),
       adjustedText: "Click Checkout — primary checkout action",
       adjustedCount: adjustedReproductionCount,
       adjustFocusRestored: adjustFocusRestoredForReproduction,
       anchorsAfterRemove: anchorsAfterManualRemove,
       order: reproductionOrder,
       crossAnchorMoveDisabled,
+      crossAnchorGuidance,
       cancelPreserved: JSON.stringify(afterCancelOrder) === JSON.stringify(beforeCancelOrder),
       cancelFocusRestored: reproductionCancelFocus,
       manualSectionAddName,

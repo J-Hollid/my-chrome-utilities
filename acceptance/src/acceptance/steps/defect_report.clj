@@ -26,8 +26,14 @@
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         ui-line (last (filter #(str/starts-with? % "{") (str/split-lines (:out ui-result))))
         ui-observation (:defectReportUi (when ui-line (json/parse-string ui-line true)))
+        action-rows-observation (support/load-browser-observation!
+                                 {:adapter-env "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER"
+                                  :observation-key :reproductionStepActionRows
+                                  :runtime-error "Reproduction step action rows browser runtime failed."
+                                  :missing-error "Reproduction step action rows browser observation is missing."})
         observation (some-> (:defectReport (when line (json/parse-string line true)))
-                            (assoc :ui ui-observation))]
+                            (assoc :ui ui-observation
+                                   :reproductionStepActionRows action-rows-observation))]
     (support/assert! (zero? (:exit result))
                      (str "Defect report production runtime failed: " (:err result))
                      {:out (:out result) :err (:err result)})

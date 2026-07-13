@@ -85,7 +85,8 @@ export function appendReproductionControls(
       });
       if (step.kind === "manual") {
         item.dataset.reproductionStepId = step.id;
-        const text = document.createElement("span"); text.textContent = step.text;
+        const text = document.createElement("span"); text.className = "defect-reproduction-step-text"; text.textContent = step.text;
+        const actions = document.createElement("div"); actions.className = "defect-reproduction-step-actions";
         const adjust = document.createElement("button"); adjust.type = "button"; adjust.textContent = "Adjust"; adjust.dataset.adjustStep = step.id;
         adjustActions.set(step.id, adjust);
         adjust.addEventListener("click", () => {
@@ -102,16 +103,18 @@ export function appendReproductionControls(
         const following = state.report().reproductionSteps[index + 1];
         later.disabled = following?.kind !== "manual" || following.visitId !== step.visitId;
         later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
-        const segmentNote = document.createElement("small"); segmentNote.textContent = `Belongs to ${step.pathname}; choose another pathname segment to move across an anchor.`;
-        item.append(text, add, adjust, remove, earlier, later, segmentNote);
+        const segmentNote = document.createElement("small"); segmentNote.className = "defect-reproduction-step-guidance"; segmentNote.textContent = `Reordering stays within ${step.pathname}.`;
+        actions.append(add, adjust, remove, earlier, later);
+        item.append(text, actions, segmentNote);
         return item;
       }
-      const input = document.createElement("input"); input.value = step.text; input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
+      const input = document.createElement("input"); input.className = "defect-reproduction-step-text"; input.value = step.text; input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
       input.addEventListener("input", () => {
         state.update({ ...state.report(), reproductionSteps: state.report().reproductionSteps.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, text: input.value } : candidate) });
         state.refresh();
       });
-      item.append(input, add); return item;
+      const actions = document.createElement("div"); actions.className = "defect-reproduction-step-actions"; actions.append(add);
+      item.append(input, actions); return item;
     }));
     if (stage !== "idle") renderComposer();
   };

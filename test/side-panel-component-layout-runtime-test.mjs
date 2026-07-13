@@ -13,6 +13,7 @@ let liveValidationVisualsObservation;
 let singleLiveEventFeedObservation;
 let schemaViewContainmentObservation;
 let payloadPathFilterPickerObservation;
+const reproductionStepActionRowsObservations = [];
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -399,6 +400,82 @@ const singleLiveEventFeedRuntime = `(async () => {
     archiveEventIds:archive.events.map(({ id }) => id),
     defectEventIds:defectContext.timeline.map(({ id }) => id),
   };
+})()`;
+
+const reproductionStepActionRowsRuntime = `(async () => {
+  const ui = await import("/data-layer-defect-report-ui.js");
+  const event = (id, pathname, captureTime) => ({
+    id, name:id, sourceId:"dataLayer", sourceName:"Data layer", captureTime,
+    pageUrl:"https://shop.example" + pathname, payload:{}, validation:"1 error",
+    validationDetails:{ schema:{ name:"Checkout", version:4 }, evaluations:[], issues:[{
+      instancePath:"/page_type", severity:"error", expected:"checkout", actual:"unknown",
+      schemaLocation:"#/page_type", rule:"Known page types v1",
+    }] },
+  });
+  const products = event("pageview", "/products", "2026-07-13T10:00:00Z");
+  const checkout = event("purchase", "/checkout", "2026-07-13T10:01:00Z");
+  const button = (root, label) => {
+    const match = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label);
+    if (!match) throw new Error("Missing " + label);
+    return match;
+  };
+  const addClickStep = (root, pathname) => {
+    const pathnameRow = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'))
+      .find((row) => row.querySelector("input").value.endsWith(pathname));
+    if (!pathnameRow) throw new Error("Missing pathname row " + pathname);
+    pathnameRow.querySelector("[data-add-reproduction-step]").click();
+    button(root, "Click component").click();
+    const name = root.querySelector('[data-reproduction-field="componentName"]');
+    name.value = "Checkout"; name.dispatchEvent(new Event("input", { bubbles:true }));
+    button(root, "Add step").click();
+    return Array.from(root.querySelectorAll('[data-reproduction-step-kind="manual"]')).find((row) => row.textContent.includes("Click Checkout"));
+  };
+  const mount = (events) => {
+    const root = document.createElement("section"); root.className = "reproduction-action-rows-browser-fixture";
+    document.body.append(root); ui.renderDefectReportBuilder(root, events.at(-1), { writeRich:async () => {} }, events);
+    button(root, "Generate pathname steps").click(); return root;
+  };
+  const root = mount([products, checkout]);
+  const manual = addClickStep(root, "/products");
+  if (!manual) throw new Error("Missing generated manual step");
+  const text = manual.querySelector(".defect-reproduction-step-text");
+  const actions = manual.querySelector(".defect-reproduction-step-actions");
+  const guidance = manual.querySelector(".defect-reproduction-step-guidance");
+  const actionButtons = Array.from(actions.querySelectorAll("button"));
+  const pathnameRows = Array.from(root.querySelectorAll('[data-reproduction-step-kind="pathname"]'));
+  const rows = [...pathnameRows, manual].map((row) => ({
+    kind:row.dataset.reproductionStepKind,
+    textBeforeActions:Array.from(row.children).indexOf(row.querySelector(".defect-reproduction-step-text")) < Array.from(row.children).indexOf(row.querySelector(".defect-reproduction-step-actions")),
+    addName:row.querySelector("[data-add-reproduction-step]").getAttribute("aria-label"),
+  }));
+  const textRect = text.getBoundingClientRect();
+  const actionsRect = actions.getBoundingClientRect();
+  const guidanceRect = guidance.getBoundingClientRect();
+  const observation = {
+    width:innerWidth,
+    text:text.textContent,
+    actionOrder:actionButtons.map(({ textContent }) => textContent),
+    tabOrder:Array.from(manual.querySelectorAll("button:not([tabindex='-1'])")).map(({ textContent }) => textContent),
+    textBeforeActions:textRect.bottom <= actionsRect.top + 1,
+    guidanceAfterActions:actionsRect.bottom <= guidanceRect.top + 1,
+    completeControls:actionButtons.every((control) => getComputedStyle(control).whiteSpace === "nowrap" && control.scrollWidth <= actions.clientWidth),
+    noHorizontalOverflow:manual.scrollWidth <= manual.clientWidth && root.scrollWidth <= root.clientWidth,
+    rows,
+  };
+  root.remove();
+  const checkoutRoot = mount([checkout]);
+  const checkoutManual = addClickStep(checkoutRoot, "/checkout");
+  const earlier = button(checkoutManual, "Move earlier");
+  const checkoutGuidance = checkoutManual.querySelector(".defect-reproduction-step-guidance").textContent;
+  observation.checkoutBoundary = {
+    text:checkoutManual.querySelector(".defect-reproduction-step-text").textContent,
+    earlierVisible:earlier.getClientRects().length > 0,
+    earlierDisabled:earlier.disabled,
+    guidance:checkoutGuidance,
+    chooseAnotherAbsent:!checkoutGuidance.includes("choose another pathname segment"),
+  };
+  checkoutRoot.remove();
+  return observation;
 })()`;
 
 const guidedValidationRuntime = `(async () => {
@@ -1593,6 +1670,26 @@ try {
       beforeLaterEvent:"0 of 2 events",
       afterLaterEvent:"1 of 3 events",
     }, `Payload path filter picker violated its ${width}px browser contract`);
+    if (width === 360 || width === 520) {
+      const reproductionStepActionRows = await evaluate(socket, reproductionStepActionRowsRuntime);
+      reproductionStepActionRowsObservations.push(reproductionStepActionRows);
+      assert.equal(reproductionStepActionRows.width, width);
+      assert.equal(reproductionStepActionRows.text, "2. Click Checkout");
+      assert.deepEqual(reproductionStepActionRows.actionOrder, ["+", "Adjust", "Remove", "Move earlier", "Move later"]);
+      assert.deepEqual(reproductionStepActionRows.tabOrder, reproductionStepActionRows.actionOrder);
+      assert.equal(reproductionStepActionRows.textBeforeActions, true);
+      assert.equal(reproductionStepActionRows.guidanceAfterActions, true);
+      assert.equal(reproductionStepActionRows.completeControls, true);
+      assert.equal(reproductionStepActionRows.noHorizontalOverflow, true);
+      assert.equal(reproductionStepActionRows.rows.every(({ textBeforeActions, addName }) => textBeforeActions && /^Add step to \//.test(addName)), true);
+      assert.deepEqual(reproductionStepActionRows.checkoutBoundary, {
+        text:"2. Click Checkout",
+        earlierVisible:true,
+        earlierDisabled:true,
+        guidance:"Reordering stays within /checkout.",
+        chooseAnotherAbsent:true,
+      });
+    }
     await reloadPanel(socket);
     singleLiveEventFeedObservation = await evaluate(socket, singleLiveEventFeedRuntime);
     assert.deepEqual(singleLiveEventFeedObservation, {
@@ -2085,6 +2182,9 @@ try {
   }
   if (process.env.PAYLOAD_PATH_FILTER_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ payloadPathFilterPicker:payloadPathFilterPickerObservation }));
+  }
+  if (process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ reproductionStepActionRows:reproductionStepActionRowsObservations }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
