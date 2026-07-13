@@ -44,6 +44,7 @@ export function createGuidedValidationFlow(root, effects) {
     let schemaPickerOpen = false;
     let schemaPickerQuery = "";
     let schemaPickerReturnId = "guided-existing-schema-picker";
+    let continuationCandidate;
     function announce(message) { status = message; render(); }
     function setDraft(next, message) {
         draft = next;
@@ -185,11 +186,8 @@ export function createGuidedValidationFlow(root, effects) {
             input.value = property.path;
             input.checked = draft.property?.path === property.path;
             input.addEventListener("change", () => {
-                const continuation = draft.continuation
-                    ? effects.schemaCandidates().find(({ id }) => id === draft.continuation?.schemaId)
-                    : undefined;
-                const next = continuation
-                    ? selectGuidedContinuationProperty(draft, property.path, continuation)
+                const next = continuationCandidate
+                    ? selectGuidedContinuationProperty(draft, property.path, continuationCandidate)
                     : selectGuidedProperty(draft, property.path);
                 setDraft(next, `${property.path} selected; ${property.detectedType} detected from this event.`);
             });
@@ -599,8 +597,8 @@ export function createGuidedValidationFlow(root, effects) {
         root.append(statusElement);
     }
     const api = {
-        open(event, continuation) { draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
-        close() { draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
+        open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
+        close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
         currentDraft() { return draft; },
     };
     return api;
