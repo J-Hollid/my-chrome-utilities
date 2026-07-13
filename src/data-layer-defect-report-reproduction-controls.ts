@@ -43,8 +43,8 @@ export function appendReproductionControls(
   const selectedPathname = (): string => state.report().reproductionSteps
     .find((step) => step.kind !== "manual" && step.visitId === selectedVisitId)?.pathname ?? "";
 
-  let renderComposer = () => {};
-  let renderSteps = () => {};
+  let renderComposer: () => void;
+  let renderSteps: () => void;
 
   const updateSteps = (reproductionSteps: ReproductionStep[]) => {
     state.update({ ...state.report(), reproductionSteps });

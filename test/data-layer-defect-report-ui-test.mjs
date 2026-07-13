@@ -320,6 +320,12 @@ element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispa
 const reproductionOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
 assert.deepEqual(reproductionOrder, ["1. Visit /products", "2. Scroll to the bottom of the page", "3. Click Checkout", "4. Visit /checkout"]);
 manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+element(manualScroll, ({ textContent }) => textContent === "Move later").dispatch("click");
+assert.deepEqual(reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value),
+  ["1. Visit /products", "2. Click Checkout", "3. Scroll to the bottom of the page", "4. Visit /checkout"]);
+manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispatch("click");
+manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
 const crossAnchorMoveDisabled = element(manualScroll, ({ textContent }) => textContent === "Move earlier").disabled;
 assert.equal(crossAnchorMoveDisabled, true);
 assert.match(element(manualScroll, ({ tagName }) => tagName === "SMALL").textContent, /choose another pathname segment/);

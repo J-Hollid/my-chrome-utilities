@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 
 import {
+  addManualReproductionStep,
+  adjustManualReproductionStep,
   applyExpectedResult,
   createDefectReport,
   expectedResultAssistance,
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
+  moveManualReproductionStep,
+  removeManualReproductionStep,
   removeTimelineSelection,
   renderJiraReport,
   saveTimelineSelection,
@@ -130,10 +134,45 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   }));
   const start = integer(visitCount - 1);
   const end = start + integer(visitCount - start);
+  const pathnameSteps = generatePathnameSkeleton(visits, visits[start].id, visits[end].id);
+  const pathnameSnapshot = JSON.parse(JSON.stringify(pathnameSteps));
+  assert.deepEqual(pathnameSteps.map(({ visitId }) => visitId), visits.slice(start, end + 1).map(({ id }) => id));
+  const anchor = pathnameSteps[integer(pathnameSteps.length)];
+  const manualCount = 1 + integer(7);
+  const manualIds = Array.from({ length: manualCount }, (_, index) => `manual-${iteration}-${index}`);
+  const templates = manualIds.map((_, index) => {
+    const suffix = `${iteration}-${index}`;
+    switch ((iteration + index) % 6) {
+      case 0: return { kind: "click", componentName: `component-${suffix}` };
+      case 1: return { kind: "login", persona: `persona-${suffix}` };
+      case 2: return { kind: "scroll", target: "bottom" };
+      case 3: return { kind: "scroll", target: "top" };
+      case 4: return { kind: "scroll", target: "component", detail: `target-${suffix}` };
+      default: return { kind: "custom", text: `Perform action ${suffix}` };
+    }
+  });
+  let composedSteps = pathnameSteps;
+  for (let index = 0; index < manualIds.length; index += 1) {
+    composedSteps = addManualReproductionStep(composedSteps, anchor.visitId, manualIds[index], templates[index]);
+  }
+  assert.deepEqual(pathnameSteps, pathnameSnapshot);
   assert.deepEqual(
-    generatePathnameSkeleton(visits, visits[start].id, visits[end].id).map(({ visitId }) => visitId),
-    visits.slice(start, end + 1).map(({ id }) => id),
+    composedSteps.filter(({ kind }) => kind !== "manual").map(({ visitId, pathname }) => ({ visitId, pathname })),
+    pathnameSteps.map(({ visitId, pathname }) => ({ visitId, pathname })),
   );
+  assert.deepEqual(composedSteps.map(({ text }) => text.match(/^\d+/)?.[0]),
+    composedSteps.map((_, index) => String(index + 1)));
+  assert.equal(composedSteps.filter(({ kind, visitId }) => kind === "manual" && visitId === anchor.visitId).length, manualCount);
+  if (manualCount > 1) {
+    const movedEarlier = moveManualReproductionStep(composedSteps, manualIds.at(-1), "earlier");
+    assert.deepEqual(moveManualReproductionStep(movedEarlier, manualIds.at(-1), "later"), composedSteps);
+  }
+  const adjustedSteps = adjustManualReproductionStep(composedSteps, manualIds[0], { kind: "custom", text: `Adjusted ${iteration}` });
+  assert.equal(adjustedSteps.length, composedSteps.length);
+  assert.match(adjustedSteps.find(({ id }) => id === manualIds[0]).text, new RegExp(`Adjusted ${iteration}$`));
+  let removedSteps = adjustedSteps;
+  for (const id of manualIds) removedSteps = removeManualReproductionStep(removedSteps, id);
+  assert.deepEqual(removedSteps, pathnameSteps);
 
   const timeline = Array.from({ length: visitCount }, (_, index) => ({
     id: `timeline-${index}`,

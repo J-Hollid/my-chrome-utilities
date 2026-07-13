@@ -26,8 +26,8 @@ export function appendReproductionControls(controls, steps, context, state) {
     composer.setAttribute("aria-label", "Reproduction step composer");
     const selectedPathname = () => state.report().reproductionSteps
         .find((step) => step.kind !== "manual" && step.visitId === selectedVisitId)?.pathname ?? "";
-    let renderComposer = () => { };
-    let renderSteps = () => { };
+    let renderComposer;
+    let renderSteps;
     const updateSteps = (reproductionSteps) => {
         state.update({ ...state.report(), reproductionSteps });
         renderSteps();
