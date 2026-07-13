@@ -10,6 +10,7 @@ Feature: Data layer guided validation creation
 
   # Data layer guided validation creation 001
   Scenario: Data layer guided validation creation 001
+    Given no working-draft continuation context is selected
     When the operator activates Create validation from this event
     Then a guided validation draft opens at property selection
     And the draft retains event pageview, its captured source, payload, domain 127.0.0.1, and pathname /
