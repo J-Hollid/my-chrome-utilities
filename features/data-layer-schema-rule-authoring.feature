@@ -59,6 +59,7 @@ Feature: Data layer schema rule authoring
     When rules are attached to /items/*/product_id and /items/*/price
     Then every array item is validated at the corresponding nested path
     And an issue identifies the concrete item index and complete property path
+    And each rule retains its wildcard template path
     And sibling properties and surrounding array structure are not flattened
 
   # Data layer schema rule authoring 007
