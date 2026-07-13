@@ -5,6 +5,38 @@ function button(text) {
     control.textContent = text;
     return control;
 }
+function createPayloadPathStage() {
+    const container = document.createElement("section");
+    container.id = "event-feed-payload-path-stage";
+    container.setAttribute("aria-label", "Choose payload property path");
+    container.hidden = true;
+    const back = button("Back to fields");
+    const searchLabel = document.createElement("label");
+    searchLabel.textContent = "Search observed payload paths ";
+    const search = document.createElement("input");
+    search.id = "event-feed-payload-path-search";
+    search.type = "search";
+    searchLabel.append(search);
+    const results = document.createElement("div");
+    results.id = "event-feed-payload-path-results";
+    results.setAttribute("role", "listbox");
+    results.setAttribute("aria-label", "Observed payload paths");
+    const enterCustom = button("Enter custom path");
+    const customEditor = document.createElement("section");
+    customEditor.id = "event-feed-query-custom-path-editor";
+    customEditor.hidden = true;
+    const customLabel = document.createElement("label");
+    customLabel.textContent = "Custom property path ";
+    const customPath = document.createElement("input");
+    customPath.id = "event-feed-query-custom-path";
+    customPath.type = "text";
+    customLabel.append(customPath);
+    const addCustom = button("Add property path");
+    addCustom.disabled = true;
+    customEditor.append(customLabel, addCustom);
+    container.append(back, searchLabel, results, enterCustom, customEditor);
+    return { container, back, search, results, enterCustom, customEditor, customPath, addCustom };
+}
 function clearButton(query, update) {
     const clear = button("Clear all");
     clear.addEventListener("click", () => update(clearEventFeedQuery(query)));
@@ -91,35 +123,8 @@ function renderConditionEditor(events, query, update, add) {
     const selectedField = document.createElement("output");
     selectedField.id = "event-feed-query-selected-field";
     selectedField.hidden = true;
-    const pathStage = document.createElement("section");
-    pathStage.id = "event-feed-payload-path-stage";
-    pathStage.setAttribute("aria-label", "Choose payload property path");
-    pathStage.hidden = true;
-    const backToFields = button("Back to fields");
-    const pathSearchLabel = document.createElement("label");
-    pathSearchLabel.textContent = "Search observed payload paths ";
-    const pathSearch = document.createElement("input");
-    pathSearch.id = "event-feed-payload-path-search";
-    pathSearch.type = "search";
-    pathSearchLabel.append(pathSearch);
-    const pathResults = document.createElement("div");
-    pathResults.id = "event-feed-payload-path-results";
-    pathResults.setAttribute("role", "listbox");
-    pathResults.setAttribute("aria-label", "Observed payload paths");
-    const enterCustomPath = button("Enter custom path");
-    const customPathEditor = document.createElement("section");
-    customPathEditor.id = "event-feed-query-custom-path-editor";
-    customPathEditor.hidden = true;
-    const customPathLabel = document.createElement("label");
-    customPathLabel.textContent = "Custom property path ";
-    const customPath = document.createElement("input");
-    customPath.id = "event-feed-query-custom-path";
-    customPath.type = "text";
-    customPathLabel.append(customPath);
-    const addPropertyPath = button("Add property path");
-    addPropertyPath.disabled = true;
-    customPathEditor.append(customPathLabel, addPropertyPath);
-    pathStage.append(backToFields, pathSearchLabel, pathResults, enterCustomPath, customPathEditor);
+    const payloadPathStage = createPayloadPathStage();
+    const { container: pathStage, back: backToFields, search: pathSearch, results: pathResults, enterCustom: enterCustomPath, customEditor: customPathEditor, customPath, addCustom: addPropertyPath, } = payloadPathStage;
     const candidate = () => ({
         id: `condition-${Date.now()}-${query.conditions.length + 1}`,
         field: field.value,
@@ -127,12 +132,15 @@ function renderConditionEditor(events, query, update, add) {
         values: value.value.split(",").map((entry) => entry.trim()).filter(Boolean),
     });
     const refreshApply = () => { apply.disabled = !queryConditionComplete(candidate()); };
+    const hideConditionControls = (hidden) => {
+        fieldLabel.hidden = hidden;
+        operatorLabel.hidden = hidden;
+        valueLabel.hidden = hidden;
+        apply.hidden = hidden;
+    };
     const configureConditionControls = () => {
-        fieldLabel.hidden = false;
+        hideConditionControls(false);
         pathStage.hidden = true;
-        operatorLabel.hidden = false;
-        valueLabel.hidden = false;
-        apply.hidden = false;
         operator.replaceChildren(...eventFeedQueryOperators(field.value).map((candidate) => Object.assign(document.createElement("option"), { value: candidate, textContent: candidate })));
         operator.disabled = !field.value;
         value.disabled = !field.value;
@@ -162,10 +170,7 @@ function renderConditionEditor(events, query, update, add) {
         }));
     };
     const openPayloadPathStage = () => {
-        fieldLabel.hidden = true;
-        operatorLabel.hidden = true;
-        valueLabel.hidden = true;
-        apply.hidden = true;
+        hideConditionControls(true);
         selectedField.hidden = true;
         pathStage.hidden = false;
         customPathEditor.hidden = true;
@@ -184,10 +189,7 @@ function renderConditionEditor(events, query, update, add) {
     pathSearch.addEventListener("input", renderPayloadPaths);
     backToFields.addEventListener("click", () => {
         pathStage.hidden = true;
-        fieldLabel.hidden = false;
-        operatorLabel.hidden = false;
-        valueLabel.hidden = false;
-        apply.hidden = false;
+        hideConditionControls(false);
         field.value = "Payload property";
         operator.disabled = true;
         value.disabled = true;

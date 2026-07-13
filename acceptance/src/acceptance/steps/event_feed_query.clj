@@ -7,6 +7,14 @@
 (def feature-files ["features/data-layer-event-feed-query-builder.feature"])
 (defonce ^:private observation (atom nil))
 
+(def ^:private query-case-identity (juxt :field :operator :value))
+(def ^:private rule-outcome-matches
+  {"failed" ["failed"]
+   "warned" ["warned"]
+   "passed" ["passed"]
+   "was evaluated" ["failed" "warned" "passed"]
+   "was not evaluated" ["absent"]})
+
 (defn- load-observation! []
   (let [result (process/shell support/build-shell-options "node" "test/data-layer-event-feed-query-ui-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
@@ -22,21 +30,29 @@
 
 (defn- observation! [] (or @observation (load-observation!)))
 
-(defn- assert-example! [example observed]
-  (when-let [field (:field example)]
-    (let [match (some #(when (and (= field (:field %)) (= (:operator example) (:operator %)) (= (:value example) (:value %))) %) (:matchingCases observed))]
+(defn- find-case [identity-fn expected cases]
+  (some #(when (= expected (identity-fn %)) %) cases))
+
+(defn- assert-query-example! [example observed]
+  (when (:field example)
+    (let [match (find-case query-case-identity
+                           (query-case-identity example)
+                           (:matchingCases observed))]
       (support/assert! match "The query example was not exercised through production filtering." {:example example})
       (support/assert! (= ["purchase"] (:matches match)) "The query example retained a nonmatching event." match)
-      (support/assert! (= (:summary example) (:summary match)) "The active-condition summary differs." match)))
+      (support/assert! (= (:summary example) (:summary match)) "The active-condition summary differs." match))))
+
+(defn- assert-rule-outcome-example! [example observed]
   (when-let [outcome (:outcome example)]
-    (let [match (some #(when (= outcome (:operator %)) %) (:ruleOutcomes observed))
-          expected (get {"failed" ["failed"]
-                         "warned" ["warned"]
-                         "passed" ["passed"]
-                         "was evaluated" ["failed" "warned" "passed"]
-                         "was not evaluated" ["absent"]} outcome)]
+    (let [match (find-case :operator outcome (:ruleOutcomes observed))]
       (support/assert! match "The validation-rule outcome was not exercised." {:outcome outcome})
-      (support/assert! (= expected (:matches match)) "The validation-rule outcome retained an event outside its criterion." match))))
+      (support/assert! (= (get rule-outcome-matches outcome) (:matches match))
+                       "The validation-rule outcome retained an event outside its criterion."
+                       match))))
+
+(defn- assert-example! [example observed]
+  (assert-query-example! example observed)
+  (assert-rule-outcome-example! example observed))
 
 (defn- assert-observation! [example observed]
   (assert-example! example observed)

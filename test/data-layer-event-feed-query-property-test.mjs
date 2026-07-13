@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 import {
   applyQueryCondition,
   clearEventFeedQuery,
+  eventFeedQueryFields,
   eventFeedQuerySuggestions,
   filterEventsByQuery,
+  observedPayloadPaths,
+  queryConditionComplete,
   removeQueryCondition,
 } from "../dist/data-layer-event-feed-query.js";
 
@@ -69,5 +72,35 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   const suggestions = eventFeedQuerySuggestions(events, "Event name");
   assert.deepEqual(suggestions, [...new Set(events.map(({ name }) => name))].sort(), "suggestions must be distinct and sorted");
+
+  const payloadEvents = events.map((event, index) => ({
+    ...event,
+    payload: { custom: { [`field_${index % 7}`]: { value: `value-${index % 11}` } } },
+  }));
+  const originalPayloadEvents = structuredClone(payloadEvents);
+  const expectedPaths = [...new Set(payloadEvents.map((_, index) => `custom.field_${index % 7}.value`))]
+    .sort((left, right) => left.localeCompare(right));
+  assert.deepEqual(observedPayloadPaths(payloadEvents), expectedPaths, "observed payload paths must be distinct and sorted");
+  assert.deepEqual(
+    eventFeedQueryFields(payloadEvents),
+    ["Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],
+    "payload paths must remain behind one stable top-level field",
+  );
+  assert.deepEqual(eventFeedQuerySuggestions(payloadEvents, "Payload property"), [], "the payload picker field must not behave like a filterable leaf path");
+  assert.equal(queryConditionComplete({ id: "picker", field: "Payload property", operator: "is", values: ["anything"] }), false, "the payload picker field must not form a condition");
+
+  const selectedIndex = randomIndex(payloadEvents.length);
+  const selectedPath = `custom.field_${selectedIndex % 7}.value`;
+  const selectedValue = `value-${selectedIndex % 11}`;
+  const payloadQuery = applyQueryCondition(emptyQuery, { id: "payload", field: `Payload · ${selectedPath}`, operator: "is", values: [selectedValue] });
+  const expectedPayloadMatches = payloadEvents.filter(({ payload }) => payload.custom[`field_${selectedIndex % 7}`]?.value === selectedValue);
+  assert.deepEqual(filterEventsByQuery(payloadEvents, payloadQuery), expectedPayloadMatches, "arbitrary observed payload paths must filter their leaf values");
+
+  const futurePath = `future.path_${sample}.code`;
+  const futureQuery = applyQueryCondition(emptyQuery, { id: "future", field: `Payload · ${futurePath}`, operator: "is", values: ["later"] });
+  const futureEvent = { ...events[0], id: `future-${sample}`, payload: { future: { [`path_${sample}`]: { code: "later" } } } };
+  assert.deepEqual(filterEventsByQuery(payloadEvents, futureQuery), [], "an unseen custom path must not match existing events");
+  assert.deepEqual(filterEventsByQuery([...payloadEvents, futureEvent], futureQuery), [futureEvent], "an unseen custom path must match a later event without rebuilding the query");
+  assert.deepEqual(payloadEvents, originalPayloadEvents, "payload-path discovery and filtering must not mutate captured events");
   assert.deepEqual(events, originalEvents, "query operations must not mutate captured events");
 }
