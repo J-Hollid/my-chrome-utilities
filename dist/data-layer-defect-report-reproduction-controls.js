@@ -8,7 +8,9 @@ export function appendReproductionControls(controls, steps, context, state) {
     let draft;
     let editingId;
     let nextManualId = 1;
-    let contextualAdd;
+    let activeRowKey;
+    const addActions = new Map();
+    const rowHosts = new Map();
     const adjustActions = new Map();
     const startLabel = document.createElement("label");
     startLabel.textContent = "Reproduction starts at ";
@@ -39,15 +41,34 @@ export function appendReproductionControls(controls, steps, context, state) {
         draft = undefined;
         editingId = undefined;
         renderComposer();
-        const action = restoreId ? adjustActions.get(restoreId) : contextualAdd;
+        const action = restoreId ? adjustActions.get(restoreId) : activeRowKey ? addActions.get(activeRowKey) : undefined;
         action?.focus({ preventScroll: true });
     };
     renderSteps = () => {
+        addActions.clear();
+        rowHosts.clear();
         adjustActions.clear();
         steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
             const item = document.createElement("li");
             item.dataset.reproductionStepKind = step.kind;
             item.dataset.visitId = step.visitId;
+            const rowKey = step.kind === "manual" ? `manual:${step.id}` : `pathname:${step.visitId}`;
+            rowHosts.set(rowKey, item);
+            const add = document.createElement("button");
+            add.type = "button";
+            add.textContent = "+";
+            add.className = "defect-reproduction-add";
+            add.dataset.addReproductionStep = step.visitId;
+            add.setAttribute("aria-label", `Add step to ${step.pathname} section from step ${index + 1} ${step.text.replace(/^\d+\.\s*/, "")}`);
+            addActions.set(rowKey, add);
+            add.addEventListener("click", () => {
+                selectedVisitId = step.visitId;
+                activeRowKey = rowKey;
+                editingId = undefined;
+                draft = undefined;
+                stage = "templates";
+                renderComposer();
+            });
             if (step.kind === "manual") {
                 item.dataset.reproductionStepId = step.id;
                 const text = document.createElement("span");
@@ -59,6 +80,7 @@ export function appendReproductionControls(controls, steps, context, state) {
                 adjustActions.set(step.id, adjust);
                 adjust.addEventListener("click", () => {
                     selectedVisitId = step.visitId;
+                    activeRowKey = rowKey;
                     editingId = step.id;
                     draft = copyTemplate(step.template);
                     stage = "configure";
@@ -82,7 +104,7 @@ export function appendReproductionControls(controls, steps, context, state) {
                 later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
                 const segmentNote = document.createElement("small");
                 segmentNote.textContent = `Belongs to ${step.pathname}; choose another pathname segment to move across an anchor.`;
-                item.append(text, adjust, remove, earlier, later, segmentNote);
+                item.append(text, add, adjust, remove, earlier, later, segmentNote);
                 return item;
             }
             const input = document.createElement("input");
@@ -92,14 +114,11 @@ export function appendReproductionControls(controls, steps, context, state) {
                 state.update({ ...state.report(), reproductionSteps: state.report().reproductionSteps.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, text: input.value } : candidate) });
                 state.refresh();
             });
-            const select = document.createElement("button");
-            select.type = "button";
-            select.textContent = `Select ${step.pathname} segment`;
-            select.dataset.selectReproductionSegment = step.visitId;
-            select.addEventListener("click", () => { selectedVisitId = step.visitId; stage = "idle"; draft = undefined; editingId = undefined; renderComposer(); });
-            item.append(input, select);
+            item.append(input, add);
             return item;
         }));
+        if (stage !== "idle")
+            renderComposer();
     };
     const beginTemplate = (template) => {
         draft = template;
@@ -108,22 +127,15 @@ export function appendReproductionControls(controls, steps, context, state) {
     };
     renderComposer = () => {
         composer.replaceChildren();
-        if (!selectedVisitId)
+        composer.remove();
+        const host = activeRowKey ? rowHosts.get(activeRowKey) : undefined;
+        if (!selectedVisitId || !host || stage === "idle")
             return;
         const pathname = selectedPathname();
-        if (stage === "idle") {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.textContent = `Add step to ${pathname}`;
-            add.dataset.addReproductionStep = selectedVisitId;
-            contextualAdd = add;
-            add.addEventListener("click", () => { stage = "templates"; renderComposer(); });
-            composer.append(add);
-            return;
-        }
         if (stage === "templates") {
             const group = document.createElement("section");
             group.setAttribute("aria-label", `Choose step template for ${pathname}`);
+            let firstTemplate;
             for (const [label, template] of [
                 ["Click component", { kind: "click", componentName: "" }],
                 ["Log in as user", { kind: "login", persona: "" }],
@@ -133,6 +145,7 @@ export function appendReproductionControls(controls, steps, context, state) {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.textContent = label;
+                firstTemplate ??= button;
                 button.addEventListener("click", () => beginTemplate(template));
                 group.append(button);
             }
@@ -142,6 +155,8 @@ export function appendReproductionControls(controls, steps, context, state) {
             cancelButton.addEventListener("click", cancel);
             group.append(cancelButton);
             composer.append(group);
+            host.append(composer);
+            firstTemplate?.focus({ preventScroll: true });
             return;
         }
         if (!draft)
@@ -154,12 +169,14 @@ export function appendReproductionControls(controls, steps, context, state) {
         submit.type = "button";
         submit.textContent = editingId ? "Save changes" : "Add step";
         const refreshPreview = () => { const text = reproductionStepPreview(draft); preview.textContent = text ?? "Complete the template to preview the step."; submit.disabled = !text; };
+        let firstControl;
         const input = (labelText, field, value, update) => {
             const label = document.createElement("label");
             label.textContent = `${labelText} `;
             const control = document.createElement("input");
             control.value = value;
             control.dataset.reproductionField = field;
+            firstControl ??= control;
             control.addEventListener("input", () => { update(control.value); refreshPreview(); });
             label.append(control);
             form.append(label);
@@ -185,6 +202,7 @@ export function appendReproductionControls(controls, steps, context, state) {
             const select = document.createElement("select");
             select.dataset.reproductionField = "scrollTarget";
             select.value = draft.target;
+            firstControl ??= select;
             for (const [value, text] of [["bottom", "bottom of the page"], ["top", "top of the page"], ["component", "component"], ["custom", "custom"]])
                 select.append(Object.assign(document.createElement("option"), { value, textContent: text }));
             select.addEventListener("change", () => { if (draft?.kind === "scroll")
@@ -221,16 +239,19 @@ export function appendReproductionControls(controls, steps, context, state) {
         form.append(preview, submit, cancelButton);
         refreshPreview();
         composer.append(form);
+        host.append(composer);
+        firstControl?.focus({ preventScroll: true });
     };
     generate.addEventListener("click", () => {
         const skeleton = generatePathnameSkeleton(context.visits, startVisit.value, context.defectVisitId);
-        selectedVisitId = skeleton[0]?.visitId;
+        selectedVisitId = undefined;
+        activeRowKey = undefined;
         stage = "idle";
         draft = undefined;
         editingId = undefined;
         updateSteps(skeleton);
         renderComposer();
     });
-    controls.append(startLabel, generate, composer);
+    controls.append(startLabel, generate);
 }
 //# sourceMappingURL=data-layer-defect-report-reproduction-controls.js.map

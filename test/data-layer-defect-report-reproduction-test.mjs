@@ -53,6 +53,16 @@ assert.deepEqual(withTwoManualSteps.map(({ text }) => text), [
   "3. Scroll to the bottom of the page",
   "4. Visit /checkout",
 ]);
+const appendedAtSectionEnd = addManualReproductionStep(withTwoManualSteps, "products", "manual-review", {
+  kind: "custom", text: "Review the available products",
+});
+assert.deepEqual(appendedAtSectionEnd.map(({ text }) => text), [
+  "1. Visit /products",
+  "2. Click Checkout — sticky footer button",
+  "3. Scroll to the bottom of the page",
+  "4. Review the available products",
+  "5. Visit /checkout",
+]);
 const reordered = moveManualReproductionStep(withTwoManualSteps, "manual-scroll", "earlier");
 assert.deepEqual(reordered.map(({ text }) => text), [
   "1. Visit /products",

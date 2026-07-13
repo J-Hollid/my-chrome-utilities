@@ -24,13 +24,27 @@ class FakeElement {
   }
 
   append(...children) {
+    for (const child of children) {
+      if (!(child instanceof FakeElement)) continue;
+      child.remove();
+      child.parent = this;
+    }
     this.children.push(...children);
     if (this.tagName === "SELECT" && !this.value) {
       const firstOption = children.find((child) => child instanceof FakeElement && child.tagName === "OPTION");
       if (firstOption) this.value = firstOption.value;
     }
   }
-  replaceChildren(...children) { this.children = children; }
+  replaceChildren(...children) {
+    for (const child of this.children) if (child instanceof FakeElement) child.parent = undefined;
+    this.children = [];
+    this.append(...children);
+  }
+  remove() {
+    if (!this.parent) return;
+    this.parent.children = this.parent.children.filter((child) => child !== this);
+    this.parent = undefined;
+  }
   setAttribute(name, value) { this.attributes.set(name, value); }
   addEventListener(name, listener) {
     const listeners = this.listeners.get(name) ?? [];
@@ -215,15 +229,27 @@ element(root, ({ textContent }) => textContent === "Generate pathname steps").di
 const reproduction = element(root, ({ tagName }) => tagName === "OL");
 assert.equal(reproduction.children.length, 2);
 const initialReproductionStepCount = reproduction.children.length;
-element(root, ({ dataset }) => dataset.selectReproductionSegment === "visit-1").dispatch("click");
-let addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
-assert.equal(descendants(root).filter(({ dataset }) => dataset.addReproductionStep).length, 1);
+const addActionForRow = (row) => element(row, ({ dataset }) => dataset.addReproductionStep);
+const pathnameRow = (visitId) => element(reproduction, ({ dataset }) => dataset.reproductionStepKind === "pathname" && dataset.visitId === visitId);
+let addReproductionStep = addActionForRow(pathnameRow("visit-1"));
+const initialAdjacentAddActions = descendants(reproduction).filter(({ dataset }) => dataset.addReproductionStep);
+assert.equal(initialAdjacentAddActions.length, 2);
+assert.equal(addReproductionStep.textContent, "+");
+assert.equal(addReproductionStep.attributes.get("aria-label"), "Add step to /products section from step 1 Visit /products");
+assert.equal(addActionForRow(pathnameRow("visit-2")).attributes.get("aria-label"), "Add step to /checkout section from step 2 Visit /checkout");
+assert.equal(descendants(root).some(({ dataset }) => dataset.selectReproductionSegment), false);
+assert.equal(descendants(root).some(({ textContent }) => /^Add step to \//.test(textContent)), false);
 assert.equal(descendants(root).some(({ textContent }) => textContent === "Click component"), false);
 addReproductionStep.dispatch("click");
+const inlineComposer = element(pathnameRow("visit-1"), ({ attributes }) => attributes.get("aria-label") === "Reproduction step composer");
 const reproductionTemplateActions = descendants(root)
   .filter(({ tagName, textContent }) => tagName === "BUTTON" && ["Click component", "Log in as user", "Scroll", "Custom step"].includes(textContent))
   .map(({ textContent }) => textContent);
 assert.deepEqual(reproductionTemplateActions, ["Click component", "Log in as user", "Scroll", "Custom step"]);
+assert.ok(inlineComposer);
+const templateComposerFocus = element(inlineComposer, ({ textContent }) => textContent === "Click component").focusOptions;
+assert.deepEqual(templateComposerFocus, { preventScroll: true });
+const composerDisplayedInline = descendants(pathnameRow("visit-1")).includes(inlineComposer);
 assert.equal(reproduction.children.length, 2);
 element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
 let componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
@@ -239,8 +265,10 @@ reproductionSubmit.dispatch("click");
 assert.deepEqual(reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value), [
   "1. Visit /products", "2. Click Checkout — sticky footer button", "3. Visit /checkout",
 ]);
+const afterFirstAddActionCount = descendants(reproduction).filter(({ dataset }) => dataset.addReproductionStep).length;
+assert.equal(afterFirstAddActionCount, 3);
 let manualClick = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-1");
-const manualActions = descendants(manualClick).filter(({ tagName }) => tagName === "BUTTON").map(({ textContent }) => textContent);
+const manualActions = descendants(manualClick).filter(({ tagName, dataset }) => tagName === "BUTTON" && !dataset.addReproductionStep).map(({ textContent }) => textContent);
 assert.deepEqual(manualActions, ["Adjust", "Remove", "Move earlier", "Move later"]);
 
 element(manualClick, ({ textContent }) => textContent === "Adjust").dispatch("click");
@@ -261,7 +289,7 @@ const anchorsAfterManualRemove = reproduction.children.map(({ dataset }) => data
 assert.deepEqual(anchorsAfterManualRemove, ["pathname", "pathname"]);
 
 const previewTemplate = (templateText, configure) => {
-  element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+  addActionForRow(pathnameRow("visit-1")).dispatch("click");
   element(root, ({ textContent }) => textContent === templateText).dispatch("click");
   configure();
   const text = element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent;
@@ -280,7 +308,7 @@ const loginPreview = previewTemplate("Log in as user", () => {
   assert.equal(reproductionSecretFieldsAbsent, true);
 });
 const scrollPreviews = [];
-element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+addActionForRow(pathnameRow("visit-1")).dispatch("click");
 element(root, ({ textContent }) => textContent === "Scroll").dispatch("click");
 scrollPreviews.push(element(root, ({ dataset }) => dataset.reproductionPreview === "true").textContent);
 let scrollTarget = element(root, ({ dataset }) => dataset.reproductionField === "scrollTarget");
@@ -308,28 +336,62 @@ assert.equal(loginPreview, "Log in as returning customer");
 assert.deepEqual(scrollPreviews, ["Scroll to the bottom of the page", "Scroll to the top of the page", "Scroll to Order summary", "Scroll to the middle of results"]);
 assert.equal(customPreview, "Apply the free delivery filter");
 
+const manualRowWithText = (text) => element(reproduction, ({ dataset, children }) => dataset.reproductionStepKind === "manual" && children[0]?.textContent.endsWith(text));
+addActionForRow(pathnameRow("visit-1")).dispatch("click");
+element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
+componentName = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
+componentName.value = "Product card"; componentName.dispatch("input");
+element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
+addActionForRow(pathnameRow("visit-1")).dispatch("click");
+element(root, ({ textContent }) => textContent === "Scroll").dispatch("click");
+element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
+let productCardRow = manualRowWithText("Click Product card");
+const manualSectionAddName = addActionForRow(productCardRow).attributes.get("aria-label");
+assert.equal(manualSectionAddName, "Add step to /products section from step 2 Click Product card");
+addActionForRow(productCardRow).dispatch("click");
+assert.ok(element(productCardRow, ({ attributes }) => attributes.get("aria-label") === "Reproduction step composer"));
+element(root, ({ textContent }) => textContent === "Custom step").dispatch("click");
+const reviewText = element(root, ({ dataset }) => dataset.reproductionField === "customText");
+reviewText.value = "Review the available products"; reviewText.dispatch("input");
+element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
+const sectionEndOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
+assert.deepEqual(sectionEndOrder, [
+  "1. Visit /products",
+  "2. Click Product card",
+  "3. Scroll to the bottom of the page",
+  "4. Review the available products",
+  "5. Visit /checkout",
+]);
+const finalAdjacentActionCount = descendants(reproduction).filter(({ dataset }) => dataset.addReproductionStep).length;
+assert.equal(finalAdjacentActionCount, reproduction.children.length);
+for (const text of ["Review the available products", "Scroll to the bottom of the page", "Click Product card"]) {
+  const row = manualRowWithText(text);
+  element(row, ({ textContent }) => textContent === "Remove").dispatch("click");
+}
+assert.deepEqual(reproduction.children.map(({ dataset }) => dataset.reproductionStepKind), ["pathname", "pathname"]);
+
 const addClickStep = (description = "") => {
-  element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+  addActionForRow(pathnameRow("visit-1")).dispatch("click");
   element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
   const name = element(root, ({ dataset }) => dataset.reproductionField === "componentName"); name.value = "Checkout"; name.dispatch("input");
   if (description) { const details = element(root, ({ dataset }) => dataset.reproductionField === "description"); details.value = description; details.dispatch("input"); }
   element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
 };
 addClickStep();
-element(root, ({ textContent }) => textContent === "Add step to /products").dispatch("click");
+addActionForRow(pathnameRow("visit-1")).dispatch("click");
 element(root, ({ textContent }) => textContent === "Scroll").dispatch("click");
 element(root, ({ textContent }) => textContent === "Add step").dispatch("click");
-let manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+let manualScroll = manualRowWithText("Scroll to the bottom of the page");
 element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispatch("click");
 const reproductionOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
 assert.deepEqual(reproductionOrder, ["1. Visit /products", "2. Scroll to the bottom of the page", "3. Click Checkout", "4. Visit /checkout"]);
-manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+manualScroll = manualRowWithText("Scroll to the bottom of the page");
 element(manualScroll, ({ textContent }) => textContent === "Move later").dispatch("click");
 assert.deepEqual(reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value),
   ["1. Visit /products", "2. Click Checkout", "3. Scroll to the bottom of the page", "4. Visit /checkout"]);
-manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+manualScroll = manualRowWithText("Scroll to the bottom of the page");
 element(manualScroll, ({ textContent }) => textContent === "Move earlier").dispatch("click");
-manualScroll = element(reproduction, ({ dataset }) => dataset.reproductionStepId === "manual-3");
+manualScroll = manualRowWithText("Scroll to the bottom of the page");
 const crossAnchorMoveDisabled = element(manualScroll, ({ textContent }) => textContent === "Move earlier").disabled;
 assert.equal(crossAnchorMoveDisabled, true);
 assert.match(element(manualScroll, ({ tagName }) => tagName === "SMALL").textContent, /choose another pathname segment/);
@@ -339,7 +401,7 @@ assert.ok(finalReproductionPreview.indexOf("Scroll to the bottom of the page") <
 assert.ok(finalReproductionPreview.indexOf("Click Checkout") < finalReproductionPreview.indexOf("Visit /checkout"));
 assert.doesNotMatch(finalReproductionPreview, /componentName|scrollTarget|sticky footer button/);
 
-addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
+addReproductionStep = addActionForRow(pathnameRow("visit-1"));
 const beforeCancelOrder = [...reproductionOrder];
 addReproductionStep.dispatch("click");
 element(root, ({ textContent }) => textContent === "Click component").dispatch("click");
@@ -347,7 +409,7 @@ componentName = element(root, ({ dataset }) => dataset.reproductionField === "co
 element(root, ({ textContent }) => textContent === "Cancel").dispatch("click");
 const afterCancelOrder = reproduction.children.map((item) => item.dataset.reproductionStepKind === "manual" ? item.children[0].textContent : item.children[0].value);
 assert.deepEqual(afterCancelOrder, beforeCancelOrder);
-addReproductionStep = element(root, ({ textContent }) => textContent === "Add step to /products");
+addReproductionStep = addActionForRow(pathnameRow("visit-1"));
 assert.deepEqual(addReproductionStep.focusOptions, { preventScroll: true });
 const reproductionCancelFocus = addReproductionStep.focusOptions;
 const firstReproductionInput = element(reproduction.children[0], ({ tagName }) => tagName === "INPUT");
@@ -559,9 +621,14 @@ process.stdout.write(`${JSON.stringify({
     headings,
     reproductionSteps: initialReproductionStepCount,
     reproductionComposer: {
-      contextualActionCount: 1,
+      initialAdjacentActionCount: initialAdjacentAddActions.length,
+      initialActionNames: initialAdjacentAddActions.map(({ attributes }) => attributes.get("aria-label")),
+      legacyControlsAbsent: !descendants(root).some(({ dataset, textContent }) => dataset.selectReproductionSegment || /^Add step to \//.test(textContent)),
+      composerDisplayedInline,
+      templateComposerFocus,
       templateActions: reproductionTemplateActions,
       noStepBeforeSubmit: initialReproductionStepCount === 2,
+      afterFirstAddActionCount,
       clickPreview,
       clickExamples: [
         { componentName: "Checkout", componentDetails: "description sticky footer button", stepText: clickPreview },
@@ -588,6 +655,9 @@ process.stdout.write(`${JSON.stringify({
       crossAnchorMoveDisabled,
       cancelPreserved: JSON.stringify(afterCancelOrder) === JSON.stringify(beforeCancelOrder),
       cancelFocusRestored: reproductionCancelFocus,
+      manualSectionAddName,
+      sectionEndOrder,
+      finalAdjacentActionCount,
       finalPreview: finalReproductionPreview,
       jiraText: richWrites[0]?.text,
       finalStepCount: reproduction.children.length,

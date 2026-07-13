@@ -19,9 +19,20 @@
         expected-order ["1. Visit /products"
                         "2. Scroll to the bottom of the page"
                         "3. Click Checkout"
-                        "4. Visit /checkout"]]
+                        "4. Visit /checkout"]
+        section-end-order ["1. Visit /products"
+                           "2. Click Product card"
+                           "3. Scroll to the bottom of the page"
+                           "4. Review the available products"
+                           "5. Visit /checkout"]]
     (assert-outline-example! example composer)
-    (support/assert! (= 1 (:contextualActionCount composer)) "The selected pathname did not have exactly one contextual add action." composer)
+    (support/assert! (= 2 (:initialAdjacentActionCount composer)) "A pathname row is missing its adjacent add action." composer)
+    (support/assert! (= ["Add step to /products section from step 1 Visit /products"
+                         "Add step to /checkout section from step 2 Visit /checkout"]
+                        (:initialActionNames composer)) "Initial row add actions have incorrect accessible names." composer)
+    (support/assert! (true? (:legacyControlsAbsent composer)) "Legacy pathname selector or shared add controls remain visible." composer)
+    (support/assert! (true? (:composerDisplayedInline composer)) "The template composer was not mounted beneath its invoking row." composer)
+    (support/assert! (= {:preventScroll true} (:templateComposerFocus composer)) "Opening the template composer moved the viewport or did not focus it." composer)
     (support/assert! (= ["Click component" "Log in as user" "Scroll" "Custom step"] (:templateActions composer)) "The reproduction templates are incomplete or unordered." composer)
     (support/assert! (true? (:noStepBeforeSubmit composer)) "Opening the composer added an incomplete step." composer)
     (support/assert! (= "Click Checkout — sticky footer button" (:clickPreview composer)) "Click component preview differs." composer)
@@ -36,6 +47,7 @@
     (support/assert! (= "Apply the free delivery filter" (:customPreview composer)) "Custom preview differs." composer)
     (support/assert! (true? (:customBlankSubmissionUnavailable composer)) "Blank custom text could be submitted." composer)
     (support/assert! (= ["Adjust" "Remove" "Move earlier" "Move later"] (:manualActions composer)) "Manual-step actions are incomplete." composer)
+    (support/assert! (= 3 (:afterFirstAddActionCount composer)) "An added manual row did not receive its own adjacent add action." composer)
     (support/assert! (= "Click Checkout — primary checkout action" (:adjustedText composer)) "Adjusted click text differs." composer)
     (support/assert! (= 1 (:adjustedCount composer)) "Adjusting created a duplicate manual step." composer)
     (support/assert! (= {:preventScroll true} (:adjustFocusRestored composer)) "Saving an adjustment did not restore focus." composer)
@@ -44,6 +56,9 @@
     (support/assert! (true? (:crossAnchorMoveDisabled composer)) "A manual step could move across a pathname anchor without changing segment." composer)
     (support/assert! (true? (:cancelPreserved composer)) "Cancel changed the numbered reproduction steps." composer)
     (support/assert! (= {:preventScroll true} (:cancelFocusRestored composer)) "Cancel did not restore focus to the contextual Add action." composer)
+    (support/assert! (= "Add step to /products section from step 2 Click Product card" (:manualSectionAddName composer)) "The manual-row add action has an incorrect accessible name." composer)
+    (support/assert! (= section-end-order (:sectionEndOrder composer)) "Adding from a manual row did not append at the pathname section end." composer)
+    (support/assert! (= 5 (:finalAdjacentActionCount composer)) "A row in the section-end insertion example lacks an adjacent add action." composer)
     (support/assert! (= 4 (:finalStepCount composer)) "The final reproduction list lost a pathname or manual step." composer)
     (doseq [representation [(:finalPreview composer) (:jiraText composer)]]
       (support/assert! (and representation

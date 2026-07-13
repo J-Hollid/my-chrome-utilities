@@ -105,9 +105,11 @@ button { white-space:normal; overflow-wrap:anywhere; }
 pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
 .defect-reproduction-composer { display:grid; gap:.5rem; margin-block:.5rem; padding:.6rem; border:1px solid var(--line); }
 .defect-reproduction-composer > section { display:grid; gap:.45rem; }
-[data-reproduction-step-kind="manual"] { display:grid; grid-template-columns:minmax(0,1fr) repeat(4,auto); gap:.35rem; align-items:center; }
+[data-reproduction-step-kind="manual"] { display:grid; grid-template-columns:minmax(0,1fr) repeat(5,auto); gap:.35rem; align-items:center; }
 [data-reproduction-step-kind="manual"] > small { grid-column:1/-1; color:var(--muted); }
 [data-reproduction-step-kind="pathname"] { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.35rem; align-items:end; }
+[data-reproduction-step-kind] > .defect-reproduction-composer { grid-column:1/-1; }
+.defect-reproduction-add { inline-size:1.8rem; block-size:1.8rem; min-inline-size:1.8rem; padding:0; font-size:1rem; line-height:1; }
 
 @media (min-width:700px) {
   #data-layer-panel-live {

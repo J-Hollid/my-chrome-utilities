@@ -28,7 +28,9 @@ export function appendReproductionControls(
   let draft: ReproductionStepTemplate | undefined;
   let editingId: string | undefined;
   let nextManualId = 1;
-  let contextualAdd: HTMLButtonElement | undefined;
+  let activeRowKey: string | undefined;
+  const addActions = new Map<string, HTMLButtonElement>();
+  const rowHosts = new Map<string, HTMLLIElement>();
   const adjustActions = new Map<string, HTMLButtonElement>();
 
   const startLabel = document.createElement("label"); startLabel.textContent = "Reproduction starts at ";
@@ -56,23 +58,38 @@ export function appendReproductionControls(
     const restoreId = editingId;
     stage = "idle"; draft = undefined; editingId = undefined;
     renderComposer();
-    const action = restoreId ? adjustActions.get(restoreId) : contextualAdd;
+    const action = restoreId ? adjustActions.get(restoreId) : activeRowKey ? addActions.get(activeRowKey) : undefined;
     action?.focus({ preventScroll: true });
   };
 
   renderSteps = () => {
+    addActions.clear();
+    rowHosts.clear();
     adjustActions.clear();
     steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
       const item = document.createElement("li");
       item.dataset.reproductionStepKind = step.kind;
       item.dataset.visitId = step.visitId;
+      const rowKey = step.kind === "manual" ? `manual:${step.id}` : `pathname:${step.visitId}`;
+      rowHosts.set(rowKey, item);
+      const add = document.createElement("button");
+      add.type = "button";
+      add.textContent = "+";
+      add.className = "defect-reproduction-add";
+      add.dataset.addReproductionStep = step.visitId;
+      add.setAttribute("aria-label", `Add step to ${step.pathname} section from step ${index + 1} ${step.text.replace(/^\d+\.\s*/, "")}`);
+      addActions.set(rowKey, add);
+      add.addEventListener("click", () => {
+        selectedVisitId = step.visitId; activeRowKey = rowKey; editingId = undefined; draft = undefined;
+        stage = "templates"; renderComposer();
+      });
       if (step.kind === "manual") {
         item.dataset.reproductionStepId = step.id;
         const text = document.createElement("span"); text.textContent = step.text;
         const adjust = document.createElement("button"); adjust.type = "button"; adjust.textContent = "Adjust"; adjust.dataset.adjustStep = step.id;
         adjustActions.set(step.id, adjust);
         adjust.addEventListener("click", () => {
-          selectedVisitId = step.visitId; editingId = step.id; draft = copyTemplate(step.template);
+          selectedVisitId = step.visitId; activeRowKey = rowKey; editingId = step.id; draft = copyTemplate(step.template);
           stage = "configure"; renderComposer();
         });
         const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
@@ -86,7 +103,7 @@ export function appendReproductionControls(
         later.disabled = following?.kind !== "manual" || following.visitId !== step.visitId;
         later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
         const segmentNote = document.createElement("small"); segmentNote.textContent = `Belongs to ${step.pathname}; choose another pathname segment to move across an anchor.`;
-        item.append(text, adjust, remove, earlier, later, segmentNote);
+        item.append(text, add, adjust, remove, earlier, later, segmentNote);
         return item;
       }
       const input = document.createElement("input"); input.value = step.text; input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
@@ -94,10 +111,9 @@ export function appendReproductionControls(
         state.update({ ...state.report(), reproductionSteps: state.report().reproductionSteps.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, text: input.value } : candidate) });
         state.refresh();
       });
-      const select = document.createElement("button"); select.type = "button"; select.textContent = `Select ${step.pathname} segment`; select.dataset.selectReproductionSegment = step.visitId;
-      select.addEventListener("click", () => { selectedVisitId = step.visitId; stage = "idle"; draft = undefined; editingId = undefined; renderComposer(); });
-      item.append(input, select); return item;
+      item.append(input, add); return item;
     }));
+    if (stage !== "idle") renderComposer();
   };
 
   const beginTemplate = (template: ReproductionStepTemplate) => {
@@ -106,16 +122,13 @@ export function appendReproductionControls(
 
   renderComposer = () => {
     composer.replaceChildren();
-    if (!selectedVisitId) return;
+    composer.remove();
+    const host = activeRowKey ? rowHosts.get(activeRowKey) : undefined;
+    if (!selectedVisitId || !host || stage === "idle") return;
     const pathname = selectedPathname();
-    if (stage === "idle") {
-      const add = document.createElement("button"); add.type = "button"; add.textContent = `Add step to ${pathname}`; add.dataset.addReproductionStep = selectedVisitId;
-      contextualAdd = add;
-      add.addEventListener("click", () => { stage = "templates"; renderComposer(); });
-      composer.append(add); return;
-    }
     if (stage === "templates") {
       const group = document.createElement("section"); group.setAttribute("aria-label", `Choose step template for ${pathname}`);
+      let firstTemplate: HTMLButtonElement | undefined;
       for (const [label, template] of [
         ["Click component", { kind: "click", componentName: "" }],
         ["Log in as user", { kind: "login", persona: "" }],
@@ -123,19 +136,24 @@ export function appendReproductionControls(
         ["Custom step", { kind: "custom", text: "" }],
       ] as const) {
         const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+        firstTemplate ??= button;
         button.addEventListener("click", () => beginTemplate(template)); group.append(button);
       }
       const cancelButton = document.createElement("button"); cancelButton.type = "button"; cancelButton.textContent = "Cancel"; cancelButton.addEventListener("click", cancel);
-      group.append(cancelButton); composer.append(group); return;
+      group.append(cancelButton); composer.append(group); host.append(composer);
+      firstTemplate?.focus({ preventScroll: true });
+      return;
     }
     if (!draft) return;
     const form = document.createElement("section"); form.setAttribute("aria-label", `${editingId ? "Adjust" : "Configure"} step for ${pathname}`);
     const preview = document.createElement("output"); preview.dataset.reproductionPreview = "true";
     const submit = document.createElement("button"); submit.type = "button"; submit.textContent = editingId ? "Save changes" : "Add step";
     const refreshPreview = () => { const text = reproductionStepPreview(draft!); preview.textContent = text ?? "Complete the template to preview the step."; submit.disabled = !text; };
+    let firstControl: HTMLElement | undefined;
     const input = (labelText: string, field: string, value: string, update: (value: string) => void) => {
       const label = document.createElement("label"); label.textContent = `${labelText} `;
       const control = document.createElement("input"); control.value = value; control.dataset.reproductionField = field;
+      firstControl ??= control;
       control.addEventListener("input", () => { update(control.value); refreshPreview(); });
       label.append(control); form.append(label); return control;
     };
@@ -151,6 +169,7 @@ export function appendReproductionControls(
     } else if (draft.kind === "scroll") {
       const label = document.createElement("label"); label.textContent = "Scroll target ";
       const select = document.createElement("select"); select.dataset.reproductionField = "scrollTarget"; select.value = draft.target;
+      firstControl ??= select;
       for (const [value, text] of [["bottom", "bottom of the page"], ["top", "top of the page"], ["component", "component"], ["custom", "custom"]]) select.append(Object.assign(document.createElement("option"), { value, textContent: text }));
       select.addEventListener("change", () => { if (draft?.kind === "scroll") draft = { kind: "scroll", target: select.value as "bottom" | "top" | "component" | "custom" }; renderComposer(); });
       label.append(select); form.append(label);
@@ -168,13 +187,14 @@ export function appendReproductionControls(
       if (restoreId) adjustActions.get(restoreId)?.focus({ preventScroll: true });
     });
     const cancelButton = document.createElement("button"); cancelButton.type = "button"; cancelButton.textContent = "Cancel"; cancelButton.addEventListener("click", cancel);
-    form.append(preview, submit, cancelButton); refreshPreview(); composer.append(form);
+    form.append(preview, submit, cancelButton); refreshPreview(); composer.append(form); host.append(composer);
+    firstControl?.focus({ preventScroll: true });
   };
 
   generate.addEventListener("click", () => {
     const skeleton = generatePathnameSkeleton(context.visits, startVisit.value, context.defectVisitId);
-    selectedVisitId = skeleton[0]?.visitId; stage = "idle"; draft = undefined; editingId = undefined;
+    selectedVisitId = undefined; activeRowKey = undefined; stage = "idle"; draft = undefined; editingId = undefined;
     updateSteps(skeleton); renderComposer();
   });
-  controls.append(startLabel, generate, composer);
+  controls.append(startLabel, generate);
 }
