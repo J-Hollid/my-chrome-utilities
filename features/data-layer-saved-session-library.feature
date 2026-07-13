@@ -23,8 +23,8 @@ Feature: Data layer saved session library
   # Data layer saved session library 002
   Scenario Outline: Data layer saved session library 002
     Given saved session <session_name> contains event <event_name> from source <source_name>
-    When saved session <session_name> is opened later
-    Then the observer workspace is visibly in Archived session mode
+    When saved session <session_name> is opened in the Live feed later
+    Then the Live view is visibly in Saved session mode
     And event <event_name> retains its source, page, capture order, payload, and raw input
     And no live observer is started automatically
 
@@ -34,8 +34,8 @@ Feature: Data layer saved session library
 
   # Data layer saved session library 003
   Scenario Outline: Data layer saved session library 003
-    Given saved session <session_name> is open in Archived session mode
-    When the user resumes capture from the saved session on page <page_url>
+    Given saved session <session_name> is selected in Sessions
+    When the user starts linked capture from the saved session on page <page_url>
     Then a new active session is created and linked to <session_name>
     And saved session <session_name> remains unchanged
     And new events are captured only in the new active session
@@ -60,7 +60,7 @@ Feature: Data layer saved session library
     Given saved sessions <session_names> are listed
     When the user searches for <query>
     Then only saved sessions matching <query> by name, page, source, or event name are listed
-    And session actions offer Open, Rename, Export, Create sequence, and Delete
+    And session actions offer Open in Live feed, Start linked capture, Rename, Export, Create sequence, and Delete
 
     Examples:
       | project_name         | session_names                         | query    |
