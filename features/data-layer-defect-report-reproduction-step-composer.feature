@@ -11,7 +11,7 @@ Feature: Data layer defect report reproduction step composer
   # Data layer defect report reproduction step composer 001
   Scenario: Data layer defect report reproduction step composer 001
     When the numbered reproduction steps are displayed
-    Then every pathname and manual step has an adjacent compact + action
+    Then every pathname and manual step has a compact + action in its associated action row
     And step 1 has accessible action name Add step to /products section from step 1 Visit /products
     And step 2 has accessible action name Add step to /checkout section from step 2 Visit /checkout
     And Select pathname segment controls and a shared Add step control are absent
@@ -72,7 +72,7 @@ Feature: Data layer defect report reproduction step composer
       | 3      | Visit /checkout                        |
     And pathname anchors remain in captured order
     And Adjust and Remove are available for the added step
-    And each numbered row has its own adjacent + action
+    And each numbered row has its own + action in its action row
 
   # Data layer defect report reproduction step composer 007
   Scenario: Data layer defect report reproduction step composer 007
@@ -120,3 +120,35 @@ Feature: Data layer defect report reproduction step composer
     Then Review the available products becomes step 4 immediately before Visit /checkout
     And it is appended after Scroll to the bottom of the page instead of immediately after Click Product card
     And later reproduction steps are renumbered
+
+  # Data layer defect report reproduction step composer 013
+  Scenario Outline: Data layer defect report reproduction step composer 013
+    Given manual step 2 is Click Checkout in a reproduction builder of width <builder_width>
+    When manual step 2 is rendered
+    Then 2. Click Checkout occupies a full row before its actions
+    And +, Adjust, Remove, Move earlier, and Move later are displayed in an action row beneath the step text
+    And action controls wrap as complete controls without splitting their captions across lines
+    And the reproduction step does not overflow horizontally
+    And its segment guidance is displayed on a separate row after the actions
+
+    Examples:
+      | builder_width |
+      | 360 CSS px    |
+      | 520 CSS px    |
+
+  # Data layer defect report reproduction step composer 014
+  Scenario: Data layer defect report reproduction step composer 014
+    Given pathname and manual reproduction steps are displayed together
+    When their row actions are inspected
+    Then every step presents its text before its associated action row
+    And each + action retains an accessible name identifying its step and pathname section
+    And a manual step orders actions +, Adjust, Remove, Move earlier, and Move later
+    And keyboard navigation follows the displayed action order
+
+  # Data layer defect report reproduction step composer 015
+  Scenario: Data layer defect report reproduction step composer 015
+    Given manual step 2 belongs to /checkout and cannot move earlier across its pathname anchor
+    When the step actions are displayed
+    Then Move earlier remains visible and disabled
+    And guidance states Reordering stays within /checkout
+    And guidance to choose another pathname segment is absent
