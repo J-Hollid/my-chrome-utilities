@@ -67,3 +67,7 @@
            :applies? (fn [world] (or (= entry-step (:text spec)) (:schema-property-rule-picker world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T01:08:48.722767311+02:00", :module-hash "1417952612", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "110500236"} {:id "def/feature-file", :kind "def", :line 5, :end-line nil, :hash "-1761985661"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line nil, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line nil, :hash "-684177608"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line nil, :hash "1271028503"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-775394783"} {:id "defn-/assert-availability-example!", :kind "defn-", :line 19, :end-line nil, :hash "-1772756707"} {:id "defn-/assert-search-example!", :kind "defn-", :line 26, :end-line nil, :hash "-460434597"} {:id "defn-/assert-example!", :kind "defn-", :line 31, :end-line nil, :hash "1634770139"} {:id "defn-/assert-picker!", :kind "defn-", :line 35, :end-line nil, :hash "-652600351"} {:id "defn-/transition", :kind "defn-", :line 57, :end-line nil, :hash "1019694489"} {:id "def/handlers", :kind "def", :line 64, :end-line nil, :hash "789228454"}]}
+;; clj-mutate-manifest-end

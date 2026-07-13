@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 
 import {
+  applicablePropertyTypesForRule,
   builtInRulesForProperty,
   reusableRulesForProperty,
   ruleTypeAvailability,
 } from "../dist/data-layer-schema-property-rule-picker.js";
+
+assert.deepEqual(applicablePropertyTypesForRule({ id:"explicit", name:"Explicit", kind:"Numeric range · number", applicableType:"string" }), ["string"]);
 
 assert.equal(ruleTypeAvailability("string", "Required"), "available");
 assert.equal(ruleTypeAvailability("string", "Regular expression"), "available");
