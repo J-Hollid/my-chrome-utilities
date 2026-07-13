@@ -19,11 +19,13 @@ let schemaRevisionLifecycleUiObservation;
 let guidedDraftContinuationObservation;
 let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
+let schemaPropertyRulePickerObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
     : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
       : [320, 360, 520, 720];
@@ -498,6 +500,30 @@ const reproductionStepActionRowsRuntime = `(async () => {
   return observation;
 })()`;
 
+const guidedDestinationOptionsRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"pageview", page_type:"product_list", count:2 }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  Array.from(q("#live-event-inspector").querySelectorAll("button")).find(({ textContent }) => textContent === "Create validation from this event").click();
+  const flow = q("#guided-validation-flow");
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  Array.from(flow.querySelectorAll("button")).find(({ textContent }) => textContent === "Continue").click();
+  flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
+  return Array.from(q("#guided-schema-results").querySelectorAll(":scope > article")).map((row) => ({
+    label:row.querySelector("h6").textContent,
+    disabled:row.querySelector("button").disabled,
+    explanation:row.querySelectorAll("p")[1].textContent.replace("Property compatibility: ", ""),
+  }));
+})()`;
+
 const guidedValidationRuntime = `(async () => {
   const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
   const visible = (element) => element.getClientRects().length > 0 && !element.hidden;
@@ -935,15 +961,13 @@ const schemaAssignmentRuntime = `(() => {
   q("#schema-subview-schemas").click();
   Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit working draft").click();
   q("#cancel-schema-revision").click();
-  const propertyAdd = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "Add validation rule");
-  if (!propertyAdd) throw new Error("Missing expandable property rule menu");
-  const propertyMenu = q("#schema-property-tree details[data-rule-menu]");
+  const propertyAdd = q('#schema-property-tree button[aria-label="Add rule for example"]');
   propertyAdd.click();
-  const propertyMenuOpen = propertyMenu.open;
-  const attach = Array.from(q("#schema-property-tree").querySelectorAll("button")).find((button) => button.textContent === "Attach Known page types v1");
+  const propertyMenuOpen = q("#schema-property-rule-picker").open;
+  const attach = Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find((button) => button.textContent === "Known page types version 1");
   if (!attach) throw new Error("Missing property rule attachment action");
   attach.click();
-  const propertyReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
+  const propertyReturnFocus = document.activeElement?.getAttribute("aria-label") === "Add rule for example";
   const attachedSummary = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)");
   if (!attachedSummary) throw new Error("Missing attached-rules disclosure");
   attachedSummary.click();
@@ -1193,6 +1217,46 @@ const guidedDraftContinuationReloadRuntime = `(async () => {
     destinationAbsent:!document.querySelector("#guided-schema-destination") && !document.querySelector("#guided-schema-picker"),
     expectedTypeSource:document.querySelector("#guided-expected-type-hint").textContent,
   };
+})()`;
+
+const schemaPropertyRulePickerRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click();
+  click(q("#schema-list"), "Edit working draft");
+  const trigger = q('#schema-property-tree button[aria-label="Add rule for page_type"]');
+  const editorBefore = q("#schema-editor").getBoundingClientRect();
+  const closed = { label:trigger.textContent, pickerAbsent:!q("#schema-property-rule-picker").open, inlineResults:!q("#schema-property-tree").querySelector("#schema-property-rule-results"), expandedMenu:!q("#schema-property-tree").querySelector("details[data-rule-menu]") };
+  trigger.click();
+  const dialog = q("#schema-property-rule-picker");
+  const results = () => q("#schema-property-rule-results");
+  const opened = { heading:q("#schema-property-rule-picker-heading").textContent, searchFocused:document.activeElement === q("#schema-property-rule-search"), bounded:dialog.getBoundingClientRect().height <= innerHeight - 8, scrolls:results().scrollHeight >= results().clientHeight, modal:dialog.matches(":modal"), backgroundExcluded:q("#schema-editor").matches(":modal") === false };
+  const input = (value) => { const search = q("#schema-property-rule-search"); search.value = value; search.dispatchEvent(new Event("input", { bubbles:true })); return Array.from(document.querySelector('[aria-label="Attach from Rule Library"]')?.querySelectorAll("button") ?? []).map(({ textContent }) => textContent); };
+  const searches = Object.fromEntries([["Approved pages","rule name"],["allowed values","operator"],["checkout","parameters"],["public pages","description"],["string","applicable type"],["version 2","version"]].map(([query, metadata]) => [metadata, input(query)]));
+  input("");
+  const groups = Array.from(results().querySelectorAll(":scope > section > h5")).map(({ textContent }) => textContent);
+  const metadata = Array.from(results().querySelectorAll("article p")).map(({ textContent }) => textContent);
+  click(results(), "Regular expression");
+  const builtInConfiguration = q("#schema-local-rule-configuration").textContent;
+  click(dialog, "Cancel");
+  trigger.click();
+  click(q("#schema-property-rule-picker"), "Approved pages version 2");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const triggerAfter = q('#schema-property-tree button[aria-label="Add rule for page_type"]'); triggerAfter.click();
+  const already = Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find(({ textContent }) => textContent.includes("Approved pages version 2"));
+  const beforeEmpty = localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  input("missing-rule");
+  const empty = { message:q("#schema-property-rule-empty").textContent, clearAvailable:Array.from(dialog.querySelectorAll("button")).some(({ textContent }) => textContent === "Clear search") };
+  click(dialog, "Clear search");
+  empty.restored = results().querySelectorAll("article").length > 1; empty.unchanged = beforeEmpty === localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  const first = results().querySelector("button:not(:disabled)"); q("#schema-property-rule-search").focus(); q("#schema-property-rule-search").dispatchEvent(new KeyboardEvent("keydown", { key:"ArrowDown", bubbles:true })); document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key:"Enter", bubbles:true }));
+  const keyboard = { selected:first?.textContent, configured:Boolean(q("#schema-local-rule-configuration")) };
+  dialog.dispatchEvent(new Event("cancel", { cancelable:true }));
+  const editorAfter = q("#schema-editor").getBoundingClientRect(); keyboard.escapeClosed = !dialog.open; keyboard.layoutUnchanged = editorBefore.width === editorAfter.width && editorBefore.left === editorAfter.left;
+  const model = await import("/data-layer-schema-property-rule-picker.js");
+  const availability = Object.fromEntries([["string","Required"],["string","Regular expression"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
+  return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard };
 })()`;
 
 const schemaRevisionLifecycleUiRuntime = `(() => {
@@ -2039,6 +2103,21 @@ try {
         close:{ dialogClosed:true, restored:true },
         button:{ summary:"Product listing version 3", changeFocused:true },
       }, "Guided schema picker violated its 320px browser contract");
+      if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
+        await evaluate(socket, `(() => {
+          const current = { id:"schema-page-view", name:"Page view", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], attachedRules:[], pendingChanges:[] } };
+          const rules = [
+            { id:"rule:approved", name:"Approved pages", kind:"Allowed values · string", operator:"allowed values", parameters:"homepage, checkout", description:"Public pages", applicableType:"string", version:2, enabled:true },
+            { id:"rule:number", name:"Revenue range", kind:"Numeric range · number", operator:"numeric range", parameters:"0-100", applicableType:"number", version:3, enabled:true },
+            { id:"rule:array", name:"Item count", kind:"Item count · array", operator:"item count", parameters:"1-10", applicableType:"array", version:1, enabled:true },
+          ];
+          localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([current]));
+          localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify(rules));
+          return true;
+        })()`);
+        await reloadPanel(socket);
+        schemaPropertyRulePickerObservation = await evaluate(socket, schemaPropertyRulePickerRuntime);
+      }
       await evaluate(socket, `(previous => { localStorage.clear(); for (const [key, value] of Object.entries(previous)) localStorage.setItem(key, value); })(${JSON.stringify(previousPickerStorage)})`);
       await reloadPanel(socket);
       socket.close();
@@ -2047,6 +2126,21 @@ try {
     if (width === 720) {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
+        const schemas = [
+          { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+          { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
+        ];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return previous;
+      })()`);
+      await reloadPanel(socket);
+      const guidedDestinationOptionsObservation = await evaluate(socket, guidedDestinationOptionsRuntime);
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        for (const [key, value] of Object.entries(${JSON.stringify(previousGuidedStorage)})) localStorage.setItem(key, value);
         const schemas = [
           { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
@@ -2057,10 +2151,11 @@ try {
         ];
         localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
         localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
-        return previous;
+        return true;
       })()`);
       await reloadPanel(socket);
       guidedValidationObservation = await evaluate(socket, guidedValidationRuntime);
+      guidedValidationObservation.existingOptions = guidedDestinationOptionsObservation;
       const { production, ...renderedGuidedValidation } = guidedValidationObservation;
       assert.deepEqual(renderedGuidedValidation, {
         initial:{
@@ -2091,12 +2186,10 @@ try {
         saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
-          { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
-          { label:"Generic pageview version 4", disabled:false, explanation:"page_type accepts String rules" },
+          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
-          { label:"Signal Shop pageview version 1", disabled:false, explanation:"page_type accepts String rules" },
         ],
         existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
         existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
@@ -2558,6 +2651,9 @@ try {
   }
   if (process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ guidedDraftContinuation:{ initial:guidedDraftContinuationInitialObservation, interaction:guidedDraftContinuationObservation, reload:guidedDraftContinuationReloadObservation } }));
+  }
+  if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaPropertyRulePicker:schemaPropertyRulePickerObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
