@@ -16,15 +16,21 @@
 
 (defn- observation! [] (or @observation (load-observation!)))
 
-(defn- assert-example! [example observed]
+(defn- assert-availability-example! [example observed]
   (when-let [property-type (support/example-value example "property_type")]
     (let [rule-type (support/require-example example "rule_type")
           expected (support/require-example example "availability")]
       (support/assert! (= expected (get-in observed [:availability (keyword (str property-type ":" rule-type))]))
-                       "Property type compatibility changed." {:example example})))
+                       "Property type compatibility changed." {:example example}))))
+
+(defn- assert-search-example! [example observed]
   (when-let [metadata (support/example-value example "matched_metadata")]
     (support/assert! (= ["Approved pages version 2"] (get-in observed [:searches (keyword metadata)]))
                      "Reusable rule metadata search changed." {:example example})))
+
+(defn- assert-example! [example observed]
+  (assert-availability-example! example observed)
+  (assert-search-example! example observed))
 
 (defn- assert-picker! [example observed]
   (support/assert! (= {:label "Add rule" :pickerAbsent true :inlineResults true :expandedMenu true} (:closed observed))

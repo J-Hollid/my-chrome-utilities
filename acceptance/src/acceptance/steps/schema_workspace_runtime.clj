@@ -112,7 +112,7 @@
     (contains? #{"<source_kind> <source_name> contains nested payload properties page_type, page_name, and commerce.order.id"
                  "the operator activates Create schema from this <source_kind>"
                  "the schema editor renders expandable property rows for the observed payload hierarchy"
-                 "each row offers Add rule and View attached rules for its complete property path"
+                 "each row offers Add validation rule and View attached rules for its complete property path"
                  "the operator does not have to type a property path into a free-form field"
                  "no observed value becomes an active rule before the operator accepts it"} text)
     (support/assert! (= ["page_type" "page_name" "commerce" "commerce.order" "commerce.order.id"] (get-in observation [:sourceCreation :paths])) "Source schema browser controls did not render observed paths." {:observation observation})
@@ -199,7 +199,7 @@
     "the schema editor renders expandable property rows for the observed payload hierarchy"
     (do (require! world :draft "Schema draft was not created.") world)
 
-    "each row offers Add rule and View attached rules for its complete property path"
+    "each row offers Add validation rule and View attached rules for its complete property path"
     (do (support/assert! (contains? (get-in world [:draft :paths]) "commerce.order.id")
                          "Nested property path was not created." {})
         world)
@@ -446,6 +446,14 @@
       (transition world example observation)
       (throw (ex-info "Unsupported schema rule visibility step." {:step text})))))
 
+(def ^:private runtime-step-aliases
+  {"each row offers Add rule and View attached rules for its complete property path"
+   "each row offers Add validation rule and View attached rules for its complete property path"})
+
+(defn- runtime-transition [world example captures spec]
+  (transition world example captures
+              (update spec :text #(get runtime-step-aliases % %))))
+
 (def runtime-handlers
   (mapv (fn [spec]
           {:pattern (support/template-pattern (:text spec))
@@ -456,7 +464,7 @@
                                         "shared schema export verification compares identity collections separately from envelope metadata"
                                         "the acceptance parser provides example values <schema_count> and <rule_count> using its supported key representation"} (:text spec))
                            (:schema-workspace-runtime? world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
+           :handler (fn [world example captures] (runtime-transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
 
 (def visibility-handlers
