@@ -47,3 +47,21 @@ Use the inspect links on the extension card to debug the service worker and
 side panel. The generated source maps embed the TypeScript source, so DevTools
 can open and breakpoint files under `src/` even though the unpacked extension
 only serves files from `dist/`.
+
+## Clojure Analysis Tools
+
+The SwarmForge analysis commands use Clojure CLI with cache and configuration
+stored under each worktree's `.swarmforge/clojure` directory.
+
+```sh
+clj -Sdescribe
+crap4clj data_layer
+dry4clj
+clj-mutate acceptance/src/acceptance/runtime.clj --scan
+```
+
+`crap4clj` runs the Clojure unit coverage suite and analyzes the Babashka
+acceptance implementation under `acceptance/src`. Optional arguments select
+source-path fragments. `dry4clj` compares the acceptance implementation and
+its unit tests by default. Mutation scans require an explicit source file and
+do not run mutation tests.

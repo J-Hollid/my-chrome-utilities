@@ -1,6 +1,8 @@
 node_modules/
 build/
 coverage/
+target/
+.cpcache/
 tmp/
 .nyc_output/
 *.tsbuildinfo

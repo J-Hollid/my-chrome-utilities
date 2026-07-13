@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($#)); then
+  exec clj -M:dry4clj "$@"
+else
+  exec clj -M:dry4clj acceptance/src test/acceptance
+fi
