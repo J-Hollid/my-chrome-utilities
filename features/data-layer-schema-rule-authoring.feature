@@ -14,11 +14,11 @@ Feature: Data layer schema rule authoring
   # Data layer schema rule authoring 002
   Scenario: Data layer schema rule authoring 002
     Given property page_type has observed type string
-    When the operator activates Add validation rule for page_type
-    Then a keyboard-accessible rule menu opens for page_type
+    When the operator activates Add rule for page_type
+    Then a keyboard-accessible searchable rule picker opens for page_type
     And string-compatible built-in rules and reusable string rules are available
-    And rules that require incompatible value types are absent or disabled with an explanation
-    And closing the menu returns focus to Add validation rule for page_type
+    And rules that require incompatible value types are absent from results
+    And closing the picker returns focus to Add rule for page_type
 
   # Data layer schema rule authoring 003
   Scenario Outline: Data layer schema rule authoring 003
