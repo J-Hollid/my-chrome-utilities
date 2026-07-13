@@ -20,26 +20,36 @@
     "a defect report has numbered pathname step 1 Visit /products and step 2 Visit /checkout"
     "a defect report is being built from invalid event purchase"})
 
+(defn- json-output-line? [line]
+  (str/starts-with? line "{"))
+
+(defn- last-json-output-line [result]
+  (last (filter json-output-line? (str/split-lines (:out result)))))
+
+(defn- result-observation [result observation-key]
+  (when-let [line (last-json-output-line result)]
+    (get (json/parse-string line true) observation-key)))
+
+(defn- assert-runtime-result! [result failure-message]
+  (support/assert! (zero? (:exit result))
+                   (str failure-message ": " (:err result))
+                   {:out (:out result) :err (:err result)}))
+
 (defn- load-observation! []
   (let [result (process/shell support/build-shell-options "node" "test/data-layer-defect-report-runtime-test.mjs")
         ui-result (process/shell support/build-shell-options "node" "test/data-layer-defect-report-ui-test.mjs")
-        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        ui-line (last (filter #(str/starts-with? % "{") (str/split-lines (:out ui-result))))
-        ui-observation (:defectReportUi (when ui-line (json/parse-string ui-line true)))
+        defect-report-observation (result-observation result :defectReport)
+        ui-observation (result-observation ui-result :defectReportUi)
         action-rows-observation (support/load-browser-observation!
                                  {:adapter-env "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER"
                                   :observation-key :reproductionStepActionRows
                                   :runtime-error "Reproduction step action rows browser runtime failed."
                                   :missing-error "Reproduction step action rows browser observation is missing."})
-        observation (some-> (:defectReport (when line (json/parse-string line true)))
+        observation (some-> defect-report-observation
                             (assoc :ui ui-observation
                                    :reproductionStepActionRows action-rows-observation))]
-    (support/assert! (zero? (:exit result))
-                     (str "Defect report production runtime failed: " (:err result))
-                     {:out (:out result) :err (:err result)})
-    (support/assert! (zero? (:exit ui-result))
-                     (str "Defect report production UI runtime failed: " (:err ui-result))
-                     {:out (:out ui-result) :err (:err ui-result)})
+    (assert-runtime-result! result "Defect report production runtime failed")
+    (assert-runtime-result! ui-result "Defect report production UI runtime failed")
     (support/assert! observation "Defect report runtime observation is missing." {:out (:out result)})
     (reset! runtime-observation observation)))
 

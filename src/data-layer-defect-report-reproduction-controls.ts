@@ -17,6 +17,18 @@ function copyTemplate(template: ReproductionStepTemplate): ReproductionStepTempl
   return { ...template };
 }
 
+function appendStepPresentation(
+  item: HTMLLIElement,
+  text: HTMLElement,
+  controls: readonly HTMLButtonElement[],
+  guidance?: HTMLElement,
+): void {
+  text.className = "defect-reproduction-step-text";
+  const actions = document.createElement("div"); actions.className = "defect-reproduction-step-actions"; actions.append(...controls);
+  if (guidance) guidance.className = "defect-reproduction-step-guidance";
+  item.append(...[text, actions, guidance].filter((element): element is HTMLElement => Boolean(element)));
+}
+
 export function appendReproductionControls(
   controls: HTMLElement,
   steps: HTMLElement,
@@ -85,8 +97,7 @@ export function appendReproductionControls(
       });
       if (step.kind === "manual") {
         item.dataset.reproductionStepId = step.id;
-        const text = document.createElement("span"); text.className = "defect-reproduction-step-text"; text.textContent = step.text;
-        const actions = document.createElement("div"); actions.className = "defect-reproduction-step-actions";
+        const text = document.createElement("span"); text.textContent = step.text;
         const adjust = document.createElement("button"); adjust.type = "button"; adjust.textContent = "Adjust"; adjust.dataset.adjustStep = step.id;
         adjustActions.set(step.id, adjust);
         adjust.addEventListener("click", () => {
@@ -103,18 +114,16 @@ export function appendReproductionControls(
         const following = state.report().reproductionSteps[index + 1];
         later.disabled = following?.kind !== "manual" || following.visitId !== step.visitId;
         later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
-        const segmentNote = document.createElement("small"); segmentNote.className = "defect-reproduction-step-guidance"; segmentNote.textContent = `Reordering stays within ${step.pathname}.`;
-        actions.append(add, adjust, remove, earlier, later);
-        item.append(text, actions, segmentNote);
+        const segmentNote = document.createElement("small"); segmentNote.textContent = `Reordering stays within ${step.pathname}.`;
+        appendStepPresentation(item, text, [add, adjust, remove, earlier, later], segmentNote);
         return item;
       }
-      const input = document.createElement("input"); input.className = "defect-reproduction-step-text"; input.value = step.text; input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
+      const input = document.createElement("input"); input.value = step.text; input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
       input.addEventListener("input", () => {
         state.update({ ...state.report(), reproductionSteps: state.report().reproductionSteps.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, text: input.value } : candidate) });
         state.refresh();
       });
-      const actions = document.createElement("div"); actions.className = "defect-reproduction-step-actions"; actions.append(add);
-      item.append(input, actions); return item;
+      appendStepPresentation(item, input, [add]); return item;
     }));
     if (stage !== "idle") renderComposer();
   };

@@ -14,29 +14,37 @@
       (support/assert! match "Scroll example was not exercised by the production UI." {:example example})
       (support/assert! (= (:step_text example) (:stepText match)) "Scroll example preview differs." {:example example :match match}))))
 
+(def ^:private action-order ["+" "Adjust" "Remove" "Move earlier" "Move later"])
+(def ^:private checkout-boundary
+  {:text "2. Click Checkout"
+   :earlierVisible true
+   :earlierDisabled true
+   :guidance "Reordering stays within /checkout."
+   :chooseAnotherAbsent true})
+
+(defn- complete-layout? [observation]
+  (= [true true true true]
+     ((juxt :textBeforeActions :guidanceAfterActions :completeControls :noHorizontalOverflow)
+      observation)))
+
+(defn- contextual-row? [row]
+  (= [true true true]
+     [(:textBeforeActions row)
+      (str/starts-with? (:addName row) "Add step to /")
+      (str/includes? (:addName row) " section from step ")]))
+
+(defn- assert-action-row! [observation]
+  (support/assert! (= "2. Click Checkout" (:text observation)) "The manual step text differs in the browser." observation)
+  (support/assert! (= action-order (:actionOrder observation)) "Manual-step browser actions are unordered." observation)
+  (support/assert! (= (:actionOrder observation) (:tabOrder observation)) "Keyboard navigation order differs from the displayed action order." observation)
+  (support/assert! (complete-layout? observation) "The reproduction step does not preserve its three-row responsive layout." observation)
+  (support/assert! (every? contextual-row? (:rows observation)) "A pathname or manual row lost text-first order or its contextual Add name." observation)
+  (support/assert! (= checkout-boundary (:checkoutBoundary observation)) "The /checkout pathname boundary is unclear or movable." observation))
+
 (defn- assert-action-rows! [observations]
   (support/assert! (= [360 520] (mapv :width observations)) "The reproduction action rows were not verified at both specified widths." observations)
   (doseq [observation observations]
-    (support/assert! (= "2. Click Checkout" (:text observation)) "The manual step text differs in the browser." observation)
-    (support/assert! (= ["+" "Adjust" "Remove" "Move earlier" "Move later"] (:actionOrder observation)) "Manual-step browser actions are unordered." observation)
-    (support/assert! (= (:actionOrder observation) (:tabOrder observation)) "Keyboard navigation order differs from the displayed action order." observation)
-    (support/assert! (and (:textBeforeActions observation)
-                          (:guidanceAfterActions observation)
-                          (:completeControls observation)
-                          (:noHorizontalOverflow observation))
-                     "The reproduction step does not preserve its three-row responsive layout." observation)
-    (support/assert! (every? #(and (:textBeforeActions %)
-                                   (str/starts-with? (:addName %) "Add step to /")
-                                   (str/includes? (:addName %) " section from step "))
-                            (:rows observation))
-                     "A pathname or manual row lost text-first order or its contextual Add name." observation)
-    (support/assert! (= {:text "2. Click Checkout"
-                         :earlierVisible true
-                         :earlierDisabled true
-                         :guidance "Reordering stays within /checkout."
-                         :chooseAnotherAbsent true}
-                        (:checkoutBoundary observation))
-                     "The /checkout pathname boundary is unclear or movable." observation)))
+    (assert-action-row! observation)))
 
 (defn assert-reproduction-composer! [example observation]
   (let [composer (get-in observation [:ui :reproductionComposer])
