@@ -209,6 +209,23 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   gap: 0.5rem;
 }
 
+#saved-session-live-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+}
+
+#saved-session-live-banner[hidden] { display: none; }
+#saved-session-live-summary,
+#saved-session-background-status,
+#saved-session-validation-comparison { flex-basis: 100%; }
+#save-live-session-form { display: grid; gap: 0.55rem; min-width: min(28rem, 80vw); }
+
 #schema-specific-index-dialog form {
   display: grid;
   gap: 0.5rem;

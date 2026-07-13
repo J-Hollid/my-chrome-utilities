@@ -22,11 +22,14 @@ let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
 let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
+let savedSessionLiveFeedObservation;
+let savedSessionLiveFeedReloadObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
@@ -426,6 +429,70 @@ const singleLiveEventFeedRuntime = `(async () => {
     archiveEventIds:archive.events.map(({ id }) => id),
     defectEventIds:defectContext.timeline.map(({ id }) => id),
   };
+})()`;
+
+const savedSessionLiveFeedRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-sessions").click();
+  const row = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey"));
+  const actions = Array.from(row.querySelectorAll("button")).map(({ textContent }) => textContent);
+  click(row, "Open in Live feed");
+  const banner = q("#saved-session-live-banner");
+  const open = {
+    liveSelected:q("#data-layer-view-live").getAttribute("aria-selected") === "true",
+    mode:q("#data-layer-panel-live").dataset.feedMode,
+    banner:banner.textContent,
+    eventCount:q("#live-captured-event-count").textContent,
+    observer:q("#live-observer-status").textContent,
+    captureDisabled:[q("#pause-capture").disabled, q("#resume-capture").disabled, q("#save-live-session").disabled],
+    storedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events.length,
+  };
+  const eventButton = q('[data-event-id="saved-18"]'); eventButton.click();
+  const analysisActions = Array.from(q("#live-event-inspector").querySelectorAll("button")).map(({ textContent }) => textContent);
+  const model = await import("/data-layer-saved-session-live-feed.js");
+  const sessions = await import("/data-layer-saved-sessions.js");
+  const observers = await import("/data-layer-live-observer.js");
+  const library = sessions.restoreSavedSessionLibrary(localStorage.getItem(model.SAVED_SESSION_LIBRARY_STORAGE_KEY));
+  const saved = library.sessions[0];
+  const currentEvents = Array.from({ length:14 }, (_, index) => ({ id:index === 13 ? "purchase" : "current-" + (index + 1), name:index === 13 ? "purchase" : "current", sourceId:"history", sourceName:"Event history", captureTime:"2026-07-13T09:" + String(index).padStart(2, "0") + ":00Z", pageUrl:"https://example.test/current", payload:{ index }, rawInput:["current", index] }));
+  const current = { view:"Live", status:"Live", pageUrl:"https://example.test/current", sources:[{ id:"history", name:"Event history", status:"Connected" }], events:currentEvents, query:{ conditions:[{ id:"purchase", field:"Event name", operator:"is", values:["purchase"] }] }, inspectorEventId:"purchase", listVisible:true };
+  let persisted = model.openSavedSessionLiveFeed(current, saved, { scrollTop:480 });
+  persisted = model.updateSavedSessionLiveFeedView(persisted, { query:{ conditions:[{ id:"saved-purchase", field:"Event name", operator:"is", values:["purchase"] }] }, inspectorEventId:"saved-18", listVisible:true, scrollTop:275 });
+  for (let index = 0; index < 4; index += 1) persisted = model.recordBackgroundLiveEvent(persisted, { id:"background-" + (index + 1), name:"background", sourceId:"history", sourceName:"Event history", captureTime:"2026-07-13T10:2" + index + ":00Z", pageUrl:"https://example.test/current", payload:{ index }, rawInput:["background", index] });
+  localStorage.setItem(model.SAVED_SESSION_LIVE_FEED_STORAGE_KEY, model.serializeSavedSessionLiveFeed(persisted));
+  localStorage.setItem("dataLayerTestingSession", JSON.stringify({ session:{ id:"active-background", status:"active", tabId:99, historyPath:"event.history", startUrl:"https://example.test/current", currentUrl:"https://example.test/current", timeline:[] } }));
+  const restored = model.restoreSavedSessionLiveFeed(model.serializeSavedSessionLiveFeed(persisted), library);
+  const imported = sessions.importSavedSession(sessions.createSavedSessionLibrary(), sessions.exportSavedSession(saved)).sessions[0];
+  const linked = sessions.resumeSavedSession(sessions.openSavedSession(library, saved.id), "https://example.test/confirmation");
+  const draft = model.createSessionSaveDraft({ id:"active", pageScope:current.pageUrl, startedAt:currentEvents[0].captureTime, endedAt:currentEvents.at(-1).captureTime, events:currentEvents });
+  return {
+    actions, open, analysisActions,
+    model:{ savedOrder:persisted.savedView.events.map(({ id }) => id), currentCount:persisted.currentView.events.length, savedCount:persisted.session.events.length, background:persisted.backgroundEventCount, currentSelected:persisted.currentView.inspectorEventId, currentFilter:persisted.currentView.query.conditions[0].values[0], currentScroll:persisted.currentScrollTop, savedSelected:restored.savedView.inspectorEventId, savedScroll:restored.savedScrollTop, observerStarts:restored.startLiveObserver },
+    imported:{ ids:imported.events.map(({ id }) => id), sources:imported.events.map(({ sourceId }) => sourceId), payload:imported.events[17].payload, rawInput:imported.events[17].rawInput, pageUrl:imported.events[17].pageUrl, provenance:imported.events[17].provenance },
+    linked:{ parent:linked.activeSession.parentSavedSessionId, events:linked.activeSession.events.length, savedEvents:saved.events.length },
+    saveDraft:{ eventCount:draft.summary.eventCount, sourceCount:draft.summary.sourceCount, validation:draft.summary.validationSummary },
+  };
+})()`;
+
+const savedSessionLiveFeedReloadRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const restored = { mode:q("#data-layer-panel-live").dataset.feedMode, banner:q("#saved-session-live-summary").textContent, background:q("#saved-session-background-status").textContent, returnLabel:q("#return-to-current-live-feed").textContent, selected:q("#live-event-inspector h4").textContent, scrollTop:q("#live-event-list").scrollTop, observer:q("#live-observer-status").textContent };
+  q("#revalidate-saved-session").click();
+  const comparison = q("#saved-session-validation-comparison").textContent;
+  const original = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events[17];
+  q("#return-to-current-live-feed").click();
+  const returned = { count:q("#live-captured-event-count").textContent, selected:q("#live-event-inspector h4").textContent, query:q("#live-event-query-count").textContent, hasSavedEvent:Boolean(document.querySelector('[data-event-id="saved-18"]')), message:q("#live-session-message").textContent };
+  q("#save-live-session").click();
+  const saveDialog = q("#save-live-session-dialog"); const name = q("#save-live-session-name"); const confirm = q("#confirm-save-live-session");
+  const save = { open:saveDialog.open, focused:document.activeElement === q("#save-live-session-heading"), summary:q("#save-live-session-summary").textContent, blankDisabled:confirm.disabled };
+  name.value = "Checkout journey snapshot"; name.dispatchEvent(new Event("input", { bubbles:true })); save.namedEnabled = !confirm.disabled; confirm.click();
+  save.persisted = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey snapshot").events.length;
+  q("#data-layer-view-sessions").click(); const originalRow = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey:") && !textContent.includes("snapshot")); click(originalRow, "Start linked capture");
+  const linkedSession = JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
+  const linked = { count:q("#live-captured-event-count").textContent, message:q("#live-session-message").textContent, savedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey").events.length, parent:linkedSession.parentSavedSessionId, active:linkedSession.status };
+  return { restored, comparison, original:{ validation:original.validation, version:original.validationDetails.schema.version }, returned, save, linked };
 })()`;
 
 const reproductionStepActionRowsRuntime = `(async () => {
@@ -2194,6 +2261,21 @@ try {
       configurationInsideEditor:true,
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
+    if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const events = Array.from({ length:18 }, (_, index) => ({ id:"saved-" + (index + 1), name:"purchase", sourceId:"history", sourceName:"Event history", sourceKind:"Data layer", captureTime:"2026-07-12T10:" + String(index).padStart(2, "0") + ":00Z", pageUrl:"https://example.test/checkout", captureOrder:index + 1, payload:{ index:index + 1 }, rawInput:["purchase", index + 1], provenance:{ adapter:"history", imported:true }, validation:index === 17 ? "1 issues" : "Valid", validationDetails:{ schema:{ id:"checkout", name:"Checkout", version:3 }, issues:index === 17 ? [{ instancePath:"/index", message:"Recorded issue", expected:"17", actual:"18", schemaName:"Checkout", schemaVersion:3, schemaLocation:"#/index" }] : [], evaluations:[] } }));
+        const session = { id:"saved:checkout", name:"Checkout journey", immutable:true, pageScope:"https://example.test/checkout", startedAt:"2026-07-12T10:00:00Z", endedAt:"2026-07-12T10:18:00Z", events, provenance:{ imported:true } };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.saved-session-library.v1", JSON.stringify({ sessions:[session] }));
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([{ id:"checkout", name:"Checkout", version:4, published:true, document:{ type:"object" }, assignments:[{ id:"checkout-purchases", sourceId:"history", eventName:"purchase", target:"payload", enabled:true }] }]));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      savedSessionLiveFeedObservation = await evaluate(socket, savedSessionLiveFeedRuntime);
+      await reloadPanel(socket);
+      savedSessionLiveFeedReloadObservation = await evaluate(socket, savedSessionLiveFeedReloadRuntime);
+      socket.close(); continue;
+    }
     if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         const document = { type:"object", properties:{ fruits:{ type:"array", items:{ type:"string" } }, products:{ type:"array", items:{ type:"object", properties:{ id:{ type:"number" }, name:{ type:"string" } } } }, order:{ type:"object", properties:{ id:{ type:"string" } } } } };
@@ -2809,6 +2891,9 @@ try {
   }
   if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
+  }
+  if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ savedSessionLiveFeed:{ initial:savedSessionLiveFeedObservation, reload:savedSessionLiveFeedReloadObservation } }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
