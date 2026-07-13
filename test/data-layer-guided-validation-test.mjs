@@ -209,7 +209,7 @@ const routingEditedAfterDestination = setGuidedScope(matchedBeforeRoutingEdit, {
   conditions:[],
 });
 const editedRoutingReview = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedValidation(routingEditedAfterDestination)));
-assert.equal(publishGuidedValidation(editedRoutingReview, false).destination.assignmentAction, "create the reviewed enabled assignment");
+assert.equal(publishGuidedValidation(editedRoutingReview, false).destination.assignmentAction, "add the reviewed assignment as a pending change");
 assert.deepEqual(schemaDestinationOptions(destinationStage, candidates).map(({ name, available, explanation }) => ({ name, available, explanation })), [
   { name:"Generic pageview", available:true, explanation:"page_type will be added" },
   { name:"Product listing", available:true, explanation:"page_type accepts String rules" },
@@ -229,7 +229,9 @@ const reviewed = advanceGuidedValidation(advanceGuidedValidation(advanceGuidedVa
 assert.equal(reviewed.stage, "review");
 assert.equal(reviewed.property.path, "page_type");
 assert.match(reviewed.review, /pageview on 127\.0\.0\.1 requires page_type to be product_list or homepage/);
-assert.match(reviewed.review, /Product listing version 4 will be created while version 3 remains unchanged/);
+assert.match(reviewed.review, /rule will be added to the Product listing working draft based on version 3/);
+assert.match(reviewed.review, /version 3 remains current until the working draft is published/);
+assert.doesNotMatch(reviewed.review, /version 4/);
 
 const local = publishGuidedValidation(reviewed, false);
 assert.equal(local.schema.rules.length, 1);
@@ -241,7 +243,9 @@ assert.equal(local.assignment.target, "payload");
 assert.equal(local.assignment.versionPolicy, "pinned");
 assert.equal(local.destination.kind, "existing");
 assert.equal(local.destination.assignmentAction, "reuse the matching enabled assignment");
-assert.equal(local.schema.version, 4);
+assert.equal(local.schema.version, 3);
+assert.equal(local.schema.id, "schema:listing:3");
+assert.equal(local.schema.pending, true);
 assert.match(local.readableRequirement, /page_type must be product_list or homepage/);
 
 const reusable = publishGuidedValidation(reviewed, true);

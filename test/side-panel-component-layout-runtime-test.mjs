@@ -14,6 +14,7 @@ let singleLiveEventFeedObservation;
 let schemaViewContainmentObservation;
 let payloadPathFilterPickerObservation;
 const reproductionStepActionRowsObservations = [];
+let schemaRevisionLifecycleObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -616,7 +617,7 @@ const guidedValidationRuntime = `(async () => {
   const originalSetItem = Storage.prototype.setItem;
   let failNextSchemaWrite = true;
   Storage.prototype.setItem = function (key, value) { if (failNextSchemaWrite && key === "my-chrome-utilities.schema-library.v1") { failNextSchemaWrite = false; throw new Error("Fixture storage unavailable"); } return originalSetItem.call(this, key, value); };
-  clickButton(flow, "Save validation");
+  clickButton(flow, "Add validation to draft");
   await new Promise((resolve) => setTimeout(resolve, 0));
   Storage.prototype.setItem = originalSetItem;
   const saveFailure = {
@@ -627,26 +628,40 @@ const guidedValidationRuntime = `(async () => {
   };
   const publishLabel = q("#guided-publish-rule").parentElement.textContent.trim();
   q("#guided-publish-rule").checked = true;
-  clickButton(flow, "Save validation");
+  clickButton(flow, "Add validation to draft");
   await new Promise((resolve) => setTimeout(resolve, 0));
   const storedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const storedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const newSchemaDraft = storedSchemas.at(-1);
   const saved = {
     schemas:storedSchemas.length - before.schemas,
     reusableRules:storedRules.length - before.rules,
-    localRules:storedSchemas.at(-1).attachedRules.length,
-    assignment:storedSchemas.at(-1).assignments[0],
+    published:newSchemaDraft.published,
+    pendingChanges:newSchemaDraft.workingDraft.pendingChanges,
+    localRules:newSchemaDraft.workingDraft.attachedRules.length,
+    assignment:newSchemaDraft.workingDraft.assignments[0],
     flowClosed:!visible(flow),
     inspectorRestored:visible(q("#live-event-inspector")),
     status:q("#live-session-message").textContent,
     focusReturned:document.activeElement?.dataset.action === "create-validation",
+    nextActions:Array.from(q("#guided-draft-next-actions").querySelectorAll("button")).map(({ textContent }) => textContent),
   };
   const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const unpublishedChoiceAbsent = !Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview"));
+  clickButton(q("#guided-draft-next-actions"), "Publish revision");
+  q("#confirm-schema-revision").click();
+  const schemasAfterPublication = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const rulesAfterPublication = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
+  const publishedSchema = schemasAfterPublication.find(({ name }) => name === "Signal Shop pageview");
   const published = {
     label:publishLabel,
-    reusableRules:reusableRules.length - before.rules,
-    attachedRuleId:storedSchemas.at(-1).attachedRules[0].id,
-    reusableRuleId:reusableRules.at(-1).id,
+    reusableRules:rulesAfterPublication.length - before.rules,
+    attachedRuleId:publishedSchema.attachedRules[0].id,
+    reusableRuleId:rulesAfterPublication.at(-1).id,
+    unpublishedChoiceAbsent,
+    assignableAfterPublication:Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview version 1")),
+    currentRevision:publishedSchema.version,
+    historicalRevisions:publishedSchema.revisionHistory.length,
   };
   clickButton(q("#live-event-inspector"), "Create validation from this event");
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
@@ -667,15 +682,16 @@ const guidedValidationRuntime = `(async () => {
   clickButton(flow, "Continue");
   clickButton(flow, "Continue");
   const existingReview = q("#guided-validation-review").textContent;
-  clickButton(flow, "Save validation");
+  clickButton(flow, "Add validation to draft");
   await new Promise((resolve) => setTimeout(resolve, 0));
   const afterExistingSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const productVersions = afterExistingSchemas.filter((schema) => schema.name === "Product listing");
   const existingSaved = {
     versions:productVersions.map(({ version }) => version),
-    version3Rules:productVersions.find(({ version }) => version === 3).attachedRules?.length ?? 0,
-    version4Rules:productVersions.find(({ version }) => version === 4).attachedRules?.length ?? 0,
-    assignments:productVersions.find(({ version }) => version === 4).assignments.length,
+    currentRules:productVersions[0].attachedRules?.length ?? 0,
+    draftRules:productVersions[0].workingDraft?.attachedRules?.length ?? 0,
+    pendingChanges:productVersions[0].workingDraft?.pendingChanges,
+    assignments:productVersions[0].workingDraft?.assignments.length,
     flowClosed:!visible(flow),
     inspectorRestored:visible(q("#live-event-inspector")),
     status:q("#live-session-message").textContent,
@@ -892,7 +908,7 @@ const schemaAssignmentRuntime = `(() => {
   q("#save-schema-rule").click();
   const initialRuleSeverity = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")).at(-1).severity;
   q("#schema-subview-schemas").click();
-  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
+  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit working draft").click();
   q("#cancel-schema-revision").click();
   const propertyAdd = Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "Add validation rule");
   if (!propertyAdd) throw new Error("Missing expandable property rule menu");
@@ -953,13 +969,13 @@ const schemaAssignmentRuntime = `(() => {
   if (!deleteCopy) throw new Error("Missing duplicate assignment delete action");
   deleteCopy.click();
   q("#schema-subview-schemas").click();
-  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit as new version").click();
-  const revisionReview = { open:q("#schema-revision-review").open, summary:q("#schema-revision-review-summary").textContent };
+  Array.from(q("#schema-list").querySelectorAll("button")).find((button) => button.textContent === "Edit working draft").click();
+  const revisionReview = { open:q("#schema-revision-review").open, summary:q("#schema-revision-review-summary").textContent, status:q("#schema-editor-status").textContent };
   q("#cancel-schema-revision").click();
   q("#create-schema").click();
   input("#schema-editor-name", "Unsaved schema");
   q("#close-schema-editor").click();
-  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#schema-close-review-summary").textContent };
+  const closeReview = { open:q("#close-schema-editor-review").open, summary:q("#schema-close-review-summary").textContent, result:q("#schema-result").textContent };
   q("#discard-schema-draft").click();
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
@@ -977,6 +993,42 @@ const schemaAssignmentRuntime = `(() => {
     propertyRule:{ menuOpen:propertyMenuOpen, returnFocus:propertyReturnFocus, stateReturnFocus:propertyStateReturnFocus, summary:attachedSummary.textContent, actions:propertyRuleActions, reenable, revisionReview:ruleRevisionReview, ruleExportName },
     storedPropertyRule:{ attached:Boolean(storedPropertyRule), version:storedPropertyRule?.version, enabled:storedPropertyRule?.enabled, propertyPath:storedPropertyRule?.propertyPath },
     rule:{ initialSeverity:initialRuleSeverity, name:latestRule.name, version:latestRule.version, enabled:latestRule.enabled, operator:latestRule.operator, parameters:latestRule.parameters, severity:latestRule.severity, message:latestRule.message, examples:latestRule.examples, attachments:latestRule.attachments },
+  };
+})()`;
+
+const schemaRevisionLifecycleRuntime = `(async () => {
+  const lifecycle = await import("/data-layer-schema-verification.js");
+  const base = {
+    ...lifecycle.createSchema("Product listing", 3, { type:"object", properties:{ product_id:{ type:"string" } } }),
+    id:"schema-product-listing",
+    assignments:[{ id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", schemaVersion:3, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true }],
+  };
+  const pageType = lifecycle.updateSchemaWorkingDraft(base, { document:{ type:"object", properties:{ product_id:{ type:"string" }, page_type:{ type:"string" } } } }, "Add page_type rule");
+  const pageName = lifecycle.updateSchemaWorkingDraft(pageType, { document:{ type:"object", properties:{ product_id:{ type:"string" }, page_type:{ type:"string" }, page_name:{ type:"string" } } } }, "Add page_name rule");
+  const pendingAssignment = { id:"assignment:checkout", schemaId:base.id, sourceId:"history", eventName:"checkout", target:"payload", versionPolicy:"follow latest", enabled:true };
+  const ready = lifecycle.updateSchemaWorkingDraft(pageName, { assignments:[...pageName.workingDraft.assignments, pendingAssignment] }, "Add Checkout assignment");
+  const storageKey = "schema-revision-lifecycle-browser-fixture";
+  const previous = localStorage.getItem(storageKey);
+  localStorage.setItem(storageKey, lifecycle.serializeSchemaLibrary([ready]));
+  const reloaded = lifecycle.restoreSchemaLibrary(localStorage.getItem(storageKey))[0];
+  const pendingResolution = lifecycle.resolveSchemaAssignment({ sourceId:"history", eventName:"checkout" }, "https://shop.example/checkout", [reloaded]);
+  const published = lifecycle.publishSchemaWorkingDraft(reloaded);
+  const pinned = lifecycle.resolveSchemaAssignment({ sourceId:"history", eventName:"pageview" }, "https://shop.example/products", [published]);
+  const latest = lifecycle.resolveSchemaAssignment({ sourceId:"history", eventName:"pageview" }, "https://shop.example/products", [{ ...published, assignments:[{ ...published.assignments[0], versionPolicy:"follow latest" }] }]);
+  const restored = lifecycle.restoreSchemaRevisionDraft(published, 3);
+  const duplicate = lifecycle.duplicateSchemaRevision(published, 3);
+  const legacy = [1, 2, 3, 4].map((version) => ({
+    ...lifecycle.createSchema("Product listing", version, { type:"object", properties:{ ["revision_" + version]:{ type:"string" } } }),
+    assignments:version === 3 ? [{ id:"legacy-pinned", schemaId:"schema:product-listing:" + version, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true }] : version === 4 ? [{ id:"legacy-latest", schemaId:"schema:product-listing:" + version, sourceId:"history", eventName:"purchase", target:"payload", versionPolicy:"follow latest", enabled:true }] : [],
+  }));
+  const migrated = lifecycle.migrateSchemaLibrary(legacy);
+  if (previous === null) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey, previous);
+  return {
+    workingDraft:{ identity:reloaded.id, current:reloaded.version, base:reloaded.workingDraft.baseVersion, source:reloaded.workingDraft.sourceVersion, twoPending:pageName.workingDraft.pendingChanges, pending:reloaded.workingDraft.pendingChanges, properties:Object.keys(reloaded.workingDraft.document.properties), durable:true, currentProperties:Object.keys(reloaded.document.properties), activeCheckout:Boolean(pendingResolution.schema), sameIdentity:pageType.id === pageName.id },
+    publication:{ identity:published.id, current:published.version, history:lifecycle.schemaRevisionChoices(published), draftCleared:!published.workingDraft, properties:Object.keys(published.document.properties), checkoutRevision:lifecycle.resolveSchemaAssignment({ sourceId:"history", eventName:"checkout" }, "https://shop.example/checkout", [published]).schema.version, choices:lifecycle.assignableSchemas([published]).map(({ name }) => name) },
+    policies:{ pinned:pinned.schema.version, latest:latest.schema.version, recorded:[pinned.schema.version, latest.schema.version] },
+    history:{ choices:lifecycle.schemaRevisionChoices(published), selected:lifecycle.schemaRevision(published, 3).version, duplicate:{ name:duplicate.name, published:duplicate.published, assignable:lifecycle.assignableSchemas([duplicate]).length }, restored:{ current:restored.version, source:restored.workingDraft.sourceVersion, pending:restored.workingDraft.pendingChanges, discardCurrent:lifecycle.discardSchemaWorkingDraft(restored).version } },
+    migration:{ count:migrated.length, identity:migrated[0].id, current:migrated[0].version, history:lifecycle.schemaRevisionChoices(migrated[0]), assignments:migrated[0].assignments.map(({ schemaId, schemaVersion, versionPolicy }) => ({ schemaId, schemaVersion:schemaVersion ?? null, versionPolicy })) },
   };
 })()`;
 
@@ -1051,11 +1103,11 @@ const schemaInheritanceRuntime = `(async () => {
   q("#schema-editor-parent").dispatchEvent(new Event("change", { bubbles:true }));
   q("#save-schema").click();
   q("#confirm-schema-revision").click();
-  const child = Array.from(q("#schema-list").querySelectorAll("li")).find((item) => item.textContent.startsWith("Order confirmation v1"));
+  const child = Array.from(q("#schema-list").querySelectorAll("li")).find((item) => item.textContent.startsWith("Order confirmation · current revision 1"));
   if (!child) throw new Error("Missing saved child schema");
   q("#schema-subview-assignments").click();
   q("#create-schema-assignment").click();
-  q("#schema-assignment-schema").value = Array.from(q("#schema-assignment-schema").options).find((option) => option.textContent.startsWith("Order confirmation v1"))?.value ?? "";
+  q("#schema-assignment-schema").value = Array.from(q("#schema-assignment-schema").options).find((option) => option.textContent.startsWith("Order confirmation version 1"))?.value ?? "";
   input("#schema-assignment-source", "event-history");
   input("#schema-assignment-event", "page_view");
   q("#schema-assignment-target").value = "payload";
@@ -1797,14 +1849,14 @@ try {
         blankNameAssistance:"Enter a name for the new schema",
         duplicateNameAssistance:"Choose the existing schema or enter another name",
         newNameAssistance:"New schema Signal Shop pageview will be created",
-        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema Signal Shop pageview will be created.",
+        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.",
         reviewStages:[["Choose properties","complete"],["Choose schema destination","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
         retainedDestination:{ kind:"new", name:"Signal Shop pageview" },
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
-        saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema Signal Shop pageview will be created.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:1, localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Saved validation: schema Signal Shop pageview was created.", focusReturned:true },
-        published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement" },
+        saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
+        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add another property", "Review draft", "Publish revision"] },
+        published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
@@ -1814,8 +1866,8 @@ try {
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
           { label:"Signal Shop pageview version 1", disabled:false, explanation:"page_type accepts String rules" },
         ],
-        existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.",
-        existingSaved:{ versions:[3,4], version3Rules:0, version4Rules:1, assignments:1, flowClosed:true, inspectorRestored:true, status:"Saved validation: validation was added to Product listing version 4.", focusReturned:true },
+        existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
+        existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
         schemaPrefillRequirement:{ expectedType:"String", expectedTypeSource:"String — Generic pageview version 4", target:"payload" },
         schemaPrefillScope:{ domain:"shop.example", domainSource:"Generic shop pages assignment", eventName:"pageview", eventNameSource:"Generic shop pages assignment", source:"event-history", sourceSource:"Generic shop pages assignment", pathCondition:"/products/*" },
         replacementReview:{
@@ -1863,8 +1915,8 @@ try {
           { count:2, selection:"required from readable assignment choices", domain:"127.0.0.1", pathConditions:[] },
         ],
         destinations:{
-          matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: reuse the matching enabled assignment.", assignmentAction:"reuse the matching enabled assignment" },
-          absent:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. Product listing version 4 will be created while version 3 remains unchanged. Assignment action: create the reviewed enabled assignment.", assignmentAction:"create the reviewed enabled assignment" },
+          matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.", assignmentAction:"reuse the matching enabled assignment" },
+          absent:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: add the reviewed assignment as a pending change.", assignmentAction:"add the reviewed assignment as a pending change" },
         },
       }, "Guided validation production matchers violated their browser-loaded contract");
       await evaluate(socket, `(() => { localStorage.clear(); for (const [key, value] of Object.entries(${JSON.stringify(previousGuidedStorage)})) localStorage.setItem(key, value); return true; })()`);
@@ -2082,10 +2134,10 @@ try {
       schemaMasterVisible:true,
       actions:["Edit", "Duplicate", "Disable", "Delete"],
       duplicateCount:3,
-      revisionReview:{ open:true, summary:"Checkout schema will be saved as version 3; version 2 remains available." },
-      closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
+      revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2.", status:"Working draft based on revision 2 · 0 pending changes" },
+      closeReview:{ open:false, summary:"", result:"Working draft retained without publishing." },
       rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
-      assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, pathnameCondition:null, versionPolicy:"pinned", enabled:false },
+      assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, pathnameCondition:null, versionPolicy:"pinned", enabled:true },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
       rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
@@ -2104,7 +2156,7 @@ try {
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
         draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
-        persistedAttachment:"schema:checkout-schema:2",
+        persistedAttachment:"schema:checkout-schema:1",
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, schemaLibraryExportFixture === "1:3" ? {
@@ -2163,6 +2215,16 @@ try {
         ruleEditorVisibility:schemaRuleEditorVisibility,
       });
     }
+    if (width === 720) {
+      schemaRevisionLifecycleObservation = await evaluate(socket, schemaRevisionLifecycleRuntime);
+      assert.deepEqual(schemaRevisionLifecycleObservation, {
+        workingDraft:{ identity:"schema-product-listing", current:3, base:3, source:3, twoPending:["Add page_type rule", "Add page_name rule"], pending:["Add page_type rule", "Add page_name rule", "Add Checkout assignment"], properties:["product_id", "page_type", "page_name"], durable:true, currentProperties:["product_id"], activeCheckout:false, sameIdentity:true },
+        publication:{ identity:"schema-product-listing", current:4, history:[3], draftCleared:true, properties:["product_id", "page_type", "page_name"], checkoutRevision:4, choices:["Product listing"] },
+        policies:{ pinned:3, latest:4, recorded:[3,4] },
+        history:{ choices:[3], selected:3, duplicate:{ name:"Product listing revision 3 copy", published:false, assignable:0 }, restored:{ current:4, source:3, pending:["Restore revision 3"], discardCurrent:4 } },
+        migration:{ count:1, identity:"schema-product-listing", current:4, history:[3,2,1], assignments:[{ schemaId:"schema-product-listing", schemaVersion:3, versionPolicy:"pinned" }, { schemaId:"schema-product-listing", schemaVersion:null, versionPolicy:"follow latest" }] },
+      }, "Schema revision lifecycle violated its browser storage and resolution contract");
+    }
     socket.close();
   }
   if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
@@ -2185,6 +2247,9 @@ try {
   }
   if (process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ reproductionStepActionRows:reproductionStepActionRowsObservations }));
+  }
+  if (process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaRevisionLifecycle:{ ...schemaRevisionLifecycleObservation, completionActions:guidedValidationObservation?.saved?.nextActions ?? [] } }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

@@ -405,7 +405,7 @@ export function createGuidedValidationFlow(
     if (!draft) return;
     const review = element("p", draft.review); review.id = "guided-validation-review";
     const publishLabel = element("label"); const publish = element("input"); publish.id = "guided-publish-rule"; publish.type = "checkbox"; publishLabel.append(publish, " Publish this rule for Rule Library reuse");
-    const save = element("button", "Save validation"); save.type = "button"; save.addEventListener("click", async () => {
+    const save = element("button", "Add validation to draft"); save.type = "button"; save.addEventListener("click", async () => {
       try {
         const result = publishGuidedValidation(draft!, publish.checked);
         await effects.publish(result);

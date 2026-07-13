@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, createSchema, createSchemaLibraryExport, duplicateSchema, exportSchema, filterByValidation, importSchema, resolveSchemaAssignment, restoreSchemaLibrary, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, migrateSchemaLibrary, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
 const valid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { transaction_id: "test-123", revenue: 49.95 }, rawInput: [] }, [schema]);
@@ -48,3 +48,86 @@ assert.equal(exportSnapshot.schemas[0].name, "Generic page view");
 assert.notEqual(exportSnapshot.schemas[0], generic);
 assert.deepEqual(exportSnapshot.rules, [{ id:"rule:a", parameters:"product" }]);
 assert.deepEqual(JSON.parse(serializeSchemaLibraryExport([generic, order], [{ id:"rule:a" }, { id:"rule:b" }])), { version:1, schemas:[generic, order], rules:[{ id:"rule:a" }, { id:"rule:b" }] });
+
+const stableProduct = {
+  ...createSchema("Product listing", 3, { type:"object", properties:{ product_id:{ type:"string" } } }),
+  id:"schema-product-listing",
+  assignments:[{ id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", schemaVersion:3, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true }],
+};
+const firstDraft = createSchemaWorkingDraft(stableProduct);
+assert.equal(firstDraft.version, 3);
+assert.equal(firstDraft.workingDraft.baseVersion, 3);
+assert.deepEqual(firstDraft.document, stableProduct.document);
+assert.deepEqual(firstDraft.workingDraft.pendingChanges, []);
+const pageTypeDraft = updateSchemaWorkingDraft(firstDraft, {
+  document:{ type:"object", properties:{ product_id:{ type:"string" }, page_type:{ type:"string" } } },
+  attachedRules:[{ id:"rule:page-type", version:1, propertyPath:"page_type", operator:"allowed-values", parameters:"page_type:product,listing" }],
+}, "Add page_type rule");
+const twoChangeDraft = updateSchemaWorkingDraft(pageTypeDraft, {
+  document:{ type:"object", properties:{ product_id:{ type:"string" }, page_type:{ type:"string" }, page_name:{ type:"string" } } },
+}, "Add page_name rule");
+assert.equal(twoChangeDraft.version, 3);
+assert.equal(twoChangeDraft.id, "schema-product-listing");
+assert.equal(twoChangeDraft.document.properties.page_type, undefined);
+assert.deepEqual(twoChangeDraft.workingDraft.pendingChanges, ["Add page_type rule", "Add page_name rule"]);
+assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([twoChangeDraft]))[0].workingDraft, twoChangeDraft.workingDraft);
+
+const inheritedProduct = {
+  ...stableProduct,
+  parentSchemaId:"schema-parent",
+  attachedRules:[{ id:"rule:legacy", version:1 }],
+  inheritedRuleOverrides:{ "rule:legacy":"disabled" },
+};
+const clearedInheritance = publishSchemaWorkingDraft(updateSchemaWorkingDraft(inheritedProduct, {
+  parentSchemaId:undefined,
+  attachedRules:[],
+  inheritedRuleOverrides:undefined,
+}, "Clear inherited configuration"));
+assert.equal(clearedInheritance.parentSchemaId, undefined);
+assert.deepEqual(clearedInheritance.attachedRules, []);
+assert.equal(clearedInheritance.inheritedRuleOverrides, undefined);
+
+const pendingAssignment = { id:"assignment:checkout", name:"Checkout pages", schemaId:"schema-product-listing", schemaVersion:4, sourceId:"history", eventName:"checkout", target:"payload", versionPolicy:"follow latest", enabled:true };
+const readyDraft = updateSchemaWorkingDraft(twoChangeDraft, { assignments:[...twoChangeDraft.assignments, pendingAssignment] }, "Add Checkout pages assignment");
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"checkout" }, "https://shop.example/checkout", [readyDraft]).schema, undefined);
+const publishedProduct = publishSchemaWorkingDraft(readyDraft);
+assert.equal(publishedProduct.id, "schema-product-listing");
+assert.equal(publishedProduct.version, 4);
+assert.equal(publishedProduct.workingDraft, undefined);
+assert.deepEqual(publishedProduct.revisionHistory.map(({ version }) => version), [3]);
+assert.ok(publishedProduct.document.properties.page_type);
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"checkout" }, "https://shop.example/checkout", [publishedProduct]).schema.version, 4);
+assert.deepEqual(schemaRevisionChoices(publishedProduct), [3]);
+assert.equal(schemaRevision(publishedProduct, 3).document.properties.page_type, undefined);
+assert.equal(assignableSchemas([publishedProduct]).length, 1);
+
+const pinnedProduct = { ...publishedProduct, assignments:[publishedProduct.assignments[0]] };
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"pageview" }, "https://shop.example/products", [pinnedProduct]).schema.version, 3);
+const latestProduct = { ...publishedProduct, assignments:[{ ...publishedProduct.assignments[0], versionPolicy:"follow latest" }] };
+assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"pageview" }, "https://shop.example/products", [latestProduct]).schema.version, 4);
+
+const restoredFromTwo = restoreSchemaRevisionDraft(publishedProduct, 3);
+assert.equal(restoredFromTwo.version, 4);
+assert.equal(restoredFromTwo.workingDraft.baseVersion, 4);
+assert.equal(restoredFromTwo.workingDraft.sourceVersion, 3);
+assert.deepEqual(discardSchemaWorkingDraft(restoredFromTwo), publishedProduct);
+const duplicateFromThree = duplicateSchemaRevision(publishedProduct, 3);
+assert.equal(duplicateFromThree.published, false);
+assert.equal(duplicateFromThree.version, 1);
+assert.match(duplicateFromThree.name, /Product listing revision 3 copy/);
+assert.deepEqual(duplicateFromThree.document, schemaRevision(publishedProduct, 3).document);
+assert.deepEqual(assignableSchemas([publishedProduct, duplicateFromThree]), [publishedProduct]);
+
+const legacySchemas = [1, 2, 3, 4].map((version) => ({
+  ...createSchema("Product listing", version, { type:"object", properties:{ [`revision_${version}`]:{ type:"string" } } }),
+  assignments:version === 3 ? [{ id:"assignment:pinned", schemaId:`schema:product-listing:${version}`, schemaVersion:3, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true }] : version === 4 ? [{ id:"assignment:latest", schemaId:`schema:product-listing:${version}`, sourceId:"history", eventName:"purchase", target:"payload", versionPolicy:"follow latest", enabled:true }] : [],
+}));
+const migrated = migrateSchemaLibrary(legacySchemas);
+assert.equal(migrated.length, 1);
+assert.equal(migrated[0].id, "schema-product-listing");
+assert.equal(migrated[0].version, 4);
+assert.deepEqual(migrated[0].revisionHistory.map(({ version }) => version), [1, 2, 3]);
+assert.deepEqual(migrated[0].assignments.map(({ schemaId, schemaVersion, versionPolicy }) => [schemaId, schemaVersion, versionPolicy]), [
+  ["schema-product-listing", 3, "pinned"],
+  ["schema-product-listing", undefined, "follow latest"],
+]);

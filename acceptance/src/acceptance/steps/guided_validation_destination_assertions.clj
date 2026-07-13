@@ -67,8 +67,10 @@
                      {:example example})
     (support/assert! (str/includes? (:review result) "Rule attachment path: page_type")
                      "Existing schema review omitted the rule attachment path." {:result result})
-    (support/assert! (str/includes? (:review result) "Product listing version 4 will be created while version 3 remains unchanged")
-                     "Existing schema review omitted immutable revision behavior." {:result result})
+    (support/assert! (and (str/includes? (:review result) "working draft based on version 3")
+                          (str/includes? (:review result) "version 3 remains current until the working draft is published")
+                          (not (str/includes? (:review result) "version 4")))
+                     "Existing schema review omitted working-draft isolation." {:result result})
     (support/assert! (= expected-action (:assignmentAction result))
                      "Existing schema review used the wrong assignment action."
                      {:example example :result result})))
@@ -84,7 +86,7 @@
                         [(:flowClosed result) (:inspectorRestored result) (:focusReturned result)])
                      "Successful schema-destination save did not close, restore, and return focus."
                      {:example example :result result})
-    (support/assert! (str/includes? (:status result) saved-result)
+    (support/assert! (str/includes? (str/lower-case (:status result)) (str/lower-case saved-result))
                      "Successful schema-destination save did not show its confirmation."
                      {:example example :result result})))
 
@@ -166,11 +168,13 @@
      "matching assignment state is <assignment_state>"
      "the validation review is displayed"
      "it identifies page_type as the rule attachment path"
-     "it states that Product listing version 4 will be created while version 3 remains unchanged"
+     "it states that the rule will be added to the Product listing working draft based on version 3"
+     "Product listing version 3 remains current until the working draft is published"
+     "no Product listing version 4 exists before publication"
      "assignment action is <assignment_action>"}
    revision-review
    #{"the review has destination <schema_destination>"
-     "the operator activates Save validation and persistence completes"
+     "the operator activates Add validation to draft and persistence completes"
      "the review and guided validation flow close"
      "the originating Live event inspector is restored"
      "a visible status confirms <saved_result>"

@@ -33,7 +33,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { createSchema, createSchemaLibraryExport, duplicateSchema, importSchema, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
@@ -140,8 +140,15 @@ const schemaCloseReviewSummary = document.querySelector("#schema-close-review-su
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
-const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
+const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema") ?? Object.assign(document.createElement("button"), { id: "save-and-close-schema", type: "button", textContent: "Publish and close schema", hidden: true });
+if (!saveAndCloseSchemaButton.parentElement)
+    schemaEditor?.append(saveAndCloseSchemaButton);
 const saveSchemaCloseReviewButton = document.querySelector("#save-schema-close-review");
+const discardWorkingSchemaDraftButton = document.querySelector("#discard-working-schema-draft");
+const schemaRevisionSelector = document.querySelector("#schema-revision-selector");
+const schemaRevisionComparison = document.querySelector("#schema-revision-comparison");
+const duplicateSchemaRevisionButton = document.querySelector("#duplicate-schema-revision");
+const restoreSchemaRevisionButton = document.querySelector("#restore-schema-revision");
 const addSchemaRuleButton = document.querySelector("#add-schema-rule");
 const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
@@ -293,6 +300,7 @@ let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_K
 let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
+let pendingSchemaRestoration;
 let editingSchemaAssignment;
 let editingReusableSchemaRuleId;
 let pendingReusableSchemaRuleDeletionId;
@@ -325,7 +333,7 @@ catch {
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
     schemaCandidates: guidedSchemaCandidates,
     publish: persistPublishedGuidedValidation,
-    close: () => renderLiveObserver(),
+    close: () => { showDataLayerView("Live"); renderLiveObserver(); },
     saved: finishGuidedValidationSave,
 });
 let replaySequences = [];
@@ -850,22 +858,23 @@ function renderSchemas() {
             const duplicate = document.createElement("button");
             const remove = document.createElement("button");
             const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
-            item.textContent = `${schema.name} v${schema.version}${parent ? ` inherits ${parent.name} v${parent.version}` : ""}: ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+            const pending = schema.workingDraft?.pendingChanges.length ?? 0;
+            const history = schemaRevisionChoices(schema).length;
+            item.textContent = schema.published === false
+                ? `${schema.name} · unpublished draft · ${pending} pending changes. `
+                : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
             revise.type = duplicate.type = remove.type = "button";
-            revise.textContent = "Edit as new version";
+            revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
-                schemaDraft = structuredClone(schema);
+                const withDraft = schema.workingDraft ? schema : schema.published === false ? schema : createSchemaWorkingDraft(schema);
+                schemas = schemas.map((candidate) => candidate.id === schema.id ? withDraft : candidate);
+                persistSchemaLibrary();
+                schemaDraft = schemaEditorDraft(withDraft);
                 renderSchemaDraft();
-                if (schemaRevisionReviewSummary)
-                    schemaRevisionReviewSummary.textContent = `${schema.name} will be saved as version ${schema.version + 1}; version ${schema.version} remains available.`;
-                if (schemaRevisionReview) {
-                    schemaRevisionReview.hidden = false;
-                    schemaRevisionReview.showModal();
-                }
             });
-            duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchema(schema, `${schema.name} copy`)]; persistSchemaLibrary(); renderSchemas(); });
+            duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version)]; persistSchemaLibrary(); renderSchemas(); });
             remove.addEventListener("click", () => {
                 const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
                 if (children.length) {
@@ -901,10 +910,17 @@ function renderSchemaDraft() {
         closeSchemaEditorButton.hidden = !draft;
     if (saveAndCloseSchemaButton)
         saveAndCloseSchemaButton.hidden = !draft;
+    if (discardWorkingSchemaDraftButton)
+        discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = Boolean(draft);
     if (!draft)
         return;
+    const storedSchema = schemas.find((schema) => schema.id === draft.id);
+    const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
+    const status = document.querySelector("#schema-editor-status");
+    if (status)
+        status.textContent = storedSchema?.published === false ? `Unpublished new schema draft · ${pendingChanges} pending changes` : storedSchema ? `Working draft based on revision ${storedSchema.version} · ${pendingChanges} pending changes` : "Unsaved new schema";
     if (schemaEditorName)
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)
@@ -1010,8 +1026,21 @@ function renderSchemaDraft() {
     const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one validation rule" : inheritanceError ?? "Ready to save";
     if (saveSchemaButton)
         saveSchemaButton.disabled = !ready;
+    if (saveSchemaButton)
+        saveSchemaButton.textContent = storedSchema?.published === false || !storedSchema ? "Publish schema" : "Publish revision";
     if (saveSchemaReason)
         saveSchemaReason.textContent = reason;
+    const historyVersions = storedSchema ? schemaRevisionChoices(storedSchema) : [];
+    if (schemaRevisionSelector) {
+        schemaRevisionSelector.replaceChildren(...historyVersions.map((version) => Object.assign(document.createElement("option"), { value: String(version), textContent: `Revision ${version}` })));
+        schemaRevisionSelector.disabled = historyVersions.length === 0;
+    }
+    if (duplicateSchemaRevisionButton)
+        duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
+    if (restoreSchemaRevisionButton)
+        restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
+    if (schemaRevisionComparison)
+        schemaRevisionComparison.textContent = historyVersions.length ? `Select one historical revision to compare with current revision ${storedSchema?.version}.` : "No historical revisions.";
 }
 function renderSchemaInheritancePresentation(draft) {
     const ancestors = [];
@@ -1106,6 +1135,38 @@ function openNewSchemaEditor() {
 function persistSchemaLibrary() {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
 }
+function schemaEditorDraft(schema) {
+    const draft = schema.workingDraft;
+    if (!draft)
+        return structuredClone(schema);
+    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, ...current } = structuredClone(schema);
+    return {
+        ...current,
+        document: structuredClone(draft.document),
+        assignments: structuredClone(draft.assignments),
+        ...(draft.attachedRules !== undefined ? { attachedRules: structuredClone(draft.attachedRules) } : {}),
+        ...(draft.parentSchemaId !== undefined ? { parentSchemaId: draft.parentSchemaId } : {}),
+        ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides: structuredClone(draft.inheritedRuleOverrides) } : {}),
+    };
+}
+function persistSchemaEditorDraft(change) {
+    if (!schemaDraft)
+        return;
+    const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
+    if (!stored)
+        return;
+    const changes = {
+        document: schemaDraft.document,
+        assignments: schemaDraft.assignments,
+        attachedRules: schemaDraft.attachedRules,
+        parentSchemaId: schemaDraft.parentSchemaId,
+        inheritedRuleOverrides: schemaDraft.inheritedRuleOverrides,
+    };
+    const updated = updateSchemaWorkingDraft(stored, changes, change);
+    schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
+    persistSchemaLibrary();
+    renderSchemas();
+}
 function guidedType(type) {
     return type === "String" ? "string"
         : type === "Number" ? "number"
@@ -1139,7 +1200,7 @@ function guidedDocumentTypes(document, prefix = "") {
     }, {});
 }
 function guidedSchemaCandidates() {
-    return schemas.map((schema) => ({
+    return assignableSchemas(schemas).map((schema) => ({
         id: schema.id,
         name: schema.name,
         version: schema.version,
@@ -1169,9 +1230,37 @@ function mergeGuidedDocument(current, addition) {
 }
 function finishGuidedValidationSave(result) {
     const message = result.destination.kind === "new"
-        ? `Saved validation: schema ${result.schema.name} was created.`
-        : `Saved validation: validation was added to ${result.schema.name} version ${result.schema.version}.`;
+        ? `Draft ${result.schema.name} was created.`
+        : `Validation was added to ${result.schema.name} draft.`;
     setLiveSessionMessage(message);
+    const inspector = liveObserverElements.eventInspector;
+    inspector?.querySelector("#guided-draft-next-actions")?.remove();
+    if (inspector) {
+        const actions = document.createElement("section");
+        actions.id = "guided-draft-next-actions";
+        actions.setAttribute("aria-label", "Schema draft next actions");
+        const addAnother = document.createElement("button");
+        addAnother.type = "button";
+        addAnother.textContent = "Add another property";
+        addAnother.addEventListener("click", () => inspector.querySelector('[data-action="create-validation"]')?.click());
+        const review = document.createElement("button");
+        review.type = "button";
+        review.textContent = "Review draft";
+        review.addEventListener("click", () => {
+            const schema = schemas.find((candidate) => candidate.id === result.schema.id);
+            if (!schema)
+                return;
+            showDataLayerView("Schemas");
+            schemaDraft = schemaEditorDraft(schema);
+            renderSchemaDraft();
+        });
+        const publish = document.createElement("button");
+        publish.type = "button";
+        publish.textContent = "Publish revision";
+        publish.addEventListener("click", () => { review.click(); saveSchemaButton?.click(); });
+        actions.append(addAnother, review, publish);
+        inspector.append(actions);
+    }
     liveObserverElements.eventInspector?.querySelector('[data-action="create-validation"]')?.focus({ preventScroll: true });
 }
 function persistPublishedGuidedValidation(result) {
@@ -1212,33 +1301,27 @@ function persistPublishedGuidedValidation(result) {
         : undefined;
     const matchingAssignment = previousSchema?.assignments.find((candidate) => candidate.enabled !== false
         && guidedAssignmentsMatch(candidate, assignment));
-    const schema = {
-        id: result.schema.id,
-        name: result.schema.name,
-        version: result.schema.version,
-        document: mergeGuidedDocument(previousSchema?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType)),
-        assignments: result.destination.assignmentAction === "reuse the matching enabled assignment" && matchingAssignment
-            ? previousSchema?.assignments ?? [matchingAssignment]
-            : [...(previousSchema?.assignments ?? []), assignment],
-        attachedRules: [...(previousSchema?.attachedRules ?? []), attachedRule],
-        ...(previousSchema ? { revisionHistory: [...(previousSchema.revisionHistory ?? []), previousSchema] } : {}),
-    };
+    const currentDraft = previousSchema?.workingDraft;
+    const draftAssignments = currentDraft?.assignments ?? previousSchema?.assignments ?? [];
+    const draftRules = currentDraft?.attachedRules ?? previousSchema?.attachedRules ?? [];
+    const pendingAssignments = result.destination.assignmentAction === "reuse the matching enabled assignment" && matchingAssignment
+        ? draftAssignments
+        : [...draftAssignments, assignment];
+    const pendingDocument = mergeGuidedDocument(currentDraft?.document ?? previousSchema?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType));
+    const pendingRules = [...draftRules.filter((candidate) => candidate.id !== attachedRule.id || candidate.propertyPath !== attachedRule.propertyPath), attachedRule];
+    const schema = previousSchema
+        ? updateSchemaWorkingDraft(previousSchema, { document: pendingDocument, assignments: pendingAssignments, attachedRules: pendingRules }, `Add ${rule.path} validation`)
+        : {
+            id: result.schema.id,
+            name: result.schema.name,
+            version: 1,
+            document: { type: "object" },
+            assignments: [],
+            published: false,
+            workingDraft: { baseVersion: 0, sourceVersion: 0, document: pendingDocument, assignments: pendingAssignments, attachedRules: pendingRules, pendingChanges: [`Add ${rule.path} validation`] },
+        };
     const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
-    let nextRules = reusableSchemaRules;
-    if (result.reusableRules[0]) {
-        const reusable = result.reusableRules[0];
-        nextRules = [...reusableSchemaRules.filter(({ id }) => id !== reusable.id), {
-                id: reusable.id,
-                name: reusable.name,
-                kind: reusable.requirement,
-                version: 1,
-                enabled: true,
-                operator,
-                parameters,
-                severity: "error",
-                attachments: [schema.id],
-            }];
-    }
+    const nextRules = reusableSchemaRules;
     const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
@@ -1292,6 +1375,7 @@ function attachReusableRule(path, rule) {
         enabled: true,
     };
     schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
+    persistSchemaEditorDraft(`Attach ${rule.name} to ${path}`);
     renderSchemaDraft();
     focusSchemaPropertyRow(path);
 }
@@ -1305,6 +1389,7 @@ function updateAttachedRule(path, id, update) {
         return next ? [next] : [];
     });
     schemaDraft = { ...schemaDraft, attachedRules };
+    persistSchemaEditorDraft(`Update attached rule on ${path}`);
     renderSchemaDraft();
     focusSchemaPropertyRow(path);
 }
@@ -1314,8 +1399,9 @@ function focusSchemaPropertyRow(path) {
         ?.focus({ preventScroll: true });
 }
 function renderSchemaWorkflowRows() {
+    const choices = assignableSchemas(schemas);
     if (schemaAssignmentSchema)
-        schemaAssignmentSchema.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
+        schemaAssignmentSchema.replaceChildren(...choices.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
     const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
     schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
         const item = document.createElement("li");
@@ -2327,14 +2413,28 @@ schemaEditorName?.addEventListener("input", () => { if (schemaDraft) {
     schemaDraft = { ...schemaDraft, name: schemaEditorName.value };
     renderSchemaDraft();
 } });
-schemaEditorTarget?.addEventListener("input", renderSchemaDraft);
+schemaEditorTarget?.addEventListener("input", () => {
+    if (!schemaDraft)
+        return;
+    const target = schemaEditorTarget.value === "raw input" ? "raw input" : "payload";
+    schemaDraft = {
+        ...schemaDraft,
+        assignments: schemaDraft.assignments.length
+            ? schemaDraft.assignments.map((assignment) => ({ ...assignment, target }))
+            : [{ sourceId: "", eventName: "", target }],
+    };
+    persistSchemaEditorDraft("Change validation target");
+    renderSchemaDraft();
+});
 schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) {
     schemaDraft = withSchemaParent(schemaDraft, schemaEditorParent.value || undefined);
+    persistSchemaEditorDraft("Change parent schema");
     renderSchemaDraft();
 } });
 schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft) {
     const { additionalProperties: _previous, ...document } = schemaDraft.document;
     schemaDraft = { ...schemaDraft, document: schemaOnlyDeclaredProperties.checked ? { ...document, additionalProperties: false } : document };
+    persistSchemaEditorDraft("Change additional-property policy");
     renderSchemaDraft();
 } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
@@ -2344,6 +2444,7 @@ addSchemaRuleButton?.addEventListener("click", () => {
     if (!Object.keys(schemaDraft.document.properties ?? {}).length) {
         selectedSchemaPropertyPath = "example";
         schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, [selectedSchemaPropertyPath]) };
+        persistSchemaEditorDraft("Add example property rule");
         renderSchemaDraft();
     }
     if (schemaResult)
@@ -2354,9 +2455,17 @@ saveSchemaButton?.addEventListener("click", () => {
         return;
     const draft = schemaDraft;
     if (schemaRevisionReview) {
-        const existing = schemas.find((schema) => schema.name === draft.name);
+        const existing = schemas.find((schema) => schema.id === draft.id || schema.name === draft.name);
+        if (existing)
+            persistSchemaEditorDraft();
         if (schemaRevisionReviewSummary)
-            schemaRevisionReviewSummary.textContent = existing ? `${draft.name} will be saved as version ${existing.version + 1}; version ${existing.version} remains available.` : `${draft.name} will be created as version 1.`;
+            schemaRevisionReviewSummary.textContent = existing?.published === false
+                ? `${draft.name} draft will be published as current revision 1.`
+                : existing
+                    ? `${draft.name} working draft will be compared with current revision ${existing.version}; confirmation publishes revision ${existing.version + 1}.`
+                    : `${draft.name} will be published as current revision 1.`;
+        if (confirmSchemaRevisionButton)
+            confirmSchemaRevisionButton.textContent = existing?.published === false || !existing ? "Publish revision 1" : `Publish revision ${existing.version + 1}`;
         schemaRevisionReview.hidden = false;
         schemaRevisionReview.showModal();
         return;
@@ -2364,11 +2473,30 @@ saveSchemaButton?.addEventListener("click", () => {
     confirmSchemaRevisionButton?.click();
 });
 confirmSchemaRevisionButton?.addEventListener("click", () => {
+    if (pendingSchemaRestoration) {
+        const current = schemas.find((schema) => schema.id === pendingSchemaRestoration?.schemaId);
+        if (!current)
+            return;
+        const restored = restoreSchemaRevisionDraft(current, pendingSchemaRestoration.version);
+        schemas = schemas.map((schema) => schema.id === restored.id ? restored : schema);
+        schemaDraft = schemaEditorDraft(restored);
+        pendingSchemaRestoration = undefined;
+        persistSchemaLibrary();
+        renderSchemas();
+        renderSchemaDraft();
+        if (schemaRevisionReview?.open)
+            schemaRevisionReview.close();
+        if (schemaRevisionReview)
+            schemaRevisionReview.hidden = true;
+        if (schemaResult)
+            schemaResult.textContent = `Created ${restored.name} working draft from revision ${restored.workingDraft?.sourceVersion}; current revision ${restored.version} is unchanged.`;
+        return;
+    }
     if (!schemaDraft)
         return;
     const draft = schemaDraft;
     const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
-    const existing = schemas.find((schema) => schema.name === draft.name);
+    const existing = schemas.find((schema) => schema.id === draft.id || schema.name === draft.name);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
     const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
@@ -2378,40 +2506,100 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
         return;
     }
     const saved = existing
-        ? withSchemaParent({
-            ...reviseSchema(existing, draft.document),
+        ? publishSchemaWorkingDraft(updateSchemaWorkingDraft(existing, {
+            document: draft.document,
             assignments: draft.assignments,
-            ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}),
-            ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: draft.inheritedRuleOverrides } : {}),
-        }, draft.parentSchemaId)
-        : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, assignments: draft.assignments.length ? draft.assignments : [{ sourceId: "", eventName: "", target: target }] };
-    schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema.parentSchemaId === existing.id ? { ...schema, parentSchemaId: saved.id } : schema) : [...schemas, saved];
+            attachedRules: draft.attachedRules,
+            parentSchemaId: draft.parentSchemaId,
+            inheritedRuleOverrides: draft.inheritedRuleOverrides,
+        }))
+        : { ...draft, id: `schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, published: true, assignments: draft.assignments.length ? draft.assignments : [{ sourceId: "", eventName: "", target: target }] };
+    schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved];
+    for (const rule of saved.attachedRules ?? []) {
+        if (!rule.id.startsWith("rule:") || reusableSchemaRules.some(({ id }) => id === rule.id))
+            continue;
+        reusableSchemaRules = [...reusableSchemaRules, { id: rule.id, name: rule.name ?? rule.id, kind: rule.operator ?? "required", version: rule.version, enabled: rule.enabled !== false, ...(rule.operator ? { operator: rule.operator } : {}), ...(rule.parameters ? { parameters: rule.parameters } : {}), ...(rule.severity ? { severity: rule.severity } : {}), ...(rule.message ? { message: rule.message } : {}), attachments: [saved.id] }];
+    }
     persistSchemaLibrary();
+    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
     schemaDraft = undefined;
     renderSchemaDraft();
     renderSchemas();
+    renderSchemaWorkflowRows();
     if (schemaResult)
-        schemaResult.textContent = `Saved ${saved.name} version ${saved.version}.`;
+        schemaResult.textContent = `Published ${saved.name} revision ${saved.version}.`;
     if (schemaRevisionReview?.open)
         schemaRevisionReview.close();
     if (schemaRevisionReview)
         schemaRevisionReview.hidden = true;
 });
-cancelSchemaRevisionButton?.addEventListener("click", () => { if (schemaRevisionReview?.open)
+cancelSchemaRevisionButton?.addEventListener("click", () => { pendingSchemaRestoration = undefined; if (schemaRevisionReview?.open)
     schemaRevisionReview.close(); if (schemaRevisionReview)
     schemaRevisionReview.hidden = true; });
+schemaRevisionSelector?.addEventListener("change", () => {
+    if (!schemaDraft || !schemaRevisionComparison)
+        return;
+    const current = schemas.find((schema) => schema.id === schemaDraft?.id);
+    const version = Number(schemaRevisionSelector.value);
+    const historical = current && schemaRevision(current, version);
+    schemaRevisionComparison.textContent = historical ? `Revision ${version} compared with current revision ${current.version}. ${Object.keys(historical.document.properties ?? {}).length} historical properties; ${Object.keys(current.document.properties ?? {}).length} current properties.` : "Historical revision unavailable.";
+});
+duplicateSchemaRevisionButton?.addEventListener("click", () => {
+    if (!schemaDraft)
+        return;
+    const current = schemas.find((schema) => schema.id === schemaDraft?.id);
+    const version = Number(schemaRevisionSelector?.value);
+    if (!current || !version)
+        return;
+    const duplicate = duplicateSchemaRevision(current, version);
+    schemas = [...schemas, duplicate];
+    schemaDraft = schemaEditorDraft(duplicate);
+    persistSchemaLibrary();
+    renderSchemas();
+    renderSchemaDraft();
+    schemaEditorName?.focus({ preventScroll: true });
+});
+restoreSchemaRevisionButton?.addEventListener("click", () => {
+    if (!schemaDraft)
+        return;
+    const current = schemas.find((schema) => schema.id === schemaDraft?.id);
+    const version = Number(schemaRevisionSelector?.value);
+    if (!current || !version)
+        return;
+    pendingSchemaRestoration = { schemaId: current.id, version };
+    if (schemaRevisionReviewSummary)
+        schemaRevisionReviewSummary.textContent = `${current.name} revision ${version} will replace ${current.workingDraft?.pendingChanges.length ?? 0} pending draft changes and create a working draft. Current revision ${current.version} remains active; publication will create revision ${current.version + 1}.`;
+    if (confirmSchemaRevisionButton)
+        confirmSchemaRevisionButton.textContent = `Restore revision ${version} to working draft`;
+    if (schemaRevisionReview) {
+        schemaRevisionReview.hidden = false;
+        schemaRevisionReview.showModal();
+    }
+});
 discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; renderSchemaDraft(); if (schemaCloseReview?.open)
     schemaCloseReview.close(); if (schemaCloseReview)
     schemaCloseReview.hidden = true; });
+discardWorkingSchemaDraftButton?.addEventListener("click", () => {
+    if (!schemaDraft)
+        return;
+    const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
+    if (!stored)
+        return;
+    schemas = stored.published === false ? schemas.filter((schema) => schema.id !== stored.id) : schemas.map((schema) => schema.id === stored.id ? discardSchemaWorkingDraft(stored) : schema);
+    schemaDraft = undefined;
+    persistSchemaLibrary();
+    renderSchemaDraft();
+    renderSchemas();
+    renderSchemaWorkflowRows();
+    if (schemaResult)
+        schemaResult.textContent = `Discarded ${stored.name} working draft; revision ${stored.version} remains current.`;
+});
 keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview?.open)
     schemaCloseReview.close(); if (schemaCloseReview)
     schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll: true }); });
 closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft)
-    return; if (schemaCloseReviewSummary)
-    schemaCloseReviewSummary.textContent = `Discard unsaved schema ${schemaDraft.name || "draft"}?`; if (schemaCloseReview) {
-    schemaCloseReview.hidden = false;
-    schemaCloseReview.showModal();
-} });
+    return; schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); if (schemaResult)
+    schemaResult.textContent = "Working draft retained without publishing."; });
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
 saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open)
     schemaCloseReview.close(); if (schemaCloseReview)

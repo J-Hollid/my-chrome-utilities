@@ -39,11 +39,12 @@
                    "Guided Back navigation lost the reviewed scope." {:observation observation}))
 
 (defn- creation-saved [_example observation]
-  (support/assert! (= [1 1 true]
-                      [(get-in observation [:saved :schemas])
+  (support/assert! (= [false ["Add page_type validation"] 1 true]
+                      [(get-in observation [:saved :published])
+                       (get-in observation [:saved :pendingChanges])
                        (get-in observation [:saved :localRules])
                        (get-in observation [:saved :assignment :enabled])])
-                   "Guided validation was not persisted as one enabled schema requirement." {:observation observation}))
+                   "Guided validation was not persisted as one pending schema-draft requirement." {:observation observation}))
 
 (defn- creation-routing [_example observation]
   (support/assert! (= ["event-history" "pageview" "payload" "127.0.0.1"]
@@ -57,12 +58,15 @@
                    "Saved validation was not displayed readably." {:observation observation}))
 
 (defn- creation-published [_example observation]
-  (support/assert! (= ["Publish this rule for Rule Library reuse" 1 true]
+  (support/assert! (= ["Publish this rule for Rule Library reuse" 1 true true 1 0]
                       [(get-in observation [:published :label])
                        (get-in observation [:published :reusableRules])
                        (= (get-in observation [:published :reusableRuleId])
-                          (get-in observation [:published :attachedRuleId]))])
-                   "Reusable guided rule was not attached and persisted." {:observation observation}))
+                          (get-in observation [:published :attachedRuleId]))
+                       (get-in observation [:published :assignableAfterPublication])
+                       (get-in observation [:published :currentRevision])
+                       (get-in observation [:published :historicalRevisions])])
+                   "Reusable guided rule was not deferred until schema publication." {:observation observation}))
 
 (defn- creation-advanced [_example observation]
   (support/assert! (= [true "pageview requirement" "Severity Error; version policy Pinned."] [(get-in observation [:initial :advancedPrimary]) (get-in observation [:advanced :rule]) (get-in observation [:advanced :defaults])])
@@ -90,15 +94,16 @@
            (repeat creation-review))
    {"the operator can return to and correct each completed stage without losing the draft" creation-back-navigation}
    (zipmap #{"a complete guided validation draft has a schema destination and local rule"
-             "the operator saves the validation"
-             "its selected schema destination, local rule, and enabled assignment are persisted together"}
+             "the operator adds the validation to the schema draft"
+             "its selected schema destination, local rule, and assignment draft are persisted together as pending changes"
+             "the schema's current revision and active assignments remain unchanged"}
            (repeat creation-saved))
-   {"validation uses the captured source, event pageview, payload target, and reviewed scope" creation-routing
-    "the completed validation is displayed as one readable requirement" creation-readable}
+   {"the pending validation uses the captured source, event pageview, payload target, and reviewed scope" creation-routing
+    "the completed pending validation is displayed as one readable requirement" creation-readable}
    (zipmap #{"the validation is ready to publish its rule for reuse"
              "publication details appear"
              "Rule Library reuse is stated"
-             "saving persists one reusable rule attached to the new schema"}
+             "publishing the schema draft persists one reusable rule attached to the current schema revision"}
            (repeat creation-published))
    (zipmap #{"the guided validation draft is displayed"
              "rule name, severity, custom message, source, target, priority, and version policy are absent from the primary flow"

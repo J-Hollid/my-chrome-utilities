@@ -362,8 +362,8 @@ function reviewText(draft) {
         ? `to be ${draft.allowedValues.join(" or ")}`
         : draft.requirement.toLowerCase();
     const destination = draft.destination.kind === "new"
-        ? `New schema ${draft.destination.schemaName} will be created.`
-        : `${draft.destination.schemaName} version ${draft.destination.schemaVersion + 1} will be created while version ${draft.destination.schemaVersion} remains unchanged. Assignment action: ${selectedAssignmentStillMatches(draft) ? "reuse the matching enabled assignment" : "create the reviewed enabled assignment"}.`;
+        ? `New schema draft ${draft.destination.schemaName} will be created and remain unavailable until publication.`
+        : `The rule will be added to the ${draft.destination.schemaName} working draft based on version ${draft.destination.schemaVersion}. ${draft.destination.schemaName} version ${draft.destination.schemaVersion} remains current until the working draft is published. Assignment action: ${selectedAssignmentStillMatches(draft) ? "reuse the matching enabled assignment" : "add the reviewed assignment as a pending change"}.`;
     return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
 }
 export function advanceGuidedValidation(draft) {
@@ -379,8 +379,8 @@ export function publishGuidedValidation(draft, reusable) {
     if (!draft.property || !draft.requirement || !draft.destination || draft.requirementCorrectionRequired)
         throw new Error("Guided validation draft is incomplete.");
     const schemaName = draft.destination.schemaName;
-    const schemaVersion = draft.destination.kind === "existing" ? draft.destination.schemaVersion + 1 : 1;
-    const schemaId = `schema:${slug(schemaName)}:${schemaVersion}`;
+    const schemaVersion = draft.destination.kind === "existing" ? draft.destination.schemaVersion : 1;
+    const schemaId = draft.destination.kind === "existing" ? draft.destination.schemaId : `schema:${slug(schemaName)}:1`;
     const reusableRuleId = reusable ? `rule:${slug(draft.advanced.ruleName)}` : undefined;
     const rule = {
         path: draft.property.path,
@@ -406,7 +406,7 @@ export function publishGuidedValidation(draft, reusable) {
         enabled: true,
     };
     return {
-        schema: { id: schemaId, name: schemaName, version: schemaVersion, rules: [rule] },
+        schema: { id: schemaId, name: schemaName, version: schemaVersion, pending: true, rules: [rule] },
         reusableRules: reusable && reusableRuleId ? [{ id: reusableRuleId, name: draft.advanced.ruleName, requirement: draft.requirement, values: [...draft.allowedValues] }] : [],
         assignment,
         destination: {
@@ -416,7 +416,7 @@ export function publishGuidedValidation(draft, reusable) {
                 : {}),
             assignmentAction: draft.destination.kind === "existing" && selectedAssignmentStillMatches(draft)
                 ? "reuse the matching enabled assignment"
-                : "create the reviewed enabled assignment",
+                : "add the reviewed assignment as a pending change",
         },
         readableRequirement: `${draft.property.path} must be ${draft.allowedValues.join(" or ") || draft.requirement.toLowerCase()}`,
     };

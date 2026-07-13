@@ -502,7 +502,7 @@ export function createGuidedValidationFlow(root, effects) {
         publish.id = "guided-publish-rule";
         publish.type = "checkbox";
         publishLabel.append(publish, " Publish this rule for Rule Library reuse");
-        const save = element("button", "Save validation");
+        const save = element("button", "Add validation to draft");
         save.type = "button";
         save.addEventListener("click", async () => {
             try {

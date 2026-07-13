@@ -1,7 +1,21 @@
 import { pathConditionResult } from "./data-layer-path-conditions.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
-function schemaId(name, version) { return `schema:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:${version}`; }
+function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+function schemaId(name, version) { return `schema:${schemaSlug(name)}:${version}`; }
+function stableSchemaId(name) { return `schema-${schemaSlug(name)}`; }
+function schemaSnapshot(schema) {
+    const { revisionHistory: _history, workingDraft: _draft, ...snapshot } = clone(schema);
+    return snapshot;
+}
+function assignmentForSchema(assignment, id) {
+    const { schemaVersion, ...withoutVersion } = clone(assignment);
+    return {
+        ...withoutVersion,
+        ...(assignment.schemaId ? { schemaId: id } : {}),
+        ...(assignment.versionPolicy === "pinned" && schemaVersion !== undefined ? { schemaVersion } : {}),
+    };
+}
 export function createSchema(name, version, document) {
     return { id: schemaId(name, version), name, version, document: clone(document), assignments: [] };
 }
@@ -10,8 +24,81 @@ export function exportSchema(schema) { return JSON.stringify(schema); }
 export function assignSchema(schema, assignment) {
     return { ...schema, assignments: [...schema.assignments.filter((item) => !(item.sourceId === assignment.sourceId && item.eventName === assignment.eventName && item.target === assignment.target)), clone(assignment)] };
 }
-export function reviseSchema(schema, document) { return { ...schema, id: schemaId(schema.name, schema.version + 1), version: schema.version + 1, document: clone(document), revisionHistory: [...(schema.revisionHistory ?? []), clone(schema)] }; }
+export function createSchemaWorkingDraft(schema, sourceVersion = schema.version) {
+    if (schema.workingDraft)
+        return clone(schema);
+    const source = schemaRevision(schema, sourceVersion);
+    if (!source)
+        throw new Error(`Schema revision ${sourceVersion} does not exist.`);
+    return {
+        ...clone(schema),
+        workingDraft: {
+            baseVersion: schema.version,
+            sourceVersion,
+            document: clone(source.document),
+            assignments: clone(source.assignments),
+            ...(source.attachedRules ? { attachedRules: clone(source.attachedRules) } : {}),
+            ...(source.parentSchemaId ? { parentSchemaId: source.parentSchemaId } : {}),
+            ...(source.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(source.inheritedRuleOverrides) } : {}),
+            pendingChanges: [],
+        },
+    };
+}
+export function updateSchemaWorkingDraft(schema, changes, change) {
+    const withDraft = schema.workingDraft ? clone(schema) : createSchemaWorkingDraft(schema);
+    const draft = withDraft.workingDraft;
+    return { ...withDraft, workingDraft: { ...draft, ...clone(changes), pendingChanges: change ? [...draft.pendingChanges, change] : draft.pendingChanges } };
+}
+export function discardSchemaWorkingDraft(schema) {
+    const { workingDraft: _draft, ...current } = clone(schema);
+    return current;
+}
+export function publishSchemaWorkingDraft(schema) {
+    const draft = schema.workingDraft;
+    if (!draft)
+        throw new Error("Schema has no working draft to publish.");
+    const snapshot = schemaSnapshot(schema);
+    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, ...current } = snapshot;
+    return {
+        ...current,
+        version: schema.published === false ? 1 : schema.version + 1,
+        published: true,
+        document: clone(draft.document),
+        assignments: clone(draft.assignments).map((assignment) => assignmentForSchema(assignment, schema.id)),
+        ...(draft.attachedRules ? { attachedRules: clone(draft.attachedRules) } : {}),
+        ...(draft.parentSchemaId ? { parentSchemaId: draft.parentSchemaId } : {}),
+        ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(draft.inheritedRuleOverrides) } : {}),
+        revisionHistory: schema.published === false ? [] : [...(schema.revisionHistory ?? []).map(schemaSnapshot), snapshot],
+    };
+}
+export function schemaRevision(schema, version) {
+    if (schema.version === version)
+        return schemaSnapshot(schema);
+    const match = schema.revisionHistory?.find((revision) => revision.version === version);
+    return match ? schemaSnapshot(match) : undefined;
+}
+export function schemaRevisionChoices(schema) {
+    return [...new Set((schema.revisionHistory ?? []).map(({ version }) => version))].sort((left, right) => right - left);
+}
+export function restoreSchemaRevisionDraft(schema, version) {
+    const withoutDraft = discardSchemaWorkingDraft(schema);
+    const restored = createSchemaWorkingDraft(withoutDraft, version);
+    return { ...restored, workingDraft: { ...restored.workingDraft, pendingChanges: [`Restore revision ${version}`] } };
+}
+export function duplicateSchemaRevision(schema, version) {
+    const source = schemaRevision(schema, version);
+    if (!source)
+        throw new Error(`Schema revision ${version} does not exist.`);
+    const { revisionHistory: _history, workingDraft: _draft, ...duplicate } = duplicateSchema(source, `${schema.name} revision ${version} copy`);
+    return { ...duplicate, version: 1, published: false, assignments: [] };
+}
+export function reviseSchema(schema, document) {
+    return publishSchemaWorkingDraft(updateSchemaWorkingDraft(schema, { document }, "Update schema document"));
+}
 export function duplicateSchema(schema, name) { return { ...clone(schema), id: schemaId(name, schema.version), name }; }
+export function assignableSchemas(schemas) {
+    return schemas.filter(({ published }) => published !== false).map(clone);
+}
 export function schemaInheritanceError(schema, schemas) {
     if (!schema.parentSchemaId)
         return undefined;
@@ -73,7 +160,12 @@ export function resolveSchemaAssignment(event, pageUrl, schemas) {
     const selected = matches.filter(({ assignment }) => (assignment.priority ?? 0) === highest);
     if (selected.length !== 1)
         return { error: `Assignment error: ${selected.map(({ assignment }) => assignment.name ?? assignment.id ?? "unnamed assignment").join(", ")}` };
-    return selected[0] ?? {};
+    const resolved = selected[0];
+    if (!resolved)
+        return {};
+    const pinnedVersion = resolved.assignment.versionPolicy === "pinned" ? resolved.assignment.schemaVersion : undefined;
+    const selectedSchema = pinnedVersion ? schemaRevision(resolved.schema, pinnedVersion) : resolved.schema;
+    return selectedSchema ? { schema: selectedSchema, assignment: resolved.assignment } : { error: `Assignment error: schema revision ${pinnedVersion} is unavailable` };
 }
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
 export function serializeSchemaLibrary(schemas) { return JSON.stringify(schemas); }
@@ -82,12 +174,39 @@ export function createSchemaLibraryExport(schemas, rules) {
     return { version: 1, schemas: schemas.map(clone), rules: rules.map(clone) };
 }
 export function serializeSchemaLibraryExport(schemas, rules) { return `${JSON.stringify(createSchemaLibraryExport(schemas, rules), null, 2)}\n`; }
+export function migrateSchemaLibrary(schemas) {
+    const groups = new Map();
+    for (const schema of schemas) {
+        const key = schema.name.trim().toLowerCase();
+        groups.set(key, [...(groups.get(key) ?? []), clone(schema)]);
+    }
+    return [...groups.values()].map((group) => {
+        if (group.length === 1)
+            return group[0];
+        const ordered = [...group].sort((left, right) => left.version - right.version);
+        const current = ordered.at(-1);
+        const stableId = stableSchemaId(current.name);
+        const revisions = ordered.slice(0, -1).flatMap((schema) => [...(schema.revisionHistory ?? []), schema]).map(schemaSnapshot);
+        const assignments = ordered.flatMap(({ assignments }) => assignments).map((assignment) => {
+            const pinnedVersion = assignment.schemaVersion ?? Number(assignment.schemaId?.match(/(?:^|:)(\d+)$/)?.[1] ?? current.version);
+            return assignmentForSchema({ ...assignment, ...(assignment.versionPolicy === "pinned" ? { schemaVersion: pinnedVersion } : {}) }, stableId);
+        });
+        return {
+            ...schemaSnapshot(current),
+            id: stableId,
+            assignments,
+            revisionHistory: [...new Map(revisions.map((revision) => [revision.version, { ...revision, id: stableId }])).values()].sort((left, right) => left.version - right.version),
+        };
+    });
+}
 export function restoreSchemaLibrary(serialized) {
     if (!serialized)
         return [];
     try {
         const parsed = JSON.parse(serialized);
-        return Array.isArray(parsed) ? parsed.filter((schema) => !!schema && typeof schema.id === "string" && typeof schema.name === "string" && typeof schema.version === "number").map(clone) : [];
+        if (!Array.isArray(parsed))
+            return [];
+        return parsed.filter((schema) => !!schema && typeof schema.id === "string" && typeof schema.name === "string" && typeof schema.version === "number").map(clone);
     }
     catch {
         return [];
@@ -280,5 +399,8 @@ export function validateWithSchema(event, schema, schemas, target = schema.assig
 }
 export function validationSummary(results) { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings") && !result.state.includes("error")).length, Issues: results.filter((result) => result.state.endsWith("issues") || result.state.includes("error") && result.state !== "Assignment error").length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
-export function revalidateExplicitly(event, schemas, version) { return validateEvent(event, schemas.filter((schema) => schema.version === version)); }
+export function revalidateExplicitly(event, schemas, version) {
+    const revisions = schemas.flatMap((schema) => schemaRevision(schema, version) ?? []);
+    return validateEvent(event, revisions);
+}
 //# sourceMappingURL=data-layer-schema-verification.js.map
