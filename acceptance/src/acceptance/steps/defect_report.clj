@@ -18,11 +18,18 @@
 
 (defn- load-observation! []
   (let [result (process/shell support/build-shell-options "node" "test/data-layer-defect-report-runtime-test.mjs")
+        ui-result (process/shell support/build-shell-options "node" "test/data-layer-defect-report-ui-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        observation (:defectReport (when line (json/parse-string line true)))]
+        ui-line (last (filter #(str/starts-with? % "{") (str/split-lines (:out ui-result))))
+        ui-observation (:defectReportUi (when ui-line (json/parse-string ui-line true)))
+        observation (some-> (:defectReport (when line (json/parse-string line true)))
+                            (assoc :ui ui-observation))]
     (support/assert! (zero? (:exit result))
                      (str "Defect report production runtime failed: " (:err result))
                      {:out (:out result) :err (:err result)})
+    (support/assert! (zero? (:exit ui-result))
+                     (str "Defect report production UI runtime failed: " (:err ui-result))
+                     {:out (:out ui-result) :err (:err ui-result)})
     (support/assert! observation "Defect report runtime observation is missing." {:out (:out result)})
     (reset! runtime-observation observation)))
 
@@ -61,6 +68,10 @@
   (support/assert! (= "warning" (get-in observation [:copies :plainCopy :status])) "Plain clipboard fallback did not warn." observation)
   (support/assert! (= "failure" (get-in observation [:copies :failedCopy :status])) "Clipboard failure was not reported." observation)
   (support/assert! (not= "success" (get-in observation [:copies :failedCopy :status])) "Clipboard failure reported success." observation)
+  (support/assert! (= 2 (get-in observation [:ui :reproductionSteps])) "Production UI did not generate pathname reproduction steps." observation)
+  (support/assert! (= 2 (get-in observation [:ui :timelineEntries])) "Production UI did not render session timeline entries." observation)
+  (support/assert! (true? (get-in observation [:ui :editedSummaryVisible])) "Production UI did not preserve editable report details." observation)
+  (support/assert! (= 1 (get-in observation [:ui :copied])) "Production UI did not invoke the Jira clipboard callback." observation)
   true)
 
 (defn- transition [world example _captures {:keys [text]}]

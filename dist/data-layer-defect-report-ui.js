@@ -1,105 +1,24 @@
-import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, filterTimelineEvents, generatePathnameSkeleton, generateReportDetails, renderJiraReport, supportingTimeline, toggleReportIssue, } from "./data-layer-defect-report.js";
-function issueId(pointer, index) {
-    return pointer.split("/").filter(Boolean).at(-1) ?? `issue-${index + 1}`;
-}
-function pathname(pageUrl) {
-    try {
-        return new URL(pageUrl ?? "https://local.invalid/").pathname;
-    }
-    catch {
-        return "/";
-    }
-}
-export function defectReportContext(events, defectEventId) {
-    const chronological = [...events].sort((left, right) => left.captureTime.localeCompare(right.captureTime));
-    const visits = [];
-    for (const event of chronological) {
-        const eventPathname = pathname(event.pageUrl);
-        const latest = visits.at(-1);
-        if (latest?.pathname === eventPathname)
-            latest.eventIds = [...latest.eventIds, event.id];
-        else
-            visits.push({ id: `visit-${visits.length + 1}`, pathname: eventPathname, eventIds: [event.id] });
-    }
-    const defectVisitId = visits.find(({ eventIds }) => eventIds.includes(defectEventId))?.id ?? visits.at(-1)?.id ?? "";
-    return {
-        visits,
-        defectVisitId,
-        timeline: chronological.map((event) => ({
-            id: event.id,
-            captureTime: event.captureTime,
-            name: event.name,
-            source: event.sourceName ?? event.sourceId,
-            pathname: pathname(event.pageUrl),
-            validation: event.validation ?? "Not checked",
-            payload: event.payload,
-            ...(event.keyProperties ? { summary: Object.entries(event.keyProperties).map(([key, value]) => `${key}: ${String(value)}`).join(", ") } : {}),
-            ...(event.validationDetails ? { validationDetails: event.validationDetails } : {}),
-        })),
-    };
-}
-export function defectCapturedEvent(event) {
-    const schema = event.validationDetails?.schema;
-    return {
-        id: event.id,
-        name: event.name,
-        source: event.sourceName ?? event.sourceId,
-        pageUrl: event.pageUrl ?? "",
-        pathname: pathname(event.pageUrl),
-        captureTime: event.captureTime,
-        payload: event.payload,
-        schema: { name: schema?.name ?? "Assigned schema", version: schema?.version ?? 0 },
-        issues: (event.validationDetails?.issues ?? []).map((issue, index) => ({
-            id: issueId(issue.instancePath, index),
-            severity: issue.severity === "warning" ? "warning" : "error",
-            pointer: issue.instancePath || "/",
-            constraint: issue.expected,
-            actual: issue.actual,
-            rule: issue.rule ?? issue.schemaLocation,
-            ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),
-        })),
-    };
-}
-export function browserDefectReportClipboard() {
-    return {
-        ...(typeof navigator.clipboard?.write === "function" && typeof ClipboardItem !== "undefined" ? {
-            async writeRich(html, text) {
-                await navigator.clipboard.write([new ClipboardItem({
-                        "text/html": new Blob([html], { type: "text/html" }),
-                        "text/plain": new Blob([text], { type: "text/plain" }),
-                    })]);
-            },
-        } : {}),
-        ...(typeof navigator.clipboard?.writeText === "function" ? {
-            async writeText(text) { await navigator.clipboard.writeText(text); },
-        } : {}),
-    };
+import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
+import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
+import { appendDetailControls, appendIssueControls, appendReproductionControls, appendTimelineControls, } from "./data-layer-defect-report-ui-controls.js";
+export { browserDefectReportClipboard, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
+function heading(level, text) {
+    const element = document.createElement(level);
+    element.textContent = text;
+    return element;
 }
 export function renderDefectReportBuilder(root, event, clipboard = browserDefectReportClipboard(), sessionEvents = [event]) {
     let report = createDefectReport(defectCapturedEvent(event));
     const context = defectReportContext(sessionEvents, event.id);
-    const timelineSelections = new Map();
+    const selectedChoices = new Map();
     const detailEdits = {};
-    const heading = document.createElement("h4");
-    heading.textContent = `Defect report: ${event.name}`;
-    heading.tabIndex = -1;
-    const issueHeading = document.createElement("h5");
-    issueHeading.textContent = "Validation issues";
     const issues = document.createElement("fieldset");
-    const expectedHeading = document.createElement("h5");
-    expectedHeading.textContent = "Expected result";
     const expectedControls = document.createElement("div");
-    const reproductionHeading = document.createElement("h5");
-    reproductionHeading.textContent = "Steps to reproduce";
     const reproductionControls = document.createElement("div");
     const reproductionSteps = document.createElement("ol");
-    const timelineHeading = document.createElement("h5");
-    timelineHeading.textContent = "Supporting timeline";
     const timelineFilters = document.createElement("div");
     timelineFilters.setAttribute("aria-label", "Timeline filters");
     const timelineList = document.createElement("ul");
-    const detailsHeading = document.createElement("h5");
-    detailsHeading.textContent = "Report details";
     const detailControls = document.createElement("div");
     const preview = document.createElement("section");
     preview.setAttribute("aria-label", "Final report preview");
@@ -109,7 +28,8 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     copy.type = "button";
     copy.textContent = "Copy for Jira Cloud";
     copy.dataset.actionVariant = "primary";
-    const selectedChoices = new Map();
+    const title = heading("h4", `Defect report: ${event.name}`);
+    title.tabIndex = -1;
     let lastGenerated = generateReportDetails(report);
     const refresh = () => {
         let corrected = report;
@@ -126,147 +46,20 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
             if (input.dataset.edited !== "true")
                 input.value = lastGenerated[field];
         }
-        const rendered = renderJiraReport(lastGenerated);
-        preview.innerHTML = rendered.html;
+        preview.innerHTML = renderJiraReport(lastGenerated).html;
         copy.onclick = () => { void copyDefectReportForJira(lastGenerated, clipboard).then((result) => { feedback.textContent = result.feedback; }); };
     };
-    for (const reportIssue of report.issues) {
-        const row = document.createElement("div");
-        const selected = document.createElement("input");
-        selected.type = "checkbox";
-        selected.checked = reportIssue.selected;
-        selected.id = `defect-issue-${reportIssue.id}`;
-        selected.addEventListener("change", () => { report = toggleReportIssue(report, reportIssue.id); refresh(); });
-        const label = document.createElement("label");
-        label.htmlFor = selected.id;
-        label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}`;
-        row.append(selected, label);
-        issues.append(row);
-        const methodLabel = document.createElement("label");
-        methodLabel.textContent = `${reportIssue.id} correction `;
-        const method = document.createElement("select");
-        for (const value of ["", "choose an allowed value", "enter a valid response", "apply the rule", "keep the rule generic"]) {
-            method.append(Object.assign(document.createElement("option"), { value, textContent: value || "Choose method" }));
-        }
-        const response = document.createElement("input");
-        response.placeholder = "Valid response";
-        const updateChoice = () => {
-            if (!method.value)
-                selectedChoices.delete(reportIssue.id);
-            else
-                selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: method.value, ...(response.value ? { response: response.value } : {}) });
-            refresh();
-        };
-        method.addEventListener("change", updateChoice);
-        response.addEventListener("input", updateChoice);
-        methodLabel.append(method, response);
-        expectedControls.append(methodLabel);
-    }
-    const startLabel = document.createElement("label");
-    startLabel.textContent = "Reproduction starts at ";
-    const startVisit = document.createElement("select");
-    startVisit.id = "defect-reproduction-start";
-    const defectVisitIndex = context.visits.findIndex(({ id }) => id === context.defectVisitId);
-    for (const visit of context.visits.slice(0, defectVisitIndex + 1)) {
-        startVisit.append(Object.assign(document.createElement("option"), { value: visit.id, textContent: visit.pathname }));
-    }
-    const generateSteps = document.createElement("button");
-    generateSteps.type = "button";
-    generateSteps.textContent = "Generate pathname steps";
-    const renderReproductionSteps = () => {
-        reproductionSteps.replaceChildren(...report.reproductionSteps.map((step, index) => {
-            const item = document.createElement("li");
-            const input = document.createElement("input");
-            input.value = step.text;
-            input.setAttribute("aria-label", `Reproduction step ${index + 1}`);
-            input.addEventListener("input", () => {
-                report = { ...report, reproductionSteps: report.reproductionSteps.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, text: input.value } : candidate) };
-                refresh();
-            });
-            item.append(input);
-            return item;
-        }));
+    const state = {
+        report: () => report,
+        update(next) { report = next; },
+        refresh,
     };
-    generateSteps.addEventListener("click", () => {
-        report = { ...report, reproductionSteps: generatePathnameSkeleton(context.visits, startVisit.value, context.defectVisitId) };
-        renderReproductionSteps();
-        refresh();
-    });
-    startLabel.append(startVisit);
-    reproductionControls.append(startLabel, generateSteps);
-    const timelineFilter = {};
-    const filterInputs = [
-        ["name", "Event name"], ["source", "Source"], ["pathname", "Pathname"], ["validation", "Validation state"],
-    ].map(([field, labelText]) => {
-        const label = document.createElement("label");
-        label.textContent = `${labelText} `;
-        const input = document.createElement("input");
-        input.dataset.timelineFilter = field;
-        input.addEventListener("input", () => {
-            if (input.value)
-                timelineFilter[field] = input.value;
-            else
-                delete timelineFilter[field];
-            renderTimeline();
-        });
-        label.append(input);
-        return label;
-    });
-    timelineFilters.append(...filterInputs);
-    const updateTimeline = () => {
-        report = { ...report, timeline: supportingTimeline(context.timeline, [...timelineSelections.values()]) };
-        refresh();
-    };
-    const renderTimeline = () => {
-        timelineList.replaceChildren(...filterTimelineEvents(context.timeline, timelineFilter).map((timelineEvent) => {
-            const item = document.createElement("li");
-            const selectedLabel = document.createElement("label");
-            const selected = document.createElement("input");
-            selected.type = "checkbox";
-            selected.checked = timelineSelections.has(timelineEvent.id);
-            selectedLabel.append(selected, `${timelineEvent.captureTime} ${timelineEvent.name} · ${timelineEvent.source} · ${timelineEvent.pathname} · ${timelineEvent.validation}`);
-            const options = document.createElement("span");
-            for (const [field, labelText] of [["includeSummary", "Summary"], ["includePayload", "Payload"], ["includeValidation", "Validation details"]]) {
-                const optionLabel = document.createElement("label");
-                const option = document.createElement("input");
-                option.type = "checkbox";
-                option.checked = Boolean(timelineSelections.get(timelineEvent.id)?.[field]);
-                option.disabled = !selected.checked;
-                option.addEventListener("change", () => {
-                    timelineSelections.set(timelineEvent.id, { ...(timelineSelections.get(timelineEvent.id) ?? { eventId: timelineEvent.id }), [field]: option.checked });
-                    updateTimeline();
-                });
-                optionLabel.append(option, labelText);
-                options.append(optionLabel);
-            }
-            selected.addEventListener("change", () => {
-                if (selected.checked)
-                    timelineSelections.set(timelineEvent.id, { eventId: timelineEvent.id });
-                else
-                    timelineSelections.delete(timelineEvent.id);
-                renderTimeline();
-                updateTimeline();
-            });
-            item.append(selectedLabel, options);
-            return item;
-        }));
-    };
-    renderTimeline();
-    for (const [field, labelText, multiline] of [
-        ["summary", "Summary", false],
-        ["description", "Description", true],
-        ["expectedExplanation", "Expected result explanation", true],
-    ]) {
-        const label = document.createElement("label");
-        label.textContent = `${labelText} `;
-        const input = multiline ? document.createElement("textarea") : document.createElement("input");
-        input.dataset.reportField = field;
-        input.addEventListener("input", () => { input.dataset.edited = "true"; detailEdits[field] = input.value; refresh(); });
-        label.append(input);
-        detailControls.append(label);
-    }
-    root.replaceChildren(heading, issueHeading, issues, expectedHeading, expectedControls, reproductionHeading, reproductionControls, reproductionSteps, timelineHeading, timelineFilters, timelineList, detailsHeading, detailControls, preview, copy, feedback);
+    appendIssueControls(issues, expectedControls, state, selectedChoices);
+    appendReproductionControls(reproductionControls, reproductionSteps, context, state);
+    appendTimelineControls(timelineFilters, timelineList, context, state);
+    appendDetailControls(detailControls, detailEdits, refresh);
+    root.replaceChildren(title, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, feedback);
     refresh();
-    heading.focus({ preventScroll: true });
+    title.focus({ preventScroll: true });
 }
 //# sourceMappingURL=data-layer-defect-report-ui.js.map
