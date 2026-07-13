@@ -57,6 +57,71 @@ const generic = applyExpectedResult(report, [{ issueId: "currency", method: "kee
 const customValidation = validateAssistedResponse(report.issues.find(({ id }) => id === "currency"), "CAD");
 const customOverride = applyExpectedResult(report, [{ issueId: "currency", method: "enter a valid response", response: "CAD", responseSource: "Custom value or response", operatorProvided: true }]);
 
+const pageTypeOriginal = { page_type: "unknown" };
+const pageTypeReport = createDefectReport({
+  ...captured,
+  payload: pageTypeOriginal,
+  issues: [{
+    id: "page_type",
+    severity: "error",
+    pointer: "/page_type",
+    constraint: "one of homepage, product listing, product detail, or checkout",
+    actual: "unknown",
+    rule: "page-type",
+    ruleVersion: 1,
+  }],
+});
+const inlineCases = [
+  ["Use generic constraint", { issueId: "page_type", method: "keep the rule generic", responseSource: "schema constraint" }],
+  ["schema value product detail", { issueId: "page_type", method: "choose an allowed value", response: "product detail", responseSource: "schema-provided value" }],
+  ["custom value category landing", { issueId: "page_type", method: "enter a valid response", response: "category landing", responseSource: "operator custom override", operatorProvided: true }],
+].map(([selection, choice]) => {
+  const selected = applyExpectedResult(pageTypeReport, [choice]);
+  const preview = renderJiraReport(generateReportDetails(selected));
+  return {
+    selection,
+    responseSource: selected.expected.corrections[0].responseSource,
+    inlineResponse: selected.expected.corrections[0].inlineResponse,
+    correctionCount: selected.expected.corrections.length,
+    expectedPayload: selected.expected.payload,
+    expectedJson: preview.expectedJson,
+    preview,
+  };
+});
+const commentCases = [true, false].map((selected) => {
+  const result = applyExpectedResult(pageTypeReport, [{
+    issueId: "page_type",
+    method: "choose an allowed value",
+    response: "homepage",
+    responseSource: "schema-provided value",
+    includeAllowedValuesComment: selected,
+  }]);
+  const preview = renderJiraReport(generateReportDetails(result));
+  return {
+    checkboxState: selected ? "selected" : "cleared",
+    inlineResponse: result.expected.corrections[0].inlineResponse,
+    response: result.expected.corrections[0].response,
+    expectedJson: preview.expectedJson,
+    preview,
+  };
+});
+const inlineRichWrites = [];
+for (const item of [inlineCases[0], commentCases[0]]) {
+  const copy = await copyDefectReportForJira(
+    generateReportDetails(applyExpectedResult(pageTypeReport, [{
+      issueId: "page_type",
+      method: item === inlineCases[0] ? "keep the rule generic" : "choose an allowed value",
+      ...(item === inlineCases[0]
+        ? { responseSource: "schema constraint" }
+        : { response: "homepage", responseSource: "schema-provided value", includeAllowedValuesComment: true }),
+    }])),
+    { writeRich: async (html, text) => { inlineRichWrites.push({ html, text }); } },
+  );
+  assert.equal(copy.status, "success");
+}
+const pageTypeAssistance = expectedResultAssistance(pageTypeReport.issues[0]);
+const pageTypeCustomValidation = validateAssistedResponse(pageTypeReport.issues[0], "category landing");
+
 report = applyExpectedResult(report, [
   { issueId: "currency", method: "choose an allowed value", response: "EUR" },
   { issueId: "debug", method: "apply the rule" },
@@ -107,6 +172,14 @@ process.stdout.write(`${JSON.stringify({
     assistance,
     generic: { explanation: generic.expected.explanations[0], payload: generic.expected.payload, corrections: generic.expected.corrections },
     custom: { validation: customValidation, explanation: customOverride.expected.explanations[0], correction: customOverride.expected.corrections[0] },
+    pageType: {
+      original: pageTypeOriginal,
+      assistance: pageTypeAssistance,
+      customValidation: pageTypeCustomValidation,
+      inlineCases,
+      commentCases,
+      inlineRichWrites,
+    },
     steps,
     timelineInitialSelection: [],
     filteredTimelineCount: filterTimelineEvents(timelineEvents, { name: "purchase", source: "dataLayer", pathname: "/checkout", validation: "Invalid" }).length,

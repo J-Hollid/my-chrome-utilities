@@ -69,13 +69,14 @@ function element(root, predicate) {
   return found;
 }
 
-const payload = { commerce: { currency: "GBP" } };
+const payload = { page_type: "unknown", commerce: { currency: "GBP" } };
 const sessionEvents = [
   { id: "pageview", name: "pageview", sourceId: "dataLayer", sourceName: "Data layer", captureTime: "01", pageUrl: "https://shop.test/products", payload: { page: "products" }, keyProperties: { page: "products" }, validation: "Valid" },
   { id: "purchase", name: "purchase", sourceId: "dataLayer", sourceName: "Data layer", captureTime: "02", pageUrl: "https://shop.test/checkout", payload, validation: "1 error", validationDetails: {
     schema: { name: "Checkout", version: 4 },
     evaluations: [],
     issues: [
+      { instancePath: "/page_type", severity: "error", expected: "one of homepage, product listing, product detail, or checkout", actual: "unknown", schemaLocation: "#/page_type", rule: "page type v1" },
       { instancePath: "/commerce/currency", severity: "error", expected: "one of EUR or USD", actual: "GBP", schemaLocation: "#/currency", rule: "currency v2" },
       { instancePath: "/commerce/debug", severity: "error", expected: "forbidden property", actual: true, schemaLocation: "#/debug", rule: "debug v1" },
     ],
@@ -122,29 +123,60 @@ assert.equal(closeLiveFeed, 1);
 
 const headings = descendants(root).filter(({ tagName }) => tagName === "H4" || tagName === "H5").map(({ textContent }) => textContent);
 assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Expected result", "Steps to reproduce", "Supporting timeline", "Report details"]);
+const preview = element(root, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
+
+const pageTypeGeneric = element(root, ({ name, dataset }) => name === "defect-response-page_type" && dataset.responseSource === "Use generic constraint");
+assert.equal(pageTypeGeneric.checked, true);
+const pageTypeGenericSelected = pageTypeGeneric.checked;
+const pageTypeGenericInline = preview.innerHTML;
+assert.match(pageTypeGenericInline, /page_type: homepage OR product listing OR product detail OR checkout/);
+const pageTypeSchemaValue = element(root, ({ name, value }) => name === "defect-response-page_type" && value === "product detail");
+pageTypeSchemaValue.checked = true;
+pageTypeSchemaValue.dispatch("change");
+const pageTypeSchemaInline = preview.innerHTML;
+assert.match(pageTypeSchemaInline, /page_type: product detail/);
+assert.doesNotMatch(pageTypeSchemaInline, /page_type: homepage OR product listing/);
+const pageTypeComment = element(root, ({ dataset }) => dataset.allowedValuesComment === "page_type");
+const pageTypeHomepage = element(root, ({ name, value }) => name === "defect-response-page_type" && value === "homepage");
+pageTypeHomepage.checked = true;
+pageTypeHomepage.dispatch("change");
+pageTypeComment.checked = true;
+pageTypeComment.dispatch("change");
+const pageTypeCommentedInline = preview.innerHTML;
+assert.match(pageTypeCommentedInline, /page_type: &quot;homepage&quot;, \/\/ must be of type homepage, product listing, product detail, or checkout/);
+pageTypeComment.checked = false;
+pageTypeComment.dispatch("change");
+const pageTypeClearedInline = preview.innerHTML;
+assert.match(pageTypeClearedInline, /page_type: &quot;homepage&quot;/);
+assert.doesNotMatch(pageTypeClearedInline, /must be of type homepage/);
+assert.deepEqual(payload, { page_type: "unknown", commerce: { currency: "GBP" } });
 
 const issueCheckbox = element(root, ({ id }) => id === "defect-issue-currency");
 issueCheckbox.checked = false;
 issueCheckbox.dispatch("change");
-const schemaResponses = descendants(root).filter(({ dataset }) => dataset.responseSource === "Checkout schema").map(({ value }) => value);
+const schemaResponses = descendants(root)
+  .filter(({ dataset, name }) => dataset.responseSource === "Checkout schema" && name === "defect-response-currency")
+  .map(({ value }) => value);
 assert.deepEqual(schemaResponses, ["EUR", "USD"]);
 assert.equal(schemaResponses.includes("GBP"), false);
-const correctionMethod = element(root, ({ dataset, type }) => dataset.responseSource === "Custom value or response" && type === "radio");
-const correctionResponse = element(root, ({ placeholder }) => placeholder === "Custom value or response");
+const currencyAssistance = element(root, ({ attributes }) => attributes.get("aria-label") === "currency expected-result assistance");
+const correctionMethod = element(currencyAssistance, ({ dataset, type }) => dataset.responseSource === "Custom value or response" && type === "radio");
+const correctionResponse = element(currencyAssistance, ({ placeholder }) => placeholder === "Custom value or response");
 const customInitiallyHidden = correctionResponse.hidden;
 assert.equal(customInitiallyHidden, true);
 correctionMethod.checked = true;
 correctionMethod.dispatch("change");
 const customVisibleAfterSelection = !correctionResponse.hidden;
 assert.equal(customVisibleAfterSelection, true);
-const genericMethod = element(root, ({ dataset }) => dataset.responseSource === "Use generic constraint");
+const genericMethod = element(currencyAssistance, ({ dataset }) => dataset.responseSource === "Use generic constraint");
 genericMethod.checked = true;
 genericMethod.dispatch("change");
 assert.equal(correctionResponse.hidden, true);
-const schemaMethod = element(root, ({ dataset, value }) => dataset.responseSource === "Checkout schema" && value === "EUR");
+const schemaMethod = element(currencyAssistance, ({ dataset, value }) => dataset.responseSource === "Checkout schema" && value === "EUR");
 schemaMethod.checked = true;
 schemaMethod.dispatch("change");
-const ruleMethod = element(root, ({ dataset }) => dataset.responseSource === "validation rule");
+const debugAssistance = element(root, ({ attributes }) => attributes.get("aria-label") === "debug expected-result assistance");
+const ruleMethod = element(debugAssistance, ({ dataset }) => dataset.responseSource === "validation rule");
 ruleMethod.checked = true;
 ruleMethod.dispatch("change");
 correctionMethod.checked = true;
@@ -154,11 +186,11 @@ correctionResponse.dispatch("input");
 
 correctionResponse.value = "CAD";
 correctionResponse.dispatch("input");
-const customWarning = element(root, ({ dataset }) => dataset.customResponseWarning === "currency");
+const customWarning = element(currencyAssistance, ({ dataset }) => dataset.customResponseWarning === "currency");
 assert.match(customWarning.textContent, /CAD does not satisfy/);
 const invalidCustomWarning = customWarning.textContent;
-const keepOverride = element(root, ({ textContent }) => textContent === "Keep custom override");
-const replaceOverride = element(root, ({ textContent }) => textContent === "Replace custom override");
+const keepOverride = element(currencyAssistance, ({ textContent }) => textContent === "Keep custom override");
+const replaceOverride = element(currencyAssistance, ({ textContent }) => textContent === "Replace custom override");
 replaceOverride.dispatch("click");
 assert.equal(correctionResponse.value, "");
 correctionResponse.value = "CAD";
@@ -188,7 +220,6 @@ assert.equal(timeline.children.length, 1);
 const summary = element(root, ({ dataset }) => dataset.reportField === "summary");
 summary.value = "Checkout purchase has invalid currency";
 summary.dispatch("input");
-const preview = element(root, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
 assert.match(preview.innerHTML, /Checkout purchase has invalid currency/);
 
 const copy = element(root, ({ textContent }) => textContent === "Copy for Jira Cloud");
@@ -226,6 +257,15 @@ process.stdout.write(`${JSON.stringify({
     navigation: { backToCapturedEvent, focusCreateDefectReport, backToLiveFeed },
     navigationActions: [backToEvent.textContent, backToFeed.textContent],
     liveFeedScrollTop,
+    pageType: {
+      genericSelected: pageTypeGenericSelected,
+      schemaResponses: descendants(root).filter(({ name, value }) => name === "defect-response-page_type" && value).map(({ value }) => value),
+      commentAvailable: Boolean(pageTypeComment),
+      genericInline: pageTypeGenericInline,
+      schemaInline: pageTypeSchemaInline,
+      commentedInline: pageTypeCommentedInline,
+      clearedInline: pageTypeClearedInline,
+    },
     schemaResponses,
     customWarning: customWarning.textContent,
     invalidCustomWarning,

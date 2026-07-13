@@ -36,6 +36,7 @@ export interface ExpectedCorrection {
   response?: unknown;
   responseSource?: string;
   operatorProvided?: boolean;
+  inlineResponse?: string;
   marker?: "+";
 }
 
@@ -54,6 +55,7 @@ export interface ExpectedResultChoice {
   response?: unknown;
   responseSource?: string;
   operatorProvided?: boolean;
+  includeAllowedValuesComment?: boolean;
 }
 
 export interface ExpectedResultAssistance {

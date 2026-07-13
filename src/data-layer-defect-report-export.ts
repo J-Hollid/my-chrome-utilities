@@ -80,6 +80,22 @@ function jsonLines(value: unknown, depth = 0, pointer = ""): JsonLine[] {
   return lines;
 }
 
+function expectedLines(report: GeneratedDefectReport): JsonLine[] {
+  const inline = new Map(report.expected.corrections.flatMap((correction) => correction.inlineResponse
+    ? [[correction.pointer, correction.inlineResponse] as const]
+    : []));
+  return jsonLines(report.expected.payload).map((line) => {
+    const response = line.pointer ? inline.get(line.pointer) : undefined;
+    if (!response) return line;
+    const indentation = line.text.match(/^\s*/)?.[0] ?? "";
+    return { ...line, text: `${indentation}${response}` };
+  });
+}
+
+function expectedPresentation(report: GeneratedDefectReport): string {
+  return expectedLines(report).map(({ text }) => text).join("\n");
+}
+
 function reportSections(report: GeneratedDefectReport): Array<[string, string]> {
   const responseSources = report.expected.corrections.flatMap((correction) => correction.responseSource
     ? [`${correction.issueId} response source: ${correction.responseSource}${correction.operatorProvided ? " (operator-provided)" : ""}`]
@@ -90,7 +106,7 @@ function reportSections(report: GeneratedDefectReport): Array<[string, string]> 
     ["Description", report.description],
     ["Steps to reproduce", report.reproductionSteps.map(({ text }) => text).join("\n")],
     ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
-    ["Expected result", `${expectedNarrative}\n${JSON.stringify(report.expected.payload, null, 2)}`.trim()],
+    ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
     ["Differences", [
       ...report.actual.differences.map(({ pointer }) => `− ${pointer} invalid actual value`),
       ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `+ ${pointer} corrected expected value`),
@@ -116,6 +132,16 @@ function highlightedJson(
   }).join("\n");
 }
 
+function highlightedExpected(report: GeneratedDefectReport): string {
+  const selected = new Set(report.expected.corrections
+    .filter(({ operation, inlineResponse }) => operation !== "none" || inlineResponse)
+    .map(({ pointer }) => pointer));
+  return expectedLines(report).map((line) => {
+    if (!line.pointer || !selected.has(line.pointer)) return escapeHtml(line.text);
+    return `<span style="background-color:#d9f7d9;color:#1f1f1f" data-json-pointer="${escapeHtml(line.pointer)}">${escapeHtml(line.text)}</span>`;
+  }).join("\n");
+}
+
 export function renderJiraReport(report: GeneratedDefectReport): {
   html: string;
   text: string;
@@ -138,9 +164,9 @@ export function renderJiraReport(report: GeneratedDefectReport): {
       return `<h2>${heading}</h2><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.actual.payload, report.actual.differences.map(({ pointer }) => pointer), "#ffd7d7")}</pre>`;
     }
     if (heading === "Expected result") {
-      const pointers = report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => pointer);
-      const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + expectedJson)));
-      return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.expected.payload, pointers, "#d9f7d9")}</pre>`;
+      const presentation = expectedPresentation(report);
+      const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + presentation)));
+      return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedExpected(report)}</pre>`;
     }
     const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation evidence" || heading === "Supporting timeline";
     return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;
