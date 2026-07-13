@@ -57,6 +57,12 @@
                      "Existing schema compatibility did not match its target and property type."
                      {:example example :option option})))
 
+(defn- isolated-working-draft-review? [review]
+  (= [true true false]
+     [(str/includes? review "working draft based on version 3")
+      (str/includes? review "version 3 remains current until the working draft is published")
+      (str/includes? review "version 4")]))
+
 (defn- revision-review [example observation]
   (let [state (example-value example "assignment_state")
         expected-action (example-value example "assignment_action")
@@ -67,9 +73,7 @@
                      {:example example})
     (support/assert! (str/includes? (:review result) "Rule attachment path: page_type")
                      "Existing schema review omitted the rule attachment path." {:result result})
-    (support/assert! (and (str/includes? (:review result) "working draft based on version 3")
-                          (str/includes? (:review result) "version 3 remains current until the working draft is published")
-                          (not (str/includes? (:review result) "version 4")))
+    (support/assert! (isolated-working-draft-review? (:review result))
                      "Existing schema review omitted working-draft isolation." {:result result})
     (support/assert! (= expected-action (:assignmentAction result))
                      "Existing schema review used the wrong assignment action."

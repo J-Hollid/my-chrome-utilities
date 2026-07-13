@@ -28,51 +28,67 @@
 
 (defn- observation! [] (or @browser-observation (load-observation!)))
 
+(def ^:private expected-working-draft
+  {:identity "schema-product-listing"
+   :current 3
+   :base 3
+   :source 3
+   :twoPending ["Add page_type rule" "Add page_name rule"]
+   :pending ["Add page_type rule" "Add page_name rule" "Add Checkout assignment"]
+   :properties ["product_id" "page_type" "page_name"]
+   :durable true
+   :currentProperties ["product_id"]
+   :activeCheckout false
+   :sameIdentity true})
+
+(def ^:private expected-publication
+  {:identity "schema-product-listing"
+   :current 4
+   :history [3]
+   :draftCleared true
+   :properties ["product_id" "page_type" "page_name"]
+   :checkoutRevision 4
+   :choices ["Product listing"]})
+
+(def ^:private expected-history
+  {:choices [3]
+   :selected 3
+   :duplicate {:name "Product listing revision 3 copy" :published false :assignable 0}
+   :restored {:current 4 :source 3 :pending ["Restore revision 3"] :discardCurrent 4}})
+
+(def ^:private expected-migration
+  {:count 1
+   :identity "schema-product-listing"
+   :current 4
+   :history [3 2 1]
+   :assignments [{:schemaId "schema-product-listing" :schemaVersion 3 :versionPolicy "pinned"}
+                 {:schemaId "schema-product-listing" :schemaVersion nil :versionPolicy "follow latest"}]})
+
+(defn- policy-revision [policy observation]
+  (get-in observation [:policies (if (= policy "pinned to 3") :pinned :latest)]))
+
+(defn- assert-policy-example! [example observation]
+  (when-let [policy (support/example-value example "version_policy")]
+    (let [expected (support/example-value example "resolved_revision")
+          observed (policy-revision policy observation)]
+      (support/assert! (= expected (str "revision " observed))
+                       "Assignment policy example resolved the wrong revision."
+                       {:example example :observation observation}))))
+
 (defn- assert-lifecycle! [example observation]
-  (support/assert! (= {:identity "schema-product-listing"
-                       :current 3
-                       :base 3
-                       :source 3
-                       :twoPending ["Add page_type rule" "Add page_name rule"]
-                       :pending ["Add page_type rule" "Add page_name rule" "Add Checkout assignment"]
-                       :properties ["product_id" "page_type" "page_name"]
-                       :durable true
-                       :currentProperties ["product_id"]
-                       :activeCheckout false
-                       :sameIdentity true}
-                      (:workingDraft observation))
+  (support/assert! (= expected-working-draft (:workingDraft observation))
                    "Working draft changes mutated the current schema or failed to survive storage." observation)
-  (support/assert! (= {:identity "schema-product-listing"
-                       :current 4
-                       :history [3]
-                       :draftCleared true
-                       :properties ["product_id" "page_type" "page_name"]
-                       :checkoutRevision 4
-                       :choices ["Product listing"]}
-                      (:publication observation))
+  (support/assert! (= expected-publication (:publication observation))
                    "Publication did not advance one stable schema identity." observation)
   (support/assert! (= {:pinned 3 :latest 4 :recorded [3 4]} (:policies observation))
                    "Pinned and follow-latest assignments resolved the wrong revisions." observation)
-  (support/assert! (= {:choices [3]
-                       :selected 3
-                       :duplicate {:name "Product listing revision 3 copy" :published false :assignable 0}
-                       :restored {:current 4 :source 3 :pending ["Restore revision 3"] :discardCurrent 4}}
-                      (:history observation))
+  (support/assert! (= expected-history (:history observation))
                    "Historical duplication or restoration changed the current revision." observation)
-  (support/assert! (= {:count 1
-                       :identity "schema-product-listing"
-                       :current 4
-                       :history [3 2 1]
-                       :assignments [{:schemaId "schema-product-listing" :schemaVersion 3 :versionPolicy "pinned"}
-                                     {:schemaId "schema-product-listing" :schemaVersion nil :versionPolicy "follow latest"}]}
-                      (:migration observation))
+  (support/assert! (= expected-migration (:migration observation))
                    "Legacy revision rows did not migrate to one stable schema." observation)
   (support/assert! (= ["Add another property" "Review draft" "Publish revision"] (:completionActions observation))
                    "Guided draft completion actions are missing or unordered." observation)
-  (when-let [policy (support/example-value example "version_policy")]
-    (let [expected (support/example-value example "resolved_revision")
-          observed (if (= policy "pinned to 3") (get-in observation [:policies :pinned]) (get-in observation [:policies :latest]))]
-      (support/assert! (= expected (str "revision " observed)) "Assignment policy example resolved the wrong revision." {:example example :observation observation}))))
+  (assert-policy-example! example observation))
 
 (defn- transition [world example _captures {:keys [text]}]
   (let [world (if (entry-steps text) (assoc world :schema-revision-lifecycle (observation!)) world)
