@@ -1,0 +1,108 @@
+export type DefectSeverity = "error" | "warning" | "pass";
+
+export interface DefectIssue {
+  id: string;
+  severity: DefectSeverity;
+  pointer: string;
+  constraint: string;
+  actual: unknown;
+  rule: string;
+  ruleVersion: number;
+}
+
+export interface DefectCapturedEvent {
+  id: string;
+  name: string;
+  source: string;
+  pageUrl: string;
+  pathname: string;
+  captureTime: string;
+  payload: unknown;
+  schema: { name: string; version: number };
+  issues: readonly DefectIssue[];
+}
+
+export interface ReportIssue extends DefectIssue { selected: boolean }
+export interface ReportDifference {
+  pointer: string;
+  marker: "+" | "−";
+  treatment: "green" | "red";
+  value: unknown;
+}
+export interface ExpectedCorrection {
+  issueId: string;
+  pointer: string;
+  operation: "add" | "replace" | "remove" | "none";
+  response?: unknown;
+  marker?: "+";
+}
+
+export interface DefectReport {
+  event: DefectCapturedEvent;
+  issues: ReportIssue[];
+  actual: { payload: unknown; differences: ReportDifference[] };
+  expected: { payload: unknown; corrections: ExpectedCorrection[]; explanations: string[] };
+  reproductionSteps: ReproductionStep[];
+  timeline: SupportingTimelineEntry[];
+}
+
+export interface ExpectedResultChoice {
+  issueId: string;
+  method: "choose an allowed value" | "enter a valid response" | "apply the rule" | "keep the rule generic";
+  response?: unknown;
+}
+
+export interface PathnameVisit { id: string; pathname: string; eventIds: readonly string[] }
+export interface ReproductionStep { visitId: string; pathname: string; text: string }
+
+export interface TimelineEvent {
+  id: string;
+  captureTime: string;
+  name: string;
+  source: string;
+  pathname: string;
+  validation: string;
+  payload?: unknown;
+  summary?: string;
+  validationDetails?: unknown;
+}
+export interface TimelineFilter { name?: string; source?: string; pathname?: string; validation?: string }
+export interface TimelineSelection {
+  eventId: string;
+  includeSummary?: boolean;
+  includePayload?: boolean;
+  includeValidation?: boolean;
+}
+export interface SupportingTimelineEntry {
+  captureTime: string;
+  name: string;
+  source: string;
+  pathname: string;
+  summary?: string;
+  payload?: unknown;
+  validationDetails?: unknown;
+}
+
+export interface GeneratedDefectReport extends DefectReport {
+  summary: string;
+  description: string;
+  expectedExplanation: string;
+  editable: readonly ["summary", "description", "expectedExplanation"];
+  evidence: {
+    schema: string;
+    validation: Array<{
+      rule: string;
+      ruleVersion: number;
+      severity: DefectSeverity;
+      pointer: string;
+      constraint: string;
+      actual: unknown;
+    }>;
+    capture: { eventName: string; source: string; pageUrl: string; captureTime: string };
+  };
+}
+
+export interface DefectReportClipboard {
+  writeRich?(html: string, text: string): Promise<void>;
+  writeText?(text: string): Promise<void>;
+}

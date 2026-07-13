@@ -27,6 +27,7 @@ import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigation
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import { renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
@@ -704,6 +705,10 @@ function openLiveInspector(eventId) {
                 });
                 if (liveObserverElements.eventInspector)
                     liveObserverElements.eventInspector.hidden = true;
+            },
+            startDefectReport: (selected) => {
+                if (liveObserverElements.eventInspector)
+                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected);
             },
             validationAvailable: (selected) => Boolean(validateEvent({
                 sourceId: selected.sourceId,

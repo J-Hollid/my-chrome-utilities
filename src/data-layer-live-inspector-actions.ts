@@ -10,6 +10,7 @@ export interface LiveInspectorActions {
   saveToLibrary(event: LiveEvent): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  startDefectReport?(event: LiveEvent): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
   manualSchemaChoices(event: LiveEvent): readonly { id: string; label: string }[];
@@ -22,6 +23,7 @@ export interface LiveInspectorActionEffects {
   storeTemplate(template: EditableEventTemplate): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  startDefectReport?(event: LiveEvent): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
   validationAvailable?(event: LiveEvent): boolean;
   validationState(event: LiveEvent): ValidationState;
@@ -62,6 +64,7 @@ export function createLiveInspectorActions(
     },
     ...(effects.createSchema ? { createSchema(event: LiveEvent) { effects.createSchema?.(event); } } : {}),
     ...(effects.createValidation ? { createValidation(event: LiveEvent) { effects.createValidation?.(event); } } : {}),
+    ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
     validationAvailability(event) {
       return effects.validationAvailable?.(event) === false
         ? { enabled: false, reason: "Select a schema to validate" }
