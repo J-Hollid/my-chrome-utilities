@@ -118,7 +118,7 @@
                    "Legacy revision rows did not migrate to one stable schema." observation)
   (support/assert! (= expected-ui (:ui observation))
                    "Revision history UI changed lifecycle state or exposed an assignable draft or historical row." observation)
-  (support/assert! (= ["Add another property" "Review draft" "Publish revision"] (:completionActions observation))
+  (support/assert! (= ["Add property from this event" "Review draft" "Publish revision"] (:completionActions observation))
                    "Guided draft completion actions are missing or unordered." observation)
   (assert-policy-example! example observation))
 

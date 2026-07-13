@@ -10,6 +10,7 @@
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.event-feed-query :as event-feed-query]
             [acceptance.steps.guided-validation :as guided-validation]
+            [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -32,7 +33,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat project-skeleton/handlers
+  (vec (concat guided-draft-continuation/handlers
+               project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers
                side-panel/handlers

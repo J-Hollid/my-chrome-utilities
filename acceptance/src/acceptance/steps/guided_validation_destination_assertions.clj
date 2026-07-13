@@ -42,9 +42,12 @@
         expected-property-state (example-value example "property_state")
         expected-availability (example-value example "availability")
         expected-explanation (example-value example "explanation")
-        option (find-first #(str/starts-with? (:label %) (str name " version")) (:existingOptions observation))
+        unavailable? (= expected-availability "unavailable")
+        option (find-first #(= [unavailable? expected-explanation]
+                               [(:disabled %) (:explanation %)])
+                           (:existingOptions observation))
         production-option (find-first #(= name (:name %)) (get-in observation [:production :destinationOptions]))]
-    (support/assert! option "Specified schema was not displayed." {:example example})
+    (support/assert! option "Specified compatibility state was not displayed." {:example example})
     (support/assert! (contains? #{"selectable" "unavailable"} expected-availability)
                      "Schema availability must use the supported result vocabulary."
                      {:example example})
@@ -52,7 +55,7 @@
                         [(:target production-option) (:propertyState production-option) (:available production-option) (:explanation production-option)])
                      "Production schema destination option did not match its specification row."
                      {:example example :production-option production-option})
-    (support/assert! (= [(= expected-availability "unavailable") expected-explanation]
+    (support/assert! (= [unavailable? expected-explanation]
                         [(:disabled option) (:explanation option)])
                      "Existing schema compatibility did not match its target and property type."
                      {:example example :option option})))

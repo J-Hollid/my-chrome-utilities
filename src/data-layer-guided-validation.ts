@@ -93,6 +93,7 @@ export interface GuidedValidationDraft {
   requirementCorrectionRequired: boolean;
   scope: GuidedScope;
   destination?: GuidedSchemaDestination;
+  continuation?: { schemaId: string; schemaName: string; schemaVersion: number };
   assignmentResolution?: {
     selection: "Create a new assignment" | "the compatible assignment" | "required from readable assignment choices";
     compatibleAssignments: readonly GuidedAssignmentIdentity[];
@@ -160,6 +161,11 @@ const requirements: Record<GuidedValueType, readonly GuidedRequirement[]> = {
 };
 
 const stageOrder: readonly GuidedValidationStage[] = ["property", "destination", "requirement", "scope", "review"];
+const continuationStageOrder: readonly GuidedValidationStage[] = ["property", "requirement", "scope", "review"];
+
+export function guidedValidationStages(draft: GuidedValidationDraft): readonly GuidedValidationStage[] {
+  return draft.continuation ? continuationStageOrder : stageOrder;
+}
 
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -229,6 +235,17 @@ export function createGuidedValidationDraft(event: GuidedValidationDraft["event"
   };
 }
 
+export function createGuidedContinuationDraft(
+  event: GuidedValidationDraft["event"],
+  candidate: GuidedSchemaCandidate,
+): GuidedValidationDraft {
+  const applied = applyGuidedSchemaCandidate(createGuidedValidationDraft(event), candidate);
+  return {
+    ...applied,
+    continuation:{ schemaId:candidate.id, schemaName:candidate.name, schemaVersion:candidate.version },
+  };
+}
+
 export function compatibleRequirements(type: GuidedValueType): readonly GuidedRequirement[] {
   return requirements[type];
 }
@@ -239,6 +256,14 @@ export function selectGuidedProperty(draft: GuidedValidationDraft, path: string)
   const property: GuidedProperty = { path, observedValue, detectedType, expectedType:detectedType, typeSource:"detected from this event" };
   const { requirement: _requirement, ...withoutRequirement } = draft;
   return { ...withoutRequirement, property, allowedValues:[], requirementCorrectionRequired:false, preview:previewFor(property) };
+}
+
+export function selectGuidedContinuationProperty(
+  draft: GuidedValidationDraft,
+  path: string,
+  candidate: GuidedSchemaCandidate,
+): GuidedValidationDraft {
+  return applyGuidedSchemaCandidate(selectGuidedProperty(draft, path), candidate);
 }
 
 export function setExpectedType(draft: GuidedValidationDraft, expectedType: GuidedValueType): GuidedValidationDraft {
@@ -573,14 +598,16 @@ function reviewText(draft: GuidedValidationDraft): string {
 }
 
 export function advanceGuidedValidation(draft: GuidedValidationDraft): GuidedValidationDraft {
-  const index = stageOrder.indexOf(draft.stage);
-  const next = stageOrder[Math.min(stageOrder.length - 1, index + 1)] ?? "review";
+  const stages = guidedValidationStages(draft);
+  const index = stages.indexOf(draft.stage);
+  const next = stages[Math.min(stages.length - 1, index + 1)] ?? "review";
   return { ...draft, stage:next, review:next === "review" ? reviewText(draft) : draft.review };
 }
 
 export function backGuidedValidation(draft: GuidedValidationDraft): GuidedValidationDraft {
-  const index = stageOrder.indexOf(draft.stage);
-  return { ...draft, stage:stageOrder[Math.max(0, index - 1)] ?? "property" };
+  const stages = guidedValidationStages(draft);
+  const index = stages.indexOf(draft.stage);
+  return { ...draft, stage:stages[Math.max(0, index - 1)] ?? "property" };
 }
 
 export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: boolean): PublishedGuidedValidation {

@@ -113,12 +113,12 @@
 
 (defn load-browser-observation-with-environment!
   [{:keys [environment observation-key runtime-error missing-error]}]
-  (let [result (process/shell (assoc build-shell-options :env environment)
+  (let [result (process/shell (assoc build-shell-options :env (merge (into {} (System/getenv)) environment))
                               "node" "test/side-panel-component-layout-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         payload (when line (json/parse-string line true))
         observation (get payload observation-key)]
-    (assert! (zero? (:exit result)) runtime-error {:out (:out result) :err (:err result)})
+    (assert! (zero? (:exit result)) (str runtime-error " " (:err result)) {:out (:out result) :err (:err result)})
     (assert! observation missing-error {:payload payload})
     observation))
 

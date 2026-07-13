@@ -33,13 +33,14 @@
 
 (defn- load-browser-observation! []
   (let [result (process/shell (assoc support/build-shell-options
-                                     :env {"GUIDED_VALIDATION_BROWSER_ADAPTER" "1"})
+                                     :env (merge (into {} (System/getenv))
+                                                 {"GUIDED_VALIDATION_BROWSER_ADAPTER" "1"}))
                               "node" "test/side-panel-component-layout-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         payload (parse-browser-payload line)
         observation (combine-browser-observations payload)]
     (support/assert! (zero? (:exit result))
-                     "Guided validation browser runtime verification failed."
+                     (str "Guided validation browser runtime verification failed: " (:err result))
                      {:out (:out result) :err (:err result)})
     (support/assert! observation "Guided validation browser observation is missing." {:payload payload})
     (reset! browser-observation observation)))

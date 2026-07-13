@@ -17,7 +17,7 @@
     "test:unit:component-layout": "npm run build && node test/side-panel-component-layout-runtime-test.mjs",
     "test:unit:live-event-presentation": "npm run build && node test/data-layer-event-presentation-test.mjs && node test/data-layer-live-validation-presentation-test.mjs && node test/data-layer-defect-report-test.mjs && node test/data-layer-defect-report-reproduction-test.mjs && node test/data-layer-defect-report-ui-test.mjs",
   "test:unit:event-library-editor": "npm run build && node test/data-layer-event-library-editor-test.mjs && node test/data-layer-event-template-renaming-test.mjs && node test/data-layer-template-change-review-test.mjs && node test/data-layer-library-new-event-test.mjs && node test/data-layer-event-library-transfer-test.mjs && node test/data-layer-event-library-deletion-test.mjs && node test/data-layer-selected-target-push-test.mjs && node test/data-layer-push-draft-review-test.mjs",
-    "test:unit:schema-verification": "npm run build && node test/data-layer-schema-verification-test.mjs && node test/data-layer-guided-validation-test.mjs",
+    "test:unit:schema-verification": "npm run build && node test/data-layer-schema-verification-test.mjs && node test/data-layer-guided-validation-test.mjs && node test/data-layer-guided-validation-continuation-test.mjs",
     "test:unit:sequence-replay": "npm run build && node test/data-layer-sequence-replay-test.mjs",
     "test:unit:saved-sessions": "npm run build && node test/data-layer-saved-sessions-test.mjs",
     "test:unit:command-palette": "npm run build && node test/command-palette-test.mjs",

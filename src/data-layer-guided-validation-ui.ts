@@ -4,13 +4,16 @@ import {
   advanceGuidedValidation,
   backGuidedValidation,
   compatibleRequirements,
+  createGuidedContinuationDraft,
   createGuidedValidationDraft,
+  guidedValidationStages,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
   resolveGuidedPrefillReplacement,
   removeAllowedValue,
   selectGuidedProperty,
+  selectGuidedContinuationProperty,
   setAllowedValue,
   setExpectedType,
   setGuidedRequirement,
@@ -31,7 +34,7 @@ import {
 import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
 
 export interface GuidedValidationFlow {
-  open(event: GuidedValidationDraft["event"]): void;
+  open(event: GuidedValidationDraft["event"], continuation?: GuidedSchemaCandidate): void;
   close(): void;
   currentDraft(): GuidedValidationDraft | undefined;
 }
@@ -134,6 +137,9 @@ export function createGuidedValidationFlow(
         return [{ id:"guided-compatible-assignments", message:"Choose a compatible assignment" }];
       }
     }
+    if (draft.continuation && draft.stage === "requirement" && draft.assignmentResolution?.selection === "required from readable assignment choices") {
+      return [{ id:"guided-compatible-assignments", message:"Choose a compatible assignment" }];
+    }
     return [];
   }
 
@@ -146,7 +152,7 @@ export function createGuidedValidationFlow(
 
   function renderStages(container: HTMLElement): void {
     if (!draft) return;
-    const order: readonly GuidedValidationStage[] = ["property", "destination", "requirement", "scope", "review"];
+    const order = guidedValidationStages(draft);
     const current = order.indexOf(draft.stage);
     const list = element("ol"); list.id = "guided-validation-stages"; list.setAttribute("aria-label", "Validation creation stages");
     list.replaceChildren(...order.map((stage, index) => {
@@ -183,12 +189,25 @@ export function createGuidedValidationFlow(
 
   function renderPropertyStage(container: HTMLElement): void {
     if (!draft) return;
+    if (draft.continuation) {
+      const context = element("p", `Adding to ${draft.continuation.schemaName} draft`);
+      context.id = "guided-continuation-context";
+      container.append(context);
+    }
     const fieldset = element("fieldset"); fieldset.id = "guided-property-list";
     fieldset.append(element("legend", "Select a property to validate"));
     for (const property of draft.properties) {
       const label = element("label");
       const input = element("input"); input.type = "radio"; input.name = "guided-property"; input.value = property.path; input.checked = draft.property?.path === property.path;
-      input.addEventListener("change", () => setDraft(selectGuidedProperty(draft!, property.path), `${property.path} selected; ${property.detectedType} detected from this event.`));
+      input.addEventListener("change", () => {
+        const continuation = draft!.continuation
+          ? effects.schemaCandidates().find(({ id }) => id === draft!.continuation?.schemaId)
+          : undefined;
+        const next = continuation
+          ? selectGuidedContinuationProperty(draft!, property.path, continuation)
+          : selectGuidedProperty(draft!, property.path);
+        setDraft(next, `${property.path} selected; ${property.detectedType} detected from this event.`);
+      });
       label.append(input, ` ${property.path} — ${String(property.value)} (${property.detectedType})`); fieldset.append(label);
     }
     container.append(fieldset);
@@ -223,7 +242,7 @@ export function createGuidedValidationFlow(
     requirement.addEventListener("change", () => { if (requirement.value) setDraft(setGuidedRequirement(draft!, requirement.value as GuidedRequirement), `${requirement.value} selected.`); });
     const hint = element("p", "Choose the plain-language condition that this property must satisfy."); hint.id = "guided-requirement-hint";
     const preview = element("p", draft.preview.message); preview.id = "guided-validation-preview"; preview.setAttribute("role", "status");
-    container.append(typeLabel, type, typeHint, requirementLabel, requirement, hint, preview); renderAllowedValues(container);
+    container.append(typeLabel, type, typeHint, requirementLabel, requirement, hint, preview); renderAllowedValues(container); renderCompatibleAssignments(container);
   }
 
   function updateScope(kind: GuidedScopeKind): void {
@@ -242,13 +261,14 @@ export function createGuidedValidationFlow(
 
   function renderPathConditions(container: HTMLElement): void {
     if (!draft || draft.scope.kind !== "selected-paths") return;
+    const pathSource = draft.prefillSources.pathConditions ?? "Enter a pathname, wildcard path, or complete-path regular expression.";
     const group = element("fieldset"); group.id = "guided-path-conditions"; group.append(element("legend", "Path conditions"), element("p", "This assignment matches when any condition matches."));
     draft.scope.conditions.forEach((condition, index) => {
       const row = element("section"); row.setAttribute("aria-label", `Path condition ${index + 1}`);
       const typeLabel = element("label", "Match type"); const type = element("select"); typeLabel.htmlFor = type.id = `guided-path-type-${index}`;
       for (const value of ["Exact path", "Path pattern", "Regular expression"] as const) type.append(Object.assign(element("option", value), { value, selected:condition.matchType === value }));
       type.addEventListener("change", () => updateCondition(index, { matchType:type.value as GuidedPathMatchType }));
-      const expression = labelledInput(`guided-path-expression-${index}`, "Expression", condition.expression, "Enter a pathname, wildcard path, or complete-path regular expression.");
+      const expression = labelledInput(`guided-path-expression-${index}`, "Expression", condition.expression, pathSource);
       expression.input.addEventListener("change", () => updateCondition(index, { expression:expression.input.value }));
       const result = pathConditionResult(condition, draft!.scope.pathname);
       const output = element("output", result.valid ? `${draft!.scope.pathname} is ${result.matches ? "a match" : "no match"}` : `Syntax error: ${result.error}`); output.setAttribute("aria-live", "polite");
@@ -351,29 +371,8 @@ export function createGuidedValidationFlow(
       summary.append(change); container.append(summary);
     }
 
-    if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
-      const assignments = element("fieldset"); assignments.id = "guided-compatible-assignments"; assignments.append(element("legend", "Choose a compatible assignment"));
-      for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {
-        const id = assignment.id ?? `compatible-assignment-${index}`;
-        const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-compatible-assignment"; input.value = id;
-        const readable = assignment.name ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`;
-        input.addEventListener("change", () => {
-          const candidate = candidates.find(({ id: candidateId }) => draft!.destination?.kind === "existing" && candidateId === draft!.destination.schemaId);
-          if (candidate) setDraft(applyGuidedSchemaCandidate(draft!, candidate, id), `${readable} selected.`);
-        });
-        label.append(input, ` ${readable}`); assignments.append(label);
-      }
-      container.append(assignments);
-    }
-
-    if (draft.prefillReplacementReview?.length) {
-      const review = element("section"); review.id = "guided-prefill-replacement-review"; review.append(element("h5", "Review schema-derived replacements"));
-      const list = element("ul");
-      list.replaceChildren(...draft.prefillReplacementReview.map(({ field, currentValue, proposedValue }) => element("li", `${field}: ${currentValue} would be replaced by ${proposedValue}`)));
-      const keep = element("button", "Keep current values"); keep.type = "button"; keep.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "keep"), "Current values kept."));
-      const accept = element("button", "Accept schema-derived values"); accept.type = "button"; accept.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "accept"), "Schema-derived values accepted."));
-      review.append(list, keep, accept); container.append(review);
-    }
+    renderCompatibleAssignments(container);
+    renderPrefillReplacementReview(container);
     if (schemaPickerOpen) {
       renderGuidedSchemaPicker({
         container,
@@ -384,6 +383,34 @@ export function createGuidedValidationFlow(
         onClose() { closeSchemaPicker(); },
         onSelect(candidate) { selectSchemaCandidate(candidate); },
       });
+    }
+  }
+
+  function renderCompatibleAssignments(container: HTMLElement): void {
+    if (!draft || draft.assignmentResolution?.selection !== "required from readable assignment choices") return;
+    const candidates = effects.schemaCandidates();
+    const assignments = element("fieldset"); assignments.id = "guided-compatible-assignments"; assignments.append(element("legend", "Choose a compatible assignment"));
+    for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {
+      const id = assignment.id ?? `compatible-assignment-${index}`;
+      const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-compatible-assignment"; input.value = id;
+      const readable = assignment.name ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`;
+      input.addEventListener("change", () => {
+        const candidate = candidates.find(({ id: candidateId }) => draft!.destination?.kind === "existing" && candidateId === draft!.destination.schemaId);
+        if (candidate) setDraft(applyGuidedSchemaCandidate(draft!, candidate, id), `${readable} selected.`);
+      });
+      label.append(input, ` ${readable}`); assignments.append(label);
+    }
+    container.append(assignments);
+  }
+
+  function renderPrefillReplacementReview(container: HTMLElement): void {
+    if (draft?.prefillReplacementReview?.length) {
+      const review = element("section"); review.id = "guided-prefill-replacement-review"; review.append(element("h5", "Review schema-derived replacements"));
+      const list = element("ul");
+      list.replaceChildren(...draft.prefillReplacementReview.map(({ field, currentValue, proposedValue }) => element("li", `${field}: ${currentValue} would be replaced by ${proposedValue}`)));
+      const keep = element("button", "Keep current values"); keep.type = "button"; keep.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "keep"), "Current values kept."));
+      const accept = element("button", "Accept schema-derived values"); accept.type = "button"; accept.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft!, "accept"), "Schema-derived values accepted."));
+      review.append(list, keep, accept); container.append(review);
     }
   }
 
@@ -443,7 +470,7 @@ export function createGuidedValidationFlow(
   }
 
   const api: GuidedValidationFlow = {
-    open(event) { draft = createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
+    open(event, continuation) { draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
     close() { draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
     currentDraft() { return draft; },
   };

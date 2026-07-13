@@ -280,6 +280,7 @@ export function renderLiveInspector(
   feedback.setAttribute("aria-live", "polite");
   feedback.id = "live-validation-update-status";
   const choices = actionHandlers.manualSchemaChoices?.(event) ?? [];
+  const draftContinuation = actionHandlers.draftContinuation?.(event);
   if (choices.length) {
     const label = document.createElement("label"); label.textContent = "Manual schema override: ";
     const select = document.createElement("select"); select.id = "live-change-schema"; select.setAttribute("aria-label", "Change schema");
@@ -293,7 +294,7 @@ export function renderLiveInspector(
     "Copy payload": async () => actionHandlers.copyPayload(event),
     "Save to Library": async () => actionHandlers.saveToLibrary(event),
     ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
-    ...(actionHandlers.createValidation ? { "Create validation from this event": async () => actionHandlers.createValidation?.(event) } : {}),
+    ...(!draftContinuation && actionHandlers.createValidation ? { "Create validation from this event": async () => actionHandlers.createValidation?.(event) } : {}),
     [event.validation && event.validation !== "Not checked" ? "Revalidate" : "Validate"]: async () => actionHandlers.validate(event),
   } as const;
   for (const [label, callback] of Object.entries(actionCallbacks)) {
@@ -321,6 +322,23 @@ export function renderLiveInspector(
       );
     });
     actions.append(action);
+  }
+  if (draftContinuation) {
+    const continuation = document.createElement("section"); continuation.id = "guided-draft-continuation"; continuation.setAttribute("aria-label", `${draftContinuation.schemaName} working draft`);
+    const heading = document.createElement("h5"); heading.textContent = `${draftContinuation.schemaName} working draft`;
+    const status = document.createElement("p"); status.textContent = `Current revision ${draftContinuation.schemaVersion} · ${draftContinuation.pendingChanges} pending changes`;
+    const callbacks: readonly [string, () => void][] = [
+      ["Add property from this event", draftContinuation.addProperty],
+      ["Review draft", draftContinuation.review],
+      ["Publish revision", draftContinuation.publish],
+      ["Use a different schema", draftContinuation.useDifferent],
+    ];
+    continuation.append(heading, status, ...callbacks.map(([label, callback]) => {
+      const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+      if (label === "Add property from this event") button.dataset.action = "add-property-validation";
+      button.addEventListener("click", callback); return button;
+    }));
+    actions.append(continuation);
   }
   actions.append(feedback);
   const issues = renderEventLevelIssues(event); issues.tabIndex = -1;

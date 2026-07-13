@@ -16,6 +16,17 @@ let payloadPathFilterPickerObservation;
 const reproductionStepActionRowsObservations = [];
 let schemaRevisionLifecycleObservation;
 let schemaRevisionLifecycleUiObservation;
+let guidedDraftContinuationObservation;
+let guidedDraftContinuationInitialObservation;
+let guidedDraftContinuationReloadObservation;
+const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
+const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
+    : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
+      : [320, 360, 520, 720];
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -168,7 +179,7 @@ class DevtoolsSocket {
   close() { this.socket?.destroy(); }
 }
 
-const panelReadyAttempts = 100;
+const panelReadyAttempts = 300;
 
 async function openPanel(port, width, height = 900) {
   const panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`;
@@ -202,11 +213,18 @@ async function evaluate(socket, expression) {
 }
 
 async function reloadPanel(socket) {
-  await socket.call("Page.reload");
-  for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
-    const ready = await evaluate(socket, "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null");
-    if (ready) return;
-    await wait(50);
+  for (let reloadAttempt = 0; reloadAttempt < 3; reloadAttempt += 1) {
+    const reloadToken = `reload-${Date.now()}-${Math.random()}`;
+    await evaluate(socket, `document.documentElement.dataset.componentReloadToken = ${JSON.stringify(reloadToken)}`);
+    await socket.call("Page.reload");
+    for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
+      const ready = await evaluate(socket, `(() => {
+        if (document.readyState !== "complete" || !document.querySelector("#side-panel-root") || document.documentElement.dataset.componentReloadToken === ${JSON.stringify(reloadToken)}) return false;
+        return document.querySelector("#schema-count")?.textContent !== "";
+      })()`);
+      if (ready) return;
+      await wait(50);
+    }
   }
   throw new Error("Side panel did not finish reloading.");
 }
@@ -644,12 +662,12 @@ const guidedValidationRuntime = `(async () => {
     flowClosed:!visible(flow),
     inspectorRestored:visible(q("#live-event-inspector")),
     status:q("#live-session-message").textContent,
-    focusReturned:document.activeElement?.dataset.action === "create-validation",
-    nextActions:Array.from(q("#guided-draft-next-actions").querySelectorAll("button")).map(({ textContent }) => textContent),
+    focusReturned:document.activeElement?.dataset.action === "add-property-validation",
+    nextActions:Array.from(q("#guided-draft-continuation").querySelectorAll("button")).map(({ textContent }) => textContent),
   };
   const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const unpublishedChoiceAbsent = !Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview"));
-  clickButton(q("#guided-draft-next-actions"), "Publish revision");
+  clickButton(q("#guided-draft-continuation"), "Publish revision");
   q("#confirm-schema-revision").click();
   const schemasAfterPublication = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
   const rulesAfterPublication = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
@@ -664,6 +682,8 @@ const guidedValidationRuntime = `(async () => {
     currentRevision:publishedSchema.version,
     historicalRevisions:publishedSchema.revisionHistory.length,
   };
+  q("#data-layer-view-live").click();
+  q("#live-event-feed button").click();
   clickButton(q("#live-event-inspector"), "Create validation from this event");
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   clickButton(flow, "Continue");
@@ -696,8 +716,12 @@ const guidedValidationRuntime = `(async () => {
     flowClosed:!visible(flow),
     inspectorRestored:visible(q("#live-event-inspector")),
     status:q("#live-session-message").textContent,
-    focusReturned:document.activeElement?.dataset.action === "create-validation",
+    focusReturned:document.activeElement?.dataset.action === "add-property-validation",
   };
+  clickButton(q("#guided-draft-continuation"), "Publish revision");
+  q("#confirm-schema-revision").click();
+  q("#data-layer-view-live").click();
+  q("#live-event-feed button").click();
   clickButton(q("#live-event-inspector"), "Create validation from this event");
   flow.querySelector('input[name="guided-property"][value="page_type"]').click();
   clickButton(flow, "Continue");
@@ -726,7 +750,7 @@ const guidedValidationRuntime = `(async () => {
   clickButton(flow, "Back");
   clickButton(flow, "Back");
   clickButton(flow, "Change existing schema");
-  clickButton(q("#guided-schema-picker"), "Select Product listing version 3");
+  clickButton(q("#guided-schema-picker"), "Select Product listing version 4");
   const replacementReview = {
     items:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("li")).map((item) => item.textContent),
     actions:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("button")).map((button) => button.textContent),
@@ -1030,6 +1054,143 @@ const schemaRevisionLifecycleRuntime = `(async () => {
     policies:{ pinned:pinned.schema.version, latest:latest.schema.version, recorded:[pinned.schema.version, latest.schema.version] },
     history:{ choices:lifecycle.schemaRevisionChoices(published), selected:lifecycle.schemaRevision(published, 3).version, duplicate:{ name:duplicate.name, published:duplicate.published, assignable:lifecycle.assignableSchemas([duplicate]).length }, restored:{ current:restored.version, source:restored.workingDraft.sourceVersion, pending:restored.workingDraft.pendingChanges, discardCurrent:lifecycle.discardSchemaWorkingDraft(restored).version } },
     migration:{ count:migrated.length, identity:migrated[0].id, current:migrated[0].version, history:lifecycle.schemaRevisionChoices(migrated[0]), assignments:migrated[0].assignments.map(({ schemaId, schemaVersion, versionPolicy }) => ({ schemaId, schemaVersion:schemaVersion ?? null, versionPolicy })) },
+  };
+})()`;
+
+const openPageviewInspector = `
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"pageview", page_type:"product_list", page_name:"Products" }] } } }] },
+  };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  if (!document.querySelector("#live-event-feed button")) {
+    const end = document.querySelector("#end-data-layer-testing");
+    if (end && !end.hidden) { end.click(); await new Promise((resolve) => setTimeout(resolve, 25)); }
+    const start = document.querySelector("#start-data-layer-testing");
+    if (start.disabled) {
+      document.querySelector("#choose-observation-target").click();
+      for (let attempt = 0; attempt < 30 && !document.querySelector("#observation-target-list [data-target-id]"); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+      const target = document.querySelector("#observation-target-list [data-target-id]");
+      if (!target) throw new Error("observation target was not discovered for continuation runtime");
+      target.click();
+    }
+    start.click();
+  }
+  for (let attempt = 0; attempt < 20 && !document.querySelector("#live-event-feed button"); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  const eventButton = document.querySelector("#live-event-feed button");
+  if (!eventButton) throw new Error("pageview was not captured for continuation runtime");
+  eventButton.click();`;
+
+const guidedDraftContinuationInitialRuntime = `(async () => {
+  const ui = await import("/data-layer-live-observer-ui.js");
+  const actionCore = await import("/data-layer-live-inspector-actions.js");
+  const event = { id:"event:pageview", name:"pageview", sourceId:"event-history", captureTime:"2026-07-13T21:00:00Z", pageUrl:"http://127.0.0.1:4173/", payload:{ page_name:"Products" }, rawInput:[], validation:"Not checked", provenance:"Captured" };
+  const actions = actionCore.createLiveInspectorActions({ currentPageUrl:()=>event.pageUrl, writeClipboard:async()=>{}, storeTemplate:()=>{}, createValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  const elements = ui.findLiveObserverElements();
+  ui.renderLiveInspector(elements, event, actions);
+  const inspector = elements.eventInspector;
+  return {
+    createAvailable:Array.from(inspector.querySelectorAll("button")).some(({ textContent }) => textContent === "Create validation from this event"),
+    continuationAbsent:!inspector.querySelector("#guided-draft-continuation"),
+  };
+})()`;
+
+const guidedDraftContinuationRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const storedSchema = (id) => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").find((schema) => schema.id === id);
+  const reopen = () => { q("#data-layer-view-live").click(); q("#live-event-feed button").click(); };
+  ${openPageviewInspector}
+  const inspector = q("#live-event-inspector");
+  const section = q("#guided-draft-continuation");
+  const initial = {
+    heading:section.querySelector("h5").textContent,
+    status:section.querySelector("p").textContent,
+    actions:Array.from(section.querySelectorAll("button")).map(({ textContent }) => textContent),
+    sectionCount:inspector.querySelectorAll("#guided-draft-continuation").length,
+    genericAbsent:!Array.from(inspector.querySelectorAll("button")).some(({ textContent }) => textContent === "Create validation from this event"),
+  };
+  const beforeProduct = structuredClone(storedSchema("schema-product-listing"));
+  const beforeCheckout = structuredClone(storedSchema("schema-checkout"));
+  click(section, "Add property from this event");
+  const flow = q("#guided-validation-flow");
+  const opened = {
+    context:q("#guided-continuation-context").textContent,
+    stages:Array.from(q("#guided-validation-stages").children).map(({ textContent }) => textContent),
+  };
+  flow.querySelector('input[name="guided-property"][value="page_name"]').click();
+  click(flow, "Continue");
+  const requirement = {
+    heading:q("#guided-validation-heading").textContent,
+    destinationAbsent:!flow.querySelector("#guided-schema-destination") && !flow.querySelector("#guided-schema-picker"),
+    selectedSchema:JSON.parse(localStorage.getItem("my-chrome-utilities.guided-validation-continuations.v1"))["event-history\\u0000pageview"],
+  };
+  q("#guided-requirement").value = "Must be present";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  click(flow, "Continue");
+  const prefill = {
+    target:q("#guided-scope-target").value,
+    targetSource:q("#guided-scope-target-hint").textContent,
+    source:q("#guided-scope-source").value,
+    sourceSource:q("#guided-scope-source-hint").textContent,
+    domain:q("#guided-scope-domain").value,
+    domainSource:q("#guided-scope-domain-hint").textContent,
+    eventName:q("#guided-scope-event").value,
+    eventSource:q("#guided-scope-event-hint").textContent,
+    path:q("#guided-path-expression-0").value,
+    pathSource:q("#guided-path-expression-0-hint").textContent,
+    editable:["#guided-scope-target", "#guided-scope-source", "#guided-scope-domain", "#guided-scope-event", "#guided-path-expression-0"].every((selector) => !q(selector).disabled),
+  };
+  click(flow, "Cancel");
+  const productSection = q("#guided-draft-continuation");
+  click(productSection, "Review draft");
+  const review = { name:q("#schema-editor-name").value, status:q("#schema-editor-status").textContent, checkoutUnchanged:JSON.stringify(storedSchema("schema-checkout")) === JSON.stringify(beforeCheckout) };
+  reopen();
+  click(q("#guided-draft-continuation"), "Publish revision");
+  const publication = { review:q("#schema-revision-review-summary").textContent, productCurrent:storedSchema("schema-product-listing").version, checkoutUnchanged:JSON.stringify(storedSchema("schema-checkout")) === JSON.stringify(beforeCheckout) };
+  q("#cancel-schema-revision").click();
+  reopen();
+  click(q("#guided-draft-continuation"), "Use a different schema");
+  const switcher = q("#guided-continuation-schema-picker");
+  const switchOpen = { heading:switcher.querySelector("h5").textContent, choices:Array.from(switcher.querySelectorAll(":scope > div > button")).map(({ textContent }) => textContent), productUnchanged:JSON.stringify(storedSchema("schema-product-listing")) === JSON.stringify(beforeProduct) };
+  click(switcher, "Cancel");
+  const afterCancel = { context:q("#guided-draft-continuation h5").textContent, productUnchanged:JSON.stringify(storedSchema("schema-product-listing")) === JSON.stringify(beforeProduct) };
+  click(q("#guided-draft-continuation"), "Use a different schema");
+  click(q("#guided-continuation-schema-picker"), "Checkout revision 2 · 1 pending changes");
+  const afterSwitch = {
+    context:q("#guided-draft-continuation h5").textContent,
+    sectionCount:inspector.querySelectorAll("#guided-draft-continuation").length,
+    unnamedAbsent:!inspector.textContent.includes("Unnamed draft"),
+    productUnchanged:JSON.stringify(storedSchema("schema-product-listing")) === JSON.stringify(beforeProduct),
+  };
+  const core = await import("/data-layer-guided-validation.js");
+  const event = { id:"event:pageview", name:"pageview", sourceId:"event-history", pageUrl:"http://127.0.0.1:4173/", payload:{ page_name:"Products" } };
+  const candidate = (assignments) => ({ id:"schema-product-listing", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_name:"String" }, assignments });
+  const resolution = (assignments) => {
+    const schema = candidate(assignments); const draft = core.createGuidedContinuationDraft(event, schema);
+    return core.selectGuidedContinuationProperty(draft, "page_name", schema).assignmentResolution.selection;
+  };
+  const assignmentResolution = {
+    none:resolution([]),
+    multiple:resolution([
+      { id:"assignment:a", name:"Product pages", sourceId:"event-history", eventName:"pageview", target:"payload", enabled:true },
+      { id:"assignment:b", name:"Alternate pages", sourceId:"event-history", eventName:"pageview", target:"payload", enabled:true },
+    ]),
+  };
+  return { initial, opened, requirement, prefill, review, publication, switchOpen, afterCancel, afterSwitch, assignmentResolution };
+})()`;
+
+const guidedDraftContinuationReloadRuntime = `(async () => {
+  ${openPageviewInspector}
+  const section = document.querySelector("#guided-draft-continuation");
+  const add = Array.from(section.querySelectorAll("button")).find(({ textContent }) => textContent === "Add property from this event");
+  add.click();
+  document.querySelector('input[name="guided-property"][value="page_name"]').click();
+  Array.from(document.querySelector("#guided-validation-flow").querySelectorAll("button")).find(({ textContent }) => textContent === "Continue").click();
+  return {
+    context:section.querySelector("h5").textContent,
+    heading:document.querySelector("#guided-validation-heading").textContent,
+    destinationAbsent:!document.querySelector("#guided-schema-destination") && !document.querySelector("#guided-schema-picker"),
   };
 })()`;
 
@@ -1763,7 +1924,7 @@ const overlaps = (left, right) => left.x < right.right && left.right > right.x &
 
 try {
   const port = await debuggingPort();
-  for (const width of [320, 360, 520, 720]) {
+  for (const width of componentWidths) {
     const socket = await openPanel(port, width);
     schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
     assert.deepEqual(schemaViewContainmentObservation, {
@@ -1926,7 +2087,7 @@ try {
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
         saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add another property", "Review draft", "Publish revision"] },
+        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
@@ -2217,7 +2378,7 @@ try {
     let schemaLibraryTransfer;
     let schemaReload;
     let schemaLiveValidation;
-    if (width === 720) {
+    if (width === 720 && runExtendedSchemaWorkspaceRuntime) {
       schemaSourceCreation = await evaluate(socket, schemaSourceCreationRuntime);
       assert.deepEqual(schemaSourceCreation, {
         schemaView:true,
@@ -2285,7 +2446,47 @@ try {
         ruleEditorVisibility:schemaRuleEditorVisibility,
       });
     }
-    if (width === 720) {
+    if (width === 720 && runGuidedDraftContinuationRuntime) {
+      const installContinuationFixture = (selectedSchemaId) => evaluate(socket, `(() => {
+        const assignment = { id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathConditions:[{ matchType:"Exact path", expression:"/" }], enabled:true };
+        const product = { id:"schema-product-listing", name:"Product listing", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[assignment], workingDraft:{ baseVersion:3, sourceVersion:3, document:{ type:"object", properties:{ page_type:{ type:"string" }, page_name:{ type:"string" } } }, assignments:[assignment], pendingChanges:["Add page_type", "Add page_name"] } };
+        const checkout = { id:"schema-checkout", name:"Checkout", version:2, published:true, document:{ type:"object", properties:{ checkout_id:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:2, sourceVersion:2, document:{ type:"object", properties:{ checkout_id:{ type:"string" }, page_name:{ type:"string" } } }, assignments:[], pendingChanges:["Add page_name"] } };
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([product, checkout]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        localStorage.removeItem("my-chrome-utilities.guided-validation-continuations.v1");
+        if (${JSON.stringify(selectedSchemaId)}) {
+          const selections = { ["event-history" + String.fromCharCode(0) + "pageview"]:${JSON.stringify(selectedSchemaId)} };
+          localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1", JSON.stringify(selections));
+        }
+        return true;
+      })()`);
+      await installContinuationFixture(undefined);
+      await reloadPanel(socket);
+      guidedDraftContinuationInitialObservation = await evaluate(socket, guidedDraftContinuationInitialRuntime);
+      assert.deepEqual(guidedDraftContinuationInitialObservation, { createAvailable:true, continuationAbsent:true }, "Events without a selected draft continuation lost their generic creation action");
+      await installContinuationFixture("schema-product-listing");
+      await reloadPanel(socket);
+      guidedDraftContinuationObservation = await evaluate(socket, guidedDraftContinuationRuntime);
+      assert.deepEqual(guidedDraftContinuationObservation, {
+        initial:{ heading:"Product listing working draft", status:"Current revision 3 · 2 pending changes", actions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"], sectionCount:1, genericAbsent:true },
+        opened:{ context:"Adding to Product listing draft", stages:["Choose properties", "Define requirement", "Choose event scope", "Review validation"] },
+        requirement:{ heading:"Define requirement", destinationAbsent:true, selectedSchema:"schema-product-listing" },
+        prefill:{ target:"payload", targetSource:"Product listing version 3", source:"event-history", sourceSource:"Product pages assignment", domain:"127.0.0.1", domainSource:"Product pages assignment", eventName:"pageview", eventSource:"Product pages assignment", path:"/", pathSource:"Product pages assignment", editable:true },
+        review:{ name:"Product listing", status:"Working draft based on revision 3 · 2 pending changes", checkoutUnchanged:true },
+        publication:{ review:"Product listing working draft will be compared with current revision 3; confirmation publishes revision 4.", productCurrent:3, checkoutUnchanged:true },
+        switchOpen:{ heading:"Choose schema destination", choices:["Product listing revision 3 · 2 pending changes", "Checkout revision 2 · 1 pending changes"], productUnchanged:true },
+        afterCancel:{ context:"Product listing working draft", productUnchanged:true },
+        afterSwitch:{ context:"Checkout working draft", sectionCount:1, unnamedAbsent:true, productUnchanged:true },
+        assignmentResolution:{ none:"Create a new assignment", multiple:"required from readable assignment choices" },
+      }, "Guided draft continuation violated its browser interaction contract");
+      const continuationSchemas = await evaluate(socket, `localStorage.getItem("my-chrome-utilities.schema-library.v1")`);
+      const continuationSelection = await evaluate(socket, `localStorage.getItem("my-chrome-utilities.guided-validation-continuations.v1")`);
+      await evaluate(socket, `(() => { localStorage.setItem("my-chrome-utilities.schema-library.v1", ${JSON.stringify(continuationSchemas)}); localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]"); localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1", ${JSON.stringify(continuationSelection)}); return true; })()`);
+      await reloadPanel(socket);
+      guidedDraftContinuationReloadObservation = await evaluate(socket, guidedDraftContinuationReloadRuntime);
+      assert.deepEqual(guidedDraftContinuationReloadObservation, { context:"Checkout working draft", heading:"Define requirement", destinationAbsent:true }, "Guided draft continuation did not survive reload");
+    }
+    if (width === 720 && runSchemaRevisionLifecycleRuntime) {
       await evaluate(socket, `(() => {
         const assignment = { id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", schemaVersion:3, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true };
         const revision = (version) => ({ id:"schema-product-listing", name:"Product listing", version, published:true, document:{ type:"object", properties:{ ["revision_" + version]:{ type:"string" } } }, assignments:[assignment] });
@@ -2352,7 +2553,10 @@ try {
     console.log(JSON.stringify({ reproductionStepActionRows:reproductionStepActionRowsObservations }));
   }
   if (process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1") {
-    console.log(JSON.stringify({ schemaRevisionLifecycle:{ ...schemaRevisionLifecycleObservation, ui:schemaRevisionLifecycleUiObservation, completionActions:guidedValidationObservation?.saved?.nextActions ?? [] } }));
+    console.log(JSON.stringify({ schemaRevisionLifecycle:{ ...schemaRevisionLifecycleObservation, ui:schemaRevisionLifecycleUiObservation, completionActions:(guidedValidationObservation?.saved?.nextActions ?? []).filter((label) => label !== "Use a different schema") } }));
+  }
+  if (process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ guidedDraftContinuation:{ initial:guidedDraftContinuationInitialObservation, interaction:guidedDraftContinuationObservation, reload:guidedDraftContinuationReloadObservation } }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

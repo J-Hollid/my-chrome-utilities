@@ -9,6 +9,10 @@ const requirements = {
     Null: ["Must be present"],
 };
 const stageOrder = ["property", "destination", "requirement", "scope", "review"];
+const continuationStageOrder = ["property", "requirement", "scope", "review"];
+export function guidedValidationStages(draft) {
+    return draft.continuation ? continuationStageOrder : stageOrder;
+}
 function slug(value) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -76,6 +80,13 @@ export function createGuidedValidationDraft(event) {
         persisted: false,
     };
 }
+export function createGuidedContinuationDraft(event, candidate) {
+    const applied = applyGuidedSchemaCandidate(createGuidedValidationDraft(event), candidate);
+    return {
+        ...applied,
+        continuation: { schemaId: candidate.id, schemaName: candidate.name, schemaVersion: candidate.version },
+    };
+}
 export function compatibleRequirements(type) {
     return requirements[type];
 }
@@ -85,6 +96,9 @@ export function selectGuidedProperty(draft, path) {
     const property = { path, observedValue, detectedType, expectedType: detectedType, typeSource: "detected from this event" };
     const { requirement: _requirement, ...withoutRequirement } = draft;
     return { ...withoutRequirement, property, allowedValues: [], requirementCorrectionRequired: false, preview: previewFor(property) };
+}
+export function selectGuidedContinuationProperty(draft, path, candidate) {
+    return applyGuidedSchemaCandidate(selectGuidedProperty(draft, path), candidate);
 }
 export function setExpectedType(draft, expectedType) {
     if (!draft.property)
@@ -367,13 +381,15 @@ function reviewText(draft) {
     return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
 }
 export function advanceGuidedValidation(draft) {
-    const index = stageOrder.indexOf(draft.stage);
-    const next = stageOrder[Math.min(stageOrder.length - 1, index + 1)] ?? "review";
+    const stages = guidedValidationStages(draft);
+    const index = stages.indexOf(draft.stage);
+    const next = stages[Math.min(stages.length - 1, index + 1)] ?? "review";
     return { ...draft, stage: next, review: next === "review" ? reviewText(draft) : draft.review };
 }
 export function backGuidedValidation(draft) {
-    const index = stageOrder.indexOf(draft.stage);
-    return { ...draft, stage: stageOrder[Math.max(0, index - 1)] ?? "property" };
+    const stages = guidedValidationStages(draft);
+    const index = stages.indexOf(draft.stage);
+    return { ...draft, stage: stages[Math.max(0, index - 1)] ?? "property" };
 }
 export function publishGuidedValidation(draft, reusable) {
     if (!draft.property || !draft.requirement || !draft.destination || draft.requirementCorrectionRequired)

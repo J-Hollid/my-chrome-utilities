@@ -10,11 +10,23 @@ export interface LiveInspectorActions {
   saveToLibrary(event: LiveEvent): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
   manualSchemaChoices(event: LiveEvent): readonly { id: string; label: string }[];
   selectManualSchema(eventId: string, schemaId: string | undefined): void;
+}
+
+export interface LiveDraftContinuation {
+  schemaId: string;
+  schemaName: string;
+  schemaVersion: number;
+  pendingChanges: number;
+  addProperty(): void;
+  review(): void;
+  publish(): void;
+  useDifferent(): void;
 }
 
 export interface LiveInspectorActionEffects {
@@ -23,6 +35,7 @@ export interface LiveInspectorActionEffects {
   storeTemplate(template: EditableEventTemplate): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
   validationAvailable?(event: LiveEvent): boolean;
@@ -64,6 +77,7 @@ export function createLiveInspectorActions(
     },
     ...(effects.createSchema ? { createSchema(event: LiveEvent) { effects.createSchema?.(event); } } : {}),
     ...(effects.createValidation ? { createValidation(event: LiveEvent) { effects.createValidation?.(event); } } : {}),
+    ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),
     ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
     validationAvailability(event) {
       return effects.validationAvailable?.(event) === false
