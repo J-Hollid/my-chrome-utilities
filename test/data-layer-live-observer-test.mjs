@@ -12,6 +12,7 @@ import {
   resumeCapture,
   selectLiveEvent,
   setLiveFilter,
+  setLiveQuery,
   updateLiveSourceStatus,
 } from "../dist/data-layer-live-observer.js";
 assert.equal(dataLayerViewForNavigationKey("Live", "ArrowRight"), "Library");
@@ -63,6 +64,13 @@ assert.deepEqual(filteredLiveEvents(setLiveFilter(richEvents, { kind:"validation
 assert.deepEqual(filteredLiveEvents(setLiveFilter(richEvents, { kind:"validation state", value:"Valid" })).map(({ id }) => id), ["one"]);
 assert.deepEqual(filteredLiveEvents(setLiveFilter(richEvents, { kind:"validation state", value:"Not checked" })).map(({ id }) => id), ["four"]);
 assert.deepEqual(filteredLiveEvents(setLiveFilter(richEvents, { kind:"validation state", value:"Assignment error" })).map(({ id }) => id), ["five"]);
+
+let queried = setLiveQuery(richEvents, { conditions: [{ id:"names", field:"Event name", operator:"is", values:["purchase"] }] });
+assert.deepEqual(filteredLiveEvents(queried).map(({ id }) => id), ["two"]);
+queried = recordLiveEvent(queried, { id:"six", name:"checkout", sourceId:"history", captureTime:"2026-07-10T10:00:05Z" });
+queried = recordLiveEvent(queried, { id:"seven", name:"purchase", sourceId:"history", captureTime:"2026-07-10T10:00:06Z" });
+assert.deepEqual(filteredLiveEvents(queried).map(({ id }) => id), ["two", "seven"]);
+assert.equal(selectLiveEvent(queried, "two", "stacked").query.conditions[0].values[0], "purchase");
 
 state = selectLiveEvent(state, "two", "stacked");
 assert.equal(state.inspectorEventId, "two");

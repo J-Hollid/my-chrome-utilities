@@ -878,9 +878,13 @@ const schemaLiveValidationRuntime = `(async () => {
   validate.click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const validationTerm = q('#live-event-inspector dt[data-field="validation"]');
-  q("#live-validation-filter").value = "Warnings";
-  q("#live-validation-filter").dispatchEvent(new Event("change", { bubbles:true }));
-  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? document.querySelector("#live-event-validation-issues")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), filterOptions:Array.from(q("#live-validation-filter").options).map((option) => option.textContent) };
+  q("#add-event-feed-filter").click();
+  const field = q("#event-feed-query-field");
+  field.value = "Validation state"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  q("#event-feed-query-operator").value = "is";
+  const value = q("#event-feed-query-value"); value.value = "Warnings"; value.dispatchEvent(new Event("input", { bubbles:true }));
+  Array.from(q("#live-event-query").querySelectorAll("button")).find((button) => button.textContent === "Apply condition").click();
+  return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? document.querySelector("#live-event-validation-issues")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), queryFields:Array.from(field.options).map((option) => option.textContent) };
 })()`;
 
 const liveValidationVisualsRuntime = `(async () => {
@@ -1845,7 +1849,7 @@ try {
         assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
         assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
       }
-      assert.deepEqual(schemaLiveValidation.filterOptions, ["All states", "Not checked", "Valid", "Warnings", "Issues", "Assignment error"], "Live validation filter did not expose all five states");
+      assert.ok(schemaLiveValidation.queryFields.includes("Validation state"), "Live query builder did not expose validation state");
     }
     if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
       schemaWorkspaceAdapterObservations.push({

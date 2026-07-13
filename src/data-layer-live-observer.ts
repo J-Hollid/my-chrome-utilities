@@ -1,6 +1,7 @@
 import type { SourceEvent } from "./data-layer-source.js";
 import type { ValidationIssue } from "./data-layer-schema-verification.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-feed-query.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 
@@ -43,6 +44,7 @@ export interface LiveObserverState {
   sources: readonly LiveSource[];
   events: readonly LiveEvent[];
   filter?: LiveFilter;
+  query?: EventFeedQuery;
   inspectorEventId?: string;
   listVisible: boolean;
 }
@@ -100,7 +102,13 @@ export function setLiveFilter(
   return withoutFilter;
 }
 
+export function setLiveQuery(state: LiveObserverState, query: EventFeedQuery): LiveObserverState {
+  const { filter: _filter, ...withoutLegacyFilter } = state;
+  return { ...withoutLegacyFilter, query: { conditions: query.conditions.map((condition) => ({ ...condition, values: [...condition.values] })) } };
+}
+
 export function filteredLiveEvents(state: LiveObserverState): LiveEvent[] {
+  if (state.query?.conditions.length) return filterEventsByQuery(state.events, state.query);
   if (!state.filter) return [...state.events];
   const value = state.filter.value.toLowerCase();
   return state.events.filter((event) => {

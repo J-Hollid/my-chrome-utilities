@@ -126,12 +126,13 @@ import {
   pauseCapture,
   recordLiveEvent,
   resumeCapture,
-  setLiveFilter,
+  setLiveQuery,
   selectLiveEvent,
   updateLiveSourceStatus,
   type DataLayerView,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
+import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
 import {
   confirmSavedSessionDeletion,
   cancelSavedSessionDeletion,
@@ -366,7 +367,7 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
-const liveValidationFilter = document.querySelector<HTMLSelectElement>("#live-validation-filter");
+const liveEventQuery = document.querySelector<HTMLElement>("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
@@ -917,6 +918,12 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
 
 function renderLiveObserver(): void {
   renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+  if (liveEventQuery) renderEventFeedQueryBuilder(
+    liveEventQuery,
+    liveObserverState.events,
+    liveObserverState.query ?? { conditions: [] },
+    (query) => { liveObserverState = setLiveQuery(liveObserverState, query); renderLiveObserver(); },
+  );
   if (liveEventsEmptyState) liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
   if (liveSourceErrorState) liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
   renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
@@ -2686,11 +2693,6 @@ pauseCaptureButton?.addEventListener("click", () => {
 resumeCaptureButton?.addEventListener("click", () => {
   liveObserverState = resumeCapture(liveObserverState);
   setLiveSessionMessage("Capture resumed");
-  renderLiveObserver();
-});
-
-liveValidationFilter?.addEventListener("change", () => {
-  liveObserverState = setLiveFilter(liveObserverState, liveValidationFilter.value ? { kind:"validation state", value:liveValidationFilter.value } : undefined);
   renderLiveObserver();
 });
 

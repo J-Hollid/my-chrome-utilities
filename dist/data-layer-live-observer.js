@@ -1,3 +1,4 @@
+import { filterEventsByQuery } from "./data-layer-event-feed-query.js";
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 export const dataLayerViews = ["Live", "Library", "Sessions", "Schemas"];
 export function dataLayerViewForNavigationKey(current, key) {
@@ -38,7 +39,13 @@ export function setLiveFilter(state, filter) {
     const { filter: _filter, ...withoutFilter } = state;
     return withoutFilter;
 }
+export function setLiveQuery(state, query) {
+    const { filter: _filter, ...withoutLegacyFilter } = state;
+    return { ...withoutLegacyFilter, query: { conditions: query.conditions.map((condition) => ({ ...condition, values: [...condition.values] })) } };
+}
 export function filteredLiveEvents(state) {
+    if (state.query?.conditions.length)
+        return filterEventsByQuery(state.events, state.query);
     if (!state.filter)
         return [...state.events];
     const value = state.filter.value.toLowerCase();

@@ -23,7 +23,8 @@ import { createTargetPathStatusController, targetPathStatusForObservation, } fro
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
-import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveFilter, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./data-layer-live-observer.js";
+import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
@@ -123,7 +124,7 @@ const schemaEmptyState = document.querySelector("#schema-empty-state");
 const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, addNewButton, templateName: eventTemplateName, eventName: eventTemplateEventName, source: eventTemplateSource, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
-const liveValidationFilter = document.querySelector("#live-validation-filter");
+const liveEventQuery = document.querySelector("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector("#schema-editor");
@@ -627,6 +628,8 @@ function showDataLayerView(view, focus = false) {
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    if (liveEventQuery)
+        renderEventFeedQueryBuilder(liveEventQuery, liveObserverState.events, liveObserverState.query ?? { conditions: [] }, (query) => { liveObserverState = setLiveQuery(liveObserverState, query); renderLiveObserver(); });
     if (liveEventsEmptyState)
         liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
     if (liveSourceErrorState)
@@ -2346,10 +2349,6 @@ pauseCaptureButton?.addEventListener("click", () => {
 resumeCaptureButton?.addEventListener("click", () => {
     liveObserverState = resumeCapture(liveObserverState);
     setLiveSessionMessage("Capture resumed");
-    renderLiveObserver();
-});
-liveValidationFilter?.addEventListener("change", () => {
-    liveObserverState = setLiveFilter(liveObserverState, liveValidationFilter.value ? { kind: "validation state", value: liveValidationFilter.value } : undefined);
     renderLiveObserver();
 });
 copyPageUrlButton?.addEventListener("click", () => {

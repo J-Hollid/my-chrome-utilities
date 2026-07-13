@@ -1,5 +1,6 @@
 import {
   dataLayerViews,
+  filteredLiveEvents,
   type DataLayerView,
   type LiveEvent,
   type LiveObserverState,
@@ -140,7 +141,7 @@ export function renderLiveObserverState(
       }),
     );
   }
-  elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit, index) => {
+  elements.eventFeed?.replaceChildren(...pathnameVisits(filteredLiveEvents(state)).map((visit, index) => {
     const group = document.createElement("li");
     group.className = "pathname-visit";
     const heading = visitHeader(visit.pathname, visit.events);

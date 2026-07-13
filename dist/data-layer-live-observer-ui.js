@@ -1,4 +1,4 @@
-import { dataLayerViews, } from "./data-layer-live-observer.js";
+import { dataLayerViews, filteredLiveEvents, } from "./data-layer-live-observer.js";
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
@@ -89,7 +89,7 @@ export function renderLiveObserverState(elements, state, openEvent) {
             return item;
         }));
     }
-    elements.eventFeed?.replaceChildren(...pathnameVisits(state.events).map((visit, index) => {
+    elements.eventFeed?.replaceChildren(...pathnameVisits(filteredLiveEvents(state)).map((visit, index) => {
         const group = document.createElement("li");
         group.className = "pathname-visit";
         const heading = visitHeader(visit.pathname, visit.events);

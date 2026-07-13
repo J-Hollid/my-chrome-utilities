@@ -8,6 +8,7 @@
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
             [acceptance.steps.event-library-editor :as event-library-editor]
+            [acceptance.steps.event-feed-query :as event-feed-query]
             [acceptance.steps.guided-validation :as guided-validation]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
@@ -44,6 +45,7 @@
                live-observer/handlers
                live-event-presentation/handlers
                live-validation-visuals/handlers
+               event-feed-query/handlers
                defect-report/handlers
                data-layer-timeline/handlers
                timeline-presentations/handlers
