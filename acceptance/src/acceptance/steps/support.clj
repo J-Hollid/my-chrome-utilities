@@ -2,6 +2,7 @@
   (:require [aps.json :as aps-json]
             [babashka.fs :as fs]
             [babashka.process :as process]
+            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def build-shell-options {:out :string :err :string :continue true})
@@ -109,6 +110,17 @@
 (defn assert! [condition message data]
   (when-not condition
     (throw (ex-info message data))))
+
+(defn load-browser-observation!
+  [{:keys [adapter-env observation-key runtime-error missing-error]}]
+  (let [result (process/shell (assoc build-shell-options :env {adapter-env "1"})
+                              "node" "test/side-panel-component-layout-runtime-test.mjs")
+        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
+        payload (when line (json/parse-string line true))
+        observation (get payload observation-key)]
+    (assert! (zero? (:exit result)) runtime-error {:out (:out result) :err (:err result)})
+    (assert! observation missing-error {:payload payload})
+    observation))
 
 (defn validate-example-domain!
   [canonical-values example keys message]

@@ -1,9 +1,6 @@
 (ns acceptance.steps.live-validation-visuals
   (:require [acceptance.steps.live-validation-visual-assertions :as assertions]
-            [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+            [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-live-validation-feed-presentation.feature"
@@ -13,14 +10,12 @@
 (defonce ^:private browser-observation (atom nil))
 
 (defn- load-browser-observation! []
-  (let [result (process/shell (assoc support/build-shell-options :env {"LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER" "1"})
-                              "node" "test/side-panel-component-layout-runtime-test.mjs")
-        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        payload (when line (json/parse-string line true))
-        observation (:liveValidationVisuals payload)]
-    (support/assert! (zero? (:exit result)) "Live validation visuals browser runtime failed." {:out (:out result) :err (:err result)})
-    (support/assert! observation "Live validation visuals browser observation is missing." {:payload payload})
-    (reset! browser-observation observation)))
+  (reset! browser-observation
+          (support/load-browser-observation!
+            {:adapter-env "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER"
+             :observation-key :liveValidationVisuals
+             :runtime-error "Live validation visuals browser runtime failed."
+             :missing-error "Live validation visuals browser observation is missing."})))
 
 (defn- observation! []
   (or @browser-observation (load-browser-observation!)))

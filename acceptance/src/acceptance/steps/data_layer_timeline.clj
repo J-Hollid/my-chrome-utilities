@@ -1,8 +1,6 @@
 (ns acceptance.steps.data-layer-timeline
   (:require [acceptance.steps.data-layer-session :as session]
             [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def timeline-timestamp "2026-07-08T00:00:00Z")
@@ -30,19 +28,12 @@
 (defonce ^:private single-live-event-feed-observation (atom nil))
 
 (defn- load-single-live-event-feed-observation! []
-  (let [result (process/shell (assoc support/build-shell-options
-                                     :env {"SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER" "1"})
-                              "node" "test/side-panel-component-layout-runtime-test.mjs")
-        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        payload (when line (json/parse-string line true))
-        observation (:singleLiveEventFeed payload)]
-    (support/assert! (zero? (:exit result))
-                     "Single Live event feed browser verification failed."
-                     {:out (:out result) :err (:err result)})
-    (support/assert! observation
-                     "Single Live event feed browser observation is missing."
-                     {:payload payload})
-    (reset! single-live-event-feed-observation observation)))
+  (reset! single-live-event-feed-observation
+          (support/load-browser-observation!
+            {:adapter-env "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER"
+             :observation-key :singleLiveEventFeed
+             :runtime-error "Single Live event feed browser verification failed."
+             :missing-error "Single Live event feed browser observation is missing."})))
 
 (defn- observed-entry [{:keys [event-name page-url history-path payload-label raw-label]}]
   {:type "observed"

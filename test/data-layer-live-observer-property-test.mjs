@@ -14,6 +14,7 @@ import {
   selectLiveEvent,
   setLiveFilter,
 } from "../dist/data-layer-live-observer.js";
+import { eventPathname, pathnameVisits } from "../dist/data-layer-event-feed-summaries.js";
 
 let seed = 0x9e3779b9;
 
@@ -91,6 +92,27 @@ for (let sample = 0; sample < 100; sample += 1) {
     state.events.slice(-windowSize),
   );
   assert.deepEqual(setLiveFilter(filtered, undefined).events, state.events);
+
+  const groupedInput = state.events.map((event, index) => ({
+    ...event,
+    pageUrl: `https://example.test/path-${nextInteger(Math.max(1, Math.min(index + 1, 5)))}`,
+  }));
+  const originalGroupedInput = structuredClone(groupedInput);
+  const visits = pathnameVisits(groupedInput);
+  assert.deepEqual(
+    visits.flatMap(({ events }) => events.map(({ id }) => id)),
+    groupedInput.map(({ id }) => id).reverse(),
+    "pathname grouping must conserve every event in reverse capture order",
+  );
+  assert.ok(
+    visits.every((visit) => visit.events.every((event) => eventPathname(event.pageUrl) === visit.pathname)),
+    "each visit must contain only events from its pathname",
+  );
+  assert.ok(
+    visits.every((visit, index) => index === 0 || visits[index - 1].pathname !== visit.pathname),
+    "adjacent events from the same pathname must form one visit",
+  );
+  assert.deepEqual(groupedInput, originalGroupedInput, "pathname grouping must not mutate captured events");
 
   const selected = selectLiveEvent(state, state.events[0].id, "stacked");
   assert.equal(selected.listVisible, false);
