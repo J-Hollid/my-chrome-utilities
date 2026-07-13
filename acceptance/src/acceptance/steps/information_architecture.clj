@@ -1,7 +1,6 @@
 (ns acceptance.steps.information-architecture
   (:require [acceptance.steps.support :as support]
             [babashka.process :as process]
-            [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]))
 
@@ -137,16 +136,12 @@
 
 (defn- load-schema-view-containment! []
   (or @schema-view-containment-observation
-      (let [result (process/shell (assoc support/build-shell-options
-                                         :env {"SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER" "1"})
-                                  "node" "test/side-panel-component-layout-runtime-test.mjs")
-            line (last (filter #(str/starts-with? % "{")
-                               (str/split-lines (:out result))))
-            payload (when line (json/parse-string line true))
-            observation (:schemaViewContainment payload)]
-        (support/assert! (zero? (:exit result))
-                         "Schema view containment browser verification failed."
-                         {:out (:out result) :err (:err result)})
+      (let [observation
+            (support/load-browser-observation!
+              {:adapter-env "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER"
+               :observation-key :schemaViewContainment
+               :runtime-error "Schema view containment browser verification failed."
+               :missing-error "Schema view containment browser observation is missing."})]
         (support/assert! (schema-view-contained? observation)
                          "Rendered Schema view is not contained."
                          {:observation observation})

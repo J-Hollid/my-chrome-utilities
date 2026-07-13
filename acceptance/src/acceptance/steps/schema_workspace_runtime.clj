@@ -1,8 +1,5 @@
 (ns acceptance.steps.schema-workspace-runtime
-  (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+  (:require [acceptance.steps.support :as support]))
 
 (def feature-file "features/data-layer-schema-workspace-runtime-completion.feature")
 (def visibility-feature-file "features/data-layer-schema-rule-editor-visibility.feature")
@@ -28,47 +25,55 @@
                      {:version (:version exported)})
     observation))
 
+(defn- validate-browser-workspace! [observation]
+  (support/assert! (true? (:mounted observation)) "Production Schema workspace did not mount." {:observation observation})
+  (support/assert! (= "Order complete schema" (get-in observation [:sourceCreation :name]))
+                   "Library Create schema did not invoke the production source callback." {:observation observation})
+  (support/assert! (= "schema-library-v1.json" (get-in observation [:transfer :downloadName]))
+                   "Schema Library export did not produce the versioned download." {:observation observation})
+  (assert-export-preflight! observation)
+  (support/assert! (= (get-in observation [:transfer :before]) (get-in observation [:transfer :reloaded]))
+                   "Schema Library import did not persist every exported identity." {:observation observation})
+  (support/assert! (= ["Disable" "Remove"] (get-in observation [:rules :actions]))
+                   "Property rule menus did not expose production actions." {:observation observation})
+  (support/assert! (every? true? (map #(get-in observation [:rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
+                   "Property rule menu disclosure or focus return failed." {:observation observation})
+  (support/assert! (= "Re-enable" (get-in observation [:rules :reenable]))
+                   "Property rule disable and re-enable did not persist." {:observation observation})
+  (support/assert! (= "event-history" (get-in observation [:assignment :sourceId]))
+                   "Schema assignment did not retain its production source." {:observation observation})
+  (support/assert! (= 120 (get-in observation [:assignment :priority]))
+                   "Schema assignment edit did not persist its production priority." {:observation observation})
+  (support/assert! (= "active-inherited" (get-in observation [:inheritance :groups 0 :state]))
+                   "Inherited rules did not render in their active state group." {:observation observation})
+  (support/assert! (some #{"example · Known page types v1 · inherited from Checkout schema v2"}
+                         (get-in observation [:inheritance :preview]))
+                   "Effective-rule preview did not identify the inherited rule origin." {:observation observation})
+  (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation])))
+                   "Live Validate did not produce a validation state." {:observation observation})
+  observation)
+
+(defn- run-browser-workspace! [fixture]
+  (let [environment (cond-> {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}
+                      fixture (assoc "SCHEMA_LIBRARY_EXPORT_FIXTURE" fixture))
+        observation (support/load-browser-observation-with-environment!
+                      {:environment environment
+                       :observation-key :schemaWorkspace
+                       :runtime-error "Schema workspace browser runtime verification failed."
+                       :missing-error "Schema workspace browser observation is missing."})]
+    (validate-browser-workspace! observation)
+    (swap! browser-workspace-observations assoc fixture observation)
+    observation))
+
+(defn- browser-workspace-observation [fixture]
+  (or (get @browser-workspace-observations fixture)
+      (run-browser-workspace! fixture)))
+
 (defn- browser-workspace! [world example]
   (if (:browser-observation world)
     world
-    (let [fixture (export-fixture example)]
-      (if-let [observation (get @browser-workspace-observations fixture)]
-        (assoc world :browser-observation observation)
-        (let [environment (cond-> {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}
-                            fixture (assoc "SCHEMA_LIBRARY_EXPORT_FIXTURE" fixture))
-              result (process/shell (assoc support/build-shell-options :env environment) "node" "test/side-panel-component-layout-runtime-test.mjs")
-              line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-              payload (when line (json/parse-string line true))
-              observation (:schemaWorkspace payload)]
-          (support/assert! (zero? (:exit result)) "Schema workspace browser runtime verification failed."
-                           {:out (:out result) :err (:err result)})
-          (support/assert! (true? (:mounted observation)) "Production Schema workspace did not mount." {:payload payload})
-          (support/assert! (= "Order complete schema" (get-in observation [:sourceCreation :name]))
-                           "Library Create schema did not invoke the production source callback." {:payload payload})
-          (support/assert! (= "schema-library-v1.json" (get-in observation [:transfer :downloadName]))
-                           "Schema Library export did not produce the versioned download." {:payload payload})
-          (assert-export-preflight! observation)
-          (support/assert! (= (get-in observation [:transfer :before]) (get-in observation [:transfer :reloaded]))
-                           "Schema Library import did not persist every exported identity." {:payload payload})
-          (support/assert! (= ["Disable" "Remove"] (get-in observation [:rules :actions]))
-                           "Property rule menus did not expose production actions." {:payload payload})
-          (support/assert! (every? true? (map #(get-in observation [:rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
-                           "Property rule menu disclosure or focus return failed." {:payload payload})
-          (support/assert! (= "Re-enable" (get-in observation [:rules :reenable]))
-                           "Property rule disable and re-enable did not persist." {:payload payload})
-          (support/assert! (= "event-history" (get-in observation [:assignment :sourceId]))
-                           "Schema assignment did not retain its production source." {:payload payload})
-          (support/assert! (= 120 (get-in observation [:assignment :priority]))
-                           "Schema assignment edit did not persist its production priority." {:payload payload})
-          (support/assert! (= "active-inherited" (get-in observation [:inheritance :groups 0 :state]))
-                           "Inherited rules did not render in their active state group." {:payload payload})
-          (support/assert! (some #{"example · Known page types v1 · inherited from Checkout schema v2"}
-                                 (get-in observation [:inheritance :preview]))
-                           "Effective-rule preview did not identify the inherited rule origin." {:payload payload})
-          (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation])))
-                           "Live Validate did not produce a validation state." {:payload payload})
-          (swap! browser-workspace-observations assoc fixture observation)
-          (assoc world :browser-observation observation))))))
+    (assoc world :browser-observation
+           (browser-workspace-observation (export-fixture example)))))
 
 (defn- require! [world key message]
   (support/assert! (get world key) message {:required key}) world)

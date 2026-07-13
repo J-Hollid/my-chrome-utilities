@@ -111,9 +111,9 @@
   (when-not condition
     (throw (ex-info message data))))
 
-(defn load-browser-observation!
-  [{:keys [adapter-env observation-key runtime-error missing-error]}]
-  (let [result (process/shell (assoc build-shell-options :env {adapter-env "1"})
+(defn load-browser-observation-with-environment!
+  [{:keys [environment observation-key runtime-error missing-error]}]
+  (let [result (process/shell (assoc build-shell-options :env environment)
                               "node" "test/side-panel-component-layout-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         payload (when line (json/parse-string line true))
@@ -121,6 +121,11 @@
     (assert! (zero? (:exit result)) runtime-error {:out (:out result) :err (:err result)})
     (assert! observation missing-error {:payload payload})
     observation))
+
+(defn load-browser-observation!
+  [{:keys [adapter-env] :as options}]
+  (load-browser-observation-with-environment!
+    (assoc options :environment {adapter-env "1"})))
 
 (defn validate-example-domain!
   [canonical-values example keys message]
