@@ -10,10 +10,15 @@
 (defn- load-observation! []
   (let [result (process/shell support/build-shell-options "node" "test/data-layer-event-feed-query-ui-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        parsed (:eventFeedQuery (when line (json/parse-string line true)))]
+        parsed (:eventFeedQuery (when line (json/parse-string line true)))
+        payload-path-picker (support/load-browser-observation!
+                             {:adapter-env "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER"
+                              :observation-key :payloadPathFilterPicker
+                              :runtime-error "The payload path filter picker browser verification failed."
+                              :missing-error "The payload path filter picker observation is missing."})]
     (support/assert! (zero? (:exit result)) "The production event-feed query UI failed." {:err (:err result)})
     (support/assert! parsed "The event-feed query observation is missing." {:out (:out result)})
-    (reset! observation parsed)))
+    (reset! observation (assoc parsed :payloadPathPicker payload-path-picker))))
 
 (defn- observation! [] (or @observation (load-observation!)))
 
@@ -35,8 +40,11 @@
 
 (defn- assert-observation! [example observed]
   (assert-example! example observed)
-  (doseq [field ["Event name" "Source" "Adapter kind" "Pathname" "Payload · currency" "Validation state" "Schema" "Validation rule" "Rule severity" "Affected property"]]
+  (doseq [field ["Event name" "Source" "Adapter kind" "Pathname" "Payload property" "Validation state" "Schema" "Validation rule" "Rule severity" "Affected property"]]
     (support/assert! (some #{field} (:fieldOptions observed)) "A required query field is absent." {:field field}))
+  (support/assert! (not-any? #(str/starts-with? % "Payload · ") (:fieldOptions observed))
+                   "An individual payload path remains in the top-level field list."
+                   observed)
   (support/assert! (= ["event-feed-query-field" "event-feed-query-operator" "event-feed-query-value" "Apply condition" "Cancel"] (:controlOrder observed)) "Condition controls are not in keyboard order." observed)
   (support/assert! (= ["is" "is not" "contains" "does not contain"] (:operatorOptions observed)) "Text operators are incomplete." observed)
   (support/assert! (= ["checkout" "purchase"] (:suggestedNames observed)) "Captured event-name suggestions are not distinct and searchable." observed)
@@ -61,7 +69,45 @@
   (support/assert! (= ["purchase"] (:multiAndMatches observed)) "Conditions were not AND-matched." observed)
   (support/assert! (= ["purchase" "new-match"] (:liveMatches observed)) "New captures did not reuse the active query." observed)
   (support/assert! (= 1 (count (get-in observed [:preservedQuery :conditions]))) "Inspector navigation lost the active query." observed)
-  (support/assert! (= {:eventId "purchase" :scrollTop 480} (:returnSnapshot observed)) "Inspector navigation lost feed scroll." observed))
+  (support/assert! (= {:eventId "purchase" :scrollTop 480} (:returnSnapshot observed)) "Inspector navigation lost feed scroll." observed)
+  (let [picker (:payloadPathPicker observed)]
+    (support/assert! (= ["Choose field" "Event name" "Source" "Adapter kind" "Pathname" "Payload property" "Validation state" "Schema" "Validation rule" "Rule severity" "Affected property"]
+                        (:initialFieldOptions picker))
+                     "Payload property is not the single top-level payload field."
+                     picker)
+    (support/assert! (= {:visible true :searchAvailable true :customAvailable true :pathCount 44
+                         :completeAccessibleNames true :bounded true :overflowY "auto"
+                         :topFieldsAbsent true :searchFocused true}
+                        (:presentation picker))
+                     "The browser payload-path stage is incomplete or unbounded."
+                     picker)
+    (support/assert! (= {:stageHidden true :fieldFocused true :conditionCount 0} (:back picker))
+                     "Back to fields did not restore the unapplied field stage and focus."
+                     picker)
+    (support/assert! (true? (:reopenedSearchFocused picker))
+                     "Reopening the payload-path stage did not focus search."
+                     picker)
+    (support/assert! (= ["commerce.order.id" "commerce.total"] (:filteredPaths picker))
+                     "Observed payload-path search returned the wrong paths."
+                     picker)
+    (support/assert! (= {:selected "Selected field Payload · commerce.total"
+                         :operatorVisible true :valueVisible true :suggestions ["12"]}
+                        (:observedSelection picker))
+                     "Selecting an observed path did not configure its condition editor."
+                     picker)
+    (support/assert! (true? (:blankCustomDisabled picker))
+                     "A blank custom payload path can be added."
+                     picker)
+    (support/assert! (= {:selected "Selected field Payload · commerce.coupon.code" :conditionCount 0}
+                        (:customSelection picker))
+                     "Adding a custom path applied a condition prematurely."
+                     picker)
+    (support/assert! (= "0 of 2 events" (:beforeLaterEvent picker))
+                     "Events without the custom path matched its condition."
+                     picker)
+    (support/assert! (= "1 of 3 events" (:afterLaterEvent picker))
+                     "A later event with the custom path did not match."
+                     picker)))
 
 (defn- transition [world example _captures _spec]
   (let [observed (observation!)] (assert-observation! example observed) (assoc world :event-feed-query observed)))

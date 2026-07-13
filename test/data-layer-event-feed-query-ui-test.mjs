@@ -24,7 +24,7 @@ const descendants = (root) => {
 const find = (root, predicate) => { const match = descendants(root).find(predicate); assert.ok(match); return match; };
 
 const events = [
-  { id: "purchase", name: "purchase", sourceId: "adobe", sourceName: "Adobe beacons", sourceKind: "Adobe", captureTime: "10:00:00", pageUrl: "https://shop.test/checkout", payload: { currency: "EUR" }, validation: "1 issues", validationDetails: { issues: [], evaluations: [{ propertyPath:"page_type", status:"error", rule:"Page type allowed values", severity:"warning", message:"fail", expected:"known", actual:"other", ruleVersion:1, schemaName:"Purchase event", schemaVersion:1 }], schema: { id: "purchase", name: "Purchase event", version: 1 } } },
+  { id: "purchase", name: "purchase", sourceId: "adobe", sourceName: "Adobe beacons", sourceKind: "Adobe", captureTime: "10:00:00", pageUrl: "https://shop.test/checkout", payload: { currency: "EUR", commerce:{ total:12 } }, validation: "1 issues", validationDetails: { issues: [], evaluations: [{ propertyPath:"page_type", status:"error", rule:"Page type allowed values", severity:"warning", message:"fail", expected:"known", actual:"other", ruleVersion:1, schemaName:"Purchase event", schemaVersion:1 }], schema: { id: "purchase", name: "Purchase event", version: 1 } } },
   { id: "checkout", name: "checkout", sourceId: "history", sourceName: "Event history", sourceKind: "Data layer", captureTime: "10:00:01", pageUrl: "https://shop.test/products", payload: { currency: "GBP" }, validation: "Valid", validationDetails: { issues: [], evaluations: [{ propertyPath:"currency", status:"pass", rule:"Page type allowed values", severity:"error", message:"pass", expected:"known", actual:"known", ruleVersion:1, schemaName:"Checkout event", schemaVersion:1 }] } },
 ];
 const root = new FakeElement("section");
@@ -39,13 +39,44 @@ const editor = find(root, ({ attributes }) => attributes.get("aria-label") === "
 assert.equal(editor.hidden, false);
 const field = find(editor, ({ id }) => id === "event-feed-query-field");
 const fieldOptions = field.children.map(({ textContent }) => textContent);
+assert.ok(fieldOptions.includes("Payload property"));
+assert.equal(fieldOptions.some((candidate) => candidate.startsWith("Payload · ")), false);
 assert.deepEqual(field.focusOptions, { preventScroll: true });
-const controls = descendants(editor).filter(({ tagName }) => ["SELECT", "INPUT", "BUTTON"].includes(tagName));
+const standardControls = new Set(["event-feed-query-field", "event-feed-query-operator", "event-feed-query-value", "Apply condition", "Cancel"]);
+const controls = descendants(editor).filter(({ id, textContent }) => standardControls.has(id || textContent));
 assert.deepEqual(controls.map(({ id, textContent }) => id || textContent), ["event-feed-query-field", "event-feed-query-operator", "event-feed-query-value", "Apply condition", "Cancel"]);
 const apply = find(editor, ({ textContent }) => textContent === "Apply condition");
+const operator = find(editor, ({ id }) => id === "event-feed-query-operator");
 assert.equal(apply.disabled, true);
+field.value = "Payload property"; field.dispatch("change");
+const pathStage = find(editor, ({ id }) => id === "event-feed-payload-path-stage");
+assert.equal(pathStage.hidden, false);
+assert.equal(operator.disabled, true);
+const pathSearch = find(pathStage, ({ id }) => id === "event-feed-payload-path-search");
+assert.deepEqual(pathSearch.focusOptions, { preventScroll: true });
+assert.deepEqual(find(pathStage, ({ id }) => id === "event-feed-payload-path-results").children.map(({ textContent }) => textContent), ["commerce.total", "currency"]);
+find(pathStage, ({ textContent }) => textContent === "Back to fields").dispatch("click");
+assert.equal(pathStage.hidden, true);
+assert.deepEqual(field.focusOptions, { preventScroll: true });
+field.value = "Payload property"; field.dispatch("change");
+pathSearch.value = "commerce"; pathSearch.dispatch("input");
+assert.deepEqual(find(pathStage, ({ id }) => id === "event-feed-payload-path-results").children.map(({ textContent }) => textContent), ["commerce.total"]);
+find(pathStage, ({ textContent }) => textContent === "commerce.total").dispatch("click");
+assert.equal(field.value, "Payload · commerce.total");
+assert.equal(find(editor, ({ id }) => id === "event-feed-query-selected-field").textContent, "Selected field Payload · commerce.total");
+assert.equal(operator.disabled, false);
+assert.deepEqual(find(editor, ({ id }) => id === "event-feed-query-suggestions").children.map(({ value }) => value), ["12"]);
+field.value = "Payload property"; field.dispatch("change");
+find(pathStage, ({ textContent }) => textContent === "Enter custom path").dispatch("click");
+const customPath = find(pathStage, ({ id }) => id === "event-feed-query-custom-path");
+const addPath = find(pathStage, ({ textContent }) => textContent === "Add property path");
+assert.equal(addPath.disabled, true);
+customPath.value = "commerce.coupon.code"; customPath.dispatch("input");
+assert.equal(addPath.disabled, false); addPath.dispatch("click");
+assert.equal(field.value, "Payload · commerce.coupon.code");
+assert.equal(updated, undefined);
 field.value = "Event name"; field.dispatch("change");
-const operator = find(editor, ({ id }) => id === "event-feed-query-operator"); operator.value = "is"; operator.dispatch("change");
+operator.value = "is"; operator.dispatch("change");
 const operatorOptions = operator.children.map(({ textContent }) => textContent);
 const suggestedNames = find(editor, ({ id }) => id === "event-feed-query-suggestions").children.map(({ value }) => value);
 const suggestionFields = ["Event name", "Source", "Adapter kind", "Pathname", "Payload · currency", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"];

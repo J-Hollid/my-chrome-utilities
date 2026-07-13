@@ -8,12 +8,13 @@ export const validationEventFeedQueryFields = [
 export type EventFeedQueryField =
   | (typeof coreEventFeedQueryFields)[number]
   | (typeof validationEventFeedQueryFields)[number]
+  | "Payload property"
   | `Payload · ${string}`;
 export type TextQueryOperator = "is" | "is not" | "contains" | "does not contain";
 export type RuleQueryOperator = "failed" | "warned" | "passed" | "was evaluated" | "was not evaluated";
 export type EventFeedQueryOperator = TextQueryOperator | RuleQueryOperator;
 
-type TextEventFeedQueryField = Exclude<EventFeedQueryField, "Validation rule">;
+type TextEventFeedQueryField = Exclude<EventFeedQueryField, "Validation rule" | "Payload property">;
 
 export type EventFeedQueryCondition = {
   id: string;
@@ -100,29 +101,34 @@ function eventValues(event: QueryableEvent, field: EventFeedQueryField): string[
     ...(event.validationDetails?.evaluations ?? []).map(({ propertyPath }) => affectedProperty(propertyPath)),
     ...(event.validationDetails?.issues ?? []).map(({ instancePath }) => affectedProperty(instancePath)),
   ];
+  if (field === "Payload property") return [];
   const path = field.slice("Payload · ".length);
   const match = payloadEntries(event.payload).find(([candidate]) => candidate === path);
   return match ? [String(match[1])] : [];
 }
 
 export function eventFeedQueryFields(events: readonly QueryableEvent[]): EventFeedQueryField[] {
-  const payloadFields = distinct(events.flatMap((event) => payloadEntries(event.payload).map(([path]) => path)))
-    .map((path): EventFeedQueryField => `Payload · ${path}`);
-  return [...coreEventFeedQueryFields, ...payloadFields, ...validationEventFeedQueryFields];
+  return [...coreEventFeedQueryFields, "Payload property", ...validationEventFeedQueryFields];
+}
+
+export function observedPayloadPaths(events: readonly QueryableEvent[]): string[] {
+  return distinct(events.flatMap((event) => payloadEntries(event.payload).map(([path]) => path)));
 }
 
 export function eventFeedQueryOperators(field: EventFeedQueryField): EventFeedQueryOperator[] {
+  if (field === "Payload property") return [];
   return field === "Validation rule"
     ? ["failed", "warned", "passed", "was evaluated", "was not evaluated"]
     : ["is", "is not", "contains", "does not contain"];
 }
 
 export function eventFeedQuerySuggestions(events: readonly QueryableEvent[], field: EventFeedQueryField): string[] {
+  if (field === "Payload property") return [];
   return distinct(events.flatMap((event) => eventValues(event, field)));
 }
 
 export function queryConditionComplete(condition: EventFeedQueryConditionDraft): condition is EventFeedQueryCondition {
-  if (!condition.id || !condition.field || !condition.operator || !condition.values?.some((value) => value.trim())) return false;
+  if (!condition.id || !condition.field || condition.field === "Payload property" || !condition.operator || !condition.values?.some((value) => value.trim())) return false;
   return (eventFeedQueryOperators(condition.field) as readonly EventFeedQueryOperator[]).includes(condition.operator);
 }
 

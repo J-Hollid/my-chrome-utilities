@@ -8,6 +8,7 @@ import {
   eventFeedQueryOperators,
   eventFeedQuerySuggestions,
   filterEventsByQuery,
+  observedPayloadPaths,
   queryConditionComplete,
   queryConditionSummary,
   removeQueryCondition,
@@ -32,7 +33,9 @@ const events = [
 
 const fields = eventFeedQueryFields(events);
 assert.deepEqual(fields.slice(0, 4), ["Event name", "Source", "Adapter kind", "Pathname"]);
-for (const field of ["Payload · currency", "Payload · commerce.total", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"]) assert.ok(fields.includes(field));
+assert.deepEqual(fields, ["Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"]);
+assert.equal(fields.some((field) => field.startsWith("Payload · ")), false);
+assert.deepEqual(observedPayloadPaths(events), ["commerce.total", "currency"]);
 assert.deepEqual(eventFeedQueryOperators("Event name"), ["is", "is not", "contains", "does not contain"]);
 assert.deepEqual(eventFeedQueryOperators("Validation rule"), ["failed", "warned", "passed", "was evaluated", "was not evaluated"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Event name"), ["checkout", "purchase"]);

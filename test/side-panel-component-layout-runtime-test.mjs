@@ -12,6 +12,7 @@ let guidedSchemaPickerObservation;
 let liveValidationVisualsObservation;
 let singleLiveEventFeedObservation;
 let schemaViewContainmentObservation;
+let payloadPathFilterPickerObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -300,6 +301,67 @@ const schemaViewContainmentRuntime = `(() => {
     editorStates:{ assignmentWasOpen, assignmentHiddenWhileAway, ruleWasOpen, ruleHiddenWhileAway },
     restored,
   };
+})()`;
+
+const payloadPathFilterPickerRuntime = `(async () => {
+  const queryUi = await import("/data-layer-event-feed-query-ui.js");
+  const host = document.createElement("section"); host.id = "payload-path-filter-picker-fixture"; document.body.append(host);
+  const baseEvents = [
+    { id:"purchase", name:"purchase", sourceId:"history", captureTime:"2026-07-13T10:00:00Z", payload:{ currency:"EUR", commerce:{ total:12, order:{ id:"A-42" } }, ...Object.fromEntries(Array.from({ length:40 }, (_, index) => ["fixture_" + index, index])) } },
+    { id:"checkout", name:"checkout", sourceId:"history", captureTime:"2026-07-13T10:01:00Z", payload:{ user:{ status:"member" } } },
+  ];
+  let events = baseEvents;
+  let query = { conditions:[] };
+  const render = () => queryUi.renderEventFeedQueryBuilder(host, events, query, (next) => { query = next; render(); });
+  const q = (selector) => { const element = host.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const button = (label, root = host) => { const result = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!result) throw new Error("Missing " + label); return result; };
+  render(); button("Add filter").click();
+  let field = q("#event-feed-query-field");
+  const initialFieldOptions = Array.from(field.options).map(({ textContent }) => textContent);
+  field.value = "Payload property"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  let stage = q("#event-feed-payload-path-stage");
+  let search = q("#event-feed-payload-path-search");
+  let results = q("#event-feed-payload-path-results");
+  const resultButtons = Array.from(results.querySelectorAll("button"));
+  const presentation = {
+    visible:stage.getClientRects().length > 0,
+    searchAvailable:Boolean(search),
+    customAvailable:Boolean(button("Enter custom path", stage)),
+    pathCount:resultButtons.length,
+    completeAccessibleNames:resultButtons.every((result) => result.getAttribute("aria-label") === result.textContent),
+    bounded:results.scrollHeight > results.clientHeight && results.clientHeight > 0,
+    overflowY:getComputedStyle(results).overflowY,
+    topFieldsAbsent:resultButtons.every((result) => !initialFieldOptions.includes(result.textContent)),
+    searchFocused:document.activeElement === search,
+  };
+  button("Back to fields", stage).click();
+  const back = { stageHidden:stage.hidden, fieldFocused:document.activeElement === field, conditionCount:query.conditions.length };
+  field.value = "Payload property"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  stage = q("#event-feed-payload-path-stage"); search = q("#event-feed-payload-path-search"); results = q("#event-feed-payload-path-results");
+  const reopenedSearchFocused = document.activeElement === search;
+  search.value = "commerce"; search.dispatchEvent(new Event("input", { bubbles:true }));
+  const filteredPaths = Array.from(results.querySelectorAll("button")).map(({ textContent }) => textContent);
+  button("commerce.total", results).click();
+  const observedSelection = {
+    selected:q("#event-feed-query-selected-field").textContent,
+    operatorVisible:q("#event-feed-query-operator").getClientRects().length > 0,
+    valueVisible:q("#event-feed-query-value").getClientRects().length > 0,
+    suggestions:Array.from(q("#event-feed-query-suggestions").children).map(({ value }) => value),
+  };
+  field = q("#event-feed-query-field"); field.value = "Payload property"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  stage = q("#event-feed-payload-path-stage"); button("Enter custom path", stage).click();
+  const customPath = q("#event-feed-query-custom-path");
+  const addPath = button("Add property path", stage);
+  const blankCustomDisabled = addPath.disabled;
+  customPath.value = "commerce.coupon.code"; customPath.dispatchEvent(new Event("input", { bubbles:true })); addPath.click();
+  const customSelection = { selected:q("#event-feed-query-selected-field").textContent, conditionCount:query.conditions.length };
+  const operator = q("#event-feed-query-operator"); operator.value = "is"; operator.dispatchEvent(new Event("change", { bubbles:true }));
+  const value = q("#event-feed-query-value"); value.value = "SUMMER"; value.dispatchEvent(new Event("input", { bubbles:true })); button("Apply condition").click();
+  const beforeLaterEvent = q("#live-event-query-count").textContent;
+  events = [...baseEvents, { id:"promotion", name:"promotion", sourceId:"history", captureTime:"2026-07-13T10:02:00Z", payload:{ commerce:{ coupon:{ code:"SUMMER" } } } }]; render();
+  const afterLaterEvent = q("#live-event-query-count").textContent;
+  host.remove();
+  return { initialFieldOptions, presentation, back, reopenedSearchFocused, filteredPaths, observedSelection, blankCustomDisabled, customSelection, beforeLaterEvent, afterLaterEvent };
 })()`;
 
 const singleLiveEventFeedRuntime = `(async () => {
@@ -1516,6 +1578,19 @@ try {
       editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
       restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
     }, `Schema view containment violated its ${width}px browser contract`);
+    payloadPathFilterPickerObservation = await evaluate(socket, payloadPathFilterPickerRuntime);
+    assert.deepEqual(payloadPathFilterPickerObservation, {
+      initialFieldOptions:["Choose field", "Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],
+      presentation:{ visible:true, searchAvailable:true, customAvailable:true, pathCount:44, completeAccessibleNames:true, bounded:true, overflowY:"auto", topFieldsAbsent:true, searchFocused:true },
+      back:{ stageHidden:true, fieldFocused:true, conditionCount:0 },
+      reopenedSearchFocused:true,
+      filteredPaths:["commerce.order.id", "commerce.total"],
+      observedSelection:{ selected:"Selected field Payload · commerce.total", operatorVisible:true, valueVisible:true, suggestions:["12"] },
+      blankCustomDisabled:true,
+      customSelection:{ selected:"Selected field Payload · commerce.coupon.code", conditionCount:0 },
+      beforeLaterEvent:"0 of 2 events",
+      afterLaterEvent:"1 of 3 events",
+    }, `Payload path filter picker violated its ${width}px browser contract`);
     await reloadPanel(socket);
     singleLiveEventFeedObservation = await evaluate(socket, singleLiveEventFeedRuntime);
     assert.deepEqual(singleLiveEventFeedObservation, {
@@ -2005,6 +2080,9 @@ try {
   }
   if (process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaViewContainment:schemaViewContainmentObservation }));
+  }
+  if (process.env.PAYLOAD_PATH_FILTER_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ payloadPathFilterPicker:payloadPathFilterPickerObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
