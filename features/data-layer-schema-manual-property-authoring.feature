@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d65c5f8f3ba611637d136cc80ec731c01406b5a1b253452ebba2e1fe00240e12
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T23:27:54.638848943Z","feature_name":"Data layer schema manual property authoring","feature_path":"features/data-layer-schema-manual-property-authoring.feature","background_hash":"4055b373c09d05f3adc87a79090b14759b2da70a6c43d55203020e5e6357dd42","implementation_hash":"sha256:6215bfc08114642e8c1acd47acb6871fa158522525cdd5ea42892470ae80dc9f","scenarios":[{"index":2,"name":"Data layer schema manual property authoring 003","scenario_hash":"8905632d47b8f29974399d4bb063f2b29e73270888bfd2ade17dfa0475099416","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-13T23:27:54.638848943Z"},{"index":4,"name":"Data layer schema manual property authoring 005","scenario_hash":"826e78c6a79f663f3882879e086c79749fab1e034bff5e9b2572de24a6760f5e","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-13T23:27:54.638848943Z"},{"index":5,"name":"Data layer schema manual property authoring 006","scenario_hash":"674ae409da847c72f5812ca50d06581dc5896c02e75ed91b207bff6fbc6c2e2e","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T23:27:54.638848943Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema manual property authoring
 
   Background:

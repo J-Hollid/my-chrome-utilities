@@ -197,7 +197,7 @@ async function openPanel(port, width, height = 900) {
   let loaded = false;
   for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await socket.call("Runtime.evaluate", {
-      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null",
+      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null && document.querySelector('#save-and-close-schema') !== null",
       returnByValue: true,
     });
     if (ready.result.value === true) {

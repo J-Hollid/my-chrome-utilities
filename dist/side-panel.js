@@ -144,9 +144,7 @@ const schemaCloseReviewSummary = document.querySelector("#schema-close-review-su
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
-const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema") ?? Object.assign(document.createElement("button"), { id: "save-and-close-schema", type: "button", textContent: "Publish and close schema", hidden: true });
-if (!saveAndCloseSchemaButton.parentElement)
-    schemaEditor?.append(saveAndCloseSchemaButton);
+const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
 const saveSchemaCloseReviewButton = document.querySelector("#save-schema-close-review");
 const discardWorkingSchemaDraftButton = document.querySelector("#discard-working-schema-draft");
 const schemaRevisionSelector = document.querySelector("#schema-revision-selector");
@@ -1335,7 +1333,7 @@ schemaManualPropertyForm.addEventListener("submit", (event) => {
         return;
     }
     const path = inspection.normalizedPath.slice(1).replaceAll("/", ".");
-    schemaDraft = { ...schemaDraft, document: addManualProperty(schemaDraft.document, definition) };
+    schemaDraft = { ...schemaDraft, document: addManualProperty(schemaDraft.document, schemaParentDocuments(), definition) };
     selectedSchemaPropertyPath = path;
     persistSchemaEditorDraft(`Add manual property ${inspection.normalizedPath}`);
     closeManualPropertyForm(false);

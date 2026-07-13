@@ -44,8 +44,8 @@ for (let sample = 0; sample < 200; sample += 1) {
     missingObjectPath:[branch],
   }, "valid nested definitions must normalize and report missing object parents in order");
 
-  const added = addManualProperty(base, definition);
-  const slashAdded = addManualProperty(base, { ...definition, path:slashPath });
+  const added = addManualProperty(base, [], definition);
+  const slashAdded = addManualProperty(base, [], { ...definition, path:slashPath });
   assert.deepEqual(added, slashAdded, "dot and slash paths must create the same schema structure");
   assert.deepEqual(base, snapshot, "manual property addition must not mutate its source document");
   assert.deepEqual(added.properties.stable, base.properties.stable, "manual property addition must conserve unrelated siblings");
@@ -76,8 +76,13 @@ for (let sample = 0; sample < 200; sample += 1) {
     "a successfully added path must subsequently resolve as the existing property",
   );
 
-  const inherited = addManualProperty({ type:"object" }, { ...definition, path:slashPath });
+  const inherited = addManualProperty({ type:"object" }, [], { ...definition, path:slashPath });
   const inheritedInspection = inspectManualProperty(base, [inherited], definition);
   assert.equal(inheritedInspection.result, "blocked", "an inherited leaf must not be duplicated locally");
   assert.equal(inheritedInspection.assistance, `${segments.join(".")} is defined by the parent schema`);
+  assert.throws(
+    () => addManualProperty(base, [inherited], definition),
+    /is defined by the parent schema/,
+    "the domain write must reject every inherited collision reported by inspection",
+  );
 }
