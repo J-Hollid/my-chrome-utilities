@@ -74,7 +74,10 @@ const sessionEvents = [
   { id: "purchase", name: "purchase", sourceId: "dataLayer", sourceName: "Data layer", captureTime: "02", pageUrl: "https://shop.test/checkout", payload, validation: "1 error", validationDetails: {
     schema: { name: "Checkout", version: 4 },
     evaluations: [],
-    issues: [{ instancePath: "/commerce/currency", severity: "error", expected: "one of EUR or USD", actual: "GBP", schemaLocation: "#/currency", rule: "currency v2" }],
+    issues: [
+      { instancePath: "/commerce/currency", severity: "error", expected: "one of EUR or USD", actual: "GBP", schemaLocation: "#/currency", rule: "currency v2" },
+      { instancePath: "/commerce/debug", severity: "error", expected: "forbidden property", actual: true, schemaLocation: "#/debug", rule: "debug v1" },
+    ],
   } },
 ];
 const root = new FakeElement("section");
@@ -121,6 +124,12 @@ const genericMethod = element(root, ({ dataset }) => dataset.responseSource === 
 genericMethod.checked = true;
 genericMethod.dispatch("change");
 assert.equal(correctionResponse.hidden, true);
+const schemaMethod = element(root, ({ dataset, value }) => dataset.responseSource === "Checkout schema" && value === "EUR");
+schemaMethod.checked = true;
+schemaMethod.dispatch("change");
+const ruleMethod = element(root, ({ dataset }) => dataset.responseSource === "validation rule");
+ruleMethod.checked = true;
+ruleMethod.dispatch("change");
 correctionMethod.checked = true;
 correctionMethod.dispatch("change");
 correctionResponse.value = "EUR";
@@ -132,6 +141,11 @@ const customWarning = element(root, ({ dataset }) => dataset.customResponseWarni
 assert.match(customWarning.textContent, /CAD does not satisfy/);
 const invalidCustomWarning = customWarning.textContent;
 const keepOverride = element(root, ({ textContent }) => textContent === "Keep custom override");
+const replaceOverride = element(root, ({ textContent }) => textContent === "Replace custom override");
+replaceOverride.dispatch("click");
+assert.equal(correctionResponse.value, "");
+correctionResponse.value = "CAD";
+correctionResponse.dispatch("input");
 keepOverride.dispatch("click");
 
 element(root, ({ textContent }) => textContent === "Generate pathname steps").dispatch("click");
