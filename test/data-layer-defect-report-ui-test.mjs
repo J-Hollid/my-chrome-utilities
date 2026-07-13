@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   browserDefectReportClipboard,
+  createDefectReportNavigation,
   renderDefectReportBuilder,
 } from "../dist/data-layer-defect-report-ui.js";
 
@@ -73,14 +74,34 @@ const sessionEvents = [
   { id: "purchase", name: "purchase", sourceId: "dataLayer", sourceName: "Data layer", captureTime: "02", pageUrl: "https://shop.test/checkout", payload, validation: "1 error", validationDetails: {
     schema: { name: "Checkout", version: 4 },
     evaluations: [],
-    issues: [{ instancePath: "/commerce/currency", severity: "error", expected: "one of EUR or USD", actual: "GBP", schemaLocation: "#/currency", rule: "currency v2" }],
+    issues: [
+      { instancePath: "/commerce/currency", severity: "error", expected: "one of EUR or USD", actual: "GBP", schemaLocation: "#/currency", rule: "currency v2" },
+      { instancePath: "/commerce/debug", severity: "error", expected: "forbidden property", actual: true, schemaLocation: "#/debug", rule: "debug v1" },
+    ],
   } },
 ];
 const root = new FakeElement("section");
 const richWrites = [];
+let backToCapturedEvent = 0;
+let backToLiveFeed = 0;
+let focusCreateDefectReport = 0;
+const liveFeedScrollTop = 480;
 renderDefectReportBuilder(root, sessionEvents[1], {
   writeRich: async (html, text) => { richWrites.push({ html, text }); },
-}, sessionEvents);
+}, sessionEvents, createDefectReportNavigation({
+  showCapturedEvent: () => { backToCapturedEvent += 1; },
+  focusCreateDefectReport: () => { focusCreateDefectReport += 1; },
+  closeToLiveFeed: () => { backToLiveFeed += 1; },
+}));
+
+const backToEvent = element(root, ({ textContent }) => textContent === "Back to captured event");
+const backToFeed = element(root, ({ textContent }) => textContent === "Back to Live feed");
+assert.ok(descendants(root).indexOf(backToEvent) < descendants(root).indexOf(element(root, ({ tagName }) => tagName === "FIELDSET")));
+backToEvent.dispatch("click");
+backToFeed.dispatch("click");
+assert.equal(backToCapturedEvent, 1);
+assert.equal(focusCreateDefectReport, 1);
+assert.equal(backToLiveFeed, 1);
 
 const headings = descendants(root).filter(({ tagName }) => tagName === "H4" || tagName === "H5").map(({ textContent }) => textContent);
 assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Expected result", "Steps to reproduce", "Supporting timeline", "Report details"]);
@@ -88,12 +109,44 @@ assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Exp
 const issueCheckbox = element(root, ({ id }) => id === "defect-issue-currency");
 issueCheckbox.checked = false;
 issueCheckbox.dispatch("change");
-const correctionMethod = element(root, ({ tagName, id }) => tagName === "SELECT" && id !== "defect-reproduction-start");
-correctionMethod.value = "enter a valid response";
+const schemaResponses = descendants(root).filter(({ dataset }) => dataset.responseSource === "Checkout schema").map(({ value }) => value);
+assert.deepEqual(schemaResponses, ["EUR", "USD"]);
+assert.equal(schemaResponses.includes("GBP"), false);
+const correctionMethod = element(root, ({ dataset, type }) => dataset.responseSource === "Custom value or response" && type === "radio");
+const correctionResponse = element(root, ({ placeholder }) => placeholder === "Custom value or response");
+const customInitiallyHidden = correctionResponse.hidden;
+assert.equal(customInitiallyHidden, true);
+correctionMethod.checked = true;
 correctionMethod.dispatch("change");
-const correctionResponse = element(root, ({ placeholder }) => placeholder === "Valid response");
+const customVisibleAfterSelection = !correctionResponse.hidden;
+assert.equal(customVisibleAfterSelection, true);
+const genericMethod = element(root, ({ dataset }) => dataset.responseSource === "Use generic constraint");
+genericMethod.checked = true;
+genericMethod.dispatch("change");
+assert.equal(correctionResponse.hidden, true);
+const schemaMethod = element(root, ({ dataset, value }) => dataset.responseSource === "Checkout schema" && value === "EUR");
+schemaMethod.checked = true;
+schemaMethod.dispatch("change");
+const ruleMethod = element(root, ({ dataset }) => dataset.responseSource === "validation rule");
+ruleMethod.checked = true;
+ruleMethod.dispatch("change");
+correctionMethod.checked = true;
+correctionMethod.dispatch("change");
 correctionResponse.value = "EUR";
 correctionResponse.dispatch("input");
+
+correctionResponse.value = "CAD";
+correctionResponse.dispatch("input");
+const customWarning = element(root, ({ dataset }) => dataset.customResponseWarning === "currency");
+assert.match(customWarning.textContent, /CAD does not satisfy/);
+const invalidCustomWarning = customWarning.textContent;
+const keepOverride = element(root, ({ textContent }) => textContent === "Keep custom override");
+const replaceOverride = element(root, ({ textContent }) => textContent === "Replace custom override");
+replaceOverride.dispatch("click");
+assert.equal(correctionResponse.value, "");
+correctionResponse.value = "CAD";
+correctionResponse.dispatch("input");
+keepOverride.dispatch("click");
 
 element(root, ({ textContent }) => textContent === "Generate pathname steps").dispatch("click");
 const reproduction = element(root, ({ tagName }) => tagName === "OL");
@@ -153,5 +206,14 @@ process.stdout.write(`${JSON.stringify({
     editedSummaryVisible: preview.innerHTML.includes("Checkout purchase has invalid currency"),
     copied: richWrites.length,
     browserClipboardWrites: browserWrites.length + browserTextWrites.length,
+    navigation: { backToCapturedEvent, focusCreateDefectReport, backToLiveFeed },
+    navigationActions: [backToEvent.textContent, backToFeed.textContent],
+    liveFeedScrollTop,
+    schemaResponses,
+    customWarning: customWarning.textContent,
+    invalidCustomWarning,
+    customInitiallyHidden,
+    customVisibleAfterSelection,
+    customOverrideVisible: preview.innerHTML.includes("operator-provided"),
   },
 })}\n`);

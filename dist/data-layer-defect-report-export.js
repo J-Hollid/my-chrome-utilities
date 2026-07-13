@@ -63,12 +63,16 @@ function jsonLines(value, depth = 0, pointer = "") {
     return lines;
 }
 function reportSections(report) {
+    const responseSources = report.expected.corrections.flatMap((correction) => correction.responseSource
+        ? [`${correction.issueId} response source: ${correction.responseSource}${correction.operatorProvided ? " (operator-provided)" : ""}`]
+        : []);
+    const expectedNarrative = [report.expectedExplanation, ...responseSources].filter(Boolean).join("\n");
     return [
         ["Summary", report.summary],
         ["Description", report.description],
         ["Steps to reproduce", report.reproductionSteps.map(({ text }) => text).join("\n")],
         ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
-        ["Expected result", `${report.expectedExplanation}\n${JSON.stringify(report.expected.payload, null, 2)}`.trim()],
+        ["Expected result", `${expectedNarrative}\n${JSON.stringify(report.expected.payload, null, 2)}`.trim()],
         ["Differences", [
                 ...report.actual.differences.map(({ pointer }) => `− ${pointer} invalid actual value`),
                 ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `+ ${pointer} corrected expected value`),
@@ -86,7 +90,7 @@ function highlightedJson(payload, pointers, backgroundColor) {
     return jsonLines(canonicalPayload).map((line) => {
         if (!line.pointer || !selected.has(line.pointer))
             return escapeHtml(line.text);
-        return `<span style="background-color:${backgroundColor}" data-json-pointer="${escapeHtml(line.pointer)}">${escapeHtml(line.text)}</span>`;
+        return `<span style="background-color:${backgroundColor};color:#1f1f1f" data-json-pointer="${escapeHtml(line.pointer)}">${escapeHtml(line.text)}</span>`;
     }).join("\n");
 }
 export function renderJiraReport(report) {
@@ -94,8 +98,8 @@ export function renderJiraReport(report) {
     const expectedJson = JSON.stringify(report.expected.payload, null, 2);
     const sections = reportSections(report);
     const differenceHtml = [
-        ...report.actual.differences.map(({ pointer }) => `<li style="background-color:#ffd7d7">− <code>${escapeHtml(pointer)}</code> invalid actual value</li>`),
-        ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `<li style="background-color:#d9f7d9">+ <code>${escapeHtml(pointer)}</code> corrected expected value</li>`),
+        ...report.actual.differences.map(({ pointer }) => `<li style="background-color:#ffd7d7;color:#1f1f1f">− <code>${escapeHtml(pointer)}</code> invalid actual value</li>`),
+        ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `<li style="background-color:#d9f7d9;color:#1f1f1f">+ <code>${escapeHtml(pointer)}</code> corrected expected value</li>`),
     ].join("");
     const html = sections.map(([heading, content]) => {
         if (heading === "Differences")
@@ -108,7 +112,8 @@ export function renderJiraReport(report) {
         }
         if (heading === "Expected result") {
             const pointers = report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => pointer);
-            return `<h2>${heading}</h2><p>${escapeHtml(report.expectedExplanation)}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.expected.payload, pointers, "#d9f7d9")}</pre>`;
+            const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + expectedJson)));
+            return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.expected.payload, pointers, "#d9f7d9")}</pre>`;
         }
         const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation evidence" || heading === "Supporting timeline";
         return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;

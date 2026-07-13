@@ -2,48 +2,18 @@ import {
   filterTimelineEvents,
   generatePathnameSkeleton,
   supportingTimeline,
-  toggleReportIssue,
   type DefectReport,
-  type ExpectedResultChoice,
   type TimelineFilter,
   type TimelineSelection,
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
 
+export { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
+
 export interface DefectReportBuilderState {
   report(): DefectReport;
   update(report: DefectReport): void;
   refresh(): void;
-}
-
-export function appendIssueControls(
-  issues: HTMLElement,
-  expectedControls: HTMLElement,
-  state: DefectReportBuilderState,
-  selectedChoices: Map<string, ExpectedResultChoice>,
-): void {
-  for (const reportIssue of state.report().issues) {
-    const row = document.createElement("div");
-    const selected = document.createElement("input"); selected.type = "checkbox"; selected.checked = reportIssue.selected;
-    selected.id = `defect-issue-${reportIssue.id}`;
-    selected.addEventListener("change", () => { state.update(toggleReportIssue(state.report(), reportIssue.id)); state.refresh(); });
-    const label = document.createElement("label"); label.htmlFor = selected.id; label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}`;
-    row.append(selected, label); issues.append(row);
-
-    const methodLabel = document.createElement("label"); methodLabel.textContent = `${reportIssue.id} correction `;
-    const method = document.createElement("select");
-    for (const value of ["", "choose an allowed value", "enter a valid response", "apply the rule", "keep the rule generic"]) {
-      method.append(Object.assign(document.createElement("option"), { value, textContent: value || "Choose method" }));
-    }
-    const response = document.createElement("input"); response.placeholder = "Valid response";
-    const updateChoice = () => {
-      if (!method.value) selectedChoices.delete(reportIssue.id);
-      else selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: method.value as ExpectedResultChoice["method"], ...(response.value ? { response: response.value } : {}) });
-      state.refresh();
-    };
-    method.addEventListener("change", updateChoice); response.addEventListener("input", updateChoice);
-    methodLabel.append(method, response); expectedControls.append(methodLabel);
-  }
 }
 
 export function appendReproductionControls(

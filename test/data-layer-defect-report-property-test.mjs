@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import {
   applyExpectedResult,
   createDefectReport,
+  expectedResultAssistance,
   filterTimelineEvents,
   generatePathnameSkeleton,
   supportingTimeline,
   toggleReportIssue,
+  validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
 import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
 
@@ -53,14 +55,27 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(toggleReportIssue(toggleReportIssue(report, issueId), issueId), report);
   assert.deepEqual(event.payload, payload);
 
+  const allowed = Array.from({ length: 2 + integer(8) }, (_, index) => `value-${iteration}-${index}`);
+  const actualAllowed = allowed[integer(allowed.length)];
+  const assistedIssue = { ...issues[0], actual: actualAllowed, constraint: `one of ${allowed.join(" or ")}` };
+  const assistance = expectedResultAssistance(assistedIssue);
+  assert.equal(assistance.genericConstraint, `${assistedIssue.pointer} must be ${assistedIssue.constraint}`);
+  assert.deepEqual(assistance.schemaValues, allowed.filter((value) => value !== actualAllowed));
+  assert.equal(allowed.every((value) => validateAssistedResponse(assistedIssue, value).valid), true);
+  assert.equal(validateAssistedResponse(assistedIssue, `outside-${iteration}`).valid, false);
+
   const replacement = `replacement-${iteration}`;
   const corrected = applyExpectedResult(report, [{
     issueId,
     method: "enter a valid response",
     response: replacement,
+    responseSource: "Custom value or response",
+    operatorProvided: true,
   }]);
   const issueIndex = Number(issueId.slice("issue-".length));
   assert.equal(corrected.expected.payload.nested[`field~${issueIndex}/value`], replacement);
+  assert.equal(corrected.expected.corrections[0].responseSource, "Custom value or response");
+  assert.equal(corrected.expected.corrections[0].operatorProvided, true);
   assert.deepEqual(event.payload, payload);
 
   const visitCount = 2 + integer(15);

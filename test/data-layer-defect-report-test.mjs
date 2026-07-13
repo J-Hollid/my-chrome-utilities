@@ -4,6 +4,7 @@ import {
   applyExpectedResult,
   copyDefectReportForJira,
   createDefectReport,
+  expectedResultAssistance,
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
@@ -11,6 +12,7 @@ import {
   renderJiraReport,
   supportingTimeline,
   toggleReportIssue,
+  validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
 import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
 
@@ -49,9 +51,21 @@ assert.equal(warningSelected.issues.find(({ id }) => id === "coupon").selected, 
 assert.equal(warningSelected.actual.differences.some(({ pointer }) => pointer === "/commerce/coupon"), true);
 assert.equal(toggleReportIssue(warningSelected, "currency").actual.differences.some(({ pointer }) => pointer === "/commerce/currency"), false);
 
+assert.deepEqual(expectedResultAssistance(report.issues[0]), {
+  genericConstraint: "/commerce/currency must be one of EUR or USD",
+  schemaValues: ["EUR", "USD"],
+  customAvailable: true,
+});
+assert.equal(expectedResultAssistance(report.issues[0]).schemaValues.includes("GBP"), false);
+assert.deepEqual(validateAssistedResponse(report.issues[0], "EUR"), { valid: true });
+assert.deepEqual(validateAssistedResponse(report.issues[0], "CAD"), {
+  valid: false,
+  warning: "CAD does not satisfy the current schema constraint.",
+});
+
 const corrected = applyExpectedResult(report, [
-  { issueId: "currency", method: "choose an allowed value", response: "EUR" },
-  { issueId: "order_id", method: "enter a valid response", response: "A-123" },
+  { issueId: "currency", method: "choose an allowed value", response: "EUR", responseSource: "Checkout schema" },
+  { issueId: "order_id", method: "enter a valid response", response: "A-123", responseSource: "Custom value or response" },
   { issueId: "coupon", method: "keep the rule generic" },
 ]);
 assert.deepEqual(corrected.expected.payload, {
@@ -63,11 +77,28 @@ assert.deepEqual(corrected.expected.corrections.map(({ operation, pointer, marke
   ["none", "/commerce/coupon", undefined],
 ]);
 assert.equal(corrected.expected.explanations.at(-1), "coupon satisfies its validation rule");
+assert.equal(corrected.expected.corrections[0].responseSource, "Checkout schema");
+assert.equal(corrected.expected.corrections[1].responseSource, "Custom value or response");
 assert.deepEqual(capturedPayload, { commerce: { currency: "GBP", total: -1, debug: true } });
 assert.throws(
   () => applyExpectedResult(report, [{ issueId: "currency", method: "enter a valid response" }]),
   /response/i,
 );
+
+const genericCurrency = applyExpectedResult(report, [{ issueId: "currency", method: "keep the rule generic" }]);
+assert.equal(genericCurrency.expected.explanations[0], "/commerce/currency must be one of EUR or USD");
+assert.equal(genericCurrency.expected.corrections[0].operation, "none");
+assert.deepEqual(genericCurrency.expected.payload, capturedPayload);
+
+const customOverride = applyExpectedResult(report, [{
+  issueId: "currency",
+  method: "enter a valid response",
+  response: "CAD",
+  responseSource: "Custom value or response",
+  operatorProvided: true,
+}]);
+assert.equal(customOverride.expected.corrections[0].operatorProvided, true);
+assert.match(customOverride.expected.explanations[0], /operator-provided/);
 
 const removed = applyExpectedResult(createDefectReport({
   ...event,
@@ -144,8 +175,12 @@ for (const heading of ["Summary", "Description", "Steps to reproduce", "Actual r
 }
 assert.match(rendered.text, /− \/commerce\/currency/);
 assert.match(rendered.text, /\+ \/commerce\/currency/);
+assert.match(rendered.text, /currency response source: Checkout schema/);
+assert.match(rendered.text, /order_id response source: Custom value or response/);
 assert.match(rendered.html, /background-color:#ffd7d7/);
 assert.match(rendered.html, /background-color:#d9f7d9/);
+assert.match(rendered.html, /background-color:#ffd7d7;color:#1f1f1f/);
+assert.match(rendered.html, /background-color:#d9f7d9;color:#1f1f1f/);
 assert.match(rendered.html, /background-color:#ffd7d7[^>]+data-json-pointer="\/commerce\/currency"/);
 assert.match(rendered.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/commerce\/currency"/);
 assert.doesNotMatch(JSON.parse(rendered.actualJson).commerce.currency, /^[+−-]/);

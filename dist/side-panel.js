@@ -27,7 +27,7 @@ import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigation
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { createDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
@@ -660,8 +660,10 @@ function closeInspectorAndReturnToEvents() {
     }
     inspectorReturnSnapshot = undefined;
 }
-function openLiveInspector(eventId) {
-    inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
+function openLiveInspector(eventId, preserveReturnSnapshot = false) {
+    if (!preserveReturnSnapshot) {
+        inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
+    }
     const split = globalThis.innerWidth >= 700;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     const event = liveObserverState.events.find(({ id }) => id === eventId);
@@ -708,7 +710,17 @@ function openLiveInspector(eventId) {
             },
             startDefectReport: (selected) => {
                 if (liveObserverElements.eventInspector) {
-                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events);
+                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createDefectReportNavigation({
+                        showCapturedEvent: () => {
+                            openLiveInspector(selected.id, true);
+                        },
+                        focusCreateDefectReport: () => {
+                            liveObserverElements.eventInspector
+                                ?.querySelector("#live-inspector-action-create-defect-report")
+                                ?.focus({ preventScroll: true });
+                        },
+                        closeToLiveFeed: closeInspectorAndReturnToEvents,
+                    }));
                 }
             },
             validationAvailable: (selected) => Boolean(validateEvent({

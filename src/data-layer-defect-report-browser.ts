@@ -5,6 +5,25 @@ import type {
   TimelineEvent,
 } from "./data-layer-defect-report.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
+import type { DefectReportBuilderNavigation } from "./data-layer-defect-report-ui.js";
+
+export interface DefectReportNavigationEffects {
+  showCapturedEvent(): void;
+  focusCreateDefectReport(): void;
+  closeToLiveFeed(): void;
+}
+
+export function createDefectReportNavigation(
+  effects: DefectReportNavigationEffects,
+): DefectReportBuilderNavigation {
+  return {
+    backToCapturedEvent() {
+      effects.showCapturedEvent();
+      effects.focusCreateDefectReport();
+    },
+    backToLiveFeed() { effects.closeToLiveFeed(); },
+  };
+}
 
 function issueId(pointer: string, index: number): string {
   return pointer.split("/").filter(Boolean).at(-1) ?? `issue-${index + 1}`;

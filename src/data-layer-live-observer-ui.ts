@@ -300,6 +300,7 @@ export function renderLiveInspector(
     action.type = "button";
     action.textContent = label;
     action.id = `live-inspector-action-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    if (label === "Create defect report") action.setAttribute("aria-label", `Create defect report for ${event.name}`);
     if (label === "Create validation from this event") action.dataset.action = "create-validation";
     action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
     const availability = label === "Validate" || label === "Revalidate"

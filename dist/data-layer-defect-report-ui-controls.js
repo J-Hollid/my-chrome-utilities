@@ -1,38 +1,5 @@
-import { filterTimelineEvents, generatePathnameSkeleton, supportingTimeline, toggleReportIssue, } from "./data-layer-defect-report.js";
-export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
-    for (const reportIssue of state.report().issues) {
-        const row = document.createElement("div");
-        const selected = document.createElement("input");
-        selected.type = "checkbox";
-        selected.checked = reportIssue.selected;
-        selected.id = `defect-issue-${reportIssue.id}`;
-        selected.addEventListener("change", () => { state.update(toggleReportIssue(state.report(), reportIssue.id)); state.refresh(); });
-        const label = document.createElement("label");
-        label.htmlFor = selected.id;
-        label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}`;
-        row.append(selected, label);
-        issues.append(row);
-        const methodLabel = document.createElement("label");
-        methodLabel.textContent = `${reportIssue.id} correction `;
-        const method = document.createElement("select");
-        for (const value of ["", "choose an allowed value", "enter a valid response", "apply the rule", "keep the rule generic"]) {
-            method.append(Object.assign(document.createElement("option"), { value, textContent: value || "Choose method" }));
-        }
-        const response = document.createElement("input");
-        response.placeholder = "Valid response";
-        const updateChoice = () => {
-            if (!method.value)
-                selectedChoices.delete(reportIssue.id);
-            else
-                selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: method.value, ...(response.value ? { response: response.value } : {}) });
-            state.refresh();
-        };
-        method.addEventListener("change", updateChoice);
-        response.addEventListener("input", updateChoice);
-        methodLabel.append(method, response);
-        expectedControls.append(methodLabel);
-    }
-}
+import { filterTimelineEvents, generatePathnameSkeleton, supportingTimeline, } from "./data-layer-defect-report.js";
+export { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 export function appendReproductionControls(controls, steps, context, state) {
     const startLabel = document.createElement("label");
     startLabel.textContent = "Reproduction starts at ";
