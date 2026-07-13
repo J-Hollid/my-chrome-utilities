@@ -102,6 +102,7 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(migrated[0].version, version + 2, "migration must preserve the newest current revision");
   assert.deepEqual(schemaRevisionChoices(migrated[0]), [version + 1, version], "migration must retain older revisions newest first");
   assert.equal(migrated[0].assignments.every(({ schemaId }) => schemaId === migrated[0].id), true, "migration must retarget assignments to stable identity");
+  assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary(legacy)), migrated, "restoring legacy storage must apply schema migration");
   assert.deepEqual(migrateSchemaLibrary(migrated), migrated, "schema migration must be idempotent");
   assert.deepEqual(legacy, legacySnapshot, "schema migration must not mutate legacy input");
 }

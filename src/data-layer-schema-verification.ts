@@ -235,7 +235,8 @@ export function restoreSchemaLibrary(serialized: string | null): SchemaDefinitio
   try {
     const parsed = JSON.parse(serialized);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((schema): schema is SchemaDefinition => !!schema && typeof schema.id === "string" && typeof schema.name === "string" && typeof schema.version === "number").map(clone);
+    const schemas = parsed.filter((schema): schema is SchemaDefinition => !!schema && typeof schema.id === "string" && typeof schema.name === "string" && typeof schema.version === "number");
+    return migrateSchemaLibrary(schemas);
   }
   catch { return []; }
 }

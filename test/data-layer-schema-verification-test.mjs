@@ -131,3 +131,4 @@ assert.deepEqual(migrated[0].assignments.map(({ schemaId, schemaVersion, version
   ["schema-product-listing", 3, "pinned"],
   ["schema-product-listing", undefined, "follow latest"],
 ]);
+assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary(legacySchemas)), migrated);

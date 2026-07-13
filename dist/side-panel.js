@@ -33,7 +33,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
@@ -296,7 +296,12 @@ let replaceEventLibraryArmed = false;
 let pendingEventLibraryDeletion;
 let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
-let schemas = restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+const storedSchemaLibrary = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+let schemas = restoreSchemaLibrary(storedSchemaLibrary);
+const restoredSchemaLibrary = serializeSchemaLibrary(schemas);
+if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
+    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
+}
 let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
@@ -738,7 +743,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 const manual = schemas.find((schema) => schema.id === manualSchemaOverrides[selected.id]);
                 return manual ? validateWithSchema(event, manual, schemas).state : validateEvent(event, schemas).state;
             },
-            manualSchemaChoices: () => schemas.map((schema) => ({ id: schema.id, label: `${schema.name} v${schema.version}` })),
+            manualSchemaChoices: () => assignableSchemas(schemas).map((schema) => ({ id: schema.id, label: `${schema.name} v${schema.version}` })),
             selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]: schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
             updateValidation: (selectedId, validation) => {
                 const selected = liveObserverState.events.find((candidate) => candidate.id === selectedId);
@@ -821,7 +826,7 @@ function renderEventTemplateLibrary() {
     libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
     if (selectable && editor) {
         const selected = editor.template.schemaId ?? "";
-        libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic schema" }), ...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
+        libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic schema" }), ...assignableSchemas(schemas).map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
         libraryDraftSchemaSelector.value = selected;
     }
 }
@@ -868,10 +873,7 @@ function renderSchemas() {
             duplicate.textContent = "Duplicate";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
-                const withDraft = schema.workingDraft ? schema : schema.published === false ? schema : createSchemaWorkingDraft(schema);
-                schemas = schemas.map((candidate) => candidate.id === schema.id ? withDraft : candidate);
-                persistSchemaLibrary();
-                schemaDraft = schemaEditorDraft(withDraft);
+                schemaDraft = schemaEditorDraft(schema);
                 renderSchemaDraft();
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version)]; persistSchemaLibrary(); renderSchemas(); });
@@ -920,7 +922,13 @@ function renderSchemaDraft() {
     const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
     const status = document.querySelector("#schema-editor-status");
     if (status)
-        status.textContent = storedSchema?.published === false ? `Unpublished new schema draft · ${pendingChanges} pending changes` : storedSchema ? `Working draft based on revision ${storedSchema.version} · ${pendingChanges} pending changes` : "Unsaved new schema";
+        status.textContent = storedSchema?.published === false
+            ? `Unpublished new schema draft · ${pendingChanges} pending changes`
+            : storedSchema?.workingDraft
+                ? `Working draft based on revision ${storedSchema.version} · ${pendingChanges} pending changes`
+                : storedSchema
+                    ? `Current revision ${storedSchema.version} · no working draft`
+                    : "Unsaved new schema";
     if (schemaEditorName)
         schemaEditorName.value = draft.name;
     if (schemaEditorTarget)

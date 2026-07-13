@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=67279b81d1cc80daad0e372839ebef899a1611823c3c5df5d70ce1fc385f2ea6
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T21:06:17.747776674Z","feature_name":"Data layer schema assignment","feature_path":"features/data-layer-schema-assignment.feature","background_hash":"5286618d8432ba18e195622dc77eb1457143d0a7b8f436a4a58331303085f8c5","implementation_hash":"sha256:1b60d5a69b0a0ce38a2058c83d7eefa2f6be2838944a344698731f895db92bf3","scenarios":[{"index":2,"name":"Data layer schema assignment 003","scenario_hash":"34559bc0fa940d24a53b3dc7f14e620ee17f789f14f35c0d36303b363af99d17","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:06:17.747776674Z"},{"index":7,"name":"Data layer schema assignment 008","scenario_hash":"8bd5ce6d2ccd26df2de11c0c2cbf31a5dc859d7f2c69cd8b91c074d4e0854b94","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:06:17.747776674Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema assignment
 
   Background:

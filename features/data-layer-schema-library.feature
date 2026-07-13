@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3d1aa191cd70207385c3d6a0bb70703d49e5e94142dfefe75f6ded7d9583cb29
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T21:06:32.933615630Z","feature_name":"Data layer schema Library","feature_path":"features/data-layer-schema-library.feature","background_hash":"70173ad00b28c1d3426ab0b037ac638e267465dcc24ccbc22b862fa9f3253ee5","implementation_hash":"sha256:596d5be53e06155329ff2252193fd0efca28eca3d2adb0f56e7d989e03aacf8d","scenarios":[{"index":2,"name":"Data layer schema Library 003","scenario_hash":"b512f42361300ee2c468be5cf6785e6900ca6cb4e54170bc6845e01e52af6a7a","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:06:32.933615630Z"},{"index":4,"name":"Data layer schema Library 005","scenario_hash":"7561596af6df9ae6167bb051f6be9f8888410fbbaae75d2520526df7de56e317","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:06:32.933615630Z"},{"index":7,"name":"Data layer schema Library 008","scenario_hash":"1559e06bd4916409ec14cf9cd49076df583f095e1991c7ad9d9d4ed7e4c4759b","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:06:32.933615630Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema Library
 
   Background:

@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=3307d37daa5381da332296513361cd531c6bb8ee5367b153c064d98806e9e9ac
+# mutation-stamp: sha256=b7deb671a83b502bd0847cef4875f874166bbf8fe62e568d134b3673d75ff8cb
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-12T21:44:08.024469923Z","feature_name":"Data layer guided validation creation","feature_path":"features/data-layer-guided-validation-creation.feature","background_hash":"24144acb484fa8774907f3c3fbaa96d8e12aa6ecda41b40e57eece58f6be3168","implementation_hash":"sha256:guided-schema-order-architect-v1","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-13T21:04:51.937452793Z","feature_name":"Data layer guided validation creation","feature_path":"features/data-layer-guided-validation-creation.feature","background_hash":"24144acb484fa8774907f3c3fbaa96d8e12aa6ecda41b40e57eece58f6be3168","implementation_hash":"sha256:96b20267af33970cdcc9513644316efcec2c811c55527dd0790de4275daa6d9c","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer guided validation creation

@@ -64,8 +64,38 @@
    :assignments [{:schemaId "schema-product-listing" :schemaVersion 3 :versionPolicy "pinned"}
                  {:schemaId "schema-product-listing" :schemaVersion nil :versionPolicy "follow latest"}]})
 
+(def ^:private expected-ui
+  {:history
+   {:options ["Revision 3" "Revision 2" "Revision 1"]
+    :comparison "Revision 2 compared with current revision 4. 1 historical properties; 1 current properties."
+    :actions ["Duplicate from revision" "Restore this revision"]
+    :separateRows 0
+    :assignmentChoices ["Product listing version 4"]
+    :openedWithoutMutation true
+    :status "Working draft based on revision 4 · 3 pending changes"}
+   :duplication
+   {:name "Product listing revision 2 copy"
+    :published false
+    :version 1
+    :assignments 0
+    :sourceUnchanged 4
+    :assignableChoices ["Product listing version 4"]}
+   :restoration
+   {:review "Product listing revision 2 will replace 3 pending draft changes and create a working draft. Current revision 4 remains active; publication will create revision 5."
+    :cancel {:dialogClosed true :draftUnchanged true :current 4}
+    :confirmed {:current 4 :source 2 :pending ["Restore revision 2"]}}
+   :publication
+   {:review "Product listing working draft will be compared with current revision 4; confirmation publishes revision 5."
+    :current 5
+    :history [1 2 3 4]
+    :draftCleared true}})
+
+(def ^:private policy-keys
+  {"pinned to 3" :pinned
+   "follow latest" :latest})
+
 (defn- policy-revision [policy observation]
-  (get-in observation [:policies (if (= policy "pinned to 3") :pinned :latest)]))
+  (get-in observation [:policies (get policy-keys policy)]))
 
 (defn- assert-policy-example! [example observation]
   (when-let [policy (support/example-value example "version_policy")]
@@ -86,6 +116,8 @@
                    "Historical duplication or restoration changed the current revision." observation)
   (support/assert! (= expected-migration (:migration observation))
                    "Legacy revision rows did not migrate to one stable schema." observation)
+  (support/assert! (= expected-ui (:ui observation))
+                   "Revision history UI changed lifecycle state or exposed an assignable draft or historical row." observation)
   (support/assert! (= ["Add another property" "Review draft" "Publish revision"] (:completionActions observation))
                    "Guided draft completion actions are missing or unordered." observation)
   (assert-policy-example! example observation))
@@ -103,3 +135,7 @@
            :applies? (fn [world] (or (entry-steps (:text spec)) (:schema-revision-lifecycle world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs [feature-file] #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-13T23:07:30.770828267+02:00", :module-hash "481485422", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "854328778"} {:id "def/feature-file", :kind "def", :line 4, :end-line nil, :hash "1100543844"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line nil, :hash "-1618529344"} {:id "def/entry-steps", :kind "def", :line 7, :end-line nil, :hash "63856129"} {:id "defn-/load-observation!", :kind "defn-", :line 21, :end-line nil, :hash "1102314959"} {:id "defn-/observation!", :kind "defn-", :line 29, :end-line nil, :hash "204904339"} {:id "def/expected-working-draft", :kind "def", :line 31, :end-line nil, :hash "547774403"} {:id "def/expected-publication", :kind "def", :line 44, :end-line nil, :hash "29558741"} {:id "def/expected-history", :kind "def", :line 53, :end-line nil, :hash "168465605"} {:id "def/expected-migration", :kind "def", :line 59, :end-line nil, :hash "1243713517"} {:id "def/expected-ui", :kind "def", :line 67, :end-line nil, :hash "-116718411"} {:id "def/policy-keys", :kind "def", :line 93, :end-line nil, :hash "-2123497748"} {:id "defn-/policy-revision", :kind "defn-", :line 97, :end-line nil, :hash "1831898148"} {:id "defn-/assert-policy-example!", :kind "defn-", :line 100, :end-line nil, :hash "558105691"} {:id "defn-/assert-lifecycle!", :kind "defn-", :line 108, :end-line nil, :hash "1872329838"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line nil, :hash "-813049935"} {:id "def/handlers", :kind "def", :line 132, :end-line nil, :hash "350285377"}]}
+;; clj-mutate-manifest-end

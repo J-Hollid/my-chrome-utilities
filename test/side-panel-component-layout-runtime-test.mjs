@@ -15,6 +15,7 @@ let schemaViewContainmentObservation;
 let payloadPathFilterPickerObservation;
 const reproductionStepActionRowsObservations = [];
 let schemaRevisionLifecycleObservation;
+let schemaRevisionLifecycleUiObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -1032,6 +1033,76 @@ const schemaRevisionLifecycleRuntime = `(async () => {
   };
 })()`;
 
+const schemaRevisionLifecycleUiRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const productRow = () => Array.from(q("#schema-list").querySelectorAll("li")).find((row) => row.textContent.includes("Product listing · current revision 4"));
+  const productAction = (label) => {
+    const button = Array.from(productRow()?.querySelectorAll("button") ?? []).find((candidate) => candidate.textContent === label);
+    if (!button) throw new Error("Missing Product listing " + label + " action");
+    return button;
+  };
+  const storedProduct = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").find(({ id }) => id === "schema-product-listing");
+  q("#data-layer-view-schemas").click();
+  q("#schema-subview-schemas").click();
+  const beforeOpen = structuredClone(storedProduct());
+  const initialRows = Array.from(q("#schema-list").querySelectorAll("li")).map((row) => row.childNodes[0]?.textContent?.trim() ?? "");
+  const assignmentChoices = Array.from(q("#schema-assignment-schema").options).map((option) => option.textContent);
+  productAction("Edit working draft").click();
+  const opened = storedProduct();
+  q("#schema-revision-history summary").click();
+  const historyOptions = Array.from(q("#schema-revision-selector").options).map((option) => option.textContent);
+  q("#schema-revision-selector").value = "2";
+  q("#schema-revision-selector").dispatchEvent(new Event("change", { bubbles:true }));
+  const history = {
+    options:historyOptions,
+    comparison:q("#schema-revision-comparison").textContent,
+    actions:Array.from(q("#schema-revision-history").querySelectorAll("button")).map((button) => button.textContent),
+    separateRows:initialRows.filter((text) => /revision [123](?:\\D|$)/i.test(text)).length,
+    assignmentChoices,
+    openedWithoutMutation:JSON.stringify(opened) === JSON.stringify(beforeOpen),
+    status:q("#schema-editor-status").textContent,
+  };
+  q("#duplicate-schema-revision").click();
+  const storedAfterDuplicate = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]");
+  const duplicate = storedAfterDuplicate.find(({ name, published }) => published === false && /revision 2 copy/.test(name));
+  const duplication = {
+    name:duplicate?.name,
+    published:duplicate?.published,
+    version:duplicate?.version,
+    assignments:duplicate?.assignments?.length,
+    sourceUnchanged:storedAfterDuplicate.find(({ id }) => id === "schema-product-listing")?.version,
+    assignableChoices:Array.from(q("#schema-assignment-schema").options).map((option) => option.textContent),
+  };
+  productAction("Edit working draft").click();
+  q("#schema-revision-selector").value = "2";
+  q("#restore-schema-revision").click();
+  const restorationReview = q("#schema-revision-review-summary").textContent;
+  q("#cancel-schema-revision").click();
+  const cancel = {
+    dialogClosed:!q("#schema-revision-review").open,
+    draftUnchanged:JSON.stringify(storedProduct().workingDraft) === JSON.stringify(beforeOpen.workingDraft),
+    current:storedProduct().version,
+  };
+  q("#restore-schema-revision").click();
+  q("#confirm-schema-revision").click();
+  const restored = storedProduct();
+  const restoration = {
+    review:restorationReview,
+    cancel,
+    confirmed:{ current:restored.version, source:restored.workingDraft?.sourceVersion, pending:restored.workingDraft?.pendingChanges },
+  };
+  q("#save-schema").click();
+  const publicationReview = q("#schema-revision-review-summary").textContent;
+  q("#confirm-schema-revision").click();
+  const published = storedProduct();
+  return {
+    history,
+    duplication,
+    restoration,
+    publication:{ review:publicationReview, current:published.version, history:published.revisionHistory.map(({ version }) => version), draftCleared:!published.workingDraft },
+  };
+})()`;
+
 const schemaSourceCreationRuntime = `(() => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
@@ -1859,7 +1930,6 @@ try {
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
-          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Generic pageview version 4", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
@@ -2134,10 +2204,10 @@ try {
       schemaMasterVisible:true,
       actions:["Edit", "Duplicate", "Disable", "Delete"],
       duplicateCount:3,
-      revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2.", status:"Working draft based on revision 2 · 0 pending changes" },
+      revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2.", status:"Current revision 2 · no working draft" },
       closeReview:{ open:false, summary:"", result:"Working draft retained without publishing." },
       rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
-      assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, pathnameCondition:null, versionPolicy:"pinned", enabled:true },
+      assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
       rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
@@ -2216,6 +2286,39 @@ try {
       });
     }
     if (width === 720) {
+      await evaluate(socket, `(() => {
+        const assignment = { id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", schemaVersion:3, sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"pinned", enabled:true };
+        const revision = (version) => ({ id:"schema-product-listing", name:"Product listing", version, published:true, document:{ type:"object", properties:{ ["revision_" + version]:{ type:"string" } } }, assignments:[assignment] });
+        const current = {
+          ...revision(4),
+          revisionHistory:[revision(1), revision(2), revision(3)],
+          workingDraft:{ baseVersion:4, sourceVersion:4, document:{ type:"object", properties:{ draft_field:{ type:"string" } } }, assignments:[assignment], pendingChanges:["Add draft_a", "Add draft_b", "Add draft_c"] },
+        };
+        const checkout = { id:"schema:checkout:1", name:"Checkout", version:1, published:false, document:{ type:"object" }, assignments:[], workingDraft:{ baseVersion:0, sourceVersion:0, document:{ type:"object", properties:{ checkout_id:{ type:"string" } } }, assignments:[], pendingChanges:["Add checkout_id"] } };
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([current, checkout]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaRevisionLifecycleUiObservation = await evaluate(socket, schemaRevisionLifecycleUiRuntime);
+      assert.deepEqual(schemaRevisionLifecycleUiObservation, {
+        history:{
+          options:["Revision 3", "Revision 2", "Revision 1"],
+          comparison:"Revision 2 compared with current revision 4. 1 historical properties; 1 current properties.",
+          actions:["Duplicate from revision", "Restore this revision"],
+          separateRows:0,
+          assignmentChoices:["Product listing version 4"],
+          openedWithoutMutation:true,
+          status:"Working draft based on revision 4 · 3 pending changes",
+        },
+        duplication:{ name:"Product listing revision 2 copy", published:false, version:1, assignments:0, sourceUnchanged:4, assignableChoices:["Product listing version 4"] },
+        restoration:{
+          review:"Product listing revision 2 will replace 3 pending draft changes and create a working draft. Current revision 4 remains active; publication will create revision 5.",
+          cancel:{ dialogClosed:true, draftUnchanged:true, current:4 },
+          confirmed:{ current:4, source:2, pending:["Restore revision 2"] },
+        },
+        publication:{ review:"Product listing working draft will be compared with current revision 4; confirmation publishes revision 5.", current:5, history:[1,2,3,4], draftCleared:true },
+      }, "Schema revision lifecycle UI callbacks violated their browser contract");
       schemaRevisionLifecycleObservation = await evaluate(socket, schemaRevisionLifecycleRuntime);
       assert.deepEqual(schemaRevisionLifecycleObservation, {
         workingDraft:{ identity:"schema-product-listing", current:3, base:3, source:3, twoPending:["Add page_type rule", "Add page_name rule"], pending:["Add page_type rule", "Add page_name rule", "Add Checkout assignment"], properties:["product_id", "page_type", "page_name"], durable:true, currentProperties:["product_id"], activeCheckout:false, sameIdentity:true },
@@ -2249,7 +2352,7 @@ try {
     console.log(JSON.stringify({ reproductionStepActionRows:reproductionStepActionRowsObservations }));
   }
   if (process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1") {
-    console.log(JSON.stringify({ schemaRevisionLifecycle:{ ...schemaRevisionLifecycleObservation, completionActions:guidedValidationObservation?.saved?.nextActions ?? [] } }));
+    console.log(JSON.stringify({ schemaRevisionLifecycle:{ ...schemaRevisionLifecycleObservation, ui:schemaRevisionLifecycleUiObservation, completionActions:guidedValidationObservation?.saved?.nextActions ?? [] } }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
