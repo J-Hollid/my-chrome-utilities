@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=adde8d913229b0c5995f66c7f26d98a1b76d937e7cf219c1a7d51cc5dd2e4294
+# mutation-stamp: sha256=61899ea36c07d53aa9bbbabeabb644a881b09adab89e7c4cb8201051e84a6453
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-13T21:08:05.112729443Z","feature_name":"Data layer schema revision lifecycle","feature_path":"features/data-layer-schema-revision-lifecycle.feature","background_hash":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","implementation_hash":"sha256:01ee295ec3b75ffa40ea926ae5df4c325f94bab2156d201592ebdcc6e22449d0","scenarios":[{"index":4,"name":"Data layer schema revision lifecycle 005","scenario_hash":"552d114a8bf02b73e32d2fce897583dd8c26b73ef89e4e6437a9b89647b93cc0","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:08:05.112729443Z"}]}
+# {"version":1,"tested_at":"2026-07-13T22:35:59.965735707Z","feature_name":"Data layer schema revision lifecycle","feature_path":"features/data-layer-schema-revision-lifecycle.feature","background_hash":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","implementation_hash":"sha256:01ee295ec3b75ffa40ea926ae5df4c325f94bab2156d201592ebdcc6e22449d0","scenarios":[{"index":4,"name":"Data layer schema revision lifecycle 005","scenario_hash":"552d114a8bf02b73e32d2fce897583dd8c26b73ef89e4e6437a9b89647b93cc0","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T21:08:05.112729443Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer schema revision lifecycle

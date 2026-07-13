@@ -1264,6 +1264,7 @@ const guidedDraftContinuationReloadRuntime = `(async () => {
     context:section.querySelector("h5").textContent,
     heading:document.querySelector("#guided-validation-heading").textContent,
     destinationAbsent:!document.querySelector("#guided-schema-destination") && !document.querySelector("#guided-schema-picker"),
+    expectedTypeSource:document.querySelector("#guided-expected-type-hint").textContent,
   };
 })()`;
 
@@ -2775,7 +2776,7 @@ try {
       const installContinuationFixture = (selectedSchemaId) => evaluate(socket, `(() => {
         const assignment = { id:"assignment:product", name:"Product pages", schemaId:"schema-product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathConditions:[{ matchType:"Exact path", expression:"/" }], enabled:true };
         const product = { id:"schema-product-listing", name:"Product listing", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[assignment], workingDraft:{ baseVersion:3, sourceVersion:3, document:{ type:"object", properties:{ page_type:{ type:"string" }, page_name:{ type:"string" } } }, assignments:[assignment], pendingChanges:["Add page_type", "Add page_name"] } };
-        const checkout = { id:"schema-checkout", name:"Checkout", version:2, published:true, document:{ type:"object", properties:{ checkout_id:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:2, sourceVersion:2, document:{ type:"object", properties:{ checkout_id:{ type:"string" }, page_name:{ type:"string" } } }, assignments:[], pendingChanges:["Add page_name"] } };
+        const checkout = { id:"schema-checkout", name:"Checkout", version:2, published:false, document:{ type:"object", properties:{ checkout_id:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:2, sourceVersion:2, document:{ type:"object", properties:{ checkout_id:{ type:"string" }, page_name:{ type:"string" } } }, assignments:[], pendingChanges:["Add page_name"] } };
         localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([product, checkout]));
         localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
         localStorage.removeItem("my-chrome-utilities.guided-validation-continuations.v1");
@@ -2809,7 +2810,7 @@ try {
       await evaluate(socket, `(() => { localStorage.setItem("my-chrome-utilities.schema-library.v1", ${JSON.stringify(continuationSchemas)}); localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]"); localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1", ${JSON.stringify(continuationSelection)}); return true; })()`);
       await reloadPanel(socket);
       guidedDraftContinuationReloadObservation = await evaluate(socket, guidedDraftContinuationReloadRuntime);
-      assert.deepEqual(guidedDraftContinuationReloadObservation, { context:"Checkout working draft", heading:"Define requirement", destinationAbsent:true }, "Guided draft continuation did not survive reload");
+      assert.deepEqual(guidedDraftContinuationReloadObservation, { context:"Checkout working draft", heading:"Define requirement", destinationAbsent:true, expectedTypeSource:"String — Checkout version 2" }, "Guided draft continuation did not survive reload");
     }
     if (width === 720 && runSchemaRevisionLifecycleRuntime) {
       await evaluate(socket, `(() => {

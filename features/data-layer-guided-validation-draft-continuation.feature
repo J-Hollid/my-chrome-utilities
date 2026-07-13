@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=e5b70c4d85b5f18af56b97d6c359f94c664bbbcc5d7fd74ecfeef28bbe4b7a76
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T22:35:14.260416698Z","feature_name":"Data layer guided validation draft continuation","feature_path":"features/data-layer-guided-validation-draft-continuation.feature","background_hash":"4c94748d2a79e1bfcb1f12e49525736efaa82be28c091c6246eae46c1776ddd1","implementation_hash":"sha256:6659fd173f8ddfb50064d11c0fd3971b460343fdb851361bf0e97c4c04155c43","scenarios":[{"index":4,"name":"Data layer guided validation draft continuation 005","scenario_hash":"9624897639980ede2e4d16e8c86b4013f34799a62e0453e6e342d0f9be369d77","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T22:35:14.260416698Z"},{"index":7,"name":"Data layer guided validation draft continuation 008","scenario_hash":"90fd08340129df6256f47447eab516649d4cb3f9f7a1ff7ea9b0786857aa724e","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T22:35:14.260416698Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided validation draft continuation
 
   Background:
