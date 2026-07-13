@@ -7,7 +7,8 @@ Feature: Data layer schema rule authoring
   Scenario: Data layer schema rule authoring 001
     When the property tree is displayed
     Then object and array properties can be expanded and collapsed
-    And each property row shows human name, complete path, observed type, example value, and active-rule count
+    And each observed property row shows human name, complete path, observed type, example value, and active-rule count
+    And each manual property row shows human name, complete path, declared type, Manual origin, and active-rule count
     And nested path /commerce/order/id remains associated with its containing objects
     And property values are not editable as schema rules
 

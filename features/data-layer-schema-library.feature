@@ -44,6 +44,7 @@ Feature: Data layer schema Library
     When the schema editor is displayed
     Then identity, target, and parent schema appear before rule authoring
     And Property rules and General rules are the primary editing sections
+    And Add property changes the working-draft data model independently of Add rule
     And Validation examples, Assignments, generated schema document, and Revision history are separate disclosures
     And the generated schema document and Revision history start collapsed
     And changing disclosure state does not save or discard the schema draft
