@@ -36,10 +36,10 @@ export function addManualReproductionStep(steps, visitId, id, template) {
     const text = reproductionStepPreview(template);
     if (!text)
         throw new Error("Complete the step template before adding it.");
-    const anchorIndex = steps.findIndex((step) => step.kind !== "manual" && step.visitId === visitId);
+    const anchorIndex = steps.findIndex((step) => step.kind === "pathname" && step.visitId === visitId);
     if (anchorIndex < 0)
         throw new Error(`Unknown pathname segment: ${visitId}`);
-    const nextAnchorOffset = steps.slice(anchorIndex + 1).findIndex((step) => step.kind !== "manual");
+    const nextAnchorOffset = steps.slice(anchorIndex + 1).findIndex((step) => step.kind === "pathname");
     const insertionIndex = nextAnchorOffset < 0 ? steps.length : anchorIndex + 1 + nextAnchorOffset;
     const anchor = steps[anchorIndex];
     return renumberReproductionSteps([
@@ -54,12 +54,12 @@ export function adjustManualReproductionStep(steps, id, template) {
         throw new Error("Complete the step template before saving it.");
     if (!steps.some((step) => step.kind === "manual" && step.id === id))
         throw new Error(`Unknown manual step: ${id}`);
-    return renumberReproductionSteps(steps.map((step) => step.id === id
+    return renumberReproductionSteps(steps.map((step) => step.kind === "manual" && step.id === id
         ? { ...step, text, template: { ...template } }
         : { ...step }));
 }
 export function removeManualReproductionStep(steps, id) {
-    return renumberReproductionSteps(steps.filter((step) => step.id !== id).map((step) => ({ ...step })));
+    return renumberReproductionSteps(steps.filter((step) => step.kind !== "manual" || step.id !== id).map((step) => ({ ...step })));
 }
 export function moveManualReproductionStep(steps, id, direction) {
     const index = steps.findIndex((step) => step.kind === "manual" && step.id === id);
@@ -68,7 +68,9 @@ export function moveManualReproductionStep(steps, id, direction) {
     const targetIndex = index + (direction === "earlier" ? -1 : 1);
     const target = steps[targetIndex];
     if (!target || target.kind !== "manual" || target.visitId !== steps[index].visitId) {
-        return steps.map((step) => ({ ...step, ...(step.template ? { template: { ...step.template } } : {}) }));
+        return steps.map((step) => step.kind === "manual"
+            ? { ...step, template: { ...step.template } }
+            : { ...step });
     }
     const reordered = steps.map((step) => ({ ...step }));
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];

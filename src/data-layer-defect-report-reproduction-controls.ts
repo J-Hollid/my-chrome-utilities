@@ -41,7 +41,7 @@ export function appendReproductionControls(
   const composer = document.createElement("section"); composer.className = "defect-reproduction-composer"; composer.setAttribute("aria-label", "Reproduction step composer");
 
   const selectedPathname = (): string => state.report().reproductionSteps
-    .find((step) => step.kind !== "manual" && step.visitId === selectedVisitId)?.pathname ?? "";
+    .find((step) => step.kind === "pathname" && step.visitId === selectedVisitId)?.pathname ?? "";
 
   let renderComposer: () => void;
   let renderSteps: () => void;
@@ -64,27 +64,27 @@ export function appendReproductionControls(
     adjustActions.clear();
     steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
       const item = document.createElement("li");
-      item.dataset.reproductionStepKind = step.kind ?? "pathname";
+      item.dataset.reproductionStepKind = step.kind;
       item.dataset.visitId = step.visitId;
-      if (step.kind === "manual" && step.id) {
+      if (step.kind === "manual") {
         item.dataset.reproductionStepId = step.id;
         const text = document.createElement("span"); text.textContent = step.text;
         const adjust = document.createElement("button"); adjust.type = "button"; adjust.textContent = "Adjust"; adjust.dataset.adjustStep = step.id;
         adjustActions.set(step.id, adjust);
         adjust.addEventListener("click", () => {
-          selectedVisitId = step.visitId; editingId = step.id; draft = step.template ? copyTemplate(step.template) : { kind: "custom", text: step.text.replace(/^\d+\.\s*/, "") };
+          selectedVisitId = step.visitId; editingId = step.id; draft = copyTemplate(step.template);
           stage = "configure"; renderComposer();
         });
         const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
-        remove.addEventListener("click", () => updateSteps(removeManualReproductionStep(state.report().reproductionSteps, step.id!)));
+        remove.addEventListener("click", () => updateSteps(removeManualReproductionStep(state.report().reproductionSteps, step.id)));
         const earlier = document.createElement("button"); earlier.type = "button"; earlier.textContent = "Move earlier";
         const previous = state.report().reproductionSteps[index - 1];
         earlier.disabled = previous?.kind !== "manual" || previous.visitId !== step.visitId;
-        earlier.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id!, "earlier")));
+        earlier.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "earlier")));
         const later = document.createElement("button"); later.type = "button"; later.textContent = "Move later";
         const following = state.report().reproductionSteps[index + 1];
         later.disabled = following?.kind !== "manual" || following.visitId !== step.visitId;
-        later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id!, "later")));
+        later.addEventListener("click", () => updateSteps(moveManualReproductionStep(state.report().reproductionSteps, step.id, "later")));
         const segmentNote = document.createElement("small"); segmentNote.textContent = `Belongs to ${step.pathname}; choose another pathname segment to move across an anchor.`;
         item.append(text, adjust, remove, earlier, later, segmentNote);
         return item;

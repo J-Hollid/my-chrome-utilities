@@ -81,14 +81,21 @@ export type ReproductionStepTemplate =
   | { kind: "login"; persona: string }
   | { kind: "scroll"; target: "bottom" | "top" | "component" | "custom"; detail?: string }
   | { kind: "custom"; text: string };
-export interface ReproductionStep {
+export interface ReproductionPathnameStep {
+  kind: "pathname";
   visitId: string;
   pathname: string;
   text: string;
-  kind?: "pathname" | "manual";
-  id?: string;
-  template?: ReproductionStepTemplate;
 }
+export interface ReproductionManualStep {
+  kind: "manual";
+  id: string;
+  visitId: string;
+  pathname: string;
+  text: string;
+  template: ReproductionStepTemplate;
+}
+export type ReproductionStep = ReproductionPathnameStep | ReproductionManualStep;
 
 export interface TimelineEvent {
   id: string;

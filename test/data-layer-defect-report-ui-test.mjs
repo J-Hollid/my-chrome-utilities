@@ -269,6 +269,10 @@ const previewTemplate = (templateText, configure) => {
   return text;
 };
 let reproductionSecretFieldsAbsent = false;
+const productCardPreview = previewTemplate("Click component", () => {
+  const name = element(root, ({ dataset }) => dataset.reproductionField === "componentName");
+  name.value = "Product card"; name.dispatch("input");
+});
 const loginPreview = previewTemplate("Log in as user", () => {
   const persona = element(root, ({ dataset }) => dataset.reproductionField === "persona");
   persona.value = "returning customer"; persona.dispatch("input");
@@ -559,10 +563,20 @@ process.stdout.write(`${JSON.stringify({
       templateActions: reproductionTemplateActions,
       noStepBeforeSubmit: initialReproductionStepCount === 2,
       clickPreview,
+      clickExamples: [
+        { componentName: "Checkout", componentDetails: "description sticky footer button", stepText: clickPreview },
+        { componentName: "Product card", componentDetails: "no description", stepText: productCardPreview },
+      ],
       businessFields: reproductionBusinessFields,
       loginPreview,
       secretFieldsAbsent: reproductionSecretFieldsAbsent,
       scrollPreviews,
+      scrollExamples: [
+        "bottom of the page",
+        "top of the page",
+        "component Order summary",
+        "custom middle of results",
+      ].map((scrollTarget, index) => ({ scrollTarget, stepText: scrollPreviews[index] })),
       customPreview,
       customBlankSubmissionUnavailable,
       manualActions,

@@ -25,7 +25,7 @@ export function appendReproductionControls(controls, steps, context, state) {
     composer.className = "defect-reproduction-composer";
     composer.setAttribute("aria-label", "Reproduction step composer");
     const selectedPathname = () => state.report().reproductionSteps
-        .find((step) => step.kind !== "manual" && step.visitId === selectedVisitId)?.pathname ?? "";
+        .find((step) => step.kind === "pathname" && step.visitId === selectedVisitId)?.pathname ?? "";
     let renderComposer;
     let renderSteps;
     const updateSteps = (reproductionSteps) => {
@@ -46,9 +46,9 @@ export function appendReproductionControls(controls, steps, context, state) {
         adjustActions.clear();
         steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
             const item = document.createElement("li");
-            item.dataset.reproductionStepKind = step.kind ?? "pathname";
+            item.dataset.reproductionStepKind = step.kind;
             item.dataset.visitId = step.visitId;
-            if (step.kind === "manual" && step.id) {
+            if (step.kind === "manual") {
                 item.dataset.reproductionStepId = step.id;
                 const text = document.createElement("span");
                 text.textContent = step.text;
@@ -60,7 +60,7 @@ export function appendReproductionControls(controls, steps, context, state) {
                 adjust.addEventListener("click", () => {
                     selectedVisitId = step.visitId;
                     editingId = step.id;
-                    draft = step.template ? copyTemplate(step.template) : { kind: "custom", text: step.text.replace(/^\d+\.\s*/, "") };
+                    draft = copyTemplate(step.template);
                     stage = "configure";
                     renderComposer();
                 });

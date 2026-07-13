@@ -271,7 +271,7 @@ assert.deepEqual(removeTimelineSelection([
 
 const detailed = generateReportDetails({
   ...corrected,
-  reproductionSteps: [{ visitId: "visit-1", pathname: "/products", text: "Open a product" }],
+  reproductionSteps: [{ kind: "pathname", visitId: "visit-1", pathname: "/products", text: "Open a product" }],
   timeline: supportingTimeline(timeline, [{ eventId: "purchase", includeValidation: true }]),
 });
 assert.match(detailed.summary, /purchase/);
