@@ -22,7 +22,6 @@ import { createLiveNotificationController } from "./data-layer-live-notification
 import { createTargetPathStatusController, targetPathStatusForObservation, } from "./data-layer-target-path-status.js";
 import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
-import { nestedTimeline, timelineEventHeading, } from "./data-layer-timeline.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
@@ -61,7 +60,6 @@ const historyPathInput = document.querySelector("#history-path");
 const historyPathDisplay = document.querySelector("#history-path-display");
 const historyPathStatus = document.querySelector("#history-path-status");
 const sessionHistoryPath = document.querySelector("#session-history-path");
-const sessionTimeline = document.querySelector("#session-timeline");
 const sessionWarning = document.querySelector("#session-warning");
 const restartObservationButton = document.querySelector("#restart-observation");
 const observationTargetElements = findObservationTargetElements();
@@ -1883,83 +1881,15 @@ async function loadSavedSessionFile() {
             savedSessionFileInput.value = "";
     }
 }
-function expandedTimelinePageIndexes() {
-    const expandedIndexes = new Set();
-    if (!sessionTimeline) {
-        return expandedIndexes;
-    }
-    const pages = Array.from(sessionTimeline.querySelectorAll(":scope > li > details"));
-    pages.forEach((page, index) => {
-        if (page.open) {
-            expandedIndexes.add(index);
-        }
-    });
-    return expandedIndexes;
-}
 function renderSessionState() {
     const session = dataLayerSessionState.session;
     if (sessionHistoryPath) {
         sessionHistoryPath.textContent = session?.historyPath ?? "";
     }
-    if (sessionTimeline) {
-        const expandedPageIndexes = expandedTimelinePageIndexes();
-        sessionTimeline.replaceChildren(...nestedTimeline(session?.timeline ?? []).map((page, index) => renderTimelinePage(page, expandedPageIndexes.has(index))));
-    }
     if (sessionWarning) {
         sessionWarning.textContent = dataLayerSessionState.warning ?? "";
     }
     renderLiveContextActions();
-}
-function renderTimelinePage(page, expanded = false) {
-    const item = document.createElement("li");
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    const eventList = document.createElement("ul");
-    details.open = expanded;
-    summary.textContent = page.url;
-    eventList.append(...page.events.map(renderTimelineEvent));
-    details.append(summary, eventList);
-    item.append(details);
-    return item;
-}
-function renderTimelineEvent(event) {
-    const item = document.createElement("li");
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    const definitionList = document.createElement("dl");
-    summary.textContent = timelineEventHeading(event);
-    appendDefinition(definitionList, "Event", event.name);
-    appendDefinition(definitionList, "URL", event.url);
-    appendDefinition(definitionList, "Time", event.timestamp);
-    appendDefinition(definitionList, "Path", event.observerPath);
-    appendDefinition(definitionList, "Payload", event.payload);
-    appendDefinition(definitionList, "Raw", event.rawValue);
-    details.append(summary, definitionList);
-    if (event.payloadProperties.length > 0) {
-        details.append(renderPayloadProperties(event.payloadProperties));
-    }
-    item.append(details);
-    return item;
-}
-function renderPayloadProperties(properties) {
-    const list = document.createElement("ul");
-    list.append(...properties.map(renderPayloadProperty));
-    return list;
-}
-function renderPayloadProperty(property) {
-    const item = document.createElement("li");
-    item.textContent = `${property.name}: ${property.value}`;
-    return item;
-}
-function appendDefinition(list, label, value) {
-    if (!value) {
-        return;
-    }
-    const term = document.createElement("dt");
-    const description = document.createElement("dd");
-    term.textContent = label;
-    description.textContent = value;
-    list.append(term, description);
 }
 function renderObserverState() {
     renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());

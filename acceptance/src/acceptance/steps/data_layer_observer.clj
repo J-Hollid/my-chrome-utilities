@@ -430,7 +430,7 @@
                           (support/require-example example event-name-key)
                           (support/require-example example payload-label-key)))}
 
-   {:pattern #"^the side panel session timeline shows initial page entry <([A-Za-z0-9_]+)> and observed event <([A-Za-z0-9_]+)>$"
+   {:pattern #"^the Live event feed shows pathname visit <([A-Za-z0-9_]+)> and observed event <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [page-url-key event-name-key]]
                (let [page-url (support/require-example example page-url-key)
                      event-name (support/require-example example event-name-key)]
@@ -438,7 +438,7 @@
                                    world
                                    page-url
                                    event-name)
-                                  "Session timeline does not show the initial page and observed event."
+                                  "The Live event feed does not show the pathname visit and observed event."
                                   {:timeline (session-timeline world)})
                  world))}
 

@@ -395,7 +395,7 @@
                                 "Data Layer content combines secondary views." {})
                world)}
 
-   {:pattern #"^Live testing controls, target selection, settings, and session timeline are absent from <([A-Za-z0-9_]+)> content$"
+   {:pattern #"^Live testing controls, target selection, settings, and Live event feed are absent from <([A-Za-z0-9_]+)> content$"
     :handler (fn [world example [view-key]]
                (let [view (example-value example view-key)]
                  (support/assert! (and (= view (:active-data-layer-view world))

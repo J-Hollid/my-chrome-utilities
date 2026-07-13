@@ -180,10 +180,10 @@
                                  :actual (get-in world [:session-state :session :current-url])})
                world)}
 
-   {:pattern #"^captured event entries remain part of the same session timeline$"
+   {:pattern #"^captured event entries remain part of the same session capture$"
     :handler (fn [world _example _captures]
                (support/assert! (seq (get-in world [:session-state :session :timeline]))
-                                "Captured entries are not in the session timeline."
+                                "Captured entries are not in the session capture."
                                 {:session-state (:session-state world)})
                world)}
 
@@ -204,7 +204,8 @@
     :handler (fn [world _example _captures]
                (let [root (support/repository-root)
                      html (support/source-file root "side-panel.html")]
-                 (support/assert! (and (str/includes? html "session-timeline")
+                 (support/assert! (and (str/includes? html "live-event-feed")
+                                       (not (str/includes? html "session-timeline"))
                                        (seq (get-in world [:session-state :session :timeline])))
                                   "Captured event entries are not visible."
                                   {:session-state (:session-state world)})

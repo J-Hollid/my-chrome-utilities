@@ -93,6 +93,9 @@
           <input id="history-path" type="text" value="queue.history" aria-describedby="history-path-status" />
           <output id="history-path-display">queue.history</output>
           <output id="history-path-status" aria-live="polite">ready</output>
+          <output id="session-history-path"></output>
+          <button id="restart-observation" type="button">Restart observation</button>
+          <output id="session-warning" aria-live="polite"></output>
         </details>
       </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
@@ -175,12 +178,6 @@
       <dialog id="schema-rule-delete-review" aria-labelledby="schema-rule-delete-review-heading" hidden><h4 id="schema-rule-delete-review-heading">Delete reusable rule?</h4><output id="schema-rule-delete-review-summary"></output><button id="confirm-schema-rule-delete" type="button">Delete rule</button><button id="cancel-schema-rule-delete" type="button">Cancel</button></dialog><dialog id="schema-rule-upgrade-review" aria-labelledby="schema-rule-upgrade-review-heading" hidden><h4 id="schema-rule-upgrade-review-heading">Review pinned rule upgrade</h4><output id="schema-rule-upgrade-review-summary">Saving will update the selected schema snapshots.</output><button id="confirm-schema-rule-upgrade" type="button">Continue upgrade</button><button id="cancel-schema-rule-upgrade" type="button">Keep pinned versions</button></dialog><button id="close-schema-editor" type="button" hidden>Close schema editor</button><button id="save-and-close-schema" type="button" hidden>Save and close schema</button>
       <label for="schema-assignment-policy">Assignment policy</label><select id="schema-assignment-policy"><option value="pinned">Pinned</option><option value="follow latest">Follow latest</option></select>
       <button id="save-schema-close-review" type="button" hidden>Save revision</button>
-      <section id="data-layer-session" aria-label="Data layer testing session">
-        <output id="session-history-path"></output>
-        <button id="restart-observation" type="button">Restart observation</button>
-        <output id="session-warning" aria-live="polite"></output>
-        <ul id="session-timeline"></ul>
-      </section>
       </section>
       <section id="workspace-panel-hotkeys" role="tabpanel" aria-labelledby="workspace-tab-hotkeys" hidden>
       <h2>Hotkeys</h2>

@@ -1,6 +1,8 @@
 (ns acceptance.steps.data-layer-timeline
   (:require [acceptance.steps.data-layer-session :as session]
             [acceptance.steps.support :as support]
+            [babashka.process :as process]
+            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def timeline-timestamp "2026-07-08T00:00:00Z")
@@ -24,6 +26,23 @@
   {"page_name" "\"example page_name\""
    "page_type" "\"homepage\""
    "propertyx" "\"example property\""})
+
+(defonce ^:private single-live-event-feed-observation (atom nil))
+
+(defn- load-single-live-event-feed-observation! []
+  (let [result (process/shell (assoc support/build-shell-options
+                                     :env {"SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER" "1"})
+                              "node" "test/side-panel-component-layout-runtime-test.mjs")
+        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
+        payload (when line (json/parse-string line true))
+        observation (:singleLiveEventFeed payload)]
+    (support/assert! (zero? (:exit result))
+                     "Single Live event feed browser verification failed."
+                     {:out (:out result) :err (:err result)})
+    (support/assert! observation
+                     "Single Live event feed browser observation is missing."
+                     {:payload payload})
+    (reset! single-live-event-feed-observation observation)))
 
 (defn- observed-entry [{:keys [event-name page-url history-path payload-label raw-label]}]
   {:type "observed"
@@ -299,33 +318,78 @@
 (defn tuple-event-display-wired? [files]
   (let [observer-source (get files "src/data-layer-observer.ts" "")
         presentation-source (get files "src/data-layer-event-presentation.ts" "")
-        timeline-source (get files "src/data-layer-timeline.ts" "")
+        live-observer-source (get files "src/data-layer-live-observer-ui.ts" "")
         side-panel-source (get files "src/side-panel.ts" "")]
     (and (str/includes? observer-source "canonicalCapturedEvent")
          (str/includes? observer-source "captureSourceEvent")
          (str/includes? presentation-source "inputPayload")
          (str/includes? presentation-source "Array.isArray(raw)")
-         (str/includes? timeline-source "displayPayloadValue")
-         (str/includes? timeline-source "displayRawValue")
-         (str/includes? timeline-source "timelineEventHeading")
-         (str/includes? side-panel-source "timelineEventHeading")
-         (str/includes? side-panel-source "appendDefinition(definitionList, \"Raw\", event.rawValue)"))))
+         (str/includes? live-observer-source "renderLiveObserverState")
+         (str/includes? live-observer-source "renderLiveInspector")
+         (str/includes? live-observer-source "Raw JSON")
+         (str/includes? side-panel-source "recordLiveEvent")
+         (str/includes? side-panel-source "renderLiveObserverState"))))
 
 (defn timeline-expanded-state-wired? [files]
-  (let [side-panel-source (get files "src/side-panel.ts" "")]
-    (and (str/includes? side-panel-source "expandedTimelinePageIndexes")
-         (str/includes? side-panel-source "querySelectorAll<HTMLDetailsElement>")
-         (str/includes? side-panel-source "details.open = expanded")
-         (str/includes? side-panel-source ".map((page, index) =>")
-         (str/includes? side-panel-source "expandedPageIndexes.has(index)")
-         (not (str/includes? side-panel-source "expandedPageUrls")))))
+  (let [live-observer-source (get files "src/data-layer-live-observer-ui.ts" "")]
+    (and (str/includes? live-observer-source "pathnameVisits(filteredLiveEvents(state))")
+         (str/includes? live-observer-source "rows.replaceChildren")
+         (str/includes? live-observer-source "group.append(heading, rows)")
+         (not (str/includes? live-observer-source "HTMLDetailsElement")))))
 
 (defn- property-item [text]
   (let [[name value] (first (seq (parse-payload-properties text)))]
     {:name name :value value}))
 
 (def handlers
-  [{:pattern #"^observed event entries are recorded$"
+  [{:pattern #"^the current session contains captured events across multiple pathname visits$"
+    :handler (fn [world _example _captures]
+               (assoc world
+                      :single-live-event-feed-observation
+                      (load-single-live-event-feed-observation!)))}
+
+   {:pattern #"^the current session page and event journey is presented once through the Live event feed$"
+    :handler (fn [world _example _captures]
+               (let [observation (:single-live-event-feed-observation world)]
+                 (support/assert! (= {:visits ["/checkout" "/products"] :eventCount 3}
+                                     (:journey observation))
+                                  "The Live event feed does not present the current session journey once."
+                                  observation)
+                 (support/assert! (and (= 1 (:liveFeedCount observation))
+                                       (:liveFeedInsideLivePanel observation))
+                                  "The current-session journey is not owned by the Live feed."
+                                  observation)
+                 world))}
+
+   {:pattern #"^a duplicate session timeline is absent below or beside the Data Layer views$"
+    :handler (fn [world _example _captures]
+               (let [observation (:single-live-event-feed-observation world)]
+                 (support/assert! (zero? (:duplicateTimelineCount observation))
+                                  "A duplicate current-session timeline is rendered."
+                                  observation)
+                 world))}
+
+   {:pattern #"^Library, Sessions, and Schemas do not display another current-session event list$"
+    :handler (fn [world _example _captures]
+               (let [observation (:single-live-event-feed-observation world)]
+                 (support/assert! (= [0 0 0] (:secondaryCurrentSessionLists observation))
+                                  "A secondary Data Layer view renders the current-session event list."
+                                  observation)
+                 world))}
+
+   {:pattern #"^the canonical captured chronology remains available for saved sessions and defect report reproduction$"
+    :handler (fn [world _example _captures]
+               (let [observation (:single-live-event-feed-observation world)
+                     chronology ["pageview" "promotion" "purchase"]]
+                 (support/assert! (= chronology (:archiveEventIds observation))
+                                  "Saved sessions lost the canonical captured chronology."
+                                  observation)
+                 (support/assert! (= chronology (:defectEventIds observation))
+                                  "Defect report reproduction lost the canonical captured chronology."
+                                  observation)
+                 world))}
+
+   {:pattern #"^observed event entries are recorded$"
     :handler (fn [world example _captures]
                (-> world
                    (record-observed-entry (assoc (example-entry-options example)
@@ -495,7 +559,7 @@
                      files (support/source-file-map root
                                                     ["src/data-layer-observer.ts"
                                                      "src/data-layer-event-presentation.ts"
-                                                     "src/data-layer-timeline.ts"
+                                                     "src/data-layer-live-observer-ui.ts"
                                                      "src/side-panel.ts"])]
                  (support/assert! (tuple-event-display-wired? files)
                                   "Tuple event display is not wired."
@@ -605,7 +669,7 @@
     :handler (fn [world example [page-url-key]]
                (let [page-url (support/require-example example page-url-key)
                      root (support/repository-root)
-                     files (support/source-file-map root ["src/side-panel.ts"])]
+                     files (support/source-file-map root ["src/data-layer-live-observer-ui.ts"])]
                  (support/assert! (timeline-expanded-state-wired? files)
                                   "Timeline expanded state is not wired."
                                   {})

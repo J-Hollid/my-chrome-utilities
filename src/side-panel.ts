@@ -110,13 +110,6 @@ import {
   findLiveSessionSummaryElements,
   renderLiveSessionSummary,
 } from "./data-layer-live-session-summary-ui.js";
-import {
-  nestedTimeline,
-  timelineEventHeading,
-  type NestedTimelineEvent,
-  type NestedTimelinePage,
-  type TimelinePayloadProperty,
-} from "./data-layer-timeline.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 import {
   createLiveObserverState,
@@ -264,7 +257,6 @@ const historyPathStatus = document.querySelector<HTMLElement>(
 const sessionHistoryPath = document.querySelector<HTMLElement>(
   "#session-history-path",
 );
-const sessionTimeline = document.querySelector<HTMLElement>("#session-timeline");
 const sessionWarning = document.querySelector<HTMLElement>("#session-warning");
 const restartObservationButton = document.querySelector<HTMLButtonElement>(
   "#restart-observation",
@@ -2054,28 +2046,6 @@ async function loadSavedSessionFile(): Promise<void> {
   }
 }
 
-function expandedTimelinePageIndexes(): Set<number> {
-  const expandedIndexes = new Set<number>();
-
-  if (!sessionTimeline) {
-    return expandedIndexes;
-  }
-
-  const pages = Array.from(
-    sessionTimeline.querySelectorAll<HTMLDetailsElement>(
-      ":scope > li > details",
-    ),
-  );
-
-  pages.forEach((page, index) => {
-    if (page.open) {
-      expandedIndexes.add(index);
-    }
-  });
-
-  return expandedIndexes;
-}
-
 function renderSessionState(): void {
   const session = dataLayerSessionState.session;
 
@@ -2083,88 +2053,11 @@ function renderSessionState(): void {
     sessionHistoryPath.textContent = session?.historyPath ?? "";
   }
 
-  if (sessionTimeline) {
-    const expandedPageIndexes = expandedTimelinePageIndexes();
-    sessionTimeline.replaceChildren(
-      ...nestedTimeline(session?.timeline ?? []).map((page, index) =>
-        renderTimelinePage(page, expandedPageIndexes.has(index)),
-      ),
-    );
-  }
-
   if (sessionWarning) {
     sessionWarning.textContent = dataLayerSessionState.warning ?? "";
   }
 
   renderLiveContextActions();
-}
-
-function renderTimelinePage(
-  page: NestedTimelinePage,
-  expanded = false,
-): HTMLLIElement {
-  const item = document.createElement("li");
-  const details = document.createElement("details");
-  const summary = document.createElement("summary");
-  const eventList = document.createElement("ul");
-
-  details.open = expanded;
-  summary.textContent = page.url;
-  eventList.append(...page.events.map(renderTimelineEvent));
-  details.append(summary, eventList);
-  item.append(details);
-  return item;
-}
-
-function renderTimelineEvent(event: NestedTimelineEvent): HTMLLIElement {
-  const item = document.createElement("li");
-  const details = document.createElement("details");
-  const summary = document.createElement("summary");
-  const definitionList = document.createElement("dl");
-
-  summary.textContent = timelineEventHeading(event);
-
-  appendDefinition(definitionList, "Event", event.name);
-  appendDefinition(definitionList, "URL", event.url);
-  appendDefinition(definitionList, "Time", event.timestamp);
-  appendDefinition(definitionList, "Path", event.observerPath);
-  appendDefinition(definitionList, "Payload", event.payload);
-  appendDefinition(definitionList, "Raw", event.rawValue);
-
-  details.append(summary, definitionList);
-  if (event.payloadProperties.length > 0) {
-    details.append(renderPayloadProperties(event.payloadProperties));
-  }
-  item.append(details);
-  return item;
-}
-
-function renderPayloadProperties(
-  properties: readonly TimelinePayloadProperty[],
-): HTMLUListElement {
-  const list = document.createElement("ul");
-  list.append(...properties.map(renderPayloadProperty));
-  return list;
-}
-
-function renderPayloadProperty(
-  property: TimelinePayloadProperty,
-): HTMLLIElement {
-  const item = document.createElement("li");
-  item.textContent = `${property.name}: ${property.value}`;
-  return item;
-}
-
-function appendDefinition(list: HTMLElement, label: string, value: string): void {
-  if (!value) {
-    return;
-  }
-
-  const term = document.createElement("dt");
-  const description = document.createElement("dd");
-  term.textContent = label;
-  description.textContent = value;
-  list.append(term, description);
 }
 
 function renderObserverState(): void {

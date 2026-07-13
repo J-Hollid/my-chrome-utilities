@@ -10,6 +10,7 @@ const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
 let guidedSchemaPickerObservation;
 let liveValidationVisualsObservation;
+let singleLiveEventFeedObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -236,6 +237,41 @@ const schemaRuleEditorVisibilityRuntime = `(() => {
     editorVisible:visible(q("#schema-rule-editor")),
     configurationVisible:visible(configuration),
     configurationInsideEditor:q("#schema-rule-editor").contains(configuration),
+  };
+})()`;
+
+const singleLiveEventFeedRuntime = `(async () => {
+  const observerUi = await import("/data-layer-live-observer-ui.js");
+  const savedSessions = await import("/data-layer-saved-sessions.js");
+  const defectReports = await import("/data-layer-defect-report-browser.js");
+  const events = [
+    { id:"pageview", name:"pageview", sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-13T10:00:00Z", pageUrl:"https://shop.example/products", payload:{} },
+    { id:"promotion", name:"promotion", sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-13T10:01:00Z", pageUrl:"https://shop.example/products", payload:{} },
+    { id:"purchase", name:"purchase", sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-13T10:02:00Z", pageUrl:"https://shop.example/checkout", payload:{} },
+  ];
+  observerUi.renderLiveObserverState(observerUi.findLiveObserverElements(), {
+    view:"Live", status:"Live", pageUrl:events.at(-1).pageUrl, sources:[], events, listVisible:true,
+  }, () => {});
+  const feed = document.querySelector("#live-event-feed");
+  const completed = {
+    id:"session:current", pageScope:"shop.example", startedAt:"2026-07-13T10:00:00Z", endedAt:"2026-07-13T10:03:00Z",
+    events:events.map((event, captureOrder) => ({ ...event, rawInput:event.payload, captureOrder })),
+  };
+  const archive = savedSessions.saveCompletedSession(savedSessions.createSavedSessionLibrary(), completed, "Checkout journey").sessions[0];
+  const defectContext = defectReports.defectReportContext(events, "purchase");
+  return {
+    liveFeedCount:document.querySelectorAll("#live-event-feed").length,
+    liveFeedInsideLivePanel:Boolean(feed?.closest("#data-layer-panel-live")),
+    duplicateTimelineCount:document.querySelectorAll("#session-timeline").length,
+    secondaryCurrentSessionLists:["library", "sessions", "schemas"].map((view) =>
+      document.querySelectorAll("#data-layer-panel-" + view + " #live-event-feed, #data-layer-panel-" + view + " #session-timeline").length
+    ),
+    journey:{
+      visits:Array.from(feed.querySelectorAll(".pathname-visit-heading")).map((heading) => heading.querySelector(".pathname-visit-path").textContent),
+      eventCount:feed.querySelectorAll("[data-event-id]").length,
+    },
+    archiveEventIds:archive.events.map(({ id }) => id),
+    defectEventIds:defectContext.timeline.map(({ id }) => id),
   };
 })()`;
 
@@ -1403,6 +1439,16 @@ try {
   const port = await debuggingPort();
   for (const width of [320, 360, 520, 720]) {
     const socket = await openPanel(port, width);
+    singleLiveEventFeedObservation = await evaluate(socket, singleLiveEventFeedRuntime);
+    assert.deepEqual(singleLiveEventFeedObservation, {
+      liveFeedCount:1,
+      liveFeedInsideLivePanel:true,
+      duplicateTimelineCount:0,
+      secondaryCurrentSessionLists:[0, 0, 0],
+      journey:{ visits:["/checkout", "/products"], eventCount:3 },
+      archiveEventIds:["pageview", "promotion", "purchase"],
+      defectEventIds:["pageview", "promotion", "purchase"],
+    }, `current-session journey was duplicated outside the Live feed at ${width}px`);
     const schemaRuleEditorVisibility = await evaluate(socket, schemaRuleEditorVisibilityRuntime);
     assert.deepEqual(schemaRuleEditorVisibility, {
       hiddenByView:{ Live:true, Library:true, Sessions:true, Schemas:true },
@@ -1875,6 +1921,9 @@ try {
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
+  }
+  if (process.env.SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ singleLiveEventFeed:singleLiveEventFeedObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

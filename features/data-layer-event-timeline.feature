@@ -104,10 +104,14 @@ Feature: Data layer event timeline
       | my-chrome-utilities | 1000        | 100           |
 
   # Data layer event timeline 008
-  Scenario: Data layer event timeline 008
+  Scenario Outline: Data layer event timeline 008
     Given the current session contains captured events across multiple pathname visits
     When the Data Layer workspace is displayed
     Then the current session page and event journey is presented once through the Live event feed
     And a duplicate session timeline is absent below or beside the Data Layer views
     And Library, Sessions, and Schemas do not display another current-session event list
     And the canonical captured chronology remains available for saved sessions and defect report reproduction
+
+    Examples:
+      | project_name         |
+      | my-chrome-utilities |
