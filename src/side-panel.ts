@@ -123,6 +123,7 @@ import {
   selectLiveEvent,
   updateLiveSourceStatus,
   type DataLayerView,
+  type LiveEvent,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
 import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
@@ -189,6 +190,7 @@ import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-libra
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
+import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -536,6 +538,7 @@ const restoredSchemaLibrary = serializeSchemaLibrary(schemas);
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
   localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
+let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(localStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
 let schemaDraft: SchemaDefinition | undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
@@ -1002,17 +1005,9 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       label: "Live event",
     }),
     createValidation: (selected) => {
-      guidedValidationFlow.open({
-        id:selected.id,
-        name:selected.name,
-        sourceId:selected.sourceId,
-        pageUrl:selected.pageUrl ?? liveObserverState.pageUrl,
-        payload:selected.payload && typeof selected.payload === "object" && !Array.isArray(selected.payload)
-          ? selected.payload as Record<string, unknown>
-          : { value:selected.payload },
-      });
-      if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.hidden = true;
+      openGuidedValidationForEvent(selected);
     },
+    draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
     startDefectReport: (selected) => {
       if (liveObserverElements.eventInspector) {
         renderDefectReportBuilder(
@@ -1440,14 +1435,15 @@ function guidedDocumentTypes(
   }, {});
 }
 
-function guidedSchemaCandidates() {
-  return assignableSchemas(schemas).map((schema) => ({
+function guidedSchemaCandidate(schema: SchemaDefinition, continueWorkingDraft = false) {
+  const editable = continueWorkingDraft ? schemaEditorDraft(schema) : schema;
+  return {
     id:schema.id,
     name:schema.name,
     version:schema.version,
-    target:schema.assignments[0]?.target ?? "payload" as const,
-    propertyTypes:guidedDocumentTypes(schema.document),
-    assignments:schema.assignments.map((assignment) => ({
+    target:editable.assignments[0]?.target ?? "payload" as const,
+    propertyTypes:guidedDocumentTypes(editable.document),
+    assignments:editable.assignments.map((assignment) => ({
       ...(assignment.id ? { id:assignment.id } : {}),
       ...(assignment.name ? { name:assignment.name } : {}),
       sourceId:assignment.sourceId,
@@ -1458,7 +1454,72 @@ function guidedSchemaCandidates() {
       ...(assignment.pathConditions ? { pathConditions:assignment.pathConditions } : {}),
       ...(assignment.enabled !== undefined ? { enabled:assignment.enabled } : {}),
     })),
-  }));
+  };
+}
+
+function guidedSchemaCandidates() {
+  return assignableSchemas(schemas).map((schema) => guidedSchemaCandidate(schema));
+}
+
+function guidedEvent(event: LiveEvent) {
+  return {
+    id:event.id,
+    name:event.name,
+    sourceId:event.sourceId,
+    pageUrl:event.pageUrl ?? liveObserverState.pageUrl,
+    payload:event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+      ? event.payload as Record<string, unknown>
+      : { value:event.payload },
+  };
+}
+
+function openGuidedValidationForEvent(event: LiveEvent, schema?: SchemaDefinition): void {
+  guidedValidationFlow.open(guidedEvent(event), schema ? guidedSchemaCandidate(schema, true) : undefined);
+  if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.hidden = true;
+}
+
+function persistGuidedContinuation(event: Pick<LiveEvent, "sourceId" | "name">, schemaId: string): void {
+  guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
+  localStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
+}
+
+function openGuidedDraft(schema: SchemaDefinition): void {
+  showDataLayerView("Schemas"); schemaDraft = schemaEditorDraft(schema); renderSchemaDraft();
+}
+
+function openGuidedContinuationPicker(event: LiveEvent): void {
+  const inspector = liveObserverElements.eventInspector; if (!inspector) return;
+  inspector.querySelector("#guided-continuation-schema-picker")?.remove();
+  const trigger = inspector.querySelector<HTMLButtonElement>("#guided-draft-continuation button:last-of-type");
+  const dialog = document.createElement("dialog"); dialog.id = "guided-continuation-schema-picker"; dialog.setAttribute("aria-labelledby", "guided-continuation-schema-picker-heading");
+  const heading = document.createElement("h5"); heading.id = "guided-continuation-schema-picker-heading"; heading.tabIndex = -1; heading.textContent = "Choose schema destination";
+  const choices = document.createElement("div"); choices.setAttribute("aria-label", "Schemas with working drafts");
+  for (const schema of schemas.filter(({ workingDraft }) => Boolean(workingDraft))) {
+    const choose = document.createElement("button"); choose.type = "button"; choose.textContent = `${schema.name} revision ${schema.version} · ${schema.workingDraft?.pendingChanges.length ?? 0} pending changes`;
+    choose.addEventListener("click", () => {
+      persistGuidedContinuation(event, schema.id); dialog.close(); dialog.remove(); openLiveInspector(event.id, true);
+      liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>('[data-action="add-property-validation"]')?.focus({ preventScroll:true });
+    });
+    choices.append(choose);
+  }
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); trigger?.focus({ preventScroll:true }); });
+  dialog.append(heading, choices, cancel); inspector.append(dialog); dialog.showModal(); heading.focus({ preventScroll:true });
+}
+
+function guidedDraftContinuationForEvent(event: LiveEvent) {
+  const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
+  if (!schema?.workingDraft) return undefined;
+  return {
+    schemaId:schema.id,
+    schemaName:schema.name,
+    schemaVersion:schema.version,
+    pendingChanges:schema.workingDraft.pendingChanges.length,
+    addProperty:() => openGuidedValidationForEvent(event, schema),
+    review:() => openGuidedDraft(schema),
+    publish:() => { openGuidedDraft(schema); saveSchemaButton?.click(); },
+    useDifferent:() => openGuidedContinuationPicker(event),
+  };
 }
 
 function mergeGuidedDocument(
@@ -1479,22 +1540,11 @@ function finishGuidedValidationSave(result: PublishedGuidedValidation): void {
     ? `Draft ${result.schema.name} was created.`
     : `Validation was added to ${result.schema.name} draft.`;
   setLiveSessionMessage(message);
-  const inspector = liveObserverElements.eventInspector;
-  inspector?.querySelector("#guided-draft-next-actions")?.remove();
-  if (inspector) {
-    const actions = document.createElement("section"); actions.id = "guided-draft-next-actions"; actions.setAttribute("aria-label", "Schema draft next actions");
-    const addAnother = document.createElement("button"); addAnother.type = "button"; addAnother.textContent = "Add another property";
-    addAnother.addEventListener("click", () => inspector.querySelector<HTMLButtonElement>('[data-action="create-validation"]')?.click());
-    const review = document.createElement("button"); review.type = "button"; review.textContent = "Review draft";
-    review.addEventListener("click", () => {
-      const schema = schemas.find((candidate) => candidate.id === result.schema.id); if (!schema) return;
-      showDataLayerView("Schemas"); schemaDraft = schemaEditorDraft(schema); renderSchemaDraft();
-    });
-    const publish = document.createElement("button"); publish.type = "button"; publish.textContent = "Publish revision";
-    publish.addEventListener("click", () => { review.click(); saveSchemaButton?.click(); });
-    actions.append(addAnother, review, publish); inspector.append(actions);
-  }
-  liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>('[data-action="create-validation"]')?.focus({ preventScroll:true });
+  const event = liveObserverState.events.find(({ sourceId, name }) => sourceId === result.assignment.sourceId && name === result.assignment.eventName);
+  if (!event) return;
+  persistGuidedContinuation(event, result.schema.id);
+  openLiveInspector(event.id, true);
+  liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>('[data-action="add-property-validation"]')?.focus({ preventScroll:true });
 }
 
 function persistPublishedGuidedValidation(result: PublishedGuidedValidation): void {

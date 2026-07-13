@@ -27,6 +27,7 @@ export function createLiveInspectorActions(effects) {
         },
         ...(effects.createSchema ? { createSchema(event) { effects.createSchema?.(event); } } : {}),
         ...(effects.createValidation ? { createValidation(event) { effects.createValidation?.(event); } } : {}),
+        ...(effects.draftContinuation ? { draftContinuation(event) { return effects.draftContinuation?.(event); } } : {}),
         ...(effects.startDefectReport ? { startDefectReport(event) { effects.startDefectReport?.(event); } } : {}),
         validationAvailability(event) {
             return effects.validationAvailable?.(event) === false

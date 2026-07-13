@@ -1,4 +1,4 @@
-import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedValidationDraft, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedContinuationDraft, createGuidedValidationDraft, guidedValidationStages, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, selectGuidedContinuationProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
 import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
 const stageLabels = {
     property: "Choose properties",
@@ -44,6 +44,7 @@ export function createGuidedValidationFlow(root, effects) {
     let schemaPickerOpen = false;
     let schemaPickerQuery = "";
     let schemaPickerReturnId = "guided-existing-schema-picker";
+    let continuationCandidate;
     function announce(message) { status = message; render(); }
     function setDraft(next, message) {
         draft = next;
@@ -99,6 +100,9 @@ export function createGuidedValidationFlow(root, effects) {
                 return [{ id: "guided-compatible-assignments", message: "Choose a compatible assignment" }];
             }
         }
+        if (draft.continuation && draft.stage === "requirement" && draft.assignmentResolution?.selection === "required from readable assignment choices") {
+            return [{ id: "guided-compatible-assignments", message: "Choose a compatible assignment" }];
+        }
         return [];
     }
     function continueFlow() {
@@ -114,7 +118,7 @@ export function createGuidedValidationFlow(root, effects) {
     function renderStages(container) {
         if (!draft)
             return;
-        const order = ["property", "destination", "requirement", "scope", "review"];
+        const order = guidedValidationStages(draft);
         const current = order.indexOf(draft.stage);
         const list = element("ol");
         list.id = "guided-validation-stages";
@@ -166,6 +170,11 @@ export function createGuidedValidationFlow(root, effects) {
     function renderPropertyStage(container) {
         if (!draft)
             return;
+        if (draft.continuation) {
+            const context = element("p", `Adding to ${draft.continuation.schemaName} draft`);
+            context.id = "guided-continuation-context";
+            container.append(context);
+        }
         const fieldset = element("fieldset");
         fieldset.id = "guided-property-list";
         fieldset.append(element("legend", "Select a property to validate"));
@@ -176,7 +185,12 @@ export function createGuidedValidationFlow(root, effects) {
             input.name = "guided-property";
             input.value = property.path;
             input.checked = draft.property?.path === property.path;
-            input.addEventListener("change", () => setDraft(selectGuidedProperty(draft, property.path), `${property.path} selected; ${property.detectedType} detected from this event.`));
+            input.addEventListener("change", () => {
+                const next = continuationCandidate
+                    ? selectGuidedContinuationProperty(draft, property.path, continuationCandidate)
+                    : selectGuidedProperty(draft, property.path);
+                setDraft(next, `${property.path} selected; ${property.detectedType} detected from this event.`);
+            });
             label.append(input, ` ${property.path} — ${String(property.value)} (${property.detectedType})`);
             fieldset.append(label);
         }
@@ -241,6 +255,7 @@ export function createGuidedValidationFlow(root, effects) {
         preview.setAttribute("role", "status");
         container.append(typeLabel, type, typeHint, requirementLabel, requirement, hint, preview);
         renderAllowedValues(container);
+        renderCompatibleAssignments(container);
     }
     function updateScope(kind) {
         if (!draft)
@@ -259,6 +274,7 @@ export function createGuidedValidationFlow(root, effects) {
     function renderPathConditions(container) {
         if (!draft || draft.scope.kind !== "selected-paths")
             return;
+        const pathSource = draft.prefillSources.pathConditions ?? "Enter a pathname, wildcard path, or complete-path regular expression.";
         const group = element("fieldset");
         group.id = "guided-path-conditions";
         group.append(element("legend", "Path conditions"), element("p", "This assignment matches when any condition matches."));
@@ -271,7 +287,7 @@ export function createGuidedValidationFlow(root, effects) {
             for (const value of ["Exact path", "Path pattern", "Regular expression"])
                 type.append(Object.assign(element("option", value), { value, selected: condition.matchType === value }));
             type.addEventListener("change", () => updateCondition(index, { matchType: type.value }));
-            const expression = labelledInput(`guided-path-expression-${index}`, "Expression", condition.expression, "Enter a pathname, wildcard path, or complete-path regular expression.");
+            const expression = labelledInput(`guided-path-expression-${index}`, "Expression", condition.expression, pathSource);
             expression.input.addEventListener("change", () => updateCondition(index, { expression: expression.input.value }));
             const result = pathConditionResult(condition, draft.scope.pathname);
             const output = element("output", result.valid ? `${draft.scope.pathname} is ${result.matches ? "a match" : "no match"}` : `Syntax error: ${result.error}`);
@@ -421,29 +437,47 @@ export function createGuidedValidationFlow(root, effects) {
             summary.append(change);
             container.append(summary);
         }
-        if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
-            const assignments = element("fieldset");
-            assignments.id = "guided-compatible-assignments";
-            assignments.append(element("legend", "Choose a compatible assignment"));
-            for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {
-                const id = assignment.id ?? `compatible-assignment-${index}`;
-                const label = element("label");
-                const input = element("input");
-                input.type = "radio";
-                input.name = "guided-compatible-assignment";
-                input.value = id;
-                const readable = assignment.name ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`;
-                input.addEventListener("change", () => {
-                    const candidate = candidates.find(({ id: candidateId }) => draft.destination?.kind === "existing" && candidateId === draft.destination.schemaId);
-                    if (candidate)
-                        setDraft(applyGuidedSchemaCandidate(draft, candidate, id), `${readable} selected.`);
-                });
-                label.append(input, ` ${readable}`);
-                assignments.append(label);
-            }
-            container.append(assignments);
+        renderCompatibleAssignments(container);
+        renderPrefillReplacementReview(container);
+        if (schemaPickerOpen) {
+            renderGuidedSchemaPicker({
+                container,
+                draft,
+                candidates,
+                query: schemaPickerQuery,
+                onQuery(query) { schemaPickerQuery = query; render(); },
+                onClose() { closeSchemaPicker(); },
+                onSelect(candidate) { selectSchemaCandidate(candidate); },
+            });
         }
-        if (draft.prefillReplacementReview?.length) {
+    }
+    function renderCompatibleAssignments(container) {
+        if (!draft || draft.assignmentResolution?.selection !== "required from readable assignment choices")
+            return;
+        const candidates = effects.schemaCandidates();
+        const assignments = element("fieldset");
+        assignments.id = "guided-compatible-assignments";
+        assignments.append(element("legend", "Choose a compatible assignment"));
+        for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {
+            const id = assignment.id ?? `compatible-assignment-${index}`;
+            const label = element("label");
+            const input = element("input");
+            input.type = "radio";
+            input.name = "guided-compatible-assignment";
+            input.value = id;
+            const readable = assignment.name ?? `${assignment.eventName} on ${assignment.domainCondition ?? "every domain"}`;
+            input.addEventListener("change", () => {
+                const candidate = candidates.find(({ id: candidateId }) => draft.destination?.kind === "existing" && candidateId === draft.destination.schemaId);
+                if (candidate)
+                    setDraft(applyGuidedSchemaCandidate(draft, candidate, id), `${readable} selected.`);
+            });
+            label.append(input, ` ${readable}`);
+            assignments.append(label);
+        }
+        container.append(assignments);
+    }
+    function renderPrefillReplacementReview(container) {
+        if (draft?.prefillReplacementReview?.length) {
             const review = element("section");
             review.id = "guided-prefill-replacement-review";
             review.append(element("h5", "Review schema-derived replacements"));
@@ -457,17 +491,6 @@ export function createGuidedValidationFlow(root, effects) {
             accept.addEventListener("click", () => setDraft(resolveGuidedPrefillReplacement(draft, "accept"), "Schema-derived values accepted."));
             review.append(list, keep, accept);
             container.append(review);
-        }
-        if (schemaPickerOpen) {
-            renderGuidedSchemaPicker({
-                container,
-                draft,
-                candidates,
-                query: schemaPickerQuery,
-                onQuery(query) { schemaPickerQuery = query; render(); },
-                onClose() { closeSchemaPicker(); },
-                onSelect(candidate) { selectSchemaCandidate(candidate); },
-            });
         }
     }
     function updateAdvanced(field, value) {
@@ -574,8 +597,8 @@ export function createGuidedValidationFlow(root, effects) {
         root.append(statusElement);
     }
     const api = {
-        open(event) { draft = createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
-        close() { draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
+        open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
+        close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
         currentDraft() { return draft; },
     };
     return api;

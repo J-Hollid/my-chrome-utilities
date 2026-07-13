@@ -6,13 +6,16 @@ import {
   assignmentScopeSummary,
   advanceGuidedValidation,
   compatibleRequirements,
+  createGuidedContinuationDraft,
   createGuidedValidationDraft,
+  guidedValidationStages,
   guidedAssignmentsMatch,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
   resolveGuidedPrefillReplacement,
   selectGuidedProperty,
+  selectGuidedContinuationProperty,
   setAllowedValue,
   setExpectedType,
   setGuidedRequirement,
@@ -38,6 +41,39 @@ assert.equal(initial.scope.kind, "domain-all-paths");
 assert.equal(initial.scope.domain, "127.0.0.1");
 assert.equal(initial.scope.pathname, "/");
 assert.equal(initial.advanced.severity, "Error");
+
+const continuationCandidate = {
+  id:"schema-product-listing",
+  name:"Product listing",
+  version:3,
+  target:"payload",
+  propertyTypes:{ page_name:"String" },
+  assignments:[{ id:"assignment:product", name:"Product pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/", enabled:true }],
+};
+const continuation = createGuidedContinuationDraft(event, continuationCandidate);
+assert.equal(continuation.stage, "property");
+assert.deepEqual(continuation.continuation, { schemaId:"schema-product-listing", schemaName:"Product listing", schemaVersion:3 });
+assert.deepEqual(guidedValidationStages(continuation), ["property", "requirement", "scope", "review"]);
+assert.equal(continuation.destination.schemaId, "schema-product-listing");
+assert.equal(continuation.assignmentResolution.selection, "the compatible assignment");
+assert.equal(continuation.prefillSources.target, "Product listing version 3");
+assert.match(continuation.prefillSources.domain, /Product pages assignment/);
+const continuedProperty = selectGuidedContinuationProperty(continuation, "page_name", continuationCandidate);
+assert.equal(advanceGuidedValidation(continuedProperty).stage, "requirement");
+assert.equal(continuedProperty.destination.schemaId, "schema-product-listing");
+assert.equal(continuedProperty.property.expectedType, "String");
+const noAssignmentContinuation = selectGuidedContinuationProperty(createGuidedContinuationDraft(event, { ...continuationCandidate, assignments:[] }), "page_name", { ...continuationCandidate, assignments:[] });
+assert.equal(noAssignmentContinuation.assignmentResolution.selection, "Create a new assignment");
+assert.equal(noAssignmentContinuation.destination.schemaId, "schema-product-listing");
+const twoAssignments = [
+  continuationCandidate.assignments[0],
+  { ...continuationCandidate.assignments[0], id:"assignment:alternate", name:"Alternate product pages", domainCondition:"shop.example" },
+];
+const ambiguousCandidate = { ...continuationCandidate, assignments:twoAssignments };
+const ambiguousContinuation = selectGuidedContinuationProperty(createGuidedContinuationDraft(event, ambiguousCandidate), "page_name", ambiguousCandidate);
+assert.equal(ambiguousContinuation.assignmentResolution.selection, "required from readable assignment choices");
+assert.deepEqual(ambiguousContinuation.assignmentResolution.compatibleAssignments.map(({ name }) => name), ["Product pages", "Alternate product pages"]);
+assert.equal(advanceGuidedValidation(ambiguousContinuation).stage, "requirement");
 assert.equal(initial.advanced.versionPolicy, "Pinned");
 assert.equal(initial.persisted, false);
 
