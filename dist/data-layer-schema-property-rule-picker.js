@@ -19,7 +19,7 @@ export function builtInRulesForProperty(propertyType) {
         .filter(({ name }) => ruleTypeAvailability(propertyType, name) === "available")
         .map((rule) => ({ ...rule, applicableType: propertyType }));
 }
-function applicableTypes(rule) {
+export function applicablePropertyTypesForRule(rule) {
     if (rule.applicableType)
         return [rule.applicableType];
     const metadata = `${rule.kind} ${rule.operator ?? ""}`.toLowerCase();
@@ -40,8 +40,8 @@ function applicableTypes(rule) {
 export function reusableRulesForProperty(rules, propertyType, query, attachedIds) {
     const normalized = query.trim().toLowerCase();
     return rules
-        .filter((rule) => rule.enabled !== false && applicableTypes(rule).includes(propertyType))
-        .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicableTypes(rule), `version ${rule.version ?? 1}`]
+        .filter((rule) => rule.enabled !== false && applicablePropertyTypesForRule(rule).includes(propertyType))
+        .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
         .filter(Boolean).join(" ").toLowerCase().includes(normalized))
         .map((rule) => ({ ...rule, alreadyAttached: attachedIds.has(rule.id) }));
 }

@@ -43,7 +43,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   const compatible = {
     id:`compatible-${token}`,
     name:`Rule ${token}`,
-    kind:`Custom ${propertyType}`,
+    kind:`Custom ${incompatibleType}`,
     operator:`operator-${token}`,
     parameters:`parameter-${token}`,
     description:`description-${token}`,
