@@ -30,7 +30,7 @@ export interface SchemaAssignment {
   schemaId?: string;
   schemaVersion?: number;
 }
-export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
+export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; propertyOrigin?: "manual"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
 export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
