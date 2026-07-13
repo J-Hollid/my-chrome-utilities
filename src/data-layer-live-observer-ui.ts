@@ -288,6 +288,7 @@ export function renderLiveInspector(
   }
   const actionCallbacks = {
     ...(event.validationDetails?.issues.length ? { "Show validation issues": async () => { const issues = elements.eventInspector?.querySelector<HTMLElement>("#live-event-validation-issues"); if (issues) { issues.hidden = !issues.hidden; if (!issues.hidden) issues.focus({ preventScroll:false }); } } } : {}),
+    ...(event.validationDetails?.issues.length && actionHandlers.startDefectReport ? { "Create defect report": async () => actionHandlers.startDefectReport?.(event) } : {}),
     "Copy payload": async () => actionHandlers.copyPayload(event),
     "Save to Library": async () => actionHandlers.saveToLibrary(event),
     ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),

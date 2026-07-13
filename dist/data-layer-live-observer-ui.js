@@ -298,6 +298,7 @@ export function renderLiveInspector(elements, event, actionHandlers) {
                 if (!issues.hidden)
                     issues.focus({ preventScroll: false });
             } } } : {}),
+        ...(event.validationDetails?.issues.length && actionHandlers.startDefectReport ? { "Create defect report": async () => actionHandlers.startDefectReport?.(event) } : {}),
         "Copy payload": async () => actionHandlers.copyPayload(event),
         "Save to Library": async () => actionHandlers.saveToLibrary(event),
         ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),

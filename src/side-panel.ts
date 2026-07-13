@@ -157,6 +157,7 @@ import {
   setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import { renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
@@ -998,6 +999,9 @@ function openLiveInspector(eventId: string): void {
           : { value:selected.payload },
       });
       if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.hidden = true;
+    },
+    startDefectReport: (selected) => {
+      if (liveObserverElements.eventInspector) renderDefectReportBuilder(liveObserverElements.eventInspector, selected);
     },
     validationAvailable: (selected) => Boolean(validateEvent({
         sourceId: selected.sourceId,
