@@ -6,6 +6,8 @@ import {
   expectedResultAssistance,
   filterTimelineEvents,
   generatePathnameSkeleton,
+  generateReportDetails,
+  renderJiraReport,
   supportingTimeline,
   toggleReportIssue,
   validateAssistedResponse,
@@ -63,6 +65,33 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(assistance.schemaValues, allowed.filter((value) => value !== actualAllowed));
   assert.equal(allowed.every((value) => validateAssistedResponse(assistedIssue, value).valid), true);
   assert.equal(validateAssistedResponse(assistedIssue, `outside-${iteration}`).valid, false);
+  const inlineEvent = {
+    ...event,
+    payload: { choice: actualAllowed },
+    issues: [{ ...assistedIssue, id: "choice", pointer: "/choice" }],
+  };
+  const inlineReport = createDefectReport(inlineEvent);
+  const genericInline = applyExpectedResult(inlineReport, [{
+    issueId: "choice",
+    method: "keep the rule generic",
+    responseSource: "schema constraint",
+  }]);
+  const genericPreview = renderJiraReport(generateReportDetails(genericInline));
+  assert.match(genericPreview.text, new RegExp(`choice: ${allowed.join(" OR ")}`));
+  assert.deepEqual(JSON.parse(genericPreview.expectedJson), inlineEvent.payload);
+  const selectedValue = allowed[(allowed.indexOf(actualAllowed) + 1) % allowed.length];
+  const commentedInline = applyExpectedResult(inlineReport, [{
+    issueId: "choice",
+    method: "choose an allowed value",
+    response: selectedValue,
+    responseSource: "schema-provided value",
+    includeAllowedValuesComment: true,
+  }]);
+  const commentedPreview = renderJiraReport(generateReportDetails(commentedInline));
+  assert.match(commentedPreview.text, /\/\/ must be of type/);
+  assert.equal(JSON.parse(commentedPreview.expectedJson).choice, selectedValue);
+  assert.doesNotMatch(commentedPreview.expectedJson, /must be of type/);
+  assert.deepEqual(inlineEvent.payload, { choice: actualAllowed });
 
   const replacement = `replacement-${iteration}`;
   const corrected = applyExpectedResult(report, [{
