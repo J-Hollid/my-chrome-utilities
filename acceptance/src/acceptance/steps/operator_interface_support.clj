@@ -310,5 +310,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T11:11:54.061997004+02:00", :module-hash "1677799820", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "497625458"} {:id "defn/validate-example!", :kind "defn", :line 103, :end-line nil, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-13T18:57:04.399738171+02:00", :module-hash "-108727836", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "868810159"} {:id "def/base-canonical-example-values", :kind "def", :line 4, :end-line nil, :hash "2021873346"} {:id "def/schema-example-values", :kind "def", :line 241, :end-line nil, :hash "-1295269211"} {:id "def/canonical-example-values", :kind "def", :line 302, :end-line nil, :hash "-811014458"} {:id "defn/validate-example!", :kind "defn", :line 305, :end-line nil, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end

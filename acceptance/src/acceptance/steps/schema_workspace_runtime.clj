@@ -5,6 +5,13 @@
 (def visibility-feature-file "features/data-layer-schema-rule-editor-visibility.feature")
 (defonce browser-workspace-observations (atom {}))
 
+(def canonical-source-names
+  {"Live event" "captured event event-7"
+   "Library template" "template Order complete"})
+
+(defn- canonical-source? [kind name]
+  (= name (get canonical-source-names kind)))
+
 (defn- export-fixture [example]
   (let [schemas (support/example-value example "schema_count")
         rules (support/example-value example "rule_count")]
@@ -179,6 +186,9 @@
     "<source_kind> <source_name> contains nested payload properties page_type, page_name, and commerce.order.id"
     (let [kind (source-value example "source_kind")
           name (source-value example "source_name")]
+      (support/assert! (canonical-source? kind name)
+                       "Schema source example is not canonical."
+                       {:kind kind :name name})
       (require! world :browser-observation "Schemas workspace was not mounted.")
       (assoc world :source {:kind kind :name name :paths #{"page_type" "page_name" "commerce.order.id"}}))
 
@@ -463,5 +473,5 @@
 (def handlers (vec (concat visibility-handlers runtime-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-12T19:04:57.541172952+02:00", :module-hash "-930840781", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "2070356081"} {:id "def/feature-file", :kind "def", :line 7, :end-line nil, :hash "-1813648721"} {:id "def/visibility-feature-file", :kind "def", :line 8, :end-line nil, :hash "782585494"} {:id "defn-/export-fixture", :kind "defn-", :line 10, :end-line nil, :hash "376473154"} {:id "defn-/assert-export-preflight!", :kind "defn-", :line 15, :end-line nil, :hash "1666428955"} {:id "defn-/browser-workspace!", :kind "defn-", :line 30, :end-line nil, :hash "-902216293"} {:id "defn-/require!", :kind "defn-", :line 68, :end-line nil, :hash "-936314498"} {:id "defn-/source-value", :kind "defn-", :line 71, :end-line nil, :hash "1957517251"} {:id "defn-/count-value", :kind "defn-", :line 74, :end-line nil, :hash "-1818484422"} {:id "defn-/assert-export-counts!", :kind "defn-", :line 77, :end-line nil, :hash "-737297105"} {:id "defn-/assert-browser-step!", :kind "defn-", :line 92, :end-line nil, :hash "-1661936637"} {:id "defn-/transition", :kind "defn-", :line 156, :end-line nil, :hash "2109981935"} {:id "def/visibility-entry-steps", :kind "def", :line 375, :end-line nil, :hash "-889792007"} {:id "defn-/begin-visibility-observation", :kind "defn-", :line 379, :end-line nil, :hash "-1955634581"} {:id "defn-/activate-visibility-view", :kind "defn-", :line 384, :end-line nil, :hash "1944164230"} {:id "defn-/assert-rule-configuration-hidden", :kind "defn-", :line 390, :end-line nil, :hash "-967894054"} {:id "defn-/assert-rule-configuration-visible", :kind "defn-", :line 397, :end-line nil, :hash "1957385540"} {:id "def/visibility-transitions", :kind "def", :line 405, :end-line nil, :hash "436198965"} {:id "defn-/visibility-transition", :kind "defn-", :line 422, :end-line nil, :hash "1101527031"} {:id "def/runtime-handlers", :kind "def", :line 429, :end-line nil, :hash "195233824"} {:id "def/visibility-handlers", :kind "def", :line 442, :end-line nil, :hash "-2063408008"} {:id "def/handlers", :kind "def", :line 453, :end-line nil, :hash "348612342"}]}
+;; {:version 1, :tested-at "2026-07-13T18:57:04.791077022+02:00", :module-hash "495666496", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "549491900"} {:id "def/feature-file", :kind "def", :line 4, :end-line nil, :hash "-1813648721"} {:id "def/visibility-feature-file", :kind "def", :line 5, :end-line nil, :hash "782585494"} {:id "form/3/defonce", :kind "defonce", :line 6, :end-line nil, :hash "2065372164"} {:id "def/canonical-source-names", :kind "def", :line 8, :end-line nil, :hash "1084522028"} {:id "defn-/canonical-source?", :kind "defn-", :line 12, :end-line nil, :hash "1463562921"} {:id "defn-/export-fixture", :kind "defn-", :line 15, :end-line nil, :hash "376473154"} {:id "defn-/assert-export-preflight!", :kind "defn-", :line 20, :end-line nil, :hash "1666428955"} {:id "defn-/validate-browser-workspace!", :kind "defn-", :line 35, :end-line nil, :hash "-1042141668"} {:id "defn-/run-browser-workspace!", :kind "defn-", :line 63, :end-line nil, :hash "1130236019"} {:id "defn-/browser-workspace-observation", :kind "defn-", :line 75, :end-line nil, :hash "-922079562"} {:id "defn-/browser-workspace!", :kind "defn-", :line 79, :end-line nil, :hash "-8880884"} {:id "defn-/require!", :kind "defn-", :line 85, :end-line nil, :hash "-936314498"} {:id "defn-/source-value", :kind "defn-", :line 88, :end-line nil, :hash "1957517251"} {:id "defn-/count-value", :kind "defn-", :line 91, :end-line nil, :hash "-1818484422"} {:id "defn-/assert-export-counts!", :kind "defn-", :line 94, :end-line nil, :hash "-737297105"} {:id "defn-/assert-browser-step!", :kind "defn-", :line 109, :end-line nil, :hash "-1661936637"} {:id "defn-/transition", :kind "defn-", :line 173, :end-line nil, :hash "-267095413"} {:id "def/visibility-entry-steps", :kind "def", :line 395, :end-line nil, :hash "-889792007"} {:id "defn-/begin-visibility-observation", :kind "defn-", :line 399, :end-line nil, :hash "-1955634581"} {:id "defn-/activate-visibility-view", :kind "defn-", :line 404, :end-line nil, :hash "1944164230"} {:id "defn-/assert-rule-configuration-hidden", :kind "defn-", :line 410, :end-line nil, :hash "-967894054"} {:id "defn-/assert-rule-configuration-visible", :kind "defn-", :line 417, :end-line nil, :hash "1957385540"} {:id "def/visibility-transitions", :kind "def", :line 425, :end-line nil, :hash "436198965"} {:id "defn-/visibility-transition", :kind "defn-", :line 442, :end-line nil, :hash "1101527031"} {:id "def/runtime-handlers", :kind "def", :line 449, :end-line nil, :hash "195233824"} {:id "def/visibility-handlers", :kind "def", :line 462, :end-line nil, :hash "-2063408008"} {:id "def/handlers", :kind "def", :line 473, :end-line nil, :hash "348612342"}]}
 ;; clj-mutate-manifest-end
