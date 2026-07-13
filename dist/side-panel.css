@@ -171,3 +171,29 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   #schema-master { grid-area:schemas-master; }
   #schema-detail { grid-area:schemas-detail; }
 }
+
+#schema-property-rule-picker {
+  inline-size: min(38rem, calc(100vw - 1rem));
+  max-block-size: min(42rem, calc(100vh - 1rem));
+  padding: 1rem;
+}
+
+#schema-property-rule-results {
+  max-block-size: min(28rem, 60vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#schema-property-rule-results article {
+  border-block-end: 1px solid var(--border-color, #777);
+  padding-block: 0.5rem;
+}
+
+#schema-property-rule-results article p {
+  margin-block: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.schema-property-add-rule {
+  padding: 0.25rem 0.5rem;
+}

@@ -112,7 +112,7 @@
     (contains? #{"<source_kind> <source_name> contains nested payload properties page_type, page_name, and commerce.order.id"
                  "the operator activates Create schema from this <source_kind>"
                  "the schema editor renders expandable property rows for the observed payload hierarchy"
-                 "each row offers Add validation rule and View attached rules for its complete property path"
+                 "each row offers Add rule and View attached rules for its complete property path"
                  "the operator does not have to type a property path into a free-form field"
                  "no observed value becomes an active rule before the operator accepts it"} text)
     (support/assert! (= ["page_type" "page_name" "commerce" "commerce.order" "commerce.order.id"] (get-in observation [:sourceCreation :paths])) "Source schema browser controls did not render observed paths." {:observation observation})
@@ -199,7 +199,7 @@
     "the schema editor renders expandable property rows for the observed payload hierarchy"
     (do (require! world :draft "Schema draft was not created.") world)
 
-    "each row offers Add validation rule and View attached rules for its complete property path"
+    "each row offers Add rule and View attached rules for its complete property path"
     (do (support/assert! (contains? (get-in world [:draft :paths]) "commerce.order.id")
                          "Nested property path was not created." {})
         world)
