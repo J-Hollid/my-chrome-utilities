@@ -4,6 +4,7 @@ import type {
   DefectIssue,
   DefectReport,
   ExpectedCorrection,
+  ExpectedResponsePresentation,
   ExpectedResultAssistance,
   ExpectedResultChoice,
   ReportDifference,
@@ -41,24 +42,23 @@ function issueName(issue: DefectIssue): string {
   return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
 
-function naturalList(values: readonly string[]): string {
-  if (values.length < 2) return values[0] ?? "";
-  if (values.length === 2) return `${values[0]} or ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
-}
-
-function inlineResponse(issue: DefectIssue, choice: ExpectedResultChoice): string | undefined {
-  const name = issueName(issue);
+function responsePresentation(
+  issue: DefectIssue,
+  choice: ExpectedResultChoice,
+): ExpectedResponsePresentation | undefined {
+  const property = issueName(issue);
   const values = allowedValues(issue.constraint);
   if (choice.method === "keep the rule generic") {
-    return values.length ? `${name}: ${values.join(" OR ")}` : undefined;
+    return values.length ? { kind: "constraint", property, allowedValues: values } : undefined;
   }
   if (choice.method === "apply the rule" || choice.response === undefined) return undefined;
-  if (choice.includeAllowedValuesComment !== undefined && values.length) {
-    const comment = choice.includeAllowedValuesComment ? `, // must be of type ${naturalList(values)}` : "";
-    return `${name}: ${JSON.stringify(choice.response)}${comment}`;
-  }
-  return `${name}: ${String(choice.response)}`;
+  return {
+    kind: "value",
+    property,
+    value: cloneValue(choice.response),
+    quoteValue: choice.includeAllowedValuesComment !== undefined,
+    ...(choice.includeAllowedValuesComment && values.length ? { allowedValuesComment: values } : {}),
+  };
 }
 
 function actualDifferences(payload: unknown, issues: readonly ReportIssue[]): ReportDifference[] {
@@ -109,14 +109,14 @@ export function applyExpectedResult(
     const issue = report.issues.find(({ id }) => id === choice.issueId);
     if (!issue) throw new Error(`Unknown report issue: ${choice.issueId}`);
     const name = issueName(issue);
-    const inline = inlineResponse(issue, choice);
+    const presentation = responsePresentation(issue, choice);
     if (choice.method === "keep the rule generic") {
       corrections.push({
         issueId: issue.id,
         pointer: issue.pointer,
         operation: "none",
         ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
-        ...(inline ? { inlineResponse: inline } : {}),
+        ...(presentation ? { responsePresentation: presentation } : {}),
       });
       explanations.push(allowedValues(issue.constraint).length
         ? expectedResultAssistance(issue).genericConstraint
@@ -143,7 +143,7 @@ export function applyExpectedResult(
       marker: "+",
       ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
       ...(choice.operatorProvided ? { operatorProvided: true } : {}),
-      ...(inline ? { inlineResponse: inline } : {}),
+      ...(presentation ? { responsePresentation: presentation } : {}),
     });
     explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
   }

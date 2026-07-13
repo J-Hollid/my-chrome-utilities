@@ -2,6 +2,7 @@ import { cloneValue, pointerSegments } from "./data-layer-defect-report-json.js"
 import type {
   DefectReport,
   DefectReportClipboard,
+  ExpectedCorrection,
   GeneratedDefectReport,
 } from "./data-layer-defect-report-model.js";
 
@@ -80,10 +81,34 @@ function jsonLines(value: unknown, depth = 0, pointer = ""): JsonLine[] {
   return lines;
 }
 
+function naturalList(values: readonly string[]): string {
+  if (values.length < 2) return values[0] ?? "";
+  if (values.length === 2) return `${values[0]} or ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
+}
+
+export function expectedResponseLine(correction: ExpectedCorrection): string | undefined {
+  const presentation = correction.responsePresentation;
+  if (!presentation) return undefined;
+  if (presentation.kind === "constraint") {
+    return `${presentation.property}: ${presentation.allowedValues.join(" OR ")}`;
+  }
+  const value = presentation.quoteValue
+    ? JSON.stringify(presentation.value)
+    : String(presentation.value);
+  const comment = presentation.allowedValuesComment
+    ? `, // must be of type ${naturalList(presentation.allowedValuesComment)}`
+    : "";
+  return `${presentation.property}: ${value}${comment}`;
+}
+
 function expectedLines(report: GeneratedDefectReport): JsonLine[] {
-  const inline = new Map(report.expected.corrections.flatMap((correction) => correction.inlineResponse
-    ? [[correction.pointer, correction.inlineResponse] as const]
-    : []));
+  const inline = new Map(report.expected.corrections.flatMap((correction) => {
+    const line = expectedResponseLine(correction);
+    return line
+      ? [[correction.pointer, line] as const]
+      : [];
+  }));
   return jsonLines(report.expected.payload).map((line) => {
     const response = line.pointer ? inline.get(line.pointer) : undefined;
     if (!response) return line;
@@ -134,7 +159,7 @@ function highlightedJson(
 
 function highlightedExpected(report: GeneratedDefectReport): string {
   const selected = new Set(report.expected.corrections
-    .filter(({ operation, inlineResponse }) => operation !== "none" || inlineResponse)
+    .filter(({ operation, responsePresentation }) => operation !== "none" || responsePresentation)
     .map(({ pointer }) => pointer));
   return expectedLines(report).map((line) => {
     if (!line.pointer || !selected.has(line.pointer)) return escapeHtml(line.text);

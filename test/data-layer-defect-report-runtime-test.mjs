@@ -4,6 +4,7 @@ import {
   copyDefectReportForJira,
   createDefectReport,
   expectedResultAssistance,
+  expectedResponseLine,
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
@@ -81,7 +82,7 @@ const inlineCases = [
   return {
     selection,
     responseSource: selected.expected.corrections[0].responseSource,
-    inlineResponse: selected.expected.corrections[0].inlineResponse,
+    inlineResponse: expectedResponseLine(selected.expected.corrections[0]),
     correctionCount: selected.expected.corrections.length,
     expectedPayload: selected.expected.payload,
     expectedJson: preview.expectedJson,
@@ -99,7 +100,7 @@ const commentCases = [true, false].map((selected) => {
   const preview = renderJiraReport(generateReportDetails(result));
   return {
     checkboxState: selected ? "selected" : "cleared",
-    inlineResponse: result.expected.corrections[0].inlineResponse,
+    inlineResponse: expectedResponseLine(result.expected.corrections[0]),
     response: result.expected.corrections[0].response,
     expectedJson: preview.expectedJson,
     preview,

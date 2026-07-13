@@ -36,9 +36,19 @@ export interface ExpectedCorrection {
   response?: unknown;
   responseSource?: string;
   operatorProvided?: boolean;
-  inlineResponse?: string;
+  responsePresentation?: ExpectedResponsePresentation;
   marker?: "+";
 }
+
+export type ExpectedResponsePresentation =
+  | { kind: "constraint"; property: string; allowedValues: string[] }
+  | {
+      kind: "value";
+      property: string;
+      value: unknown;
+      quoteValue: boolean;
+      allowedValuesComment?: string[];
+    };
 
 export interface DefectReport {
   event: DefectCapturedEvent;
