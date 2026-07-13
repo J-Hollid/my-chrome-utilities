@@ -1,4 +1,4 @@
-import { filterTimelineEvents, generatePathnameSkeleton, supportingTimeline, } from "./data-layer-defect-report.js";
+import { generatePathnameSkeleton, } from "./data-layer-defect-report.js";
 export function appendReproductionControls(controls, steps, context, state) {
     const startLabel = document.createElement("label");
     startLabel.textContent = "Reproduction starts at ";
@@ -32,61 +32,6 @@ export function appendReproductionControls(controls, steps, context, state) {
     });
     startLabel.append(startVisit);
     controls.append(startLabel, generate);
-}
-export function appendTimelineControls(filters, list, context, state) {
-    const selections = new Map();
-    const filter = {};
-    const update = () => {
-        state.update({ ...state.report(), timeline: supportingTimeline(context.timeline, [...selections.values()]) });
-        state.refresh();
-    };
-    const render = () => {
-        list.replaceChildren(...filterTimelineEvents(context.timeline, filter).map((event) => {
-            const item = document.createElement("li");
-            const selectedLabel = document.createElement("label");
-            const selected = document.createElement("input");
-            selected.type = "checkbox";
-            selected.checked = selections.has(event.id);
-            selectedLabel.append(selected, `${event.captureTime} ${event.name} · ${event.source} · ${event.pathname} · ${event.validation}`);
-            const options = document.createElement("span");
-            for (const [field, labelText] of [["includeSummary", "Summary"], ["includePayload", "Payload"], ["includeValidation", "Validation details"]]) {
-                const optionLabel = document.createElement("label");
-                const option = document.createElement("input");
-                option.type = "checkbox";
-                option.checked = Boolean(selections.get(event.id)?.[field]);
-                option.disabled = !selected.checked;
-                option.addEventListener("change", () => {
-                    selections.set(event.id, { ...(selections.get(event.id) ?? { eventId: event.id }), [field]: option.checked });
-                    update();
-                });
-                optionLabel.append(option, labelText);
-                options.append(optionLabel);
-            }
-            selected.addEventListener("change", () => {
-                if (selected.checked)
-                    selections.set(event.id, { eventId: event.id });
-                else
-                    selections.delete(event.id);
-                render();
-                update();
-            });
-            item.append(selectedLabel, options);
-            return item;
-        }));
-    };
-    for (const [field, labelText] of [["name", "Event name"], ["source", "Source"], ["pathname", "Pathname"], ["validation", "Validation state"]]) {
-        const label = document.createElement("label");
-        label.textContent = `${labelText} `;
-        const input = document.createElement("input");
-        input.dataset.timelineFilter = field;
-        input.addEventListener("input", () => { if (input.value)
-            filter[field] = input.value;
-        else
-            delete filter[field]; render(); });
-        label.append(input);
-        filters.append(label);
-    }
-    render();
 }
 export function appendDetailControls(controls, edits, refresh) {
     for (const [field, labelText, multiline] of [

@@ -18,10 +18,10 @@ import {
 import {
   appendDetailControls,
   appendReproductionControls,
-  appendTimelineControls,
   type DefectReportBuilderState,
 } from "./data-layer-defect-report-ui-controls.js";
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
+import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
 
 export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
@@ -48,8 +48,8 @@ export function renderDefectReportBuilder(
   const expectedControls = document.createElement("div");
   const reproductionControls = document.createElement("div");
   const reproductionSteps = document.createElement("ol");
-  const timelineFilters = document.createElement("div"); timelineFilters.setAttribute("aria-label", "Timeline filters");
-  const timelineList = document.createElement("ul");
+  const timelineFilters = document.createElement("div"); timelineFilters.className = "defect-timeline-composer"; timelineFilters.setAttribute("aria-label", "Timeline composer");
+  const timelineList = document.createElement("ul"); timelineList.className = "defect-timeline-entries"; timelineList.setAttribute("aria-label", "Supporting timeline entries");
   const detailControls = document.createElement("div");
   const preview = document.createElement("section"); preview.setAttribute("aria-label", "Final report preview");
   const feedback = document.createElement("output"); feedback.setAttribute("aria-live", "polite");

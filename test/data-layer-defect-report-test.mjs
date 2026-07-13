@@ -11,7 +11,10 @@ import {
   editReportDetails,
   renderJiraReport,
   supportingTimeline,
+  timelineEventChoices,
   toggleReportIssue,
+  removeTimelineSelection,
+  saveTimelineSelection,
   validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
 import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
@@ -197,6 +200,30 @@ assert.deepEqual(supportingTimeline(timeline, [
   { captureTime: "01", name: "pageview", source: "dataLayer", pathname: "/products", summary: "Products opened" },
   { captureTime: "04", name: "purchase", source: "dataLayer", pathname: "/checkout", validationDetails: ["currency invalid"] },
 ]);
+const choicePage = timelineEventChoices(timeline, { source: "data" }, ["purchase"], 2);
+assert.deepEqual(choicePage.choices.map(({ event, alreadyAdded }) => [event.id, alreadyAdded]), [
+  ["purchase", true],
+  ["promotion", false],
+]);
+assert.equal(choicePage.hasOlder, true);
+assert.deepEqual(
+  saveTimelineSelection(
+    [{ eventId: "purchase", includeValidation: true }],
+    { eventId: "purchase", includePayload: true },
+  ),
+  [{ eventId: "purchase", includePayload: true }],
+);
+assert.deepEqual(
+  saveTimelineSelection(
+    [{ eventId: "purchase", includeValidation: true }],
+    { eventId: "pageview", includeSummary: true },
+  ),
+  [{ eventId: "purchase", includeValidation: true }, { eventId: "pageview", includeSummary: true }],
+);
+assert.deepEqual(removeTimelineSelection([
+  { eventId: "purchase", includeValidation: true },
+  { eventId: "pageview", includeSummary: true },
+], "purchase"), [{ eventId: "pageview", includeSummary: true }]);
 
 const detailed = generateReportDetails({
   ...corrected,

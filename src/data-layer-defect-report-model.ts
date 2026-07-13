@@ -88,7 +88,7 @@ export interface TimelineEvent {
   summary?: string;
   validationDetails?: unknown;
 }
-export interface TimelineFilter { name?: string; source?: string; pathname?: string; validation?: string }
+export interface TimelineFilter { search?: string; name?: string; source?: string; pathname?: string; validation?: string }
 export interface TimelineSelection {
   eventId: string;
   includeSummary?: boolean;

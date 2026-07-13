@@ -1,7 +1,8 @@
 import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
-import { appendDetailControls, appendReproductionControls, appendTimelineControls, } from "./data-layer-defect-report-ui-controls.js";
+import { appendDetailControls, appendReproductionControls, } from "./data-layer-defect-report-ui-controls.js";
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
+import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
 function heading(level, text) {
     const element = document.createElement(level);
@@ -18,8 +19,11 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     const reproductionControls = document.createElement("div");
     const reproductionSteps = document.createElement("ol");
     const timelineFilters = document.createElement("div");
-    timelineFilters.setAttribute("aria-label", "Timeline filters");
+    timelineFilters.className = "defect-timeline-composer";
+    timelineFilters.setAttribute("aria-label", "Timeline composer");
     const timelineList = document.createElement("ul");
+    timelineList.className = "defect-timeline-entries";
+    timelineList.setAttribute("aria-label", "Supporting timeline entries");
     const detailControls = document.createElement("div");
     const preview = document.createElement("section");
     preview.setAttribute("aria-label", "Final report preview");
