@@ -24,12 +24,29 @@ export function appendIssueControls(
     const assistance = expectedResultAssistance(reportIssue);
     const group = document.createElement("fieldset");
     group.setAttribute("aria-label", `${reportIssue.id} expected-result assistance`);
+    const includeComment = document.createElement("input");
+    includeComment.type = "checkbox";
+    includeComment.dataset.allowedValuesComment = reportIssue.id;
+    const includeCommentLabel = document.createElement("label");
+    includeCommentLabel.append(includeComment, "Include all allowed values as a comment");
     const genericLabel = document.createElement("label");
     const generic = document.createElement("input"); generic.type = "radio"; generic.name = `defect-response-${reportIssue.id}`;
     generic.dataset.responseSource = "Use generic constraint";
+    if (assistance.schemaValues.length) {
+      generic.checked = true;
+      selectedChoices.set(reportIssue.id, {
+        issueId: reportIssue.id,
+        method: "keep the rule generic",
+        responseSource: "schema constraint",
+      });
+    }
     generic.addEventListener("change", () => {
       hideCustomResponse();
-      selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: "keep the rule generic" });
+      selectedChoices.set(reportIssue.id, {
+        issueId: reportIssue.id,
+        method: "keep the rule generic",
+        responseSource: "schema constraint",
+      });
       state.refresh();
     });
     genericLabel.append(generic, `Use generic constraint — ${assistance.genericConstraint}`);
@@ -46,13 +63,22 @@ export function appendIssueControls(
           issueId: reportIssue.id,
           method: "choose an allowed value",
           response: value,
-          responseSource: `${state.report().event.schema.name} schema`,
+          responseSource: "schema-provided value",
+          ...(includeComment.checked ? { includeAllowedValuesComment: true } : {}),
         });
         state.refresh();
       });
       schemaLabel.append(schemaValue, `${value} — ${state.report().event.schema.name} schema`);
       group.append(schemaLabel);
     }
+
+    includeComment.addEventListener("change", () => {
+      const choice = selectedChoices.get(reportIssue.id);
+      if (choice?.method !== "choose an allowed value") return;
+      selectedChoices.set(reportIssue.id, { ...choice, includeAllowedValuesComment: includeComment.checked });
+      state.refresh();
+    });
+    if (assistance.schemaValues.length) group.append(includeCommentLabel);
 
     if (/forbidden/i.test(reportIssue.constraint)) {
       const ruleLabel = document.createElement("label");
@@ -82,7 +108,7 @@ export function appendIssueControls(
       warning.textContent = result.valid ? "Custom value or response." : result.warning;
       keep.hidden = result.valid; replace.hidden = result.valid;
       if (result.valid && response.value) {
-        selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: "enter a valid response", response: response.value, responseSource: "Custom value or response" });
+        selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: "enter a valid response", response: response.value, responseSource: "operator custom override" });
       } else selectedChoices.delete(reportIssue.id);
       state.refresh();
     });
@@ -91,7 +117,7 @@ export function appendIssueControls(
         issueId: reportIssue.id,
         method: "enter a valid response",
         response: response.value,
-        responseSource: "Custom value or response",
+        responseSource: "operator custom override",
         operatorProvided: true,
       });
       warning.textContent = `${response.value} is kept as an operator-provided override.`;

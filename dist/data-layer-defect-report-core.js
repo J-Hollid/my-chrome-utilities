@@ -24,6 +24,27 @@ export function validateAssistedResponse(issue, response) {
 function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
+function naturalList(values) {
+    if (values.length < 2)
+        return values[0] ?? "";
+    if (values.length === 2)
+        return `${values[0]} or ${values[1]}`;
+    return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
+}
+function inlineResponse(issue, choice) {
+    const name = issueName(issue);
+    const values = allowedValues(issue.constraint);
+    if (choice.method === "keep the rule generic") {
+        return values.length ? `${name}: ${values.join(" OR ")}` : undefined;
+    }
+    if (choice.method === "apply the rule" || choice.response === undefined)
+        return undefined;
+    if (choice.includeAllowedValuesComment !== undefined && values.length) {
+        const comment = choice.includeAllowedValuesComment ? `, // must be of type ${naturalList(values)}` : "";
+        return `${name}: ${JSON.stringify(choice.response)}${comment}`;
+    }
+    return `${name}: ${String(choice.response)}`;
+}
 function actualDifferences(payload, issues) {
     return issues.filter(({ selected }) => selected).map((issue) => ({
         pointer: issue.pointer,
@@ -68,8 +89,15 @@ export function applyExpectedResult(report, choices) {
         if (!issue)
             throw new Error(`Unknown report issue: ${choice.issueId}`);
         const name = issueName(issue);
+        const inline = inlineResponse(issue, choice);
         if (choice.method === "keep the rule generic") {
-            corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "none" });
+            corrections.push({
+                issueId: issue.id,
+                pointer: issue.pointer,
+                operation: "none",
+                ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
+                ...(inline ? { inlineResponse: inline } : {}),
+            });
             explanations.push(allowedValues(issue.constraint).length
                 ? expectedResultAssistance(issue).genericConstraint
                 : `${name} satisfies its validation rule`);
@@ -96,6 +124,7 @@ export function applyExpectedResult(report, choices) {
             marker: "+",
             ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
             ...(choice.operatorProvided ? { operatorProvided: true } : {}),
+            ...(inline ? { inlineResponse: inline } : {}),
         });
         explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
     }

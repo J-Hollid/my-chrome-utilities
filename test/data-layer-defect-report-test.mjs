@@ -100,6 +100,72 @@ const customOverride = applyExpectedResult(report, [{
 assert.equal(customOverride.expected.corrections[0].operatorProvided, true);
 assert.match(customOverride.expected.explanations[0], /operator-provided/);
 
+const pageTypeEvent = {
+  ...event,
+  payload: { page_type: "unknown" },
+  issues: [{
+    id: "page_type",
+    severity: "error",
+    pointer: "/page_type",
+    constraint: "one of homepage, product listing, product detail, or checkout",
+    actual: "unknown",
+    rule: "allowed-page-type",
+    ruleVersion: 1,
+  }],
+};
+const pageTypeReport = createDefectReport(pageTypeEvent);
+const genericPageType = applyExpectedResult(pageTypeReport, [{
+  issueId: "page_type",
+  method: "keep the rule generic",
+  responseSource: "schema constraint",
+}]);
+const genericPageTypePreview = renderJiraReport(generateReportDetails(genericPageType));
+assert.match(genericPageTypePreview.text, /page_type: homepage OR product listing OR product detail OR checkout/);
+assert.match(genericPageTypePreview.text, /page_type response source: schema constraint/);
+assert.match(genericPageTypePreview.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/page_type"/);
+assert.equal(JSON.parse(genericPageTypePreview.expectedJson).page_type, "unknown");
+assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
+
+const commentedPageType = applyExpectedResult(pageTypeReport, [{
+  issueId: "page_type",
+  method: "choose an allowed value",
+  response: "homepage",
+  responseSource: "schema-provided value",
+  includeAllowedValuesComment: true,
+}]);
+const commentedPageTypePreview = renderJiraReport(generateReportDetails(commentedPageType));
+const commentedPageTypeLine = 'page_type: "homepage", // must be of type homepage, product listing, product detail, or checkout';
+assert.match(commentedPageTypePreview.text, new RegExp(commentedPageTypeLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.match(commentedPageTypePreview.html, /page_type: &quot;homepage&quot;, \/\/ must be of type homepage, product listing, product detail, or checkout/);
+assert.equal(JSON.parse(commentedPageTypePreview.expectedJson).page_type, "homepage");
+assert.doesNotMatch(commentedPageTypePreview.expectedJson, /must be of type/);
+assert.equal(commentedPageType.expected.corrections[0].responseSource, "schema-provided value");
+assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
+
+const clearedCommentPageType = applyExpectedResult(pageTypeReport, [{
+  issueId: "page_type",
+  method: "choose an allowed value",
+  response: "homepage",
+  responseSource: "schema-provided value",
+  includeAllowedValuesComment: false,
+}]);
+const clearedCommentPreview = renderJiraReport(generateReportDetails(clearedCommentPageType));
+assert.match(clearedCommentPreview.text, /page_type: "homepage"/);
+assert.doesNotMatch(clearedCommentPreview.text, /must be of type/);
+assert.equal(JSON.parse(clearedCommentPreview.expectedJson).page_type, "homepage");
+
+const customPageType = applyExpectedResult(pageTypeReport, [{
+  issueId: "page_type",
+  method: "enter a valid response",
+  response: "category landing",
+  responseSource: "operator custom override",
+  operatorProvided: true,
+}]);
+const customPageTypePreview = renderJiraReport(generateReportDetails(customPageType));
+assert.match(customPageTypePreview.text, /page_type: category landing/);
+assert.match(customPageTypePreview.text, /page_type response source: operator custom override \(operator-provided\)/);
+assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
+
 const removed = applyExpectedResult(createDefectReport({
   ...event,
   issues: [{ id: "debug", severity: "error", pointer: "/commerce/debug", constraint: "forbidden property", actual: true, rule: "forbidden", ruleVersion: 1 }],

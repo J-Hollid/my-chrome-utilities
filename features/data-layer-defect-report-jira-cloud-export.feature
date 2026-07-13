@@ -54,3 +54,21 @@ Feature: Data layer defect report Jira Cloud export
     Then copy failure is reported
     And current report content is not cleared
     And success is not reported
+
+  # Data layer defect report Jira Cloud export 006
+  Scenario: Data layer defect report Jira Cloud export 006
+    Given Expected response uses schema constraint must be one of homepage, product listing, product detail, or checkout for page_type
+    When the final preview and rich clipboard representation are produced
+    Then both inline page_type: homepage OR product listing OR product detail OR checkout
+    And the inlined expected response has green highlighting and schema-constraint identification
+    And it is not represented as a selected literal JSON value
+
+  # Data layer defect report Jira Cloud export 007
+  Scenario: Data layer defect report Jira Cloud export 007
+    Given page_type has selected expected value homepage
+    And Include all allowed values as a comment is selected
+    When the final preview and rich clipboard representation are produced
+    Then both inline page_type: "homepage", // must be of type homepage, product listing, product detail, or checkout
+    And the page_type value has green expected-result highlighting
+    And the schema-derived comment remains adjacent to the value
+    And the underlying expected JSON payload contains homepage without the comment

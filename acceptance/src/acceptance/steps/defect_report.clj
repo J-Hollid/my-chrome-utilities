@@ -35,15 +35,17 @@
 
 (defn- observation! [] (or @runtime-observation (load-observation!)))
 
-(defn- assert-observation! [text example observation]
+(defn- assert-builder-state! [observation]
   (support/assert! (= "purchase-1" (:associatedEvent observation)) "The builder lost its captured event association." observation)
   (support/assert! (= {:currency true :order_id true :coupon false :debug true :total true} (:initial observation)) "Initial issue selection is incorrect." observation)
   (support/assert! (not (some #{"passing"} (:offeredIssues observation))) "Passing evaluations were offered." observation)
   (support/assert! (and (= true (get-in observation [:toggled :coupon])) (= false (get-in observation [:toggled :currency]))) "Issues are not independently selectable." observation)
   (support/assert! (= (:original observation) (get-in observation [:actual :payload])) "The actual result changed the captured payload." observation)
   (support/assert! (= "red" (get-in observation [:actual :differences 0 :treatment])) "The actual difference is not red." observation)
-  (support/assert! (= "−" (get-in observation [:actual :differences 0 :marker])) "The actual difference lacks a minus marker." observation)
-  (when (seq example)
+  (support/assert! (= "−" (get-in observation [:actual :differences 0 :marker])) "The actual difference lacks a minus marker." observation))
+
+(defn- assert-expected-example! [example observation]
+  (when (:issue example)
     (let [match (some (fn [candidate]
                         (when (and (= (:issue example) (:issueId candidate))
                                    (= (:constraint example) (:constraint candidate))
@@ -54,23 +56,69 @@
       (support/assert! match "Expected-result example was not exercised by production code." {:example example :cases (:cases observation)})
       (support/assert! (= (:expected_outcome example) (:outcome match)) "Expected explanation differs." match)
       (support/assert! (= (:json_operation example) (:jsonOperation match)) "JSON operation differs." match)
-      (support/assert! (= (:response_source example) (:responseSource match)) "Expected response provenance differs." match)))
+      (support/assert! (= (:response_source example) (:responseSource match)) "Expected response provenance differs." match))))
+
+(defn- assert-inline-example! [example observation]
+  (when-let [selection (:selection example)]
+    (let [match (some #(when (= selection (:selection %)) %) (get-in observation [:pageType :inlineCases]))]
+      (support/assert! match "Inline expected-response selection was not exercised by production code." {:example example})
+      (support/assert! (= (:expected_response example) (:inlineResponse match)) "Inline expected response differs." match)
+      (support/assert! (= (:response_source example) (:responseSource match)) "Inline response provenance differs." match)
+      (support/assert! (= 1 (:correctionCount match)) "Changing selection retained more than one inline correction." match)
+      (support/assert! (str/includes? (get-in match [:preview :text]) (:expected_response example)) "Plain preview omitted the inline expected response." match)
+      (support/assert! (str/includes? (get-in match [:preview :html]) "background-color:#d9f7d9") "Rich preview omitted green inline highlighting." match)
+      (support/assert! (= {:page_type "unknown"} (get-in observation [:pageType :original])) "Inline selection mutated the captured event." observation))))
+
+(defn- assert-comment-example! [example observation]
+  (when-let [checkbox-state (:checkbox_state example)]
+    (let [match (some #(when (= checkbox-state (:checkboxState %)) %) (get-in observation [:pageType :commentCases]))
+          expected-json (some-> (:expectedJson match) (json/parse-string true))]
+      (support/assert! match "Allowed-values comment state was not exercised by production code." {:example example})
+      (support/assert! (= (:expected_line example) (:inlineResponse match)) "Allowed-values inline line differs." match)
+      (support/assert! (= "homepage" (:response match)) "Comment toggling changed the selected expected value." match)
+      (support/assert! (= "homepage" (:page_type expected-json)) "Expected JSON lost the selected page_type value." {:expected-json expected-json})
+      (support/assert! (not (str/includes? (:expectedJson match) "must be of type")) "Schema comment was inserted into Expected JSON." match))))
+
+(defn- assert-assistance! [observation]
   (support/assert! (= "/commerce/currency must be one of EUR or USD" (get-in observation [:assistance :genericConstraint])) "Generic constraint assistance is incorrect." observation)
   (support/assert! (= ["EUR" "USD"] (get-in observation [:assistance :schemaValues])) "Schema allowed values are incorrect." observation)
   (support/assert! (not (some #{"GBP"} (get-in observation [:assistance :schemaValues]))) "The invalid actual value was offered as valid." observation)
   (support/assert! (= "/commerce/currency must be one of EUR or USD" (get-in observation [:generic :explanation])) "Generic Expected result is incorrect." observation)
   (support/assert! (= (:original observation) (get-in observation [:generic :payload])) "Generic constraint changed Expected JSON." observation)
   (support/assert! (= "none" (get-in observation [:generic :corrections 0 :operation])) "Generic constraint invented a JSON operation." observation)
+  (support/assert! (= ["homepage" "product listing" "product detail" "checkout"] (get-in observation [:pageType :assistance :schemaValues])) "Page type schema values are incorrect." observation)
+  (support/assert! (not (some #{"unknown"} (get-in observation [:pageType :assistance :schemaValues]))) "Invalid page_type was offered as a valid value." observation)
+  (support/assert! (false? (get-in observation [:pageType :customValidation :valid])) "Invalid custom page_type was accepted as schema-valid." observation)
+  (support/assert! (str/includes? (get-in observation [:pageType :customValidation :warning]) "category landing does not satisfy") "Custom page_type warning is missing." observation))
+
+(defn- assert-inline-delivery! [observation]
+  (let [generic-inline (get-in observation [:pageType :inlineCases 0])
+        commented-inline (get-in observation [:pageType :commentCases 0])
+        generic-copy (get-in observation [:pageType :inlineRichWrites 0])
+        commented-copy (get-in observation [:pageType :inlineRichWrites 1])]
+    (support/assert! (= "unknown" (:page_type (json/parse-string (:expectedJson generic-inline) true))) "Generic constraint became a selected literal JSON value." generic-inline)
+    (doseq [representation [(get-in generic-inline [:preview :text]) (:text generic-copy)]]
+      (support/assert! (str/includes? representation "page_type: homepage OR product listing OR product detail OR checkout") "Generic inline response is absent from preview or clipboard." {}))
+    (doseq [representation [(get-in commented-inline [:preview :text]) (:text commented-copy)]]
+      (support/assert! (str/includes? representation "page_type: \"homepage\", // must be of type homepage, product listing, product detail, or checkout") "Commented inline response is absent from preview or clipboard." {}))
+    (support/assert! (str/includes? (:html generic-copy) "page_type response source: schema constraint") "Generic rich clipboard omitted response provenance." generic-copy)
+    (support/assert! (str/includes? (:html commented-copy) "background-color:#d9f7d9") "Commented rich clipboard omitted green highlighting." commented-copy)))
+
+(defn- assert-custom-override! [observation]
   (support/assert! (false? (get-in observation [:custom :validation :valid])) "Invalid custom response was accepted as schema-valid." observation)
   (support/assert! (str/includes? (get-in observation [:custom :validation :warning]) "does not satisfy") "Invalid custom response warning is missing." observation)
-  (support/assert! (true? (get-in observation [:custom :correction :operatorProvided])) "Kept custom override lacks operator provenance." observation)
+  (support/assert! (true? (get-in observation [:custom :correction :operatorProvided])) "Kept custom override lacks operator provenance." observation))
+
+(defn- assert-reproduction-and-timeline! [observation]
   (support/assert! (= ["/products" "/checkout" "/products" "/checkout"] (mapv :pathname (:steps observation))) "Pathname skeleton is not visit-ordered." observation)
   (support/assert! (= "Open the selected product" (get-in observation [:steps 0 :text])) "Operator reproduction edits were lost." observation)
   (support/assert! (= 1 (:filteredTimelineCount observation)) "Timeline filters did not compose." observation)
   (support/assert! (= ["pageview" "purchase"] (mapv :name (:selectedTimeline observation))) "Supporting timeline selection or chronology is incorrect." observation)
   (support/assert! (nil? (get-in observation [:selectedTimeline 0 :payload])) "Unrequested timeline payload was included." observation)
   (support/assert! (= "Products opened" (get-in observation [:selectedTimeline 0 :summary])) "Requested timeline summary is missing." observation)
-  (support/assert! (seq (get-in observation [:selectedTimeline 1 :validationDetails])) "Requested validation details are missing." observation)
+  (support/assert! (seq (get-in observation [:selectedTimeline 1 :validationDetails])) "Requested validation details are missing." observation))
+
+(defn- assert-preview-and-copy! [observation]
   (doseq [heading ["Summary" "Description" "Steps to reproduce" "Actual result" "Expected result" "Differences" "Validation evidence" "Supporting timeline"]]
     (support/assert! (str/includes? (get-in observation [:preview :text]) heading) "Report preview section is missing." {:heading heading}))
   (support/assert! (str/includes? (get-in observation [:preview :html]) "background-color:#ffd7d7") "Rich actual highlighting is missing." observation)
@@ -78,12 +126,21 @@
   (support/assert! (= "success" (get-in observation [:copies :richCopy :status])) "Rich clipboard copy did not succeed." observation)
   (support/assert! (= "warning" (get-in observation [:copies :plainCopy :status])) "Plain clipboard fallback did not warn." observation)
   (support/assert! (= "failure" (get-in observation [:copies :failedCopy :status])) "Clipboard failure was not reported." observation)
-  (support/assert! (not= "success" (get-in observation [:copies :failedCopy :status])) "Clipboard failure reported success." observation)
+  (support/assert! (not= "success" (get-in observation [:copies :failedCopy :status])) "Clipboard failure reported success." observation))
+
+(defn- assert-production-ui! [observation]
   (support/assert! (= 2 (get-in observation [:ui :reproductionSteps])) "Production UI did not generate pathname reproduction steps." observation)
   (support/assert! (= 2 (get-in observation [:ui :timelineEntries])) "Production UI did not render session timeline entries." observation)
   (support/assert! (true? (get-in observation [:ui :editedSummaryVisible])) "Production UI did not preserve editable report details." observation)
   (support/assert! (= 1 (get-in observation [:ui :copied])) "Production UI did not invoke the Jira clipboard callback." observation)
   (support/assert! (= ["EUR" "USD"] (get-in observation [:ui :schemaResponses])) "Production UI did not render separate schema responses." observation)
+  (support/assert! (true? (get-in observation [:ui :pageType :genericSelected])) "Production UI did not initially select Use generic constraint." observation)
+  (support/assert! (= ["homepage" "product listing" "product detail" "checkout"] (get-in observation [:ui :pageType :schemaResponses])) "Production UI did not render page_type schema responses." observation)
+  (support/assert! (true? (get-in observation [:ui :pageType :commentAvailable])) "Production UI omitted the allowed-values comment control." observation)
+  (support/assert! (str/includes? (get-in observation [:ui :pageType :genericInline]) "page_type: homepage OR product listing OR product detail OR checkout") "Production UI omitted the generic inline response." observation)
+  (support/assert! (str/includes? (get-in observation [:ui :pageType :schemaInline]) "page_type: product detail") "Production UI did not replace the generic inline response." observation)
+  (support/assert! (str/includes? (get-in observation [:ui :pageType :commentedInline]) "// must be of type homepage, product listing, product detail, or checkout") "Production UI omitted the selected schema comment." observation)
+  (support/assert! (not (str/includes? (get-in observation [:ui :pageType :clearedInline]) "must be of type homepage")) "Production UI retained a cleared schema comment." observation)
   (support/assert! (true? (get-in observation [:ui :customInitiallyHidden])) "Custom input was displayed before selection." observation)
   (support/assert! (true? (get-in observation [:ui :customVisibleAfterSelection])) "Custom input did not appear after selection." observation)
   (support/assert! (str/includes? (get-in observation [:ui :invalidCustomWarning]) "does not satisfy") "Production UI omitted custom constraint warning." observation)
@@ -91,7 +148,19 @@
   (support/assert! (= ["Back to captured event" "Back to Live feed"] (get-in observation [:ui :navigationActions])) "Builder navigation actions are missing or unordered." observation)
   (support/assert! (= {:backToCapturedEvent 1 :focusCreateDefectReport 1 :backToLiveFeed 1} (get-in observation [:ui :navigation])) "Builder navigation callbacks did not restore both destinations and focus." observation)
   (support/assert! (= 480 (get-in observation [:ui :liveFeedScrollTop])) "Builder navigation changed Live feed scroll." observation)
-  (support/assert! (>= (:contrast observation) 4.5) "Highlighted text contrast is below 4.5:1." observation)
+  (support/assert! (>= (:contrast observation) 4.5) "Highlighted text contrast is below 4.5:1." observation))
+
+(defn- assert-observation! [_text example observation]
+  (assert-builder-state! observation)
+  (assert-expected-example! example observation)
+  (assert-inline-example! example observation)
+  (assert-comment-example! example observation)
+  (assert-assistance! observation)
+  (assert-inline-delivery! observation)
+  (assert-custom-override! observation)
+  (assert-reproduction-and-timeline! observation)
+  (assert-preview-and-copy! observation)
+  (assert-production-ui! observation)
   true)
 
 (defn- transition [world example _captures {:keys [text]}]

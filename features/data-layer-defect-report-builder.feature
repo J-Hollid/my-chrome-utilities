@@ -9,6 +9,7 @@ Feature: Data layer defect report builder
     Given captured event purchase is invalid under Checkout schema version 4
     And its captured payload is purchase-invalid-json
     And currency violates constraint must be one of EUR or USD
+    And page_type violates constraint must be one of homepage, product listing, product detail, or checkout
 
   # Data layer defect report builder 001
   Scenario: Data layer defect report builder 001
@@ -30,11 +31,13 @@ Feature: Data layer defect report builder
 
   # Data layer defect report builder 003
   Scenario: Data layer defect report builder 003
-    When expected-result assistance for currency is displayed
-    Then Use generic constraint shows the current currency rule with EUR and USD
-    And schema-provided values EUR and USD are separately selectable
+    When expected-result assistance for page_type is displayed
+    Then green highlighted Expected response inlines page_type: homepage OR product listing OR product detail OR checkout
+    And Use generic constraint is selected and identifies the inlined text as a schema constraint
+    And schema-provided values homepage, product listing, product detail, and checkout are separately selectable
     And Custom value or response is available as an alternative
     And custom response input is displayed only after Custom value or response is selected
+    And Include all allowed values as a comment is available for the allowed-values rule
     And the invalid actual value is not presented as a schema-provided valid value
 
   # Data layer defect report builder 004
@@ -70,18 +73,24 @@ Feature: Data layer defect report builder
       | debug    | forbidden property | remove   | validation rule          | debug is absent   | remove debug     |
 
   # Data layer defect report builder 007
-  Scenario: Data layer defect report builder 007
-    When the operator chooses Use generic constraint
-    Then Expected result represents /commerce/currency must be one of EUR or USD
-    And no single allowed value is selected
-    And no placeholder, annotation, or allowed-values array is inserted into expected JSON
-    And the invalid actual value is not presented as a corrected value
+  Scenario Outline: Data layer defect report builder 007
+    When the operator applies <selection> in the expected-response selector
+    Then green highlighted Expected response inlines <expected_response>
+    And the response is identified as <response_source>
+    And changing the selection replaces the previous inline expression
+    And the captured purchase event remains unchanged
+
+    Examples:
+      | selection                     | expected_response                                                    | response_source          |
+      | Use generic constraint        | page_type: homepage OR product listing OR product detail OR checkout | schema constraint        |
+      | schema value product detail   | page_type: product detail                                             | schema-provided value    |
+      | custom value category landing | page_type: category landing                                           | operator custom override |
 
   # Data layer defect report builder 008
   Scenario: Data layer defect report builder 008
-    When the operator enters custom expected value CAD
-    Then the helper identifies CAD as a Custom value or response
-    And the helper warns that CAD does not satisfy the current schema constraint
+    When the operator enters custom expected value category landing
+    Then the helper identifies category landing as a Custom value or response
+    And the helper warns that category landing does not satisfy the current schema constraint
     And the operator can explicitly keep or replace the custom override
     And a kept override is identified as operator-provided in Expected result
 
@@ -103,3 +112,17 @@ Feature: Data layer defect report builder
     Then the defect report builder and purchase inspector are closed
     And focus returns to purchase in the Live feed
     And the Live feed scroll position is unchanged
+
+  # Data layer defect report builder 011
+  Scenario Outline: Data layer defect report builder 011
+    Given schema value homepage is selected for page_type
+    And Include all allowed values as a comment is <checkbox_state>
+    When the operator reviews the inline Expected response
+    Then its page_type line is <expected_line>
+    And the selected expected value remains homepage
+    And the comment is presentation metadata derived from the schema and is not inserted into the expected JSON payload
+
+    Examples:
+      | checkbox_state | expected_line                                                                                              |
+      | selected       | page_type: "homepage", // must be of type homepage, product listing, product detail, or checkout          |
+      | cleared        | page_type: "homepage"                                                                                     |
