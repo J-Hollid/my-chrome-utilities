@@ -55,6 +55,12 @@ for (let sample = 0; sample < 200; sample += 1) {
     events.filter(({ name }) => selectedNames.includes(name)).map(({ id }) => id),
     "values within one condition must be OR-composed",
   );
+  const neither = applyQueryCondition(emptyQuery, { id:"neither", field:"Event name", operator:"is not", values:selectedNames });
+  assert.deepEqual(
+    filterEventsByQuery(events, neither).map(({ id }) => id),
+    events.filter(({ name }) => !selectedNames.includes(name)).map(({ id }) => id),
+    "negative values must exclude every selected alternative",
+  );
 
   const normalized = applyQueryCondition(emptyQuery, { id: "normalized", field: "Event name", operator: "is", values: [` ${leftName} `, leftName, ""] });
   assert.deepEqual(normalized.conditions[0].values, [leftName], "condition values must be trimmed and deduplicated");

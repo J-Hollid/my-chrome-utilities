@@ -8,6 +8,7 @@ import {
   eventFeedQueryOperators,
   eventFeedQuerySuggestions,
   filterEventsByQuery,
+  queryConditionComplete,
   queryConditionSummary,
   removeQueryCondition,
 } from "../dist/data-layer-event-feed-query.js";
@@ -37,6 +38,8 @@ assert.deepEqual(eventFeedQueryOperators("Validation rule"), ["failed", "warned"
 assert.deepEqual(eventFeedQuerySuggestions(events, "Event name"), ["checkout", "purchase"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Payload · currency"), ["EUR", "GBP"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Validation rule"), ["Page type allowed values"]);
+assert.equal(queryConditionComplete({ id:"invalid", field:"Event name", operator:"failed", values:["purchase"] }), false);
+assert.equal(queryConditionComplete({ id:"valid", field:"Validation rule", operator:"failed", values:["Page type allowed values"] }), true);
 
 const cases = [
   ["Event name", "is", "purchase"], ["Source", "is", "Adobe beacons"], ["Adapter kind", "is", "Adobe"],
@@ -61,3 +64,11 @@ assert.deepEqual(clearEventFeedQuery(query), { conditions: [] });
 
 const notEvaluated = applyQueryCondition({ conditions: [] }, { id: "absent", field: "Validation rule", operator: "was not evaluated", values: ["Missing rule"] });
 assert.deepEqual(filterEventsByQuery(events, notEvaluated).map(({ id }) => id), ["purchase", "checkout"]);
+const excludedNames = applyQueryCondition({ conditions: [] }, { id:"excluded", field:"Event name", operator:"is not", values:["purchase", "checkout"] });
+assert.deepEqual(filterEventsByQuery(events, excludedNames), []);
+const excludedFragments = applyQueryCondition({ conditions: [] }, { id:"fragments", field:"Event name", operator:"does not contain", values:["pur", "check"] });
+assert.deepEqual(filterEventsByQuery(events, excludedFragments), []);
+const missingSchemaIsNotPurchase = applyQueryCondition({ conditions: [] }, { id:"missing-schema", field:"Schema", operator:"is not", values:["Purchase event"] });
+assert.deepEqual(filterEventsByQuery(events, missingSchemaIsNotPurchase).map(({ id }) => id), ["checkout"]);
+const noSelectedRuleEvaluated = applyQueryCondition({ conditions: [] }, { id:"rules-absent", field:"Validation rule", operator:"was not evaluated", values:["Page type allowed values", "Missing rule"] });
+assert.deepEqual(filterEventsByQuery(events, noSelectedRuleEvaluated), []);

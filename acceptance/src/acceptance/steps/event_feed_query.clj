@@ -24,9 +24,14 @@
       (support/assert! (= ["purchase"] (:matches match)) "The query example retained a nonmatching event." match)
       (support/assert! (= (:summary example) (:summary match)) "The active-condition summary differs." match)))
   (when-let [outcome (:outcome example)]
-    (let [match (some #(when (= outcome (:operator %)) %) (:ruleOutcomes observed))]
+    (let [match (some #(when (= outcome (:operator %)) %) (:ruleOutcomes observed))
+          expected (get {"failed" ["failed"]
+                         "warned" ["warned"]
+                         "passed" ["passed"]
+                         "was evaluated" ["failed" "warned" "passed"]
+                         "was not evaluated" ["absent"]} outcome)]
       (support/assert! match "The validation-rule outcome was not exercised." {:outcome outcome})
-      (support/assert! (seq (:matches match)) "The validation-rule outcome matched no canonical event." match))))
+      (support/assert! (= expected (:matches match)) "The validation-rule outcome retained an event outside its criterion." match))))
 
 (defn- assert-observation! [example observed]
   (assert-example! example observed)
@@ -35,6 +40,15 @@
   (support/assert! (= ["event-feed-query-field" "event-feed-query-operator" "event-feed-query-value" "Apply condition" "Cancel"] (:controlOrder observed)) "Condition controls are not in keyboard order." observed)
   (support/assert! (= ["is" "is not" "contains" "does not contain"] (:operatorOptions observed)) "Text operators are incomplete." observed)
   (support/assert! (= ["checkout" "purchase"] (:suggestedNames observed)) "Captured event-name suggestions are not distinct and searchable." observed)
+  (doseq [[field expected] {"Source" ["Adobe beacons" "Event history"]
+                            "Adapter kind" ["Adobe" "Data layer"]
+                            "Pathname" ["/checkout" "/products"]
+                            "Payload · currency" ["EUR" "GBP"]
+                            "Schema" ["Purchase event"]
+                            "Validation rule" ["Page type allowed values"]
+                            "Rule severity" ["error" "warning"]
+                            "Affected property" ["currency" "page_type"]}]
+    (support/assert! (= expected (get (:suggestionsByField observed) (keyword field))) "A query field did not expose distinct captured suggestions." {:field field :observed observed}))
   (support/assert! (true? (:incompleteDisabled observed)) "An incomplete condition could be applied." observed)
   (support/assert! (true? (:legacyFilterAbsent observed)) "The standalone validation filter remains." observed)
   (support/assert! (= {:preventScroll true} (:focusOnOpen observed)) "Opening the editor did not move focus without scrolling." observed)
@@ -54,3 +68,7 @@
 
 (def handlers
   (support/semantic-handlers (support/feature-step-specs feature-files #{}) transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-13T16:17:46.8249262+02:00", :module-hash "1542119108", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1354257905"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "768548319"} {:id "form/2/defonce", :kind "defonce", :line 8, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 10, :end-line nil, :hash "168076834"} {:id "defn-/observation!", :kind "defn-", :line 18, :end-line nil, :hash "-775394783"} {:id "defn-/assert-example!", :kind "defn-", :line 20, :end-line nil, :hash "-289796773"} {:id "defn-/assert-observation!", :kind "defn-", :line 36, :end-line nil, :hash "1617644257"} {:id "defn-/transition", :kind "defn-", :line 66, :end-line nil, :hash "-1692133953"} {:id "def/handlers", :kind "def", :line 69, :end-line nil, :hash "857296873"}]}
+;; clj-mutate-manifest-end

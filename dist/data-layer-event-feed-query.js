@@ -74,7 +74,9 @@ export function eventFeedQuerySuggestions(events, field) {
     return distinct(events.flatMap((event) => eventValues(event, field)));
 }
 export function queryConditionComplete(condition) {
-    return Boolean(condition.field && condition.operator && condition.values?.some((value) => value.trim()));
+    if (!condition.id || !condition.field || !condition.operator || !condition.values?.some((value) => value.trim()))
+        return false;
+    return eventFeedQueryOperators(condition.field).includes(condition.operator);
 }
 export function applyQueryCondition(query, condition) {
     if (!queryConditionComplete(condition))
@@ -110,24 +112,29 @@ function validationStateMatches(actual, operator, expected) {
 }
 function ruleMatches(event, condition) {
     const evaluations = event.validationDetails?.evaluations ?? [];
-    return condition.values.some((rule) => {
+    const matchesRule = (rule) => {
         const matches = evaluations.filter((evaluation) => evaluation.rule.toLocaleLowerCase() === rule.toLocaleLowerCase());
-        if (condition.operator === "was not evaluated")
-            return matches.length === 0;
         if (condition.operator === "was evaluated")
             return matches.length > 0;
         const status = condition.operator === "failed" ? "error" : condition.operator === "warned" ? "warning" : "pass";
         return matches.some((evaluation) => evaluation.status === status);
-    });
+    };
+    if (condition.operator === "was not evaluated") {
+        return condition.values.every((rule) => evaluations.every((evaluation) => evaluation.rule.toLocaleLowerCase() !== rule.toLocaleLowerCase()));
+    }
+    return condition.values.some(matchesRule);
 }
 export function eventMatchesQueryCondition(event, condition) {
     if (condition.field === "Validation rule")
         return ruleMatches(event, condition);
-    const operator = condition.operator;
     const actualValues = eventValues(event, condition.field);
-    return condition.values.some((expected) => actualValues.some((actual) => condition.field === "Validation state"
-        ? validationStateMatches(actual, operator, expected)
-        : textMatches(actual, operator, expected)));
+    const matches = (actual, expected) => condition.field === "Validation state"
+        ? validationStateMatches(actual, condition.operator, expected)
+        : textMatches(actual, condition.operator, expected);
+    if (condition.operator === "is not" || condition.operator === "does not contain") {
+        return condition.values.every((expected) => actualValues.every((actual) => matches(actual, expected)));
+    }
+    return condition.values.some((expected) => actualValues.some((actual) => matches(actual, expected)));
 }
 export function filterEventsByQuery(events, query) {
     if (query.conditions.length === 0)

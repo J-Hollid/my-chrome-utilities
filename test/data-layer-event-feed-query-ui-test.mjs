@@ -48,6 +48,12 @@ field.value = "Event name"; field.dispatch("change");
 const operator = find(editor, ({ id }) => id === "event-feed-query-operator"); operator.value = "is"; operator.dispatch("change");
 const operatorOptions = operator.children.map(({ textContent }) => textContent);
 const suggestedNames = find(editor, ({ id }) => id === "event-feed-query-suggestions").children.map(({ value }) => value);
+const suggestionFields = ["Event name", "Source", "Adapter kind", "Pathname", "Payload · currency", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"];
+const suggestionsByField = Object.fromEntries(suggestionFields.map((candidate) => {
+  field.value = candidate; field.dispatch("change");
+  return [candidate, find(editor, ({ id }) => id === "event-feed-query-suggestions").children.map(({ value }) => value)];
+}));
+field.value = "Event name"; field.dispatch("change");
 const value = find(editor, ({ id }) => id === "event-feed-query-value"); value.value = "purchase"; value.dispatch("input");
 assert.equal(apply.disabled, false); apply.dispatch("click");
 assert.equal(updated.conditions.length, 1);
@@ -87,7 +93,7 @@ liveState = recordLiveEvent(liveState, { ...events[0], id:"new-match" });
 const selected = selectLiveEvent(liveState, "purchase", "stacked");
 
 process.stdout.write(`${JSON.stringify({ eventFeedQuery: {
-  fieldOptions, controlOrder:controls.map(({ id, textContent }) => id || textContent), operatorOptions, suggestedNames,
+  fieldOptions, controlOrder:controls.map(({ id, textContent }) => id || textContent), operatorOptions, suggestedNames, suggestionsByField,
   incompleteDisabled:true, focusOnOpen:field.focusOptions, appliedCount, appliedSummary, removeName, removeFocus:add.focusOptions,
   zeroCount:"0 of 2 events", zeroMessage:"No events match the active filters.", legacyFilterAbsent:!descendants(root).some(({ id }) => id === "live-validation-filter"),
   matchingCases, ruleOutcomes, multiMatches:filterEventsByQuery(events, multi).map(({ id }) => id), multiAndMatches:filterEventsByQuery(events, multiAnd).map(({ id }) => id),
