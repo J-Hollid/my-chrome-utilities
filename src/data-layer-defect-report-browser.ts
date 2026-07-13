@@ -1,11 +1,11 @@
 import type {
   DefectCapturedEvent,
+  DefectReportBuilderNavigation,
   DefectReportClipboard,
   PathnameVisit,
   TimelineEvent,
 } from "./data-layer-defect-report.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
-import type { DefectReportBuilderNavigation } from "./data-layer-defect-report-ui.js";
 
 export interface DefectReportNavigationEffects {
   showCapturedEvent(): void;
@@ -23,6 +23,23 @@ export function createDefectReportNavigation(
     },
     backToLiveFeed() { effects.closeToLiveFeed(); },
   };
+}
+
+export interface LiveDefectReportNavigationEffects {
+  reopenCapturedEvent(eventId: string, preserveReturnSnapshot: boolean): void;
+  createDefectReportAction(): Pick<HTMLElement, "focus"> | null;
+  closeToLiveFeed(): void;
+}
+
+export function createLiveDefectReportNavigation(
+  eventId: string,
+  effects: LiveDefectReportNavigationEffects,
+): DefectReportBuilderNavigation {
+  return createDefectReportNavigation({
+    showCapturedEvent: () => effects.reopenCapturedEvent(eventId, true),
+    focusCreateDefectReport: () => effects.createDefectReportAction()?.focus({ preventScroll: true }),
+    closeToLiveFeed: effects.closeToLiveFeed,
+  });
 }
 
 function issueId(pointer: string, index: number): string {

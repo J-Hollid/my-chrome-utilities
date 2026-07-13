@@ -27,7 +27,7 @@ import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigation
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { createDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
@@ -710,15 +710,10 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
             },
             startDefectReport: (selected) => {
                 if (liveObserverElements.eventInspector) {
-                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createDefectReportNavigation({
-                        showCapturedEvent: () => {
-                            openLiveInspector(selected.id, true);
-                        },
-                        focusCreateDefectReport: () => {
-                            liveObserverElements.eventInspector
-                                ?.querySelector("#live-inspector-action-create-defect-report")
-                                ?.focus({ preventScroll: true });
-                        },
+                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createLiveDefectReportNavigation(selected.id, {
+                        reopenCapturedEvent: openLiveInspector,
+                        createDefectReportAction: () => liveObserverElements.eventInspector
+                            ?.querySelector("#live-inspector-action-create-defect-report") ?? null,
                         closeToLiveFeed: closeInspectorAndReturnToEvents,
                     }));
                 }

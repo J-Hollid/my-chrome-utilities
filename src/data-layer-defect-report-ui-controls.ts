@@ -8,8 +8,6 @@ import {
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
 
-export { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
-
 export interface DefectReportBuilderState {
   report(): DefectReport;
   update(report: DefectReport): void;

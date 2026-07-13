@@ -6,6 +6,7 @@ import {
   generateReportDetails,
   renderJiraReport,
   type DefectReport,
+  type DefectReportBuilderNavigation,
   type DefectReportClipboard,
   type ExpectedResultChoice,
 } from "./data-layer-defect-report.js";
@@ -16,25 +17,20 @@ import {
 } from "./data-layer-defect-report-browser.js";
 import {
   appendDetailControls,
-  appendIssueControls,
   appendReproductionControls,
   appendTimelineControls,
   type DefectReportBuilderState,
 } from "./data-layer-defect-report-ui-controls.js";
+import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
 
-export { browserDefectReportClipboard, createDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
-export type { DefectReportContext, DefectReportNavigationEffects } from "./data-layer-defect-report-browser.js";
+export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
+export type { DefectReportContext, DefectReportNavigationEffects, LiveDefectReportNavigationEffects } from "./data-layer-defect-report-browser.js";
 
 function heading(level: "h4" | "h5", text: string): HTMLHeadingElement {
   const element = document.createElement(level);
   element.textContent = text;
   return element;
-}
-
-export interface DefectReportBuilderNavigation {
-  backToCapturedEvent(): void;
-  backToLiveFeed(): void;
 }
 
 export function renderDefectReportBuilder(

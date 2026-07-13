@@ -1,5 +1,4 @@
 import { filterTimelineEvents, generatePathnameSkeleton, supportingTimeline, } from "./data-layer-defect-report.js";
-export { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 export function appendReproductionControls(controls, steps, context, state) {
     const startLabel = document.createElement("label");
     startLabel.textContent = "Reproduction starts at ";

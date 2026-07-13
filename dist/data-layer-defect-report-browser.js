@@ -7,6 +7,13 @@ export function createDefectReportNavigation(effects) {
         backToLiveFeed() { effects.closeToLiveFeed(); },
     };
 }
+export function createLiveDefectReportNavigation(eventId, effects) {
+    return createDefectReportNavigation({
+        showCapturedEvent: () => effects.reopenCapturedEvent(eventId, true),
+        focusCreateDefectReport: () => effects.createDefectReportAction()?.focus({ preventScroll: true }),
+        closeToLiveFeed: effects.closeToLiveFeed,
+    });
+}
 function issueId(pointer, index) {
     return pointer.split("/").filter(Boolean).at(-1) ?? `issue-${index + 1}`;
 }

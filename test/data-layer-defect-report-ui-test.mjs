@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   browserDefectReportClipboard,
   createDefectReportNavigation,
+  createLiveDefectReportNavigation,
   renderDefectReportBuilder,
 } from "../dist/data-layer-defect-report-ui.js";
 
@@ -102,6 +103,22 @@ backToFeed.dispatch("click");
 assert.equal(backToCapturedEvent, 1);
 assert.equal(focusCreateDefectReport, 1);
 assert.equal(backToLiveFeed, 1);
+
+let reopenedEvent;
+let closeLiveFeed = 0;
+let focusOptions;
+const liveNavigation = createLiveDefectReportNavigation("purchase", {
+  reopenCapturedEvent: (eventId, preserveReturnSnapshot) => {
+    reopenedEvent = { eventId, preserveReturnSnapshot };
+  },
+  createDefectReportAction: () => ({ focus: (options) => { focusOptions = options; } }),
+  closeToLiveFeed: () => { closeLiveFeed += 1; },
+});
+liveNavigation.backToCapturedEvent();
+liveNavigation.backToLiveFeed();
+assert.deepEqual(reopenedEvent, { eventId: "purchase", preserveReturnSnapshot: true });
+assert.deepEqual(focusOptions, { preventScroll: true });
+assert.equal(closeLiveFeed, 1);
 
 const headings = descendants(root).filter(({ tagName }) => tagName === "H4" || tagName === "H5").map(({ textContent }) => textContent);
 assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Expected result", "Steps to reproduce", "Supporting timeline", "Report details"]);

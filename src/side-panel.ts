@@ -157,7 +157,7 @@ import {
   setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { createDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
@@ -1009,15 +1009,10 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
           selected,
           undefined,
           liveObserverState.events,
-          createDefectReportNavigation({
-            showCapturedEvent: () => {
-              openLiveInspector(selected.id, true);
-            },
-            focusCreateDefectReport: () => {
-              liveObserverElements.eventInspector
-                ?.querySelector<HTMLButtonElement>("#live-inspector-action-create-defect-report")
-                ?.focus({ preventScroll: true });
-            },
+          createLiveDefectReportNavigation(selected.id, {
+            reopenCapturedEvent: openLiveInspector,
+            createDefectReportAction: () => liveObserverElements.eventInspector
+              ?.querySelector<HTMLButtonElement>("#live-inspector-action-create-defect-report") ?? null,
             closeToLiveFeed: closeInspectorAndReturnToEvents,
           }),
         );

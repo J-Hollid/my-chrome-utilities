@@ -116,3 +116,8 @@ export interface DefectReportClipboard {
   writeRich?(html: string, text: string): Promise<void>;
   writeText?(text: string): Promise<void>;
 }
+
+export interface DefectReportBuilderNavigation {
+  backToCapturedEvent(): void;
+  backToLiveFeed(): void;
+}

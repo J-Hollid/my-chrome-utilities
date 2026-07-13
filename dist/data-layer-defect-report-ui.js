@@ -1,7 +1,8 @@
 import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
-import { appendDetailControls, appendIssueControls, appendReproductionControls, appendTimelineControls, } from "./data-layer-defect-report-ui-controls.js";
-export { browserDefectReportClipboard, createDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
+import { appendDetailControls, appendReproductionControls, appendTimelineControls, } from "./data-layer-defect-report-ui-controls.js";
+import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
+export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
 function heading(level, text) {
     const element = document.createElement(level);
     element.textContent = text;
