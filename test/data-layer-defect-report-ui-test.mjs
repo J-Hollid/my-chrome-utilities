@@ -241,6 +241,15 @@ const timelineFilterFields = ["search", "name", "source", "pathname", "validatio
 for (const field of timelineFilterFields) {
   assert.ok(element(root, ({ dataset }) => dataset.timelineFilter === field));
 }
+let timelineSearch = element(root, ({ dataset }) => dataset.timelineFilter === "search");
+timelineSearch.value = "PURCHASE";
+timelineSearch.dispatch("input");
+const searchResultIds = descendants(root).filter(({ dataset }) => dataset.timelineEventId).map(({ dataset }) => dataset.timelineEventId);
+assert.deepEqual(searchResultIds, ["purchase"]);
+timelineSearch = element(root, ({ dataset }) => dataset.timelineFilter === "search");
+timelineSearch.value = "";
+timelineSearch.dispatch("input");
+assert.equal(descendants(root).filter(({ dataset }) => dataset.timelineEventId).length, 20);
 let purchaseChoice = element(root, ({ dataset }) => dataset.timelineEventId === "purchase");
 purchaseChoice.checked = true;
 purchaseChoice.dispatch("change");
@@ -256,6 +265,11 @@ assert.deepEqual(evidenceDescriptions, [
 ]);
 const configurationActions = descendants(root).filter(({ tagName }) => tagName === "BUTTON").map(({ textContent }) => textContent).filter((text) => ["Back to event selection", "Add to timeline", "Cancel"].includes(text));
 assert.deepEqual(configurationActions, ["Back to event selection", "Add to timeline", "Cancel"]);
+element(root, ({ textContent }) => textContent === "Back to event selection").dispatch("click");
+const backReturnedToSelection = Boolean(element(root, ({ attributes }) => attributes.get("aria-label") === "Select one captured event"));
+purchaseChoice = element(root, ({ dataset }) => dataset.timelineEventId === "purchase");
+purchaseChoice.checked = true;
+purchaseChoice.dispatch("change");
 let validationEvidence = element(root, ({ dataset }) => dataset.timelineEvidence === "includeValidation");
 assert.equal(validationEvidence.checked, false);
 validationEvidence.checked = true;
@@ -373,10 +387,12 @@ process.stdout.write(`${JSON.stringify({
       initialChoiceSummaries: initialTimelineChoiceSummaries,
       loadedChoiceCount: loadedTimelineChoiceCount,
       filterFields: timelineFilterFields,
+      searchResultIds,
       evidenceHiddenBeforeSelection,
       alwaysIncludedText,
       evidenceDescriptions,
       configurationActions,
+      backReturnedToSelection,
       cancelFocusRestored,
       cancelledTimelineEmpty,
       addStagesClosed,

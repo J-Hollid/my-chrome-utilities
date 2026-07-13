@@ -7,8 +7,11 @@ import {
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
+  removeTimelineSelection,
   renderJiraReport,
+  saveTimelineSelection,
   supportingTimeline,
+  timelineEventChoices,
   toggleReportIssue,
   validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
@@ -133,6 +136,38 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   const filtered = filterTimelineEvents(timeline, { name: "PUR", validation: "Invalid" });
   assert.deepEqual(filtered, timeline.filter(({ name, validation }) =>
     name.toLowerCase().includes("pur") && validation === "Invalid"));
+  const search = timeline[integer(timeline.length)].pathname.toUpperCase();
+  assert.deepEqual(
+    filterTimelineEvents(timeline, { search }),
+    timeline.filter((entry) => [entry.captureTime, entry.name, entry.source, entry.pathname, entry.validation]
+      .join(" ").toLowerCase().includes(search.toLowerCase())),
+  );
+
+  const addedEventIds = timeline.filter((_, index) => index % 4 === 0).map(({ id }) => id);
+  const choiceLimit = 1 + integer(timeline.length);
+  const invalidEventsNewestFirst = timeline.filter(({ validation }) => validation === "Invalid")
+    .sort((left, right) => right.captureTime.localeCompare(left.captureTime));
+  const choicePage = timelineEventChoices(timeline, { validation: "Invalid" }, addedEventIds, choiceLimit);
+  assert.deepEqual(choicePage.choices.map(({ event }) => event.id),
+    invalidEventsNewestFirst.slice(0, choiceLimit).map(({ id }) => id));
+  assert.deepEqual(choicePage.choices.map(({ event, alreadyAdded }) => alreadyAdded),
+    choicePage.choices.map(({ event }) => addedEventIds.includes(event.id)));
+  assert.equal(choicePage.hasOlder, invalidEventsNewestFirst.length > choiceLimit);
+
+  const initialSelections = [{ eventId: timeline[0].id, includeSummary: true }];
+  const replacementSelection = { eventId: timeline[0].id, includePayload: true };
+  const replacedSelections = saveTimelineSelection(initialSelections, replacementSelection);
+  assert.deepEqual(replacedSelections, [replacementSelection]);
+  assert.deepEqual(initialSelections, [{ eventId: timeline[0].id, includeSummary: true }]);
+  assert.deepEqual(saveTimelineSelection(replacedSelections, replacementSelection), replacedSelections);
+  const appendedSelection = { eventId: timeline[1].id, includeValidation: true };
+  const appendedSelections = saveTimelineSelection(replacedSelections, appendedSelection);
+  assert.deepEqual(appendedSelections, [replacementSelection, appendedSelection]);
+  assert.equal(new Set(appendedSelections.map(({ eventId }) => eventId)).size, appendedSelections.length);
+  const removedSelections = removeTimelineSelection(appendedSelections, replacementSelection.eventId);
+  assert.deepEqual(removedSelections, [appendedSelection]);
+  assert.deepEqual(removeTimelineSelection(removedSelections, replacementSelection.eventId), removedSelections);
+  assert.deepEqual(appendedSelections, [replacementSelection, appendedSelection]);
 
   const chosen = timeline.filter((_, index) => index % 3 === 0);
   const supporting = supportingTimeline(timeline, chosen.map(({ id }) => ({ eventId: id, includeSummary: true })));
