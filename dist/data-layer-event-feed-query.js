@@ -31,6 +31,11 @@ function pathname(pageUrl) {
 function affectedProperty(path) {
     return path.replace(/^\//, "").replaceAll("/", ".");
 }
+function payloadPath(field) {
+    if (!field.startsWith("Payload · "))
+        return undefined;
+    return field.slice("Payload · ".length).trim() || undefined;
+}
 function eventValues(event, field) {
     if (field === "Event name")
         return [event.name];
@@ -58,11 +63,13 @@ function eventValues(event, field) {
         ];
     if (field === "Payload property")
         return [];
-    const path = field.slice("Payload · ".length);
+    const path = payloadPath(field);
+    if (!path)
+        return [];
     const match = payloadEntries(event.payload).find(([candidate]) => candidate === path);
     return match ? [String(match[1])] : [];
 }
-export function eventFeedQueryFields(events) {
+export function eventFeedQueryFields() {
     return [...coreEventFeedQueryFields, "Payload property", ...validationEventFeedQueryFields];
 }
 export function observedPayloadPaths(events) {
@@ -81,7 +88,9 @@ export function eventFeedQuerySuggestions(events, field) {
     return distinct(events.flatMap((event) => eventValues(event, field)));
 }
 export function queryConditionComplete(condition) {
-    if (!condition.id || !condition.field || condition.field === "Payload property" || !condition.operator || !condition.values?.some((value) => value.trim()))
+    if (!condition.id || !condition.field || condition.field === "Payload property" ||
+        (condition.field.startsWith("Payload · ") && !payloadPath(condition.field)) ||
+        !condition.operator || !condition.values?.some((value) => value.trim()))
         return false;
     return eventFeedQueryOperators(condition.field).includes(condition.operator);
 }

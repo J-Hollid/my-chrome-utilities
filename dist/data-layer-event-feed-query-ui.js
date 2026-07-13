@@ -97,7 +97,7 @@ function renderConditionEditor(events, query, update, add) {
     const field = document.createElement("select");
     field.id = "event-feed-query-field";
     field.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose field" }));
-    for (const candidate of eventFeedQueryFields(events))
+    for (const candidate of eventFeedQueryFields())
         field.append(Object.assign(document.createElement("option"), { value: candidate, textContent: candidate }));
     fieldLabel.append(field);
     const operatorLabel = document.createElement("label");

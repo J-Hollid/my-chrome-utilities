@@ -82,7 +82,7 @@ for (let sample = 0; sample < 200; sample += 1) {
     .sort((left, right) => left.localeCompare(right));
   assert.deepEqual(observedPayloadPaths(payloadEvents), expectedPaths, "observed payload paths must be distinct and sorted");
   assert.deepEqual(
-    eventFeedQueryFields(payloadEvents),
+    eventFeedQueryFields(),
     ["Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],
     "payload paths must remain behind one stable top-level field",
   );

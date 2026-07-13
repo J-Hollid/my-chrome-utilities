@@ -107,7 +107,7 @@ function renderConditionEditor(
   const fieldLabel = document.createElement("label"); fieldLabel.textContent = "Field ";
   const field = document.createElement("select"); field.id = "event-feed-query-field";
   field.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose field" }));
-  for (const candidate of eventFeedQueryFields(events)) field.append(Object.assign(document.createElement("option"), { value: candidate, textContent: candidate }));
+  for (const candidate of eventFeedQueryFields()) field.append(Object.assign(document.createElement("option"), { value: candidate, textContent: candidate }));
   fieldLabel.append(field);
   const operatorLabel = document.createElement("label"); operatorLabel.textContent = "Operator ";
   const operator = document.createElement("select"); operator.id = "event-feed-query-operator"; operator.disabled = true; operatorLabel.append(operator);

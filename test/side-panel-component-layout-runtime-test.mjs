@@ -165,6 +165,8 @@ class DevtoolsSocket {
   close() { this.socket?.destroy(); }
 }
 
+const panelReadyAttempts = 100;
+
 async function openPanel(port, width, height = 900) {
   const panelUrl = `http://127.0.0.1:${assetPort}/side-panel.html`;
   const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(panelUrl)}`, { method: "PUT" }).then((response) => response.json());
@@ -173,7 +175,7 @@ async function openPanel(port, width, height = 900) {
   await socket.call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
   await socket.call("Runtime.enable");
   let loaded = false;
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await socket.call("Runtime.evaluate", {
       expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null",
       returnByValue: true,
@@ -198,7 +200,7 @@ async function evaluate(socket, expression) {
 
 async function reloadPanel(socket) {
   await socket.call("Page.reload");
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await evaluate(socket, "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null");
     if (ready) return;
     await wait(50);

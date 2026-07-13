@@ -31,7 +31,7 @@ const events = [
   },
 ];
 
-const fields = eventFeedQueryFields(events);
+const fields = eventFeedQueryFields();
 assert.deepEqual(fields.slice(0, 4), ["Event name", "Source", "Adapter kind", "Pathname"]);
 assert.deepEqual(fields, ["Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"]);
 assert.equal(fields.some((field) => field.startsWith("Payload · ")), false);
@@ -42,6 +42,7 @@ assert.deepEqual(eventFeedQuerySuggestions(events, "Event name"), ["checkout", "
 assert.deepEqual(eventFeedQuerySuggestions(events, "Payload · currency"), ["EUR", "GBP"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Validation rule"), ["Page type allowed values"]);
 assert.equal(queryConditionComplete({ id:"invalid", field:"Event name", operator:"failed", values:["purchase"] }), false);
+assert.equal(queryConditionComplete({ id:"blank-payload-path", field:"Payload · ", operator:"is", values:["anything"] }), false);
 assert.equal(queryConditionComplete({ id:"valid", field:"Validation rule", operator:"failed", values:["Page type allowed values"] }), true);
 
 const cases = [

@@ -85,6 +85,11 @@ function affectedProperty(path: string): string {
   return path.replace(/^\//, "").replaceAll("/", ".");
 }
 
+function payloadPath(field: EventFeedQueryField): string | undefined {
+  if (!field.startsWith("Payload · ")) return undefined;
+  return field.slice("Payload · ".length).trim() || undefined;
+}
+
 function eventValues(event: QueryableEvent, field: EventFeedQueryField): string[] {
   if (field === "Event name") return [event.name];
   if (field === "Source") return [event.sourceName ?? event.sourceId];
@@ -102,12 +107,13 @@ function eventValues(event: QueryableEvent, field: EventFeedQueryField): string[
     ...(event.validationDetails?.issues ?? []).map(({ instancePath }) => affectedProperty(instancePath)),
   ];
   if (field === "Payload property") return [];
-  const path = field.slice("Payload · ".length);
+  const path = payloadPath(field);
+  if (!path) return [];
   const match = payloadEntries(event.payload).find(([candidate]) => candidate === path);
   return match ? [String(match[1])] : [];
 }
 
-export function eventFeedQueryFields(events: readonly QueryableEvent[]): EventFeedQueryField[] {
+export function eventFeedQueryFields(): EventFeedQueryField[] {
   return [...coreEventFeedQueryFields, "Payload property", ...validationEventFeedQueryFields];
 }
 
@@ -128,7 +134,9 @@ export function eventFeedQuerySuggestions(events: readonly QueryableEvent[], fie
 }
 
 export function queryConditionComplete(condition: EventFeedQueryConditionDraft): condition is EventFeedQueryCondition {
-  if (!condition.id || !condition.field || condition.field === "Payload property" || !condition.operator || !condition.values?.some((value) => value.trim())) return false;
+  if (!condition.id || !condition.field || condition.field === "Payload property" ||
+      (condition.field.startsWith("Payload · ") && !payloadPath(condition.field)) ||
+      !condition.operator || !condition.values?.some((value) => value.trim())) return false;
   return (eventFeedQueryOperators(condition.field) as readonly EventFeedQueryOperator[]).includes(condition.operator);
 }
 
