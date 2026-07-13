@@ -41,8 +41,18 @@
   (support/assert! (every? contextual-row? (:rows observation)) "A pathname or manual row lost text-first order or its contextual Add name." observation)
   (support/assert! (= checkout-boundary (:checkoutBoundary observation)) "The /checkout pathname boundary is unclear or movable." observation))
 
-(defn- assert-action-rows! [observations]
+(def ^:private builder-widths
+  {"360 CSS px" 360
+   "520 CSS px" 520})
+
+(defn- assert-action-rows! [example observations]
   (support/assert! (= [360 520] (mapv :width observations)) "The reproduction action rows were not verified at both specified widths." observations)
+  (when-let [builder-width (:builder_width example)]
+    (let [expected-width (get builder-widths builder-width)]
+      (support/assert! expected-width "The reproduction builder example uses an unsupported width." {:example example})
+      (support/assert! (some #(= expected-width (:width %)) observations)
+                       "The reproduction builder example was not exercised at its specified width."
+                       {:example example :observations observations})))
   (doseq [observation observations]
     (assert-action-row! observation)))
 
@@ -59,7 +69,7 @@
                            "4. Review the available products"
                            "5. Visit /checkout"]]
     (assert-outline-example! example composer)
-    (assert-action-rows! action-rows)
+    (assert-action-rows! example action-rows)
     (support/assert! (= 2 (:initialAdjacentActionCount composer)) "A pathname row is missing its adjacent add action." composer)
     (support/assert! (= ["Add step to /products section from step 1 Visit /products"
                          "Add step to /checkout section from step 2 Visit /checkout"]
@@ -107,5 +117,5 @@
       (support/assert! (not (re-find #"componentName|scrollTarget|reproductionField" representation)) "Template configuration leaked into report output." {:representation representation}))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-13T14:55:40.465890176+02:00", :module-hash "-1627878349", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1823940385"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 5, :end-line nil, :hash "389789638"} {:id "defn/assert-reproduction-composer!", :kind "defn", :line 17, :end-line nil, :hash "-2036617342"}]}
+;; {:version 1, :tested-at "2026-07-13T21:28:25.921429987+02:00", :module-hash "1833592313", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1823940385"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 5, :end-line nil, :hash "389789638"} {:id "def/action-order", :kind "def", :line 17, :end-line nil, :hash "-821931862"} {:id "def/checkout-boundary", :kind "def", :line 18, :end-line nil, :hash "544271857"} {:id "defn-/complete-layout?", :kind "defn-", :line 25, :end-line nil, :hash "-344994125"} {:id "defn-/contextual-row?", :kind "defn-", :line 30, :end-line nil, :hash "-514341073"} {:id "defn-/assert-action-row!", :kind "defn-", :line 36, :end-line nil, :hash "-1599490917"} {:id "def/builder-widths", :kind "def", :line 44, :end-line nil, :hash "1495228669"} {:id "defn-/assert-action-rows!", :kind "defn-", :line 48, :end-line nil, :hash "-1487388388"} {:id "defn/assert-reproduction-composer!", :kind "defn", :line 59, :end-line nil, :hash "901310921"}]}
 ;; clj-mutate-manifest-end
