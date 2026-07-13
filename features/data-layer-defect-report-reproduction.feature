@@ -8,6 +8,7 @@ Feature: Data layer defect report reproduction
   Background:
     Given a defect report is being built from invalid event purchase
     And its testing session retains pathname visits and captured event chronology
+    And the session timeline contains pageview, promotion, checkout, and purchase
 
   # Data layer defect report reproduction 001
   Scenario: Data layer defect report reproduction 001
@@ -27,28 +28,84 @@ Feature: Data layer defect report reproduction
 
   # Data layer defect report reproduction 003
   Scenario: Data layer defect report reproduction 003
-    Given the session timeline contains pageview, promotion, checkout, and purchase
-    When the timeline builder is opened
-    Then no timeline event is selected for the report
-    And events can be filtered by event name, source, pathname, and validation state
-    And the operator can select and deselect individual timeline events
-    And payload and validation details remain excluded unless the operator includes them for a selected event
+    Given no event has been added to Supporting timeline
+    When the timeline builder is displayed
+    Then an empty state and Add event to timeline are displayed
+    And captured events and their evidence controls are not listed in the timeline builder
+    And the pathname skeleton remains independently editable
 
   # Data layer defect report reproduction 004
   Scenario: Data layer defect report reproduction 004
-    Given the operator selects pageview summary and purchase validation details from the session timeline
-    When Supporting timeline is added to the report
-    Then only pageview and purchase appear in Supporting timeline
-    And they remain in capture chronology
-    And each entry contains capture time, event name, source, and pathname
-    And pageview contains its summary without its payload or validation details
-    And purchase contains its validation details without its payload
-    And unselected timeline events do not appear in the report
+    When the operator activates Add event to timeline
+    Then an event-selection stage explains that one captured event must be selected
+    And each event choice identifies capture time, event name, source, pathname, and validation state
+    And search and filters for event name, source, pathname, and validation state are available within the event-selection stage
+    And matching event choices are displayed newest first in a bounded result window
+    And older matches can be loaded without rendering the complete session at once
+    And exactly one event can be selected before continuing
+    And evidence configuration controls are not displayed before an event is selected
 
   # Data layer defect report reproduction 005
   Scenario: Data layer defect report reproduction 005
-    Given the pathname skeleton contains operator edits
-    And Supporting timeline contains selected events
-    When the operator changes the timeline selection
-    Then the pathname skeleton edits remain unchanged
-    And Supporting timeline reflects the changed selection
+    Given the event-selection stage is displayed
+    When the operator selects purchase
+    Then an evidence-configuration stage identifies purchase as the selected event
+    And event choices are no longer displayed
+    And capture time, event name, source, and pathname are identified as always included
+    And Summary is explained as the compact event summary
+    And Payload is explained as the captured event JSON
+    And Validation details is explained as schema, rule, and issue information
+    And Back to event selection, Add to timeline, and Cancel are available
+
+  # Data layer defect report reproduction 006
+  Scenario: Data layer defect report reproduction 006
+    Given purchase is configured for a new timeline entry
+    And only Validation details is included in its evidence configuration
+    When the operator activates Add to timeline
+    Then one purchase entry is added to Supporting timeline
+    And it contains capture time, event name, source, pathname, and validation details
+    And summary and payload are excluded
+    And the entry identifies Validation details as included
+    And Adjust and Remove are available for the entry
+    And the add-event stages are closed
+
+  # Data layer defect report reproduction 007
+  Scenario: Data layer defect report reproduction 007
+    Given purchase is configured for a new timeline entry
+    And the pathname skeleton contains operator edits
+    When the operator activates Cancel
+    Then purchase is not added to Supporting timeline
+    And the pathname skeleton edits remain unchanged
+    And focus returns to Add event to timeline
+
+  # Data layer defect report reproduction 008
+  Scenario: Data layer defect report reproduction 008
+    Given Supporting timeline contains purchase with Validation details
+    When the operator activates Adjust for purchase
+    Then the evidence-configuration stage is prefilled with purchase and Validation details
+    When the operator replaces Validation details with Payload and activates Save changes
+    Then the existing purchase entry contains payload without validation details
+    And no duplicate purchase entry is created
+    And focus returns to Adjust for purchase
+
+  # Data layer defect report reproduction 009
+  Scenario: Data layer defect report reproduction 009
+    Given purchase is the only entry in Supporting timeline
+    When the operator activates Remove for purchase
+    Then purchase is removed from Supporting timeline
+    And the captured purchase event remains in the testing session
+    And the timeline builder displays its empty state
+
+  # Data layer defect report reproduction 010
+  Scenario: Data layer defect report reproduction 010
+    Given purchase has already been added to Supporting timeline
+    When the operator opens the event-selection stage
+    Then purchase is identified as Already added and cannot be added again
+    And Adjust is available for the existing purchase entry
+
+  # Data layer defect report reproduction 011
+  Scenario: Data layer defect report reproduction 011
+    Given purchase is added before the earlier captured pageview event
+    When both entries are displayed in Supporting timeline
+    Then pageview appears before purchase in capture chronology
+    And adding events in another order does not change timeline chronology
