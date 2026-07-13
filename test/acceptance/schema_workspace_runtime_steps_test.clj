@@ -34,3 +34,10 @@
     (is (= world
            (#'workspace/begin-visibility-observation
             world example "Rule configuration is not visible")))))
+
+(deftest browser-workspace-reuses-a-validated-observation-for-the-same-fixture
+  (let [observation {:mounted true}]
+    (reset! workspace/browser-workspace-observations {nil observation})
+    (is (= {:browser-observation observation}
+           (#'workspace/browser-workspace! {} {})))
+    (reset! workspace/browser-workspace-observations {})))

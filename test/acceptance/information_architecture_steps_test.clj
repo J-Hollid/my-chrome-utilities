@@ -38,3 +38,24 @@
   (is (not (information-architecture/contextual-actions?
             "<section id=\"live-context-actions\"><button id=\"start-data-layer-testing\"></button><button id=\"end-data-layer-testing\"></button><button id=\"choose-observation-target\"></button><button id=\"stop-capture\"></button></section><button id=\"pause-capture\"></button><button id=\"resume-capture\"></button>"
             "function renderLiveContextActions() {} startTestingButton?.addEventListener(() => {})"))))
+
+(def contained-schema-observation
+  {:containedControls true
+   :editorContainsActions true
+   :closeReviewContainsActions true
+   :assignmentContainsPolicy true
+   :standaloneAssignmentPolicy 0
+   :presentationByView
+   {:Live {:panelDisplay "none" :painted false :focusable false :closeReviewOpen false}
+    :Library {:panelDisplay "none" :painted false :focusable false :closeReviewOpen false}
+    :Sessions {:panelDisplay "none" :painted false :focusable false :closeReviewOpen false}}
+   :editorStates {:assignmentWasOpen true :assignmentHiddenWhileAway true
+                  :ruleWasOpen true :ruleHiddenWhileAway true}
+   :restored {:editorVisible true :name "Unsaved checkout schema" :closeReviewOpen false}})
+
+(deftest recognizes-contained-schema-view-browser-observation
+  (is (information-architecture/schema-view-contained? contained-schema-observation))
+  (is (not (information-architecture/schema-view-contained?
+            (assoc contained-schema-observation :containedControls false))))
+  (is (not (information-architecture/schema-view-contained?
+            (assoc-in contained-schema-observation [:restored :name] "")))))

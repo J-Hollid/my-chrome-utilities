@@ -1,6 +1,7 @@
 (ns acceptance.steps.information-architecture
   (:require [acceptance.steps.support :as support]
             [babashka.process :as process]
+            [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.string :as str]))
 
@@ -112,6 +113,54 @@
     (support/assert! (navigation-structure? (:html world) (:css world))
                      "Side panel navigation structure is incomplete." {})
     world))
+
+(def expected-hidden-schema-presentation
+  {:panelDisplay "none" :painted false :focusable false :closeReviewOpen false})
+
+(defn schema-view-contained? [observation]
+  (and (every? true? (map observation
+                           [:containedControls
+                            :editorContainsActions
+                            :closeReviewContainsActions
+                            :assignmentContainsPolicy]))
+       (zero? (:standaloneAssignmentPolicy observation -1))
+       (= #{:Live :Library :Sessions}
+          (set (keys (:presentationByView observation))))
+       (every? #(= expected-hidden-schema-presentation %)
+               (vals (:presentationByView observation)))
+       (every? true? (vals (:editorStates observation)))
+       (true? (get-in observation [:restored :editorVisible]))
+       (not (str/blank? (get-in observation [:restored :name])))
+       (false? (get-in observation [:restored :closeReviewOpen]))))
+
+(defonce schema-view-containment-observation (atom nil))
+
+(defn- load-schema-view-containment! []
+  (or @schema-view-containment-observation
+      (let [result (process/shell (assoc support/build-shell-options
+                                         :env {"SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER" "1"})
+                                  "node" "test/side-panel-component-layout-runtime-test.mjs")
+            line (last (filter #(str/starts-with? % "{")
+                               (str/split-lines (:out result))))
+            payload (when line (json/parse-string line true))
+            observation (:schemaViewContainment payload)]
+        (support/assert! (zero? (:exit result))
+                         "Schema view containment browser verification failed."
+                         {:out (:out result) :err (:err result)})
+        (support/assert! (schema-view-contained? observation)
+                         "Rendered Schema view is not contained."
+                         {:observation observation})
+        (reset! schema-view-containment-observation observation))))
+
+(defn- observe-schema-view-containment [world]
+  (assoc world :schema-view-containment (load-schema-view-containment!)))
+
+(defn- require-schema-view-containment! [world]
+  (let [observation (:schema-view-containment world)]
+    (support/assert! (schema-view-contained? observation)
+                     "Schema view containment browser evidence is missing."
+                     {:observation observation})
+    observation))
 
 (def handlers
   [{:pattern #"^command <([A-Za-z0-9_]+)> named <([A-Za-z0-9_]+)> is registered$"
@@ -486,6 +535,126 @@
                                        (hidden-panel-css-wins? (:css world)))
                                   "Hidden panel content remains painted or focusable." {:view view})
                  world))}
+
+   {:pattern #"^the Schemas view contains <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [state-key]]
+               (let [state (example-value example state-key)]
+                 (support/assert! (contains? #{"an open dirty schema draft"
+                                               "an open assignment editor"
+                                               "an open reusable rule editor"}
+                                             state)
+                                  "Unknown Schema view state."
+                                  {:state state})
+                 (assoc (observe-schema-view-containment world) :schema-view-state state)))}
+
+   {:pattern #"^the operator leaves Schemas for <([A-Za-z0-9_]+)>$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)
+                     observation (require-schema-view-containment! world)]
+                 (support/assert! (= expected-hidden-schema-presentation
+                                     (get-in observation [:presentationByView (keyword view)]))
+                                  "Schemas content remains presented after changing views."
+                                  {:view view :observation observation})
+                 (assoc world :active-data-layer-view view)))}
+
+   {:pattern #"^schema editors, editor actions, assignment controls, and schema review controls are not visible or focusable$"
+    :handler (fn [world _example _captures]
+               (require-schema-view-containment! world)
+               world)}
+
+   {:pattern #"^no schema-specific control is displayed after the <([A-Za-z0-9_]+)> panel$"
+    :handler (fn [world example [view-key]]
+               (support/assert! (= (example-value example view-key)
+                                   (:active-data-layer-view world))
+                                "The selected view does not own the displayed content."
+                                {:active (:active-data-layer-view world)})
+               (require-schema-view-containment! world)
+               world)}
+
+   {:pattern #"^only <([A-Za-z0-9_]+)> content is available to assistive technology$"
+    :handler (fn [world example [view-key]]
+               (let [view (example-value example view-key)
+                     observation (require-schema-view-containment! world)]
+                 (support/assert! (and (= view (:active-data-layer-view world))
+                                       (false? (get-in observation [:presentationByView (keyword view) :focusable])))
+                                  "Hidden Schema content remains available to focus navigation."
+                                  {:view view :observation observation})
+                 world))}
+
+   {:pattern #"^the Schemas view has a dirty schema draft with an open editor$"
+    :handler (fn [world _example _captures]
+               (assoc (observe-schema-view-containment world) :schema-view-state "an open dirty schema draft"))}
+
+   {:pattern #"^the operator switches to Library and returns to Schemas$"
+    :handler (fn [world _example _captures]
+               (let [observation (require-schema-view-containment! world)]
+                 (support/assert! (= expected-hidden-schema-presentation
+                                     (get-in observation [:presentationByView :Library]))
+                                  "Schemas did not leave the rendered Library view."
+                                  {:observation observation})
+                 (assoc world :active-data-layer-view "Schemas")))}
+
+   {:pattern #"^the schema draft and editor values are restored unchanged$"
+    :handler (fn [world _example _captures]
+               (let [restored (:restored (require-schema-view-containment! world))]
+                 (support/assert! (= {:editorVisible true
+                                      :name "Unsaved checkout schema"
+                                      :closeReviewOpen false}
+                                     restored)
+                                  "Schema draft was not restored unchanged."
+                                  {:restored restored})
+                 world))}
+
+   {:pattern #"^switching views does not close, save, or discard the draft$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (get-in (require-schema-view-containment! world)
+                                                [:restored :editorVisible]))
+                                "Switching views closed the schema draft."
+                                {})
+               world)}
+
+   {:pattern #"^switching views does not open a discard-changes review$"
+    :handler (fn [world _example _captures]
+               (support/assert! (false? (get-in (require-schema-view-containment! world)
+                                                 [:restored :closeReviewOpen]))
+                                "Switching views opened the schema close review."
+                                {})
+               world)}
+
+   {:pattern #"^schema authoring controls are displayed$"
+    :handler (fn [world _example _captures] (observe-schema-view-containment world))}
+
+   {:pattern #"^Close schema editor and Save and close schema are contained within the schema editor$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (:editorContainsActions
+                                        (require-schema-view-containment! world)))
+                                "Schema editor actions escaped their editor."
+                                {})
+               world)}
+
+   {:pattern #"^the schema close-review actions are contained within their review$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (:closeReviewContainsActions
+                                        (require-schema-view-containment! world)))
+                                "Schema close-review actions escaped their review."
+                                {})
+               world)}
+
+   {:pattern #"^Version policy is contained within the assignment editor$"
+    :handler (fn [world _example _captures]
+               (support/assert! (true? (:assignmentContainsPolicy
+                                        (require-schema-view-containment! world)))
+                                "Version policy escaped the assignment editor."
+                                {})
+               world)}
+
+   {:pattern #"^a standalone Assignment policy control is absent$"
+    :handler (fn [world _example _captures]
+               (support/assert! (zero? (:standaloneAssignmentPolicy
+                                        (require-schema-view-containment! world)))
+                                "A standalone Assignment policy control remains."
+                                {})
+               world)}
 
    {:pattern #"^Data Layer Live is active in context <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [context-key]]

@@ -11,6 +11,7 @@ let guidedValidationObservation;
 let guidedSchemaPickerObservation;
 let liveValidationVisualsObservation;
 let singleLiveEventFeedObservation;
+let schemaViewContainmentObservation;
 const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
@@ -237,6 +238,67 @@ const schemaRuleEditorVisibilityRuntime = `(() => {
     editorVisible:visible(q("#schema-rule-editor")),
     configurationVisible:visible(configuration),
     configurationInsideEditor:q("#schema-rule-editor").contains(configuration),
+  };
+})()`;
+
+const schemaViewContainmentRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const schemasPanel = q("#data-layer-panel-schemas");
+  q("#data-layer-view-schemas").click();
+  q("#create-schema").click();
+  const name = q("#schema-editor-name");
+  name.value = "Unsaved checkout schema";
+  name.dispatchEvent(new Event("input", { bubbles:true }));
+  const containedControls = [
+    "#schema-editor", "#close-schema-editor", "#save-and-close-schema",
+    "#schema-assignment-editor", "#schema-assignment-version-policy",
+    "#schema-revision-review", "#close-schema-editor-review",
+    "#schema-import-review", "#schema-delete-review",
+    "#schema-rule-delete-review", "#schema-rule-upgrade-review",
+  ].every((selector) => schemasPanel.contains(q(selector)));
+  const closeReviewContainsActions = [
+    "#keep-editing-schema", "#discard-schema-draft", "#save-schema-close-review",
+  ].every((selector) => q("#close-schema-editor-review").contains(q(selector)));
+  const editorContainsActions = ["#close-schema-editor", "#save-and-close-schema"]
+    .every((selector) => q("#schema-editor").contains(q(selector)));
+  const assignmentContainsPolicy = q("#schema-assignment-editor").contains(q("#schema-assignment-version-policy"));
+  const presentationByView = {};
+  for (const view of ["Live", "Library", "Sessions"]) {
+    q("#data-layer-view-" + view.toLowerCase()).click();
+    const hiddenControls = Array.from(schemasPanel.querySelectorAll("button, input, select, textarea, dialog"));
+    presentationByView[view] = {
+      panelDisplay:getComputedStyle(schemasPanel).display,
+      painted:hiddenControls.some((control) => control.getClientRects().length > 0),
+      focusable:hiddenControls.some((control) => { control.focus(); return document.activeElement === control; }),
+      closeReviewOpen:q("#close-schema-editor-review").open,
+    };
+    q("#data-layer-view-schemas").click();
+  }
+  const restored = {
+    editorVisible:q("#schema-editor").getClientRects().length > 0,
+    name:name.value,
+    closeReviewOpen:q("#close-schema-editor-review").open,
+  };
+  q("#schema-subview-assignments").click();
+  q("#create-schema-assignment").click();
+  const assignmentWasOpen = !q("#schema-assignment-editor").hidden;
+  q("#data-layer-view-library").click();
+  const assignmentHiddenWhileAway = q("#schema-assignment-editor").getClientRects().length === 0;
+  q("#data-layer-view-schemas").click();
+  q("#schema-subview-rules").click();
+  q("#create-schema-rule").click();
+  const ruleWasOpen = !q("#schema-rule-editor").hidden;
+  q("#data-layer-view-sessions").click();
+  const ruleHiddenWhileAway = q("#schema-rule-editor").getClientRects().length === 0;
+  return {
+    containedControls,
+    editorContainsActions,
+    closeReviewContainsActions,
+    assignmentContainsPolicy,
+    standaloneAssignmentPolicy:document.querySelectorAll("#schema-assignment-policy").length,
+    presentationByView,
+    editorStates:{ assignmentWasOpen, assignmentHiddenWhileAway, ruleWasOpen, ruleHiddenWhileAway },
+    restored,
   };
 })()`;
 
@@ -733,7 +795,7 @@ const schemaAssignmentRuntime = `(() => {
   input("#schema-assignment-domain", "shop.example");
   input("#schema-assignment-pathname", "/order-confirmation");
   input("#schema-assignment-priority", "100");
-  q("#schema-assignment-policy").value = "follow latest";
+  q("#schema-assignment-version-policy").value = "follow latest";
   q("#schema-assignment-enabled").checked = true;
   q("#save-schema-assignment").click();
   const firstRow = () => q("#schema-assignment-list li");
@@ -763,7 +825,7 @@ const schemaAssignmentRuntime = `(() => {
   const latestRule = persistedRules.at(-1);
   const storedPropertyRule = persistedSchemas[0].attachedRules?.find((rule) => rule.propertyPath === "example");
   return {
-    fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
+    fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-version-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
     schemaMasterVisible,
     actions,
     duplicateCount,
@@ -1439,6 +1501,22 @@ try {
   const port = await debuggingPort();
   for (const width of [320, 360, 520, 720]) {
     const socket = await openPanel(port, width);
+    schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
+    assert.deepEqual(schemaViewContainmentObservation, {
+      containedControls:true,
+      editorContainsActions:true,
+      closeReviewContainsActions:true,
+      assignmentContainsPolicy:true,
+      standaloneAssignmentPolicy:0,
+      presentationByView:{
+        Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+        Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+        Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+      },
+      editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
+      restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
+    }, `Schema view containment violated its ${width}px browser contract`);
+    await reloadPanel(socket);
     singleLiveEventFeedObservation = await evaluate(socket, singleLiveEventFeedRuntime);
     assert.deepEqual(singleLiveEventFeedObservation, {
       liveFeedCount:1,
@@ -1824,7 +1902,7 @@ try {
         { selector:"#schema-assignment-pathname", required:false },
         { selector:"#schema-assignment-priority", required:false },
         { selector:"#schema-assignment-schema", required:false },
-        { selector:"#schema-assignment-policy", required:false },
+        { selector:"#schema-assignment-version-policy", required:false },
         { selector:"#schema-assignment-enabled", required:false },
       ],
       schemaMasterVisible:true,
@@ -1832,7 +1910,7 @@ try {
       duplicateCount:3,
       revisionReview:{ open:true, summary:"Checkout schema will be saved as version 3; version 2 remains available." },
       closeReview:{ open:true, summary:"Discard unsaved schema Unsaved schema?" },
-      rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · pinned · enabled · Checkout schema"],
+      rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:2:page_view", name:"Checkout schema automatic", priority:120, pathnameCondition:null, versionPolicy:"pinned", enabled:false },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
@@ -1924,6 +2002,9 @@ try {
   }
   if (process.env.SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ singleLiveEventFeed:singleLiveEventFeedObservation }));
+  }
+  if (process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaViewContainment:schemaViewContainmentObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {
