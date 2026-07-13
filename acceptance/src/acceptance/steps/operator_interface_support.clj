@@ -1,7 +1,7 @@
 (ns acceptance.steps.operator-interface-support
   (:require [acceptance.steps.support :as support]))
 
-(def canonical-example-values
+(def base-canonical-example-values
   {"action_name" #{"Browse all tabs" "Copy payload" "Discard draft" "Duplicate" "End testing" "Export" "Import session" "Load keymap" "Pause capture" "Push draft" "Push purchase to Checkout" "Save revision" "Save to Library" "Start testing" "Validate"}
    "action_context" #{"Library editor" "Live inspector"}
    "configuration_action" #{"add page_category last" "move page_type before page_name" "edit page_name to content_name" "remove page_type"}
@@ -237,6 +237,70 @@
    "visible_count" #{"7"}
    "width_use" #{"longer readable content lines" "purposeful list and detail panes"}
    "workspace_name" #{"Data Layer" "Hotkeys"}})
+
+(def schema-example-values
+  {"accepted_value" #{"Checkout" "ORDER-42" "product" "2 items" "49.95"}
+   "affected_field" #{"Name" "Rules" "Validation target"}
+   "assignment" #{"generic-page-view" "order-confirmation"}
+   "assignment_behavior" #{"continue using version 4"
+                            "use version 5 after explicit compatibility review"}
+   "blocked_reason" #{"A schema cannot inherit from itself"
+                       "Schema inheritance cannot contain a cycle"
+                       "Parent and child validation targets must match"}
+   "condition" #{"/products/*" "/order-confirmation" "*.shop.example"
+                  "shop.example" "/products"}
+   "condition_kind" #{"domain wildcard" "pathname exact" "pathname glob" "domain exact"}
+   "destination" #{"queue.history"}
+   "disabled_reason" #{"Enter a schema name" "Select payload or raw input"
+                        "Correct invalid validation rules" "Add at least one validation rule"}
+   "edit_action" #{"remove property" "add number 49.95" "change value to test-456"}
+   "error_count" #{"0" "2"}
+   "expected_result" #{"property absent" "test-456" "number 49.95"}
+   "expected_schemas" #{"Purchase" "Page view, Purchase" "Page view" "Product detail"}
+   "invalid_configuration" #{"string rule on number value" "empty allowed-values list"
+                              "minimum greater than maximum" "malformed regular expression"}
+   "invalid_content" #{"missing closing brace"}
+   "match_result" #{"match" "no match"}
+   "new_value" #{"sku-456"}
+   "new_version" #{"4"}
+   "old_value" #{"test-123" "sku-123" "true" "absent"}
+   "old_version" #{"3"}
+   "page_url" #{"https://uk.shop.example/products"
+                 "https://shop.example/products/field-notebook"
+                 "https://shop.example/products"
+                 "https://shop.example/order-confirmation"}
+   "parameters" #{"page, product, checkout" "^[A-Z]+-[0-9]+$"
+                   "minimum 0, maximum 100000" "minimum 1"
+                   "test, debug; case insensitive"}
+   "parent_relationship" #{"Order confirmation extends itself"
+                            "Generic page view extends Order confirmation"
+                            "Payload schema extends Raw input schema"}
+   "payload" #{"effective payload"}
+   "property_path" #{"/items/0/product_id" "/items" "revenue" "/revenue" "debug"
+                     "transaction_id" "/page_type" "/transaction_id" "/page_name"}
+   "property_type" #{"string" "number" "array"}
+   "query" #{"event-history purchase" "version 2" "Page view" "payload"}
+   "readiness_problem" #{"Name empty" "rule configuration invalid"
+                         "no active rules" "no validation target"}
+   "recovery_message" #{"Choose a rule compatible with number"
+                        "Make minimum less than maximum"
+                        "Add at least one allowed value"
+                        "Correct the regular expression"}
+   "rejected_value" #{"internal" "-1" "empty array" "Debug checkout" "order42"}
+   "result" #{"completed"}
+   "rule_kind" #{"regular expression" "numeric range" "item count"
+                 "forbidden substrings" "allowed values"}
+   "schema_name" #{"Event history envelope" "Generic page view"}
+   "schema_version" #{"4" "2"}
+   "source_kind" #{"Library template" "Live event"}
+   "source_object" #{"template template-4" "captured event event-7"}
+   "validation_state" #{"2 warnings"}
+   "validation_target" #{"payload" "raw input"}
+   "version_policy" #{"follow latest" "pinned"}
+   "warning_count" #{"1" "0" "2"}})
+
+(def canonical-example-values
+  (merge-with into base-canonical-example-values schema-example-values))
 
 (defn validate-example! [example keys]
   (support/validate-example-domain!
