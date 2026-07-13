@@ -50,3 +50,33 @@ Feature: Data Layer secondary view separation
       | Library     | Sessions      |
       | Sessions    | Schemas       |
       | Schemas     | Library       |
+
+  # Data Layer secondary view separation 004
+  Scenario Outline: Data Layer secondary view separation 004
+    Given the Schemas view contains <schema_state>
+    When the operator leaves Schemas for <selected_view>
+    Then schema editors, editor actions, assignment controls, and schema review controls are not visible or focusable
+    And no schema-specific control is displayed after the <selected_view> panel
+    And only <selected_view> content is available to assistive technology
+
+    Examples:
+      | schema_state                | selected_view |
+      | an open dirty schema draft  | Live          |
+      | an open assignment editor   | Library       |
+      | an open reusable rule editor | Sessions     |
+
+  # Data Layer secondary view separation 005
+  Scenario: Data Layer secondary view separation 005
+    Given the Schemas view has a dirty schema draft with an open editor
+    When the operator switches to Library and returns to Schemas
+    Then the schema draft and editor values are restored unchanged
+    And switching views does not close, save, or discard the draft
+    And switching views does not open a discard-changes review
+
+  # Data Layer secondary view separation 006
+  Scenario: Data Layer secondary view separation 006
+    When schema authoring controls are displayed
+    Then Close schema editor and Save and close schema are contained within the schema editor
+    And the schema close-review actions are contained within their review
+    And Version policy is contained within the assignment editor
+    And a standalone Assignment policy control is absent
