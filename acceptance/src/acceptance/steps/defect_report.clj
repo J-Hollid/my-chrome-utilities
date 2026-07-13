@@ -11,6 +11,11 @@
 
 (defonce ^:private runtime-observation (atom nil))
 
+(def ^:private entry-steps
+  #{"captured event purchase is invalid under Checkout schema version 4"
+    "a completed defect report is previewed for Jira Cloud"
+    "a defect report is being built from invalid event purchase"})
+
 (defn- load-observation! []
   (let [result (process/shell support/build-shell-options "node" "test/data-layer-defect-report-runtime-test.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
@@ -66,5 +71,8 @@
 (def handlers
   (mapv (fn [spec]
           {:pattern (support/template-pattern (:text spec))
+           :applies? (fn [world]
+                       (or (entry-steps (:text spec))
+                           (contains? world :defect-report)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
