@@ -70,5 +70,5 @@
       (support/assert! (not (re-find #"componentName|scrollTarget|reproductionField" representation)) "Template configuration leaked into report output." {:representation representation}))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-13T13:57:09.951206741+02:00", :module-hash "-1725450592", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1823940385"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 5, :end-line nil, :hash "389789638"} {:id "defn/assert-reproduction-composer!", :kind "defn", :line 17, :end-line nil, :hash "2131075878"}]}
+;; {:version 1, :tested-at "2026-07-13T14:55:40.465890176+02:00", :module-hash "-1627878349", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1823940385"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 5, :end-line nil, :hash "389789638"} {:id "defn/assert-reproduction-composer!", :kind "defn", :line 17, :end-line nil, :hash "-2036617342"}]}
 ;; clj-mutate-manifest-end
