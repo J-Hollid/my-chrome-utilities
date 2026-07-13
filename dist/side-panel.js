@@ -37,6 +37,7 @@ import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSche
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
+import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, reusableRulesForProperty } from "./data-layer-schema-property-rule-picker.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
@@ -142,22 +143,62 @@ const schemaCloseReviewSummary = document.querySelector("#schema-close-review-su
 const discardSchemaDraftButton = document.querySelector("#discard-schema-draft");
 const keepEditingSchemaButton = document.querySelector("#keep-editing-schema");
 const closeSchemaEditorButton = document.querySelector("#close-schema-editor");
-const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema") ?? Object.assign(document.createElement("button"), { id: "save-and-close-schema", type: "button", textContent: "Publish and close schema", hidden: true });
-if (!saveAndCloseSchemaButton.parentElement)
-    schemaEditor?.append(saveAndCloseSchemaButton);
+const saveAndCloseSchemaButton = document.querySelector("#save-and-close-schema");
 const saveSchemaCloseReviewButton = document.querySelector("#save-schema-close-review");
 const discardWorkingSchemaDraftButton = document.querySelector("#discard-working-schema-draft");
 const schemaRevisionSelector = document.querySelector("#schema-revision-selector");
 const schemaRevisionComparison = document.querySelector("#schema-revision-comparison");
 const duplicateSchemaRevisionButton = document.querySelector("#duplicate-schema-revision");
 const restoreSchemaRevisionButton = document.querySelector("#restore-schema-revision");
-const addSchemaRuleButton = document.querySelector("#add-schema-rule");
-if (addSchemaRuleButton)
-    addSchemaRuleButton.textContent = "Add rule";
+const addSchemaPropertyButton = document.querySelector("#add-schema-property");
 const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
-addSchemaRuleButton?.after(schemaPropertyTree);
+addSchemaPropertyButton?.after(schemaPropertyTree);
 let selectedSchemaPropertyPath = "example";
+const schemaManualPropertyDialog = document.createElement("dialog");
+schemaManualPropertyDialog.id = "schema-manual-property-dialog";
+schemaManualPropertyDialog.setAttribute("aria-labelledby", "schema-manual-property-heading");
+const schemaManualPropertyForm = document.createElement("form");
+schemaManualPropertyForm.method = "dialog";
+const schemaManualPropertyHeading = document.createElement("h4");
+schemaManualPropertyHeading.id = "schema-manual-property-heading";
+schemaManualPropertyHeading.textContent = "Add property";
+const schemaManualPropertyPathLabel = document.createElement("label");
+schemaManualPropertyPathLabel.htmlFor = "schema-manual-property-path";
+schemaManualPropertyPathLabel.textContent = "Property path";
+const schemaManualPropertyPath = document.createElement("input");
+schemaManualPropertyPath.id = "schema-manual-property-path";
+const schemaManualPropertyTypeLabel = document.createElement("label");
+schemaManualPropertyTypeLabel.htmlFor = "schema-manual-property-type";
+schemaManualPropertyTypeLabel.textContent = "Value type";
+const schemaManualPropertyType = document.createElement("select");
+schemaManualPropertyType.id = "schema-manual-property-type";
+schemaManualPropertyType.replaceChildren(...["string", "number", "boolean", "object", "array"].map((type) => Object.assign(document.createElement("option"), { value: type, textContent: type })));
+const schemaManualArrayTypeGroup = document.createElement("label");
+schemaManualArrayTypeGroup.htmlFor = "schema-manual-array-item-type";
+schemaManualArrayTypeGroup.textContent = "Array item type ";
+const schemaManualArrayItemType = document.createElement("select");
+schemaManualArrayItemType.id = "schema-manual-array-item-type";
+schemaManualArrayItemType.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Select item type" }), ...["string", "number", "boolean", "object"].map((type) => Object.assign(document.createElement("option"), { value: type, textContent: type })));
+schemaManualArrayTypeGroup.append(schemaManualArrayItemType);
+const schemaManualPropertyPreview = document.createElement("output");
+schemaManualPropertyPreview.id = "schema-manual-property-preview";
+schemaManualPropertyPreview.setAttribute("aria-live", "polite");
+const schemaManualPropertyAssistance = document.createElement("output");
+schemaManualPropertyAssistance.id = "schema-manual-property-assistance";
+schemaManualPropertyAssistance.setAttribute("aria-live", "polite");
+const goToExistingSchemaPropertyButton = document.createElement("button");
+goToExistingSchemaPropertyButton.type = "button";
+goToExistingSchemaPropertyButton.hidden = true;
+const confirmSchemaManualPropertyButton = document.createElement("button");
+confirmSchemaManualPropertyButton.type = "submit";
+confirmSchemaManualPropertyButton.textContent = "Add property";
+const cancelSchemaManualPropertyButton = document.createElement("button");
+cancelSchemaManualPropertyButton.type = "button";
+cancelSchemaManualPropertyButton.textContent = "Cancel";
+schemaManualPropertyForm.append(schemaManualPropertyHeading, schemaManualPropertyPathLabel, schemaManualPropertyPath, schemaManualPropertyTypeLabel, schemaManualPropertyType, schemaManualArrayTypeGroup, schemaManualPropertyPreview, schemaManualPropertyAssistance, goToExistingSchemaPropertyButton, confirmSchemaManualPropertyButton, cancelSchemaManualPropertyButton);
+schemaManualPropertyDialog.append(schemaManualPropertyForm);
+document.body.append(schemaManualPropertyDialog);
 let schemaRulePickerPath;
 let schemaRulePickerTrigger;
 const schemaPropertyRulePicker = document.createElement("dialog");
@@ -948,9 +989,17 @@ function renderSchemaDraft() {
     schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
         const item = document.createElement("li");
         item.dataset.schemaPropertyPath = path;
+        if (path === selectedSchemaPropertyPath)
+            item.setAttribute("aria-current", "true");
         item.tabIndex = -1;
         const label = document.createElement("strong");
         label.textContent = path;
+        let property = draft.document;
+        for (const segment of path.split("."))
+            property = property?.properties?.[segment];
+        const metadata = document.createElement("span");
+        metadata.className = "schema-property-metadata";
+        metadata.textContent = `${property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
         const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
         const count = document.createElement("span");
         count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
@@ -981,7 +1030,7 @@ function renderSchemaDraft() {
             row.append(toggle, remove);
             view.append(row);
         }
-        item.append(label, count, add, view);
+        item.append(label, metadata, count, add, view);
         return item;
     }));
     const existing = schemas.find((schema) => schema.name === draft.name);
@@ -1014,7 +1063,7 @@ function renderSchemaDraft() {
     const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
     const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
     const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
-    const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one validation rule" : inheritanceError ?? "Ready to save";
+    const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one property" : inheritanceError ?? "Ready to save";
     if (saveSchemaButton)
         saveSchemaButton.disabled = !ready;
     if (saveSchemaButton)
@@ -1158,6 +1207,102 @@ function persistSchemaEditorDraft(change) {
     persistSchemaLibrary();
     renderSchemas();
 }
+function schemaParentDocuments() {
+    const documents = [];
+    const visited = new Set();
+    let parentId = schemaDraft?.parentSchemaId;
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = schemas.find(({ id }) => id === parentId);
+        if (!parent)
+            break;
+        documents.push(parent.document);
+        parentId = parent.parentSchemaId;
+    }
+    return documents;
+}
+function manualPropertyDefinition() {
+    const type = schemaManualPropertyType.value;
+    const arrayItemType = schemaManualArrayItemType.value;
+    return {
+        path: schemaManualPropertyPath.value,
+        type,
+        ...(type === "array" && arrayItemType ? { arrayItemType } : {}),
+    };
+}
+function renderManualPropertyForm() {
+    if (!schemaDraft)
+        return;
+    const definition = manualPropertyDefinition();
+    const inspection = inspectManualProperty(schemaDraft.document, schemaParentDocuments(), definition);
+    schemaManualArrayTypeGroup.hidden = definition.type !== "array";
+    schemaManualPropertyPreview.textContent = definition.path.trim()
+        ? `Normalized path: ${inspection.normalizedPath || "none"}. ${manualPropertyPreview(definition)}. Missing object path: ${inspection.missingObjectPath.join(", ") || "none"}.`
+        : "Normalized path: none. Missing object path: none.";
+    schemaManualPropertyAssistance.textContent = inspection.result === "blocked" ? inspection.assistance : "Ready to add";
+    confirmSchemaManualPropertyButton.disabled = inspection.result === "blocked";
+    goToExistingSchemaPropertyButton.hidden = inspection.result !== "blocked" || !inspection.existingPath;
+    if (inspection.result === "blocked" && inspection.existingPath) {
+        goToExistingSchemaPropertyButton.textContent = inspection.assistance;
+        goToExistingSchemaPropertyButton.dataset.schemaPropertyPath = inspection.existingPath;
+    }
+    else
+        delete goToExistingSchemaPropertyButton.dataset.schemaPropertyPath;
+}
+function closeManualPropertyForm(restoreFocus = true) {
+    if (schemaManualPropertyDialog.open)
+        schemaManualPropertyDialog.close();
+    if (restoreFocus)
+        addSchemaPropertyButton?.focus({ preventScroll: true });
+}
+function focusSchemaPropertyRule(path) {
+    const trigger = Array.from(schemaPropertyTree.querySelectorAll("button.schema-property-add-rule"))
+        .find((button) => button.getAttribute("aria-label") === `Add rule for ${path}`);
+    trigger?.scrollIntoView({ block: "nearest" });
+    trigger?.focus({ preventScroll: true });
+}
+function openManualPropertyForm() {
+    if (!schemaDraft)
+        return;
+    schemaManualPropertyPath.value = "";
+    schemaManualPropertyType.value = "string";
+    schemaManualArrayItemType.value = "";
+    renderManualPropertyForm();
+    schemaManualPropertyDialog.showModal();
+    schemaManualPropertyPath.focus({ preventScroll: true });
+}
+schemaManualPropertyPath.addEventListener("input", renderManualPropertyForm);
+schemaManualPropertyType.addEventListener("change", renderManualPropertyForm);
+schemaManualArrayItemType.addEventListener("change", renderManualPropertyForm);
+schemaManualPropertyForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!schemaDraft)
+        return;
+    const definition = manualPropertyDefinition();
+    const inspection = inspectManualProperty(schemaDraft.document, schemaParentDocuments(), definition);
+    if (inspection.result !== "ready") {
+        renderManualPropertyForm();
+        return;
+    }
+    const path = inspection.normalizedPath.slice(1).replaceAll("/", ".");
+    schemaDraft = { ...schemaDraft, document: addManualProperty(schemaDraft.document, schemaParentDocuments(), definition) };
+    selectedSchemaPropertyPath = path;
+    persistSchemaEditorDraft(`Add manual property ${inspection.normalizedPath}`);
+    closeManualPropertyForm(false);
+    renderSchemaDraft();
+    focusSchemaPropertyRule(path);
+});
+cancelSchemaManualPropertyButton.addEventListener("click", () => closeManualPropertyForm());
+schemaManualPropertyDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeManualPropertyForm(); });
+goToExistingSchemaPropertyButton.addEventListener("click", () => {
+    const path = goToExistingSchemaPropertyButton.dataset.schemaPropertyPath;
+    if (!path)
+        return;
+    selectedSchemaPropertyPath = path;
+    closeManualPropertyForm(false);
+    renderSchemaDraft();
+    focusSchemaPropertyRule(path);
+});
 function guidedType(type) {
     return type === "String" ? "string"
         : type === "Number" ? "number"
@@ -2592,18 +2737,7 @@ schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft
     renderSchemaDraft();
 } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
-addSchemaRuleButton?.addEventListener("click", () => {
-    if (!schemaDraft)
-        return;
-    if (!Object.keys(schemaDraft.document.properties ?? {}).length) {
-        selectedSchemaPropertyPath = "example";
-        schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, [selectedSchemaPropertyPath]) };
-        persistSchemaEditorDraft("Add example property rule");
-        renderSchemaDraft();
-    }
-    if (schemaResult)
-        schemaResult.textContent = "Choose a property row, then attach a reusable rule from its menu.";
-});
+addSchemaPropertyButton?.addEventListener("click", openManualPropertyForm);
 saveSchemaButton?.addEventListener("click", () => {
     if (!schemaDraft || saveSchemaButton.disabled)
         return;
