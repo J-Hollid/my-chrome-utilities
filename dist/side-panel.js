@@ -707,8 +707,9 @@ function openLiveInspector(eventId) {
                     liveObserverElements.eventInspector.hidden = true;
             },
             startDefectReport: (selected) => {
-                if (liveObserverElements.eventInspector)
-                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected);
+                if (liveObserverElements.eventInspector) {
+                    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events);
+                }
             },
             validationAvailable: (selected) => Boolean(validateEvent({
                 sourceId: selected.sourceId,

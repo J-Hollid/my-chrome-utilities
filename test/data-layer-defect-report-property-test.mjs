@@ -8,6 +8,7 @@ import {
   supportingTimeline,
   toggleReportIssue,
 } from "../dist/data-layer-defect-report.js";
+import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
 
 let state = 0x5eed1234;
 function random() {
@@ -94,6 +95,23 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(supporting.map(({ captureTime }) => captureTime),
     chosen.map(({ captureTime }) => captureTime).sort());
   assert.equal(supporting.every((entry) => "summary" in entry && !("payload" in entry)), true);
+
+  const browserEvents = timeline.map((timelineEvent) => ({
+    id: timelineEvent.id,
+    name: timelineEvent.name,
+    sourceId: timelineEvent.source,
+    captureTime: timelineEvent.captureTime,
+    pageUrl: `https://example.test${timelineEvent.pathname}`,
+    payload: timelineEvent.payload,
+    validation: timelineEvent.validation,
+  }));
+  const defectEvent = browserEvents[integer(browserEvents.length)];
+  const context = defectReportContext(browserEvents, defectEvent.id);
+  const chronological = [...browserEvents].sort((left, right) => left.captureTime.localeCompare(right.captureTime));
+  assert.deepEqual(context.timeline.map(({ id }) => id), chronological.map(({ id }) => id));
+  assert.deepEqual(context.visits.flatMap(({ eventIds }) => eventIds), chronological.map(({ id }) => id));
+  assert.equal(context.visits.every((visit, index) => index === 0 || visit.pathname !== context.visits[index - 1].pathname), true);
+  assert.equal(context.visits.find(({ id }) => id === context.defectVisitId).eventIds.includes(defectEvent.id), true);
 }
 
 process.stdout.write("defect report properties: 200 generated cases passed\n");

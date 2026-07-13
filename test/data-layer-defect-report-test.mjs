@@ -7,10 +7,12 @@ import {
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
+  editReportDetails,
   renderJiraReport,
   supportingTimeline,
   toggleReportIssue,
 } from "../dist/data-layer-defect-report.js";
+import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
 
 const capturedPayload = {
   commerce: { currency: "GBP", total: -1, debug: true },
@@ -108,6 +110,32 @@ assert.match(detailed.summary, /purchase/);
 assert.match(detailed.description, /currency/);
 assert.equal(detailed.evidence.schema, "Checkout version 4");
 assert.equal(detailed.evidence.capture.pageUrl, event.pageUrl);
+const edited = editReportDetails(detailed, {
+  summary: "Checkout purchase has invalid currency",
+  description: "Reproduced from the live session.",
+  expectedExplanation: "Use EUR.",
+});
+assert.equal(edited.summary, "Checkout purchase has invalid currency");
+assert.equal(edited.description, "Reproduced from the live session.");
+assert.equal(edited.expectedExplanation, "Use EUR.");
+assert.deepEqual(edited.evidence, detailed.evidence);
+
+const browserContext = defectReportContext([
+  { id: "pageview", name: "pageview", sourceId: "dataLayer", captureTime: "01", pageUrl: "https://shop.test/products", payload: {}, validation: "Valid" },
+  { id: "promotion", name: "promotion", sourceId: "dataLayer", captureTime: "02", pageUrl: "https://shop.test/products", payload: {}, validation: "Not checked" },
+  { id: "checkout", name: "checkout", sourceId: "dataLayer", captureTime: "03", pageUrl: "https://shop.test/checkout", payload: {}, validation: "Valid" },
+  { id: "purchase", name: "purchase", sourceId: "dataLayer", captureTime: "04", pageUrl: "https://shop.test/checkout", payload: {}, validation: "1 error", validationDetails: { issues: [{ message: "invalid" }], evaluations: [] } },
+  { id: "return", name: "pageview", sourceId: "dataLayer", captureTime: "05", pageUrl: "https://shop.test/products", payload: {}, validation: "Valid" },
+], "purchase");
+assert.deepEqual(browserContext.visits.map(({ pathname, eventIds }) => [pathname, eventIds]), [
+  ["/products", ["pageview", "promotion"]],
+  ["/checkout", ["checkout", "purchase"]],
+  ["/products", ["return"]],
+]);
+assert.equal(browserContext.defectVisitId, "visit-2");
+assert.deepEqual(browserContext.timeline.map(({ id, pathname }) => [id, pathname]), [
+  ["pageview", "/products"], ["promotion", "/products"], ["checkout", "/checkout"], ["purchase", "/checkout"], ["return", "/products"],
+]);
 
 const rendered = renderJiraReport(detailed);
 for (const heading of ["Summary", "Description", "Steps to reproduce", "Actual result", "Expected result", "Differences", "Validation evidence", "Supporting timeline"]) {
@@ -118,6 +146,8 @@ assert.match(rendered.text, /− \/commerce\/currency/);
 assert.match(rendered.text, /\+ \/commerce\/currency/);
 assert.match(rendered.html, /background-color:#ffd7d7/);
 assert.match(rendered.html, /background-color:#d9f7d9/);
+assert.match(rendered.html, /background-color:#ffd7d7[^>]+data-json-pointer="\/commerce\/currency"/);
+assert.match(rendered.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/commerce\/currency"/);
 assert.doesNotMatch(JSON.parse(rendered.actualJson).commerce.currency, /^[+−-]/);
 
 const richWrites = [];
