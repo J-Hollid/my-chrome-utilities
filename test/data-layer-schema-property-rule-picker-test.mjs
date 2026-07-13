@@ -16,7 +16,7 @@ assert.equal(ruleTypeAvailability("array", "Item count"), "available");
 assert.equal(ruleTypeAvailability("number", "Regular expression"), "unavailable");
 assert.equal(ruleTypeAvailability("object", "Allowed values"), "unavailable");
 
-assert.deepEqual(builtInRulesForProperty("string").map(({ name }) => name), ["Required", "Allowed values", "Regular expression"]);
+assert.deepEqual(builtInRulesForProperty("string").map(({ name }) => name), ["Required", "Exact value", "Allowed values", "Regular expression", "Text length", "Digits only"]);
 
 const reusable = [
   { id:"approved", name:"Approved pages", kind:"Allowed values", operator:"allowed values", parameters:"homepage, checkout", description:"Public pages", applicableType:"string", version:2 },

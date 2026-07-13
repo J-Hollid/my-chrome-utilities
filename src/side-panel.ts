@@ -192,6 +192,7 @@ import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js
 import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
+import { ensureNestedSchemaPath } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, reusableRulesForProperty, type SchemaPropertyType } from "./data-layer-schema-property-rule-picker.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
@@ -394,6 +395,18 @@ const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
 addSchemaPropertyButton?.after(schemaPropertyTree);
 let selectedSchemaPropertyPath = "example";
+let specificIndexArrayPath: string | undefined;
+let specificIndexTrigger: HTMLButtonElement | undefined;
+const schemaSpecificIndexDialog = document.createElement("dialog"); schemaSpecificIndexDialog.id = "schema-specific-index-dialog";
+const schemaSpecificIndexForm = document.createElement("form");
+const schemaSpecificIndexHeading = document.createElement("h4"); schemaSpecificIndexHeading.textContent = "Add specific index rule";
+const schemaSpecificIndexLabel = document.createElement("label"); schemaSpecificIndexLabel.htmlFor = "schema-specific-index"; schemaSpecificIndexLabel.textContent = "Zero-based array index";
+const schemaSpecificIndex = document.createElement("input"); schemaSpecificIndex.id = "schema-specific-index"; schemaSpecificIndex.type = "number"; schemaSpecificIndex.min = "0"; schemaSpecificIndex.step = "1";
+const schemaSpecificIndexAssistance = document.createElement("output"); schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index";
+const confirmSchemaSpecificIndex = document.createElement("button"); confirmSchemaSpecificIndex.type = "submit"; confirmSchemaSpecificIndex.textContent = "Choose rule"; confirmSchemaSpecificIndex.disabled = true;
+const cancelSchemaSpecificIndex = document.createElement("button"); cancelSchemaSpecificIndex.type = "button"; cancelSchemaSpecificIndex.textContent = "Cancel";
+schemaSpecificIndexForm.append(schemaSpecificIndexHeading, schemaSpecificIndexLabel, schemaSpecificIndex, schemaSpecificIndexAssistance, confirmSchemaSpecificIndex, cancelSchemaSpecificIndex);
+schemaSpecificIndexDialog.append(schemaSpecificIndexForm); document.body.append(schemaSpecificIndexDialog);
 const schemaManualPropertyDialog = document.createElement("dialog");
 schemaManualPropertyDialog.id = "schema-manual-property-dialog";
 schemaManualPropertyDialog.setAttribute("aria-labelledby", "schema-manual-property-heading");
@@ -1231,9 +1244,14 @@ function renderSchemaDraft(): void {
   if (schemaOnlyDeclaredProperties) schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
   const paths = (document: SchemaDefinition["document"], prefix = ""): string[] => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
     const path = prefix ? `${prefix}.${name}` : name;
-    return [path, ...paths(child, path)];
+    return child.type === "array" && child.items
+      ? [path, `${path}.*`, ...paths(child.items, `${path}.*`)]
+      : [path, ...paths(child, path)];
   });
-  const propertyPaths = paths(draft.document);
+  const propertyPaths = [...new Set([
+    ...paths(draft.document),
+    ...(draft.attachedRules ?? []).flatMap(({ propertyPath }) => propertyPath?.startsWith("/") ? [propertyPath.slice(1).replaceAll("/", ".")] : []),
+  ])];
   if (!propertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
   schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
     const item = document.createElement("li");
@@ -1242,25 +1260,34 @@ function renderSchemaDraft(): void {
     item.tabIndex = -1;
     const label = document.createElement("strong"); label.textContent = path;
     let property: SchemaDefinition["document"] | undefined = draft.document;
-    for (const segment of path.split(".")) property = property?.properties?.[segment];
+    for (const segment of path.split(".")) property = segment === "*" || /^\d+$/.test(segment) ? property?.items : property?.properties?.[segment];
     const metadata = document.createElement("span"); metadata.className = "schema-property-metadata";
-    metadata.textContent = `${property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
-    const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
+    metadata.textContent = `${path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
+    const persistedPath = path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
+    const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedPath);
     const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
     const add = document.createElement("button"); add.type = "button"; add.textContent = "Add rule"; add.className = "schema-property-add-rule"; add.setAttribute("aria-label", `Add rule for ${path}`);
     add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
+    const addSpecificIndex = property?.type === "array" ? document.createElement("button") : undefined;
+    if (addSpecificIndex) {
+      addSpecificIndex.type = "button"; addSpecificIndex.textContent = "Add specific index rule";
+      addSpecificIndex.addEventListener("click", () => {
+        specificIndexArrayPath = path; specificIndexTrigger = addSpecificIndex; schemaSpecificIndex.value = ""; confirmSchemaSpecificIndex.disabled = true;
+        schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index"; schemaSpecificIndexDialog.showModal(); schemaSpecificIndex.focus({ preventScroll:true });
+      });
+    }
     const view = document.createElement("details"); view.dataset.attachedRules = "true"; const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
     if (!attached.length) view.append("No rules attached to this property.");
     for (const rule of attached) {
       const row = document.createElement("div");
       row.textContent = `${rule.id} v${rule.version} · ${rule.operator ?? "rule"} · ${rule.parameters ?? "no parameters"} · ${rule.severity ?? "error"} · ${rule.enabled === false ? "disabled" : "active"} `;
       const toggle = document.createElement("button"); toggle.type = "button"; toggle.textContent = rule.enabled === false ? "Re-enable" : "Disable";
-      toggle.addEventListener("click", () => updateAttachedRule(path, rule.id, (item) => ({ ...item, enabled:item.enabled === false })));
+      toggle.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, (item) => ({ ...item, enabled:item.enabled === false })));
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
-      remove.addEventListener("click", () => updateAttachedRule(path, rule.id, () => undefined));
+      remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
       row.append(toggle, remove); view.append(row);
     }
-    item.append(label, metadata, count, add, view); return item;
+    item.append(label, metadata, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), view); return item;
   }));
   const existing = schemas.find((schema) => schema.name === draft.name);
   const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
@@ -1745,8 +1772,12 @@ function defineSchemaProperty(document: SchemaDefinition["document"], path: read
 
 function schemaPropertyType(path: string): SchemaPropertyType {
   let document = schemaDraft?.document;
-  for (const segment of path.split(".")) document = document?.properties?.[segment];
+  for (const segment of path.split(".")) document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
   return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+}
+
+function persistedSchemaRulePath(path: string): string {
+  return path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
 }
 
 function closeSchemaPropertyRulePicker(): void {
@@ -1766,7 +1797,7 @@ function renderSchemaPropertyRulePicker(): void {
   const results = document.createElement("div"); results.id = "schema-property-rule-results";
   const normalized = previousQuery.trim().toLowerCase();
   const builtIns = builtInRulesForProperty(propertyType).filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
-  const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === path).map(({ id }) => id));
+  const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedSchemaRulePath(path)).map(({ id }) => id));
   const reusable = reusableRulesForProperty(reusableSchemaRules, propertyType, previousQuery, attachedIds);
   const resultButton = (label: string, metadata: string, action: () => void, disabled = false) => {
     const article = document.createElement("article"); const button = document.createElement("button"); const detail = document.createElement("p");
@@ -1813,20 +1844,38 @@ schemaPropertyRulePicker.addEventListener("keydown", (event) => {
   event.preventDefault(); buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
 });
 
+schemaSpecificIndex.addEventListener("input", () => {
+  const index = Number(schemaSpecificIndex.value);
+  const valid = schemaSpecificIndex.value !== "" && Number.isInteger(index) && index >= 0;
+  confirmSchemaSpecificIndex.disabled = !valid;
+  schemaSpecificIndexAssistance.textContent = valid ? `Item ${index + 1} at zero-based index ${index}` : "Enter a non-negative array index";
+});
+schemaSpecificIndexForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const index = Number(schemaSpecificIndex.value);
+  if (!specificIndexArrayPath || !specificIndexTrigger || !Number.isInteger(index) || index < 0) return;
+  schemaSpecificIndexDialog.close(); openSchemaPropertyRulePicker(`${specificIndexArrayPath}.${index}`, specificIndexTrigger);
+});
+const closeSpecificIndexDialog = () => { if (schemaSpecificIndexDialog.open) schemaSpecificIndexDialog.close(); specificIndexTrigger?.focus({ preventScroll:true }); };
+cancelSchemaSpecificIndex.addEventListener("click", closeSpecificIndexDialog);
+schemaSpecificIndexDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSpecificIndexDialog(); });
+
 function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
   if (!schemaDraft) return;
+  const propertyPath = persistedSchemaRulePath(path);
   const attachment = {
     id: rule.id,
     name: rule.name,
     version: rule.version ?? 1,
-    propertyPath: path,
+    propertyPath,
     ...(rule.operator ? { operator:rule.operator } : {}),
     ...(rule.parameters ? { parameters:rule.parameters } : {}),
     ...(rule.severity ? { severity:rule.severity } : {}),
     ...(rule.message ? { message:rule.message } : {}),
     enabled: true,
   };
-  schemaDraft = { ...schemaDraft, document:defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules:[...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
+  const nested = ensureNestedSchemaPath(schemaDraft.document, propertyPath.startsWith("/") ? propertyPath : `/${propertyPath}`, schemaPropertyType(path));
+  schemaDraft = { ...schemaDraft, document:nested.document, attachedRules:[...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== propertyPath), attachment] };
   persistSchemaEditorDraft(`Attach ${rule.name} to ${path}`);
   renderSchemaDraft();
   focusSchemaPropertyRow(path);
@@ -1846,8 +1895,9 @@ function updateAttachedRule(path: string, id: string, update: (rule: NonNullable
 }
 
 function focusSchemaPropertyRow(path: string): void {
+  const displayedPath = path.startsWith("/") ? path.slice(1).replaceAll("/", ".") : path;
   Array.from(schemaPropertyTree.querySelectorAll<HTMLElement>("li[data-schema-property-path]"))
-    .find((row) => row.dataset.schemaPropertyPath === path)
+    .find((row) => row.dataset.schemaPropertyPath === displayedPath)
     ?.focus({ preventScroll:true });
 }
 
@@ -1900,7 +1950,7 @@ function recheckCapturedSchemaValidation(): void {
       if (validation.state !== "Not checked") checked += 1;
       const assignment = validation.assignment;
       const assignmentDetails = assignment ? `assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId} · event ${assignment.eventName} · target ${assignment.target} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : `assignment ${validation.target ?? "automatic"}`;
-      issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
+      issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${event.name} · ${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
       records.push({ eventId:event.id, eventName:event.name, state:validation.state, checkedAt, ...(validation.schema ? { schemaName:validation.schema.name, schemaVersion:validation.schema.version } : {}), ...(validation.target ? { target:validation.target } : {}) });
       return { ...event, validation:validation.state };
     }),

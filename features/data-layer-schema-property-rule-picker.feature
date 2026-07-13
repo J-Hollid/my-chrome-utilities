@@ -35,7 +35,10 @@ Feature: Data layer schema property rule picker
     Examples:
       | property_name | property_type | rule_type             | availability |
       | page_type     | string        | Required              | available    |
+      | page_type     | string        | Exact value           | available    |
       | page_type     | string        | Regular expression    | available    |
+      | page_type     | string        | Text length            | available    |
+      | page_type     | string        | Digits only            | available    |
       | revenue       | number        | Numeric range         | available    |
       | items         | array         | Item count            | available    |
       | revenue       | number        | Regular expression    | unavailable  |
