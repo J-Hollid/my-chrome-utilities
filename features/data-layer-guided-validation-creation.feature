@@ -29,17 +29,18 @@ Feature: Data layer guided validation creation
   # Data layer guided validation creation 003
   Scenario: Data layer guided validation creation 003
     Given a complete guided validation draft has a schema destination and local rule
-    When the operator saves the validation
-    Then its selected schema destination, local rule, and enabled assignment are persisted together
-    And validation uses the captured source, event pageview, payload target, and reviewed scope
-    And the completed validation is displayed as one readable requirement
+    When the operator adds the validation to the schema draft
+    Then its selected schema destination, local rule, and assignment draft are persisted together as pending changes
+    And the pending validation uses the captured source, event pageview, payload target, and reviewed scope
+    And the schema's current revision and active assignments remain unchanged
+    And the completed pending validation is displayed as one readable requirement
 
   # Data layer guided validation creation 004
   Scenario: Data layer guided validation creation 004
     Given the validation is ready to publish its rule for reuse
     When publication details appear
     Then Rule Library reuse is stated
-    And saving persists one reusable rule attached to the new schema
+    And publishing the schema draft persists one reusable rule attached to the current schema revision
 
   # Data layer guided validation creation 005
   Scenario: Data layer guided validation creation 005

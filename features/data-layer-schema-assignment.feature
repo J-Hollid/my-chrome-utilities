@@ -73,9 +73,10 @@ Feature: Data layer schema assignment
   # Data layer schema assignment 008
   Scenario Outline: Data layer schema assignment 008
     Given assignment version policy is <version_policy> for schema version 4
-    When schema version 5 is saved
+    When schema version 5 is published as the current revision
     Then assignment behavior is <assignment_behavior>
     And every validation record stores the exact schema version actually used
+    And the schema remains 1 choice for assignment
 
     Examples:
       | version_policy | assignment_behavior                              |

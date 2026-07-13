@@ -17,7 +17,7 @@ Feature: Data layer schema Library
     Then an unpersisted schema editor opens with Name empty, target Payload, no parent, and no active rules
     And the editor status is Unsaved new schema
     And keyboard focus moves to Name
-    And no schema record is created before Save schema succeeds
+    And no schema record is created before Publish schema succeeds
 
   # Data layer schema Library 003
   Scenario Outline: Data layer schema Library 003
@@ -47,7 +47,7 @@ Feature: Data layer schema Library
   Scenario Outline: Data layer schema Library 005
     Given the new schema draft has readiness problem <readiness_problem>
     When schema actions are displayed
-    Then Save schema is disabled with reason <disabled_reason>
+    Then Publish schema is disabled with reason <disabled_reason>
     And the reason is associated with <affected_field>
 
     Examples:
@@ -60,21 +60,23 @@ Feature: Data layer schema Library
   # Data layer schema Library 006
   Scenario: Data layer schema Library 006
     Given new schema Page view has target Payload and at least 1 valid active rule
-    When the operator activates Save schema
+    When the operator activates Publish schema
     Then Page view version 1 is persisted with a stable schema identity
     And its rule identities, target, parent reference, examples, and generated schema document are stored
-    And subsequent edits use Save revision
+    And subsequent edits use the Page view working draft
     And Page view remains available after the side panel reloads
 
   # Data layer schema Library 007
   Scenario: Data layer schema Library 007
     Given Page view version 2 has a dirty schema draft
-    When the operator activates Save revision
+    When the operator activates Publish revision
     Then a review identifies rules added, changed, disabled, re-enabled, and removed
     And it identifies parent, target, assignment, and example changes
     And no schema mutation occurs before confirmation
-    When the operator confirms Save revision 3
-    Then version 3 is persisted and version 2 remains available for historical validation
+    When the operator confirms Publish revision 3
+    Then version 3 replaces version 2 as the current revision of Page view
+    And version 2 remains available only in read-only Revision history
+    And Page view remains 1 schema available for assignment
 
   # Data layer schema Library 008
   Scenario Outline: Data layer schema Library 008
@@ -109,8 +111,18 @@ Feature: Data layer schema Library
 
   # Data layer schema Library 011
   Scenario: Data layer schema Library 011
-    Given schema Page view has a dirty draft
+    Given Page view version 2 has a dirty schema draft
     When the operator closes the editor or selects another schema
-    Then a confirmation offers Keep editing, Save revision, and Discard changes
-    And no saved schema changes before Save revision is confirmed
-    And discarding or reopening Page view restores its latest saved revision rather than the abandoned draft
+    Then the working draft is retained without publishing
+    And no current revision changes
+    And reopening Page view restores the same draft for guided and advanced editing
+    And Discard draft remains available as an explicit action
+
+  # Data layer schema Library 012
+  Scenario: Data layer schema Library 012
+    Given Page view has current revision 3, 2 historical revisions, and 4 pending draft changes
+    When schemas are displayed
+    Then 1 Page view row identifies current revision 3
+    And it identifies 4 pending draft changes and 2 historical revisions
+    And Revision history is accessed from the Page view row
+    And historical revisions are not displayed as schema rows

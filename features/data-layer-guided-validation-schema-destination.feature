@@ -51,18 +51,20 @@ Feature: Data layer guided validation schema destination
     And matching assignment state is <assignment_state>
     When the validation review is displayed
     Then it identifies page_type as the rule attachment path
-    And it states that Product listing version 4 will be created while version 3 remains unchanged
+    And it states that the rule will be added to the Product listing working draft based on version 3
+    And Product listing version 3 remains current until the working draft is published
+    And no Product listing version 4 exists before publication
     And assignment action is <assignment_action>
 
     Examples:
       | assignment_state   | assignment_action                         |
       | matching exists    | reuse the matching enabled assignment     |
-      | matching absent    | create the reviewed enabled assignment    |
+      | matching absent    | add the reviewed assignment as a pending change |
 
   # Data layer guided validation schema destination 005
   Scenario Outline: Data layer guided validation schema destination 005
     Given the review has destination <schema_destination>
-    When the operator activates Save validation and persistence completes
+    When the operator activates Add validation to draft and persistence completes
     Then the review and guided validation flow close
     And the originating Live event inspector is restored
     And a visible status confirms <saved_result>
@@ -70,8 +72,8 @@ Feature: Data layer guided validation schema destination
 
     Examples:
       | schema_destination          | saved_result                                      |
-      | new Signal Shop pageview    | schema Signal Shop pageview was created           |
-      | existing Product listing v3 | validation was added to Product listing version 4 |
+      | new Signal Shop pageview    | draft Signal Shop pageview was created            |
+      | existing Product listing v3 | validation was added to Product listing draft     |
 
   # Data layer guided validation schema destination 006
   Scenario: Data layer guided validation schema destination 006

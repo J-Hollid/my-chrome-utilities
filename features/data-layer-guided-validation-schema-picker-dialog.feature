@@ -65,9 +65,9 @@ Feature: Data layer guided validation schema picker dialog
   Scenario Outline: Data layer guided validation schema picker dialog 006
     Given compatible schema Product listing version 3 has keyboard focus
     When the operator completes selection with <selection_input>
-    Then Product listing version 3 becomes the existing schema destination
+    Then Product listing becomes the existing schema destination by stable schema identity
     And the destination stage replaces the dialog
-    And the destination stage shows a compact Product listing version 3 summary
+    And the destination stage shows a compact Product listing current version 3 summary
     And Change existing schema receives focus
     And schema-derived prefill rules are applied to the guided validation draft
 
@@ -88,3 +88,12 @@ Feature: Data layer guided validation schema picker dialog
       | dismissal   |
       | Escape      |
       | Close button |
+
+  # Data layer guided validation schema picker dialog 008
+  Scenario: Data layer guided validation schema picker dialog 008
+    Given Product listing has current revision 4, 3 historical revisions, and a working draft
+    When the schema-picker dialog is opened
+    Then exactly 1 Product listing result is displayed
+    And the result identifies current revision 4 and the pending working draft
+    And historical revisions are absent from selectable results
+    And selecting Product listing references its stable schema identity
