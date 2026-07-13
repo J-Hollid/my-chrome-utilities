@@ -13,7 +13,7 @@ Feature: Data layer schema workspace runtime completion
     Given <source_kind> <source_name> contains nested payload properties page_type, page_name, and commerce.order.id
     When the operator activates Create schema from this <source_kind>
     Then the schema editor renders expandable property rows for the observed payload hierarchy
-    And each row offers Add validation rule and View attached rules for its complete property path
+    And each row offers Add rule and View attached rules for its complete property path
     And the operator does not have to type a property path into a free-form field
     And no observed value becomes an active rule before the operator accepts it
 

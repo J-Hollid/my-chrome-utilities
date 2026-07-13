@@ -191,6 +191,7 @@ import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSche
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
+import { builtInRulesForProperty, reusableRulesForProperty, type SchemaPropertyType } from "./data-layer-schema-property-rule-picker.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -388,16 +389,24 @@ const schemaRevisionComparison = document.querySelector<HTMLElement>("#schema-re
 const duplicateSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#duplicate-schema-revision");
 const restoreSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#restore-schema-revision");
 const addSchemaRuleButton = document.querySelector<HTMLButtonElement>("#add-schema-rule");
+if (addSchemaRuleButton) addSchemaRuleButton.textContent = "Add rule";
 const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
 addSchemaRuleButton?.after(schemaPropertyTree);
 let selectedSchemaPropertyPath = "example";
+let schemaRulePickerPath: string | undefined;
+let schemaRulePickerTrigger: HTMLButtonElement | undefined;
+const schemaPropertyRulePicker = document.createElement("dialog");
+schemaPropertyRulePicker.id = "schema-property-rule-picker";
+schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
+document.body.append(schemaPropertyRulePicker);
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
 const schemaRuleName = document.querySelector<HTMLInputElement>("#schema-rule-name");
 const schemaRuleParameters = document.querySelector<HTMLInputElement>("#schema-rule-parameters");
 const schemaRuleTypes = document.querySelector<HTMLSelectElement>("#schema-rule-types");
+schemaRuleTypes?.replaceChildren(...(["string", "number", "array", "object", "boolean"] as const).map((type) => Object.assign(document.createElement("option"), { value:type, textContent:type })));
 const schemaRuleOperator = document.querySelector<HTMLSelectElement>("#schema-rule-operator");
 const schemaRuleSeverity = document.querySelector<HTMLSelectElement>("#schema-rule-severity");
 const schemaRuleMessage = document.querySelector<HTMLInputElement>("#schema-rule-message");
@@ -554,7 +563,7 @@ const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validat
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; severity?: string; message?: string }[]; }
+interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; severity?: string; message?: string }[]; }
 let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   schemaCandidates: guidedSchemaCandidates,
@@ -1212,20 +1221,8 @@ function renderSchemaDraft(): void {
     const label = document.createElement("strong"); label.textContent = path;
     const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
     const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
-    const menu = document.createElement("details"); menu.dataset.ruleMenu = "true"; menu.setAttribute("aria-label", `${path} rule menu`);
-    const add = document.createElement("summary"); add.textContent = "Add validation rule"; menu.append(add);
-    add.addEventListener("click", (event) => { event.preventDefault(); menu.open = !menu.open; });
-    const rules = reusableSchemaRules.filter((rule) => rule.enabled !== false);
-    if (rules.length) {
-      menu.append(...rules.map((rule) => {
-        const attach = document.createElement("button"); attach.type = "button"; attach.textContent = `Attach ${rule.name} v${rule.version ?? 1}`;
-        attach.addEventListener("click", () => attachReusableRule(path, rule)); return attach;
-      }));
-    } else {
-      const create = document.createElement("button"); create.type = "button"; create.textContent = "Create reusable rule";
-      create.addEventListener("click", () => { selectedSchemaPropertyPath = path; showSchemaSubview("schema-rule-library"); createSchemaRuleButton?.click(); }); menu.append(create);
-    }
-    menu.addEventListener("toggle", () => { if (!menu.open) focusSchemaPropertyRow(path); });
+    const add = document.createElement("button"); add.type = "button"; add.textContent = "Add rule"; add.className = "schema-property-add-rule"; add.setAttribute("aria-label", `Add rule for ${path}`);
+    add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
     const view = document.createElement("details"); view.dataset.attachedRules = "true"; const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
     if (!attached.length) view.append("No rules attached to this property.");
     for (const rule of attached) {
@@ -1237,7 +1234,7 @@ function renderSchemaDraft(): void {
       remove.addEventListener("click", () => updateAttachedRule(path, rule.id, () => undefined));
       row.append(toggle, remove); view.append(row);
     }
-    item.append(label, count, add, menu, view); return item;
+    item.append(label, count, add, view); return item;
   }));
   const existing = schemas.find((schema) => schema.name === draft.name);
   const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
@@ -1638,6 +1635,76 @@ function defineSchemaProperty(document: SchemaDefinition["document"], path: read
   if (rest.length === 0) return { ...document, type:document.type ?? "object", properties:{ ...properties, [name]:properties[name] ?? { type:"string" } } };
   return { ...document, type:document.type ?? "object", properties:{ ...properties, [name]:defineSchemaProperty(properties[name] ?? { type:"object" }, rest) } };
 }
+
+function schemaPropertyType(path: string): SchemaPropertyType {
+  let document = schemaDraft?.document;
+  for (const segment of path.split(".")) document = document?.properties?.[segment];
+  return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+}
+
+function closeSchemaPropertyRulePicker(): void {
+  if (schemaPropertyRulePicker.open) schemaPropertyRulePicker.close();
+  schemaRulePickerTrigger?.focus({ preventScroll:true });
+  schemaRulePickerPath = undefined;
+}
+
+function renderSchemaPropertyRulePicker(): void {
+  const path = schemaRulePickerPath;
+  if (!path) return;
+  const propertyType = schemaPropertyType(path);
+  const previousQuery = schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.value ?? "";
+  const heading = document.createElement("h4"); heading.id = "schema-property-rule-picker-heading"; heading.textContent = `Add rule for ${path} · type ${propertyType}`;
+  const searchLabel = document.createElement("label"); searchLabel.htmlFor = "schema-property-rule-search"; searchLabel.textContent = "Search rules";
+  const search = document.createElement("input"); search.id = "schema-property-rule-search"; search.type = "search"; search.value = previousQuery;
+  const results = document.createElement("div"); results.id = "schema-property-rule-results";
+  const normalized = previousQuery.trim().toLowerCase();
+  const builtIns = builtInRulesForProperty(propertyType).filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
+  const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === path).map(({ id }) => id));
+  const reusable = reusableRulesForProperty(reusableSchemaRules, propertyType, previousQuery, attachedIds);
+  const resultButton = (label: string, metadata: string, action: () => void, disabled = false) => {
+    const article = document.createElement("article"); const button = document.createElement("button"); const detail = document.createElement("p");
+    button.type = "button"; button.textContent = label; button.disabled = disabled; button.addEventListener("click", action); detail.textContent = metadata; article.append(button, detail); return article;
+  };
+  const create = document.createElement("section"); create.setAttribute("aria-label", "Create a rule"); create.append(Object.assign(document.createElement("h5"), { textContent:"Create a rule" }), ...builtIns.map((rule) => resultButton(rule.name, `${rule.operator} · no parameters · type ${propertyType}`, () => {
+    const configuration = document.createElement("section"); configuration.id = "schema-local-rule-configuration"; configuration.append(Object.assign(document.createElement("h5"), { textContent:`Configure ${rule.name} for ${path}` }), Object.assign(document.createElement("p"), { textContent:`Local ${rule.operator} rule · type ${propertyType}` }));
+    results.replaceChildren(configuration);
+  })));
+  const library = document.createElement("section"); library.setAttribute("aria-label", "Attach from Rule Library"); library.append(Object.assign(document.createElement("h5"), { textContent:"Attach from Rule Library" }), ...reusable.map((rule) => resultButton(
+    `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`,
+    `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`,
+    () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
+    rule.alreadyAttached,
+  )));
+  if (!builtIns.length && !reusable.length) {
+    const empty = document.createElement("p"); empty.id = "schema-property-rule-empty"; empty.textContent = "No compatible rules match this search";
+    const clear = document.createElement("button"); clear.type = "button"; clear.textContent = "Clear search"; clear.addEventListener("click", () => { search.value = ""; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.focus(); });
+    results.append(empty, clear);
+  } else results.append(create, library);
+  const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; cancel.addEventListener("click", closeSchemaPropertyRulePicker);
+  schemaPropertyRulePicker.replaceChildren(heading, searchLabel, search, results, cancel);
+  search.addEventListener("input", () => {
+    const position = search.selectionStart ?? search.value.length;
+    renderSchemaPropertyRulePicker();
+    const replacement = schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search");
+    replacement?.focus({ preventScroll:true }); replacement?.setSelectionRange(position, position);
+  });
+}
+
+function openSchemaPropertyRulePicker(path: string, trigger: HTMLButtonElement): void {
+  selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = trigger;
+  renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.showModal();
+  schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.focus({ preventScroll:true });
+}
+
+schemaPropertyRulePicker.addEventListener("cancel", (event) => { event.preventDefault(); closeSchemaPropertyRulePicker(); });
+schemaPropertyRulePicker.addEventListener("keydown", (event) => {
+  if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") return;
+  const buttons = Array.from(schemaPropertyRulePicker.querySelectorAll<HTMLButtonElement>("#schema-property-rule-results button:not(:disabled)"));
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  if (event.key === "Enter" && index >= 0) { event.preventDefault(); buttons[index]?.click(); return; }
+  if (!buttons.length || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) return;
+  event.preventDefault(); buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+});
 
 function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
   if (!schemaDraft) return;
