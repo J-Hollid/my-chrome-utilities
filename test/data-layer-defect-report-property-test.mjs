@@ -163,6 +163,10 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(composedSteps.map(({ text }) => text.match(/^\d+/)?.[0]),
     composedSteps.map((_, index) => String(index + 1)));
   assert.equal(composedSteps.filter(({ kind, visitId }) => kind === "manual" && visitId === anchor.visitId).length, manualCount);
+  const composedAnchorIndex = composedSteps.findIndex(({ kind, visitId }) => kind === "pathname" && visitId === anchor.visitId);
+  const followingAnchorOffset = composedSteps.slice(composedAnchorIndex + 1).findIndex(({ kind }) => kind === "pathname");
+  const composedSectionEnd = followingAnchorOffset < 0 ? composedSteps.length : composedAnchorIndex + 1 + followingAnchorOffset;
+  assert.deepEqual(composedSteps.slice(composedAnchorIndex + 1, composedSectionEnd).map(({ id }) => id), manualIds);
   if (manualCount > 1) {
     const movedEarlier = moveManualReproductionStep(composedSteps, manualIds.at(-1), "earlier");
     assert.deepEqual(moveManualReproductionStep(movedEarlier, manualIds.at(-1), "later"), composedSteps);
