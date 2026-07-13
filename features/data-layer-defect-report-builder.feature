@@ -8,6 +8,7 @@ Feature: Data layer defect report builder
   Background:
     Given captured event purchase is invalid under Checkout schema version 4
     And its captured payload is purchase-invalid-json
+    And currency violates constraint must be one of EUR or USD
 
   # Data layer defect report builder 001
   Scenario: Data layer defect report builder 001
@@ -28,20 +29,13 @@ Feature: Data layer defect report builder
     And the issue remains identifiable by JSON pointer without relying on color
 
   # Data layer defect report builder 003
-  Scenario Outline: Data layer defect report builder 003
-    Given selected issue <issue> reports constraint <constraint>
-    When the operator chooses expected result method <method> with response <response>
-    Then Expected result describes <expected_outcome>
-    And corrected JSON operation is <json_operation>
-    And the builder does not invent a corrected value
-
-    Examples:
-      | issue        | constraint                   | method                   | response | expected_outcome                         | json_operation        |
-      | currency     | one of EUR or USD             | choose an allowed value  | EUR      | currency is EUR                          | replace currency      |
-      | currency     | one of EUR or USD             | enter a valid response   | USD      | currency is USD                          | replace currency      |
-      | order_id     | required string               | enter a valid response   | A-123    | order_id is A-123                        | add order_id          |
-      | debug        | forbidden property            | apply the rule           | none     | debug is absent                          | remove debug          |
-      | total        | number greater than or equal to 0 | keep the rule generic | none     | total satisfies its validation rule      | none                  |
+  Scenario: Data layer defect report builder 003
+    When expected-result assistance for currency is displayed
+    Then Use generic constraint shows the current currency rule with EUR and USD
+    And schema-provided values EUR and USD are separately selectable
+    And Custom value or response is available as an alternative
+    And custom response input is displayed only after Custom value or response is selected
+    And the invalid actual value is not presented as a schema-provided valid value
 
   # Data layer defect report builder 004
   Scenario: Data layer defect report builder 004
@@ -60,3 +54,52 @@ Feature: Data layer defect report builder
     And Summary, Description, and Expected result explanation are editable
     And schema name and version, rule identity and version, severity, JSON pointer, expected constraint, and actual value remain available as validation evidence
     And event name, source, page URL, and capture time remain available as capture evidence
+
+  # Data layer defect report builder 006
+  Scenario Outline: Data layer defect report builder 006
+    Given selected issue <issue> reports constraint <constraint>
+    When the operator chooses assisted response <response> from <response_source>
+    Then Expected result describes <expected_outcome>
+    And corrected JSON operation is <json_operation>
+    And the response is identified as <response_source>
+
+    Examples:
+      | issue    | constraint         | response | response_source          | expected_outcome  | json_operation   |
+      | currency | one of EUR or USD  | EUR      | Checkout schema          | currency is EUR   | replace currency |
+      | order_id | required string    | A-123    | Custom value or response | order_id is A-123 | add order_id     |
+      | debug    | forbidden property | remove   | validation rule          | debug is absent   | remove debug     |
+
+  # Data layer defect report builder 007
+  Scenario: Data layer defect report builder 007
+    When the operator chooses Use generic constraint
+    Then Expected result represents /commerce/currency must be one of EUR or USD
+    And no single allowed value is selected
+    And no placeholder, annotation, or allowed-values array is inserted into expected JSON
+    And the invalid actual value is not presented as a corrected value
+
+  # Data layer defect report builder 008
+  Scenario: Data layer defect report builder 008
+    When the operator enters custom expected value CAD
+    Then the helper identifies CAD as a Custom value or response
+    And the helper warns that CAD does not satisfy the current schema constraint
+    And the operator can explicitly keep or replace the custom override
+    And a kept override is identified as operator-provided in Expected result
+
+  # Data layer defect report builder 009
+  Scenario: Data layer defect report builder 009
+    Given the builder was opened from the purchase Live inspector
+    When the builder header is displayed
+    Then Back to captured event and Back to Live feed are available before report controls
+    When the operator activates Back to captured event
+    Then the purchase Live inspector is restored
+    And focus returns to Create defect report for purchase
+    And the Live feed scroll position is unchanged
+
+  # Data layer defect report builder 010
+  Scenario: Data layer defect report builder 010
+    Given the builder was opened from the purchase Live inspector
+    And purchase had focus in the Live feed before its inspector opened
+    When the operator activates Back to Live feed
+    Then the defect report builder and purchase inspector are closed
+    And focus returns to purchase in the Live feed
+    And the Live feed scroll position is unchanged

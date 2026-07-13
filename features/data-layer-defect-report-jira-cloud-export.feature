@@ -17,6 +17,7 @@ Feature: Data layer defect report Jira Cloud export
     And Supporting timeline is included when the operator selected timeline evidence
     And the invalid actual field has a red background and a minus marker
     And the corrected expected field has a green background and a plus marker
+    And text on each highlighted background has a contrast ratio of at least 4.5 to 1
     And both differences identify JSON pointer /commerce/currency without relying on color
 
   # Data layer defect report Jira Cloud export 002
