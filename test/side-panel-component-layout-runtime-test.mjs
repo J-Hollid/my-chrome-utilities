@@ -26,6 +26,7 @@ const requestedBrowserAdapter = Object.entries(process.env).some(([name, value])
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
@@ -2152,21 +2153,23 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
-    schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
-    assert.deepEqual(schemaViewContainmentObservation, {
-      containedControls:true,
-      editorContainsActions:true,
-      closeReviewContainsActions:true,
-      assignmentContainsPolicy:true,
-      standaloneAssignmentPolicy:0,
-      presentationByView:{
-        Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-      },
-      editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
-      restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
-    }, `Schema view containment violated its ${width}px browser contract`);
+    if (runSchemaViewContainmentRuntime) {
+      schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
+      assert.deepEqual(schemaViewContainmentObservation, {
+        containedControls:true,
+        editorContainsActions:true,
+        closeReviewContainsActions:true,
+        assignmentContainsPolicy:true,
+        standaloneAssignmentPolicy:0,
+        presentationByView:{
+          Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+        },
+        editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
+        restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
+      }, `Schema view containment violated its ${width}px browser contract`);
+    }
     payloadPathFilterPickerObservation = await evaluate(socket, payloadPathFilterPickerRuntime);
     assert.deepEqual(payloadPathFilterPickerObservation, {
       initialFieldOptions:["Choose field", "Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],
