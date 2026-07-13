@@ -38,7 +38,16 @@ const cases = [
   const result = applyExpectedResult(report, [{ issueId, method, ...(response !== undefined ? { response } : {}) }]);
   assert.equal(result.expected.explanations[0], outcome);
   assert.equal(result.expected.corrections[0].operation, operation);
-  return { issueId, method, response: response ?? "none", outcome, operation };
+  const constraint = captured.issues.find(({ id }) => id === issueId)?.constraint;
+  return {
+    issueId,
+    constraint,
+    method,
+    response: response ?? "none",
+    outcome,
+    operation,
+    jsonOperation: operation === "none" ? "none" : `${operation} ${issueId}`,
+  };
 });
 
 report = applyExpectedResult(report, [

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c33acea8a2b773dc8fef784caf5a4660e7f594871716388146465e009717f311
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T01:23:35.165901459Z","feature_name":"Data layer defect report builder","feature_path":"features/data-layer-defect-report-builder.feature","background_hash":"4791487a825067ce1c819551acc030fec1bf3599215696a058d0174fe87c6404","implementation_hash":"sha256:388ce8455e37761d629239c60034be4fd41f95760eb8fca1765e323061e672ea","scenarios":[{"index":2,"name":"Data layer defect report builder 003","scenario_hash":"655ff088d335a995158a0140b470790a657d05f599f1a630484ae1a79c4e8507","mutation_count":30,"result":{"Total":30,"Killed":30,"Survived":0,"Errors":0},"tested_at":"2026-07-13T01:22:09.832248058Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer defect report builder
 
   Background:

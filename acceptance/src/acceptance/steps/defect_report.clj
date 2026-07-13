@@ -46,13 +46,14 @@
   (when (seq example)
     (let [match (some (fn [candidate]
                         (when (and (= (:issue example) (:issueId candidate))
+                                   (= (:constraint example) (:constraint candidate))
                                    (= (:method example) (:method candidate))
                                    (= (:response example) (:response candidate)))
                           candidate))
                       (:cases observation))]
       (support/assert! match "Expected-result example was not exercised by production code." {:example example :cases (:cases observation)})
       (support/assert! (= (:expected_outcome example) (:outcome match)) "Expected explanation differs." match)
-      (support/assert! (= (first (str/split (:json_operation example) #" ")) (:operation match)) "JSON operation differs." match)))
+      (support/assert! (= (:json_operation example) (:jsonOperation match)) "JSON operation differs." match)))
   (support/assert! (= ["/products" "/checkout" "/products" "/checkout"] (mapv :pathname (:steps observation))) "Pathname skeleton is not visit-ordered." observation)
   (support/assert! (= "Open the selected product" (get-in observation [:steps 0 :text])) "Operator reproduction edits were lost." observation)
   (support/assert! (= 1 (:filteredTimelineCount observation)) "Timeline filters did not compose." observation)
@@ -87,3 +88,7 @@
                            (contains? world :defect-report)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-13T03:23:24.395460851+02:00", :module-hash "152952066", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "554503955"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-368844484"} {:id "form/2/defonce", :kind "defonce", :line 12, :end-line nil, :hash "140063040"} {:id "def/entry-steps", :kind "def", :line 14, :end-line nil, :hash "1217624902"} {:id "defn-/load-observation!", :kind "defn-", :line 19, :end-line nil, :hash "-857094689"} {:id "defn-/observation!", :kind "defn-", :line 36, :end-line nil, :hash "-569553941"} {:id "defn-/assert-observation!", :kind "defn-", :line 38, :end-line nil, :hash "791469015"} {:id "defn-/transition", :kind "defn-", :line 78, :end-line nil, :hash "-650328638"} {:id "def/handlers", :kind "def", :line 83, :end-line nil, :hash "-914950263"}]}
+;; clj-mutate-manifest-end

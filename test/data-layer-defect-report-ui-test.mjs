@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { renderDefectReportBuilder } from "../dist/data-layer-defect-report-ui.js";
+import {
+  browserDefectReportClipboard,
+  renderDefectReportBuilder,
+} from "../dist/data-layer-defect-report-ui.js";
 
 class FakeElement {
   constructor(tagName) {
@@ -123,6 +126,25 @@ copy.onclick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.equal(richWrites.length, 1);
 
+const browserWrites = [];
+const browserTextWrites = [];
+Object.defineProperty(globalThis, "navigator", {
+  configurable: true,
+  value: { clipboard: {
+    write: async (items) => { browserWrites.push(items); },
+    writeText: async (text) => { browserTextWrites.push(text); },
+  } },
+});
+globalThis.ClipboardItem = class ClipboardItem {
+  constructor(items) { this.items = items; }
+};
+const browserClipboard = browserDefectReportClipboard();
+await browserClipboard.writeRich("<p>rich</p>", "plain");
+await browserClipboard.writeText("fallback");
+assert.equal(browserWrites.length, 1);
+assert.deepEqual(Object.keys(browserWrites[0][0].items).sort(), ["text/html", "text/plain"]);
+assert.deepEqual(browserTextWrites, ["fallback"]);
+
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
     headings,
@@ -130,5 +152,6 @@ process.stdout.write(`${JSON.stringify({
     timelineEntries: initialTimelineEntries,
     editedSummaryVisible: preview.innerHTML.includes("Checkout purchase has invalid currency"),
     copied: richWrites.length,
+    browserClipboardWrites: browserWrites.length + browserTextWrites.length,
   },
 })}\n`);

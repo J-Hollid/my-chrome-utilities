@@ -44,6 +44,42 @@ function escapeHtml(value: unknown): string {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
+interface JsonLine {
+  text: string;
+  pointer?: string;
+}
+
+function pointerChild(pointer: string, segment: string): string {
+  return `${pointer}/${segment.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+}
+
+function jsonLines(value: unknown, depth = 0, pointer = ""): JsonLine[] {
+  const indentation = "  ".repeat(depth);
+  if (value === null || typeof value !== "object") {
+    return [{ text: `${indentation}${JSON.stringify(value)}`, pointer }];
+  }
+  const entries: Array<[string, unknown]> = Array.isArray(value)
+    ? value.map((item, index) => [String(index), item])
+    : Object.entries(value);
+  const opening = Array.isArray(value) ? "[" : "{";
+  const closing = Array.isArray(value) ? "]" : "}";
+  const lines: JsonLine[] = [{ text: `${indentation}${opening}`, pointer }];
+  entries.forEach(([key, child], index) => {
+    const childPointer = pointerChild(pointer, key);
+    const childLines = jsonLines(child, depth + 1, childPointer);
+    if (!Array.isArray(value)) {
+      childLines[0] = {
+        text: `${"  ".repeat(depth + 1)}${JSON.stringify(key)}: ${childLines[0]!.text.trimStart()}`,
+        pointer: childPointer,
+      };
+    }
+    if (index < entries.length - 1) childLines.at(-1)!.text += ",";
+    lines.push(...childLines);
+  });
+  lines.push({ text: `${indentation}${closing}` });
+  return lines;
+}
+
 function reportSections(report: GeneratedDefectReport): Array<[string, string]> {
   return [
     ["Summary", report.summary],
@@ -61,19 +97,18 @@ function reportSections(report: GeneratedDefectReport): Array<[string, string]> 
 }
 
 function highlightedJson(
-  json: string,
+  payload: unknown,
   pointers: readonly string[],
   backgroundColor: string,
 ): string {
-  const remaining = new Set(pointers);
-  return json.split("\n").map((line) => {
-    const pointer = [...remaining].find((candidate) => {
-      const property = pointerSegments(candidate).at(-1);
-      return property !== undefined && line.includes(`${JSON.stringify(property)}:`);
-    });
-    if (!pointer) return escapeHtml(line);
-    remaining.delete(pointer);
-    return `<span style="background-color:${backgroundColor}" data-json-pointer="${escapeHtml(pointer)}">${escapeHtml(line)}</span>`;
+  const selected = new Set(pointers.map((pointer) => `/${pointerSegments(pointer)
+    .map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1"))
+    .join("/")}`));
+  const serialized = JSON.stringify(payload);
+  const canonicalPayload = serialized === undefined ? null : JSON.parse(serialized) as unknown;
+  return jsonLines(canonicalPayload).map((line) => {
+    if (!line.pointer || !selected.has(line.pointer)) return escapeHtml(line.text);
+    return `<span style="background-color:${backgroundColor}" data-json-pointer="${escapeHtml(line.pointer)}">${escapeHtml(line.text)}</span>`;
   }).join("\n");
 }
 
@@ -96,11 +131,11 @@ export function renderJiraReport(report: GeneratedDefectReport): {
       return `<h2>${heading}</h2><ol>${report.reproductionSteps.map(({ text }) => `<li>${escapeHtml(text.replace(/^\d+\.\s*/, ""))}</li>`).join("")}</ol>`;
     }
     if (heading === "Actual result") {
-      return `<h2>${heading}</h2><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(actualJson, report.actual.differences.map(({ pointer }) => pointer), "#ffd7d7")}</pre>`;
+      return `<h2>${heading}</h2><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.actual.payload, report.actual.differences.map(({ pointer }) => pointer), "#ffd7d7")}</pre>`;
     }
     if (heading === "Expected result") {
       const pointers = report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => pointer);
-      return `<h2>${heading}</h2><p>${escapeHtml(report.expectedExplanation)}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(expectedJson, pointers, "#d9f7d9")}</pre>`;
+      return `<h2>${heading}</h2><p>${escapeHtml(report.expectedExplanation)}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedJson(report.expected.payload, pointers, "#d9f7d9")}</pre>`;
     }
     const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation evidence" || heading === "Supporting timeline";
     return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;

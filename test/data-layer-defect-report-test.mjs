@@ -150,6 +150,18 @@ assert.match(rendered.html, /background-color:#ffd7d7[^>]+data-json-pointer="\/c
 assert.match(rendered.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/commerce\/currency"/);
 assert.doesNotMatch(JSON.parse(rendered.actualJson).commerce.currency, /^[+−-]/);
 
+const duplicateKeyReport = generateReportDetails({
+  ...report,
+  event: { ...report.event, payload: { shipping: { code: "BAD" }, billing: { code: "OK" } } },
+  actual: {
+    payload: { shipping: { code: "BAD" }, billing: { code: "OK" } },
+    differences: [{ pointer: "/shipping/code", marker: "−", treatment: "red", value: "BAD" }],
+  },
+});
+const duplicateKeyHtml = renderJiraReport(duplicateKeyReport).html;
+assert.match(duplicateKeyHtml, /data-json-pointer="\/shipping\/code"[^>]*>[^<]*&quot;code&quot;: &quot;BAD&quot;/);
+assert.doesNotMatch(duplicateKeyHtml, /data-json-pointer="\/billing\/code"/);
+
 const richWrites = [];
 assert.deepEqual(await copyDefectReportForJira(detailed, {
   writeRich: async (html, text) => richWrites.push({ html, text }),
