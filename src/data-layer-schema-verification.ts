@@ -1,5 +1,6 @@
 import type { ValidationState } from "./data-layer-source.js";
 import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
+import { resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 
 export type ValidationTarget = "payload" | "raw input";
@@ -31,7 +32,7 @@ export interface SchemaAssignment {
   schemaVersion?: number;
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; propertyOrigin?: "manual"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
-export interface ValidationIssue { instancePath: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; }
+export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
@@ -257,7 +258,7 @@ function issuesFor(value: unknown, schema: JsonSchema, path: string, schemaPath:
 function issueFromAttachedRule(
   rule: AttachedSchemaRule,
   schema: SchemaDefinition,
-  issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual">,
+  issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual"> & Pick<ValidationIssue, "templatePath">,
   allowedValues: readonly string[] = [],
 ): ValidationIssue {
   return {
@@ -273,9 +274,46 @@ function issueFromAttachedRule(
   };
 }
 
+function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): Pick<ValidationIssue, "message" | "expected" | "actual"> | undefined {
+  const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
+  const actual = match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing";
+  if (operator === "required") return match.exists ? undefined : { message:"Required value", expected:"value", actual };
+  if (operator === "exact-value") return match.exists && String(match.value) === (rule.parameters ?? "") ? undefined : { message:"Value is not exact", expected:rule.parameters ?? "value", actual };
+  if (operator === "value-type") {
+    const valueType = Array.isArray(match.value) ? "array" : typeof match.value;
+    return match.exists && valueType === rule.parameters ? undefined : { message:"Type mismatch", expected:rule.parameters ?? "value", actual:match.exists ? valueType : actual };
+  }
+  if (operator === "non-empty-string") return match.exists && typeof match.value === "string" && match.value.length > 0 ? undefined : { message:"Value is empty", expected:"non-empty string", actual };
+  if (operator === "text-length") {
+    const length = Number(rule.parameters);
+    return match.exists && typeof match.value === "string" && match.value.length === length ? undefined : { message:"Text length mismatch", expected:`text length ${length}`, actual };
+  }
+  if (operator === "digits-only") return match.exists && typeof match.value === "string" && /^\d+$/.test(match.value) ? undefined : { message:"Value contains non-digits", expected:"digits only", actual };
+  if (operator === "allowed-values" || operator === "allowed values") {
+    const values = rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+    return match.exists && values.includes(String(match.value)) ? undefined : { message:"Value is not allowed", expected:values.join(","), actual };
+  }
+  if (operator === "regular-expression" || operator === "regular expression") {
+    try { return match.exists && new RegExp(rule.parameters ?? "").test(String(match.value)) ? undefined : { message:"Value does not match pattern", expected:rule.parameters ?? "pattern", actual }; }
+    catch { return { message:"Invalid regular expression", expected:rule.parameters ?? "pattern", actual }; }
+  }
+  if (operator === "item-count") {
+    const minimum = Number(rule.parameters ?? 0);
+    return match.exists && Array.isArray(match.value) && match.value.length >= minimum ? undefined : { message:"Too few items", expected:`minimum ${minimum} items`, actual };
+  }
+  return undefined;
+}
+
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {
   for (const rule of rules) {
     if (rule.enabled === false) continue;
+    if (rule.propertyPath?.startsWith("/")) {
+      for (const match of resolveNestedValues(value, rule.propertyPath)) {
+        const failure = nestedRuleFailure(rule, match);
+        if (failure) result.push(issueFromAttachedRule(rule, schema, { instancePath:match.concretePath, templatePath:match.templatePath, ...failure }));
+      }
+      continue;
+    }
     const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
     if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing" }));
     const [property, constraint] = rule.parameters?.split(":", 2) ?? [];

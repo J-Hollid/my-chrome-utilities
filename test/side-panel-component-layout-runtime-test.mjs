@@ -21,11 +21,13 @@ let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
 let schemaManualPropertyObservation;
+let schemaNestedPathObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
@@ -1234,7 +1236,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   dialog.dispatchEvent(new Event("cancel", { cancelable:true }));
   const editorAfter = q("#schema-editor").getBoundingClientRect(); keyboard.escapeClosed = !dialog.open; keyboard.layoutUnchanged = editorBefore.width === editorAfter.width && editorBefore.left === editorAfter.left;
   const model = await import("/data-layer-schema-property-rule-picker.js");
-  const availability = Object.fromEntries([["string","Required"],["string","Regular expression"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
+  const availability = Object.fromEntries([["string","Required"],["string","Exact value"],["string","Regular expression"],["string","Text length"],["string","Digits only"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
   return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard };
 })()`;
 
@@ -1329,6 +1331,68 @@ const schemaManualPropertyReloadRuntime = `(() => {
   const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Page view");
   const row = q('#schema-property-tree [data-schema-property-path="commerce.order.id"]');
   return { present:true, metadata:row.querySelector(".schema-property-metadata").textContent, activeCount:row.querySelector("span:not(.schema-property-metadata)").textContent, currentVersion:stored.version, currentUnchanged:!stored.document.properties?.commerce };
+})()`;
+
+const schemaNestedPathRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click();
+  const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Product detail")); click(row, "Edit working draft");
+  const tree = q("#schema-property-tree");
+  const paths = Array.from(tree.children).map(({ dataset }) => dataset.schemaPropertyPath);
+  const products = q('#schema-property-tree [data-schema-property-path="products"]');
+  const everyItem = q('#schema-property-tree [data-schema-property-path="products.*"]');
+  const advanced = { paths, arrayActions:Array.from(products.querySelectorAll("button")).map(({ textContent }) => textContent), everyItem:everyItem.querySelector(".schema-property-metadata").textContent };
+  click(q('#schema-property-tree [data-schema-property-path="fruits"]'), "Add specific index rule");
+  const indexDialog = q("#schema-specific-index-dialog"); const indexInput = q("#schema-specific-index");
+  indexInput.value = "-1"; indexInput.dispatchEvent(new Event("input", { bubbles:true }));
+  const invalidIndex = { min:indexInput.min, blocked:indexDialog.querySelector('button[type="submit"]').disabled, assistance:indexDialog.querySelector("output").textContent };
+  indexInput.value = "1"; indexInput.dispatchEvent(new Event("input", { bubbles:true }));
+  const validIndex = { assistance:indexDialog.querySelector("output").textContent, canContinue:!indexDialog.querySelector('button[type="submit"]').disabled };
+  click(indexDialog, "Choose rule");
+  const stringPicker = q("#schema-property-rule-picker");
+  const exactIndex = { heading:q("#schema-property-rule-picker-heading").textContent, choices:Array.from(stringPicker.querySelectorAll('[aria-label="Create a rule"] button')).map(({ textContent }) => textContent) };
+  click(stringPicker, "Cancel");
+  click(q('#schema-property-tree [data-schema-property-path="products.*.id"]'), "Add rule");
+  const numberPicker = q("#schema-property-rule-picker");
+  const wildcardPicker = { heading:q("#schema-property-rule-picker-heading").textContent, choices:Array.from(numberPicker.querySelectorAll('[aria-label="Create a rule"] button')).map(({ textContent }) => textContent) };
+  click(numberPicker, "Product ids version 1");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Product detail");
+  const persisted = { pendingChanges:stored.workingDraft.pendingChanges, attachmentPaths:stored.workingDraft.attachedRules.map(({ propertyPath }) => propertyPath), currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const nested = await import("/data-layer-schema-nested-path.js");
+  const schemaModel = await import("/data-layer-schema-verification.js");
+  const pickerModel = await import("/data-layer-schema-property-rule-picker.js");
+  const payload = { fruits:["apple", "banana", "pear"], products:[{ id:1, name:"product 1" }, { id:2, name:"product 2" }], order:{ id:"12345678" } };
+  const schemaDocument = stored.workingDraft.document;
+  const targetChoices = nested.nestedTargetChoices(payload, "/products/1/id");
+  const nestedChoice = nested.nestedTargetChoices(payload, "/order/id");
+  const normalization = Object.fromEntries(["nested order id", "fruits item at zero-based index 1", "id in every products item"].map((intent) => [intent, nested.canonicalPathForTargetIntent(intent)]));
+  const pathValidation = Object.fromEntries(["/order/id", "/products/*/id", "/fruits/1", "/order/*", "/fruits/name", "/fruits/-1"].map((path) => [path, nested.validateNestedRuleTarget(schemaDocument, path)]));
+  const compatibility = Object.fromEntries(["/order/id", "/products/*/id", "/fruits/1"].map((path) => { const type = nested.validateNestedRuleTarget(schemaDocument, path).targetType; return [path, pickerModel.builtInRulesForProperty(type).map(({ name }) => name)]; }));
+  const ensured = nested.ensureNestedSchemaPath({ type:"object" }, "/products/*/id", "number");
+  const validate = (rules, value = payload, model = schemaDocument) => {
+    const schema = { id:"preview", name:"Product detail", version:3, document:model, assignments:[], attachedRules:rules };
+    return schemaModel.validateWithSchema({ sourceId:"event", eventName:"product_view", payload:value, rawInput:[] }, schema, [schema]);
+  };
+  const fruitRules = [{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }];
+  const fruits = [payload.fruits, ["apple", "orange", "pear"], ["apple"]].map((values) => { const result = validate(fruitRules, { ...payload, fruits:values }); return { state:result.state, paths:result.issues.map(({ instancePath }) => instancePath) }; });
+  const productRules = [{ id:"id", version:1, propertyPath:"/products/*/id", operator:"value-type", parameters:"number" }, { id:"name", version:1, propertyPath:"/products/*/name", operator:"non-empty-string" }];
+  const productsResult = validate(productRules, { ...payload, products:[payload.products[0], { name:"" }] });
+  const emptyProducts = validate(productRules, { ...payload, products:[] });
+  const orders = ["12345678", "1234567", "1234567a"].map((id) => { const result = validate([{ id:"length", version:1, propertyPath:"/order/id", operator:"text-length", parameters:"8" }, { id:"digits", version:1, propertyPath:"/order/id", operator:"digits-only" }], { ...payload, order:{ id } }); return { id, state:result.state, failed:result.issues[0]?.expected ?? "none" }; });
+  const combined = validate([{ id:"all-fruits", version:1, propertyPath:"/fruits/*", operator:"value-type", parameters:"string" }, ...fruitRules]);
+  const repeatedPayload = { orders:[{ items:[{ sku:"A" }, { sku:"" }] }, { items:[{ sku:"B" }] }] };
+  const repeatedDocument = nested.ensureNestedSchemaPath({ type:"object" }, "/orders/*/items/*/sku", "string").document;
+  const repeated = validate([{ id:"sku", version:1, propertyPath:"/orders/*/items/*/sku", operator:"non-empty-string" }], repeatedPayload, repeatedDocument);
+  const validation = {
+    fruits,
+    products:productsResult.issues.map(({ instancePath, templatePath }) => ({ instancePath, templatePath })),
+    emptyProducts:{ issues:emptyProducts.issues.length, itemCountAvailable:pickerModel.builtInRulesForProperty("array").some(({ name }) => name === "Item count") },
+    orders,
+    combined:{ wildcardMatches:nested.resolveNestedValues(payload, "/fruits/*").length, exactMatches:nested.resolveNestedValues(payload, "/fruits/1").length, issues:combined.issues.length },
+    repeated:repeated.issues.map(({ instancePath, templatePath, expected, actual }) => ({ instancePath, templatePath, expected, actual })),
+  };
+  return { advanced, invalidIndex, validIndex, exactIndex, wildcardPicker, persisted, targetChoices, nestedChoice, normalization, pathValidation, compatibility, ensured:{ createdNodes:ensured.createdNodes, property:ensured.document.properties.products }, validation };
 })()`;
 
 const schemaRevisionLifecycleUiRuntime = `(() => {
@@ -2130,6 +2194,19 @@ try {
       configurationInsideEditor:true,
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
+    if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const document = { type:"object", properties:{ fruits:{ type:"array", items:{ type:"string" } }, products:{ type:"array", items:{ type:"object", properties:{ id:{ type:"number" }, name:{ type:"string" } } } }, order:{ type:"object", properties:{ id:{ type:"string" } } } } };
+        const current = { id:"schema-product-detail", name:"Product detail", version:3, published:true, document, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document, assignments:[], attachedRules:[], pendingChanges:[] } };
+        const rules = [{ id:"rule-product-ids", name:"Product ids", kind:"Numeric range · number", operator:"numeric range", parameters:"0-999", applicableType:"number", version:1, enabled:true }];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([current]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify(rules));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaNestedPathObservation = await evaluate(socket, schemaNestedPathRuntime);
+      socket.close(); continue;
+    }
     if (width === 320) {
       const previousPickerStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
@@ -2729,6 +2806,9 @@ try {
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
+  }
+  if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

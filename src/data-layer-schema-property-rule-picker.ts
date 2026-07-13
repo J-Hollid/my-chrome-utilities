@@ -1,5 +1,5 @@
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
-export type SchemaRuleType = "Required" | "Allowed values" | "Regular expression" | "Numeric range" | "Item count";
+export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count";
 
 export interface PropertyRuleChoice {
   id: string;
@@ -19,8 +19,11 @@ export interface ReusablePropertyRuleChoice extends PropertyRuleChoice {
 
 const compatibility: Record<SchemaRuleType, readonly SchemaPropertyType[]> = {
   "Required":["string", "number", "array", "object", "boolean"],
+  "Exact value":["string", "number", "boolean"],
   "Allowed values":["string", "number", "boolean"],
   "Regular expression":["string"],
+  "Text length":["string"],
+  "Digits only":["string"],
   "Numeric range":["number"],
   "Item count":["array"],
 };

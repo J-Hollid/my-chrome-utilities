@@ -209,6 +209,11 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   gap: 0.5rem;
 }
 
+#schema-specific-index-dialog form {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .schema-property-metadata {
   display: block;
   color: var(--muted, #555);

@@ -1,4 +1,5 @@
 import { pathConditionResult } from "./data-layer-path-conditions.js";
+import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -254,10 +255,55 @@ function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
         ...(allowedValues.length ? { allowedValues } : {}),
     };
 }
+function nestedRuleFailure(rule, match) {
+    const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
+    const actual = match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing";
+    if (operator === "required")
+        return match.exists ? undefined : { message: "Required value", expected: "value", actual };
+    if (operator === "exact-value")
+        return match.exists && String(match.value) === (rule.parameters ?? "") ? undefined : { message: "Value is not exact", expected: rule.parameters ?? "value", actual };
+    if (operator === "value-type") {
+        const valueType = Array.isArray(match.value) ? "array" : typeof match.value;
+        return match.exists && valueType === rule.parameters ? undefined : { message: "Type mismatch", expected: rule.parameters ?? "value", actual: match.exists ? valueType : actual };
+    }
+    if (operator === "non-empty-string")
+        return match.exists && typeof match.value === "string" && match.value.length > 0 ? undefined : { message: "Value is empty", expected: "non-empty string", actual };
+    if (operator === "text-length") {
+        const length = Number(rule.parameters);
+        return match.exists && typeof match.value === "string" && match.value.length === length ? undefined : { message: "Text length mismatch", expected: `text length ${length}`, actual };
+    }
+    if (operator === "digits-only")
+        return match.exists && typeof match.value === "string" && /^\d+$/.test(match.value) ? undefined : { message: "Value contains non-digits", expected: "digits only", actual };
+    if (operator === "allowed-values" || operator === "allowed values") {
+        const values = rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+        return match.exists && values.includes(String(match.value)) ? undefined : { message: "Value is not allowed", expected: values.join(","), actual };
+    }
+    if (operator === "regular-expression" || operator === "regular expression") {
+        try {
+            return match.exists && new RegExp(rule.parameters ?? "").test(String(match.value)) ? undefined : { message: "Value does not match pattern", expected: rule.parameters ?? "pattern", actual };
+        }
+        catch {
+            return { message: "Invalid regular expression", expected: rule.parameters ?? "pattern", actual };
+        }
+    }
+    if (operator === "item-count") {
+        const minimum = Number(rule.parameters ?? 0);
+        return match.exists && Array.isArray(match.value) && match.value.length >= minimum ? undefined : { message: "Too few items", expected: `minimum ${minimum} items`, actual };
+    }
+    return undefined;
+}
 function attachedRuleIssues(value, schema, result, rules = schema.attachedRules ?? []) {
     for (const rule of rules) {
         if (rule.enabled === false)
             continue;
+        if (rule.propertyPath?.startsWith("/")) {
+            for (const match of resolveNestedValues(value, rule.propertyPath)) {
+                const failure = nestedRuleFailure(rule, match);
+                if (failure)
+                    result.push(issueFromAttachedRule(rule, schema, { instancePath: match.concretePath, templatePath: match.templatePath, ...failure }));
+            }
+            continue;
+        }
         const record = value && typeof value === "object" && !Array.isArray(value) ? value : undefined;
         if (rule.operator === "required")
             for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [])
