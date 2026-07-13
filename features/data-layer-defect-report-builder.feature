@@ -126,3 +126,17 @@ Feature: Data layer defect report builder
       | checkbox_state | expected_line                                                                                              |
       | selected       | page_type: "homepage", // must be of type homepage, product listing, product detail, or checkout          |
       | cleared        | page_type: "homepage"                                                                                     |
+
+  # Data layer defect report builder 012
+  Scenario: Data layer defect report builder 012
+    Given captured event product has invalid page_type product test
+    And its assigned schema has allowed-values rule page_type:product,content
+    And the validation issue displays /page_type expected product,content
+    When the operator starts a defect report from product
+    Then expected-result assistance derives allowed values from the assigned schema rule without requiring one of in the displayed issue text
+    And product and content are separately selectable as schema-provided values
+    And green highlighted Expected response inlines page_type: product OR content
+    And Include all allowed values as a comment is available for the allowed-values rule
+    When the operator selects product and includes all allowed values as a comment
+    Then green highlighted Expected response inlines page_type: "product", // must be of type product or content
+    And the underlying expected JSON payload contains page_type product without the comment
