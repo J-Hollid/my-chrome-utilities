@@ -10,11 +10,15 @@ Feature: Data layer defect report reproduction step composer
 
   # Data layer defect report reproduction step composer 001
   Scenario: Data layer defect report reproduction step composer 001
-    When the operator selects the /products pathname segment
-    Then one contextual Add step to /products action is available
-    And unselected pathname segments do not repeat step-template controls
-    When the operator activates Add step to /products
+    When the numbered reproduction steps are displayed
+    Then every pathname and manual step has an adjacent compact + action
+    And step 1 has accessible action name Add step to /products section from step 1 Visit /products
+    And step 2 has accessible action name Add step to /checkout section from step 2 Visit /checkout
+    And Select pathname segment controls and a shared Add step control are absent
+    When the operator activates Add step to /products section from step 1 Visit /products
     Then Click component, Log in as user, Scroll, and Custom step are available
+    And the template composer is displayed immediately after step 1 without changing the viewport position
+    And keyboard focus moves into the template composer
     And no step is added before a template is completed and submitted
 
   # Data layer defect report reproduction step composer 002
@@ -68,6 +72,7 @@ Feature: Data layer defect report reproduction step composer
       | 3      | Visit /checkout                        |
     And pathname anchors remain in captured order
     And Adjust and Remove are available for the added step
+    And each numbered row has its own adjacent + action
 
   # Data layer defect report reproduction step composer 007
   Scenario: Data layer defect report reproduction step composer 007
@@ -91,14 +96,14 @@ Feature: Data layer defect report reproduction step composer
     When Scroll to the bottom of the page is moved before Click Checkout
     Then both manual steps remain between Visit /products and Visit /checkout
     And reproduction step numbers reflect their displayed order
-    And moving a step across a pathname anchor requires choosing another pathname segment
+    And local reorder actions cannot move a manual step across a pathname anchor
 
   # Data layer defect report reproduction step composer 010
   Scenario: Data layer defect report reproduction step composer 010
     Given a new Click component step is being composed for /products
     When the operator activates Cancel
     Then the numbered reproduction steps remain unchanged
-    And focus returns to Add step to /products
+    And focus returns to Add step to /products section from step 1 Visit /products
 
   # Data layer defect report reproduction step composer 011
   Scenario: Data layer defect report reproduction step composer 011
@@ -106,3 +111,12 @@ Feature: Data layer defect report reproduction step composer
     When the final defect report preview and Jira Cloud representation are produced
     Then pathname and manual steps appear in the same numbered order
     And template configuration fields are not included in the report
+
+  # Data layer defect report reproduction step composer 012
+  Scenario: Data layer defect report reproduction step composer 012
+    Given step 2 is Click Product card and step 3 is Scroll to the bottom of the page in the /products section
+    When the operator activates Add step to /products section from step 2 Click Product card
+    And submits custom step Review the available products
+    Then Review the available products becomes step 4 immediately before Visit /checkout
+    And it is appended after Scroll to the bottom of the page instead of immediately after Click Product card
+    And later reproduction steps are renumbered
