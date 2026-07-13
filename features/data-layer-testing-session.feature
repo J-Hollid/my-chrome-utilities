@@ -26,7 +26,7 @@ Feature: Data layer testing session
     Given a data layer testing session is active
     When the selected target tab navigates or reloads from <start_url> to <next_url>
     Then the same data layer testing session remains active
-    And captured event entries remain part of the same session timeline
+    And captured event entries remain part of the same session capture
 
     Examples:
       | project_name         | history_path  | start_url             | next_url                |

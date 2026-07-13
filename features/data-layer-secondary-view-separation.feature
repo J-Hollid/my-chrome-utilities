@@ -15,7 +15,7 @@ Feature: Data Layer secondary view separation
     And only the <selected_view> panel is visible in Data Layer content
     And the <first_hidden_view>, <second_hidden_view>, and <third_hidden_view> panels are hidden
     And the Data Layer content is not a combined Library, Sessions, and Schemas view
-    And Live testing controls, target selection, settings, and session timeline are absent from <selected_view> content
+    And Live testing controls, target selection, settings, and Live event feed are absent from <selected_view> content
 
     Examples:
       | selected_view | first_hidden_view | second_hidden_view | third_hidden_view |

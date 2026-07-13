@@ -31,7 +31,7 @@ Feature: Data layer captured event presentation pipeline
     When the input is captured
     Then one canonical source event is created with <event_name>, <payload_label>, and the complete raw input
     And the event contains its stable event id, session id, source kind, source id, capture time, page URL, validation state, and provenance
-    And the same canonical event id and content are used by the session timeline and Live workspace
+    And the same canonical event id and content are used by the session capture and Live workspace
     And valid input <input_shape> is not renamed to observed event
 
     Examples:

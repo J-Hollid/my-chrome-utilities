@@ -8,7 +8,7 @@ Feature: Data layer defect report reproduction
   Background:
     Given a defect report is being built from invalid event purchase
     And its testing session retains pathname visits and captured event chronology
-    And the session timeline contains pageview, promotion, checkout, and purchase
+    And the captured session contains pageview, promotion, checkout, and purchase
 
   # Data layer defect report reproduction 001
   Scenario: Data layer defect report reproduction 001

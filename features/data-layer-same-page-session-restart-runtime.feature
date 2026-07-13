@@ -11,7 +11,7 @@ Feature: Data layer same-page session restart runtime
     When the user ends testing
     And starts testing again on the same tab and unchanged page
     Then a new testing session with a distinct session identity is active
-    And the prior session timeline is cleared before current page history is imported
+    And prior session events are cleared before current page history is imported
     And the new Live feed contains <existing_events> exactly once in history order
     And no event entry from the ended session persists in the new session
     And history array <history_path> on the target page remains unchanged
@@ -37,8 +37,8 @@ Feature: Data layer same-page session restart runtime
     When the selected target tab navigates to <next_page_url>
     And events <next_page_events> are observed there
     Then the same testing session identity remains active
-    And the session timeline retains <first_page_events> under <page_url>
-    And the session timeline contains <next_page_events> under <next_page_url>
+    And the Live event feed retains <first_page_events> under <page_url>
+    And the Live event feed contains <next_page_events> under <next_page_url>
     And navigation does not apply the same-page new-session reset
 
     Examples:
