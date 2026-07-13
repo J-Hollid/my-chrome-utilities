@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+  state_dir="$repo_root/.swarmforge/clojure"
+else
+  state_dir="${TMPDIR:-/tmp}/clojure-cli-${UID}"
+fi
+
+export CLJ_CONFIG="${CLJ_CONFIG:-$state_dir/config}"
+export CLJ_CACHE="${CLJ_CACHE:-$state_dir/cache}"
+mkdir -p "$CLJ_CONFIG" "$CLJ_CACHE"
+
+exec "$HOME/.local/bin/clojure" "$@"
