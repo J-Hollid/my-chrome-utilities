@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=9c2a8765f4fd9ed565048a417e0ee444a853eab869d93965f0f6aaa81b4c2cf3
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-13T15:35:49.617331628Z","feature_name":"Data layer same-page session restart runtime","feature_path":"features/data-layer-same-page-session-restart-runtime.feature","background_hash":"69afdd5c9e3898083df054cb29fd42f68304b1c37f6772c956657fa23367ecdf","implementation_hash":"sha256:50c687f20c94ffcc6a3090bfd599e9816dd9c6f637755d253a42242af6afaeeb","scenarios":[{"index":0,"name":"Data layer same-page session restart runtime 001","scenario_hash":"016b381952d10f591087fb94a04c8aa8c4a9c4281adabf846b3ddb869e3cec1b","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-13T15:35:49.617331628Z"},{"index":1,"name":"Data layer same-page session restart runtime 002","scenario_hash":"c467ab57add778182fcb69b9900b243302920bf0ded721229de1880b820a15af","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-13T15:35:49.617331628Z"},{"index":2,"name":"Data layer same-page session restart runtime 003","scenario_hash":"fbd01c04ae782ef5b46666100170ed5da3f276722e727b1c18eb2cf98f488a51","mutation_count":7,"result":{"Total":7,"Killed":7,"Survived":0,"Errors":0},"tested_at":"2026-07-13T15:35:49.617331628Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer same-page session restart runtime
 
   Background:

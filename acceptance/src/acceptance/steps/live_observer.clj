@@ -20,5 +20,5 @@
         (concat handlers data-layer-timeline/handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T19:23:07.495567587+02:00", :module-hash "-2017437692", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1000800029"} {:id "def/live-observer-wired?", :kind "def", :line 7, :end-line nil, :hash "-244652764"} {:id "def/handlers", :kind "def", :line 9, :end-line nil, :hash "2088242981"} {:id "defn/live-step-covered?", :kind "defn", :line 17, :end-line nil, :hash "748226166"}]}
+;; {:version 1, :tested-at "2026-07-13T17:34:37.51236927+02:00", :module-hash "699704823", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1285205314"} {:id "def/live-observer-wired?", :kind "def", :line 8, :end-line nil, :hash "-244652764"} {:id "def/handlers", :kind "def", :line 10, :end-line nil, :hash "2088242981"} {:id "defn/live-step-covered?", :kind "defn", :line 18, :end-line nil, :hash "-373881775"}]}
 ;; clj-mutate-manifest-end

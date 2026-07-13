@@ -320,11 +320,12 @@
    {:pattern #"^the feed contains <([A-Za-z0-9_]+)> loaded records$"
     :handler (fn [world example [count-key]]
                (let [count (live/integer-value example count-key)]
+                 (live/assert-value! count 24 "Accessible feed fixture is not canonical.")
                  (assoc (live/inspect world) :events
                         (mapv #(live/event % (str "event-" %) "Event history")
                               (range 1 (inc count)))
                         :focused-event-id "event-12")))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:42:33.466334127+02:00", :module-hash "209313099", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1403219948"} {:id "def/canonical-timeline-event", :kind "def", :line 5, :end-line nil, :hash "1883791962"} {:id "def/canonical-inspector", :kind "def", :line 7, :end-line nil, :hash "1989123369"} {:id "def/canonical-filters", :kind "def", :line 10, :end-line nil, :hash "2131690059"} {:id "defn-/filter-events", :kind "defn-", :line 16, :end-line nil, :hash "1573784155"} {:id "def/handlers", :kind "def", :line 25, :end-line nil, :hash "1715086273"}]}
+;; {:version 1, :tested-at "2026-07-13T17:34:37.782884537+02:00", :module-hash "-1007421748", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1403219948"} {:id "def/canonical-timeline-event", :kind "def", :line 5, :end-line nil, :hash "1883791962"} {:id "def/canonical-inspector", :kind "def", :line 7, :end-line nil, :hash "1989123369"} {:id "def/canonical-filters", :kind "def", :line 10, :end-line nil, :hash "2131690059"} {:id "defn-/filter-events", :kind "defn-", :line 16, :end-line nil, :hash "1573784155"} {:id "def/handlers", :kind "def", :line 25, :end-line nil, :hash "-2139444843"}]}
 ;; clj-mutate-manifest-end

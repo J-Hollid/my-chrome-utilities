@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=12a5b0aa306d87441659bf1ee6f3338f0e3feb8745539727f97d11792e3197cd
+# mutation-stamp: sha256=5873c5eaaab9488735d41409c32b5725d4fa9465ca15baec2563c3456534f2db
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-13T10:32:10.125039001Z","feature_name":"Data layer defect report reproduction","feature_path":"features/data-layer-defect-report-reproduction.feature","background_hash":"e4c166b6670887cd89442e4e9bbbcdbb874c101aa28f80970f0750bf764c97ca","implementation_hash":"sha256:f7f6b5cbb393fdd8834d7429ed92a5442df7a9db1fd4b730426860a2b07c5939","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-13T15:35:24.188062241Z","feature_name":"Data layer defect report reproduction","feature_path":"features/data-layer-defect-report-reproduction.feature","background_hash":"24780cd87ac4af7f033fdd3a1405f54001762d70275f551ffd114a936fc4992f","implementation_hash":"sha256:f7f6b5cbb393fdd8834d7429ed92a5442df7a9db1fd4b730426860a2b07c5939","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer defect report reproduction

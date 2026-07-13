@@ -84,7 +84,9 @@
    "shared operator action" text example))
 
 (defn- transition [world example captures {:keys [keyword text]}]
-  (let [example example
+  (let [example (operator-support/validate-example!
+                 example
+                 (support/capture-placeholder-keys captures))
         world (update world :operator-history (fnil conj []) text)]
     (case keyword
       "Given" (update world :operator-context (fnil conj []) {:text text :example example})
@@ -110,5 +112,5 @@
            handlers))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-11T11:11:19.198919378+02:00", :module-hash "-328763286", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "-706696352"} {:id "defn/operator-shell-wired?", :kind "defn", :line 27, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 38, :end-line nil, :hash "-359605785"} {:id "defn-/observe", :kind "defn-", :line 43, :end-line nil, :hash "-943567860"} {:id "defn-/transition", :kind "defn-", :line 48, :end-line nil, :hash "908273079"} {:id "def/handlers", :kind "def", :line 62, :end-line nil, :hash "-454832"} {:id "def/priority-handler-texts", :kind "def", :line 65, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 66, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 71, :end-line nil, :hash "1875904922"}]}
+;; {:version 1, :tested-at "2026-07-13T17:34:38.046373244+02:00", :module-hash "386527388", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1043150245"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "-252280068"} {:id "defn/operator-shell-wired?", :kind "defn", :line 65, :end-line nil, :hash "-2106232492"} {:id "def/operator-step-specs", :kind "def", :line 76, :end-line nil, :hash "-359605785"} {:id "defn-/observe", :kind "defn-", :line 81, :end-line nil, :hash "-943567860"} {:id "defn-/transition", :kind "defn-", :line 86, :end-line nil, :hash "908273079"} {:id "def/handlers", :kind "def", :line 100, :end-line nil, :hash "-454832"} {:id "def/priority-handler-texts", :kind "def", :line 103, :end-line nil, :hash "-1899796755"} {:id "def/priority-handlers", :kind "def", :line 104, :end-line nil, :hash "722779883"} {:id "def/regular-handlers", :kind "def", :line 109, :end-line nil, :hash "1875904922"}]}
 ;; clj-mutate-manifest-end
