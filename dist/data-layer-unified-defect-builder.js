@@ -1,3 +1,4 @@
+import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { validateWithSchema } from "./data-layer-schema-verification.js";
 function normalizedOperator(value) {
     return value?.replaceAll("_", "-").replaceAll(" ", "-").toLocaleLowerCase() ?? "";
@@ -18,78 +19,8 @@ function allowedValues(schema, pointer) {
 function pointerSegment(value) {
     return value.replaceAll("~", "~0").replaceAll("/", "~1");
 }
-function pointerSegments(pointer) {
-    return pointer.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
-}
-function arraySegment(segment) {
-    return segment === "*" || /^\d+$/.test(segment ?? "");
-}
-function mergeSchema(left, right) {
-    if (!left)
-        return structuredClone(right);
-    const merged = { ...structuredClone(left), ...structuredClone(right) };
-    if (left.properties || right.properties)
-        merged.properties = { ...structuredClone(left.properties ?? {}), ...structuredClone(right.properties ?? {}) };
-    const items = left.items && right.items ? mergeSchema(left.items, right.items) : right.items ?? left.items;
-    if (items)
-        merged.items = structuredClone(items);
-    if (left.required || right.required)
-        merged.required = [...new Set([...(left.required ?? []), ...(right.required ?? [])])];
-    return merged;
-}
-function insertSchemaPath(root, segments, definition) {
-    let current = root;
-    segments.forEach((segment, index) => {
-        const last = index === segments.length - 1;
-        if (arraySegment(segment)) {
-            current.type ??= "array";
-            if (last)
-                current.items = mergeSchema(current.items, definition);
-            else {
-                current.items ??= { type: arraySegment(segments[index + 1]) ? "array" : "object" };
-                current = current.items;
-            }
-            return;
-        }
-        current.type ??= "object";
-        current.properties ??= {};
-        if (last)
-            current.properties[segment] = mergeSchema(current.properties[segment], definition);
-        else {
-            current.properties[segment] ??= { type: arraySegment(segments[index + 1]) ? "array" : "object" };
-            current = current.properties[segment];
-        }
-    });
-}
-function markRequiredPath(root, segments) {
-    let current = root;
-    segments.forEach((segment, index) => {
-        if (arraySegment(segment)) {
-            if (current.items)
-                current = current.items;
-            return;
-        }
-        current.required = [...new Set([...(current.required ?? []), segment])];
-        if (index < segments.length - 1 && current.properties?.[segment])
-            current = current.properties[segment];
-    });
-}
-function normalizeExpectedPayloadDocument(document) {
-    const { properties, required, ...rest } = structuredClone(document);
-    const normalized = { ...rest, ...(document.type === "object" ? { properties: {} } : {}) };
-    for (const [storedPath, storedDefinition] of Object.entries(properties ?? {})) {
-        const definition = normalizeExpectedPayloadDocument(storedDefinition);
-        const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
-        insertSchemaPath(normalized, segments, definition);
-    }
-    for (const storedPath of required ?? []) {
-        const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
-        markRequiredPath(normalized, segments);
-    }
-    return normalized;
-}
 export function normalizedExpectedPayloadSchema(schema) {
-    return { ...structuredClone(schema), document: normalizeExpectedPayloadDocument(schema.document) };
+    return { ...structuredClone(schema), document: normalizeCanonicalSchemaDocument(schema.document) };
 }
 function schemaAtPointer(schema, pointer) {
     let current = schema;

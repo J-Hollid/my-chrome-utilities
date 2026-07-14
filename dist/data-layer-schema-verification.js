@@ -1,3 +1,4 @@
+import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import { canonicalNestedPath, resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
@@ -11,13 +12,20 @@ function canonicalAttachedRulePath(path) {
     return canonicalNestedPath(path);
 }
 function documentContainsPath(document, path) {
-    let current = document;
+    let current = normalizeCanonicalSchemaDocument(document);
     for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {
         current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
         if (!current)
             return false;
     }
     return true;
+}
+function schemaDefinitionAtPath(document, path) {
+    let current = normalizeCanonicalSchemaDocument(document);
+    for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {
+        current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
+    }
+    return current;
 }
 function exactLegacyParameterPrefix(parameters, propertyPath) {
     const canonical = canonicalAttachedRulePath(propertyPath);
@@ -401,9 +409,13 @@ function attachedRuleIssues(value, schema, result, rules = schema.attachedRules 
         if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup))
             continue;
         if (rule.propertyPath?.startsWith("/")) {
+            const definition = schemaDefinitionAtPath(schema.document, rule.propertyPath);
+            const storedByCanonicalPath = schema.document.properties?.[canonicalAttachedRulePath(rule.propertyPath)] !== undefined;
             for (const match of resolveNestedValues(value, rule.propertyPath)) {
                 const failure = nestedRuleFailure(rule, match);
-                if (failure) {
+                const declaredTypeMismatch = storedByCanonicalPath && match.exists && match.value !== undefined && match.value !== null
+                    && definition?.type !== undefined && valueType(match.value) !== definition.type;
+                if (failure && !declaredTypeMismatch) {
                     const allowedValues = rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values"
                         ? configuredAllowedValues(rule).map(String)
                         : [];
@@ -559,7 +571,7 @@ function validationEvaluations(value, schema, schemas) {
     return result;
 }
 function collectSchemaIssues(value, schema, schemas, result) {
-    issuesFor(value, inheritedDocument(schema, schemas), "", "#", result, schema);
+    issuesFor(value, normalizeCanonicalSchemaDocument(inheritedDocument(schema, schemas)), "", "#", result, schema);
     attachedRuleIssues(value, schema, result);
     inheritedAttachedRuleIssues(value, schema, schemas, result);
 }

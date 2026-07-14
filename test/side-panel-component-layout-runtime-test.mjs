@@ -21,6 +21,7 @@ let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
 let schemaRulePropertyIdentityObservation;
+let canonicalDeclaredPropertyValidationObservation;
 let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
@@ -47,6 +48,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
@@ -2110,6 +2112,42 @@ const schemaRulePropertyIdentityRuntime = `(async () => {
   return { initial,required,reusable,distinct,targets,reopened,runtimeErrors };
 })()`;
 
+const canonicalDeclaredPropertyValidationRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent===label||button.textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const runtimeErrors=[]; addEventListener("error",(event)=>runtimeErrors.push(String(event.error??event.message))); addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  const verification=await import("/data-layer-schema-verification.js");
+  const stored=()=>JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const child=()=>stored()[1]; const openPageView=()=>{const item=Array.from(q("#schema-list").children).find((candidate)=>candidate.textContent.includes("Generic pageview"));if(!item)throw new Error("Missing Generic pageview");click(item,"Edit working draft");};
+  const event=(payload)=>({sourceId:"history",eventName:"pageview",payload,rawInput:[]});
+  const draftSchema=()=>{const schemas=stored();const current=schemas[1];return {...current,document:current.workingDraft.document,attachedRules:current.workingDraft.attachedRules,parentSchemaId:current.workingDraft.parentSchemaId??current.parentSchemaId};};
+  const validate=(payload,schema=draftSchema(),schemas=[stored()[0],schema])=>verification.validateWithSchema(event(payload),schema,schemas);
+  q("#data-layer-view-schemas").click();openPageView();
+  const checkbox=q("#schema-only-declared-properties");const propertiesBefore=JSON.stringify(child().workingDraft.document.properties);checkbox.checked=true;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await pause();
+  const declared=validate({page_type:"product",login_status:"logged in",page_levels:["product"]});
+  const extra=validate({page_type:"product",login_status:"logged in",page_levels:["product"],debug:true});
+  const policy={checked:checkbox.checked,stored:child().workingDraft.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(child().workingDraft.document.properties)===propertiesBefore,declaredIssues:declared.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),extraIssues:extra.issues.filter(({message})=>message==="Undeclared property").map(({instancePath,expected,actual})=>({instancePath,expected,actual}))};
+  const make=(name,document,parentSchemaId)=>({id:"case:"+name,name,version:1,document,assignments:[],...(parentSchemaId?{parentSchemaId}:{})});
+  const representationCases=[];
+  for(const [name,document,payload,canonical] of [
+    ["nested",{type:"object",additionalProperties:false,properties:{page_type:{type:"string"}}},{page_type:"product"},"/page_type"],
+    ["path-keyed",{type:"object",additionalProperties:false,properties:{"/page_type":{type:"string"}}},{page_type:"product"},"/page_type"],
+    ["flat-array",{type:"object",additionalProperties:false,properties:{"/page_levels":{type:"array"},"/page_levels/0":{type:"string"}}},{page_levels:["product"]},"/page_levels"],
+  ]){const schema=make(name,document);const result=validate(payload,schema,[schema]);representationCases.push({name,canonical,undeclared:result.issues.filter(({message})=>message==="Undeclared property").length,documentUnchanged:JSON.stringify(schema.document)===JSON.stringify(document)});}
+  const pageCases={};
+  for(const [name,payload] of [["missing",{}],["numeric",{page_type:42}],["disallowed",{page_type:"internal"}],["allowed",{page_type:"product"}]]){const result=validate(payload);pageCases[name]={issues:result.issues.filter(({instancePath})=>instancePath==="/page_type").map(({message})=>message),undeclared:result.issues.some(({instancePath,message})=>instancePath==="/page_type"&&message==="Undeclared property"),evaluations:(result.evaluations??[]).filter(({propertyPath})=>propertyPath==="/page_type").map(({propertyPath,rule,ruleVersion})=>({propertyPath,rule,ruleVersion}))};}
+  const parentBytes=JSON.stringify(stored()[0].document);const childBytes=JSON.stringify(child().workingDraft.document);const inherited=validate({site_id:"otelo",page_type:"product",debug:true});
+  const inheritance={undeclared:inherited.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),parentUnchanged:JSON.stringify(stored()[0].document)===parentBytes,childUnchanged:JSON.stringify(child().workingDraft.document)===childBytes};
+  checkbox.checked=false;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await pause();const openResult=validate({page_type:"product",debug:true});const disabled={stored:child().workingDraft.document.additionalProperties===undefined,undeclared:openResult.issues.filter(({message})=>message==="Undeclared property").length,ruleActive:(openResult.evaluations??[]).some(({propertyPath,status})=>propertyPath==="/page_type"&&status==="pass")};
+  checkbox.checked=true;checkbox.dispatchEvent(new Event("change",{bubbles:true}));q("#save-schema").click();q("#confirm-schema-revision").click();await pause();await pause();
+  const published=child();const publication={version:published.version,closed:!published.workingDraft,stored:published.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(published.document.properties)===propertiesBefore,result:q("#schema-result").textContent};
+  q("#data-layer-view-live").click();const feed=Array.from(q("#live-event-feed").querySelectorAll("button"));const feedRows=feed.map(({textContent,dataset})=>({textContent,eventId:dataset.eventId}));const extraButton=feed.find((button)=>button.dataset.eventId==="event:extra");if(!extraButton)throw new Error("Missing extra event");extraButton.click();
+  const debugRow=q('[data-property-path="/debug"]');const live={feedRows,summary:q("#live-inspector-validation-summary").textContent,debug:q(".live-property-status",debugRow).textContent,debugRows:document.querySelectorAll('[data-property-path="/debug"]').length};
+  q("#data-layer-view-schemas").click();openPageView();const reopened={checked:q("#schema-only-declared-properties").checked,propertiesUnchanged:JSON.stringify(child().document.properties)===propertiesBefore};
+  return{policy,representationCases,pageCases,inheritance,disabled,publication,live,reopened,runtimeErrors};
+})()`;
+
 const schemaManualPropertyRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -3529,6 +3567,24 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        const parent={id:"schema-generic-event",name:"Generic event",version:2,published:true,document:{type:"object",properties:{"/site_id":{type:"string"}}},assignments:[]};
+        const document={type:"object",required:["/page_type"],properties:{"/page_type":{type:"string"},"/login_status":{type:"string"},"/page_levels":{type:"array"},"/page_levels/0":{type:"string"}}};
+        const assignment={id:"assignment:pageview",name:"Generic pageviews",schemaId:"schema-generic-pageview",sourceId:"history",eventName:"pageview",target:"payload",versionPolicy:"follow latest",enabled:true};
+        const rule={id:"rule:page-types",name:"Approved page types",version:2,propertyPath:"/page_type",operator:"allowed-values",parameters:"product,content",severity:"error"};
+        const child={id:"schema-generic-pageview",name:"Generic pageview",version:3,published:true,parentSchemaId:parent.id,document,assignments:[assignment],attachedRules:[rule],workingDraft:{baseVersion:3,sourceVersion:3,parentSchemaId:parent.id,document,assignments:[assignment],attachedRules:[rule],pendingChanges:[]}};
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([parent,child]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+        const observed=(id,payload,time)=>({type:"observed",url:"https://shop.example/products",timestamp:time,observerPath:"dataLayer",id,name:"pageview",sessionId:"session:canonical",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"https://shop.example/products",payload,rawInput:["pageview",payload],rawValue:["pageview",payload],validation:"Not checked"});
+        const timeline=[observed("event:declared",{page_type:"product",login_status:"logged in",page_levels:["product"]},"2026-07-14T21:00:00Z"),observed("event:extra",{site_id:"otelo",page_type:"product",login_status:"logged in",page_levels:["product"],debug:true},"2026-07-14T21:00:01Z")];
+        localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:canonical",status:"active",freshBoundary:true,tabId:1,historyPath:"dataLayer",startUrl:"https://shop.example/products",currentUrl:"https://shop.example/products",timeline}}));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      canonicalDeclaredPropertyValidationObservation=await evaluate(socket,canonicalDeclaredPropertyValidationRuntime);
+      socket.close();continue;
+    }
     if (process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -4639,6 +4695,9 @@ try {
   }
   if (process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaRulePropertyIdentity:schemaRulePropertyIdentityObservation }));
+  }
+  if (process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ canonicalDeclaredPropertyValidation:canonicalDeclaredPropertyValidationObservation }));
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
