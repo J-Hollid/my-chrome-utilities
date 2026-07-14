@@ -1,4 +1,4 @@
-import type { JsonSchema } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
 
 function pointerSegments(pointer: string): string[] {
   return pointer.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));

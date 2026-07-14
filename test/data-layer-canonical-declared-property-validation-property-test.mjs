@@ -85,6 +85,11 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.ok(wrongType.issues.some(({ instancePath, message }) =>
     instancePath === `/${group}/0/${leaf}` && message === "Type mismatch"));
   assert.equal(wrongType.issues.some(({ message }) => message === "Undeclared property"), false);
+  assert.deepEqual(
+    validateWithSchema(event({ ...validPayload, [group]:[{ [leaf]:sample }] }), normalizedSchema, [normalizedSchema]),
+    wrongType,
+    "invalid path-keyed and normalized documents must produce equivalent results",
+  );
 
   const missingRequired = validateWithSchema(event({
     ...validPayload,

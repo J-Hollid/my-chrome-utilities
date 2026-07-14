@@ -1,6 +1,7 @@
 import type { ReproductionManualStep, ReproductionPathnameStep } from "./data-layer-defect-report.js";
 import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
-import { validateWithSchema, type AttachedSchemaRule, type JsonSchema, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
+import { validateWithSchema, type AttachedSchemaRule, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
 
 export interface ExpectedPropertyChoice {
   property: string;
