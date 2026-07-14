@@ -1,5 +1,5 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
-import { missingEventActualPresentation } from "./data-layer-unified-defect-builder.js";
+import { expectedPayloadPresentation, missingEventActualPresentation } from "./data-layer-unified-defect-builder.js";
 function clone(value) { return structuredClone(value); }
 function emptyVerification() {
     return { matchingCount: 0, warningVisible: false, matches: [] };
@@ -170,20 +170,13 @@ export function confirmMissingEventExpectation(draft) {
         throw new Error("Complete the expected source, event, and page visit.");
     return { ...draft, expectation: { ...expectation, confirmed: true } };
 }
-function withinInterval(event, scope) {
-    if (!event.captureTime)
-        return true;
-    const captured = Date.parse(event.captureTime);
-    return !Number.isFinite(captured) || (captured >= Date.parse(scope.startedAt) && captured <= Date.parse(scope.endedAt));
-}
 export function verifyMissingEventAbsence(draft) {
     const expectation = draft.expectation;
     if (!expectation?.confirmed)
         throw new Error("Confirm that at least one matching event was expected before verification.");
     const matches = draft.scope.events.filter((event) => event.name === expectation.eventName
         && event.sourceId === expectation.sourceId
-        && event.pageUrl === expectation.pageUrl
-        && withinInterval(event, draft.scope));
+        && event.pageUrl === expectation.pageUrl);
     return {
         ...withoutOverride(draft),
         verification: { matchingCount: matches.length, warningVisible: matches.length > 0, matches: clone(matches) },
@@ -223,19 +216,28 @@ export function overrideMissingEventWarning(draft, explanation) {
         override: { matchingCount: draft.verification.matchingCount, ...(explanation?.trim() ? { explanation: explanation.trim() } : {}) },
     };
 }
-export function createMissingEventReport(draft, timelineEventIds = [], manualSteps = []) {
+export function createMissingEventReport(draft, timelineEventIds = [], manualSteps = [], composition = {}) {
     const expectation = draft.expectation;
     if (!expectation?.confirmed)
         throw new Error("Confirm the event expectation before creating the report.");
     if (draft.verification.matchingCount > 0 && !draft.override)
-        throw new Error("Use Create missing-event report anyway to record an explicit override.");
+        throw new Error("Record an explicit override before completing the missing-event report.");
     const expected = `At least one ${expectation.eventName} event matching ${expectation.schema.name} revision ${expectation.schema.version} was expected`;
     const { events: _events, ...scope } = clone(draft.scope);
+    const expectedPayload = clone(composition.expectedPayload ?? {});
+    const reproductionSteps = composition.reproductionSteps?.length
+        ? clone(composition.reproductionSteps)
+        : [`Visit ${draft.scope.pathname}`, ...manualSteps, `Expect at least one matching ${expectation.eventName} event`];
     return {
         type: "Missing event",
         actual: `No matching ${expectation.eventName} event was captured`,
-        absenceEvidence: `No matching ${expectation.eventName} event was captured. ${missingEventActualPresentation({ eventName: expectation.eventName, sourceId: expectation.sourceId, pathname: draft.scope.pathname, startedAt: draft.scope.startedAt, endedAt: draft.scope.endedAt })}`,
+        absenceEvidence: missingEventActualPresentation({ eventName: expectation.eventName, sourceId: expectation.sourceId, pathname: draft.scope.pathname, visitId: draft.scope.id }),
         expected,
+        expectedPayload,
+        expectedResponseSources: clone(composition.expectedResponseSources ?? {}),
+        summary: composition.summary ?? `Missing event: ${expectation.eventName}`,
+        description: composition.description ?? `${expectation.eventName} was expected during ${draft.scope.pathname}, but no matching event was captured.`,
+        expectedExplanation: composition.expectedExplanation ?? expectation.explanation,
         schema: {
             id: expectation.schema.id,
             name: expectation.schema.name,
@@ -249,7 +251,9 @@ export function createMissingEventReport(draft, timelineEventIds = [], manualSte
         validationIssues: [],
         matchingEventEvidence: clone(draft.verification.matches),
         ...(draft.override ? { override: clone(draft.override) } : {}),
-        reproductionSteps: [`Visit ${draft.scope.pathname}`, ...manualSteps, `Expect at least one matching ${expectation.eventName} event`],
+        reproductionSteps,
+        reproductionStartVisitId: composition.reproductionStartVisitId ?? draft.scope.id,
+        reproductionEndpointVisitId: composition.reproductionEndpointVisitId ?? draft.scope.id,
         timeline: clone(draft.scope.events.filter(({ id }) => timelineEventIds.includes(id))),
     };
 }
@@ -261,20 +265,26 @@ export function generateMissingEventRepresentations(report) {
         ? `${report.assignment.name ?? report.assignment.id ?? "assignment"}: ${report.assignment.sourceId}/${report.assignment.eventName}/${report.assignment.target}`
         : "No enabled covering assignment; operator-confirmed expectation";
     const captureEvidence = report.override
-        ? `Matching events retained: ${report.matchingEventEvidence.map(({ id, captureTime, sourceId, pageUrl, validation }) => `${id} · ${captureTime ?? "time unavailable"} · ${sourceId} · ${pageUrl} · ${validation ?? "Not checked"}`).join("; ")}\nExplicit override: ${report.override.explanation ?? "Create missing-event report anyway"}`
-        : `Observed ${report.scope.startedAt} to ${report.scope.endedAt}; 0 matching events`;
+        ? `Matching events retained: ${report.matchingEventEvidence.map(({ id, captureTime, sourceId, pageUrl, validation }) => `${id} · ${captureTime ?? "time unavailable"} · ${sourceId} · ${pageUrl} · ${validation ?? "Not checked"}`).join("; ")}\nExplicit override: ${report.override.explanation ?? "Operator overrode the matching-event warning"}`
+        : `Selected page visit ${report.scope.pathname} (${report.scope.id}); 0 matching events`;
+    const expectedPayload = clone(report.expectedPayload ?? {});
+    const payloadSentence = expectedPayloadPresentation(report.expectation.eventName, expectedPayload);
+    const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => `${pointer} response source: ${source}`).join("\n");
+    const expectedResult = [report.expected, report.expectedExplanation, payloadSentence, expectedSources, JSON.stringify(expectedPayload, null, 2)].filter(Boolean).join("\n");
     const sections = [
-        ["Summary", `Missing event: ${report.expectation.eventName}`],
-        ["Description", `${report.expectation.eventName} was expected during ${report.scope.pathname}, but no matching event was captured.`],
+        ["Summary", report.summary ?? `Missing event: ${report.expectation.eventName}`],
+        ["Description", report.description ?? `${report.expectation.eventName} was expected during ${report.scope.pathname}, but no matching event was captured.`],
         ["Steps to reproduce", report.reproductionSteps.join("\n")],
         ["Actual result", report.absenceEvidence],
-        ["Expected result", `${report.expected}. ${report.expectation.explanation}`.trim()],
+        ["Expected result", expectedResult],
         ["Schema expectation", `${report.schema.name} revision ${report.schema.version}\n${assignment}\nSchema rules and documentation are expectation context, not observed capture evidence.`],
         ["Capture evidence", captureEvidence],
         ["Supporting timeline", report.timeline.length ? report.timeline.map(({ captureTime, name, sourceId, pageUrl }) => `${captureTime ?? "time unavailable"} · ${name} · ${sourceId} · ${pageUrl}`).join("\n") : "No supporting captured events selected"],
     ];
     const previewText = sections.map(([heading, content]) => `${heading}\n${content}`).join("\n\n");
-    const previewHtml = sections.map(([heading, content]) => `<h2>${escapeHtml(heading)}</h2><p>${escapeHtml(content).replaceAll("\n", "<br>")}</p>`).join("");
-    return { previewHtml, previewText, jiraText: previewText };
+    const previewHtml = sections.map(([heading, content]) => heading === "Expected result"
+        ? `<h2>${escapeHtml(heading)}</h2><p>${escapeHtml([report.expected, report.expectedExplanation, payloadSentence, expectedSources].filter(Boolean).join("\n")).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(JSON.stringify(expectedPayload, null, 2))}</pre>`
+        : `<h2>${escapeHtml(heading)}</h2><p>${escapeHtml(content).replaceAll("\n", "<br>")}</p>`).join("");
+    return { previewHtml, previewText, jiraText: previewText, expectedPayload };
 }
 //# sourceMappingURL=data-layer-missing-event-defect-report.js.map

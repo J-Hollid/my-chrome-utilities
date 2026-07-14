@@ -60,11 +60,28 @@ draft = confirmMissingEventExpectation(draft);
 draft = verifyMissingEventAbsence(draft);
 assert.equal(draft.verification.matchingCount, 0);
 assert.equal(draft.verification.warningVisible, false);
-const report = createMissingEventReport(draft, ["pageview"]);
+const expectedPayload={page_name:"test",products:[{id:1,name:"robot"}]};
+const report = createMissingEventReport(draft, ["pageview"], [], {
+  expectedPayload,
+  expectedResponseSources:{"/page_name":"schema-provided value","/products/0/id":"operator custom response","/products/0/name":"operator custom response"},
+  summary:"Checkout purchase is missing",
+  description:"Checkout completed without purchase.",
+  expectedExplanation:"The purchase contract must be emitted.",
+  reproductionStartVisitId:checkoutVisit.id,
+  reproductionEndpointVisitId:checkoutVisit.id,
+});
 assert.equal(report.type, "Missing event");
 assert.equal(report.capturedEventId, undefined);
 assert.equal(report.actual, "No matching purchase event was captured");
+assert.match(report.absenceEvidence, /pushed or observed.*selected \/checkout page visit/i);
+assert.doesNotMatch(report.absenceEvidence, /2026-|12:00/);
 assert.match(report.expected, /at least one purchase event.*Checkout purchase revision 4/i);
+assert.deepEqual(report.expectedPayload, expectedPayload);
+assert.equal(report.summary, "Checkout purchase is missing");
+assert.equal(report.description, "Checkout completed without purchase.");
+assert.equal(report.expectedExplanation, "The purchase contract must be emitted.");
+assert.equal(report.reproductionStartVisitId, checkoutVisit.id);
+assert.equal(report.reproductionEndpointVisitId, checkoutVisit.id);
 assert.equal(report.schema.name, "Checkout purchase");
 assert.equal(report.schema.version, 4);
 assert.equal(report.assignment.id, checkoutAssignment.id);
@@ -78,11 +95,17 @@ assert.match(report.reproductionSteps.at(-1), /Expect at least one matching purc
 
 const rendered = generateMissingEventRepresentations(report);
 for (const representation of [rendered.previewText, rendered.jiraText, rendered.previewHtml]) {
-  assert.match(representation, /Missing event/);
-  assert.match(representation, /No matching purchase event was captured/);
+  assert.match(representation, /Checkout purchase is missing/);
+  assert.match(representation, /No matching purchase event was pushed or observed/);
   assert.match(representation, /Checkout purchase revision 4/);
   assert.doesNotMatch(representation, /Actual JSON|validation differences|transaction_id.*:/i);
 }
+for (const representation of [rendered.previewText, rendered.jiraText]) {
+  assert.match(representation, /purchase is fired with \{"page_name":"test","products":\[\{"id":1,"name":"robot"\}\]\}/i);
+  assert.match(representation, /"products": \[/);
+}
+assert.match(rendered.previewHtml, /&quot;products&quot;: \[/);
+assert.deepEqual(rendered.expectedPayload, expectedPayload);
 assert.doesNotMatch(rendered.jiraText, /override/i);
 
 const matchingEvent = {
@@ -107,7 +130,7 @@ assert.deepEqual(warningDraft.verification.matches.map(({ id, captureTime, sourc
   pageUrl:"https://shop.example/checkout",
   validation:"Valid",
 }]);
-assert.throws(() => createMissingEventReport(warningDraft), /Create missing-event report anyway/);
+assert.throws(() => createMissingEventReport(warningDraft), /explicit override/i);
 warningDraft = overrideMissingEventWarning(warningDraft, "The checkout integration is known to emit a duplicate fixture event");
 const overrideReport = createMissingEventReport(warningDraft);
 assert.equal(overrideReport.override?.matchingCount, 1);
@@ -180,13 +203,8 @@ let intervalDraft = verifyMissingEventAbsence(confirmMissingEventExpectation(sel
 )));
 assert.equal(intervalDraft.verification.matchingCount, 1);
 intervalDraft = changeMissingEventInterval(intervalDraft, "2026-07-14T12:00:40Z", "2026-07-14T12:01:00Z");
-assert.equal(intervalDraft.override, undefined);
 intervalDraft = verifyMissingEventAbsence(intervalDraft);
-assert.equal(intervalDraft.verification.matchingCount, 0);
-intervalDraft = changeMissingEventInterval(intervalDraft, "2026-07-14T12:00:00Z", "2026-07-14T12:01:00Z");
-intervalDraft = verifyMissingEventAbsence(intervalDraft);
-assert.equal(intervalDraft.verification.matchingCount, 1);
-assert.throws(() => changeMissingEventInterval(intervalDraft, "invalid", "2026-07-14T12:01:00Z"), /valid observation interval/i);
+assert.equal(intervalDraft.verification.matchingCount, 1, "absence is scoped by page-visit identity rather than an editable timestamp interval");
 
 const savedEvents = [...checkoutVisit.events];
 const savedDraft = createMissingEventDraft("saved session", [{ ...checkoutVisit, immutable:true, events:savedEvents }], [schema]);

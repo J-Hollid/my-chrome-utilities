@@ -2949,21 +2949,28 @@ const missingEventDefectReportRuntime = `(async () => {
   const ui = await import("/data-layer-missing-event-defect-report-ui.js");
   const q = (root, selector) => { const value = root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
   const button = (root, label) => { const value = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!value) throw new Error("Missing " + label); return value; };
+  const enter = (root, pointer, value) => { const input=q(root, '[data-expected-payload-input="' + pointer + '"]'); input.value=value; input.dispatchEvent(new Event("input",{bubbles:true})); };
+  const choose = (root, label) => { const input=Array.from(root.querySelectorAll("label")).find(({textContent})=>textContent.trim()===label)?.querySelector("input"); if(!input) throw new Error("Missing choice " + label); input.checked=true; input.dispatchEvent(new Event("change",{bubbles:true})); };
   const assignment = { id:"assignment:checkout-purchase", name:"Checkout purchase", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
   const schema = { id:"schema-checkout-purchase", name:"Checkout purchase", version:4, published:true, document:{ type:"object", required:["order_id","currency"], properties:{ order_id:{ type:"string" }, currency:{ type:"string" }, coupon:{ type:"string" } } }, assignments:[assignment], attachedRules:[{ id:"order-required", name:"Order required", version:2, propertyPath:"/order_id", operator:"required" },{ id:"currency-values", name:"Currencies", version:1, propertyPath:"/currency", operator:"allowed-values", allowedValues:["EUR","USD"] }], documentation:{ description:"Purchase expected after checkout confirmation" } };
+  const pageviewAssignment = { id:"assignment:generic-pageview", name:"Generic pageview", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
+  const nestedSchema = { id:"schema-generic-pageview", name:"Generic pageview", version:4, published:true, document:{type:"object",required:["page_name","products"],properties:{page_name:{type:"string"},products:{type:"array",items:{type:"object",required:["id","name"],properties:{id:{type:"number"},name:{type:"string"}}}},logged_in:{type:"boolean"}}},assignments:[pageviewAssignment],attachedRules:[{id:"page-name-values",version:1,propertyPath:"/page_name",operator:"allowed-values",allowedValues:["home","test"]},{id:"product-name-values",version:1,propertyPath:"/products/*/name",operator:"allowed-values",allowedValues:["robot","vehicle"]}] };
   const pageview = { id:"pageview", name:"pageview", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:01Z", validation:"Valid", payload:{ page_type:"checkout" } };
   const purchase = (id, seconds) => ({ id, name:"purchase", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:" + seconds + "Z", validation:"Valid", payload:{ transaction_id:id } });
   const visit = (id, events, immutable=false) => ({ id, pageUrl:"https://shop.example/checkout", pathname:"/checkout", startedAt:"2026-07-14T12:00:00Z", endedAt:"2026-07-14T12:01:00Z", events, immutable });
   const zeroVisit = visit("visit:zero", [pageview]);
   const matchVisit = visit("visit:match", [pageview, purchase("purchase-1", "30")]);
+  const productVisit = { id:"visit:products", pageUrl:"https://shop.example/products", pathname:"/products", startedAt:"2026-07-14T11:59:00Z", endedAt:"2026-07-14T11:59:59Z", events:[{...pageview,id:"products-pageview",pageUrl:"https://shop.example/products",payload:{page_type:"products"}}] };
   const host = document.createElement("section"); host.id = "missing-event-browser-fixture"; document.body.append(host);
   let copied = ""; let openedEvent; let restored = false; let focused = false;
-  const zero = ui.renderMissingEventDefectReportBuilder(host, [zeroVisit], [schema], {
+  let savedCount=0;
+  const zero = ui.renderMissingEventDefectReportBuilder(host, [productVisit,zeroVisit], [schema], {
     entryPoint:"Live session actions", initialSchemaId:schema.id,
     writeClipboard:async (text) => { copied = text; },
+    saveReportedDefect:async () => { savedCount += 1; },
     navigation:{ backToSelectedVisit:()=>{}, backToLiveFeed:()=>{}, focusReportMissingEvent:()=>{ focused=true; } },
   });
-  const unifiedInitial={stages:Array.from(host.querySelectorAll("h5")).map(({textContent})=>textContent),evidence:Boolean(host.querySelector('[aria-label="Expected-event confirmation and absence verification"]')),preview:host.querySelector('[aria-label="Final report preview"]')?.textContent,copyDisabled:button(host,"Copy for Jira Cloud").disabled,saveDisabled:button(host,"Save as reported defect").disabled,schemaExpected:q(host,'[aria-label="Schema-derived expected properties"]').textContent,commonControls:["Generate pathname steps","Add event to timeline"].every((label)=>Boolean(button(host,label)))};
+  const unifiedInitial={stages:Array.from(host.querySelectorAll("h5")).map(({textContent})=>textContent),evidence:Boolean(host.querySelector('[aria-label="Expected-event confirmation and absence verification"]')),preview:host.querySelector('[aria-label="Final report preview"]')?.textContent,copyDisabled:button(host,"Copy for Jira Cloud").disabled,saveDisabled:button(host,"Save as reported defect").disabled,schemaExpected:q(host,'[aria-label="Schema-derived expected properties"]').textContent,commonControls:["Generate pathname steps","Add event to timeline"].every((label)=>Boolean(button(host,label))),from:q(host,"#defect-reproduction-start").selectedOptions[0]?.textContent,to:q(host,"#missing-event-visit").selectedOptions[0]?.textContent?.split(" · ")[0],noCreate:!Array.from(host.querySelectorAll("button")).some(({textContent})=>textContent.includes("Create missing-event report")),noInterval:!host.textContent.includes("Observation interval")};
   const navigation = Array.from(host.querySelectorAll("header button")).map(({ textContent }) => textContent);
   const noCapturedNavigation = !Array.from(host.querySelectorAll("button")).some(({ textContent }) => textContent === "Back to captured event");
   const expectedEventInput = Array.from(host.querySelectorAll("label")).find(({ textContent }) => textContent.startsWith("Expected event name"))?.querySelector("input");
@@ -2972,19 +2979,20 @@ const missingEventDefectReportRuntime = `(async () => {
   const replacementReview = q(host, '[aria-label="Expected-event replacement review"]').textContent;
   button(host, "Accept schema-derived expected-event values").click();
   const acceptedEventName = Array.from(host.querySelectorAll("label")).find(({ textContent }) => textContent.startsWith("Expected event name"))?.querySelector("input")?.value;
-  const intervalControls = ["Observation start (ISO)", "Observation end (ISO)"].every((label) => Array.from(host.querySelectorAll("label")).some(({ textContent }) => textContent.startsWith(label))) && Boolean(button(host, "Apply observation interval"));
+  const intervalControls = ["Observation start (ISO)", "Observation end (ISO)"].some((label) => Array.from(host.querySelectorAll("label")).some(({ textContent }) => textContent.startsWith(label)));
+  enter(host,"/order_id","A-123"); choose(host,"Use schema value EUR");
   button(host, "Confirm at least one matching event was expected").click();
-  const zeroVerification = { count:zero.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, ordinary:Boolean(button(host, "Create missing-event report")) };
+  const zeroVerification = { count:zero.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, noCreate:!Array.from(host.querySelectorAll("button")).some(({textContent})=>textContent.includes("Create missing-event report")) };
   button(host, "Generate pathname steps").click();
   button(host, "Add event to timeline").click();
   q(host, '[data-timeline-event-id="pageview"]').click();
   q(host, '[data-timeline-evidence="includeSummary"]').click();
   button(host, "Add to timeline").click();
   const unifiedJourney=Array.from(host.querySelectorAll('[data-reproduction-step-kind]')).map((row)=>row.querySelector("input")?.value ?? row.textContent);
-  button(host, "Create missing-event report").click();
   const unifiedComplete={copyDisabled:button(host,"Copy for Jira Cloud").disabled,saveDisabled:button(host,"Save as reported defect").disabled,preview:q(host,'[aria-label="Final report preview"]').textContent,reproduction:unifiedJourney};
   const zeroReport = zero.report(); const zeroRepresentations = model.generateMissingEventRepresentations(zeroReport);
   button(host, "Copy for Jira Cloud").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  button(host, "Save as reported defect").click(); await new Promise((resolve) => setTimeout(resolve, 0));
   button(host, "Back to selected page visit").click();
 
   host.replaceChildren();
@@ -2992,10 +3000,11 @@ const missingEventDefectReportRuntime = `(async () => {
     entryPoint:"schema row actions", initialSchemaId:schema.id,
     navigation:{ backToSelectedVisit:()=>{}, backToLiveFeed:()=>{}, openMatchingEvent:(id, restoreBuilder)=>{ openedEvent=id; restored=false; restoreBuilder(); restored=true; } },
   });
+  enter(host,"/order_id","A-123"); choose(host,"Use schema value EUR");
   button(host, "Confirm at least one matching event was expected").click();
-  const warningBefore = { count:warning.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, ordinaryAbsent:!Array.from(host.querySelectorAll("button")).some(({ textContent }) => textContent === "Create missing-event report"), evidence:q(host, '[aria-label="Matching event warning"]').textContent };
+  const warningBefore = { count:warning.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, ordinaryAbsent:!Array.from(host.querySelectorAll("button")).some(({ textContent }) => textContent?.includes("Create missing-event report")), evidence:q(host, '[aria-label="Matching event warning"]').textContent };
   button(host, "Open matching event").click();
-  button(host, "Create missing-event report anyway").click();
+  button(host, "Override matching-event warning").click();
   const overrideReport = warning.report(); const overrideRepresentations = model.generateMissingEventRepresentations(overrideReport);
 
   host.replaceChildren();
@@ -3005,6 +3014,33 @@ const missingEventDefectReportRuntime = `(async () => {
   const scopeZero = { count:scoped.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
   q(host, "#missing-event-visit").value = matchVisit.id; q(host, "#missing-event-visit").dispatchEvent(new Event("change", { bubbles:true }));
   const scopeMatch = { count:scoped.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
+
+  host.replaceChildren();
+  const emptyNestedVisit=visit("visit:nested",[{...pageview,id:"checkout-context",name:"checkout_context"}]);
+  let nestedCopied=""; let nestedSaves=0;
+  const nested=ui.renderMissingEventDefectReportBuilder(host,[productVisit,emptyNestedVisit],[nestedSchema],{entryPoint:"Live session actions",initialSchemaId:nestedSchema.id,writeClipboard:async(text)=>{nestedCopied=text;},saveReportedDefect:async()=>{nestedSaves+=1;}});
+  const nestedTreeText=q(host,'[aria-label="Recursive expected payload editor"]').textContent;
+  choose(host,"Use schema value test");
+  button(host,"Add products item").click();
+  enter(host,"/products/0/id","1");
+  enter(host,"/products/0/name","robot");
+  button(host,"Duplicate products item 1").click();
+  const duplicatedItems=host.querySelectorAll('[data-expected-array-item]').length;
+  button(host,"Remove products item 2").click();
+  button(host,"Confirm at least one matching event was expected").click();
+  const nestedReport=nested.report(); const nestedRepresentation=model.generateMissingEventRepresentations(nestedReport);
+  const nestedActions=[button(host,"Copy for Jira Cloud").disabled,button(host,"Save as reported defect").disabled,button(host,"Save as reported defect and copy").disabled];
+  button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
+  const nestedObservation={tree:nestedTreeText,payload:nestedReport.expectedPayload,sources:nestedReport.expectedResponseSources,duplicatedItems,itemCount:nestedReport.expectedPayload.products.length,preview:nestedRepresentation.previewText,html:nestedRepresentation.previewHtml,noCreate:!Array.from(host.querySelectorAll("button")).some(({textContent})=>textContent?.includes("Create missing-event report")),noInterval:!host.textContent.includes("Observation interval"),actions:nestedActions,combined:{saves:nestedSaves,copiedSame:nestedCopied===nestedRepresentation.jiraText,feedback:host.querySelector('output[aria-live="polite"]')?.textContent}};
+
+  host.replaceChildren();
+  let rejectedSaveCalls=0;
+  const failures=ui.renderMissingEventDefectReportBuilder(host,[zeroVisit],[schema],{entryPoint:"Live session actions",initialSchemaId:schema.id,writeClipboard:async()=>{throw new Error("clipboard rejected");},saveReportedDefect:async()=>{rejectedSaveCalls+=1;throw new Error("persistence rejected");}});
+  enter(host,"/order_id","A-123"); choose(host,"Use schema value EUR"); button(host,"Confirm at least one matching event was expected").click();
+  const failurePreview=q(host,'[aria-label="Final report preview"]').textContent;
+  button(host,"Copy for Jira Cloud").click(); await new Promise((resolve)=>setTimeout(resolve,0)); const copyFailure=host.querySelector('output[aria-live="polite"]')?.textContent;
+  button(host,"Save as reported defect").click(); await new Promise((resolve)=>setTimeout(resolve,0)); const saveFailure=host.querySelector('output[aria-live="polite"]')?.textContent;
+  const failureObservation={copyFailure,saveFailure,rejectedSaveCalls,unchanged:q(host,'[aria-label="Final report preview"]').textContent===failurePreview,reportPayload:failures.report().expectedPayload};
 
   const second = { ...assignment, id:"assignment:secondary", name:"Secondary checkout" };
   const disabled = { ...assignment, id:"assignment:disabled", enabled:false };
@@ -3022,8 +3058,8 @@ const missingEventDefectReportRuntime = `(async () => {
   const schemaRowEntries = Array.from(document.querySelectorAll("#schema-list button")).filter(({ textContent }) => textContent === "Report missing event").length;
   host.remove();
   return {
-    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, unified:{initial:unifiedInitial,complete:unifiedComplete},
-    zero:{ replacement:{ review:replacementReview, acceptedEventName, intervalControls }, verification:zeroVerification, report:{ type:zeroReport.type, capturedEventId:zeroReport.capturedEventId ?? null, actual:zeroReport.actual, expected:zeroReport.expected, schema:zeroReport.schema.name + " revision " + zeroReport.schema.version, payload:zeroReport.payload ?? null, capture:zeroReport.capture ?? null, issues:zeroReport.validationIssues.length, timeline:zeroReport.timeline.map(({ id }) => id) }, preview:zeroRepresentations.previewText, jira:zeroRepresentations.jiraText, copied },
+    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, unified:{initial:unifiedInitial,complete:unifiedComplete,nested:nestedObservation,failures:failureObservation},
+    zero:{ replacement:{ review:replacementReview, acceptedEventName, intervalControls }, verification:zeroVerification, report:{ type:zeroReport.type, capturedEventId:zeroReport.capturedEventId ?? null, actual:zeroReport.actual, absenceEvidence:zeroReport.absenceEvidence, expected:zeroReport.expected, expectedPayload:zeroReport.expectedPayload, schema:zeroReport.schema.name + " revision " + zeroReport.schema.version, payload:zeroReport.payload ?? null, capture:zeroReport.capture ?? null, issues:zeroReport.validationIssues.length, timeline:zeroReport.timeline.map(({ id }) => id) }, preview:zeroRepresentations.previewText, jira:zeroRepresentations.jiraText, copied, savedCount },
     warning:{ before:warningBefore, openedEvent, restored, override:{ count:overrideReport.override.matchingCount, evidence:overrideReport.matchingEventEvidence.map(({ id }) => id), eventPayload:overrideReport.matchingEventEvidence[0].payload, preview:overrideRepresentations.previewText, jira:overrideRepresentations.jiraText } },
     scope:{ zero:scopeZero, match:scopeMatch }, expectationCases, matchCounts,
     saved:{ immutable:saved.scope.immutable, count:saved.verification.matchingCount, sourceCount:savedEvents.length, snapshotCount:saved.scope.events.length },
@@ -3558,12 +3594,19 @@ try {
       await reloadPanel(socket);
       missingEventDefectReportObservation = await evaluate(socket, missingEventDefectReportRuntime);
       assert.deepEqual(missingEventDefectReportObservation.entries, { sideEntry:"Report missing event", schemaRowEntries:1 });
-      assert.deepEqual(missingEventDefectReportObservation.zero.verification, { count:0, warning:true, ordinary:true });
+      assert.deepEqual(missingEventDefectReportObservation.zero.verification, { count:0, warning:true, noCreate:true });
       assert.deepEqual({ type:missingEventDefectReportObservation.zero.report.type, capturedEventId:missingEventDefectReportObservation.zero.report.capturedEventId, payload:missingEventDefectReportObservation.zero.report.payload, capture:missingEventDefectReportObservation.zero.report.capture, issues:missingEventDefectReportObservation.zero.report.issues }, { type:"Missing event", capturedEventId:null, payload:null, capture:null, issues:0 });
       assert.deepEqual(missingEventDefectReportObservation.warning.before.count, 1);
       assert.deepEqual(missingEventDefectReportObservation.warning.override.evidence, ["purchase-1"]);
       assert.deepEqual(missingEventDefectReportObservation.scope, { zero:{ count:0, warning:true, override:null }, match:{ count:1, visible:true, override:null } });
       assert.deepEqual(missingEventDefectReportObservation.saved, { immutable:true, count:0, sourceCount:2, snapshotCount:1 });
+      assert.equal(missingEventDefectReportObservation.zero.replacement.intervalControls, false);
+      assert.equal(missingEventDefectReportObservation.unified.initial.noInterval, true);
+      assert.equal(missingEventDefectReportObservation.unified.initial.noCreate, true);
+      assert.deepEqual(missingEventDefectReportObservation.unified.nested.payload, { page_name:"test", products:[{ id:1, name:"robot" }] });
+      assert.deepEqual(missingEventDefectReportObservation.unified.nested.actions, [false,false,false]);
+      assert.equal(missingEventDefectReportObservation.unified.nested.duplicatedItems, 2);
+      assert.deepEqual(missingEventDefectReportObservation.unified.failures, { copyFailure:"Copy failed", saveFailure:"Save failed", rejectedSaveCalls:1, unchanged:true, reportPayload:{ order_id:"A-123", currency:"EUR" } });
       socket.close(); continue;
     }
     if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {

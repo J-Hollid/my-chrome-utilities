@@ -667,10 +667,10 @@ element(missingRoot, ({ textContent }) => textContent === "Back to Live feed").d
 assert.deepEqual([missingBackVisit, missingBackFeed], [1, 1]);
 element(missingRoot, ({ textContent }) => textContent === "Confirm at least one matching event was expected").dispatch("click");
 assert.equal(element(missingRoot, ({ attributes }) => attributes.get("aria-label") === "Matching event warning").hidden, true);
-element(missingRoot, ({ textContent }) => textContent === "Create missing-event report").dispatch("click");
+assert.equal(descendants(missingRoot).some(({ textContent }) => textContent.includes("Create missing-event report")), false);
 assert.equal(missingController.report().type, "Missing event");
 assert.equal(missingController.report().capturedEventId, undefined);
-assert.match(element(missingRoot, ({ attributes }) => attributes.get("aria-label") === "Final missing-event report preview").innerHTML, /No matching purchase event was captured/);
+assert.match(element(missingRoot, ({ attributes }) => attributes.get("aria-label") === "Final missing-event report preview").innerHTML, /No matching purchase event was pushed or observed/);
 element(missingRoot, ({ textContent }) => textContent === "Copy for Jira Cloud").dispatch("click");
 await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(missingCopies.length, 1);
@@ -696,7 +696,7 @@ assert.equal(element(warningRoot, ({ attributes }) => attributes.get("aria-label
 assert.match(element(warningRoot, ({ tagName, textContent }) => tagName === "H5" && textContent.includes("matching event")).textContent, /^1 matching event/);
 element(warningRoot, ({ textContent }) => textContent === "Open matching event").dispatch("click");
 assert.equal(openedMatch, "purchase-match");
-element(warningRoot, ({ textContent }) => textContent === "Create missing-event report anyway").dispatch("click");
+element(warningRoot, ({ textContent }) => textContent === "Override matching-event warning").dispatch("click");
 assert.equal(warningController.report().override.matchingCount, 1);
 assert.equal(warningController.report().matchingEventEvidence[0].id, "purchase-match");
 
