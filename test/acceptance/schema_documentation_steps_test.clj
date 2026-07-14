@@ -1,14 +1,13 @@
 (ns acceptance.schema-documentation-steps-test
   (:require [acceptance.runtime :as runtime]
+            [acceptance.feature-support :as feature-support]
             [acceptance.steps.schema-documentation :as documentation]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest covers-every-schema-documentation-step
-  (doseq [feature-file documentation/feature-files
-          :let [feature (gherkin/parse-file feature-file)]
-          text (map :text (concat (:background feature) (mapcat :steps (:scenarios feature))))]
-    (is (some #(re-matches (:pattern %) text) documentation/handlers) text)))
+  (doseq [text (feature-support/unhandled-step-texts documentation/feature-files documentation/handlers)]
+    (is false text)))
 
 (deftest binds-every-schema-documentation-example
   (let [observation (documentation/browser-observation!)]
