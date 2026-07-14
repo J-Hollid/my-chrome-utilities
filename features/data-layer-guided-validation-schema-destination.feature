@@ -49,7 +49,7 @@ Feature: Data layer guided validation schema destination
   Scenario Outline: Data layer guided validation schema destination 004
     Given the destination targets existing Product listing version 3
     And the draft defines an allowed-values rule for page_type
-    And matching assignment state is <assignment_state>
+    And assignment coverage for the captured event is <assignment_coverage>
     When the validation review is displayed
     Then it identifies page_type as the rule attachment path
     And it states that the rule will be added to the Product listing working draft based on version 3
@@ -58,9 +58,10 @@ Feature: Data layer guided validation schema destination
     And assignment action is <assignment_action>
 
     Examples:
-      | assignment_state   | assignment_action                         |
-      | matching exists    | reuse the matching enabled assignment     |
-      | matching absent    | add the reviewed assignment as a pending change |
+      | assignment_coverage                                  | assignment_action                              |
+      | an enabled published assignment covers the event     | reuse the covering assignment                  |
+      | an enabled working-draft assignment covers the event | reuse the covering pending assignment          |
+      | no enabled published or pending assignment covers it | add the reviewed assignment as a pending change |
 
   # Data layer guided validation schema destination 005
   Scenario Outline: Data layer guided validation schema destination 005
@@ -87,7 +88,7 @@ Feature: Data layer guided validation schema destination
   # Data layer guided validation schema destination 007
   Scenario: Data layer guided validation schema destination 007
     Given the destination choice has accepted Generic pageview version 4
-    And it has one enabled assignment compatible with the captured event
+    And one enabled assignment covers the captured event
     When the requirement stage is displayed
     Then page_type expected type is prefilled from Generic pageview version 4
     And validation target is prefilled from the schema
@@ -97,16 +98,19 @@ Feature: Data layer guided validation schema destination
 
   # Data layer guided validation schema destination 008
   Scenario Outline: Data layer guided validation schema destination 008
-    Given the selected destination has <compatible_assignment_count> compatible assignments
-    When assignment resolution runs
-    Then assignment selection is <assignment_selection>
-    And scope behavior is <scope_behavior>
+    Given the selected schema has assignment state <assignment_state>
+    When assignment coverage is evaluated for the captured event
+    Then assignment configuration is <configuration_visibility>
+    And assignment action is <assignment_action>
+    And property-rule creation is <continuation_result>
 
     Examples:
-      | compatible_assignment_count | assignment_selection                      | scope_behavior                                      |
-      | 0                           | Create a new assignment                   | use captured event values as editable defaults      |
-      | 1                           | the compatible assignment                 | prefill its domain and path conditions               |
-      | 2                           | required from readable assignment choices | do not prefill scope before the operator chooses     |
+      | assignment_state                                            | configuration_visibility | assignment_action                              | continuation_result                 |
+      | no assignments                                               | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
+      | one enabled assignment covers source, event, target, and URL | not displayed            | reuse the covering assignment                  | allowed without assignment review   |
+      | two enabled assignments cover the captured event             | not displayed            | reuse existing schema coverage                 | allowed without assignment selection |
+      | source, event, and target match but URL conditions do not     | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
+      | only a disabled assignment covers the captured event          | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
 
   # Data layer guided validation schema destination 009
   Scenario: Data layer guided validation schema destination 009
