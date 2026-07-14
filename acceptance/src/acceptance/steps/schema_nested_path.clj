@@ -80,7 +80,7 @@
 
 (defn- assert-advanced-targets! [observed]
   (support/assert! (= [true
-                       ["Add rule" "Add specific index rule"]
+                       ["Add rule" "Add specific index rule" "Remove property"]
                        "Every item · type object"]
                       [(every? (set (get-in observed [:advanced :paths]))
                                ["products" "products.*" "products.*.id" "products.*.name"])
