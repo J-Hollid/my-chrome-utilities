@@ -91,22 +91,6 @@ async function injectHistoryArrayHook(tabId, historyPath, channelId, eventType) 
     });
     return injection?.result ?? { installed: false, rawValues: [] };
 }
-export function historySnapshotPageObject(historyPath, rawValues) {
-    const parts = historyPath
-        .split(".")
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0);
-    const root = {};
-    let current = root;
-    parts.forEach((part, index) => {
-        const value = index === parts.length - 1 ? [...rawValues] : {};
-        current[part] = value;
-        if (index < parts.length - 1) {
-            current = value;
-        }
-    });
-    return root;
-}
 function cleanupHistoryArrayHook(tabId, historyPath, channelId) {
     void chrome.scripting.executeScript({
         target: { tabId },

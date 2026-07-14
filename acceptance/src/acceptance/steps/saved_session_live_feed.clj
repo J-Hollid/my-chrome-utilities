@@ -128,19 +128,20 @@
   (assert-reload! (:reload observed)))
 
 (defn- transition [world _example _captures {:keys [text]}]
-  (let [world (if (entry-steps text) (assoc world :saved-session-live-feed (observation!)) world)
-        observed (:saved-session-live-feed world)]
-    (support/assert! observed "Saved session Live feed browser adapter was not executed." {:step text})
+  (let [[world observed]
+        (support/stateful-observation
+         world text entry-steps :saved-session-live-feed observation!
+         "Saved session Live feed browser adapter was not executed.")]
     (assert-observation! observed)
     world))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (entry-steps (:text spec)) (:saved-session-live-feed world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-steps
+   :saved-session-live-feed
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T02:16:21.681752679+02:00", :module-hash "-1478103238", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1178839830"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "705456916"} {:id "def/entry-steps", :kind "def", :line 10, :end-line nil, :hash "-2107388724"} {:id "form/3/defonce", :kind "defonce", :line 20, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line nil, :hash "-547569961"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line nil, :hash "-775394783"} {:id "defn-/assert-initial-actions!", :kind "defn-", :line 32, :end-line nil, :hash "-2076566139"} {:id "defn-/assert-initial-banner!", :kind "defn-", :line 45, :end-line nil, :hash "-1985464640"} {:id "defn-/assert-initial-analysis!", :kind "defn-", :line 54, :end-line nil, :hash "-622821036"} {:id "defn-/assert-initial-model!", :kind "defn-", :line 60, :end-line nil, :hash "1264665629"} {:id "defn-/assert-initial-linked-and-imported!", :kind "defn-", :line 79, :end-line nil, :hash "-179937930"} {:id "defn-/assert-initial!", :kind "defn-", :line 90, :end-line nil, :hash "2026495002"} {:id "defn-/assert-reload!", :kind "defn-", :line 97, :end-line nil, :hash "2145638317"} {:id "defn-/assert-observation!", :kind "defn-", :line 126, :end-line nil, :hash "406949664"} {:id "defn-/transition", :kind "defn-", :line 130, :end-line nil, :hash "-488746180"} {:id "def/handlers", :kind "def", :line 137, :end-line nil, :hash "1733355050"}]}
+;; {:version 1, :tested-at "2026-07-14T12:56:41.39191335+02:00", :module-hash "1587225832", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1178839830"} {:id "def/feature-files", :kind "def", :line 5, :end-line 8, :hash "705456916"} {:id "def/entry-steps", :kind "def", :line 10, :end-line 18, :hash "-2107388724"} {:id "form/3/defonce", :kind "defonce", :line 20, :end-line 20, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-547569961"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line 30, :hash "-775394783"} {:id "defn-/assert-initial-actions!", :kind "defn-", :line 32, :end-line 43, :hash "-2076566139"} {:id "defn-/assert-initial-banner!", :kind "defn-", :line 45, :end-line 52, :hash "-1985464640"} {:id "defn-/assert-initial-analysis!", :kind "defn-", :line 54, :end-line 58, :hash "1517765428"} {:id "defn-/assert-initial-model!", :kind "defn-", :line 60, :end-line 77, :hash "303666394"} {:id "defn-/assert-initial-linked-and-imported!", :kind "defn-", :line 79, :end-line 88, :hash "-1154742300"} {:id "defn-/assert-initial!", :kind "defn-", :line 90, :end-line 95, :hash "2026495002"} {:id "defn-/assert-reload!", :kind "defn-", :line 97, :end-line 124, :hash "2145638317"} {:id "defn-/assert-observation!", :kind "defn-", :line 126, :end-line 128, :hash "406949664"} {:id "defn-/transition", :kind "defn-", :line 130, :end-line 136, :hash "-925368461"} {:id "def/handlers", :kind "def", :line 138, :end-line 143, :hash "1266819586"}]}
 ;; clj-mutate-manifest-end

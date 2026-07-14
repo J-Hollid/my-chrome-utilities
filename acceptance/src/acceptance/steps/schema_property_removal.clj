@@ -117,19 +117,18 @@
    (assert-outline-example! example observed)))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (entry-steps text) (assoc world :schema-property-removal (observation!)) world)
-        observed (:schema-property-removal world)]
-    (support/assert! observed "Schema property removal browser adapter was not executed." {:step text})
-    (assert-observation! example observed)
-    world))
+  (support/stateful-transition
+   world example text entry-steps :schema-property-removal observation!
+   "Schema property removal browser adapter was not executed."
+   assert-observation!))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (entry-steps (:text spec)) (:schema-property-removal world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-steps
+   :schema-property-removal
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T09:56:41.142259117+02:00", :module-hash "514425521", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2138934778"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "475595923"} {:id "def/entry-steps", :kind "def", :line 6, :end-line nil, :hash "-1637132162"} {:id "form/3/defonce", :kind "defonce", :line 15, :end-line nil, :hash "-1819867165"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-1536960871"} {:id "defn-/assert-actions!", :kind "defn-", :line 26, :end-line nil, :hash "-805290842"} {:id "defn-/assert-immediate-and-undo!", :kind "defn-", :line 37, :end-line nil, :hash "-444773895"} {:id "defn-/assert-confirmed-and-empty!", :kind "defn-", :line 51, :end-line nil, :hash "2057431505"} {:id "def/ancestor-examples", :kind "def", :line 74, :end-line nil, :hash "-313111910"} {:id "def/focus-examples", :kind "def", :line 84, :end-line nil, :hash "1232594176"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 92, :end-line nil, :hash "860942701"} {:id "defn-/assert-observation!", :kind "defn-", :line 111, :end-line nil, :hash "2017158343"} {:id "defn-/transition", :kind "defn-", :line 119, :end-line nil, :hash "1195764001"} {:id "def/handlers", :kind "def", :line 126, :end-line nil, :hash "-649291279"}]}
+;; {:version 1, :tested-at "2026-07-14T12:57:15.353300319+02:00", :module-hash "-1425287839", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-2138934778"} {:id "def/feature-files", :kind "def", :line 5, :end-line 5, :hash "475595923"} {:id "def/entry-steps", :kind "def", :line 6, :end-line 14, :hash "-1637132162"} {:id "form/3/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1819867165"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line 24, :hash "-1536960871"} {:id "defn-/assert-actions!", :kind "defn-", :line 26, :end-line 35, :hash "159843367"} {:id "defn-/assert-immediate-and-undo!", :kind "defn-", :line 37, :end-line 49, :hash "-444773895"} {:id "defn-/assert-confirmed-and-empty!", :kind "defn-", :line 51, :end-line 72, :hash "-99091577"} {:id "def/ancestor-examples", :kind "def", :line 74, :end-line 82, :hash "-313111910"} {:id "def/focus-examples", :kind "def", :line 84, :end-line 90, :hash "1232594176"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 92, :end-line 109, :hash "860942701"} {:id "defn-/assert-observation!", :kind "defn-", :line 111, :end-line 117, :hash "2017158343"} {:id "defn-/transition", :kind "defn-", :line 119, :end-line 123, :hash "1411388438"} {:id "def/handlers", :kind "def", :line 125, :end-line 130, :hash "784379959"}]}
 ;; clj-mutate-manifest-end

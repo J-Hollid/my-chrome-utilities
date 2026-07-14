@@ -7,10 +7,10 @@ import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
 import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
-import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
+import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
 import { initialObservationActivationState, nextObservationActivation, observationActivationIsCurrent, } from "./data-layer-observation-activation.js";
-import { historySnapshotPageObject, startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
+import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
@@ -2951,10 +2951,13 @@ async function startLiveHistoryCapture(observation) {
             onSnapshot: ({ historyPath, rawValues }) => {
                 if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
                     return;
-                dataLayerObserverState = attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, {
-                    ...observation,
+                dataLayerObserverState = attachHistoryArraySnapshot({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, {
+                    pageUrl: observation.pageUrl,
+                    ...(observation.pageLoadId === undefined
+                        ? {}
+                        : { pageLoadId: observation.pageLoadId }),
                     historyPath,
-                    pageObject: historySnapshotPageObject(historyPath, rawValues),
+                    rawValues,
                     requestId: `activation:${captureGeneration}`,
                 });
                 updateSessionFromObserverState();

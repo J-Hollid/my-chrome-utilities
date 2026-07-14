@@ -56,6 +56,7 @@ import {
 import {
   appendObservedHistoryEntry,
   attachHistoryArrayObserver,
+  attachHistoryArraySnapshot,
   stopHistoryArrayObserver,
   type DataLayerHistoryObserverState,
 } from "./data-layer-observer.js";
@@ -76,7 +77,6 @@ import {
   observationActivationIsCurrent,
 } from "./data-layer-observation-activation.js";
 import {
-  historySnapshotPageObject,
   startLiveHistoryPushCapture,
   type StopLiveHistoryPushCapture,
 } from "./data-layer-live-observation.js";
@@ -2928,12 +2928,15 @@ async function startLiveHistoryCapture(
       historyPath: observation.historyPath,
       onSnapshot: ({ historyPath, rawValues }) => {
         if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) return;
-        dataLayerObserverState = attachHistoryArrayObserver(
+        dataLayerObserverState = attachHistoryArraySnapshot(
           { ...dataLayerObserverState, sessionState:dataLayerSessionState },
           {
-            ...observation,
+            pageUrl: observation.pageUrl,
+            ...(observation.pageLoadId === undefined
+              ? {}
+              : { pageLoadId: observation.pageLoadId }),
             historyPath,
-            pageObject:historySnapshotPageObject(historyPath, rawValues),
+            rawValues,
             requestId:`activation:${captureGeneration}`,
           },
         );

@@ -15,6 +15,19 @@ function valueAtPath(pageObject, path) {
         return current[part];
     }, pageObject);
 }
+function pageObjectForHistorySnapshot(historyPath, rawValues) {
+    const parts = pathParts(historyPath);
+    const root = {};
+    let current = root;
+    parts.forEach((part, index) => {
+        const value = index === parts.length - 1 ? [...rawValues] : {};
+        current[part] = value;
+        if (index < parts.length - 1) {
+            current = value;
+        }
+    });
+    return root;
+}
 function captureContext(state, observer) {
     return {
         sessionId: state.sessionState?.session?.id ?? `page:${observer.pageUrl}`,
@@ -105,6 +118,19 @@ export function attachHistoryArrayObserver(state, options) {
     return status === "ready" && options.importExisting !== false
         ? captureExistingHistoryEntries(nextState, observer)
         : nextState;
+}
+export function attachHistoryArraySnapshot(state, options) {
+    return attachHistoryArrayObserver(state, {
+        historyPath: options.historyPath,
+        pageUrl: options.pageUrl,
+        ...(options.pageLoadId === undefined
+            ? {}
+            : { pageLoadId: options.pageLoadId }),
+        pageObject: pageObjectForHistorySnapshot(options.historyPath, options.rawValues),
+        ...(options.requestId === undefined
+            ? {}
+            : { requestId: options.requestId }),
+    });
 }
 export function reinstallHistoryArrayObserver(state, options) {
     return attachHistoryArrayObserver({

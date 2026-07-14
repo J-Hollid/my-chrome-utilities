@@ -149,15 +149,12 @@
     world))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world]
-                       (or (entry-steps (:text spec))
-                           (:recursive-property-validation world)))
-           :handler (fn [world example captures]
-                      (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-steps
+   :recursive-property-validation
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T11:55:29.662557232+02:00", :module-hash "4091783", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1599784536"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "1775874140"} {:id "def/entry-steps", :kind "def", :line 11, :end-line nil, :hash "930167089"} {:id "def/canonical-example-rows", :kind "def", :line 16, :end-line nil, :hash "-978946583"} {:id "defn-/canonical-example?", :kind "defn-", :line 22, :end-line nil, :hash "-923902321"} {:id "form/5/defonce", :kind "defonce", :line 26, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 28, :end-line nil, :hash "-2006733646"} {:id "defn-/observation!", :kind "defn-", :line 36, :end-line nil, :hash "-775394783"} {:id "defn-/assert-observation!", :kind "defn-", :line 38, :end-line nil, :hash "586752416"} {:id "defn-/assert-canonical-example!", :kind "defn-", :line 133, :end-line nil, :hash "1438744672"} {:id "defn-/begin-observation", :kind "defn-", :line 138, :end-line nil, :hash "-1028059997"} {:id "defn-/transition", :kind "defn-", :line 143, :end-line nil, :hash "-1771666027"} {:id "def/handlers", :kind "def", :line 151, :end-line nil, :hash "-801819168"}]}
+;; {:version 1, :tested-at "2026-07-14T12:55:30.977229858+02:00", :module-hash "401410007", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1599784536"} {:id "def/feature-files", :kind "def", :line 6, :end-line 9, :hash "1775874140"} {:id "def/entry-steps", :kind "def", :line 11, :end-line 14, :hash "930167089"} {:id "def/canonical-example-rows", :kind "def", :line 16, :end-line 20, :hash "-978946583"} {:id "defn-/canonical-example?", :kind "defn-", :line 22, :end-line 24, :hash "-923902321"} {:id "form/5/defonce", :kind "defonce", :line 26, :end-line 26, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 28, :end-line 34, :hash "-2006733646"} {:id "defn-/observation!", :kind "defn-", :line 36, :end-line 36, :hash "-775394783"} {:id "defn-/assert-observation!", :kind "defn-", :line 38, :end-line 131, :hash "1100464949"} {:id "defn-/assert-canonical-example!", :kind "defn-", :line 133, :end-line 136, :hash "1438744672"} {:id "defn-/begin-observation", :kind "defn-", :line 138, :end-line 141, :hash "-1028059997"} {:id "defn-/transition", :kind "defn-", :line 143, :end-line 149, :hash "-1771666027"} {:id "def/handlers", :kind "def", :line 151, :end-line 156, :hash "1097611311"}]}
 ;; clj-mutate-manifest-end

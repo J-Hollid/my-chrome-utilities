@@ -6,8 +6,7 @@ import {
   observationActivationIsCurrent,
 } from "../dist/data-layer-observation-activation.js";
 import { canonicalCapturedEvent } from "../dist/data-layer-event-presentation.js";
-import { historySnapshotPageObject } from "../dist/data-layer-live-observation.js";
-import { attachHistoryArrayObserver } from "../dist/data-layer-observer.js";
+import { attachHistoryArraySnapshot } from "../dist/data-layer-observer.js";
 
 function valueAtPath(root, path) {
   return path.split(".").reduce((value, part) => value[part], root);
@@ -44,23 +43,30 @@ for (let sample = 1; sample <= 100; sample += 1) {
     { length: (sample % 7) + 1 },
     (_, index) => ({ event: `event-${sample}-${index}` }),
   );
-  const snapshot = historySnapshotPageObject(
-    pathParts.map((part) => ` ${part} `).join("."),
-    rawValues,
+  const spacedHistoryPath = pathParts.map((part) => ` ${part} `).join(".");
+  const snapshotState = attachHistoryArraySnapshot(
+    { sourceEvents: [] },
+    {
+      historyPath: spacedHistoryPath,
+      pageUrl: `https://example.test/snapshot/${sample}`,
+      pageLoadId: `snapshot-${sample}`,
+      rawValues,
+      requestId: `snapshot-${sample}`,
+    },
   );
 
-  assert.deepEqual(valueAtPath(snapshot, historyPath), rawValues);
-  assert.notEqual(valueAtPath(snapshot, historyPath), rawValues);
+  assert.deepEqual(valueAtPath(snapshotState.pageObject, historyPath), rawValues);
+  assert.notEqual(valueAtPath(snapshotState.pageObject, historyPath), rawValues);
 
   const pageUrl = `https://example.test/reload/${sample}`;
   const firstPageLoad = `load-${sample}-a`;
   const secondPageLoad = `load-${sample}-b`;
   const attach = (state, pageLoadId, requestId) =>
-    attachHistoryArrayObserver(state, {
+    attachHistoryArraySnapshot(state, {
       historyPath,
       pageUrl,
       pageLoadId,
-      pageObject: snapshot,
+      rawValues,
       requestId,
     });
 

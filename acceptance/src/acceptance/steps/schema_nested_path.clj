@@ -146,19 +146,18 @@
   (assert-example! example observed))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (entry-steps text) (assoc world :schema-nested-path (observation!)) world)
-        observed (:schema-nested-path world)]
-    (support/assert! observed "Schema nested path browser adapter was not executed." {:step text})
-    (assert-observation! example observed)
-    world))
+  (support/stateful-transition
+   world example text entry-steps :schema-nested-path observation!
+   "Schema nested path browser adapter was not executed."
+   assert-observation!))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (entry-steps (:text spec)) (:schema-nested-path world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-steps
+   :schema-nested-path
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T09:26:30.971820049+02:00", :module-hash "825702127", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1650446292"} {:id "def/feature-files", :kind "def", :line 4, :end-line nil, :hash "-644095680"} {:id "def/entry-steps", :kind "def", :line 7, :end-line nil, :hash "-1238999917"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line nil, :hash "1034861264"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line nil, :hash "-775394783"} {:id "defn-/assert-target-choice-example!", :kind "defn-", :line 22, :end-line nil, :hash "-720899987"} {:id "defn-/assert-path-validation-example!", :kind "defn-", :line 30, :end-line nil, :hash "-1071236600"} {:id "defn-/assert-compatibility-example!", :kind "defn-", :line 38, :end-line nil, :hash "1985236915"} {:id "defn-/assert-normalization-example!", :kind "defn-", :line 47, :end-line nil, :hash "-2147066055"} {:id "defn-/assert-fruits-validation-example!", :kind "defn-", :line 53, :end-line nil, :hash "1295459662"} {:id "defn-/assert-order-validation-example!", :kind "defn-", :line 64, :end-line nil, :hash "1873887271"} {:id "defn-/assert-example!", :kind "defn-", :line 73, :end-line nil, :hash "-1858034554"} {:id "defn-/assert-advanced-targets!", :kind "defn-", :line 81, :end-line nil, :hash "-2017937524"} {:id "defn-/assert-picker-compatibility!", :kind "defn-", :line 95, :end-line nil, :hash "-329396206"} {:id "defn-/assert-persistence!", :kind "defn-", :line 105, :end-line nil, :hash "-1758589139"} {:id "defn-/assert-target-choices!", :kind "defn-", :line 113, :end-line nil, :hash "1563708923"} {:id "defn-/assert-validation-results!", :kind "defn-", :line 124, :end-line nil, :hash "-1453549780"} {:id "defn-/assert-observation!", :kind "defn-", :line 140, :end-line nil, :hash "573855666"} {:id "defn-/transition", :kind "defn-", :line 148, :end-line nil, :hash "338519342"} {:id "def/handlers", :kind "def", :line 155, :end-line nil, :hash "-1494864993"}]}
+;; {:version 1, :tested-at "2026-07-14T12:57:13.642809914+02:00", :module-hash "1773386310", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1650446292"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-644095680"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 9, :hash "-1238999917"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line 18, :hash "1034861264"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line 20, :hash "-775394783"} {:id "defn-/assert-target-choice-example!", :kind "defn-", :line 22, :end-line 28, :hash "-388089577"} {:id "defn-/assert-path-validation-example!", :kind "defn-", :line 30, :end-line 36, :hash "-1071236600"} {:id "defn-/assert-compatibility-example!", :kind "defn-", :line 38, :end-line 45, :hash "1985236915"} {:id "defn-/assert-normalization-example!", :kind "defn-", :line 47, :end-line 51, :hash "-2147066055"} {:id "defn-/assert-fruits-validation-example!", :kind "defn-", :line 53, :end-line 62, :hash "1295459662"} {:id "defn-/assert-order-validation-example!", :kind "defn-", :line 64, :end-line 71, :hash "-965811884"} {:id "defn-/assert-example!", :kind "defn-", :line 73, :end-line 79, :hash "-1858034554"} {:id "defn-/assert-advanced-targets!", :kind "defn-", :line 81, :end-line 93, :hash "-1838356090"} {:id "defn-/assert-picker-compatibility!", :kind "defn-", :line 95, :end-line 103, :hash "-329396206"} {:id "defn-/assert-persistence!", :kind "defn-", :line 105, :end-line 111, :hash "-1758589139"} {:id "defn-/assert-target-choices!", :kind "defn-", :line 113, :end-line 122, :hash "1563708923"} {:id "defn-/assert-validation-results!", :kind "defn-", :line 124, :end-line 138, :hash "-1453549780"} {:id "defn-/assert-observation!", :kind "defn-", :line 140, :end-line 146, :hash "573855666"} {:id "defn-/transition", :kind "defn-", :line 148, :end-line 152, :hash "-1252184206"} {:id "def/handlers", :kind "def", :line 154, :end-line 159, :hash "481184675"}]}
 ;; clj-mutate-manifest-end
