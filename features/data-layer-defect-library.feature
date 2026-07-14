@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c7734b99eaae4e10bd867be593bf776fc139d3ac43ab486261f6b49e2c19b1ef
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T16:06:21.694428893Z","feature_name":"Data layer defect library","feature_path":"features/data-layer-defect-library.feature","background_hash":"9a0b104c88f4a64f75cfeda8331c5d7e7f29658482cdd9f10a83f0650abed334","implementation_hash":"sha256:917efd74c8fa40402fa73b9e533ffecafa97244939dd42d6040665b81ee946dc","scenarios":[{"index":0,"name":"Data layer defect library 001","scenario_hash":"ab8f09c6cde6ec7cc1bd8d689148ab3a4b599b5e5e274d6414a1274ab8d9b470","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T16:06:21.694428893Z"},{"index":2,"name":"Data layer defect library 003","scenario_hash":"db0754e0530a08d6fac7ddba4a7afb6f23eb6a9391584d16f14b91c03f2cbdd4","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-14T16:06:21.694428893Z"},{"index":4,"name":"Data layer defect library 005","scenario_hash":"cc1f0d915f3ca6e6c09045bf550b13bb7b0251d2eddf0ed367b45076b5b6797b","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T16:06:21.694428893Z"},{"index":9,"name":"Data layer defect library 010","scenario_hash":"51b9c4f5b0c4b376d9cc10589dafcf5d0eb99fb4f1251295fecb3a5777f731af","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T16:06:21.694428893Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer defect library
 
   Background:

@@ -253,6 +253,9 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
         const copy = element("button", "Copy for Jira Cloud");
         copy.type = "button";
         copy.disabled = !completed;
+        const save = element("button", "Save as reported defect");
+        save.type = "button";
+        save.disabled = !completed;
         if (completed) {
             const representations = generateMissingEventRepresentations(completed);
             preview.innerHTML = representations.previewHtml;
@@ -265,12 +268,13 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
                 }
                 void write(representations.jiraText).then(() => { feedback = "Missing-event report copied for Jira Cloud."; render(); }).catch(() => { feedback = "Copy failed. The report is unchanged."; render(); });
             });
+            save.addEventListener("click", () => { options.saveReportedDefect?.(completed); feedback = "Missing-event report saved in Defect Library."; render(); });
         }
         else
             preview.append(element("p", "Confirm and verify the expected event to generate the report."));
         const status = element("output", feedback);
         status.setAttribute("aria-live", "polite");
-        root.replaceChildren(header, expectation, warning, evidence, preview, copy, status);
+        root.replaceChildren(header, expectation, warning, evidence, preview, copy, save, status);
         title.focus({ preventScroll: true });
     };
     const controller = { draft: () => draft, report: () => completed, restore: render };

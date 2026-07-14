@@ -9,6 +9,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
+            [acceptance.steps.defect-library :as defect-library]
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.event-feed-query :as event-feed-query]
             [acceptance.steps.fresh-live-session :as fresh-live-session]
@@ -49,6 +50,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               defect-library/handlers
                validation-presence-semantics/handlers
                missing-event-defect-report/handlers
                schema-documentation/handlers
@@ -99,5 +101,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T17:33:33.342677683+02:00", :module-hash "1949985646", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 48, :hash "-1270656170"} {:id "def/handlers", :kind "def", :line 50, :end-line 99, :hash "1519567131"}]}
+;; {:version 1, :tested-at "2026-07-14T18:05:46.134501846+02:00", :module-hash "-1441139311", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 49, :hash "1293829055"} {:id "def/handlers", :kind "def", :line 51, :end-line 101, :hash "1009051799"}]}
 ;; clj-mutate-manifest-end

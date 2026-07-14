@@ -30,6 +30,7 @@ export function createLiveInspectorActions(effects) {
         ...(effects.addPropertyValidation ? { addPropertyValidation(event, path, trigger) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
         ...(effects.draftContinuation ? { draftContinuation(event) { return effects.draftContinuation?.(event); } } : {}),
         ...(effects.startDefectReport ? { startDefectReport(event) { effects.startDefectReport?.(event); } } : {}),
+        ...(effects.openReportedDefect ? { openReportedDefect(defectId, event, issueIndex, trigger) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),
         validationAvailability(event) {
             return effects.validationAvailable?.(event) === false
                 ? { enabled: false, reason: "Select a schema to validate" }

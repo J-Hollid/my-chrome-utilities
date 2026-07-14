@@ -6,10 +6,18 @@ import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-fee
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 
-export const dataLayerViews = ["Live", "Library", "Sessions", "Schemas"] as const;
+export const dataLayerViews = ["Live", "Library", "Sessions", "Defects", "Schemas"] as const;
 export type DataLayerView = (typeof dataLayerViews)[number];
 export type LiveStatus = "Live" | "Paused";
 export type InspectorLayout = "stacked" | "split";
+
+export interface LiveEventDefectTriage {
+  state: string;
+  issueDetails: readonly {
+    state: string;
+    defectLinks: readonly { id:string; label:string }[];
+  }[];
+}
 
 export interface LiveSource {
   id: string;
@@ -25,6 +33,7 @@ export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureT
     sourceName?: string;
     destination?: string;
     keyProperties?: Readonly<Record<string, unknown>>;
+    defectTriage?: LiveEventDefectTriage;
     validationDetails?: {
       issues: readonly ValidationIssue[];
       evaluations: readonly ValidationEvaluation[];
