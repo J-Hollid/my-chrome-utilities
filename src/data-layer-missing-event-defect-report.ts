@@ -1,5 +1,6 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import type { SchemaAssignment, SchemaDefinition, ValidationTarget } from "./data-layer-schema-verification.js";
+import { missingEventActualPresentation } from "./data-layer-unified-defect-builder.js";
 
 export interface MissingEventScopeEvent {
   id: string;
@@ -67,6 +68,7 @@ export interface MissingEventReport {
   type: "Missing event";
   capturedEventId?: string;
   actual: string;
+  absenceEvidence: string;
   expected: string;
   schema: { id: string; name: string; version: number; rules: SchemaDefinition["attachedRules"]; documentation: SchemaDefinition["documentation"] };
   assignment?: SchemaAssignment;
@@ -324,6 +326,7 @@ export function createMissingEventReport(
   return {
     type:"Missing event",
     actual:`No matching ${expectation.eventName} event was captured`,
+    absenceEvidence:`No matching ${expectation.eventName} event was captured. ${missingEventActualPresentation({ eventName:expectation.eventName, sourceId:expectation.sourceId, pathname:draft.scope.pathname, startedAt:draft.scope.startedAt, endedAt:draft.scope.endedAt })}`,
     expected,
     schema:{
       id:expectation.schema.id,
@@ -362,7 +365,7 @@ export function generateMissingEventRepresentations(report: MissingEventReport):
     ["Summary", `Missing event: ${report.expectation.eventName}`],
     ["Description", `${report.expectation.eventName} was expected during ${report.scope.pathname}, but no matching event was captured.`],
     ["Steps to reproduce", report.reproductionSteps.join("\n")],
-    ["Actual result", report.actual],
+    ["Actual result", report.absenceEvidence],
     ["Expected result", `${report.expected}. ${report.expectation.explanation}`.trim()],
     ["Schema expectation", `${report.schema.name} revision ${report.schema.version}\n${assignment}\nSchema rules and documentation are expectation context, not observed capture evidence.`],
     ["Capture evidence", captureEvidence],

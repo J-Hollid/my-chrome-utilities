@@ -45,6 +45,7 @@ import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-libra
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./data-layer-allowed-value-expansion.js";
+import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, validateLocalRulePromotion } from "./data-layer-local-rule-promotion.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
@@ -173,6 +174,7 @@ const liveEventQuery = document.querySelector("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector("#schema-editor");
+const schemaDetail = document.querySelector("#schema-detail");
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorDescription = document.querySelector("#schema-editor-description");
@@ -323,6 +325,11 @@ const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
 document.body.append(schemaPropertyRulePicker);
+const localRulePromotionDialog = document.createElement("dialog");
+localRulePromotionDialog.id = "local-rule-promotion-review";
+localRulePromotionDialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
+document.body.append(localRulePromotionDialog);
+let pendingLocalRulePromotion;
 const createSchemaAssignmentButton = document.querySelector("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector("#create-schema-rule");
 const schemaRuleEditor = document.querySelector("#schema-rule-editor");
@@ -1566,6 +1573,224 @@ function schemaPropertyAt(document, path) {
         property = segment === "*" || /^\d+$/.test(segment) ? property?.items : property?.properties?.[segment];
     return property;
 }
+function promotionReusableRules() {
+    return reusableSchemaRules.map((rule) => ({
+        ...structuredClone(rule),
+        version: rule.version ?? 1,
+        ...(rule.revisionHistory ? {
+            revisionHistory: rule.revisionHistory.map((snapshot) => ({ ...structuredClone(snapshot), id: rule.id })),
+        } : {}),
+    }));
+}
+function storedPromotionRules(rules) {
+    return rules.map((rule) => {
+        const { revisionHistory, ...current } = structuredClone(rule);
+        return {
+            ...current,
+            ...(revisionHistory ? {
+                revisionHistory: revisionHistory.map((snapshot) => ({
+                    name: snapshot.name ?? rule.name,
+                    kind: snapshot.kind ?? rule.kind,
+                    version: snapshot.version ?? 1,
+                    ...(snapshot.enabled !== undefined ? { enabled: snapshot.enabled } : {}),
+                    ...(snapshot.operator !== undefined ? { operator: snapshot.operator } : {}),
+                    ...(snapshot.parameters !== undefined ? { parameters: snapshot.parameters } : {}),
+                    ...(snapshot.allowedValues !== undefined ? { allowedValues: structuredClone(snapshot.allowedValues) } : {}),
+                    ...(snapshot.severity !== undefined ? { severity: snapshot.severity } : {}),
+                    ...(snapshot.message !== undefined ? { message: snapshot.message } : {}),
+                    ...(snapshot.conditionGroup !== undefined ? { conditionGroup: structuredClone(snapshot.conditionGroup) } : {}),
+                })),
+            } : {}),
+        };
+    });
+}
+function typedPromotionValue(value) {
+    return value === null ? "null" : `${typeof value} ${String(value)}`;
+}
+function restoreLocalRulePromotionPresentation(ruleId, focusOrigin) {
+    const pending = pendingLocalRulePromotion;
+    if (!pending)
+        return;
+    selectedSchemaPropertyPath = pending.propertyPath.slice(1).replaceAll("/", ".");
+    const property = schemaPropertyTree.querySelector(`li[data-schema-property-path="${CSS.escape(selectedSchemaPropertyPath)}"]`);
+    const disclosure = property?.querySelector("details[data-attached-rules]");
+    if (disclosure)
+        disclosure.open = true;
+    if (schemaDetail)
+        schemaDetail.scrollTop = pending.scrollTop;
+    if (focusOrigin)
+        pending.trigger.focus({ preventScroll: true });
+    else
+        property?.querySelector(`.schema-attached-rule[data-rule-id="${CSS.escape(ruleId)}"]`)?.focus({ preventScroll: true });
+}
+function closeLocalRulePromotionReview() {
+    if (!pendingLocalRulePromotion)
+        return;
+    if (localRulePromotionDialog.open)
+        localRulePromotionDialog.close();
+    restoreLocalRulePromotionPresentation(pendingLocalRulePromotion.sourceRuleId, true);
+    pendingLocalRulePromotion = undefined;
+}
+function openLocalRulePromotionReview(propertyPath, sourceRuleId, trigger) {
+    const schema = schemaDraft && schemas.find(({ id }) => id === schemaDraft?.id);
+    if (!schema)
+        return;
+    let review;
+    try {
+        review = reviewLocalRulePromotion({ schema, reusableRules: promotionReusableRules(), propertyPath, sourceRuleId });
+    }
+    catch (error) {
+        if (schemaResult)
+            schemaResult.textContent = error instanceof Error ? error.message : "Promotion is no longer available.";
+        return;
+    }
+    pendingLocalRulePromotion = { trigger, propertyPath, sourceRuleId, scrollTop: schemaDetail?.scrollTop ?? 0, review, duplicateArmed: false };
+    const heading = document.createElement("h4");
+    heading.id = "local-rule-promotion-heading";
+    heading.tabIndex = -1;
+    heading.textContent = "Promote to reusable rule";
+    const summary = document.createElement("p");
+    summary.id = "local-rule-promotion-summary";
+    summary.textContent = `${review.source.schema.name} revision ${review.source.schema.version} working draft · ${review.source.propertyPath} · ${review.source.rule.name ?? review.source.rule.id} (${review.source.rule.id}) revision ${review.source.rule.version}`;
+    const configuration = document.createElement("p");
+    configuration.id = "local-rule-promotion-configuration";
+    const values = review.source.rule.allowedValues?.map(typedPromotionValue).join(", ") ?? review.source.rule.parameters ?? "no parameters";
+    configuration.textContent = `Operator ${review.source.rule.operator ?? "rule"} · typed parameters ${values} · applicable type ${review.source.rule.applicableType ?? "any"} · severity ${review.source.rule.severity ?? "error"} · message ${review.source.rule.message ?? "default"} · condition ${review.source.rule.conditionGroup ? JSON.stringify(review.source.rule.conditionGroup) : "always"} · ${review.source.rule.enabled === false ? "disabled" : "enabled"}`;
+    const actionGroup = document.createElement("fieldset");
+    const actionLegend = document.createElement("legend");
+    actionLegend.textContent = "Promotion action";
+    actionGroup.append(actionLegend);
+    const createAction = document.createElement("input");
+    createAction.type = "radio";
+    createAction.name = "local-rule-promotion-action";
+    createAction.value = "create";
+    createAction.id = "local-rule-promotion-create";
+    createAction.checked = review.equivalentRules.length === 0;
+    const createActionLabel = document.createElement("label");
+    createActionLabel.htmlFor = createAction.id;
+    createActionLabel.textContent = review.equivalentRules.length ? "Create a separate reusable rule" : "Create reusable rule";
+    actionGroup.append(createAction, createActionLabel);
+    for (const equivalent of review.equivalentRules) {
+        const use = document.createElement("input");
+        use.type = "radio";
+        use.name = createAction.name;
+        use.value = equivalent.id;
+        use.id = `local-rule-promotion-use-${equivalent.id.replace(/[^a-z0-9]+/gi, "-")}`;
+        use.checked = equivalent === review.equivalentRules[0];
+        const label = document.createElement("label");
+        label.htmlFor = use.id;
+        label.textContent = `Use existing reusable rule ${equivalent.name} revision ${equivalent.version} (recommended)`;
+        actionGroup.append(use, label);
+    }
+    const name = document.createElement("input");
+    name.id = "local-rule-promotion-name";
+    name.required = true;
+    name.value = "";
+    const nameLabel = document.createElement("label");
+    nameLabel.htmlFor = name.id;
+    nameLabel.textContent = "Rule name (required)";
+    const description = document.createElement("textarea");
+    description.id = "local-rule-promotion-description";
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.htmlFor = description.id;
+    descriptionLabel.textContent = "Description (optional)";
+    const examples = document.createElement("textarea");
+    examples.id = "local-rule-promotion-examples";
+    const examplesLabel = document.createElement("label");
+    examplesLabel.htmlFor = examples.id;
+    examplesLabel.textContent = "Examples (optional)";
+    const assistance = document.createElement("output");
+    assistance.id = "local-rule-promotion-assistance";
+    assistance.setAttribute("aria-live", "polite");
+    const warning = document.createElement("p");
+    warning.id = "local-rule-promotion-warning";
+    warning.hidden = true;
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.textContent = "Confirm promotion";
+    confirm.setAttribute("data-action-variant", "primary");
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    cancel.setAttribute("data-action-variant", "quiet");
+    const selectedAction = () => localRulePromotionDialog.querySelector('input[name="local-rule-promotion-action"]:checked');
+    const selection = () => {
+        const selected = selectedAction();
+        return selected?.value === "create"
+            ? { action: "create", name: name.value }
+            : { action: "use-existing", reusableRuleId: selected?.value ?? "" };
+    };
+    const refresh = () => {
+        if (!pendingLocalRulePromotion)
+            return;
+        pendingLocalRulePromotion.duplicateArmed = false;
+        const validation = validateLocalRulePromotion(review, selection());
+        assistance.textContent = validation.assistance;
+        confirm.disabled = !validation.ready;
+        warning.hidden = !validation.duplicateDefinitionWarning;
+        warning.textContent = validation.duplicateDefinitionWarning ? "An equivalent reusable definition already exists. Confirm to create a separate duplicate definition." : "";
+        const creating = selectedAction()?.value === "create";
+        name.disabled = !creating;
+        description.disabled = !creating;
+        examples.disabled = !creating;
+        confirm.textContent = "Confirm promotion";
+    };
+    actionGroup.addEventListener("change", refresh);
+    name.addEventListener("input", refresh);
+    description.addEventListener("input", refresh);
+    examples.addEventListener("input", refresh);
+    cancel.addEventListener("click", closeLocalRulePromotionReview);
+    confirm.addEventListener("click", () => {
+        const pending = pendingLocalRulePromotion;
+        if (!pending)
+            return;
+        const validation = validateLocalRulePromotion(review, selection());
+        if (!validation.ready) {
+            refresh();
+            return;
+        }
+        if (validation.duplicateDefinitionWarning && !pending.duplicateArmed) {
+            pending.duplicateArmed = true;
+            warning.hidden = false;
+            warning.textContent = "Equivalent definition confirmed as a deliberate duplicate. Confirm once more to persist it.";
+            confirm.textContent = "Confirm duplicate definition";
+            return;
+        }
+        const selected = selection();
+        try {
+            const result = selected.action === "create"
+                ? promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath, sourceRuleId, action: "create", name: name.value, description: description.value, examples: examples.value })
+                : promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath, sourceRuleId, action: "use-existing", reusableRuleId: selected.reusableRuleId });
+            const nextSchemas = schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate);
+            const nextRules = storedPromotionRules(result.reusableRules);
+            persistLocalRulePromotion(localStorage, {
+                schemaKey: SCHEMA_LIBRARY_STORAGE_KEY,
+                schemaValue: serializeSchemaLibrary(nextSchemas),
+                ruleKey: SCHEMA_RULE_STORAGE_KEY,
+                ruleValue: JSON.stringify(nextRules),
+            });
+            schemas = nextSchemas;
+            reusableSchemaRules = nextRules;
+            schemaDraft = schemaEditorDraft(result.schema);
+            localRulePromotionDialog.close();
+            renderSchemas();
+            renderSchemaWorkflowRows();
+            renderSchemaDraft();
+            restoreLocalRulePromotionPresentation(result.replacementRuleId, false);
+            pendingLocalRulePromotion = undefined;
+            if (schemaResult)
+                schemaResult.textContent = `Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`;
+        }
+        catch (error) {
+            assistance.textContent = error instanceof Error ? `Promotion was not saved: ${error.message}` : "Promotion was not saved.";
+        }
+    });
+    localRulePromotionDialog.replaceChildren(heading, summary, configuration, actionGroup, nameLabel, name, descriptionLabel, description, examplesLabel, examples, assistance, warning, confirm, cancel);
+    refresh();
+    localRulePromotionDialog.showModal();
+    heading.focus({ preventScroll: true });
+}
+localRulePromotionDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeLocalRulePromotionReview(); });
 function renderSchemaDraft() {
     const draft = schemaDraft;
     if (schemaEditor)
@@ -1744,6 +1969,10 @@ function renderSchemaDraft() {
             view.append("No rules attached to this property.");
         for (const rule of attached) {
             const row = document.createElement("div");
+            row.className = "schema-attached-rule";
+            row.dataset.ruleId = rule.id;
+            row.dataset.propertyPath = persistedPath;
+            row.tabIndex = -1;
             const conditionSummary = rule.conditionGroup && rule.propertyPath && rule.operator
                 ? conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: rule.propertyPath, operator: rule.operator, ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}) } })
                 : undefined;
@@ -1756,7 +1985,18 @@ function renderSchemaDraft() {
             remove.type = "button";
             remove.textContent = "Remove";
             remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
-            row.append(toggle, remove);
+            const promotion = storedSchema && localRulePromotionAvailability({ schema: storedSchema, reusableRules: promotionReusableRules(), propertyPath: persistedPath, sourceRuleId: rule.id }).available
+                ? document.createElement("button")
+                : undefined;
+            if (promotion) {
+                promotion.type = "button";
+                promotion.textContent = "Promote to reusable rule";
+                promotion.className = "local-rule-promotion-action";
+                promotion.dataset.ruleId = rule.id;
+                promotion.dataset.propertyPath = persistedPath;
+                promotion.addEventListener("click", () => openLocalRulePromotionReview(persistedPath, rule.id, promotion));
+            }
+            row.append(...(promotion ? [promotion] : []), toggle, remove);
             view.append(row);
         }
         item.append(label, metadata, documentationSection, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view);

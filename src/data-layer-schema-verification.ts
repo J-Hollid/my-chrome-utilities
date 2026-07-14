@@ -14,7 +14,7 @@ import {
 } from "./data-layer-schema-documentation.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
+export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
   baseVersion: number;
   sourceVersion: number;
