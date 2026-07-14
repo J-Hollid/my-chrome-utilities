@@ -2,9 +2,14 @@ import type { ValidationState } from "./data-layer-source.js";
 import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
 import { resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+import {
+  conditionGroupAppliesToValue,
+  conditionalRuleSummary,
+  type ConditionalRuleConditionGroup,
+} from "./data-layer-conditional-validation-rules.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; }
+export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
   baseVersion: number;
   sourceVersion: number;
@@ -32,7 +37,7 @@ export interface SchemaAssignment {
   schemaVersion?: number;
 }
 export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; propertyOrigin?: "manual"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
-export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; }
+export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; conditionSummary?: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
@@ -271,6 +276,12 @@ function issueFromAttachedRule(
     severity:rule.severity ?? "error",
     origin:`${schema.name} v${schema.version}`,
     ...(allowedValues.length ? { allowedValues } : {}),
+    ...(rule.conditionGroup && rule.propertyPath && rule.operator ? {
+      conditionSummary:conditionalRuleSummary({
+        conditionGroup:rule.conditionGroup,
+        consequence:{ propertyPath:rule.propertyPath, operator:rule.operator, ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) },
+      }),
+    } : {}),
   };
 }
 
@@ -314,6 +325,7 @@ function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): P
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {
   for (const rule of rules) {
     if (rule.enabled === false) continue;
+    if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) continue;
     if (rule.propertyPath?.startsWith("/")) {
       for (const match of resolveNestedValues(value, rule.propertyPath)) {
         const failure = nestedRuleFailure(rule, match);
@@ -347,6 +359,23 @@ function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, s
 
 function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
   return rules.filter(({ enabled }) => enabled !== false).flatMap<ValidationEvaluation>((rule): ValidationEvaluation[] => {
+    if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) {
+      const summary = rule.propertyPath && rule.operator
+        ? conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath, operator:rule.operator, ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } })
+        : "Conditional rule";
+      return [{
+        propertyPath:rule.propertyPath ?? "",
+        status:"not-applicable",
+        message:`Not applicable: ${summary}`,
+        expected:summary,
+        actual:"condition not satisfied",
+        rule:rule.name ?? rule.id,
+        ruleVersion:rule.version,
+        severity:rule.severity ?? "error",
+        schemaName:schema.name,
+        schemaVersion:schema.version,
+      }];
+    }
     const issues: ValidationIssue[] = [];
     attachedRuleIssues(value, schema, issues, [rule]);
     const propertyPath = rule.propertyPath ?? rule.parameters?.split(":", 1)[0]?.split(",", 1)[0]?.trim() ?? "";

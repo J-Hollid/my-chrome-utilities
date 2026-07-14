@@ -53,7 +53,7 @@ interface QueryableEvent {
       rule: string;
       severity: string;
       propertyPath: string;
-      status: "pass" | "warning" | "error";
+      status: "pass" | "warning" | "error" | "not-applicable";
     }[];
     issues?: readonly { severity?: string; instancePath: string }[];
   };
