@@ -41,6 +41,7 @@
                         [acceptance.missing-event-defect-report-steps-test]
                         [acceptance.validation-presence-semantics-steps-test]
                         [acceptance.schema-property-removal-steps-test]
+                        [acceptance.schema-publication-refresh-steps-test]
                         [acceptance.schema-property-rule-picker-steps-test]
                         [acceptance.recursive-property-validation-steps-test]
                         [acceptance.information-architecture-steps-test]
@@ -80,6 +81,7 @@
                                                 'acceptance.missing-event-defect-report-steps-test
                                                 'acceptance.validation-presence-semantics-steps-test
                                                 'acceptance.schema-property-removal-steps-test
+                                                'acceptance.schema-publication-refresh-steps-test
                                                 'acceptance.schema-property-rule-picker-steps-test
                                                 'acceptance.recursive-property-validation-steps-test
                                                 'acceptance.information-architecture-steps-test

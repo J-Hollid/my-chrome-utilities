@@ -2,7 +2,7 @@ import { dataLayerViews, filteredLiveEvents, } from "./data-layer-live-observer.
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
-import { buildValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
+import { buildValidationPropertyTree, presentValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import { resolvePropertyDocumentation, schemaDocumentationSearchText } from "./data-layer-schema-documentation.js";
 export function findLiveObserverElements(root = document) {
@@ -371,7 +371,7 @@ function renderEventLevelIssues(event, actionHandlers) {
     section.append(heading, list);
     return section;
 }
-export function renderLiveInspector(elements, event, actionHandlers) {
+export function renderLiveInspector(elements, event, actionHandlers, presentation = {}) {
     if (!elements.eventInspector)
         return;
     elements.eventInspector.classList.add("live-detail-view");
@@ -405,6 +405,9 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     payloadHeading.textContent = "Properties";
     const propertyList = document.createElement("ul");
     propertyList.id = "live-validation-properties";
+    const nonApplicableVisibility = document.createElement("button");
+    nonApplicableVisibility.type = "button";
+    nonApplicableVisibility.id = "live-non-applicable-properties";
     const searchLabel = document.createElement("label");
     searchLabel.htmlFor = "live-property-search";
     searchLabel.textContent = "Search properties";
@@ -413,10 +416,10 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     propertySearch.type = "search";
     const propertyTree = recursiveValidationTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
     const addValidation = actionHandlers.addPropertyValidation ? (path, trigger) => actionHandlers.addPropertyValidation?.(event, path, trigger) : undefined;
-    propertyList.replaceChildren(...propertyTree.map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation)));
+    let showNonApplicable = presentation.showNonApplicableProperties === true;
     const previousOpen = new Set();
     let searchActive = false;
-    propertySearch.addEventListener("input", () => {
+    const applyPropertySearch = () => {
         const query = propertySearch.value.trim().toLowerCase();
         const disclosures = Array.from(propertyList.querySelectorAll("details"));
         if (query && !searchActive)
@@ -445,12 +448,26 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         for (const disclosure of disclosures) {
             if (query)
                 disclosure.toggleAttribute("open", matches.some((row) => disclosure.contains(row)));
-            else
+            else if (searchActive)
                 disclosure.toggleAttribute("open", previousOpen.has(disclosure.dataset.propertyPath ?? ""));
         }
         searchActive = Boolean(query);
-    });
-    payload.append(payloadHeading, searchLabel, propertySearch, propertyList);
+    };
+    const renderProperties = () => {
+        const openPaths = new Set(Array.from(propertyList.querySelectorAll("details[open][data-property-path]")).map(({ dataset }) => dataset.propertyPath ?? ""));
+        payload.dataset.showNonApplicableProperties = String(showNonApplicable);
+        nonApplicableVisibility.textContent = showNonApplicable ? "Hide non-applicable properties" : "Show non-applicable properties";
+        nonApplicableVisibility.setAttribute("aria-pressed", String(showNonApplicable));
+        propertyList.replaceChildren(...presentValidationPropertyTree(propertyTree, showNonApplicable)
+            .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation)));
+        for (const disclosure of Array.from(propertyList.querySelectorAll("details[data-property-path]")))
+            disclosure.toggleAttribute("open", openPaths.has(disclosure.dataset.propertyPath ?? ""));
+        applyPropertySearch();
+    };
+    propertySearch.addEventListener("input", applyPropertySearch);
+    nonApplicableVisibility.addEventListener("click", () => { showNonApplicable = !showNonApplicable; renderProperties(); });
+    renderProperties();
+    payload.append(payloadHeading, nonApplicableVisibility, searchLabel, propertySearch, propertyList);
     const rawJson = document.createElement("details");
     rawJson.id = "live-raw-json";
     const rawJsonSummary = document.createElement("summary");

@@ -64,7 +64,7 @@
                       (:liveSummary observation))
                    "Live presentation counted not-applicable rules as pass, failure, error, or warning."
                    (:liveSummary observation))
-  (support/assert! (= {:notApplicable true :issueRows 0 :invalidMissing false}
+  (support/assert! (= {:hiddenByDefault true :revealed true :issueRows 0 :invalidMissing false}
                       (:liveInspector observation))
                    "The rendered Live inspector did not preserve neutral optional-absence presentation."
                    (:liveInspector observation))
