@@ -25,15 +25,15 @@
 (defn- observation! [] (or @browser-observation (load-observation!)))
 
 (def ^:private expected-initial
-  {:createAvailable true :continuationAbsent true})
+  {:propertyAvailable true :genericAbsent true :continuationAbsent true})
 
 (def ^:private expected-interaction
   {:initial {:heading "Product listing working draft"
              :status "Current revision 3 · 2 pending changes"
-             :actions ["Add property from this event" "Review draft" "Publish revision" "Use a different schema"]
+             :actions ["Review draft" "Publish revision" "Use a different schema"]
              :sectionCount 1 :genericAbsent true}
    :opened {:context "Adding to Product listing draft"
-            :stages ["Choose properties" "Define requirement" "Choose event scope" "Review validation"]}
+            :stages ["Define requirement" "Choose event scope" "Review validation"]}
    :requirement {:heading "Define requirement" :destinationAbsent true :selectedSchema "schema-product-listing"}
    :prefill {:target "payload" :targetSource "Product listing version 3"
              :source "event-history" :sourceSource "Product pages assignment"
@@ -88,7 +88,7 @@
 
 (defn- assert-continuation! [example observation]
   (support/assert! (= expected-initial (:initial observation))
-                   "Events without context did not retain generic creation." observation)
+                   "Events without context did not retain property-row creation." observation)
   (support/assert! (= expected-interaction (:interaction observation))
                    "The selected working draft was not continued through the rendered browser UI." observation)
   (support/assert! (= expected-reload (:reload observation))

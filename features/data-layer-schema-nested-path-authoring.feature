@@ -12,25 +12,22 @@ Feature: Data layer schema nested path authoring
 
   # Data layer schema nested path authoring 001
   Scenario: Data layer schema nested path authoring 001
-    Given the operator selects nested event value order.id
-    When Add validation continues
+    When the operator activates Add validation on nested event property order.id
     Then rule target /order/id is displayed
     And no array-target choice is requested
     And observed value and type prefill the rule builder
 
   # Data layer schema nested path authoring 002
   Scenario: Data layer schema nested path authoring 002
-    Given the operator selects products item 2 id at concrete path /products/1/id
-    When Add validation continues
-    Then target choice is required between This item only and This property in every item
-    And neither target choice is selected automatically
-    And This item only identifies item 2 and zero-based index 1
-    And This property in every item identifies 2 matched values
+    When products is expanded in the event property tree
+    Then Every item exposes id with target /products/*/id and 2 matched values
+    And Specific items Item 2 exposes id with target /products/1/id and zero-based index 1
+    And each target has its own Add validation action
 
   # Data layer schema nested path authoring 003
   Scenario Outline: Data layer schema nested path authoring 003
-    Given selected concrete event path is /products/1/id
-    When the operator chooses <target_choice>
+    Given products is expanded to tree location <target_choice>
+    When the operator activates Add validation for id
     Then rule target is <rule_target>
     And matched value count is <matched_value_count>
 
@@ -61,7 +58,7 @@ Feature: Data layer schema nested path authoring
 
   # Data layer schema nested path authoring 006
   Scenario Outline: Data layer schema nested path authoring 006
-    Given the advanced editor manual rule target is <entered_path>
+    Given the advanced target editor receives slash-path shorthand <entered_path>
     When path validation runs
     Then path result is <path_result>
     And assistance is <assistance>

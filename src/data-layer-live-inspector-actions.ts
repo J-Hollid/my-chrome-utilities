@@ -10,6 +10,7 @@ export interface LiveInspectorActions {
   saveToLibrary(event: LiveEvent): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
@@ -35,6 +36,7 @@ export interface LiveInspectorActionEffects {
   storeTemplate(template: EditableEventTemplate): void;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
+  addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
@@ -77,6 +79,7 @@ export function createLiveInspectorActions(
     },
     ...(effects.createSchema ? { createSchema(event: LiveEvent) { effects.createSchema?.(event); } } : {}),
     ...(effects.createValidation ? { createValidation(event: LiveEvent) { effects.createValidation?.(event); } } : {}),
+    ...(effects.addPropertyValidation ? { addPropertyValidation(event: LiveEvent, path: string, trigger: HTMLButtonElement) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
     ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),
     ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
     validationAvailability(event) {

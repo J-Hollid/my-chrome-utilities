@@ -8,12 +8,15 @@ import {
   compatibleRequirements,
   createGuidedContinuationDraft,
   createGuidedValidationDraft,
+  createGuidedValidationForProperty,
   guidedValidationStages,
   guidedAssignmentsMatch,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
+  retargetGuidedValidation,
   resolveGuidedPrefillReplacement,
+  resolveGuidedTargetReplacement,
   selectGuidedProperty,
   selectGuidedContinuationProperty,
   setAllowedValue,
@@ -34,6 +37,21 @@ const event = {
   pageUrl:"http://127.0.0.1:4173/",
   payload:{ page_type:"product_list", count:2, active:true, products:[], commerce:{} },
 };
+const propertyEntry = createGuidedValidationForProperty({ ...event, payload:{ oOrder:{ orderId:"ORDER-1", products:[{ sku:"A" }, { sku:"B" }] } } }, "/oOrder/products/*/sku");
+assert.equal(propertyEntry.stage, "destination"); assert.equal(propertyEntry.property.path, "/oOrder/products/*/sku"); assert.equal(propertyEntry.property.detectedType, "String"); assert.equal(propertyEntry.property.observedValue, "A"); assert.ok(!guidedValidationStages(propertyEntry).includes("property"));
+const retargetedEntry = retargetGuidedValidation(propertyEntry, '$["oOrder"]["products"][*]["missing"]', "Number");
+assert.equal(retargetedEntry.property.path, '$["oOrder"]["products"][*]["missing"]');
+assert.equal(retargetedEntry.property.detectedType, "Number");
+assert.equal(retargetedEntry.property.expectedType, "Number");
+assert.equal(retargetedEntry.property.observedValue, undefined);
+assert.equal(retargetedEntry.stage, "destination");
+assert.equal(retargetedEntry.propertyEntry, true);
+const incompatibleRetarget = retargetGuidedValidation(setGuidedRequirement(propertyEntry, "Must match a pattern"), '$["oOrder"]["products"]');
+assert.equal(incompatibleRetarget.requirementCorrectionRequired, true);
+assert.ok(incompatibleRetarget.targetReplacementReview);
+const acceptedRetarget = resolveGuidedTargetReplacement(incompatibleRetarget, "accept");
+assert.equal(acceptedRetarget.requirement, undefined);
+assert.equal(acceptedRetarget.requirementCorrectionRequired, false);
 
 const initial = createGuidedValidationDraft(event);
 assert.equal(initial.stage, "property");

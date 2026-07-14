@@ -34,12 +34,14 @@
             [acceptance.steps.session-boundaries :as session-boundaries]
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
+            [acceptance.steps.recursive-property-validation :as recursive-property-validation]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
   (vec (concat fresh-live-session/handlers
+               recursive-property-validation/handlers
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                project-skeleton/handlers

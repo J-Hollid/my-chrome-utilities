@@ -11,8 +11,9 @@ Feature: Data layer guided validation draft continuation
   # Data layer guided validation draft continuation 001
   Scenario: Data layer guided validation draft continuation 001
     Given pageview has no working-draft continuation context
-    When event actions are displayed
-    Then Create validation from this event is available
+    When event property rows are displayed
+    Then each property row offers Add validation
+    And Create validation from this event is absent
     And working-draft continuation actions are absent
 
   # Data layer guided validation draft continuation 002
@@ -21,24 +22,25 @@ Feature: Data layer guided validation draft continuation
     And Product listing is the selected working-draft continuation context
     When event actions are displayed
     Then one working-draft section identifies Product listing, revision 3, and 2 pending changes
-    And it offers Add property from this event, Review draft, Publish revision, and Use a different schema
+    And it offers Review draft, Publish revision, and Use a different schema
+    And property-row Add validation actions identify Product listing as their destination
+    And Add property from this event is absent
     And Create validation from this event is absent
 
   # Data layer guided validation draft continuation 003
   Scenario: Data layer guided validation draft continuation 003
     Given Product listing is the selected working-draft continuation context
-    When the operator activates Add property from this event
-    Then property selection opens with Adding to Product listing draft displayed
-    When the operator selects page_name
-    Then the schema destination stage is skipped
+    When the operator activates Add validation for property page_name
+    Then the requirement stage opens with Adding to Product listing draft displayed
+    And the schema destination and property-selection stages are skipped
     And Product listing remains selected by stable schema identity
-    And the requirement stage is displayed without opening a schema picker
+    And no schema picker opens
 
   # Data layer guided validation draft continuation 004
   Scenario: Data layer guided validation draft continuation 004
     Given Product listing targets payload and has 1 enabled assignment compatible with pageview
     And Product listing is the selected working-draft continuation context
-    When requirement and scope are displayed for Add property from this event
+    When requirement and scope are displayed for Add validation on page_name
     Then validation target, assignment, domain, and path conditions are prefilled from Product listing
     And every prefilled value identifies its source
     And the operator can change each prefilled value before review
@@ -47,7 +49,7 @@ Feature: Data layer guided validation draft continuation
   Scenario Outline: Data layer guided validation draft continuation 005
     Given Product listing has <compatible_assignment_count> compatible assignments for pageview
     And Product listing is the selected working-draft continuation context
-    When assignment resolution runs for Add property from this event
+    When assignment resolution runs for property-row Add validation
     Then assignment behavior is <assignment_behavior>
     And Product listing remains the schema destination
     And the schema destination stage is skipped
@@ -94,4 +96,4 @@ Feature: Data layer guided validation draft continuation
     Given Product listing is the selected working-draft continuation context
     When the side panel reloads and pageview is reopened
     Then Product listing remains the named continuation context
-    And Add property from this event still skips schema destination selection
+    And property-row Add validation still skips schema destination selection

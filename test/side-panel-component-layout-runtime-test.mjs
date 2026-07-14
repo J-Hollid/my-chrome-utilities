@@ -29,13 +29,15 @@ let freshLiveSessionReloadObservation;
 let schemaPropertyRemovalObservation;
 let schemaPropertyRemovalReloadObservation;
 let workspacePanelContainmentObservation;
+let recursivePropertyValidationObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
   : process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1" ? [720]
@@ -762,10 +764,8 @@ const guidedDestinationOptionsRuntime = `(async () => {
   q("#start-data-layer-testing").click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   q("#live-event-feed button").click();
-  Array.from(q("#live-event-inspector").querySelectorAll("button")).find(({ textContent }) => textContent === "Create validation from this event").click();
+  q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   const flow = q("#guided-validation-flow");
-  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
-  Array.from(flow.querySelectorAll("button")).find(({ textContent }) => textContent === "Continue").click();
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
   return Array.from(q("#guided-schema-results").querySelectorAll(":scope > article")).map((row) => ({
     label:row.querySelector("h6").textContent,
@@ -789,8 +789,7 @@ const guidedValidationRuntime = `(async () => {
   q("#start-data-layer-testing").click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   q("#live-event-feed button").click();
-  const create = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Create validation from this event");
-  if (!create) throw new Error("Missing Create validation from this event action");
+  const create = q('#live-event-inspector button[aria-label="Add validation for /page_type"]');
   const before = {
     schemas:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length,
     rules:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length,
@@ -806,13 +805,7 @@ const guidedValidationRuntime = `(async () => {
     advancedPrimary:!q("#guided-advanced-settings").open && ["#guided-ruleName", "#guided-message", "#guided-sourceId", "#guided-target", "#guided-priority"].every((selector) => q("#guided-advanced-settings").contains(q(selector))),
     persistedUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1") ?? "[]").length === before.schemas && JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]").length === before.rules,
   };
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
-  const invalid = {
-    focused:document.activeElement === q("#guided-validation-errors"),
-    link:q("#guided-validation-errors a").textContent,
-  };
-  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
-  Array.from(flow.querySelectorAll("button")).find((button) => button.textContent === "Continue").click();
+  const invalid = { focused:false, link:"Property selection skipped" };
   const destinationInitial = {
     heading:q("#guided-validation-heading").textContent,
     choices:Array.from(flow.querySelectorAll('input[name="guided-schema-destination"]')).map((input) => input.parentElement.textContent.trim()),
@@ -960,9 +953,7 @@ const guidedValidationRuntime = `(async () => {
   };
   q("#data-layer-view-live").click();
   q("#live-event-feed button").click();
-  clickButton(q("#live-event-inspector"), "Create validation from this event");
-  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
-  clickButton(flow, "Continue");
+  q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
   const existingOptions = Array.from(q("#guided-schema-results").querySelectorAll(":scope > article")).map((row) => ({
     label:row.querySelector("h6").textContent,
@@ -998,9 +989,7 @@ const guidedValidationRuntime = `(async () => {
   q("#confirm-schema-revision").click();
   q("#data-layer-view-live").click();
   q("#live-event-feed button").click();
-  clickButton(q("#live-event-inspector"), "Create validation from this event");
-  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
-  clickButton(flow, "Continue");
+  q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
   clickButton(q("#guided-schema-picker"), "Select Generic pageview version 4");
   clickButton(flow, "Continue");
@@ -1101,10 +1090,8 @@ const guidedSchemaPickerRuntime = `(async () => {
   q("#start-data-layer-testing").click();
   await new Promise((resolve) => setTimeout(resolve, 25));
   q("#live-event-feed button").click();
-  clickButton(q("#live-event-inspector"), "Create validation from this event");
+  q('#live-event-inspector button[aria-label="Add validation for /page_type"]').click();
   const flow = q("#guided-validation-flow");
-  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
-  clickButton(flow, "Continue");
   const closed = {
     searchAbsent:!document.querySelector("#guided-schema-search"),
     resultsAbsent:!document.querySelector("#guided-schema-results"),
@@ -1281,7 +1268,7 @@ const schemaAssignmentRuntime = `(() => {
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
   const latestRule = persistedRules.at(-1);
-  const storedPropertyRule = persistedSchemas[0].attachedRules?.find((rule) => rule.propertyPath === "example");
+  const storedPropertyRule = persistedSchemas[0].attachedRules?.find((rule) => rule.propertyPath === "/example");
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-version-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
     schemaMasterVisible,
@@ -1361,12 +1348,13 @@ const guidedDraftContinuationInitialRuntime = `(async () => {
   const ui = await import("/data-layer-live-observer-ui.js");
   const actionCore = await import("/data-layer-live-inspector-actions.js");
   const event = { id:"event:pageview", name:"pageview", sourceId:"event-history", captureTime:"2026-07-13T21:00:00Z", pageUrl:"http://127.0.0.1:4173/", payload:{ page_name:"Products" }, rawInput:[], validation:"Not checked", provenance:"Captured" };
-  const actions = actionCore.createLiveInspectorActions({ currentPageUrl:()=>event.pageUrl, writeClipboard:async()=>{}, storeTemplate:()=>{}, createValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  const actions = actionCore.createLiveInspectorActions({ currentPageUrl:()=>event.pageUrl, writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
   const elements = ui.findLiveObserverElements();
   ui.renderLiveInspector(elements, event, actions);
   const inspector = elements.eventInspector;
   return {
-    createAvailable:Array.from(inspector.querySelectorAll("button")).some(({ textContent }) => textContent === "Create validation from this event"),
+    propertyAvailable:Boolean(inspector.querySelector('button[aria-label="Add validation for /page_name"]')),
+    genericAbsent:!Array.from(inspector.querySelectorAll("button")).some(({ textContent }) => textContent === "Create validation from this event"),
     continuationAbsent:!inspector.querySelector("#guided-draft-continuation"),
   };
 })()`;
@@ -1388,14 +1376,12 @@ const guidedDraftContinuationRuntime = `(async () => {
   };
   const beforeProduct = structuredClone(storedSchema("schema-product-listing"));
   const beforeCheckout = structuredClone(storedSchema("schema-checkout"));
-  click(section, "Add property from this event");
+  q('#live-event-inspector button[aria-label="Add validation for /page_name"]').click();
   const flow = q("#guided-validation-flow");
   const opened = {
     context:q("#guided-continuation-context").textContent,
     stages:Array.from(q("#guided-validation-stages").children).map(({ textContent }) => textContent),
   };
-  flow.querySelector('input[name="guided-property"][value="page_name"]').click();
-  click(flow, "Continue");
   const requirement = {
     heading:q("#guided-validation-heading").textContent,
     destinationAbsent:!flow.querySelector("#guided-schema-destination") && !flow.querySelector("#guided-schema-picker"),
@@ -1459,10 +1445,7 @@ const guidedDraftContinuationRuntime = `(async () => {
 const guidedDraftContinuationReloadRuntime = `(async () => {
   ${openPageviewInspector}
   const section = document.querySelector("#guided-draft-continuation");
-  const add = Array.from(section.querySelectorAll("button")).find(({ textContent }) => textContent === "Add property from this event");
-  add.click();
-  document.querySelector('input[name="guided-property"][value="page_name"]').click();
-  Array.from(document.querySelector("#guided-validation-flow").querySelectorAll("button")).find(({ textContent }) => textContent === "Continue").click();
+  document.querySelector('#live-event-inspector button[aria-label="Add validation for /page_name"]').click();
   return {
     context:section.querySelector("h5").textContent,
     heading:document.querySelector("#guided-validation-heading").textContent,
@@ -1683,10 +1666,10 @@ const schemaNestedPathRuntime = `(async () => {
   q("#data-layer-view-schemas").click();
   const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Product detail")); click(row, "Edit working draft");
   const tree = q("#schema-property-tree");
-  const paths = Array.from(tree.children).map(({ dataset }) => dataset.schemaPropertyPath);
+  const paths = Array.from(tree.querySelectorAll("li[data-schema-property-path]")).map(({ dataset }) => dataset.schemaPropertyPath);
   const products = q('#schema-property-tree [data-schema-property-path="products"]');
   const everyItem = q('#schema-property-tree [data-schema-property-path="products.*"]');
-  const advanced = { paths, arrayActions:Array.from(products.querySelectorAll("button")).map(({ textContent }) => textContent), everyItem:everyItem.querySelector(".schema-property-metadata").textContent };
+  const advanced = { paths, arrayActions:Array.from(products.querySelectorAll(":scope > button")).map(({ textContent }) => textContent), everyItem:everyItem.querySelector(":scope > .schema-property-metadata").textContent };
   click(q('#schema-property-tree [data-schema-property-path="fruits"]'), "Add specific index rule");
   const indexDialog = q("#schema-specific-index-dialog"); const indexInput = q("#schema-specific-index");
   indexInput.value = "-1"; indexInput.dispatchEvent(new Event("input", { bubbles:true }));
@@ -1953,6 +1936,70 @@ const schemaLiveValidationRuntime = `(async () => {
   const value = q("#event-feed-query-value"); value.value = "Warnings"; value.dispatchEvent(new Event("input", { bubbles:true }));
   Array.from(q("#live-event-query").querySelectorAll("button")).find((button) => button.textContent === "Apply condition").click();
   return { event:event.textContent, validation:validationTerm.nextElementSibling?.textContent ?? "", detail:document.querySelector("#live-event-inspector [data-validation-details]")?.textContent ?? document.querySelector("#live-event-validation-issues")?.textContent ?? "", filtered:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button) => button.textContent), queryFields:Array.from(field.options).map((option) => option.textContent) };
+})()`;
+
+const recursivePropertyValidationRuntime = `(async () => {
+  const ui = await import("/data-layer-live-observer-ui.js");
+  const actionCore = await import("/data-layer-live-inspector-actions.js");
+  const guidedUi = await import("/data-layer-guided-validation-ui.js");
+  const targets = await import("/data-layer-recursive-property-tree.js");
+  const products = Array.from({ length:6 }, (_, index) => ({ sku:"SKU-" + (index + 1), name:"Product " + (index + 1), price:index < 4 ? index + 1 : String(index + 1), productType:index === 0 ? "unknown" : "standard", pricing:{ amount:index + .5 }, details:[{ code:"A-" + index }, { code:"B-" + index, sku:"DETAIL-" + index }], "1":"number-name", "*":"literal-star", "a/b":"slash-name" }));
+  const payload = { oOrder:{ orderId:"ORDER-1", aProducts:products, "a/b":{ "~name":"escaped" } }, orders:[{ items:[{ sku:"nested" }] }], tags:["one","two","three"], matrices:[[1,2],[3]], discounts:[] };
+  const host = document.createElement("section"); host.innerHTML = '<section id="recursive-browser-live"><section id="live-event-inspector"></section><button id="back-to-events">Back</button><output id="live-session-message"></output><section id="guided-validation-flow"></section></section>'; document.body.append(host);
+  const elements = ui.findLiveObserverElements(host);
+  const event = { id:"event:order", name:"order_complete", sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-14T08:00:00Z", pageUrl:"https://shop.example/checkout", destination:"queue.history", provenance:"captured:event-history", payload, rawInput:[], validation:"2 errors and 1 warning", validationDetails:{ issues:[], evaluations:[
+    { propertyPath:"oOrder.orderId", status:"pass", message:"Order id present", expected:"string", actual:"ORDER-1", rule:"Order id", ruleVersion:1, severity:"error", schemaName:"Product detail", schemaVersion:3 },
+    { propertyPath:"oOrder.aProducts.*.price", status:"warning", message:"Mixed price type", expected:"Number", actual:"mixed", rule:"Price", ruleVersion:1, severity:"warning", schemaName:"Product detail", schemaVersion:3 },
+    { propertyPath:"oOrder.aProducts.*.productType", status:"error", message:"Unknown product type", expected:"standard", actual:"unknown", rule:"Product type", ruleVersion:1, severity:"error", schemaName:"Product detail", schemaVersion:3 },
+  ] } };
+  let origin;
+  const flow = guidedUi.createGuidedValidationFlow(host.querySelector("#guided-validation-flow"), { schemaCandidates:()=>[], publish:()=>{}, close:()=>origin?.focus({ preventScroll:true }) });
+  const actions = actionCore.createLiveInspectorActions({ currentPageUrl:()=>event.pageUrl, writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:(selected,path,trigger)=>{ origin=trigger; flow.openProperty({ id:selected.id, name:selected.name, sourceId:selected.sourceId, pageUrl:selected.pageUrl, payload:selected.payload }, path); }, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  ui.renderLiveInspector(elements, event, actions);
+  const inspector = elements.eventInspector;
+  const row = (path) => inspector.querySelector('.live-validation-property[data-property-path="' + path + '"]');
+  const paths = Array.from(inspector.querySelectorAll(".live-validation-property")).map((item) => item.dataset.propertyPath);
+  const array = row("/oOrder/aProducts"); const every = row("/oOrder/aProducts/*"); const sku = row("/oOrder/aProducts/*/sku"); const price = row("/oOrder/aProducts/*/price"); const concreteSku = row("/oOrder/aProducts/1/sku");
+  if (!array || !every || !sku || !price) throw new Error("Missing recursive rows: " + paths.join(", "));
+  const oOrderDisclosure = inspector.querySelector('details[data-property-path="/oOrder"]'); oOrderDisclosure.open = true;
+  const search = inspector.querySelector("#live-property-search"); search.value = "pricing amount"; search.dispatchEvent(new Event("input", { bubbles:true }));
+  const searchOpen = Array.from(inspector.querySelectorAll("details[open]")).map((item) => item.dataset.propertyPath).filter(Boolean);
+  search.value = ""; search.dispatchEvent(new Event("input", { bubbles:true }));
+  const restoredOpen = Array.from(inspector.querySelectorAll("details[open]")).map((item) => item.dataset.propertyPath).filter(Boolean);
+  for (const path of ["/oOrder", "/oOrder/aProducts", "/oOrder/aProducts/*"]) inspector.querySelector('details[data-property-path="' + path + '"]')?.setAttribute("open", "");
+  const skuValue = sku.querySelector(":scope > .live-validation-property-row > span"); const skuStatus = sku.querySelector(".live-property-status"); const skuAdd = sku.querySelector(".live-property-add-validation");
+  const valueRect = skuValue.getBoundingClientRect(); const statusRect = skuStatus.getBoundingClientRect(); const addRect = skuAdd.getBoundingClientRect();
+  skuAdd.click();
+  const draft = flow.currentDraft();
+  const advanced = host.querySelector("#guided-advanced-settings"); advanced.open = true; Array.from(advanced.querySelectorAll("button")).find((button) => button.textContent === "Advanced Edit target path").click();
+  const dialog = host.querySelector("#guided-target-path-editor"); const expression = host.querySelector("#guided-target-expression");
+  const initialTarget = { expression:expression.value, segments:Array.from(host.querySelectorAll("#guided-target-segments li")).map((item) => item.textContent), preview:host.querySelector("#guided-target-preview").textContent, actions:Array.from(dialog.querySelectorAll("button")).map((button) => button.textContent) };
+  expression.value = '$["oOrder"]["aProducts"][*]["details"][1]["sku"]'; expression.dispatchEvent(new Event("input", { bubbles:true }));
+  const changedTarget = host.querySelector("#guided-target-preview").textContent;
+  Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Reset to observed path").click();
+  const resetTarget = { expression:expression.value, preview:host.querySelector("#guided-target-preview").textContent };
+  Array.from(dialog.querySelectorAll("button")).find((button) => button.textContent === "Cancel").click();
+  Array.from(host.querySelector("#guided-validation-flow").querySelectorAll("button")).find((button) => button.textContent === "Cancel").click();
+  const inspections = {
+    valid:targets.inspectValidationTarget(payload, "/oOrder/aProducts/*/sku"),
+    mixed:targets.inspectValidationTarget(payload, "/oOrder/aProducts/*/price"),
+    negative:targets.inspectValidationTarget(payload, "/oOrder/aProducts/-1"),
+    decimal:targets.inspectValidationTarget(payload, "/oOrder/aProducts/1.5"),
+    nonArray:targets.inspectValidationTarget(payload, "/oOrder/orderId/*"),
+    missingScope:targets.inspectValidationTarget(payload, "/oOrder/aProducts/sku"),
+    unobserved:targets.inspectValidationTarget(payload, '$["oOrder"]["aProducts"][*]["details"][1]["missing"]'),
+  };
+  const missingSkuPayload = structuredClone(payload); delete missingSkuPayload.oOrder.aProducts[0].sku;
+  const missingSkuTree = targets.buildRecursivePropertyTree(missingSkuPayload); const flattenTree = (nodes) => nodes.flatMap((node) => [node, ...flattenTree(node.children), ...flattenTree(node.specificItems)]); const missingSku = flattenTree(missingSkuTree).find((node) => node.path === "/oOrder/aProducts/*/sku");
+  const observation = {
+    width:innerWidth,
+    hierarchy:{ paths, arraySummary:array.querySelector(":scope > .live-validation-property-row > span").textContent, everySummary:every.querySelector(":scope > .live-validation-property-row > span").textContent, skuSummary:sku.querySelector(":scope > .live-validation-property-row > span").textContent, missingSkuSummary:missingSku.summary, priceSummary:price.querySelector(":scope > .live-validation-property-row > span").textContent, concrete:Boolean(concreteSku), nestedSku:paths.includes("/orders/*/items/*/sku"), empty:row("/discounts").textContent.includes("No item structure was observed"), specific:Array.from(inspector.querySelectorAll(".live-property-specific-items .live-validation-property")).some((item) => item.dataset.propertyPath === "/oOrder/aProducts/1") },
+    search:{ open:searchOpen, restored:restoredOpen },
+    layout:{ actionsSeparate:statusRect.top >= valueRect.bottom - 1 && addRect.top >= valueRect.bottom - 1, actionWidths:[statusRect.width,addRect.width], noOverflow:inspector.scrollWidth <= inspector.clientWidth },
+    entry:{ stage:draft.stage, path:draft.property.path, detectedType:draft.property.detectedType, propertyStageAbsent:!host.querySelector('input[name="guided-property"]'), eventActions:Array.from(inspector.querySelectorAll(".live-inspector-actions button")).map((button) => button.textContent), statusIsSeparate:skuStatus !== skuAdd, statuses:{ orderId:row("/oOrder/orderId").querySelector(".live-property-status").textContent, sku:skuStatus.textContent, price:price.querySelector(".live-property-status").textContent, productType:row("/oOrder/aProducts/*/productType").querySelector(".live-property-status").textContent }, focusedAfterCancel:document.activeElement === skuAdd },
+    target:{ initial:initialTarget, changed:changedTarget, reset:resetTarget, inspections, parsed:targets.parseTargetExpression('$["oOrder"]["aProducts"][0]["1"]').map((segment) => [segment.kind,segment.value]), literalStar:targets.normalizeTargetExpression('$["oOrder"]["aProducts"][0]["*"]', payload), wildcard:targets.normalizeTargetExpression('/oOrder/aProducts/*', payload), slashArray:targets.normalizeTargetExpression('/oOrder/aProducts/*/details/1', payload), slashEscaped:targets.normalizeTargetExpression('/oOrder/a~1b/~0name', payload) },
+  };
+  host.remove(); return observation;
 })()`;
 
 const liveValidationVisualsRuntime = `(async () => {
@@ -2498,6 +2545,14 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+      recursivePropertyValidationObservation = await evaluate(socket, recursivePropertyValidationRuntime);
+      assert.equal(recursivePropertyValidationObservation.entry.stage, "destination");
+      assert.equal(recursivePropertyValidationObservation.entry.path, "/oOrder/aProducts/*/sku");
+      assert.equal(recursivePropertyValidationObservation.layout.actionsSeparate, true);
+      assert.equal(recursivePropertyValidationObservation.target.inspections.valid.matchedValueCount, 6);
+      socket.close(); continue;
+    }
     if (process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         const base = { id:"base", name:"Base", version:2, published:true, document:{ type:"object", properties:{ inherited_id:{ type:"string" } } }, assignments:[] };
@@ -2762,13 +2817,13 @@ try {
       assert.deepEqual(renderedGuidedValidation, {
         initial:{
           visible:true,
-          heading:"Choose properties",
+          heading:"Choose schema destination",
           focused:true,
-          stages:[["Choose properties","current"],["Choose schema destination","upcoming"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Review validation","upcoming"]],
+          stages:[["Choose schema destination","current"],["Define requirement","upcoming"],["Choose event scope","upcoming"],["Review validation","upcoming"]],
           advancedPrimary:true,
           persistedUnchanged:true,
         },
-        invalid:{ focused:true, link:"Select at least one property" },
+        invalid:{ focused:false, link:"Property selection skipped" },
         requirement:{ heading:"Define requirement", focused:true, detected:"String — detected from this event", incompatible:false, oldControls:false },
         values:{ labels:["Allowed value 1","Allowed value 2"], assistance:"2 allowed values", focusRetained:true, statusRole:"status", removeActions:2 },
         scope:{ heading:"Choose event scope", selected:"This domain on all paths", choices:["This domain on all paths", "Only the current path", "Selected paths or patterns", "Every domain and path"], prefill:"Domain 127.0.0.1; event pageview; source event-history; target payload." },
@@ -2779,13 +2834,13 @@ try {
         blankNameAssistance:"Enter a name for the new schema",
         duplicateNameAssistance:"Choose the existing schema or enter another name",
         newNameAssistance:"New schema Signal Shop pageview will be created",
-        reviewBeforeBack:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.",
-        reviewStages:[["Choose properties","complete"],["Choose schema destination","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
+        reviewBeforeBack:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.",
+        reviewStages:[["Choose schema destination","complete"],["Define requirement","complete"],["Choose event scope","complete"],["Review validation","current"]],
         retainedDestination:{ kind:"new", name:"Signal Shop pageview" },
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
-        saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
+        saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
+        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
@@ -2793,8 +2848,8 @@ try {
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
         ],
-        existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
-        existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
+        existingReview:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
+        existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add /page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
         schemaPrefillRequirement:{ expectedType:"String", expectedTypeSource:"String — Generic pageview version 4", target:"payload" },
         schemaPrefillScope:{ domain:"shop.example", domainSource:"Generic shop pages assignment", eventName:"pageview", eventNameSource:"Generic shop pages assignment", source:"event-history", sourceSource:"Generic shop pages assignment", pathCondition:"/products/*" },
         replacementReview:{
@@ -3066,7 +3121,7 @@ try {
       rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
-      storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
+      storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"/example" },
       rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
@@ -3082,26 +3137,26 @@ try {
         name:"Order complete schema",
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
-        draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
+        draftRefresh:{ unchanged:true, message:"Library draft validation: 1 warnings · Checkout schema v2." },
         persistedAttachment:"schema:checkout-schema:1",
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, schemaLibraryExportFixture === "1:3" ? {
         groups:[
-          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · /example · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+        preview:["/example · Known page types v1 · inherited from Checkout schema v2"],
       } : {
         groups:[
-          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · /example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
+        preview:["/example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.equal(schemaLibraryTransfer.downloadName, "schema-library-v1.json", "Schema Library export did not create the download");
@@ -3122,7 +3177,7 @@ try {
       if (schemaLibraryExportFixture === "1:3") {
         assert.match(schemaLiveValidation.validation, /Not checked|Valid|warnings|issues/, "Live Validate did not render a state for the smaller export fixture");
       } else {
-        assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
+        assert.equal(schemaLiveValidation.validation, "2 warnings", "Live Validate did not render the inherited warning state");
         assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
         assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
       }
@@ -3135,7 +3190,10 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
-        inheritance:schemaInheritance,
+        inheritance:schemaInheritance ? {
+          ...schemaInheritance,
+          preview:schemaInheritance.preview.map((entry) => entry.replace(/^\/example ·/, "example ·")),
+        } : schemaInheritance,
         transfer:schemaLibraryTransfer,
         reload:schemaReload,
         validation:schemaLiveValidation,
@@ -3159,13 +3217,13 @@ try {
       await installContinuationFixture(undefined);
       await reloadPanel(socket);
       guidedDraftContinuationInitialObservation = await evaluate(socket, guidedDraftContinuationInitialRuntime);
-      assert.deepEqual(guidedDraftContinuationInitialObservation, { createAvailable:true, continuationAbsent:true }, "Events without a selected draft continuation lost their generic creation action");
+      assert.deepEqual(guidedDraftContinuationInitialObservation, { propertyAvailable:true, genericAbsent:true, continuationAbsent:true }, "Events without a selected draft continuation lost their property creation action");
       await installContinuationFixture("schema-product-listing");
       await reloadPanel(socket);
       guidedDraftContinuationObservation = await evaluate(socket, guidedDraftContinuationRuntime);
       assert.deepEqual(guidedDraftContinuationObservation, {
-        initial:{ heading:"Product listing working draft", status:"Current revision 3 · 2 pending changes", actions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"], sectionCount:1, genericAbsent:true },
-        opened:{ context:"Adding to Product listing draft", stages:["Choose properties", "Define requirement", "Choose event scope", "Review validation"] },
+        initial:{ heading:"Product listing working draft", status:"Current revision 3 · 2 pending changes", actions:["Review draft", "Publish revision", "Use a different schema"], sectionCount:1, genericAbsent:true },
+        opened:{ context:"Adding to Product listing draft", stages:["Define requirement", "Choose event scope", "Review validation"] },
         requirement:{ heading:"Define requirement", destinationAbsent:true, selectedSchema:"schema-product-listing" },
         prefill:{ target:"payload", targetSource:"Product listing version 3", source:"event-history", sourceSource:"Product pages assignment", domain:"127.0.0.1", domainSource:"Product pages assignment", eventName:"pageview", eventSource:"Product pages assignment", path:"/", pathSource:"Product pages assignment", editable:true },
         review:{ name:"Product listing", status:"Working draft based on revision 3 · 2 pending changes", checkoutUnchanged:true },
@@ -3274,6 +3332,9 @@ try {
   }
   if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ workspacePanelContainment:workspacePanelContainmentObservation }));
+  }
+  if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ recursivePropertyValidation:recursivePropertyValidationObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

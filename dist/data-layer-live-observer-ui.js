@@ -2,7 +2,8 @@ import { dataLayerViews, filteredLiveEvents, } from "./data-layer-live-observer.
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
-import { buildValidationPropertyTree, validationVisual, } from "./data-layer-live-validation-presentation.js";
+import { buildValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
+import { buildRecursivePropertyTree } from "./data-layer-recursive-property-tree.js";
 export function findLiveObserverElements(root = document) {
     return {
         livePanel: root.querySelector("#data-layer-panel-live"),
@@ -115,12 +116,13 @@ function evaluationText(evaluation) {
 function propertyStatusSymbol(symbol) {
     return symbol === "check" ? "✓" : symbol === "warning" ? "⚠" : symbol === "error" ? "!" : "○";
 }
-function renderPropertyNode(node) {
+function renderPropertyNode(node, addValidation) {
     const item = document.createElement("li");
     item.className = "live-validation-property";
     item.id = `live-property-${node.path.replace(/[^a-z0-9]+/gi, "-")}`;
     item.tabIndex = -1;
     item.dataset.validationTreatment = node.summary.treatment;
+    item.dataset.propertyPath = node.technicalPath ?? node.path;
     const row = document.createElement("div");
     row.className = "live-validation-property-row";
     const name = document.createElement("code");
@@ -182,6 +184,16 @@ function renderPropertyNode(node) {
     });
     status.addEventListener("click", () => { disclosure.hidden = !disclosure.hidden; status.setAttribute("aria-expanded", String(!disclosure.hidden)); });
     row.append(name, value, status);
+    if (addValidation) {
+        const add = document.createElement("button");
+        add.type = "button";
+        add.textContent = "Add validation";
+        add.className = "live-property-add-validation";
+        add.dataset.action = "add-property-validation";
+        add.setAttribute("aria-label", `Add validation for ${node.technicalPath ?? node.path}`);
+        add.addEventListener("click", () => addValidation(node.technicalPath ?? node.path, add));
+        row.append(add);
+    }
     if (node.aggregate.errors || node.aggregate.warnings) {
         const aggregate = document.createElement("span");
         aggregate.className = "live-property-aggregate";
@@ -193,12 +205,53 @@ function renderPropertyNode(node) {
         const nested = document.createElement("details");
         const nestedSummary = document.createElement("summary");
         nestedSummary.textContent = `Expand ${node.name}`;
+        nested.dataset.propertyPath = node.technicalPath ?? node.path;
         const list = document.createElement("ul");
-        list.replaceChildren(...node.children.map(renderPropertyNode));
+        list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation)));
         nested.append(nestedSummary, list);
         item.append(nested);
     }
+    if (node.specificItems?.length) {
+        const specific = document.createElement("details");
+        specific.className = "live-property-specific-items";
+        specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`;
+        const summary = document.createElement("summary");
+        summary.textContent = "Specific items";
+        const list = document.createElement("ul");
+        list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation)));
+        specific.append(summary, list);
+        item.append(specific);
+    }
     return item;
+}
+function recursiveValidationTree(payload, evaluations, issues) {
+    const legacyRoots = buildValidationPropertyTree(payload, evaluations, issues);
+    const legacyByPath = new Map();
+    const indexLegacy = (node) => { legacyByPath.set(node.path, node); node.children.forEach(indexLegacy); };
+    legacyRoots.forEach(indexLegacy);
+    const copyLegacy = (node) => {
+        const children = node.children.map(copyLegacy);
+        const aggregate = children.reduce((counts, child) => ({ errors: counts.errors + child.summary.errors + child.aggregate.errors, warnings: counts.warnings + child.summary.warnings + child.aggregate.warnings }), { errors: 0, warnings: 0 });
+        return { ...node, technicalPath: `/${node.path.replaceAll(".", "/")}`, expression: `$${node.path.split(".").map((segment) => `[${JSON.stringify(segment)}]`).join("")}`, children, specificItems: [], aggregate };
+    };
+    const convert = (node) => {
+        const normalized = node.path.slice(1).replaceAll("/", ".");
+        const legacy = legacyByPath.get(normalized);
+        const children = node.children.map(convert);
+        if (!node.detectedTypes.includes("Array"))
+            for (const child of legacy?.children ?? [])
+                if (!children.some(({ path }) => path === child.path))
+                    children.push(copyLegacy(child));
+        const specificItems = node.specificItems.map(convert);
+        const summary = legacy?.summary ?? propertyValidationSummary([]);
+        const aggregate = legacy?.aggregate ?? children.reduce((counts, child) => ({ errors: counts.errors + child.summary.errors + child.aggregate.errors, warnings: counts.warnings + child.summary.warnings + child.aggregate.warnings }), { errors: 0, warnings: 0 });
+        return { path: normalized, technicalPath: node.path, expression: node.expression, name: node.label, value: legacy?.value, valueLabel: [node.summary, node.assistance].filter(Boolean).join(" · "), missing: false, evaluations: legacy?.evaluations ?? [], summary, aggregate, children, specificItems, matchedValueCount: node.matchedValueCount, detectedTypes: node.detectedTypes, examples: node.examples };
+    };
+    const roots = buildRecursivePropertyTree(payload).map(convert);
+    for (const legacy of legacyRoots)
+        if (!roots.some(({ path }) => path === legacy.path))
+            roots.push(copyLegacy(legacy));
+    return roots;
 }
 function renderEventLevelIssues(event) {
     const section = document.createElement("section");
@@ -259,9 +312,37 @@ export function renderLiveInspector(elements, event, actionHandlers) {
     payloadHeading.textContent = "Properties";
     const propertyList = document.createElement("ul");
     propertyList.id = "live-validation-properties";
-    const propertyTree = buildValidationPropertyTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
-    propertyList.replaceChildren(...propertyTree.map(renderPropertyNode));
-    payload.append(payloadHeading, propertyList);
+    const searchLabel = document.createElement("label");
+    searchLabel.htmlFor = "live-property-search";
+    searchLabel.textContent = "Search properties";
+    const propertySearch = document.createElement("input");
+    propertySearch.id = "live-property-search";
+    propertySearch.type = "search";
+    const propertyTree = recursiveValidationTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
+    const addValidation = actionHandlers.addPropertyValidation ? (path, trigger) => actionHandlers.addPropertyValidation?.(event, path, trigger) : undefined;
+    propertyList.replaceChildren(...propertyTree.map((node) => renderPropertyNode(node, addValidation)));
+    const previousOpen = new Set();
+    let searchActive = false;
+    propertySearch.addEventListener("input", () => {
+        const query = propertySearch.value.trim().toLowerCase();
+        const disclosures = Array.from(propertyList.querySelectorAll("details"));
+        if (query && !searchActive)
+            for (const disclosure of disclosures)
+                if (disclosure.hasAttribute("open"))
+                    previousOpen.add(disclosure.dataset.propertyPath ?? "");
+        const terms = query.split(/\s+/).filter(Boolean);
+        const matches = (text) => terms.every((term) => text?.toLowerCase().includes(term));
+        for (const row of Array.from(propertyList.querySelectorAll(".live-validation-property")))
+            row.hidden = Boolean(query) && !matches(row.textContent);
+        for (const disclosure of disclosures) {
+            if (query)
+                disclosure.toggleAttribute("open", matches(disclosure.textContent));
+            else
+                disclosure.toggleAttribute("open", previousOpen.has(disclosure.dataset.propertyPath ?? ""));
+        }
+        searchActive = Boolean(query);
+    });
+    payload.append(payloadHeading, searchLabel, propertySearch, propertyList);
     const rawJson = document.createElement("details");
     rawJson.id = "live-raw-json";
     const rawJsonSummary = document.createElement("summary");
@@ -303,7 +384,6 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         "Copy payload": async () => actionHandlers.copyPayload(event),
         "Save to Library": async () => actionHandlers.saveToLibrary(event),
         ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
-        ...(!draftContinuation && actionHandlers.createValidation ? { "Create validation from this event": async () => actionHandlers.createValidation?.(event) } : {}),
         [event.validation && event.validation !== "Not checked" ? "Revalidate" : "Validate"]: async () => actionHandlers.validate(event),
     };
     for (const [label, callback] of Object.entries(actionCallbacks)) {
@@ -338,7 +418,6 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         const status = document.createElement("p");
         status.textContent = `Current revision ${draftContinuation.schemaVersion} · ${draftContinuation.pendingChanges} pending changes`;
         const callbacks = [
-            ["Add property from this event", draftContinuation.addProperty],
             ["Review draft", draftContinuation.review],
             ["Publish revision", draftContinuation.publish],
             ["Use a different schema", draftContinuation.useDifferent],
@@ -347,8 +426,6 @@ export function renderLiveInspector(elements, event, actionHandlers) {
             const button = document.createElement("button");
             button.type = "button";
             button.textContent = label;
-            if (label === "Add property from this event")
-                button.dataset.action = "add-property-validation";
             button.addEventListener("click", callback);
             return button;
         }));
