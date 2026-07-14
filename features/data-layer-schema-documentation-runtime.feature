@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4da2cd2c4ca36d2c23614fb6f7c5ae0e4353935ff5fe2ac37e28040b6c2c247d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T13:46:47.600837567Z","feature_name":"Data layer schema documentation runtime","feature_path":"features/data-layer-schema-documentation-runtime.feature","background_hash":"d470cce8b8d725f29ef4ffe61fa695238353f1cc5c001c26a8c1132403b12aa5","implementation_hash":"sha256:5cbac9629825700b69009125e6861df78e9b53b724632a6cd35061ed390c17dd","scenarios":[{"index":1,"name":"Data layer schema documentation runtime 002","scenario_hash":"da2baab02c65c67d59a3acff70a90f2a0be8055bf29e57329263bc325cf4561e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:46:47.600837567Z"},{"index":3,"name":"Data layer schema documentation runtime 004","scenario_hash":"be931f27137f49c050677cfd87a4e64e48406bce63d5a679610530b11b8075a9","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:43:14.564833716Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema documentation runtime
 
   Background:

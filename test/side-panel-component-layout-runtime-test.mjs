@@ -1882,12 +1882,34 @@ const schemaDocumentationRuntime = `(async () => {
     { interaction:"click or Enter", presentation:"persistent additional information" },
   ];
   const mappingCases = [
-    { mappingPath:"/page_type", eventProperty:"observed /page_type", renderedPath:"/page_type", presentation:"mapped name and description", documentationResult:"mapped information on /page_type" },
-    { mappingPath:"/items/*/product_id", eventProperty:"observed /items/0/product_id", renderedPath:"/items/0/product_id", presentation:"wildcard mapped information", documentationResult:"wildcard information on the concrete item" },
-    { mappingPath:"/oOrder/aProducts/*/product_id", eventProperty:"observed /oOrder/aProducts/0/product_id", renderedPath:"/oOrder/aProducts/0/product_id", presentation:"wildcard mapped information", documentationResult:"wildcard information on the concrete item" },
-    { mappingPath:"/oOrder/order_id", eventProperty:"missing expected /oOrder/order_id", renderedPath:"/oOrder/order_id", presentation:"mapped synthetic-row information", documentationResult:"mapped information on the synthetic row" },
-    { mappingPath:"no matching path", eventProperty:"observed /currency", renderedPath:"/currency", presentation:"no documentation control", documentationResult:"no empty documentation control" },
-  ];
+    ["/page_type", "Page classification", "Business classification of page", "/page_type"],
+    ["/items/*/product_id", "Product identifier", "Stable product identifier", "/items/0/product_id"],
+    ["/oOrder/aProducts/*/product_id", "Product identifier", "Stable product identifier", "/oOrder/aProducts/0/product_id"],
+    ["/oOrder/order_id", "Order identifier", "Stable order identifier", "/oOrder/order_id"],
+    ["no matching path", "none", "none", "/currency"],
+  ].map(([mappingPath, displayName, description, renderedPath]) => {
+    const documentation = mappingPath === "no matching path"
+      ? {}
+      : { properties:{ [mappingPath]:{ displayName, description } } };
+    const mappedSchema = { ...currentProduct, parentSchemaId:undefined, documentation };
+    const mappedResult = core.validateWithSchema(documentedEvent, mappedSchema, [mappedSchema]);
+    ui.renderLiveInspector(elements, { id:"mapping", name:"product_detail", sourceId:"event-history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/product", payload, rawInput:[], validation:mappedResult.state, validationDetails:{ issues:mappedResult.issues, evaluations:mappedResult.evaluations ?? [], schema:mappedResult.schema, documentation:mappedResult.documentation } }, actions);
+    const row = q('[data-property-path="' + renderedPath + '"]');
+    const control = row.querySelector(".live-property-documentation-control");
+    const missing = Boolean(row.querySelector('[data-missing="true"]'));
+    const payloadState = (missing ? "missing expected " : "observed ") + renderedPath;
+    const wildcard = mappingPath.includes("*");
+    return {
+      mappingPath,
+      displayName:row.querySelector(".live-property-display-name")?.textContent ?? "none",
+      description:control ? row.querySelector(".live-property-documentation-preview").textContent : "none",
+      payloadState,
+      eventProperty:payloadState,
+      renderedPath:row.dataset.propertyPath,
+      presentation:!control ? "no documentation control" : wildcard ? "wildcard mapped information" : missing ? "mapped synthetic-row information" : "mapped name and description",
+      documentationResult:!control ? "no empty documentation control" : wildcard ? "wildcard information on the concrete item" : missing ? "mapped information on the synthetic row" : "mapped information on " + renderedPath,
+    };
+  });
   const revisionCases = [
     { eventContext:"automatic assignment pinned to revision 3", description:revisions.pinned, source:revisions.pinnedSource },
     { eventContext:"automatic assignment following current revision 4", description:revisions.current, source:revisions.currentSource },

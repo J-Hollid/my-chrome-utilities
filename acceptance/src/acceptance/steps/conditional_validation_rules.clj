@@ -12,13 +12,12 @@
 (defonce browser-observation (atom nil))
 
 (defn browser-observation! []
-  (or @browser-observation
-      (reset! browser-observation
-              (support/load-browser-observation!
-               {:adapter-env "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER"
-                :observation-key :conditionalValidationRules
-                :runtime-error "Conditional validation rules browser runtime failed."
-                :missing-error "Conditional validation rules browser evidence is missing."}))))
+  (support/cached-browser-observation!
+   browser-observation
+   {:adapter-env "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER"
+    :observation-key :conditionalValidationRules
+    :runtime-error "Conditional validation rules browser runtime failed."
+    :missing-error "Conditional validation rules browser evidence is missing."}))
 
 (defn- require! [condition message data]
   (support/assert! condition message data))
@@ -113,17 +112,13 @@
                   ["rule_result" (expected-value "rule_result") :result]]}]])
 
 (defn validate-example! [example observation]
-  (some (fn [[key validation]]
-          (when (example-value example key)
-            (validate-row-example! example observation validation)
-            true))
-        example-validators)
-  observation)
+  (support/validate-observation-example!
+   example observation example-validators validate-row-example!))
 
 (defn- transition [world example _captures _spec]
-  (let [observation (validate-browser-observation! (browser-observation!))]
-    (validate-example! example observation)
-    (assoc world :conditional-validation-rules observation)))
+  (support/validated-observation-transition
+   world example :conditional-validation-rules
+   browser-observation! validate-browser-observation! validate-example!))
 
 (def handlers
   (support/stateful-semantic-handlers
@@ -133,5 +128,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T15:04:33.707269939+02:00", :module-hash "-517188206", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1393853260"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2067815109"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-2040109592"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 21, :hash "889540147"} {:id "defn-/require!", :kind "defn-", :line 23, :end-line 24, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 26, :end-line 56, :hash "1838091347"} {:id "defn-/example-value", :kind "defn-", :line 58, :end-line 59, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 61, :end-line 64, :hash "1583223720"} {:id "defn-/matching-row", :kind "defn-", :line 66, :end-line 73, :hash "1214301808"} {:id "defn-/expected-value", :kind "defn-", :line 75, :end-line 76, :hash "-1174460561"} {:id "defn-/validate-row-example!", :kind "defn-", :line 78, :end-line 81, :hash "565976123"} {:id "def/example-validators", :kind "def", :line 83, :end-line 113, :hash "-806894585"} {:id "defn/validate-example!", :kind "defn", :line 115, :end-line 121, :hash "1256792150"} {:id "defn-/transition", :kind "defn-", :line 123, :end-line 126, :hash "197079151"} {:id "def/handlers", :kind "def", :line 128, :end-line 133, :hash "1225550685"}]}
+;; {:version 1, :tested-at "2026-07-14T15:46:00.99146508+02:00", :module-hash "1553481179", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1393853260"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2067815109"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-2040109592"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 20, :hash "1279255030"} {:id "defn-/require!", :kind "defn-", :line 22, :end-line 23, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 25, :end-line 55, :hash "1838091347"} {:id "defn-/example-value", :kind "defn-", :line 57, :end-line 58, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 60, :end-line 63, :hash "1583223720"} {:id "defn-/matching-row", :kind "defn-", :line 65, :end-line 72, :hash "1214301808"} {:id "defn-/expected-value", :kind "defn-", :line 74, :end-line 75, :hash "-1174460561"} {:id "defn-/validate-row-example!", :kind "defn-", :line 77, :end-line 80, :hash "565976123"} {:id "def/example-validators", :kind "def", :line 82, :end-line 112, :hash "-806894585"} {:id "defn/validate-example!", :kind "defn", :line 114, :end-line 116, :hash "1286172312"} {:id "defn-/transition", :kind "defn-", :line 118, :end-line 121, :hash "454780542"} {:id "def/handlers", :kind "def", :line 123, :end-line 128, :hash "1225550685"}]}
 ;; clj-mutate-manifest-end

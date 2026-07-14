@@ -23,7 +23,7 @@ import {
   type ValidationPropertyNode,
 } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression, type RecursivePropertyNode } from "./data-layer-recursive-property-tree.js";
-import { resolvePropertyDocumentation, type ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
+import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
 
 export interface LiveObserverElements {
   livePanel: HTMLElement | null;
@@ -179,7 +179,7 @@ function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path:
   const row = document.createElement("div"); row.className = "live-validation-property-row";
   const name = document.createElement("code"); name.textContent = node.name;
   const documentation = schemaDocumentation ? resolvePropertyDocumentation(schemaDocumentation, node.technicalPath ?? node.path) : undefined;
-  if (documentation) row.dataset.documentationSearch = `${documentation.displayName} ${documentation.description}`;
+  if (documentation) row.dataset.documentationSearch = schemaDocumentationSearchText(node.technicalPath ?? node.path, documentation);
   const displayName = document.createElement("span"); displayName.className = "live-property-display-name"; displayName.textContent = documentation?.displayName ?? "";
   const value = document.createElement("span"); value.textContent = node.valueLabel; if (node.missing) value.dataset.missing = "true";
   const status = document.createElement("button"); status.type = "button"; status.className = "live-property-status"; status.id = `${item.id}-status`; status.setAttribute("aria-expanded", "false"); status.textContent = `${propertyStatusSymbol(node.summary.symbolName)} ${node.summary.status}`;

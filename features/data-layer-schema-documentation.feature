@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3c1ea9580e55274f65b27fc575da64ce49e1d2750dd9f5aa060f36fbaf787ff5
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T13:47:18.184039602Z","feature_name":"Data layer schema documentation","feature_path":"features/data-layer-schema-documentation.feature","background_hash":"7ef577c62c4deb186f0881e7be398d3263027e8a408c6b3a4ddd3fc62f2c2795","implementation_hash":"sha256:ea6c600a983a7331a6449c550011b40419ace0b9e5967281555f20ef8295daba","scenarios":[{"index":3,"name":"Data layer schema documentation 004","scenario_hash":"fd9b91e24c607b8740b1846ca002794907fd11d2bee0f7fb878a3377f6e1bb6f","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:47:18.184039602Z"},{"index":4,"name":"Data layer schema documentation 005","scenario_hash":"dc502197b409fef314b9bc1929ee7e6bcb76936071b68491d81b99a5727edb2c","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:47:18.184039602Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema documentation
 
   Background:
