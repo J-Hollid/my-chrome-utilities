@@ -199,7 +199,7 @@
    "session_action" #{"Create sequence" "End testing" "Export" "Start testing"}
    "capture_action" #{"none" "Pause capture" "Resume capture"}
    "capture_state" #{"Capturing" "Inactive" "Live" "Paused"}
-   "session_actions" #{"Open archived, Resume, Create sequence, Export"}
+   "session_actions" #{"Open in Live feed, Start linked capture, Create sequence, Export"}
    "session_name" #{"Checkout journey"}
    "session_state" #{"Capturing" "Live" "Paused"}
    "testing_state" #{"Active" "Ended" "Paused"}

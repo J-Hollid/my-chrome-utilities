@@ -8,12 +8,12 @@
    "the saved session shows capture date, page scope, duration, source count, event count, and validation summary"
    "subsequent live capture cannot append events to the saved session"
    "saved session <session_name> contains event <event_name> from source <source_name>"
-   "saved session <session_name> is opened later"
-   "the observer workspace is visibly in Archived session mode"
+   "saved session <session_name> is opened in the Live feed later"
+   "the Live view is visibly in Saved session mode"
    "event <event_name> retains its source, page, capture order, payload, and raw input"
    "no live observer is started automatically"
-   "saved session <session_name> is open in Archived session mode"
-   "the user resumes capture from the saved session on page <page_url>"
+   "saved session <session_name> is selected in Sessions"
+   "the user starts linked capture from the saved session on page <page_url>"
    "a new active session is created and linked to <session_name>"
    "saved session <session_name> remains unchanged"
    "new events are captured only in the new active session"
@@ -24,7 +24,7 @@
    "saved sessions <session_names> are listed"
    "the user searches for <query>"
    "only saved sessions matching <query> by name, page, source, or event name are listed"
-   "session actions offer Open, Rename, Export, Create sequence, and Delete"
+   "session actions offer Open in Live feed, Start linked capture, Rename, Export, Create sequence, and Delete"
    "saved session <session_name> is listed"
    "the user requests deletion"
    "a confirmation names saved session <session_name>"
@@ -76,163 +76,202 @@
                      "Saved session fixture is not canonical." {:name name})
     name))
 
-(defn- transition [template world example]
-  (case template
-    "a completed data layer testing session contains captured events"
-    (assoc (inspect world) :completed-events [(event "event-1" "purchase" "Event history")])
+(def ^:private transitions
+  {"a completed data layer testing session contains captured events"
+   (fn [world _example]
+     (assoc (inspect world) :completed-events [(event "event-1" "purchase" "Event history")]))
 
-    "the user saves the completed session as <session_name>"
-    (let [name (canonical-name! example)]
-      (assoc world :sessions [(saved-session name (:completed-events world))]))
+   "the user saves the completed session as <session_name>"
+   (fn [world example]
+     (let [name (canonical-name! example)]
+       (assoc world :sessions [(saved-session name (:completed-events world))])))
 
-    "an immutable saved session named <session_name> is added to the Sessions view"
-    (let [session (first (:sessions world))]
-      (support/assert! (and (= (canonical-name! example) (:name session))
-                            (:immutable session))
-                       "Immutable saved session was not added." {})
-      world)
+   "an immutable saved session named <session_name> is added to the Sessions view"
+   (fn [world example]
+     (let [session (first (:sessions world))]
+       (support/assert! (= [(canonical-name! example) true]
+                           [(:name session) (:immutable session)])
+                        "Immutable saved session was not added." {})
+       world))
 
-    "the saved session shows capture date, page scope, duration, source count, event count, and validation summary"
-    (let [session (first (:sessions world))]
-      (support/assert! (and (every? #(contains? session %)
+   "the saved session shows capture date, page scope, duration, source count, event count, and validation summary"
+   (fn [world _example]
+     (let [session (first (:sessions world))]
+       (support/assert! (= [true 1 1]
+                           [(every? #(contains? session %)
                                     [:capture-date :page-scope :duration :validation-summary])
-                            (= 1 (count (:events session)))
-                            (= 1 (count (set (map :source (:events session))))))
-                       "Saved session summary is incomplete." {})
-      world)
+                            (count (:events session))
+                            (count (set (map :source (:events session))))])
+                        "Saved session summary is incomplete." {})
+       world))
 
-    "subsequent live capture cannot append events to the saved session"
-    (do (support/assert! (= ["event-1"] (mapv :id (:events (first (:sessions world)))))
-                         "Live capture mutated the saved archive." {})
-        world)
+   "subsequent live capture cannot append events to the saved session"
+   (fn [world _example]
+     (support/assert! (= ["event-1"] (mapv :id (:events (first (:sessions world)))))
+                      "Live capture mutated the saved archive." {})
+     world)
 
-    "saved session <session_name> contains event <event_name> from source <source_name>"
-    (let [name (canonical-name! example)
-          event-name (value example "event_name")
-          source (value example "source_name")]
-      (support/assert! (= ["purchase" "Event history"] [event-name source])
-                       "Archived event fixture is not canonical." {})
-      (assoc (inspect world) :sessions [(saved-session name [(event "event-1" event-name source)])]))
+   "saved session <session_name> contains event <event_name> from source <source_name>"
+   (fn [world example]
+     (let [name (canonical-name! example)
+           event-name (value example "event_name")
+           source (value example "source_name")]
+       (support/assert! (= ["purchase" "Event history"] [event-name source])
+                        "Archived event fixture is not canonical." {})
+       (assoc (inspect world) :sessions [(saved-session name [(event "event-1" event-name source)])])))
 
-    "saved session <session_name> is opened later"
-    (let [name (canonical-name! example)]
-      (assoc world :archived (first (filter #(= name (:name %)) (:sessions world)))
-             :mode "Archived" :live-observer-started false))
+   "saved session <session_name> is opened in the Live feed later"
+   (fn [world example]
+     (let [name (canonical-name! example)]
+       (assoc world :archived (first (filter #(= name (:name %)) (:sessions world)))
+              :mode "Saved session" :live-observer-started false)))
 
-    "the observer workspace is visibly in Archived session mode"
-    (do (support/assert! (= "Archived" (:mode world)) "Archived mode is not visible." {}) world)
+   "the Live view is visibly in Saved session mode"
+   (fn [world _example]
+     (support/assert! (= "Saved session" (:mode world)) "Saved session mode is not visible." {})
+     world)
 
-    "event <event_name> retains its source, page, capture order, payload, and raw input"
-    (let [archived-event (first (:events (:archived world)))]
-      (support/assert! (and (= (value example "event_name") (:name archived-event))
+   "event <event_name> retains its source, page, capture order, payload, and raw input"
+   (fn [world example]
+     (let [archived-event (first (:events (:archived world)))]
+       (support/assert! (= [(value example "event_name") true]
+                           [(:name archived-event)
                             (every? #(contains? archived-event %)
-                                    [:source :page :capture-order :payload :raw-input]))
-                       "Archived event content changed." {})
-      world)
+                                    [:source :page :capture-order :payload :raw-input])])
+                        "Archived event content changed." {})
+       world))
 
-    "no live observer is started automatically"
-    (do (support/assert! (false? (:live-observer-started world))
-                         "Opening an archive started live observation." {}) world)
+   "no live observer is started automatically"
+   (fn [world _example]
+     (support/assert! (false? (:live-observer-started world))
+                      "Opening an archive started live observation." {})
+     world)
 
-    "saved session <session_name> is open in Archived session mode"
-    (let [name (canonical-name! example)
-          session (saved-session name [(event "event-1" "purchase" "Event history")])]
-      (assoc (inspect world) :archived session :archived-snapshot session :mode "Archived"))
+   "saved session <session_name> is selected in Sessions"
+   (fn [world example]
+     (let [name (canonical-name! example)
+           session (saved-session name [(event "event-1" "purchase" "Event history")])]
+       (assoc (inspect world) :archived session :archived-snapshot session :mode "Saved session")))
 
-    "the user resumes capture from the saved session on page <page_url>"
-    (let [page (value example "page_url")]
-      (support/assert! (= "https://example.test/confirmation" page)
-                       "Resume page fixture is not canonical." {})
-      (assoc world :active-session {:parent-id (:id (:archived world))
-                                    :page page :events []}))
+   "the user starts linked capture from the saved session on page <page_url>"
+   (fn [world example]
+     (let [page (value example "page_url")]
+       (support/assert! (= "https://example.test/confirmation" page)
+                        "Resume page fixture is not canonical." {})
+       (assoc world :active-session {:parent-id (:id (:archived world))
+                                     :page page :events []})))
 
-    "a new active session is created and linked to <session_name>"
-    (do (support/assert! (= (:id (:archived world))
-                            (:parent-id (:active-session world)))
-                         "Resumed session is not linked to its archive." {}) world)
+   "a new active session is created and linked to <session_name>"
+   (fn [world _example]
+     (support/assert! (= (:id (:archived world))
+                         (:parent-id (:active-session world)))
+                      "Resumed session is not linked to its archive." {})
+     world)
 
-    "saved session <session_name> remains unchanged"
-    (do (canonical-name! example)
-        (support/assert! (= (:archived-snapshot world) (:archived world))
-                         "Resuming capture mutated the archive." {}) world)
+   "saved session <session_name> remains unchanged"
+   (fn [world example]
+     (canonical-name! example)
+     (support/assert! (= (:archived-snapshot world) (:archived world))
+                      "Resuming capture mutated the archive." {})
+     world)
 
-    "new events are captured only in the new active session"
-    (let [next-world (update-in world [:active-session :events]
-                                conj (event "event-2" "confirmation" "Event history"))]
-      (support/assert! (= ["event-1"] (mapv :id (:events (:archived next-world))))
-                       "New event was captured in the archive." {})
-      next-world)
+   "new events are captured only in the new active session"
+   (fn [world _example]
+     (let [next-world (update-in world [:active-session :events]
+                                 conj (event "event-2" "confirmation" "Event history"))]
+       (support/assert! (= ["event-1"] (mapv :id (:events (:archived next-world))))
+                        "New event was captured in the archive." {})
+       next-world))
 
-    "saved session <session_name> contains events from <source_names>"
-    (let [name (canonical-name! example)
-          sources (support/split-list (value example "source_names") #"\s+and\s+")]
-      (support/assert! (= ["Event history" "Adobe beacons"] sources)
-                       "Export source fixture is not canonical." {})
-      (assoc (inspect world) :archived
-             (saved-session name (mapv #(event (str "event-" %1) "purchase" %2)
-                                       [1 2] sources))))
+   "saved session <session_name> contains events from <source_names>"
+   (fn [world example]
+     (let [name (canonical-name! example)
+           sources (support/split-list (value example "source_names") #"\s+and\s+")]
+       (support/assert! (= ["Event history" "Adobe beacons"] sources)
+                        "Export source fixture is not canonical." {})
+       (assoc (inspect world) :archived
+              (saved-session name (mapv #(event (str "event-" %1) "purchase" %2)
+                                        [1 2] sources)))))
 
-    "the user exports the saved session and imports it later"
-    (assoc world :restored (:archived world))
+   "the user exports the saved session and imports it later"
+   (fn [world _example] (assoc world :restored (:archived world)))
 
-    "the restored session preserves event ids, source identities, capture order, payloads, raw inputs, and provenance"
-    (do (support/assert! (= (:events (:archived world)) (:events (:restored world)))
-                         "Imported session lost event content." {}) world)
+   "the restored session preserves event ids, source identities, capture order, payloads, raw inputs, and provenance"
+   (fn [world _example]
+     (support/assert! (= (:events (:archived world)) (:events (:restored world)))
+                      "Imported session lost event content." {})
+     world)
 
-    "the restored session remains an immutable archive"
-    (do (support/assert! (:immutable (:restored world))
-                         "Imported session is mutable." {}) world)
+   "the restored session remains an immutable archive"
+   (fn [world _example]
+     (support/assert! (:immutable (:restored world)) "Imported session is mutable." {})
+     world)
 
-    "saved sessions <session_names> are listed"
-    (let [names (support/split-list (value example "session_names") #"\s*,\s*")]
-      (support/assert! (= ["Checkout journey" "Newsletter signup"] names)
-                       "Search session fixture is not canonical." {})
-      (assoc (inspect world) :sessions
-             [(assoc (saved-session (first names) [(event "event-1" "purchase" "Event history")])
-                     :page-scope "https://example.test/checkout")
-              (saved-session (second names) [(event "event-2" "signup" "Adobe beacons")])]))
+   "saved sessions <session_names> are listed"
+   (fn [world example]
+     (let [names (support/split-list (value example "session_names") #"\s*,\s*")]
+       (support/assert! (= ["Checkout journey" "Newsletter signup"] names)
+                        "Search session fixture is not canonical." {})
+       (assoc (inspect world) :sessions
+              [(assoc (saved-session (first names) [(event "event-1" "purchase" "Event history")])
+                      :page-scope "https://example.test/checkout")
+               (saved-session (second names) [(event "event-2" "signup" "Adobe beacons")])])))
 
-    "the user searches for <query>"
-    (let [query (value example "query")]
-      (support/assert! (= "purchase" query) "Search query fixture is not canonical." {})
-      (assoc world :query query
-             :matches (filterv #(some (fn [event] (= query (:name event))) (:events %))
-                               (:sessions world))))
+   "the user searches for <query>"
+   (fn [world example]
+     (let [query (value example "query")]
+       (support/assert! (= "purchase" query) "Search query fixture is not canonical." {})
+       (assoc world :query query
+              :matches (filterv #(some (fn [event] (= query (:name event))) (:events %))
+                                (:sessions world)))))
 
-    "only saved sessions matching <query> by name, page, source, or event name are listed"
-    (do (support/assert! (and (= (value example "query") (:query world))
-                              (= ["Checkout journey"] (mapv :name (:matches world))))
-                         "Saved session search results are incorrect." {}) world)
+   "only saved sessions matching <query> by name, page, source, or event name are listed"
+   (fn [world example]
+     (support/assert! (= [(value example "query") ["Checkout journey"]]
+                         [(:query world) (mapv :name (:matches world))])
+                      "Saved session search results are incorrect." {})
+     world)
 
-    "session actions offer Open, Rename, Export, Create sequence, and Delete"
-    (assoc world :actions ["Open" "Rename" "Export" "Create sequence" "Delete"])
+   "session actions offer Open in Live feed, Start linked capture, Rename, Export, Create sequence, and Delete"
+   (fn [world _example]
+     (assoc world :actions ["Open in Live feed" "Start linked capture" "Rename" "Export" "Create sequence" "Delete"]))
 
-    "saved session <session_name> is listed"
-    (let [name (canonical-name! example)]
-      (assoc (inspect world) :sessions [(saved-session name [])]))
+   "saved session <session_name> is listed"
+   (fn [world example]
+     (let [name (canonical-name! example)]
+       (assoc (inspect world) :sessions [(saved-session name [])])))
 
-    "the user requests deletion"
-    (assoc world :deletion-confirmation (first (:sessions world)))
+   "the user requests deletion"
+   (fn [world _example] (assoc world :deletion-confirmation (first (:sessions world))))
 
-    "a confirmation names saved session <session_name>"
-    (do (support/assert! (= (canonical-name! example)
-                            (:name (:deletion-confirmation world)))
-                         "Deletion confirmation names the wrong session." {}) world)
+   "a confirmation names saved session <session_name>"
+   (fn [world example]
+     (support/assert! (= (canonical-name! example)
+                         (:name (:deletion-confirmation world)))
+                      "Deletion confirmation names the wrong session." {})
+     world)
 
-    "the user cancels deletion"
-    (dissoc world :deletion-confirmation)
+   "the user cancels deletion"
+   (fn [world _example] (dissoc world :deletion-confirmation))
 
-    "saved session <session_name> remains listed"
-    (do (support/assert! (some #(= (canonical-name! example) (:name %)) (:sessions world))
-                         "Cancelled deletion removed the session." {}) world)
+   "saved session <session_name> remains listed"
+   (fn [world example]
+     (support/assert! (some #(= (canonical-name! example) (:name %)) (:sessions world))
+                      "Cancelled deletion removed the session." {})
+     world)
 
-    "the user requests deletion again and confirms it"
-    (assoc world :sessions [])
+   "the user requests deletion again and confirms it"
+   (fn [world _example] (assoc world :sessions []))
 
-    "saved session <session_name> is removed from the Sessions view"
-    (do (canonical-name! example)
-        (support/assert! (empty? (:sessions world))
-                         "Confirmed deletion retained the session." {}) world)))
+   "saved session <session_name> is removed from the Sessions view"
+   (fn [world example]
+     (canonical-name! example)
+     (support/assert! (empty? (:sessions world))
+                      "Confirmed deletion retained the session." {})
+     world)})
+
+(defn- transition [template world example]
+  ((get transitions template) world example))
 
 (def handlers
   (mapv (fn [template]

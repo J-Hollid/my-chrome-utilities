@@ -31,6 +31,7 @@ export interface DataLayerTestingSession {
   windowId?: number;
   targetTitle?: string;
   targetOrigin?: string;
+  parentSavedSessionId?: string;
   timeline: DataLayerEventEntry[];
 }
 

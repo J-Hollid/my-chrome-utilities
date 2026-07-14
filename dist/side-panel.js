@@ -24,7 +24,8 @@ import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-sess
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
-import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, createSavedSessionLibrary, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, resumeSavedSession, saveCompletedSession, searchSavedSessions, savedSessionSummary, } from "./data-layer-saved-sessions.js";
+import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./data-layer-saved-sessions.js";
+import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./data-layer-saved-session-live-feed.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
@@ -38,6 +39,7 @@ import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js
 import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
+import { ensureNestedSchemaPath } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, reusableRulesForProperty } from "./data-layer-schema-property-rule-picker.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
@@ -83,6 +85,19 @@ const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, res
 const { copyPageUrlButton } = liveSessionSummaryElements;
 const liveNotificationController = createLiveNotificationController((message) => renderLiveSessionMessage(liveObserverElements, message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
 const saveLiveSessionButton = document.querySelector("#save-live-session");
+const saveLiveSessionDialog = document.querySelector("#save-live-session-dialog");
+const saveLiveSessionForm = document.querySelector("#save-live-session-form");
+const saveLiveSessionHeading = document.querySelector("#save-live-session-heading");
+const saveLiveSessionName = document.querySelector("#save-live-session-name");
+const saveLiveSessionSummary = document.querySelector("#save-live-session-summary");
+const confirmSaveLiveSessionButton = document.querySelector("#confirm-save-live-session");
+const cancelSaveLiveSessionButton = document.querySelector("#cancel-save-live-session");
+const savedSessionLiveBanner = document.querySelector("#saved-session-live-banner");
+const savedSessionLiveSummary = document.querySelector("#saved-session-live-summary");
+const savedSessionBackgroundStatus = document.querySelector("#saved-session-background-status");
+const returnToCurrentLiveFeedButton = document.querySelector("#return-to-current-live-feed");
+const revalidateSavedSessionButton = document.querySelector("#revalidate-saved-session");
+const savedSessionValidationComparison = document.querySelector("#saved-session-validation-comparison");
 const savedSessionSearch = document.querySelector("#saved-session-search");
 const importSavedSessionButton = document.querySelector("#import-saved-session");
 const savedSessionFileInput = document.querySelector("#saved-session-file");
@@ -155,6 +170,33 @@ const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
 addSchemaPropertyButton?.after(schemaPropertyTree);
 let selectedSchemaPropertyPath = "example";
+let specificIndexArrayPath;
+let specificIndexTrigger;
+const schemaSpecificIndexDialog = document.createElement("dialog");
+schemaSpecificIndexDialog.id = "schema-specific-index-dialog";
+const schemaSpecificIndexForm = document.createElement("form");
+const schemaSpecificIndexHeading = document.createElement("h4");
+schemaSpecificIndexHeading.textContent = "Add specific index rule";
+const schemaSpecificIndexLabel = document.createElement("label");
+schemaSpecificIndexLabel.htmlFor = "schema-specific-index";
+schemaSpecificIndexLabel.textContent = "Zero-based array index";
+const schemaSpecificIndex = document.createElement("input");
+schemaSpecificIndex.id = "schema-specific-index";
+schemaSpecificIndex.type = "number";
+schemaSpecificIndex.min = "0";
+schemaSpecificIndex.step = "1";
+const schemaSpecificIndexAssistance = document.createElement("output");
+schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index";
+const confirmSchemaSpecificIndex = document.createElement("button");
+confirmSchemaSpecificIndex.type = "submit";
+confirmSchemaSpecificIndex.textContent = "Choose rule";
+confirmSchemaSpecificIndex.disabled = true;
+const cancelSchemaSpecificIndex = document.createElement("button");
+cancelSchemaSpecificIndex.type = "button";
+cancelSchemaSpecificIndex.textContent = "Cancel";
+schemaSpecificIndexForm.append(schemaSpecificIndexHeading, schemaSpecificIndexLabel, schemaSpecificIndex, schemaSpecificIndexAssistance, confirmSchemaSpecificIndex, cancelSchemaSpecificIndex);
+schemaSpecificIndexDialog.append(schemaSpecificIndexForm);
+document.body.append(schemaSpecificIndexDialog);
 const schemaManualPropertyDialog = document.createElement("dialog");
 schemaManualPropertyDialog.id = "schema-manual-property-dialog";
 schemaManualPropertyDialog.setAttribute("aria-labelledby", "schema-manual-property-heading");
@@ -336,8 +378,14 @@ let liveObserverState = createLiveObserverState({
     sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
 let inspectorReturnSnapshot;
-let savedSessionLibrary = createSavedSessionLibrary();
+let savedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
+let savedSessionLiveFeed = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
+if (savedSessionLiveFeed)
+    liveObserverState = savedSessionLiveFeed.savedView;
 let archivedSavedSession;
+let pendingSessionSaveDraft;
+const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
+let savedThroughEventCount = Math.max(0, Number(localStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
 let pendingPushDraftReview;
@@ -655,6 +703,8 @@ async function attachSelectedTarget() {
     presentedSourceEventCount = 0;
     updateSessionFromObserverState();
     await startLiveHistoryCapture(observation);
+    savedThroughEventCount = 0;
+    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
     persistAndRenderObservationState();
     setObservationTargetResult("");
     setLiveSessionMessage("Testing started");
@@ -682,26 +732,78 @@ async function confirmDetachSelectedTarget() {
         return;
     }
     setObservationTargetResult("");
-    setLiveSessionMessage("Testing ended");
+    setLiveSessionMessage(testingEndedMessage());
     renderObservationTargetContext();
 }
 function showDataLayerView(view, focus = false) {
     liveObserverState = { ...liveObserverState, view };
+    if (savedSessionLiveFeed) {
+        savedSessionLiveFeed = { ...savedSessionLiveFeed, savedView: structuredClone(liveObserverState) };
+        persistSavedSessionFeed();
+    }
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
+}
+function renderSavedSessionLiveBanner() {
+    const feed = savedSessionLiveFeed;
+    if (savedSessionLiveBanner)
+        savedSessionLiveBanner.hidden = !feed;
+    document.querySelector("#data-layer-panel-live")?.setAttribute("data-feed-mode", feed ? "saved-session" : "current");
+    if (!feed) {
+        if (pauseCaptureButton)
+            pauseCaptureButton.disabled = false;
+        if (resumeCaptureButton)
+            resumeCaptureButton.disabled = false;
+        if (saveLiveSessionButton)
+            saveLiveSessionButton.disabled = false;
+        return;
+    }
+    const summary = savedSessionSummary(feed.session);
+    if (savedSessionLiveSummary)
+        savedSessionLiveSummary.textContent = `${feed.session.name} · Read-only archive · ${summary.eventCount} events · captured ${summary.captureDate}`;
+    if (savedSessionBackgroundStatus)
+        savedSessionBackgroundStatus.textContent = dataLayerSessionState.session?.status === "active"
+            ? `Live capture continues in the background · ${feed.backgroundEventCount} new events`
+            : "No observer was started or attached for this saved session.";
+    if (returnToCurrentLiveFeedButton)
+        returnToCurrentLiveFeedButton.textContent = feed.backgroundEventCount
+            ? `Return to current Live feed · ${feed.backgroundEventCount} new events`
+            : "Return to current Live feed";
+    if (savedSessionValidationComparison)
+        savedSessionValidationComparison.textContent = feed.comparison
+            ? `Separate validation comparison · revisions ${feed.comparison.revisions.join(" and ")} · ${feed.comparison.results.length} saved events · original results unchanged`
+            : "";
+    if (pauseCaptureButton)
+        pauseCaptureButton.disabled = true;
+    if (resumeCaptureButton)
+        resumeCaptureButton.disabled = true;
+    if (saveLiveSessionButton)
+        saveLiveSessionButton.disabled = true;
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
     if (liveEventQuery)
-        renderEventFeedQueryBuilder(liveEventQuery, liveObserverState.events, liveObserverState.query ?? { conditions: [] }, (query) => { liveObserverState = setLiveQuery(liveObserverState, query); renderLiveObserver(); });
+        renderEventFeedQueryBuilder(liveEventQuery, liveObserverState.events, liveObserverState.query ?? { conditions: [] }, (query) => { liveObserverState = setLiveQuery(liveObserverState, query); synchronizeSavedSessionFeedView(); renderLiveObserver(); });
     if (liveEventsEmptyState)
         liveEventsEmptyState.hidden = liveObserverState.events.length > 0;
     if (liveSourceErrorState)
-        liveSourceErrorState.hidden = !liveObserverState.sources.some(({ status }) => status !== "Connected");
+        liveSourceErrorState.hidden = Boolean(savedSessionLiveFeed) || !liveObserverState.sources.some(({ status }) => status !== "Connected");
     renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
     renderLiveContextActions();
+    renderSavedSessionLiveBanner();
 }
 function currentLiveSessionSummary() {
+    if (savedSessionLiveFeed) {
+        return createLiveSessionSummary({
+            testingState: "Ended",
+            observerStatus: "Disconnected",
+            targetPage: `${savedSessionLiveFeed.session.name} · Read-only archive`,
+            pageUrl: savedSessionLiveFeed.session.pageScope,
+            observerPath: "Saved session",
+            capturedEventCount: savedSessionLiveFeed.savedView.events.length,
+            connectedSourceCount: 0,
+        });
+    }
     const session = dataLayerSessionState.session;
     const target = attachedObservationTarget(observationTargetState)
         ?? selectedObservationTarget(observationTargetState);
@@ -720,6 +822,7 @@ function currentLiveSessionSummary() {
 function closeInspectorAndReturnToEvents() {
     const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
+    synchronizeSavedSessionFeedView();
     renderLiveObserver();
     if (returnSnapshot) {
         const restored = restoreInspectorReturn(returnSnapshot);
@@ -733,6 +836,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     }
     const split = globalThis.innerWidth >= 700;
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
+    synchronizeSavedSessionFeedView();
     const event = liveObserverState.events.find(({ id }) => id === eventId);
     if (event)
         renderLiveInspector(liveObserverElements, event, createLiveInspectorActions({
@@ -981,9 +1085,14 @@ function renderSchemaDraft() {
         schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
     const paths = (document, prefix = "") => Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
         const path = prefix ? `${prefix}.${name}` : name;
-        return [path, ...paths(child, path)];
+        return child.type === "array" && child.items
+            ? [path, `${path}.*`, ...paths(child.items, `${path}.*`)]
+            : [path, ...paths(child, path)];
     });
-    const propertyPaths = paths(draft.document);
+    const propertyPaths = [...new Set([
+            ...paths(draft.document),
+            ...(draft.attachedRules ?? []).flatMap(({ propertyPath }) => propertyPath?.startsWith("/") ? [propertyPath.slice(1).replaceAll("/", ".")] : []),
+        ])];
     if (!propertyPaths.includes(selectedSchemaPropertyPath))
         selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
     schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
@@ -996,11 +1105,12 @@ function renderSchemaDraft() {
         label.textContent = path;
         let property = draft.document;
         for (const segment of path.split("."))
-            property = property?.properties?.[segment];
+            property = segment === "*" || /^\d+$/.test(segment) ? property?.items : property?.properties?.[segment];
         const metadata = document.createElement("span");
         metadata.className = "schema-property-metadata";
-        metadata.textContent = `${property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
-        const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === path);
+        metadata.textContent = `${path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
+        const persistedPath = path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
+        const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedPath);
         const count = document.createElement("span");
         count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
         const add = document.createElement("button");
@@ -1009,6 +1119,20 @@ function renderSchemaDraft() {
         add.className = "schema-property-add-rule";
         add.setAttribute("aria-label", `Add rule for ${path}`);
         add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
+        const addSpecificIndex = property?.type === "array" ? document.createElement("button") : undefined;
+        if (addSpecificIndex) {
+            addSpecificIndex.type = "button";
+            addSpecificIndex.textContent = "Add specific index rule";
+            addSpecificIndex.addEventListener("click", () => {
+                specificIndexArrayPath = path;
+                specificIndexTrigger = addSpecificIndex;
+                schemaSpecificIndex.value = "";
+                confirmSchemaSpecificIndex.disabled = true;
+                schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index";
+                schemaSpecificIndexDialog.showModal();
+                schemaSpecificIndex.focus({ preventScroll: true });
+            });
+        }
         const view = document.createElement("details");
         view.dataset.attachedRules = "true";
         const summary = document.createElement("summary");
@@ -1022,15 +1146,15 @@ function renderSchemaDraft() {
             const toggle = document.createElement("button");
             toggle.type = "button";
             toggle.textContent = rule.enabled === false ? "Re-enable" : "Disable";
-            toggle.addEventListener("click", () => updateAttachedRule(path, rule.id, (item) => ({ ...item, enabled: item.enabled === false })));
+            toggle.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, (item) => ({ ...item, enabled: item.enabled === false })));
             const remove = document.createElement("button");
             remove.type = "button";
             remove.textContent = "Remove";
-            remove.addEventListener("click", () => updateAttachedRule(path, rule.id, () => undefined));
+            remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
             row.append(toggle, remove);
             view.append(row);
         }
-        item.append(label, metadata, count, add, view);
+        item.append(label, metadata, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), view);
         return item;
     }));
     const existing = schemas.find((schema) => schema.name === draft.name);
@@ -1557,8 +1681,11 @@ function defineSchemaProperty(document, path) {
 function schemaPropertyType(path) {
     let document = schemaDraft?.document;
     for (const segment of path.split("."))
-        document = document?.properties?.[segment];
+        document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
     return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+}
+function persistedSchemaRulePath(path) {
+    return path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
 }
 function closeSchemaPropertyRulePicker() {
     if (schemaPropertyRulePicker.open)
@@ -1586,7 +1713,7 @@ function renderSchemaPropertyRulePicker() {
     results.id = "schema-property-rule-results";
     const normalized = previousQuery.trim().toLowerCase();
     const builtIns = builtInRulesForProperty(propertyType).filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
-    const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === path).map(({ id }) => id));
+    const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedSchemaRulePath(path)).map(({ id }) => id));
     const reusable = reusableRulesForProperty(reusableSchemaRules, propertyType, previousQuery, attachedIds);
     const resultButton = (label, metadata, action, disabled = false) => {
         const article = document.createElement("article");
@@ -1659,21 +1786,41 @@ schemaPropertyRulePicker.addEventListener("keydown", (event) => {
     event.preventDefault();
     buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
 });
+schemaSpecificIndex.addEventListener("input", () => {
+    const index = Number(schemaSpecificIndex.value);
+    const valid = schemaSpecificIndex.value !== "" && Number.isInteger(index) && index >= 0;
+    confirmSchemaSpecificIndex.disabled = !valid;
+    schemaSpecificIndexAssistance.textContent = valid ? `Item ${index + 1} at zero-based index ${index}` : "Enter a non-negative array index";
+});
+schemaSpecificIndexForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const index = Number(schemaSpecificIndex.value);
+    if (!specificIndexArrayPath || !specificIndexTrigger || !Number.isInteger(index) || index < 0)
+        return;
+    schemaSpecificIndexDialog.close();
+    openSchemaPropertyRulePicker(`${specificIndexArrayPath}.${index}`, specificIndexTrigger);
+});
+const closeSpecificIndexDialog = () => { if (schemaSpecificIndexDialog.open)
+    schemaSpecificIndexDialog.close(); specificIndexTrigger?.focus({ preventScroll: true }); };
+cancelSchemaSpecificIndex.addEventListener("click", closeSpecificIndexDialog);
+schemaSpecificIndexDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSpecificIndexDialog(); });
 function attachReusableRule(path, rule) {
     if (!schemaDraft)
         return;
+    const propertyPath = persistedSchemaRulePath(path);
     const attachment = {
         id: rule.id,
         name: rule.name,
         version: rule.version ?? 1,
-        propertyPath: path,
+        propertyPath,
         ...(rule.operator ? { operator: rule.operator } : {}),
         ...(rule.parameters ? { parameters: rule.parameters } : {}),
         ...(rule.severity ? { severity: rule.severity } : {}),
         ...(rule.message ? { message: rule.message } : {}),
         enabled: true,
     };
-    schemaDraft = { ...schemaDraft, document: defineSchemaProperty(schemaDraft.document, path.split(".")), attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== path), attachment] };
+    const nested = ensureNestedSchemaPath(schemaDraft.document, propertyPath.startsWith("/") ? propertyPath : `/${propertyPath}`, schemaPropertyType(path));
+    schemaDraft = { ...schemaDraft, document: nested.document, attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== propertyPath), attachment] };
     persistSchemaEditorDraft(`Attach ${rule.name} to ${path}`);
     renderSchemaDraft();
     focusSchemaPropertyRow(path);
@@ -1693,8 +1840,9 @@ function updateAttachedRule(path, id, update) {
     focusSchemaPropertyRow(path);
 }
 function focusSchemaPropertyRow(path) {
+    const displayedPath = path.startsWith("/") ? path.slice(1).replaceAll("/", ".") : path;
     Array.from(schemaPropertyTree.querySelectorAll("li[data-schema-property-path]"))
-        .find((row) => row.dataset.schemaPropertyPath === path)
+        .find((row) => row.dataset.schemaPropertyPath === displayedPath)
         ?.focus({ preventScroll: true });
 }
 function renderSchemaWorkflowRows() {
@@ -1802,7 +1950,7 @@ function recheckCapturedSchemaValidation() {
                 checked += 1;
             const assignment = validation.assignment;
             const assignmentDetails = assignment ? `assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId} · event ${assignment.eventName} · target ${assignment.target} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : `assignment ${validation.target ?? "automatic"}`;
-            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
+            issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
             records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), ...(validation.target ? { target: validation.target } : {}) });
             return { ...event, validation: validation.state };
         }),
@@ -2151,6 +2299,81 @@ function openPushDraftReview() {
         confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
     openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
 }
+function persistSavedSessionLibrary() {
+    localStorage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
+}
+function persistSavedSessionFeed() {
+    if (savedSessionLiveFeed)
+        localStorage.setItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed(savedSessionLiveFeed));
+    else
+        localStorage.removeItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY);
+}
+function currentUnsavedEventCount() {
+    const events = savedSessionLiveFeed?.currentView.events ?? liveObserverState.events;
+    return Math.max(0, events.length - savedThroughEventCount);
+}
+function testingEndedMessage() {
+    const unsaved = currentUnsavedEventCount();
+    return unsaved ? `Testing ended; ${unsaved} captured events remain unsaved.` : "Testing ended";
+}
+function synchronizeSavedSessionFeedView(scrollTop = liveObserverElements.eventList?.scrollTop ?? 0) {
+    if (!savedSessionLiveFeed)
+        return;
+    savedSessionLiveFeed = updateSavedSessionLiveFeedView(savedSessionLiveFeed, {
+        query: liveObserverState.query,
+        ...(liveObserverState.inspectorEventId ? { inspectorEventId: liveObserverState.inspectorEventId } : {}),
+        listVisible: liveObserverState.listVisible,
+        scrollTop,
+    });
+    persistSavedSessionFeed();
+}
+function openSessionInLiveFeed(session) {
+    const currentView = savedSessionLiveFeed?.currentView ?? liveObserverState;
+    savedSessionLiveFeed = openSavedSessionLiveFeed(currentView, session, { scrollTop: liveObserverElements.eventList?.scrollTop ?? 0 });
+    liveObserverState = savedSessionLiveFeed.savedView;
+    persistSavedSessionFeed();
+    showDataLayerView("Live");
+    renderLiveObserver();
+    if (liveObserverElements.eventList)
+        liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
+}
+function startLinkedCaptureFromSavedSession(session) {
+    const archived = openSavedSession(savedSessionLibrary, session.id);
+    const resumed = resumeSavedSession(archived, globalThis.location.href);
+    const currentView = savedSessionLiveFeed?.currentView ?? liveObserverState;
+    const previousSession = dataLayerSessionState.session;
+    archivedSavedSession = archived;
+    savedSessionLiveFeed = undefined;
+    persistSavedSessionFeed();
+    savedThroughEventCount = 0;
+    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+    liveObserverState = {
+        ...currentView,
+        view: "Live",
+        status: "Live",
+        pageUrl: resumed.activeSession.pageUrl,
+        events: [],
+        listVisible: true,
+    };
+    dataLayerSessionState = {
+        session: {
+            id: resumed.activeSession.id,
+            status: "active",
+            tabId: previousSession?.tabId ?? 0,
+            ...(previousSession?.windowId === undefined ? {} : { windowId: previousSession.windowId }),
+            historyPath: previousSession?.historyPath ?? getHistoryArrayPath(),
+            startUrl: resumed.activeSession.pageUrl,
+            currentUrl: resumed.activeSession.pageUrl,
+            targetTitle: previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
+            parentSavedSessionId: resumed.activeSession.parentSavedSessionId,
+            timeline: [],
+        },
+    };
+    persistSession(dataLayerSessionState);
+    setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
+    renderLiveObserver();
+    showDataLayerView("Live");
+}
 function renderSavedSessions() {
     const sessions = searchSavedSessions(savedSessionLibrary, savedSessionSearch?.value ?? "");
     if (savedSessionEmptyState)
@@ -2167,13 +2390,9 @@ function renderSavedSessions() {
             const createSequenceButton = document.createElement("button");
             const remove = document.createElement("button");
             open.type = "button";
-            open.textContent = `Open ${session.name}`;
+            open.textContent = "Open in Live feed";
             open.addEventListener("click", () => {
-                archivedSavedSession = openSavedSession(savedSessionLibrary, session.id);
-                if (savedSessionConfirmation) {
-                    savedSessionConfirmation.textContent = `Archived session: ${session.name}. Live observer is not running.`;
-                }
-                showDataLayerView("Sessions");
+                openSessionInLiveFeed(session);
             });
             rename.type = "button";
             rename.textContent = "Rename";
@@ -2181,6 +2400,7 @@ function renderSavedSessions() {
                 const name = globalThis.prompt("Saved session name", session.name);
                 if (name?.trim()) {
                     savedSessionLibrary = renameSavedSession(savedSessionLibrary, session.id, name.trim());
+                    persistSavedSessionLibrary();
                     renderSavedSessions();
                 }
             });
@@ -2192,21 +2412,9 @@ function renderSavedSessions() {
                     savedSessionConfirmation.textContent = `Exported saved session ${session.name}.`;
             });
             resumeCapture.type = "button";
-            resumeCapture.textContent = "Resume capture";
+            resumeCapture.textContent = "Start linked capture";
             resumeCapture.addEventListener("click", () => {
-                const archived = openSavedSession(savedSessionLibrary, session.id);
-                const resumed = resumeSavedSession(archived, globalThis.location.href);
-                archivedSavedSession = archived;
-                liveObserverState = {
-                    ...liveObserverState,
-                    view: "Live",
-                    status: "Live",
-                    pageUrl: resumed.activeSession.pageUrl,
-                    events: [],
-                };
-                setLiveSessionMessage(`Capture resumed from ${session.name}; new session linked to archive.`);
-                renderLiveObserver();
-                showDataLayerView("Live");
+                startLinkedCaptureFromSavedSession(session);
             });
             createSequenceButton.type = "button";
             createSequenceButton.textContent = "Create sequence";
@@ -2230,7 +2438,7 @@ function renderSavedSessions() {
             });
             const summary = savedSessionSummary(session);
             item.textContent = `${session.name}: ${summary.captureDate}, ${summary.pageScope}, ${summary.duration}, ${summary.sourceCount} sources, ${summary.eventCount} events, ${summary.validationSummary}. `;
-            item.append(open, rename, exportButton, resumeCapture, createSequenceButton, remove);
+            item.append(open, resumeCapture, rename, exportButton, createSequenceButton, remove);
             return item;
         }));
     }
@@ -2253,6 +2461,7 @@ async function loadSavedSessionFile() {
         return;
     try {
         savedSessionLibrary = importSavedSession(savedSessionLibrary, await file.text());
+        persistSavedSessionLibrary();
         if (savedSessionConfirmation)
             savedSessionConfirmation.textContent = "Saved session imported as an immutable archive.";
         renderSavedSessions();
@@ -2291,7 +2500,7 @@ function syncCapturedEventsToLive() {
     for (const event of pendingEvents) {
         const source = liveObserverState.sources.find(({ id }) => id === event.sourceId);
         const validation = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
-        liveObserverState = recordLiveEvent(liveObserverState, {
+        const presented = {
             ...event,
             validation: validation.state,
             validationDetails: { issues: validation.issues, evaluations: validation.evaluations ?? [], ...(validation.schema ? { schema: validation.schema } : {}), ...(validation.assignment ? { assignment: validation.assignment } : {}) },
@@ -2299,10 +2508,20 @@ function syncCapturedEventsToLive() {
             ...(dataLayerObserverState.observer
                 ? { destination: dataLayerObserverState.observer.historyPath }
                 : {}),
-        });
+        };
+        if (savedSessionLiveFeed) {
+            savedSessionLiveFeed = recordBackgroundLiveEvent(savedSessionLiveFeed, presented);
+            persistSavedSessionFeed();
+        }
+        else {
+            liveObserverState = recordLiveEvent(liveObserverState, presented);
+        }
     }
-    if (pendingEvents.length > 0)
+    if (pendingEvents.length > 0) {
         renderLiveObserver();
+        if (!savedSessionLiveFeed && savedThroughEventCount > 0)
+            setLiveSessionMessage(`${currentUnsavedEventCount()} newer events unsaved.`);
+    }
 }
 function persistAndRenderSessionState() {
     persistSession(dataLayerSessionState);
@@ -2436,7 +2655,7 @@ async function recordDataLayerCommandRun(entry) {
         persistAndRenderObservationState();
         renderObservationTargetContext();
         setObservationTargetResult("");
-        setLiveSessionMessage("Testing ended");
+        setLiveSessionMessage(testingEndedMessage());
     }
     if (entry.commandId === "data-layer.choose-observation-target") {
         showObservationTargetPicker(observationTargetElements);
@@ -2670,11 +2889,14 @@ copyPageUrlButton?.addEventListener("click", () => {
     void copyLivePageUrl();
 });
 saveLiveSessionButton?.addEventListener("click", () => {
-    const completed = {
+    if (savedSessionLiveFeed)
+        return;
+    const now = new Date().toISOString();
+    pendingSessionSaveDraft = createSessionSaveDraft({
         id: `live-${Date.now()}`,
         pageScope: liveObserverState.pageUrl,
-        startedAt: new Date().toISOString(),
-        endedAt: new Date().toISOString(),
+        startedAt: liveObserverState.events[0]?.captureTime ?? now,
+        endedAt: liveObserverState.events.at(-1)?.captureTime ?? now,
         events: liveObserverState.events.map((event, index) => ({
             id: event.id,
             sourceId: event.sourceId,
@@ -2684,17 +2906,79 @@ saveLiveSessionButton?.addEventListener("click", () => {
             rawInput: event.rawInput ?? event,
             pageUrl: event.pageUrl ?? liveObserverState.pageUrl,
             captureOrder: index + 1,
+            captureTime: event.captureTime,
+            ...(event.sourceKind ? { sourceKind: event.sourceKind } : {}),
+            ...(event.destination ? { destination: event.destination } : {}),
+            ...(event.validation ? { validation: event.validation } : {}),
+            ...(event.validationDetails ? { validationDetails: event.validationDetails } : {}),
             provenance: event.provenance ?? {
                 source: "live-observer",
                 capturedAt: event.captureTime,
             },
         })),
-        provenance: { source: "live-observer", capturedAt: new Date().toISOString() },
-    };
-    savedSessionLibrary = saveCompletedSession(savedSessionLibrary, completed, `Session ${savedSessionLibrary.sessions.length + 1}`);
-    renderSavedSessions();
-    setLiveSessionMessage("Saved session created");
+        provenance: { source: "live-observer", capturedAt: now },
+    });
+    if (saveLiveSessionName)
+        saveLiveSessionName.value = "";
+    if (confirmSaveLiveSessionButton)
+        confirmSaveLiveSessionButton.disabled = true;
+    if (saveLiveSessionSummary) {
+        const summary = pendingSessionSaveDraft.summary;
+        saveLiveSessionSummary.textContent = `${summary.pageScope} · ${summary.eventCount} events · ${summary.sourceCount} sources · ${summary.validationSummary}`;
+    }
+    saveLiveSessionDialog?.showModal();
+    saveLiveSessionHeading?.focus({ preventScroll: true });
 });
+saveLiveSessionName?.addEventListener("input", () => {
+    if (confirmSaveLiveSessionButton)
+        confirmSaveLiveSessionButton.disabled = !saveLiveSessionName.value.trim();
+});
+saveLiveSessionForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = saveLiveSessionName?.value.trim() ?? "";
+    if (!pendingSessionSaveDraft || !name)
+        return;
+    savedSessionLibrary = confirmSessionSave(savedSessionLibrary, pendingSessionSaveDraft, name);
+    savedThroughEventCount = pendingSessionSaveDraft.completed.events.length;
+    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));
+    pendingSessionSaveDraft = undefined;
+    persistSavedSessionLibrary();
+    saveLiveSessionDialog?.close();
+    renderSavedSessions();
+    setLiveSessionMessage(`Saved immutable snapshot ${name}; capture state unchanged.`);
+    saveLiveSessionButton?.focus({ preventScroll: true });
+});
+const closeSaveLiveSessionDialog = () => {
+    pendingSessionSaveDraft = undefined;
+    if (saveLiveSessionDialog?.open)
+        saveLiveSessionDialog.close();
+    saveLiveSessionButton?.focus({ preventScroll: true });
+};
+cancelSaveLiveSessionButton?.addEventListener("click", closeSaveLiveSessionDialog);
+saveLiveSessionDialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeSaveLiveSessionDialog(); });
+returnToCurrentLiveFeedButton?.addEventListener("click", () => {
+    if (!savedSessionLiveFeed)
+        return;
+    const returned = returnToCurrentLiveFeed(savedSessionLiveFeed);
+    savedSessionLiveFeed = undefined;
+    persistSavedSessionFeed();
+    liveObserverState = returned.state;
+    renderLiveObserver();
+    if (liveObserverElements.eventList)
+        liveObserverElements.eventList.scrollTop = returned.scrollTop;
+    setLiveSessionMessage(`Returned to current Live feed${returned.newEventCount ? ` with ${returned.newEventCount} new events` : ""}.`);
+});
+revalidateSavedSessionButton?.addEventListener("click", () => {
+    if (!savedSessionLiveFeed)
+        return;
+    savedSessionLiveFeed = revalidateSavedSessionLiveFeed(savedSessionLiveFeed, (event) => {
+        const result = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
+        return { state: result.state, ...(result.schema ? { schema: { name: result.schema.name, version: result.schema.version } } : {}) };
+    });
+    persistSavedSessionFeed();
+    renderSavedSessionLiveBanner();
+});
+liveObserverElements.eventList?.addEventListener("scroll", () => synchronizeSavedSessionFeedView());
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
 templateEmptyRecovery?.addEventListener("click", () => {
@@ -3265,6 +3549,7 @@ cancelSavedSessionDeleteButton?.addEventListener("click", () => {
 });
 confirmSavedSessionDeleteButton?.addEventListener("click", () => {
     savedSessionLibrary = confirmSavedSessionDeletion(savedSessionLibrary);
+    persistSavedSessionLibrary();
     if (savedSessionConfirmation)
         savedSessionConfirmation.textContent = "Saved session deleted.";
     confirmSavedSessionDeleteButton.hidden = true;
@@ -3416,13 +3701,18 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
 }
 renderHistoryPath(getHistoryArrayPath());
 renderObservationTargetContext();
-void recoverAttachedObservationTarget();
+if (!savedSessionLiveFeed)
+    void recoverAttachedObservationTarget();
 renderSessionState();
 renderObserverState();
 showWorkspace(workspaceTabsController.activeTab());
 hotkeyEditor.render();
 showDataLayerView("Live");
 renderLiveObserver();
+if (savedSessionLiveFeed && liveObserverElements.eventList)
+    liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
+if (savedSessionLiveFeed?.savedView.inspectorEventId)
+    openLiveInspector(savedSessionLiveFeed.savedView.inspectorEventId, true);
 renderSavedSessions();
 renderEventTemplateLibrary();
 renderSchemas();

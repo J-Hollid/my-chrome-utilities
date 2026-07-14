@@ -8,6 +8,11 @@ export interface SavedSessionEvent {
   pageUrl?: string;
   captureOrder?: number;
   provenance?: unknown;
+  captureTime?: string;
+  sourceKind?: string;
+  destination?: string;
+  validation?: import("./data-layer-source.js").ValidationState;
+  validationDetails?: import("./data-layer-live-observer.js").LiveEvent["validationDetails"];
 }
 
 export interface CompletedSession {
@@ -105,6 +110,21 @@ export function importSavedSession(library: SavedSessionLibrary, serialized: str
   if (!isSavedSession(parsed)) throw new Error("Invalid saved session export.");
   const session: SavedSession = immutableClone({ ...parsed, immutable: true });
   return { ...library, sessions: [...library.sessions.filter(({ id }) => id !== session.id), session] };
+}
+
+export function serializeSavedSessionLibrary(library: SavedSessionLibrary): string {
+  return JSON.stringify({ sessions:library.sessions });
+}
+
+export function restoreSavedSessionLibrary(serialized: string | null): SavedSessionLibrary {
+  if (!serialized) return createSavedSessionLibrary();
+  try {
+    const parsed = JSON.parse(serialized) as { sessions?: unknown };
+    if (!Array.isArray(parsed.sessions) || !parsed.sessions.every(isSavedSession)) return createSavedSessionLibrary();
+    return { sessions:parsed.sessions.map((session) => immutableClone({ ...session, immutable:true })) };
+  } catch {
+    return createSavedSessionLibrary();
+  }
 }
 
 export function searchSavedSessions(library: SavedSessionLibrary, query: string): SavedSession[] {

@@ -21,11 +21,17 @@ let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
 let schemaManualPropertyObservation;
+let schemaNestedPathObservation;
+let savedSessionLiveFeedObservation;
+let savedSessionLiveFeedReloadObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
@@ -424,6 +430,90 @@ const singleLiveEventFeedRuntime = `(async () => {
     archiveEventIds:archive.events.map(({ id }) => id),
     defectEventIds:defectContext.timeline.map(({ id }) => id),
   };
+})()`;
+
+const savedSessionLiveFeedRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  let pushListener; let channelId;
+  const captured = Array.from({ length:14 }, (_, index) => ({ event:index === 13 ? "purchase" : "current", index }));
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async (options) => {
+      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      return [{ result:{ queue:{ history:captured } } }];
+    } },
+    runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
+  };
+  q("#choose-observation-target").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click(); q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#data-layer-view-sessions").click();
+  const row = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey"));
+  const actions = Array.from(row.querySelectorAll("button")).map(({ textContent }) => textContent);
+  click(row, "Open in Live feed");
+  if (!pushListener || !channelId) throw new Error("Production live-history callback was not attached");
+  for (let index = 0; index < 4; index += 1) pushListener({ type:"my-chrome-utilities.data-layer-history-entry", channelId, rawValue:{ event:"background", index }, timestamp:"2026-07-13T10:2" + index + ":00Z" }, { tab:{ id:23 } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const productionFeed = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-live-feed.v1"));
+  const productionBackground = { background:productionFeed.backgroundEventCount, currentCount:productionFeed.currentView.events.length, savedCount:productionFeed.savedView.events.length, returnLabel:q("#return-to-current-live-feed").textContent };
+  q("#return-to-current-live-feed").click(); q("#end-data-layer-testing").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#data-layer-view-sessions").click(); click(row, "Open in Live feed");
+  const banner = q("#saved-session-live-banner");
+  const open = {
+    liveSelected:q("#data-layer-view-live").getAttribute("aria-selected") === "true",
+    mode:q("#data-layer-panel-live").dataset.feedMode,
+    banner:banner.textContent,
+    eventCount:q("#live-captured-event-count").textContent,
+    observer:q("#live-observer-status").textContent,
+    captureDisabled:[q("#pause-capture").disabled, q("#resume-capture").disabled, q("#save-live-session").disabled],
+    storedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events.length,
+  };
+  const eventButton = q('[data-event-id="saved-18"]'); eventButton.click();
+  const analysisActions = Array.from(q("#live-event-inspector").querySelectorAll("button")).map(({ textContent }) => textContent);
+  const model = await import("/data-layer-saved-session-live-feed.js");
+  const sessions = await import("/data-layer-saved-sessions.js");
+  const observers = await import("/data-layer-live-observer.js");
+  const library = sessions.restoreSavedSessionLibrary(localStorage.getItem(model.SAVED_SESSION_LIBRARY_STORAGE_KEY));
+  const saved = library.sessions[0];
+  const currentEvents = Array.from({ length:14 }, (_, index) => ({ id:index === 13 ? "purchase" : "current-" + (index + 1), name:index === 13 ? "purchase" : "current", sourceId:"history", sourceName:"Event history", captureTime:"2026-07-13T09:" + String(index).padStart(2, "0") + ":00Z", pageUrl:"https://example.test/current", payload:{ index }, rawInput:["current", index] }));
+  const current = { view:"Live", status:"Live", pageUrl:"https://example.test/current", sources:[{ id:"history", name:"Event history", status:"Connected" }], events:currentEvents, query:{ conditions:[{ id:"purchase", field:"Event name", operator:"is", values:["purchase"] }] }, inspectorEventId:"purchase", listVisible:true };
+  let persisted = model.openSavedSessionLiveFeed(current, saved, { scrollTop:480 });
+  persisted = model.updateSavedSessionLiveFeedView(persisted, { query:{ conditions:[{ id:"saved-purchase", field:"Event name", operator:"is", values:["purchase"] }] }, inspectorEventId:"saved-18", listVisible:true, scrollTop:275 });
+  for (let index = 0; index < 4; index += 1) persisted = model.recordBackgroundLiveEvent(persisted, { id:"background-" + (index + 1), name:"background", sourceId:"history", sourceName:"Event history", captureTime:"2026-07-13T10:2" + index + ":00Z", pageUrl:"https://example.test/current", payload:{ index }, rawInput:["background", index] });
+  localStorage.setItem(model.SAVED_SESSION_LIVE_FEED_STORAGE_KEY, model.serializeSavedSessionLiveFeed(persisted));
+  localStorage.setItem("dataLayerTestingSession", JSON.stringify({ session:{ id:"active-background", status:"active", tabId:99, historyPath:"event.history", startUrl:"https://example.test/current", currentUrl:"https://example.test/current", timeline:[] } }));
+  const restored = model.restoreSavedSessionLiveFeed(model.serializeSavedSessionLiveFeed(persisted), library);
+  const imported = sessions.importSavedSession(sessions.createSavedSessionLibrary(), sessions.exportSavedSession(saved)).sessions[0];
+  const linked = sessions.resumeSavedSession(sessions.openSavedSession(library, saved.id), "https://example.test/confirmation");
+  const draft = model.createSessionSaveDraft({ id:"active", pageScope:current.pageUrl, startedAt:currentEvents[0].captureTime, endedAt:currentEvents.at(-1).captureTime, events:currentEvents });
+  return {
+    actions, open, analysisActions, productionBackground,
+    model:{ savedOrder:persisted.savedView.events.map(({ id }) => id), currentCount:persisted.currentView.events.length, savedCount:persisted.session.events.length, background:persisted.backgroundEventCount, currentSelected:persisted.currentView.inspectorEventId, currentFilter:persisted.currentView.query.conditions[0].values[0], currentScroll:persisted.currentScrollTop, savedSelected:restored.savedView.inspectorEventId, savedScroll:restored.savedScrollTop, observerStarts:restored.startLiveObserver },
+    imported:{ ids:imported.events.map(({ id }) => id), sources:imported.events.map(({ sourceId }) => sourceId), payload:imported.events[17].payload, rawInput:imported.events[17].rawInput, pageUrl:imported.events[17].pageUrl, provenance:imported.events[17].provenance },
+    linked:{ parent:linked.activeSession.parentSavedSessionId, events:linked.activeSession.events.length, savedEvents:saved.events.length },
+    saveDraft:{ eventCount:draft.summary.eventCount, sourceCount:draft.summary.sourceCount, validation:draft.summary.validationSummary },
+  };
+})()`;
+
+const savedSessionLiveFeedReloadRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const restored = { mode:q("#data-layer-panel-live").dataset.feedMode, banner:q("#saved-session-live-summary").textContent, background:q("#saved-session-background-status").textContent, returnLabel:q("#return-to-current-live-feed").textContent, selected:q("#live-event-inspector h4").textContent, scrollTop:q("#live-event-list").scrollTop, observer:q("#live-observer-status").textContent };
+  q("#revalidate-saved-session").click();
+  const comparison = q("#saved-session-validation-comparison").textContent;
+  const original = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions[0].events[17];
+  q("#return-to-current-live-feed").click();
+  const returned = { count:q("#live-captured-event-count").textContent, selected:q("#live-event-inspector h4").textContent, query:q("#live-event-query-count").textContent, hasSavedEvent:Boolean(document.querySelector('[data-event-id="saved-18"]')), message:q("#live-session-message").textContent };
+  q("#save-live-session").click();
+  const saveDialog = q("#save-live-session-dialog"); const name = q("#save-live-session-name"); const confirm = q("#confirm-save-live-session");
+  const save = { open:saveDialog.open, focused:document.activeElement === q("#save-live-session-heading"), summary:q("#save-live-session-summary").textContent, blankDisabled:confirm.disabled };
+  name.value = "Checkout journey snapshot"; name.dispatchEvent(new Event("input", { bubbles:true })); save.namedEnabled = !confirm.disabled; confirm.click();
+  save.persisted = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey snapshot").events.length;
+  q("#data-layer-view-sessions").click(); const originalRow = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey:") && !textContent.includes("snapshot")); click(originalRow, "Start linked capture");
+  const linkedSession = JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
+  const linked = { count:q("#live-captured-event-count").textContent, message:q("#live-session-message").textContent, savedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey").events.length, parent:linkedSession.parentSavedSessionId, active:linkedSession.status };
+  return { restored, comparison, original:{ validation:original.validation, version:original.validationDetails.schema.version }, returned, save, linked };
 })()`;
 
 const reproductionStepActionRowsRuntime = `(async () => {
@@ -1259,7 +1349,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   dialog.dispatchEvent(new Event("cancel", { cancelable:true }));
   const editorAfter = q("#schema-editor").getBoundingClientRect(); keyboard.escapeClosed = !dialog.open; keyboard.layoutUnchanged = editorBefore.width === editorAfter.width && editorBefore.left === editorAfter.left;
   const model = await import("/data-layer-schema-property-rule-picker.js");
-  const availability = Object.fromEntries([["string","Required"],["string","Regular expression"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
+  const availability = Object.fromEntries([["string","Required"],["string","Exact value"],["string","Regular expression"],["string","Text length"],["string","Digits only"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
   return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard };
 })()`;
 
@@ -1354,6 +1444,68 @@ const schemaManualPropertyReloadRuntime = `(() => {
   const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Page view");
   const row = q('#schema-property-tree [data-schema-property-path="commerce.order.id"]');
   return { present:true, metadata:row.querySelector(".schema-property-metadata").textContent, activeCount:row.querySelector("span:not(.schema-property-metadata)").textContent, currentVersion:stored.version, currentUnchanged:!stored.document.properties?.commerce };
+})()`;
+
+const schemaNestedPathRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click();
+  const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Product detail")); click(row, "Edit working draft");
+  const tree = q("#schema-property-tree");
+  const paths = Array.from(tree.children).map(({ dataset }) => dataset.schemaPropertyPath);
+  const products = q('#schema-property-tree [data-schema-property-path="products"]');
+  const everyItem = q('#schema-property-tree [data-schema-property-path="products.*"]');
+  const advanced = { paths, arrayActions:Array.from(products.querySelectorAll("button")).map(({ textContent }) => textContent), everyItem:everyItem.querySelector(".schema-property-metadata").textContent };
+  click(q('#schema-property-tree [data-schema-property-path="fruits"]'), "Add specific index rule");
+  const indexDialog = q("#schema-specific-index-dialog"); const indexInput = q("#schema-specific-index");
+  indexInput.value = "-1"; indexInput.dispatchEvent(new Event("input", { bubbles:true }));
+  const invalidIndex = { min:indexInput.min, blocked:indexDialog.querySelector('button[type="submit"]').disabled, assistance:indexDialog.querySelector("output").textContent };
+  indexInput.value = "1"; indexInput.dispatchEvent(new Event("input", { bubbles:true }));
+  const validIndex = { assistance:indexDialog.querySelector("output").textContent, canContinue:!indexDialog.querySelector('button[type="submit"]').disabled };
+  click(indexDialog, "Choose rule");
+  const stringPicker = q("#schema-property-rule-picker");
+  const exactIndex = { heading:q("#schema-property-rule-picker-heading").textContent, choices:Array.from(stringPicker.querySelectorAll('[aria-label="Create a rule"] button')).map(({ textContent }) => textContent) };
+  click(stringPicker, "Cancel");
+  click(q('#schema-property-tree [data-schema-property-path="products.*.id"]'), "Add rule");
+  const numberPicker = q("#schema-property-rule-picker");
+  const wildcardPicker = { heading:q("#schema-property-rule-picker-heading").textContent, choices:Array.from(numberPicker.querySelectorAll('[aria-label="Create a rule"] button')).map(({ textContent }) => textContent) };
+  click(numberPicker, "Product ids version 1");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Product detail");
+  const persisted = { pendingChanges:stored.workingDraft.pendingChanges, attachmentPaths:stored.workingDraft.attachedRules.map(({ propertyPath }) => propertyPath), currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const nested = await import("/data-layer-schema-nested-path.js");
+  const schemaModel = await import("/data-layer-schema-verification.js");
+  const pickerModel = await import("/data-layer-schema-property-rule-picker.js");
+  const payload = { fruits:["apple", "banana", "pear"], products:[{ id:1, name:"product 1" }, { id:2, name:"product 2" }], order:{ id:"12345678" } };
+  const schemaDocument = stored.workingDraft.document;
+  const targetChoices = nested.nestedTargetChoices(payload, "/products/1/id");
+  const nestedChoice = nested.nestedTargetChoices(payload, "/order/id");
+  const normalization = Object.fromEntries(["nested order id", "fruits item at zero-based index 1", "id in every products item"].map((intent) => [intent, nested.canonicalPathForTargetIntent(intent)]));
+  const pathValidation = Object.fromEntries(["/order/id", "/products/*/id", "/fruits/1", "/order/*", "/fruits/name", "/fruits/-1"].map((path) => [path, nested.validateNestedRuleTarget(schemaDocument, path)]));
+  const compatibility = Object.fromEntries(["/order/id", "/products/*/id", "/fruits/1"].map((path) => { const type = nested.validateNestedRuleTarget(schemaDocument, path).targetType; return [path, pickerModel.builtInRulesForProperty(type).map(({ name }) => name)]; }));
+  const ensured = nested.ensureNestedSchemaPath({ type:"object" }, "/products/*/id", "number");
+  const validate = (rules, value = payload, model = schemaDocument) => {
+    const schema = { id:"preview", name:"Product detail", version:3, document:model, assignments:[], attachedRules:rules };
+    return schemaModel.validateWithSchema({ sourceId:"event", eventName:"product_view", payload:value, rawInput:[] }, schema, [schema]);
+  };
+  const fruitRules = [{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }];
+  const fruits = [payload.fruits, ["apple", "orange", "pear"], ["apple"]].map((values) => { const result = validate(fruitRules, { ...payload, fruits:values }); return { state:result.state, paths:result.issues.map(({ instancePath }) => instancePath) }; });
+  const productRules = [{ id:"id", version:1, propertyPath:"/products/*/id", operator:"value-type", parameters:"number" }, { id:"name", version:1, propertyPath:"/products/*/name", operator:"non-empty-string" }];
+  const productsResult = validate(productRules, { ...payload, products:[payload.products[0], { name:"" }] });
+  const emptyProducts = validate(productRules, { ...payload, products:[] });
+  const orders = ["12345678", "1234567", "1234567a"].map((id) => { const result = validate([{ id:"length", version:1, propertyPath:"/order/id", operator:"text-length", parameters:"8" }, { id:"digits", version:1, propertyPath:"/order/id", operator:"digits-only" }], { ...payload, order:{ id } }); return { id, state:result.state, failed:result.issues[0]?.expected ?? "none" }; });
+  const combined = validate([{ id:"all-fruits", version:1, propertyPath:"/fruits/*", operator:"value-type", parameters:"string" }, ...fruitRules]);
+  const repeatedPayload = { orders:[{ items:[{ sku:"A" }, { sku:"" }] }, { items:[{ sku:"B" }] }] };
+  const repeatedDocument = nested.ensureNestedSchemaPath({ type:"object" }, "/orders/*/items/*/sku", "string").document;
+  const repeated = validate([{ id:"sku", version:1, propertyPath:"/orders/*/items/*/sku", operator:"non-empty-string" }], repeatedPayload, repeatedDocument);
+  const validation = {
+    fruits,
+    products:productsResult.issues.map(({ instancePath, templatePath }) => ({ instancePath, templatePath })),
+    emptyProducts:{ issues:emptyProducts.issues.length, itemCountAvailable:pickerModel.builtInRulesForProperty("array").some(({ name }) => name === "Item count") },
+    orders,
+    combined:{ wildcardMatches:nested.resolveNestedValues(payload, "/fruits/*").length, exactMatches:nested.resolveNestedValues(payload, "/fruits/1").length, issues:combined.issues.length },
+    repeated:repeated.issues.map(({ instancePath, templatePath, expected, actual }) => ({ instancePath, templatePath, expected, actual })),
+  };
+  return { advanced, invalidIndex, validIndex, exactIndex, wildcardPicker, persisted, targetChoices, nestedChoice, normalization, pathValidation, compatibility, ensured:{ createdNodes:ensured.createdNodes, property:ensured.document.properties.products }, validation };
 })()`;
 
 const schemaRevisionLifecycleUiRuntime = `(() => {
@@ -2088,21 +2240,23 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
-    schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
-    assert.deepEqual(schemaViewContainmentObservation, {
-      containedControls:true,
-      editorContainsActions:true,
-      closeReviewContainsActions:true,
-      assignmentContainsPolicy:true,
-      standaloneAssignmentPolicy:0,
-      presentationByView:{
-        Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-      },
-      editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
-      restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
-    }, `Schema view containment violated its ${width}px browser contract`);
+    if (runSchemaViewContainmentRuntime) {
+      schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
+      assert.deepEqual(schemaViewContainmentObservation, {
+        containedControls:true,
+        editorContainsActions:true,
+        closeReviewContainsActions:true,
+        assignmentContainsPolicy:true,
+        standaloneAssignmentPolicy:0,
+        presentationByView:{
+          Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+        },
+        editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
+        restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
+      }, `Schema view containment violated its ${width}px browser contract`);
+    }
     payloadPathFilterPickerObservation = await evaluate(socket, payloadPathFilterPickerRuntime);
     assert.deepEqual(payloadPathFilterPickerObservation, {
       initialFieldOptions:["Choose field", "Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],
@@ -2155,6 +2309,34 @@ try {
       configurationInsideEditor:true,
     }, `Schema rule configuration visibility violated its ${width}px browser contract`);
     await reloadPanel(socket);
+    if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const events = Array.from({ length:18 }, (_, index) => ({ id:"saved-" + (index + 1), name:"purchase", sourceId:"history", sourceName:"Event history", sourceKind:"Data layer", captureTime:"2026-07-12T10:" + String(index).padStart(2, "0") + ":00Z", pageUrl:"https://example.test/checkout", captureOrder:index + 1, payload:{ index:index + 1 }, rawInput:["purchase", index + 1], provenance:{ adapter:"history", imported:true }, validation:index === 17 ? "1 issues" : "Valid", validationDetails:{ schema:{ id:"checkout", name:"Checkout", version:3 }, issues:index === 17 ? [{ instancePath:"/index", message:"Recorded issue", expected:"17", actual:"18", schemaName:"Checkout", schemaVersion:3, schemaLocation:"#/index" }] : [], evaluations:[] } }));
+        const session = { id:"saved:checkout", name:"Checkout journey", immutable:true, pageScope:"https://example.test/checkout", startedAt:"2026-07-12T10:00:00Z", endedAt:"2026-07-12T10:18:00Z", events, provenance:{ imported:true } };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.saved-session-library.v1", JSON.stringify({ sessions:[session] }));
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([{ id:"checkout", name:"Checkout", version:4, published:true, document:{ type:"object" }, assignments:[{ id:"checkout-purchases", sourceId:"history", eventName:"purchase", target:"payload", enabled:true }] }]));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      savedSessionLiveFeedObservation = await evaluate(socket, savedSessionLiveFeedRuntime);
+      await reloadPanel(socket);
+      savedSessionLiveFeedReloadObservation = await evaluate(socket, savedSessionLiveFeedReloadRuntime);
+      socket.close(); continue;
+    }
+    if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const document = { type:"object", properties:{ fruits:{ type:"array", items:{ type:"string" } }, products:{ type:"array", items:{ type:"object", properties:{ id:{ type:"number" }, name:{ type:"string" } } } }, order:{ type:"object", properties:{ id:{ type:"string" } } } } };
+        const current = { id:"schema-product-detail", name:"Product detail", version:3, published:true, document, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document, assignments:[], attachedRules:[], pendingChanges:[] } };
+        const rules = [{ id:"rule-product-ids", name:"Product ids", kind:"Numeric range · number", operator:"numeric range", parameters:"0-999", applicableType:"number", version:1, enabled:true }];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([current]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify(rules));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaNestedPathObservation = await evaluate(socket, schemaNestedPathRuntime);
+      socket.close(); continue;
+    }
     if (width === 320) {
       const previousPickerStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
@@ -2768,6 +2950,12 @@ try {
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
+  }
+  if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
+  }
+  if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ savedSessionLiveFeed:{ initial:savedSessionLiveFeedObservation, reload:savedSessionLiveFeedReloadObservation } }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

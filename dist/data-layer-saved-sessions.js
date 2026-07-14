@@ -47,6 +47,22 @@ export function importSavedSession(library, serialized) {
     const session = immutableClone({ ...parsed, immutable: true });
     return { ...library, sessions: [...library.sessions.filter(({ id }) => id !== session.id), session] };
 }
+export function serializeSavedSessionLibrary(library) {
+    return JSON.stringify({ sessions: library.sessions });
+}
+export function restoreSavedSessionLibrary(serialized) {
+    if (!serialized)
+        return createSavedSessionLibrary();
+    try {
+        const parsed = JSON.parse(serialized);
+        if (!Array.isArray(parsed.sessions) || !parsed.sessions.every(isSavedSession))
+            return createSavedSessionLibrary();
+        return { sessions: parsed.sessions.map((session) => immutableClone({ ...session, immutable: true })) };
+    }
+    catch {
+        return createSavedSessionLibrary();
+    }
+}
 export function searchSavedSessions(library, query) {
     const needle = query.trim().toLowerCase();
     return library.sessions.filter((session) => {
