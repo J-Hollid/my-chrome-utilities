@@ -45,7 +45,7 @@ export function builtInRulesForProperty(propertyType: SchemaPropertyType): reado
     .map((rule) => ({ ...rule, applicableType:propertyType }));
 }
 
-function applicableTypes(rule: PropertyRuleChoice): readonly SchemaPropertyType[] {
+export function applicablePropertyTypesForRule(rule: PropertyRuleChoice): readonly SchemaPropertyType[] {
   if (rule.applicableType) return [rule.applicableType];
   const metadata = `${rule.kind} ${rule.operator ?? ""}`.toLowerCase();
   if (metadata.includes("string")) return ["string"];
@@ -66,8 +66,8 @@ export function reusableRulesForProperty<T extends PropertyRuleChoice>(
 ): readonly (T & ReusablePropertyRuleChoice)[] {
   const normalized = query.trim().toLowerCase();
   return rules
-    .filter((rule) => rule.enabled !== false && applicableTypes(rule).includes(propertyType))
-    .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicableTypes(rule), `version ${rule.version ?? 1}`]
+    .filter((rule) => rule.enabled !== false && applicablePropertyTypesForRule(rule).includes(propertyType))
+    .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
       .filter(Boolean).join(" ").toLowerCase().includes(normalized))
     .map((rule) => ({ ...rule, alreadyAttached:attachedIds.has(rule.id) }));
 }

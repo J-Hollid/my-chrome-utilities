@@ -573,6 +573,30 @@ const reproductionStepActionRowsRuntime = `(async () => {
   return observation;
 })()`;
 
+const guidedDestinationOptionsRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"pageview", page_type:"product_list", count:2 }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  Array.from(q("#live-event-inspector").querySelectorAll("button")).find(({ textContent }) => textContent === "Create validation from this event").click();
+  const flow = q("#guided-validation-flow");
+  flow.querySelector('input[name="guided-property"][value="page_type"]').click();
+  Array.from(flow.querySelectorAll("button")).find(({ textContent }) => textContent === "Continue").click();
+  flow.querySelector('input[name="guided-schema-destination"][value="existing"]').click();
+  return Array.from(q("#guided-schema-results").querySelectorAll(":scope > article")).map((row) => ({
+    label:row.querySelector("h6").textContent,
+    disabled:row.querySelector("button").disabled,
+    explanation:row.querySelectorAll("p")[1].textContent.replace("Property compatibility: ", ""),
+  }));
+})()`;
+
 const guidedValidationRuntime = `(async () => {
   const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
   const visible = (element) => element.getClientRects().length > 0 && !element.hidden;
@@ -843,7 +867,7 @@ const guidedValidationRuntime = `(async () => {
   const matchingDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }))));
   const absentDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }))));
   const productionDestinationOptions = core.schemaDestinationOptions(configuredDestinationDraft, [
-    { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, target:"payload", propertyTypes:{} },
+    { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, target:"payload", propertyTypes:{} },
     { id:"schema:product-listing:3", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_type:"String" } },
     { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
     { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
@@ -2419,9 +2443,7 @@ try {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
         const schemas = [
-          { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
-          { id:"schema:generic-pageview:4", name:"Generic pageview", version:4, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:generic-shop", name:"Generic shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true }] },
           { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
@@ -2431,7 +2453,25 @@ try {
         return previous;
       })()`);
       await reloadPanel(socket);
+      const guidedDestinationOptionsObservation = await evaluate(socket, guidedDestinationOptionsRuntime);
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        for (const [key, value] of Object.entries(${JSON.stringify(previousGuidedStorage)})) localStorage.setItem(key, value);
+        const schemas = [
+          { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:generic-pageview:4", name:"Generic pageview", version:4, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:generic-shop", name:"Generic shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true }] },
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+          { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
+        ];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return true;
+      })()`);
+      await reloadPanel(socket);
       guidedValidationObservation = await evaluate(socket, guidedValidationRuntime);
+      guidedValidationObservation.existingOptions = guidedDestinationOptionsObservation;
       const { production, ...renderedGuidedValidation } = guidedValidationObservation;
       assert.deepEqual(renderedGuidedValidation, {
         initial:{
@@ -2462,12 +2502,10 @@ try {
         saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
-          { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
-          { label:"Generic pageview version 4", disabled:false, explanation:"page_type accepts String rules" },
+          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
-          { label:"Signal Shop pageview version 1", disabled:false, explanation:"page_type accepts String rules" },
         ],
         existingReview:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
         existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
@@ -2507,7 +2545,7 @@ try {
         malformed:{ valid:false, matches:false, error:production.malformed.error },
         override:{ typeSource:"explicit override", currentEventPasses:false, message:"page_type was observed as String but Number is expected.", correctionRequired:true },
         destinationOptions:[
-          { name:"Existing pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
+          { name:"Generic pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
           { name:"Product listing", target:"payload", propertyState:"String", available:true, explanation:"page_type accepts String rules" },
           { name:"Numeric page types", target:"payload", propertyState:"Number", available:false, explanation:"page_type expects Number" },
           { name:"Raw pageview", target:"raw input", propertyState:"absent", available:false, explanation:"schema validates raw input, not payload" },
