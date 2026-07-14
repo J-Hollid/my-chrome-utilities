@@ -24,6 +24,8 @@ let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
+let freshLiveSessionObservation;
+let freshLiveSessionReloadObservation;
 let workspacePanelContainmentObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -34,6 +36,7 @@ const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINM
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
@@ -517,6 +520,110 @@ const savedSessionLiveFeedReloadRuntime = `(() => {
   const linkedSession = JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
   const linked = { count:q("#live-captured-event-count").textContent, message:q("#live-session-message").textContent, savedCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1")).sessions.find(({ name }) => name === "Checkout journey").events.length, parent:linkedSession.parentSavedSessionId, active:linkedSession.status };
   return { restored, comparison, original:{ validation:original.validation, version:original.validationDetails.schema.version }, returned, save, linked };
+})()`;
+
+const freshLiveSessionRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const button = (root, label) => { const element = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!element) throw new Error("Missing " + label); return element; };
+  const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const storedSession = () => JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
+  const storedLibrary = () => JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-library.v1") || '{"sessions":[]}');
+  const eventCount = () => Number(q("#live-captured-event-count").textContent);
+  const eventNames = () => storedSession().timeline.filter(({ type }) => type === "observed").map(({ name }) => name);
+  const history = Array.from({ length:9 }, (_, index) => ({ event:index === 0 ? "page_view" : "add_to_cart", index:index + 1 }));
+  let pushListener; let channelId;
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"https://shop.test/checkout", title:"Checkout", active:true }] },
+    scripting:{ executeScript:async (options) => {
+      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      return [{ result:{ queue:{ history } } }];
+    } },
+    runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
+  };
+  localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([{ id:"checkout-schema", name:"Checkout", version:4, published:true, document:{ type:"object" }, assignments:[] }]));
+  const schemaBefore = localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  q("#choose-observation-target").click(); await wait();
+  q("#observation-target-list [data-target-id]").click(); q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  if (!pushListener || !channelId) throw new Error("Production live-history callback was not attached");
+  const push = async (rawValue, minute) => { pushListener({ type:"my-chrome-utilities.data-layer-history-entry", channelId, rawValue, timestamp:"2026-07-14T06:" + minute + ":00Z" }, { tab:{ id:23 } }); await wait(); };
+  q("#save-live-session").click(); const existingName = q("#save-live-session-name"); existingName.value = "Existing nine"; existingName.dispatchEvent(new Event("input", { bubbles:true })); q("#confirm-save-live-session").click(); await wait();
+  await push({ event:"add_to_cart", index:10 }, "17"); await push({ event:"add_to_cart", index:11 }, "18"); await push({ event:"add_to_cart", index:12 }, "19");
+  const initialSession = storedSession();
+  const sourcesBefore = q("#live-source-statuses").textContent;
+  q("#add-event-feed-filter").click();
+  const field = q("#event-feed-query-field"); field.value = "Event name"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  const operator = q("#event-feed-query-operator"); operator.value = "is"; operator.dispatchEvent(new Event("change", { bubbles:true }));
+  const value = q("#event-feed-query-value"); value.value = "add_to_cart"; value.dispatchEvent(new Event("input", { bubbles:true }));
+  button(q("#live-event-query"), "Apply condition").click();
+  q("#live-event-list").scrollTop = 120;
+  q("#live-event-feed [data-event-id]").click();
+  const priorFeed = { query:q("#live-event-query-count").textContent, selected:q("#live-event-inspector h4").textContent, scrollTop:q("#live-event-list").scrollTop };
+  q("#start-fresh-session").click();
+  const confirmation = {
+    open:q("#fresh-session-confirmation").open,
+    summary:q("#fresh-session-confirmation-summary").textContent,
+    actions:Array.from(q("#fresh-session-confirmation").querySelectorAll("button")).map(({ textContent }) => textContent),
+    unchanged:{ id:storedSession().id, events:eventCount() },
+  };
+  q("#cancel-fresh-session").click();
+  const cancelled = { id:storedSession().id, events:eventCount(), query:q("#live-event-query-count").textContent, selected:q("#live-event-inspector h4").textContent, scrollTop:q("#live-event-list").scrollTop };
+  q("#start-fresh-session").click(); q("#save-and-start-fresh-session").click();
+  const saveDialog = {
+    open:q("#save-live-session-dialog").open,
+    heading:q("#save-live-session-heading").textContent,
+    blankDisabled:q("#confirm-save-live-session").disabled,
+    eventCount:eventCount(),
+    sessionId:storedSession().id,
+  };
+  const saveName = q("#save-live-session-name"); saveName.value = "Checkout before reset"; saveName.dispatchEvent(new Event("input", { bubbles:true })); q("#confirm-save-live-session").click(); await wait();
+  const firstSnapshot = storedLibrary().sessions.find(({ name }) => name === "Checkout before reset");
+  const afterSave = {
+    id:storedSession().id,
+    events:eventCount(),
+    snapshot:{ name:firstSnapshot?.name, immutable:firstSnapshot?.immutable, events:firstSnapshot?.events.length },
+    retained:{ title:storedSession().targetTitle, path:storedSession().historyPath, sources:q("#live-source-statuses").textContent, schema:localStorage.getItem("my-chrome-utilities.schema-library.v1") === schemaBefore },
+    reset:{ query:q("#live-event-query-count").textContent, activeFilters:!q("#active-event-feed-filters").hidden, inspectorHidden:q("#live-event-inspector").hidden, scrollTop:q("#live-event-list").scrollTop },
+  };
+  const zeroSessionId = storedSession().id; const zeroLibrary = localStorage.getItem("my-chrome-utilities.saved-session-library.v1");
+  q("#start-fresh-session").click(); await wait();
+  const zeroImmediate = { distinct:storedSession().id !== zeroSessionId, events:eventCount(), confirmationOpen:q("#fresh-session-confirmation").open, libraryUnchanged:localStorage.getItem("my-chrome-utilities.saved-session-library.v1") === zeroLibrary };
+  await push({ event:"page_view" }, "20"); await push({ event:"add_to_cart" }, "21");
+  q("#save-live-session").click(); const allSavedName = q("#save-live-session-name"); allSavedName.value = "All saved current"; allSavedName.dispatchEvent(new Event("input", { bubbles:true })); q("#confirm-save-live-session").click(); await wait();
+  const allSavedSessionId = storedSession().id; const allSavedLibrary = localStorage.getItem("my-chrome-utilities.saved-session-library.v1");
+  q("#start-fresh-session").click(); await wait();
+  const allSavedImmediate = { distinct:storedSession().id !== allSavedSessionId, events:eventCount(), confirmationOpen:q("#fresh-session-confirmation").open, libraryUnchanged:localStorage.getItem("my-chrome-utilities.saved-session-library.v1") === allSavedLibrary };
+  await push({ event:"page_view" }, "22"); await push({ event:"add_to_cart" }, "23");
+  q("#start-fresh-session").click();
+  const discardBefore = { id:storedSession().id, events:eventCount(), saved:storedLibrary().sessions.length, summary:q("#fresh-session-confirmation-summary").textContent };
+  q("#discard-and-start-fresh-session").click(); await wait();
+  const discardAfter = { id:storedSession().id, events:eventCount(), saved:storedLibrary().sessions.length, title:storedSession().targetTitle, path:storedSession().historyPath, status:q("#live-observer-status").textContent };
+  await push({ event:"purchase", order_id:"A-42" }, "24");
+  const purchase = { count:eventCount(), names:eventNames(), timeline:storedSession().timeline.length };
+  const currentId = storedSession().id;
+  q("#data-layer-view-sessions").click();
+  const archiveRow = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout before reset"));
+  button(archiveRow, "Open in Live feed").click();
+  const archive = { startDisabled:q("#start-fresh-session").disabled, returnAvailable:!q("#return-to-current-live-feed").hidden, returnLabel:q("#return-to-current-live-feed").textContent, currentId:storedSession().id };
+  q("#start-fresh-session").click(); archive.unchanged = storedSession().id === currentId && eventCount() === 12;
+  q("#return-to-current-live-feed").click();
+  return {
+    initial:{ id:initialSession.id, events:initialSession.timeline.filter(({ type }) => type === "observed").length, title:initialSession.targetTitle, path:initialSession.historyPath, sources:sourcesBefore },
+    priorFeed, confirmation, cancelled, saveDialog, afterSave, zeroImmediate, allSavedImmediate, discardBefore, discardAfter, purchase, archive,
+  };
+})()`;
+
+const freshLiveSessionReloadRuntime = `(() => {
+  const session = JSON.parse(localStorage.getItem("dataLayerTestingSession")).session;
+  const names = session.timeline.filter(({ type }) => type === "observed").map(({ name }) => name);
+  return {
+    id:session.id,
+    count:document.querySelector("#live-captured-event-count").textContent,
+    names,
+    rendered:Array.from(document.querySelectorAll("#live-event-feed [data-event-id]")).map(({ textContent }) => textContent),
+    title:session.targetTitle,
+    path:session.historyPath,
+  };
 })()`;
 
 const reproductionStepActionRowsRuntime = `(async () => {
@@ -2270,6 +2377,19 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1") {
+      freshLiveSessionObservation = await evaluate(socket, freshLiveSessionRuntime);
+      assert.equal(freshLiveSessionObservation.initial.events, 12);
+      assert.equal(freshLiveSessionObservation.confirmation.open, true);
+      assert.equal(freshLiveSessionObservation.cancelled.id, freshLiveSessionObservation.initial.id);
+      assert.equal(freshLiveSessionObservation.afterSave.snapshot.events, 12);
+      assert.deepEqual(freshLiveSessionObservation.purchase.names, ["purchase"]);
+      assert.equal(freshLiveSessionObservation.archive.unchanged, true);
+      await reloadPanel(socket);
+      freshLiveSessionReloadObservation = await evaluate(socket, freshLiveSessionReloadRuntime);
+      assert.deepEqual(freshLiveSessionReloadObservation.names, ["purchase"]);
+      socket.close(); continue;
+    }
     if (runWorkspacePanelContainmentRuntime) {
       workspacePanelContainmentObservation = await evaluate(socket, workspacePanelContainmentRuntime);
       assert.deepEqual(workspacePanelContainmentObservation, {
@@ -2469,7 +2589,7 @@ try {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
         const schemas = [
-          { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
@@ -2528,7 +2648,7 @@ try {
         saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
-          { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
+          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
@@ -3005,6 +3125,9 @@ try {
   }
   if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ savedSessionLiveFeed:{ initial:savedSessionLiveFeedObservation, reload:savedSessionLiveFeedReloadObservation } }));
+  }
+  if (process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ freshLiveSession:{ initial:freshLiveSessionObservation, reload:freshLiveSessionReloadObservation } }));
   }
   if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ workspacePanelContainment:workspacePanelContainmentObservation }));

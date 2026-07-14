@@ -13,6 +13,7 @@ import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
 import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
 import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./data-layer-live-guided-workflow-ui.js";
@@ -85,6 +86,7 @@ const { viewList: dataLayerViewList, backToEventsButton, pauseCaptureButton, res
 const { copyPageUrlButton } = liveSessionSummaryElements;
 const liveNotificationController = createLiveNotificationController((message) => renderLiveSessionMessage(liveObserverElements, message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
 const saveLiveSessionButton = document.querySelector("#save-live-session");
+const startFreshSessionButton = document.querySelector("#start-fresh-session");
 const saveLiveSessionDialog = document.querySelector("#save-live-session-dialog");
 const saveLiveSessionForm = document.querySelector("#save-live-session-form");
 const saveLiveSessionHeading = document.querySelector("#save-live-session-heading");
@@ -92,6 +94,12 @@ const saveLiveSessionName = document.querySelector("#save-live-session-name");
 const saveLiveSessionSummary = document.querySelector("#save-live-session-summary");
 const confirmSaveLiveSessionButton = document.querySelector("#confirm-save-live-session");
 const cancelSaveLiveSessionButton = document.querySelector("#cancel-save-live-session");
+const freshSessionConfirmation = document.querySelector("#fresh-session-confirmation");
+const freshSessionConfirmationHeading = document.querySelector("#fresh-session-confirmation-heading");
+const freshSessionConfirmationSummary = document.querySelector("#fresh-session-confirmation-summary");
+const saveAndStartFreshSessionButton = document.querySelector("#save-and-start-fresh-session");
+const discardAndStartFreshSessionButton = document.querySelector("#discard-and-start-fresh-session");
+const cancelFreshSessionButton = document.querySelector("#cancel-fresh-session");
 const savedSessionLiveBanner = document.querySelector("#saved-session-live-banner");
 const savedSessionLiveSummary = document.querySelector("#saved-session-live-summary");
 const savedSessionBackgroundStatus = document.querySelector("#saved-session-background-status");
@@ -377,6 +385,7 @@ let liveObserverState = createLiveObserverState({
     pageUrl: globalThis.location.href,
     sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
+liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot;
 let savedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
 let savedSessionLiveFeed = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
@@ -384,6 +393,7 @@ if (savedSessionLiveFeed)
     liveObserverState = savedSessionLiveFeed.savedView;
 let archivedSavedSession;
 let pendingSessionSaveDraft;
+let startFreshAfterSessionSave = false;
 const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
 let savedThroughEventCount = Math.max(0, Number(localStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
@@ -501,6 +511,10 @@ function renderLiveContextActions() {
         ...(selectedTarget ? { selectedTarget } : {}),
         pathStatus: currentTargetPathStatus,
     }));
+    if (startFreshSessionButton) {
+        startFreshSessionButton.hidden = !activeSession;
+        startFreshSessionButton.disabled = Boolean(savedSessionLiveFeed);
+    }
 }
 function targetFromTab(tab, currentWindow = false) {
     if (tab.id === undefined || tab.windowId === undefined || !tab.url)
@@ -756,6 +770,8 @@ function renderSavedSessionLiveBanner() {
             resumeCaptureButton.disabled = false;
         if (saveLiveSessionButton)
             saveLiveSessionButton.disabled = false;
+        if (startFreshSessionButton)
+            startFreshSessionButton.disabled = false;
         return;
     }
     const summary = savedSessionSummary(feed.session);
@@ -779,6 +795,8 @@ function renderSavedSessionLiveBanner() {
         resumeCaptureButton.disabled = true;
     if (saveLiveSessionButton)
         saveLiveSessionButton.disabled = true;
+    if (startFreshSessionButton)
+        startFreshSessionButton.disabled = true;
 }
 function renderLiveObserver() {
     renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
@@ -2891,11 +2909,9 @@ resumeCaptureButton?.addEventListener("click", () => {
 copyPageUrlButton?.addEventListener("click", () => {
     void copyLivePageUrl();
 });
-saveLiveSessionButton?.addEventListener("click", () => {
-    if (savedSessionLiveFeed)
-        return;
+function currentSessionSaveDraft() {
     const now = new Date().toISOString();
-    pendingSessionSaveDraft = createSessionSaveDraft({
+    return createSessionSaveDraft({
         id: `live-${Date.now()}`,
         pageScope: liveObserverState.pageUrl,
         startedAt: liveObserverState.events[0]?.captureTime ?? now,
@@ -2921,16 +2937,70 @@ saveLiveSessionButton?.addEventListener("click", () => {
         })),
         provenance: { source: "live-observer", capturedAt: now },
     });
+}
+function openSessionSaveDialog(startFreshAfterSave = false) {
+    if (savedSessionLiveFeed)
+        return;
+    startFreshAfterSessionSave = startFreshAfterSave;
+    pendingSessionSaveDraft = currentSessionSaveDraft();
     if (saveLiveSessionName)
         saveLiveSessionName.value = "";
     if (confirmSaveLiveSessionButton)
         confirmSaveLiveSessionButton.disabled = true;
+    if (saveLiveSessionHeading)
+        saveLiveSessionHeading.textContent = startFreshAfterSave ? "Save session before starting fresh" : "Save session snapshot";
+    if (confirmSaveLiveSessionButton)
+        confirmSaveLiveSessionButton.textContent = startFreshAfterSave ? "Save and start fresh" : "Save snapshot";
     if (saveLiveSessionSummary) {
         const summary = pendingSessionSaveDraft.summary;
         saveLiveSessionSummary.textContent = `${summary.pageScope} · ${summary.eventCount} events · ${summary.sourceCount} sources · ${summary.validationSummary}`;
     }
     saveLiveSessionDialog?.showModal();
     saveLiveSessionHeading?.focus({ preventScroll: true });
+}
+function startFreshSession() {
+    if (savedSessionLiveFeed)
+        return;
+    const session = dataLayerSessionState.session;
+    if (!session)
+        return;
+    const fresh = startFreshLiveSession(dataLayerSessionState, liveObserverState, dataLayerObserverState, newDataLayerSessionId(session.tabId));
+    if (!fresh.started)
+        return;
+    dataLayerSessionState = fresh.sessionState;
+    liveObserverState = fresh.liveObserverState;
+    dataLayerObserverState = fresh.observerState;
+    presentedSourceEventCount = 0;
+    savedThroughEventCount = 0;
+    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+    inspectorReturnSnapshot = undefined;
+    savedInspectorTemplateId = undefined;
+    if (guidedValidationFlow.currentDraft())
+        guidedValidationFlow.close();
+    persistAndRenderObservationState();
+    renderLiveObserver();
+    if (liveObserverElements.eventList)
+        liveObserverElements.eventList.scrollTop = 0;
+    setLiveSessionMessage("Fresh session started with 0 captured events.");
+    startFreshSessionButton?.focus({ preventScroll: true });
+}
+saveLiveSessionButton?.addEventListener("click", () => openSessionSaveDialog());
+startFreshSessionButton?.addEventListener("click", () => {
+    const availability = freshSessionAvailability({
+        eventCount: liveObserverState.events.length,
+        savedThroughEventCount,
+        savedSessionMode: Boolean(savedSessionLiveFeed),
+    });
+    if (availability.action === "unavailable")
+        return;
+    if (availability.action === "start") {
+        startFreshSession();
+        return;
+    }
+    if (freshSessionConfirmationSummary)
+        freshSessionConfirmationSummary.textContent = `${availability.unsavedEventCount} unsaved events would be discarded.`;
+    freshSessionConfirmation?.showModal();
+    freshSessionConfirmationHeading?.focus({ preventScroll: true });
 });
 saveLiveSessionName?.addEventListener("input", () => {
     if (confirmSaveLiveSessionButton)
@@ -2948,17 +3018,41 @@ saveLiveSessionForm?.addEventListener("submit", (event) => {
     persistSavedSessionLibrary();
     saveLiveSessionDialog?.close();
     renderSavedSessions();
+    if (startFreshAfterSessionSave) {
+        startFreshAfterSessionSave = false;
+        startFreshSession();
+        return;
+    }
     setLiveSessionMessage(`Saved immutable snapshot ${name}; capture state unchanged.`);
     saveLiveSessionButton?.focus({ preventScroll: true });
 });
 const closeSaveLiveSessionDialog = () => {
     pendingSessionSaveDraft = undefined;
+    const returnToFreshAction = startFreshAfterSessionSave;
+    startFreshAfterSessionSave = false;
     if (saveLiveSessionDialog?.open)
         saveLiveSessionDialog.close();
-    saveLiveSessionButton?.focus({ preventScroll: true });
+    (returnToFreshAction ? startFreshSessionButton : saveLiveSessionButton)?.focus({ preventScroll: true });
 };
 cancelSaveLiveSessionButton?.addEventListener("click", closeSaveLiveSessionDialog);
 saveLiveSessionDialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeSaveLiveSessionDialog(); });
+const closeFreshSessionConfirmation = () => {
+    if (freshSessionConfirmation?.open)
+        freshSessionConfirmation.close();
+    startFreshSessionButton?.focus({ preventScroll: true });
+};
+cancelFreshSessionButton?.addEventListener("click", closeFreshSessionConfirmation);
+freshSessionConfirmation?.addEventListener("cancel", (event) => { event.preventDefault(); closeFreshSessionConfirmation(); });
+saveAndStartFreshSessionButton?.addEventListener("click", () => {
+    if (freshSessionConfirmation?.open)
+        freshSessionConfirmation.close();
+    openSessionSaveDialog(true);
+});
+discardAndStartFreshSessionButton?.addEventListener("click", () => {
+    if (freshSessionConfirmation?.open)
+        freshSessionConfirmation.close();
+    startFreshSession();
+});
 returnToCurrentLiveFeedButton?.addEventListener("click", () => {
     if (!savedSessionLiveFeed)
         return;
