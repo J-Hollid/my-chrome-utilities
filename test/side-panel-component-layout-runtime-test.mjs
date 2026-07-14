@@ -1477,7 +1477,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   trigger.click();
   click(q("#schema-property-rule-picker"), "Approved pages version 2");
   const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
-  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span:not(.schema-property-metadata)').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && (propertyPath === "page_type" || propertyPath === "/page_type")).length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span:not(.schema-property-metadata)').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "/page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
   const triggerAfter = q('#schema-property-tree button[aria-label="Add rule for page_type"]'); triggerAfter.click();
   const already = Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find(({ textContent }) => textContent.includes("Approved pages version 2"));
   const beforeEmpty = localStorage.getItem("my-chrome-utilities.schema-library.v1");
