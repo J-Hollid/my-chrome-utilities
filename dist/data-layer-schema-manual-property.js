@@ -69,7 +69,10 @@ function addAtPath(document, segments, definition) {
     const child = properties[name] ?? { type: "object", propertyOrigin: "manual" };
     return { ...structuredClone(document), type: document.type ?? "object", properties: { ...structuredClone(properties), [name]: addAtPath(child, rest, definition) } };
 }
-export function addManualProperty(document, definition) {
+export function addManualProperty(document, inheritedDocuments, definition) {
+    const inspection = inspectManualProperty(document, inheritedDocuments, definition);
+    if (inspection.result === "blocked")
+        throw new Error(inspection.assistance);
     return addAtPath(document, parsePath(definition.path).segments, definition);
 }
 export function manualPropertyPreview(definition) {

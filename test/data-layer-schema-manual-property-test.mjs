@@ -48,7 +48,7 @@ for (const itemType of ["string", "number", "boolean", "object"]) {
   assert.equal(inspectManualProperty(pageView, inherited, definition).result, "ready");
 }
 
-const added = addManualProperty(pageView, { path:"commerce.order.id", type:"string" });
+const added = addManualProperty(pageView, [], { path:"commerce.order.id", type:"string" });
 assert.deepEqual(added.properties.commerce.properties.order, {
   type:"object",
   propertyOrigin:"manual",
@@ -56,5 +56,16 @@ assert.deepEqual(added.properties.commerce.properties.order, {
 });
 assert.deepEqual(pageView.properties.commerce, { type:"object", properties:{ currency:{ type:"string" } } }, "manual authoring must not mutate the source document");
 
-const arrayAdded = addManualProperty(pageView, { path:"items", type:"array", arrayItemType:"number" });
+const arrayAdded = addManualProperty(pageView, [], { path:"items", type:"array", arrayItemType:"number" });
 assert.deepEqual(arrayAdded.properties.items, { type:"array", propertyOrigin:"manual", items:{ type:"number" } });
+
+assert.throws(
+  () => addManualProperty(pageView, inherited, { path:"page_name", type:"string" }),
+  /page_name is defined by the parent schema/,
+  "the domain write must enforce inherited-property conflicts without relying on the UI",
+);
+assert.throws(
+  () => addManualProperty(pageView, [], { path:"page_type", type:"number" }),
+  /Go to existing property page_type/,
+  "the domain write must not overwrite an existing property",
+);

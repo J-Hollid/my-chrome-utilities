@@ -95,7 +95,13 @@ function addAtPath(document: JsonSchema, segments: readonly string[], definition
   return { ...structuredClone(document), type:document.type ?? "object", properties:{ ...structuredClone(properties), [name]:addAtPath(child, rest, definition) } };
 }
 
-export function addManualProperty(document: JsonSchema, definition: ManualPropertyDefinition): JsonSchema {
+export function addManualProperty(
+  document: JsonSchema,
+  inheritedDocuments: readonly JsonSchema[],
+  definition: ManualPropertyDefinition,
+): JsonSchema {
+  const inspection = inspectManualProperty(document, inheritedDocuments, definition);
+  if (inspection.result === "blocked") throw new Error(inspection.assistance);
   return addAtPath(document, parsePath(definition.path).segments, definition);
 }
 
