@@ -32,6 +32,7 @@ export interface DataLayerTestingSession {
   targetTitle?: string;
   targetOrigin?: string;
   parentSavedSessionId?: string;
+  freshBoundary?: boolean;
   timeline: DataLayerEventEntry[];
 }
 

@@ -74,6 +74,7 @@
           </div>
           </section>
           <button id="save-live-session" type="button" data-action-variant="secondary">Save session</button>
+          <button id="start-fresh-session" type="button" data-action-variant="secondary">Start fresh session</button>
           <output id="live-session-message" aria-live="polite"></output>
         </header>
         <dialog id="save-live-session-dialog" aria-labelledby="save-live-session-heading">
@@ -85,6 +86,13 @@
             <button id="confirm-save-live-session" type="submit" data-action-variant="primary" disabled>Save snapshot</button>
             <button id="cancel-save-live-session" type="button" data-action-variant="secondary">Cancel</button>
           </form>
+        </dialog>
+        <dialog id="fresh-session-confirmation" aria-labelledby="fresh-session-confirmation-heading">
+          <h4 id="fresh-session-confirmation-heading" tabindex="-1">Start fresh session?</h4>
+          <output id="fresh-session-confirmation-summary" aria-live="polite"></output>
+          <button id="save-and-start-fresh-session" type="button" data-action-variant="primary">Save and start fresh</button>
+          <button id="discard-and-start-fresh-session" type="button" data-action-variant="destructive">Discard and start fresh</button>
+          <button id="cancel-fresh-session" type="button" data-action-variant="secondary">Cancel</button>
         </dialog>
         <ul id="live-source-statuses" aria-label="Observation sources"></ul>
           <section id="live-event-list" aria-label="Observed event feed">

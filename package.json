@@ -10,7 +10,7 @@
     "package": "npm run build && node scripts/package.mjs",
     "test:unit": "bb test:unit",
     "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs",
-    "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs && node test/data-layer-live-session-end-test.mjs && node test/data-layer-live-session-target-release-test.mjs",
+    "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs && node test/data-layer-fresh-session-test.mjs && node test/data-layer-live-session-end-test.mjs && node test/data-layer-live-session-target-release-test.mjs",
     "test:unit:observation-targets": "npm run build && node test/data-layer-observation-targets-test.mjs && node test/data-layer-target-path-status-test.mjs",
     "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-event-feed-query-test.mjs && node test/data-layer-event-feed-query-ui-test.mjs && node test/data-layer-live-responsive-layout-test.mjs && node test/data-layer-live-inspector-return-test.mjs && node test/data-layer-event-feed-summaries-test.mjs && node test/data-layer-live-session-controls-test.mjs && node test/data-layer-live-guided-workflow-test.mjs && node test/data-layer-live-session-summary-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
     "test:unit:side-panel-action-hierarchy": "npm run build && node test/side-panel-action-hierarchy-test.mjs && node test/side-panel-action-hierarchy-ui-test.mjs && node test/panel-empty-states-test.mjs && node test/panel-empty-states-ui-test.mjs",
