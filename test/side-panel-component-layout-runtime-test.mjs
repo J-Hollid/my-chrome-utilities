@@ -36,13 +36,15 @@ let schemaDocumentationObservation;
 let missingEventDefectReportObservation;
 let validationPresenceSemanticsObservation;
 let defectLibraryObservation;
+let schemaPublicationRefreshObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+const componentWidths = process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" ? [720]
@@ -1745,13 +1747,16 @@ const conditionalValidationRulesRuntime = `(async () => {
     return elements.eventInspector.textContent;
   };
   const failedText = renderResult(failed, { page_type:"product_detail", currency:"EUR", oOrder:{ aProducts:[] } });
-  const notApplicableText = renderResult(notApplicable, { page_type:"category", currency:"EUR", oOrder:{} });
+  const notApplicableDefaultText = renderResult(notApplicable, { page_type:"category", currency:"EUR", oOrder:{} });
+  click(elements.eventInspector, "Show non-applicable properties");
+  const notApplicableText = elements.eventInspector.textContent;
   const presentation = {
     issueCount:failed.issues.length,
     expectedPath:failed.issues[0].instancePath,
     conditionShown:failedText.includes("page_type equals product_detail"),
     consequenceShown:failedText.includes("minimum 1 items"),
     triggerNotFailing:!failed.evaluations.some(({ propertyPath, status }) => propertyPath === "/page_type" && (status === "error" || status === "warning")),
+    notApplicableHiddenByDefault:!notApplicableDefaultText.includes("not applicable"),
     notApplicableShown:notApplicableText.includes("not applicable"),
     notApplicableIssues:notApplicable.issues.length,
   };
@@ -3042,8 +3047,10 @@ const validationPresenceSemanticsRuntime = `(async () => {
   const elements=liveUi.findLiveObserverElements();
   const actions=actionsCore.createLiveInspectorActions({ currentPageUrl:()=>"https://shop.example/presence", writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
   liveUi.renderLiveInspector(elements,{ id:"presence-event", name:"pageview", sourceId:"history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/presence", payload:{}, rawInput:[], validation:displayResult.state, validationDetails:{ issues:displayResult.issues, evaluations:displayResult.evaluations } },actions);
-  const inspectorText=elements.eventInspector.textContent;
-  const liveInspector={ notApplicable:inspectorText.includes("9 rules not applicable"), issueRows:elements.eventInspector.querySelectorAll("#live-event-validation-issues li").length, invalidMissing:/(?:actual|received) Missing/i.test(inspectorText) };
+  const defaultInspectorText=elements.eventInspector.textContent;
+  elements.eventInspector.querySelector("#live-non-applicable-properties").click();
+  const revealedInspectorText=elements.eventInspector.textContent;
+  const liveInspector={ hiddenByDefault:!defaultInspectorText.includes("9 rules not applicable"), revealed:revealedInspectorText.includes("9 rules not applicable"), issueRows:elements.eventInspector.querySelectorAll("#live-event-validation-issues li").length, invalidMissing:/(?:actual|received) Missing/i.test(revealedInspectorText) };
   return { operators, requiredCases, nullValue:{ status:nullResult.evaluations[0].status, actual:nullResult.evaluations[0].actual, issueActual:nullResult.issues[0].actual }, undefinedValue:{ statuses:undefinedResult.evaluations.map(({ status }) => status), actuals:undefinedResult.evaluations.map(({ actual }) => actual), issueActual:undefinedResult.issues.find(({ rule }) => rule?.startsWith("Allowed values"))?.actual }, nested:{ issues:nested.issues.map(({ rule, instancePath }) => [rule.replace(/ v\\d+$/, ""),instancePath]), notApplicable:nested.evaluations.filter(({ status }) => status === "not-applicable").map(({ propertyPath }) => propertyPath), wildcardPasses:nested.evaluations.filter(({ rule,status }) => rule === "Wildcard value" && status === "pass").length }, conditionalCases, equivalent:{ legacy:legacy.evaluations[0].status, inherited:inherited.evaluations[0].status, issues:legacy.issues.length+inherited.issues.length }, liveSummary, liveInspector };
 })()`;
 
@@ -3106,6 +3113,67 @@ const defectLibraryRuntime = `(async () => {
   const completed={ id:"session:one",pageScope:event.pageUrl,startedAt:event.captureTime,endedAt:event.captureTime,events:[event] }; const linked=defects.attachSavedSessionToDefect({defects:[active]},sessions.createSavedSessionLibrary(),active.id,completed,"Evidence","2026-07-14T14:02:00Z");
   const resolvedLibrary=defects.updateDefectStatus({defects:[active]},active.id,"Resolved","2026-07-14T14:03:00Z"); const archivedLibrary=defects.updateDefectStatus({defects:[active]},active.id,"Archived","2026-07-14T14:03:00Z");
   return { nav,actualReportedLinks,openedFromIssue,returnedToIssue,restoredCount,filteredCount,edited,recopy:writes[0],lifecycle:{resolved,reopened,archived},confirmation,afterDelete,stored:{count:stored.defects.length,status:stored.defects[0].status,description:stored.defects[0].report.description,notes:stored.defects[0].notes},renderCases,differences,wildcardMatch,actionResults,actionWrites,linked:{sessions:linked.savedSessions.sessions.length,id:linked.library.defects[0].savedSession.id,contains:linked.library.defects[0].savedSession.containsMatchingIssue,immutable:Object.isFrozen(linked.savedSessions.sessions[0])},statuses:{resolved:defects.issueTriage(issue(),resolvedLibrary).state,archived:defects.issueTriage(issue(),archivedLibrary).state} };
+})()`;
+
+const schemaPublicationRefreshSeedRuntime = `(async () => {
+  const defects = await import("/data-layer-defect-library.js");
+  const sessions = await import("/data-layer-saved-sessions.js");
+  localStorage.clear();
+  const assignments = ["page_view", "banner"].map((eventName) => ({ id:"assignment:" + eventName, sourceId:"history", eventName, target:"payload", priority:10, versionPolicy:"follow latest", enabled:true }));
+  const document = { type:"object", properties:{ page_type:{ type:"string" }, test:{ type:"string" }, currency:{ type:"string" } } };
+  const optionalRule = { id:"optional-test", name:"Optional test", version:3, propertyPath:"/test", operator:"allowed-values", parameters:"known", severity:"error" };
+  const currencyRule3 = { id:"known-currency", name:"Known currency", version:3, propertyPath:"/currency", operator:"allowed-values", parameters:"EUR,USD", severity:"error" };
+  const schema = { id:"product-listing", name:"Product listing", version:3, published:true, document, assignments, attachedRules:[optionalRule,currencyRule3], revisionHistory:[], workingDraft:{ baseVersion:3, sourceVersion:3, document, assignments, attachedRules:[{ ...optionalRule, version:4 },{ ...currencyRule3, version:4 },{ id:"required-page-type", name:"Required page type", version:4, propertyPath:"/page_type", operator:"required", severity:"error" }], pendingChanges:["Add required page type","Revise validation rules"] } };
+  localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([schema]));
+  const entry = (id, name, time, payload, rawInput, pageUrl) => ({ type:"observed", url:pageUrl, timestamp:time, observerPath:"dataLayer", id, name, sessionId:"session:publication", sourceId:"history", sourceKind:"Data layer", pageUrl, payload, rawInput, rawValue:rawInput, validation:"Not checked" });
+  const timeline = [
+    entry("event:page-view","page_view","2026-07-14T12:00:00Z",{ currency:"EUR" },["page_view",{ currency:"EUR" }],"https://shop.example/products"),
+    entry("event:banner","banner","2026-07-14T12:00:01Z",{ currency:"GBP" },["banner",{ currency:"GBP" }],"https://shop.example/products/2"),
+  ];
+  localStorage.setItem("dataLayerTestingSession", JSON.stringify({ session:{ id:"session:publication", status:"active", freshBoundary:true, tabId:1, historyPath:"dataLayer", startUrl:"https://shop.example/products", currentUrl:"https://shop.example/products/2", timeline } }));
+  const issue = { sourceId:"history", eventName:"banner", schemaId:"product-listing", validationTarget:"payload", concretePath:"/currency", templatePath:"/currency", ruleId:"rule:known-currency", ruleRevision:3, actual:"GBP", expected:"EUR,USD", pageUrl:"https://shop.example/products/2", captureTime:"2026-07-14T12:00:01Z", sourceName:"history", schemaName:"Product listing", ruleName:"Known currency" };
+  const defect = defects.createValidationDefect({ id:"defect:currency-v3", now:"2026-07-14T12:01:00Z", report:{ summary:"banner currency is invalid" }, issues:[issue] });
+  localStorage.setItem(defects.DEFECT_LIBRARY_STORAGE_KEY, defects.serializeDefectLibrary({ defects:[defect] }));
+  const savedEvent = { id:"saved:page-view", name:"page_view", sourceId:"history", sourceName:"history", captureTime:"2026-07-14T11:00:00Z", pageUrl:"https://shop.example/products", payload:{ currency:"EUR" }, rawInput:[], validation:"Valid", validationDetails:{ schema:{ id:"product-listing", name:"Product listing", version:3 }, issues:[], evaluations:[{ propertyPath:"/test", status:"not-applicable", message:"Optional target absent", expected:"known", actual:"missing", rule:"Optional test", ruleVersion:3, severity:"error", schemaName:"Product listing", schemaVersion:3 }] } };
+  const saved = sessions.saveCompletedSession(sessions.createSavedSessionLibrary(), { id:"saved:source", pageScope:savedEvent.pageUrl, startedAt:savedEvent.captureTime, endedAt:savedEvent.captureTime, events:[savedEvent] }, "Revision 3 evidence");
+  localStorage.setItem("my-chrome-utilities.saved-session-library.v1", sessions.serializeSavedSessionLibrary(saved));
+  return true;
+})()`;
+
+const schemaPublicationRefreshRuntime = `(async () => {
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const q = (selector, root=document) => { const value = root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const click = (label, root=document) => { const value = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label || candidate.textContent.startsWith(label)); if (!value) throw new Error("Missing action " + label); value.click(); return value; };
+  const savedBefore = localStorage.getItem("my-chrome-utilities.saved-session-library.v1");
+  click("Add filter", q("#live-event-query"));
+  const field = q("#event-feed-query-field"); field.value = "Event name"; field.dispatchEvent(new Event("change", { bubbles:true }));
+  const operator = q("#event-feed-query-operator"); operator.value = "is"; operator.dispatchEvent(new Event("change", { bubbles:true }));
+  const value = q("#event-feed-query-value"); value.value = "page_view"; value.dispatchEvent(new Event("input", { bubbles:true })); click("Apply condition", q("#live-event-query"));
+  const queryBefore = q("#live-event-query-count").textContent;
+  q("#live-event-feed button").click(); click("Validate", q("#live-event-inspector")); await pause();
+  q("#back-to-events").click(); q("#live-event-feed button").click();
+  const assignedTerm=Array.from(q("#live-event-inspector").querySelectorAll("dt")).find((term)=>term.textContent==="Assigned schema");
+  if (!assignedTerm) return { debug:{ inspector:q("#live-event-inspector").textContent, feedback:q("#live-validation-update-status").textContent, schemas:localStorage.getItem("my-chrome-utilities.schema-library.v1") } };
+  const before = { summary:q("#live-inspector-validation-summary").textContent, schema:assignedTerm.nextElementSibling.textContent, optionalHidden:!document.querySelector('[data-property-path="/test"]') };
+  const toggle = q("#live-non-applicable-properties");
+  const order = Boolean(toggle.compareDocumentPosition(q("#live-property-search")) & Node.DOCUMENT_POSITION_FOLLOWING);
+  toggle.click();
+  const optional = q('[data-property-path="/test"]'); const optionalValue = q('[data-missing="true"]',optional); const optionalStatus = q(".live-property-status",optional);
+  const dangerProbe=document.createElement("span"); dangerProbe.style.color="var(--danger)"; document.body.append(dangerProbe); const dangerColor=getComputedStyle(dangerProbe).color; dangerProbe.remove();
+  const revealed = { label:toggle.textContent, pressed:toggle.getAttribute("aria-pressed"), value:optionalValue.textContent, treatment:optional.dataset.validationTreatment, status:optionalStatus.textContent, missingColor:getComputedStyle(optionalValue).color, dangerColor };
+  optionalStatus.click(); optional.focus({ preventScroll:true }); const inspector=q("#live-event-inspector"); inspector.scrollTop=37;
+  q("#data-layer-view-schemas").click(); click("Edit working draft", q("#schema-list")); q("#save-schema").click(); q("#confirm-schema-revision").click(); await pause();
+  const publication = { result:q("#schema-result").textContent, savedUnchanged:localStorage.getItem("my-chrome-utilities.saved-session-library.v1") === savedBefore };
+  q("#data-layer-view-live").click();
+  const afterOptional=q('[data-property-path="/test"]'); const pageType=q('[data-property-path="/page_type"]');
+  const after = { query:q("#live-event-query-count").textContent, count:q("#live-captured-event-count").textContent, selected:q("#live-event-inspector h4").textContent, summary:q("#live-inspector-validation-summary").textContent, schema:q('dt[data-field="assigned schema"] + dd').textContent, show:q("#live-non-applicable-properties").getAttribute("aria-pressed"), optionalExpanded:q(".live-property-status",afterOptional).getAttribute("aria-expanded"), pageType:q(".live-property-status",pageType).textContent, scroll:inspector.scrollTop, focused:document.activeElement?.dataset.propertyPath, politeAnnouncements:Array.from(document.querySelectorAll('[aria-live="polite"]')).filter((node)=>node.textContent.includes("Published Product listing revision 4. Revalidated 2 current Live events.")).length, feed:Array.from(q("#live-event-feed").querySelectorAll("button")).map((button)=>button.textContent) };
+  click("Clear all", q("#active-event-feed-filters")); const bannerButton=Array.from(q("#live-event-feed").querySelectorAll("button")).find((button)=>button.textContent.includes("banner")); bannerButton.click();
+  const defectStates=Array.from(q("#live-event-inspector").querySelectorAll(".live-new-defect-state")).map(({textContent})=>textContent);
+  const core=await import("/data-layer-schema-publication-refresh.js"); const verification=await import("/data-layer-schema-verification.js"); const observer=await import("/data-layer-live-observer.js");
+  const published=verification.restoreSchemaLibrary(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const base={ ...observer.createLiveObserverState({ pageUrl:"https://shop.example/products", sources:[] }), events:[{ id:"pre:1",name:"page_view",sourceId:"history",captureTime:"1",pageUrl:"https://shop.example/products",payload:{currency:"EUR"},rawInput:[] },{ id:"pre:2",name:"banner",sourceId:"history",captureTime:"2",pageUrl:"https://shop.example/products/2",payload:{currency:"EUR",page_type:"listing"},rawInput:[] }] };
+  const refreshed=core.revalidateCurrentLiveSession(base,published,{}); const appendedInput={sourceId:"history",eventName:"page_view",payload:{currency:"EUR",page_type:"listing"},rawInput:[]}; const appendedValidation=verification.validateEvent(appendedInput,published,"https://shop.example/products/3"); const final=observer.recordLiveEvent(refreshed.state,{id:"post:1",name:"page_view",sourceId:"history",captureTime:"3",pageUrl:"https://shop.example/products/3",payload:appendedInput.payload,rawInput:[],validation:appendedValidation.state,validationDetails:{issues:appendedValidation.issues,evaluations:appendedValidation.evaluations,schema:appendedValidation.schema,assignment:appendedValidation.assignment}});
+  return { before,queryBefore,control:{order,revealed},publication,after,defectStates,boundary:{refreshed:refreshed.revalidatedEventIds,ids:final.events.map(({id})=>id),revisions:final.events.map((event)=>event.validationDetails.schema.version)} };
 })()`;
 
 const workflowFocusRuntime = `Promise.all([
@@ -3206,6 +3274,29 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, schemaPublicationRefreshSeedRuntime); await reloadPanel(socket);
+      schemaPublicationRefreshObservation = await evaluate(socket, schemaPublicationRefreshRuntime);
+      if (schemaPublicationRefreshObservation.debug) assert.fail(JSON.stringify(schemaPublicationRefreshObservation.debug));
+      assert.deepEqual(schemaPublicationRefreshObservation.before, { summary:"Validation passed", schema:"Product listing version 3", optionalHidden:true });
+      assert.equal(schemaPublicationRefreshObservation.queryBefore, "1 of 2 events");
+      assert.equal(schemaPublicationRefreshObservation.control.order, true);
+      assert.deepEqual({ label:schemaPublicationRefreshObservation.control.revealed.label, pressed:schemaPublicationRefreshObservation.control.revealed.pressed, value:schemaPublicationRefreshObservation.control.revealed.value, treatment:schemaPublicationRefreshObservation.control.revealed.treatment }, { label:"Hide non-applicable properties",pressed:"true",value:"Missing",treatment:"neutral" });
+      assert.match(schemaPublicationRefreshObservation.control.revealed.status, /not applicable/i);
+      assert.notEqual(schemaPublicationRefreshObservation.control.revealed.missingColor, schemaPublicationRefreshObservation.control.revealed.dangerColor);
+      assert.equal(schemaPublicationRefreshObservation.publication.savedUnchanged, true);
+      assert.match(schemaPublicationRefreshObservation.publication.result, /Published Product listing revision 4\. Revalidated 2 current Live events\./);
+      assert.equal(schemaPublicationRefreshObservation.after.politeAnnouncements, 1);
+      assert.deepEqual({ query:schemaPublicationRefreshObservation.after.query,count:schemaPublicationRefreshObservation.after.count,selected:schemaPublicationRefreshObservation.after.selected,summary:schemaPublicationRefreshObservation.after.summary,schema:schemaPublicationRefreshObservation.after.schema,show:schemaPublicationRefreshObservation.after.show,optionalExpanded:schemaPublicationRefreshObservation.after.optionalExpanded,pageType:schemaPublicationRefreshObservation.after.pageType,focused:schemaPublicationRefreshObservation.after.focused }, { query:"1 of 2 events",count:"2",selected:"page_view",summary:"Validation failed, 1 error",schema:"Product listing version 4",show:"true",optionalExpanded:"true",pageType:"! 1 error",focused:"/test" });
+      assert.equal(schemaPublicationRefreshObservation.after.feed.length, 1);
+      assert.equal(schemaPublicationRefreshObservation.defectStates.includes("Review required"), true);
+      assert.deepEqual(schemaPublicationRefreshObservation.boundary, { refreshed:["pre:1","pre:2"],ids:["pre:1","pre:2","post:1"],revisions:[4,4,4] });
+      await evaluate(socket, `(() => { const toggle=document.querySelector("#live-non-applicable-properties"); toggle.focus(); return toggle.getAttribute("aria-pressed"); })()`);
+      await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      assert.equal(await evaluate(socket, `document.querySelector("#live-non-applicable-properties").getAttribute("aria-pressed")`), "true");
+      socket.close(); continue;
+    }
     if (process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1") {
       await evaluate(socket, defectLibrarySeedRuntime); await reloadPanel(socket);
       defectLibraryObservation = await evaluate(socket, defectLibraryRuntime);
@@ -3242,7 +3333,7 @@ try {
       assert.deepEqual(validationPresenceSemanticsObservation.conditionalCases.map(({ status, issues }) => [status,issues]), [["not-applicable",0],["not-applicable",0],["error",1],["error",1]]);
       assert.deepEqual(validationPresenceSemanticsObservation.equivalent, { legacy:"not-applicable", inherited:"not-applicable", issues:0 });
       assert.deepEqual(validationPresenceSemanticsObservation.liveSummary, { status:"9 rules not applicable", symbolName:"neutral", treatment:"neutral", errors:0, warnings:0, passed:0 });
-      assert.deepEqual(validationPresenceSemanticsObservation.liveInspector, { notApplicable:true, issueRows:0, invalidMissing:false });
+      assert.deepEqual(validationPresenceSemanticsObservation.liveInspector, { hiddenByDefault:true,revealed:true,issueRows:0,invalidMissing:false });
       socket.close(); continue;
     }
     if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1") {
@@ -3579,7 +3670,7 @@ try {
       }, "Conditional rule editor lost type-aware trigger configuration");
       assert.deepEqual(conditionalValidationRulesObservation.presentation, {
         issueCount:1, expectedPath:"/oOrder/aProducts", conditionShown:true, consequenceShown:true,
-        triggerNotFailing:true, notApplicableShown:true, notApplicableIssues:0,
+        triggerNotFailing:true, notApplicableHiddenByDefault:true, notApplicableShown:true, notApplicableIssues:0,
       }, "Conditional Live inspector presentation lost failure or not-applicable evidence");
       assert.deepEqual(conditionalValidationRulesObservation.lifecycle, {
         attachmentIds:[conditionalValidationRulesObservation.stored.rule.id, "rule:reusable-products"],
@@ -4152,6 +4243,9 @@ try {
   }
   if (process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ defectLibrary:defectLibraryObservation }));
+  }
+  if (process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaPublicationRefresh:schemaPublicationRefreshObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

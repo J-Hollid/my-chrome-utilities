@@ -180,6 +180,11 @@ import {
   setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import {
+  captureLiveInspectorPresentation,
+  restoreLiveInspectorPresentation,
+  type LiveInspectorPresentationSnapshot,
+} from "./data-layer-live-inspector-presentation-ui.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
@@ -241,6 +246,7 @@ import {
 } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./data-layer-schema-verification.js";
+import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
@@ -670,6 +676,7 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
+const liveInspectorPresentation = new Map<string, LiveInspectorPresentationSnapshot>();
 let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
 let defectLibrary: DefectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
 let selectedDefectId: string | undefined;
@@ -1107,6 +1114,9 @@ async function confirmDetachSelectedTarget(): Promise<void> {
 }
 
 function showDataLayerView(view: DataLayerView, focus = false): void {
+  if (liveObserverState.view === "Live" && view !== "Live" && liveObserverState.inspectorEventId) {
+    liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
+  }
   liveObserverState = { ...liveObserverState, view };
   if (savedSessionLiveFeed) {
     savedSessionLiveFeed = { ...savedSessionLiveFeed, savedView:structuredClone(liveObserverState) };
@@ -1114,6 +1124,7 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
   }
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
   renderDataLayerView(liveObserverElements, view, focus);
+  if (view === "Live" && liveObserverState.inspectorEventId) restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
   if (view === "Defects") renderDefects();
 }
 
@@ -1336,6 +1347,8 @@ function openMissingEventBuilder(entryPoint: string, initialSchemaId?: string): 
 }
 
 function closeInspectorAndReturnToEvents(): void {
+  const selectedId = liveObserverState.inspectorEventId;
+  if (selectedId) liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
   const returnSnapshot = inspectorReturnSnapshot;
   liveObserverState = closeLiveInspector(liveObserverState);
   synchronizeSavedSessionFeedView();
@@ -1348,6 +1361,10 @@ function closeInspectorAndReturnToEvents(): void {
 }
 
 function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
+  const previousEventId = liveObserverState.inspectorEventId;
+  if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
+    liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
+  }
   if (!preserveReturnSnapshot) {
     inspectorReturnSnapshot = captureInspectorReturn(
       eventId,
@@ -1358,6 +1375,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
   liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
   synchronizeSavedSessionFeedView();
   const event = liveObserverState.events.find(({ id }) => id === eventId);
+  const presentation = liveInspectorPresentation.get(eventId);
   if (event) renderLiveInspector(liveObserverElements, triagedEvent(event), createLiveInspectorActions({
     currentPageUrl: () => liveObserverState.pageUrl,
     writeClipboard: async (text) => {
@@ -1452,9 +1470,10 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll:true });
       setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
     },
-  }));
+  }), presentation ? { showNonApplicableProperties:presentation.showNonApplicableProperties } : {});
   renderLiveObserver();
-  backToEventsButton?.focus({ preventScroll: true });
+  restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
+  if (!presentation) backToEventsButton?.focus({ preventScroll: true });
 }
 
 function appendOpenInLibraryAction(eventId: string, templateName: string): void {
@@ -2732,6 +2751,20 @@ function recheckCapturedSchemaValidation(): void {
   localStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
   renderSchemaValidationRecords();
   if (schemaResult) schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
+}
+
+function refreshCurrentLiveAfterSchemaPublication(): number {
+  const current = savedSessionLiveFeed?.currentView ?? liveObserverState;
+  const refreshed = revalidateCurrentLiveSession(current, schemas, manualSchemaOverrides);
+  if (savedSessionLiveFeed) {
+    savedSessionLiveFeed = { ...savedSessionLiveFeed, currentView:refreshed.state };
+    persistSavedSessionFeed();
+  } else {
+    liveObserverState = refreshed.state;
+    renderLiveObserver();
+    if (liveObserverState.inspectorEventId) openLiveInspector(liveObserverState.inspectorEventId, true);
+  }
+  return refreshed.revalidatedEventIds.length;
 }
 
 function renderSchemaValidationRecords(): void {
@@ -4067,8 +4100,10 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     if (!rule.id.startsWith("rule:") || reusableSchemaRules.some(({ id }) => id === rule.id)) continue;
     reusableSchemaRules = [...reusableSchemaRules, { id:rule.id, name:rule.name ?? rule.id, kind:rule.operator ?? "required", version:rule.version, enabled:rule.enabled !== false, ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.message ? { message:rule.message } : {}), attachments:[saved.id] }];
   }
-  persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();
-  if (schemaResult) schemaResult.textContent = `Published ${saved.name} revision ${saved.version}.`;
+  persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+  const refreshedEventCount = refreshCurrentLiveAfterSchemaPublication();
+  schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();
+  if (schemaResult) schemaResult.textContent = `Published ${saved.name} revision ${saved.version}. Revalidated ${refreshedEventCount} current Live ${refreshedEventCount === 1 ? "event" : "events"}.`;
   if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;
 });
 cancelSchemaRevisionButton?.addEventListener("click", () => { pendingSchemaRestoration = undefined; if (schemaRevisionReview?.open) schemaRevisionReview.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; });
