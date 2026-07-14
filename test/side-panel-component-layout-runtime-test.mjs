@@ -939,6 +939,7 @@ const guidedValidationRuntime = `(async () => {
     status:q("#live-session-message").textContent,
     focusReturned:document.activeElement?.dataset.action === "add-property-validation",
     nextActions:Array.from(q("#guided-draft-continuation").querySelectorAll("button")).map(({ textContent }) => textContent),
+    attachedRule:newSchemaDraft.workingDraft.attachedRules[0],
   };
   const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const unpublishedChoiceAbsent = !Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview"));
@@ -956,6 +957,8 @@ const guidedValidationRuntime = `(async () => {
     assignableAfterPublication:Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview version 1")),
     currentRevision:publishedSchema.version,
     historicalRevisions:publishedSchema.revisionHistory.length,
+    attachedRule:publishedSchema.attachedRules[0],
+    reusableRule:rulesAfterPublication.at(-1),
   };
   q("#data-layer-view-live").click();
   q("#live-event-feed button").click();
@@ -3425,8 +3428,8 @@ try {
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
         saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview-on-127-0-0-1", name:"pageview on 127.0.0.1", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"] },
-        published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
+        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview-on-127-0-0-1", name:"pageview on 127.0.0.1", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"], attachedRule:{ id:"rule:pageview-requirement", name:"pageview requirement", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product_list,homepage", severity:"error", enabled:true } },
+        published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0, attachedRule:{ id:"rule:pageview-requirement", name:"pageview requirement", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product_list,homepage", severity:"error", enabled:true }, reusableRule:{ id:"rule:pageview-requirement", name:"pageview requirement", kind:"allowed-values", version:1, enabled:true, operator:"allowed-values", parameters:"product_list,homepage", severity:"error", attachments:["schema:signal-shop-pageview:1"] } },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },

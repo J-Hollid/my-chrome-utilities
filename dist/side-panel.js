@@ -40,6 +40,7 @@ import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-libra
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
+import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
@@ -1938,22 +1939,8 @@ function persistPublishedGuidedValidation(result) {
         ...(result.assignment.pathnameCondition ? { pathnameCondition: result.assignment.pathnameCondition } : {}),
         ...(result.assignment.pathConditions ? { pathConditions: result.assignment.pathConditions } : {}),
     };
-    const operator = rule.requirement === "Must be one of these values" ? "allowed-values"
-        : rule.requirement === "Must match a pattern" ? "regular-expression"
-            : "required";
-    const parameters = operator === "required"
-        ? rule.path
-        : `${rule.path}:${rule.values.join(",")}`;
-    const attachedRule = {
-        id: rule.reusableRuleId ?? `local-rule:${result.schema.id}:${rule.path}`,
-        name: result.reusableRules[0]?.name ?? `${rule.path} requirement`,
-        version: 1,
-        propertyPath: rule.path,
-        operator,
-        parameters,
-        severity: "error",
-        enabled: true,
-    };
+    const ruleName = result.reusableRules[0]?.name ?? `${rule.path} requirement`;
+    const attachedRule = guidedAttachedRule(rule, ruleName, `local-rule:${result.schema.id}:${rule.path}`);
     const previousSchema = result.destination.previousSchemaId
         ? schemas.find(({ id }) => id === result.destination.previousSchemaId)
         : undefined;
