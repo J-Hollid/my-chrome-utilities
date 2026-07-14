@@ -178,8 +178,15 @@ function arrayAt(schema, draft, pointer) {
     return { definition, values };
 }
 export function addExpectedArrayItem(schema, draft, pointer) {
-    const { definition } = arrayAt(schema, draft, pointer);
+    const definition = schemaAtPointer(schema.document, pointer);
+    if (definition?.type !== "array" || !definition.items)
+        throw new Error(`Expected array not found at ${pointer}.`);
     const next = structuredClone(draft);
+    const current = valueAtPointer(next.payload, pointer);
+    if (current !== undefined && !Array.isArray(current))
+        throw new Error(`Expected array not found at ${pointer}.`);
+    if (current === undefined)
+        assignAtPointer(next.payload, pointer, []);
     valueAtPointer(next.payload, pointer).push(initialContainer(definition.items) ?? null);
     return orderPayload(schema, next);
 }
@@ -194,7 +201,12 @@ export function duplicateExpectedArrayItem(schema, draft, pointer, index) {
         throw new Error(`Unknown array item ${index} at ${pointer}.`);
     const next = structuredClone(draft);
     valueAtPointer(next.payload, pointer).splice(index + 1, 0, structuredClone(values[index]));
-    copyResponseSources({ ...next.responseSources }, next.responseSources, `${pointer}/${index}`, `${pointer}/${index + 1}`);
+    const prefix = `${pointer}/`;
+    next.responseSources = Object.fromEntries(Object.entries(draft.responseSources).filter(([key]) => !key.startsWith(prefix)));
+    valueAtPointer(next.payload, pointer).forEach((_item, nextIndex) => {
+        const originalIndex = nextIndex <= index ? nextIndex : nextIndex - 1;
+        copyResponseSources(draft.responseSources, next.responseSources, `${pointer}/${originalIndex}`, `${pointer}/${nextIndex}`);
+    });
     return orderPayload(schema, next);
 }
 export function removeExpectedArrayItem(schema, draft, pointer, index) {

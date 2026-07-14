@@ -167,14 +167,24 @@ for (let sample = 0; sample < 200; sample += 1) {
     method:"schema-value", value:`outside-${sample}`,
   }), /schema-provided value/i);
 
-  const duplicated = duplicateExpectedArrayItem(payloadSchema, payloadDraft, "/items", 0);
-  assert.deepEqual(duplicated.payload.items, [payloadDraft.payload.items[0], payloadDraft.payload.items[0]]);
+  let withSibling = addExpectedArrayItem(payloadSchema, payloadDraft, "/items");
+  withSibling = setExpectedPayloadValue(payloadSchema, withSibling, "/items/1/id", {
+    method:"custom", value:String(sample + 1.5),
+  });
+  withSibling = setExpectedPayloadValue(payloadSchema, withSibling, "/items/1/name", {
+    method:"custom", value:`custom-${allowedName}`,
+  });
+  const duplicated = duplicateExpectedArrayItem(payloadSchema, withSibling, "/items", 0);
+  assert.deepEqual(duplicated.payload.items, [payloadDraft.payload.items[0], payloadDraft.payload.items[0], withSibling.payload.items[1]]);
   assert.equal(duplicated.responseSources["/items/1/id"], "operator custom response");
   assert.equal(duplicated.responseSources["/items/1/name"], "schema-provided value");
+  assert.equal(duplicated.responseSources["/items/2/name"], "operator custom response",
+    "duplicating before a sibling must shift that sibling's response provenance");
   const shifted = removeExpectedArrayItem(payloadSchema, duplicated, "/items", 0);
-  assert.deepEqual(shifted.payload.items, [payloadDraft.payload.items[0]]);
+  assert.deepEqual(shifted.payload.items, [payloadDraft.payload.items[0], withSibling.payload.items[1]]);
   assert.equal(shifted.responseSources["/items/0/id"], "operator custom response");
   assert.equal(shifted.responseSources["/items/0/name"], "schema-provided value");
+  assert.equal(shifted.responseSources["/items/1/name"], "operator custom response");
   const withoutOptional = removeExpectedPayloadValue(shifted, "/enabled");
   assert.equal(expectedPayloadComplete(payloadSchema, withoutOptional), true);
   assert.equal(withoutOptional.responseSources["/enabled"], undefined);
