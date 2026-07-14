@@ -1,4 +1,5 @@
-import type { JsonSchema, SchemaDefinition } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
+import type { SchemaDefinition } from "./data-layer-schema-verification.js";
 import {
   addExpectedArrayItem,
   duplicateExpectedArrayItem,

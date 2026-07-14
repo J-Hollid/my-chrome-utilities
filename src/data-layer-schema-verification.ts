@@ -1,4 +1,6 @@
 import type { ValidationState } from "./data-layer-source.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
+import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { urlConditionsMatch, type PathCondition } from "./data-layer-path-conditions.js";
 import { canonicalNestedPath, resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
@@ -14,6 +16,7 @@ import {
 } from "./data-layer-schema-documentation.js";
 
 export type ValidationTarget = "payload" | "raw input";
+export type { JsonSchema } from "./data-layer-schema-document.js";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
   baseVersion: number;
@@ -42,7 +45,6 @@ export interface SchemaAssignment {
   schemaId?: string;
   schemaVersion?: number;
 }
-export interface JsonSchema { type?: "object" | "string" | "number" | "boolean" | "array"; propertyOrigin?: "manual"; required?: readonly string[]; forbidden?: readonly string[]; properties?: Record<string, JsonSchema>; items?: JsonSchema; minimum?: number; maximum?: number; additionalProperties?: boolean; }
 export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; conditionSummary?: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; documentation?: ResolvedSchemaDocumentation; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
@@ -59,12 +61,20 @@ function canonicalAttachedRulePath(path: string): string {
 }
 
 function documentContainsPath(document: JsonSchema, path: string): boolean {
-  let current: JsonSchema | undefined = document;
+  let current: JsonSchema | undefined = normalizeCanonicalSchemaDocument(document);
   for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {
     current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
     if (!current) return false;
   }
   return true;
+}
+
+function schemaDefinitionAtPath(document: JsonSchema, path: string): JsonSchema | undefined {
+  let current: JsonSchema | undefined = document;
+  for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {
+    current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
+  }
+  return current;
 }
 
 function exactLegacyParameterPrefix(parameters: string, propertyPath: string): string | undefined {
@@ -406,14 +416,18 @@ function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): P
 }
 
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {
+  const normalizedDocument = normalizeCanonicalSchemaDocument(schema.document);
   for (const storedRule of rules) {
     const rule = effectiveAttachedRule(storedRule, schema.document);
     if (rule.enabled === false) continue;
     if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) continue;
     if (rule.propertyPath?.startsWith("/")) {
+      const definition = schemaDefinitionAtPath(normalizedDocument, rule.propertyPath);
       for (const match of resolveNestedValues(value, rule.propertyPath)) {
         const failure = nestedRuleFailure(rule, match);
-        if (failure) {
+        const declaredTypeMismatch = match.exists
+          && definition?.type !== undefined && valueType(match.value) !== definition.type;
+        if (failure && !declaredTypeMismatch) {
           const allowedValues = rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values"
             ? configuredAllowedValues(rule).map(String)
             : [];
@@ -552,7 +566,7 @@ function validationEvaluations(value: unknown, schema: SchemaDefinition, schemas
 }
 
 function collectSchemaIssues(value: unknown, schema: SchemaDefinition, schemas: readonly SchemaDefinition[], result: ValidationIssue[]): void {
-  issuesFor(value, inheritedDocument(schema, schemas), "", "#", result, schema);
+  issuesFor(value, normalizeCanonicalSchemaDocument(inheritedDocument(schema, schemas)), "", "#", result, schema);
   attachedRuleIssues(value, schema, result);
   inheritedAttachedRuleIssues(value, schema, schemas, result);
 }

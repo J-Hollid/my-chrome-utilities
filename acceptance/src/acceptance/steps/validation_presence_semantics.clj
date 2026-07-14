@@ -39,9 +39,9 @@
                    (:requiredCases observation))
   (support/assert! (= {:status "error" :actual "null" :issueActual "null"} (:nullValue observation))
                    "Explicit null was confused with an absent property." (:nullValue observation))
-  (support/assert! (= {:statuses ["error" "pass"] :actuals ["undefined" "undefined"] :issueActual "undefined"}
+  (support/assert! (= {:statuses ["error" "pass"] :actuals ["undefined" "undefined"] :typeIssueActual "undefined"}
                       (:undefinedValue observation))
-                   "Explicit undefined was present but leaked an unstable observed-value representation."
+                   "Explicit undefined did not retain stable evaluation and type-issue evidence."
                    (:undefinedValue observation))
   (support/assert! (= [["Nested required" "/profile/status"]
                        ["Wildcard required" "/products/1/sku"]
@@ -137,5 +137,5 @@
       verify-model! validate-example! #(assert-runtime-boundary! (browser-observation!))))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T19:47:18.027319877+02:00", :module-hash "-873399586", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-135206568"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-1223094497"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-984489401"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 15, :end-line 19, :hash "-808924326"} {:id "defn/browser-observation!", :kind "defn", :line 21, :end-line 27, :hash "1717773233"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 29, :end-line 71, :hash "-1918977958"} {:id "def/model-example-values", :kind "def", :line 73, :end-line 83, :hash "-1786934155"} {:id "def/runtime-example-values", :kind "def", :line 85, :end-line 96, :hash "351585306"} {:id "defn/validate-example!", :kind "defn", :line 98, :end-line 127, :hash "-1209457316"} {:id "def/handlers", :kind "def", :line 129, :end-line 137, :hash "-1328409276"}]}
+;; {:version 1, :tested-at "2026-07-15T01:23:01.252197352+02:00", :module-hash "-1503001375", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-135206568"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-1223094497"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-984489401"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 15, :end-line 19, :hash "-808924326"} {:id "defn/browser-observation!", :kind "defn", :line 21, :end-line 27, :hash "1717773233"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 29, :end-line 71, :hash "-1889575513"} {:id "def/model-example-values", :kind "def", :line 73, :end-line 83, :hash "-1786934155"} {:id "def/runtime-example-values", :kind "def", :line 85, :end-line 96, :hash "351585306"} {:id "defn/validate-example!", :kind "defn", :line 98, :end-line 127, :hash "-1209457316"} {:id "def/handlers", :kind "def", :line 129, :end-line 137, :hash "-1328409276"}]}
 ;; clj-mutate-manifest-end

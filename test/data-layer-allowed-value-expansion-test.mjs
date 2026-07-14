@@ -107,7 +107,9 @@ for (const [value, different] of typedValues) {
   const accepted = validateWithSchema({ sourceId:"history", eventName:"page_view", payload:{ site:"consumer", page_type:value }, rawInput:[] }, published, [published]);
   const rejected = validateWithSchema({ sourceId:"history", eventName:"page_view", payload:{ site:"consumer", page_type:different }, rawInput:[] }, published, [published]);
   assert.equal(accepted.issues.some(({ rule: name }) => name?.startsWith("Known page types")), false);
-  assert.equal(rejected.issues.some(({ rule: name }) => name?.startsWith("Known page types")), true);
+  const matchesDeclaredType = typeof different === "string";
+  assert.equal(rejected.issues.some(({ rule: name }) => name?.startsWith("Known page types")), matchesDeclaredType);
+  assert.equal(rejected.issues.some(({ message }) => message === "Type mismatch"), !matchesDeclaredType);
 }
 
 const parent = { ...schema, id:"schema:parent", name:"Generic parent", assignments:[] };
