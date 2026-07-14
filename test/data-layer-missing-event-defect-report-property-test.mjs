@@ -6,6 +6,7 @@ import {
   confirmMissingEventExpectation,
   createMissingEventDraft,
   createMissingEventReport,
+  createMissingEventReportPreview,
   generateMissingEventRepresentations,
   overrideMissingEventWarning,
   selectMissingEventSchema,
@@ -88,6 +89,66 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   let draft = createMissingEventDraft("property test", inputs.visits, inputs.schemas);
   draft = selectMissingEventSchema(draft, schema.id);
+  const fidelityPayload = {
+    page_type:`product_<${nextToken()}>&`,
+    products:[{ id:sample + 1, name:`robot "${nextToken()}"\nline two` }],
+  };
+  const fidelityAdditionalText = `  Expected <${nextToken()}> & line one\nline two  `;
+  const fidelitySteps = [
+    `Visit ${pathname}`,
+    `Click Robot <${sample}> & continue`,
+    `Expect ${eventName} to be pushed`,
+  ];
+  const fidelityComposition = {
+    expectedPayload:fidelityPayload,
+    expectedResponseSources:{
+      "/page_type":"schema-provided value",
+      "/products/0/name":"operator custom response",
+    },
+    expectedResponseProvenance:{
+      "/page_type":{ id:`provenance-${sample}`, name:`Private provenance ${nextToken()}`, version:1, propertyPath:"/page_type" },
+    },
+    expectedResultAdditionalText:fidelityAdditionalText,
+    reproductionSteps:fidelitySteps,
+  };
+  const unconfirmedSnapshot = structuredClone(draft);
+  const previewReport = createMissingEventReportPreview(draft, [], [], fidelityComposition);
+  const previewRepresentations = generateMissingEventRepresentations(previewReport);
+  const expectedPayloadJson = JSON.stringify(fidelityPayload, null, 2);
+  const expectedResultSection = (text) => text.split("Expected result\n", 2)[1].split("\n\nSchema expectation", 1)[0];
+
+  assert.equal(previewReport.expectedResultAdditionalText, fidelityAdditionalText.trim());
+  assert.deepEqual(previewReport.reproductionSteps, fidelitySteps);
+  assert.deepEqual(previewRepresentations.expectedPayload, fidelityPayload);
+  assert.equal(previewRepresentations.previewText, previewRepresentations.jiraText);
+  assert.equal(previewRepresentations.previewText.split(expectedPayloadJson).length - 1, 1,
+    "plain representations must contain the expected payload JSON exactly once");
+  assert.equal(previewRepresentations.previewText.split(`${eventName} is fired with`).length - 1, 1,
+    "plain representations must contain the generated payload narrative exactly once");
+  assert.ok(previewRepresentations.previewText.indexOf(fidelityAdditionalText.trim())
+    < previewRepresentations.previewText.indexOf(`${eventName} is fired with`));
+  assert.equal(previewRepresentations.previewHtml.match(/<pre/g)?.length, 1,
+    "HTML representations must use exactly one preformatted payload block");
+  assert.equal(previewRepresentations.previewHtml.match(/<ol>/g)?.length, 1);
+  assert.ok(fidelitySteps.every((step) => previewRepresentations.previewHtml.includes(
+    step.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"),
+  )));
+  for (const privateEvidence of [
+    fidelityComposition.expectedResponseSources["/page_type"],
+    fidelityComposition.expectedResponseSources["/products/0/name"],
+    fidelityComposition.expectedResponseProvenance["/page_type"].name,
+  ]) {
+    assert.equal(previewRepresentations.previewText.includes(privateEvidence), false,
+      "operator response provenance must not leak into report representations");
+    assert.equal(previewRepresentations.previewHtml.includes(privateEvidence), false,
+      "operator response provenance must not leak into report HTML");
+  }
+  assert.deepEqual(draft, unconfirmedSnapshot,
+    "preview composition and representation must not mutate the unconfirmed draft");
+  assert.deepEqual(fidelityComposition.expectedPayload, fidelityPayload,
+    "preview composition must not mutate the expected payload input");
+  assert.throws(() => createMissingEventReport(draft), /Confirm the event expectation/i);
+
   draft = verifyMissingEventAbsence(confirmMissingEventExpectation(draft));
 
   assert.equal(draft.verification.matchingCount, sameVisitMatches.length);
@@ -97,6 +158,20 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   assert.throws(() => createMissingEventReport(draft), /explicit override/i);
   draft = overrideMissingEventWarning(draft, `fixture ${sample}`);
+
+  const completedFidelityReport = createMissingEventReport(draft, [], [], fidelityComposition);
+  const completedFidelityRepresentations = generateMissingEventRepresentations(completedFidelityReport);
+  assert.equal(
+    expectedResultSection(completedFidelityRepresentations.previewText),
+    expectedResultSection(previewRepresentations.previewText),
+    "pre-confirmation preview and completed reports must preserve one Expected-result representation",
+  );
+  assert.deepEqual(completedFidelityReport.reproductionSteps, fidelitySteps,
+    "completed reports must conserve the operator's reproduction-step order");
+  assert.deepEqual(completedFidelityReport.expectedResponseSources, fidelityComposition.expectedResponseSources,
+    "completed reports must retain response evidence even though representations hide it");
+  assert.deepEqual(completedFidelityReport.expectedResponseProvenance, fidelityComposition.expectedResponseProvenance,
+    "completed reports must retain response provenance even though representations hide it");
 
   const timelineIds = events.filter((_, index) => index % 2 === sample % 2).map(({ id }) => id);
   const manualSteps = [`Choose product ${sample}`, `Submit ${nextToken()}`];
