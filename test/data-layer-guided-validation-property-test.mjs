@@ -3,11 +3,17 @@ import assert from "node:assert/strict";
 import {
   addAllowedValue,
   advanceGuidedValidation,
+  applyGuidedSchemaCandidate,
+  assignmentConfigurationRequired,
+  assignmentDraftAfterGuidedSave,
+  assignmentGuidedAction,
   assignmentScopeSummary,
   backGuidedValidation,
   createGuidedValidationDraft,
   existingSchemaDestination,
+  guidedAssignmentCoversEvent,
   guidedAssignmentsMatch,
+  guidedValidationStages,
   pathConditionResult,
   searchSchemaDestinationOptions,
   schemaDestinationOptions,
@@ -95,6 +101,107 @@ for (let sample = 0; sample < 200; sample += 1) {
       pathConditions:[{ matchType:"Exact path", expression:pathname }],
     }],
   };
+
+  const pathAssignment = pathCandidate.assignments[0];
+  assert.equal(
+    guidedAssignmentCoversEvent(pathAssignment, initial.event, "payload"),
+    true,
+  );
+  assert.equal(
+    guidedAssignmentCoversEvent(
+      {
+        ...pathAssignment,
+        domainCondition:"*.example",
+        pathnameCondition:"/products/*",
+        pathConditions:undefined,
+      },
+      initial.event,
+      "payload",
+    ),
+    true,
+  );
+  for (const nonCoveringAssignment of [
+    { ...pathAssignment, enabled:false },
+    { ...pathAssignment, sourceId:"other-source" },
+    { ...pathAssignment, eventName:"other-event" },
+    { ...pathAssignment, target:"raw input" },
+    { ...pathAssignment, domainCondition:"other.example" },
+    {
+      ...pathAssignment,
+      pathConditions:[{ matchType:"Exact path", expression:"/other" }],
+    },
+  ]) {
+    assert.equal(
+      guidedAssignmentCoversEvent(
+        nonCoveringAssignment,
+        initial.event,
+        "payload",
+      ),
+      false,
+    );
+  }
+
+  const coveredDraft = applyGuidedSchemaCandidate(destination, pathCandidate);
+  assert.equal(assignmentConfigurationRequired(coveredDraft), false);
+  assert.equal(assignmentGuidedAction(coveredDraft), "reuse the covering assignment");
+  assert.equal(guidedValidationStages(coveredDraft).includes("scope"), false);
+
+  const pendingDraft = applyGuidedSchemaCandidate(destination, {
+    ...pathCandidate,
+    assignments:[{ ...pathAssignment, pending:true }],
+  });
+  assert.equal(
+    assignmentGuidedAction(pendingDraft),
+    "reuse the covering pending assignment",
+  );
+
+  const multipleCoverageDraft = applyGuidedSchemaCandidate(destination, {
+    ...pathCandidate,
+    assignments:[
+      pathAssignment,
+      { ...pathAssignment, id:`secondary:${sample}` },
+    ],
+  });
+  assert.equal(assignmentConfigurationRequired(multipleCoverageDraft), false);
+  assert.equal(
+    assignmentGuidedAction(multipleCoverageDraft),
+    "reuse existing schema coverage",
+  );
+
+  const uncoveredDraft = applyGuidedSchemaCandidate(destination, {
+    ...pathCandidate,
+    assignments:[{
+      ...pathAssignment,
+      pathConditions:[{ matchType:"Exact path", expression:"/other" }],
+    }],
+  });
+  assert.equal(assignmentConfigurationRequired(uncoveredDraft), true);
+  assert.equal(
+    assignmentGuidedAction(uncoveredDraft),
+    "add the reviewed assignment as a pending change",
+  );
+  assert.equal(guidedValidationStages(uncoveredDraft).includes("scope"), true);
+
+  const reviewedAssignment = { id:`reviewed:${sample}` };
+  const originalAssignments = [...pathCandidate.assignments];
+  assert.deepEqual(
+    assignmentDraftAfterGuidedSave(
+      originalAssignments,
+      reviewedAssignment,
+      "reuse the covering assignment",
+    ),
+    originalAssignments,
+  );
+  assert.deepEqual(
+    assignmentDraftAfterGuidedSave(
+      originalAssignments,
+      reviewedAssignment,
+      "add the reviewed assignment as a pending change",
+    ),
+    [...originalAssignments, reviewedAssignment],
+  );
+  assert.deepEqual(pathCandidate.assignments, originalAssignments);
+
   const searchInventory = [matchingCandidate, pathCandidate];
   for (const query of [schemaName, `version ${sample + 1}`, "payload", "page_type", "shop.example"]) {
     assert.ok(searchSchemaDestinationOptions(destination, searchInventory, query).some(({ id }) => id === matchingCandidate.id));
