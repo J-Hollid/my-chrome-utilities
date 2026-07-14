@@ -841,7 +841,7 @@ const guidedValidationRuntime = `(async () => {
   const matchingDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }))));
   const absentDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }))));
   const productionDestinationOptions = core.schemaDestinationOptions(configuredDestinationDraft, [
-    { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, target:"payload", propertyTypes:{} },
+    { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, target:"payload", propertyTypes:{} },
     { id:"schema:product-listing:3", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_type:"String" } },
     { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
     { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
@@ -2461,7 +2461,7 @@ try {
         malformed:{ valid:false, matches:false, error:production.malformed.error },
         override:{ typeSource:"explicit override", currentEventPasses:false, message:"page_type was observed as String but Number is expected.", correctionRequired:true },
         destinationOptions:[
-          { name:"Generic pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
+          { name:"Existing pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
           { name:"Product listing", target:"payload", propertyState:"String", available:true, explanation:"page_type accepts String rules" },
           { name:"Numeric page types", target:"payload", propertyState:"Number", available:false, explanation:"page_type expects Number" },
           { name:"Raw pageview", target:"raw input", propertyState:"absent", available:false, explanation:"schema validates raw input, not payload" },
