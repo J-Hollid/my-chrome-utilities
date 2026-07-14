@@ -24,12 +24,15 @@ let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
+let workspacePanelContainmentObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
+const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
@@ -886,7 +889,7 @@ const guidedValidationRuntime = `(async () => {
   const matchingDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:true }))));
   const absentDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(core.advanceGuidedValidation(core.setGuidedSchemaDestination(configuredDestinationDraft, { kind:"existing", schemaId:"schema:product-listing:3", schemaName:"Product listing", schemaVersion:3, matchingAssignment:false }))));
   const productionDestinationOptions = core.schemaDestinationOptions(configuredDestinationDraft, [
-    { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, target:"payload", propertyTypes:{} },
+    { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, target:"payload", propertyTypes:{} },
     { id:"schema:product-listing:3", name:"Product listing", version:3, target:"payload", propertyTypes:{ page_type:"String" } },
     { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
     { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
@@ -2232,6 +2235,33 @@ const workflowFocusRuntime = `Promise.all([
   return { tabResult, editorResult, pushResult, targetResult };
 })`;
 
+const workspacePanelContainmentRuntime = `(() => {
+  const dataLayerPanel = document.querySelector("#workspace-panel-data-layer");
+  const hotkeysPanel = document.querySelector("#workspace-panel-hotkeys");
+  const hotkeysTab = document.querySelector("#workspace-tab-hotkeys");
+  const peers = dataLayerPanel.parentElement === hotkeysPanel.parentElement;
+  const nested = dataLayerPanel.contains(hotkeysPanel) || hotkeysPanel.contains(dataLayerPanel);
+  hotkeysTab.click();
+  const heading = hotkeysPanel.querySelector("h2");
+  const search = hotkeysPanel.querySelector("#hotkey-editor-filter");
+  const groups = [...hotkeysPanel.querySelectorAll("#hotkey-editor-commands > section")];
+  const observation = {
+    peers,
+    nested,
+    afterActivation:{
+      dataLayerHidden:dataLayerPanel.hidden,
+      hotkeysHidden:hotkeysPanel.hidden,
+      hotkeysVisible:hotkeysPanel.checkVisibility(),
+      headingVisible:heading.checkVisibility(),
+      searchVisible:search.checkVisibility(),
+      registeredGroupCount:groups.length,
+      registeredGroupsVisible:groups.length > 0 && groups.every((group) => group.checkVisibility()),
+    },
+  };
+  document.querySelector("#workspace-tab-data-layer").click();
+  return observation;
+})()`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -2240,6 +2270,25 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (runWorkspacePanelContainmentRuntime) {
+      workspacePanelContainmentObservation = await evaluate(socket, workspacePanelContainmentRuntime);
+      assert.deepEqual(workspacePanelContainmentObservation, {
+        peers:true,
+        nested:false,
+        afterActivation:{
+          dataLayerHidden:true,
+          hotkeysHidden:false,
+          hotkeysVisible:true,
+          headingVisible:true,
+          searchVisible:true,
+          registeredGroupCount:3,
+          registeredGroupsVisible:true,
+        },
+      }, `Workspace panel containment violated its ${width}px browser contract`);
+    }
+    if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
+      socket.close(); continue;
+    }
     if (runSchemaViewContainmentRuntime) {
       schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
       assert.deepEqual(schemaViewContainmentObservation, {
@@ -2420,7 +2469,7 @@ try {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
         const schemas = [
-          { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
+          { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
@@ -2479,7 +2528,7 @@ try {
         saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Add property from this event", "Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
-          { label:"Generic pageview version 1", disabled:false, explanation:"page_type will be added" },
+          { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
           { label:"Product listing version 3", disabled:false, explanation:"page_type accepts String rules" },
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
@@ -2522,7 +2571,7 @@ try {
         malformed:{ valid:false, matches:false, error:production.malformed.error },
         override:{ typeSource:"explicit override", currentEventPasses:false, message:"page_type was observed as String but Number is expected.", correctionRequired:true },
         destinationOptions:[
-          { name:"Generic pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
+          { name:"Existing pageview", target:"payload", propertyState:"absent", available:true, explanation:"page_type will be added" },
           { name:"Product listing", target:"payload", propertyState:"String", available:true, explanation:"page_type accepts String rules" },
           { name:"Numeric page types", target:"payload", propertyState:"Number", available:false, explanation:"page_type expects Number" },
           { name:"Raw pageview", target:"raw input", propertyState:"absent", available:false, explanation:"schema validates raw input, not payload" },
@@ -2956,6 +3005,9 @@ try {
   }
   if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ savedSessionLiveFeed:{ initial:savedSessionLiveFeedObservation, reload:savedSessionLiveFeedReloadObservation } }));
+  }
+  if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ workspacePanelContainment:workspacePanelContainmentObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

@@ -34,12 +34,46 @@
 
 (defn- command-id [example key] (support/require-example example key))
 (defn- sequence [world id] (get-in world [:keymap :bindings id] ""))
+(def ^:private workspace-tab-labels #{"Data Layer" "Hotkeys"})
+(def ^:private workspace-navigation-keys #{"ArrowLeft" "ArrowRight" "Home" "End"})
+
+(defn- workspace-tab-label [example key]
+  (let [label (command-id example key)]
+    (support/assert! (contains? workspace-tab-labels label)
+                     "Unknown workspace tab label." {:label label})
+    label))
+
+(defn- workspace-navigation-key [example key]
+  (let [navigation-key (command-id example key)]
+    (support/assert! (contains? workspace-navigation-keys navigation-key)
+                     "Unknown workspace navigation key." {:key navigation-key})
+    navigation-key))
+
+(defn- workspace-navigation-destination [current navigation-key]
+  (case navigation-key
+    "Home" "Data Layer"
+    "End" "Hotkeys"
+    "ArrowRight" (if (= current "Data Layer") "Hotkeys" "Data Layer")
+    "ArrowLeft" (if (= current "Hotkeys") "Data Layer" "Hotkeys")))
+
+(defonce ^:private workspace-panel-containment (atom nil))
+
+(defn- load-workspace-panel-containment! []
+  (reset! workspace-panel-containment
+          (support/load-browser-observation!
+           {:adapter-env "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+            :observation-key :workspacePanelContainment
+            :runtime-error "Workspace panel containment browser runtime failed."
+            :missing-error "Workspace panel containment browser observation is missing."})))
+
+(defn- workspace-panel-containment! []
+  (or @workspace-panel-containment (load-workspace-panel-containment!)))
 
 (def handlers
   [{:pattern #"^workspace tab <([A-Za-z0-9_]+)> is active$"
     :handler (fn [world example [tab-key]]
                (assoc (require-wiring world tabs-wired? "Workspace tabs are not wired.")
-                      :active-tab (command-id example tab-key)))}
+                      :active-tab (workspace-tab-label example tab-key)))}
    {:pattern #"^global command controls remain visible outside the workspace tabs$"
     :handler (fn [world _ _]
                (let [world (require-wiring world tabs-wired? "Workspace tabs are not wired.")]
@@ -48,7 +82,7 @@
                                 "Global command launcher is not outside workspace tabs." {}) world))}
    {:pattern #"^workspace tabs are ordered <([A-Za-z0-9_]+)> then <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [first-key second-key]]
-               (let [html (:html world) first-label (command-id example first-key) second-label (command-id example second-key)]
+               (let [html (:html world) first-label (workspace-tab-label example first-key) second-label (workspace-tab-label example second-key)]
                  (support/assert! (< (.indexOf html first-label) (.indexOf html second-label)) "Workspace tabs are not ordered." {}) world))}
    {:pattern #"^only the primary workspace panel is visible by default$"
     :handler (fn [world _ _] (support/assert! (str/includes? (:html world) "workspace-panel-hotkeys\" role=\"tabpanel\" aria-labelledby=\"workspace-tab-hotkeys\" hidden") "Hotkeys panel is not hidden by default." {}) world)}
@@ -57,31 +91,83 @@
    {:pattern #"^each workspace panel begins with a heading matching its tab label$"
     :handler (fn [world _ _] (support/assert! (support/includes-all? (:html world) ["<h2>Data Layer</h2>" "<h2>Hotkeys</h2>"]) "Workspace headings are missing." {}) world)}
    {:pattern #"^data layer controls appear only in tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world _ _] (support/assert! (str/includes? (:html world) "workspace-panel-data-layer") "Data layer panel is missing." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (and (= "Data Layer" (workspace-tab-label example tab-key)) (str/includes? (:html world) "workspace-panel-data-layer")) "Data layer panel is missing or assigned to the wrong tab." {}) world)}
    {:pattern #"^hotkey configuration controls appear only in tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world _ _] (support/assert! (str/includes? (:html world) "workspace-panel-hotkeys") "Hotkeys panel is missing." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (and (= "Hotkeys" (workspace-tab-label example tab-key)) (str/includes? (:html world) "workspace-panel-hotkeys")) "Hotkeys panel is missing or assigned to the wrong tab." {}) world)}
+   {:pattern #"^panels for workspace tabs <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> are separate peer regions$"
+    :handler (fn [world example [primary-key settings-key]]
+               (let [observed (workspace-panel-containment!)]
+                 (support/assert! (= ["Data Layer" "Hotkeys"]
+                                     [(command-id example primary-key) (command-id example settings-key)])
+                                  "Workspace panel containment example changed." {:example example})
+                 (support/assert! (:peers observed)
+                                  "Workspace panels are not peer regions." observed)
+                 (assoc world :workspace-panel-containment observed)))}
+   {:pattern #"^neither workspace panel contains the other workspace panel$"
+    :handler (fn [world _ _]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (false? (:nested observed))
+                                  "One workspace panel contains the other." observed)
+                 world))}
    {:pattern #"^the user activates workspace tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world example [tab-key]] (assoc world :active-tab (command-id example tab-key)))}
+    :handler (fn [world example [tab-key]] (assoc world :active-tab (workspace-tab-label example tab-key)))}
+   {:pattern #"^the panel for tab <([A-Za-z0-9_]+)> is hidden$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (and (= "Data Layer" (command-id example tab-key))
+                                       (get-in observed [:afterActivation :dataLayerHidden]))
+                                  "The inactive Data Layer workspace panel remained visible."
+                                  {:example example :observation observed})
+                 world))}
+   {:pattern #"^the panel for tab <([A-Za-z0-9_]+)> remains visible$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (and (= "Hotkeys" (command-id example tab-key))
+                                       (false? (get-in observed [:afterActivation :hotkeysHidden]))
+                                       (get-in observed [:afterActivation :hotkeysVisible]))
+                                  "The active Hotkeys workspace panel is not rendered."
+                                  {:example example :observation observed})
+                 world))}
+   {:pattern #"^heading <([A-Za-z0-9_]+)>, hotkey search, and registered command groups are visible in that panel$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))
+                     active (:afterActivation observed)]
+                 (support/assert! (and (= "Hotkeys" (command-id example tab-key))
+                                       (:headingVisible active)
+                                       (:searchVisible active)
+                                       (pos? (:registeredGroupCount active))
+                                       (:registeredGroupsVisible active))
+                                  "Visible Hotkeys panel content is incomplete."
+                                  {:example example :observation observed})
+                 world))}
    {:pattern #"^only the panel for tab <([A-Za-z0-9_]+)> is visible$"
-    :handler (fn [world example [tab-key]] (support/assert! (= (command-id example tab-key) (:active-tab world)) "Unexpected workspace panel is active." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (= (workspace-tab-label example tab-key) (:active-tab world)) "Unexpected workspace panel is active." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> is exposed as selected$"
-    :handler (fn [world example [tab-key]] (support/assert! (= (command-id example tab-key) (:active-tab world)) "Unexpected workspace tab is selected." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (= (workspace-tab-label example tab-key) (:active-tab world)) "Unexpected workspace tab is selected." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> remains active after the side panel reloads$"
-    :handler (fn [world example [tab-key]] (support/assert! (and (= (command-id example tab-key) (:active-tab world)) (str/includes? (:source world) "storage.setItem(WORKSPACE_TAB_STORAGE_KEY")) "Workspace tab is not persisted." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (and (= (workspace-tab-label example tab-key) (:active-tab world)) (str/includes? (:source world) "storage.setItem(WORKSPACE_TAB_STORAGE_KEY")) "Workspace tab is not persisted." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> has keyboard focus$"
-    :handler (fn [world example [tab-key]] (assoc world :active-tab (command-id example tab-key)))}
+    :handler (fn [world example [tab-key]] (assoc world :active-tab (workspace-tab-label example tab-key)))}
    {:pattern #"^tab navigation key <([A-Za-z0-9_]+)> is pressed$"
-    :handler (fn [world example [key]] (assoc world :navigation-key (command-id example key)))}
+    :handler (fn [world example [key]] (assoc world :navigation-key (workspace-navigation-key example key)))}
    {:pattern #"^keyboard focus and selection move to workspace tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world example [tab-key]] (assoc world :active-tab (command-id example tab-key)))}
+    :handler (fn [world example [tab-key]]
+               (let [target (workspace-tab-label example tab-key)
+                     expected (workspace-navigation-destination (:active-tab world) (:navigation-key world))]
+                 (support/assert! (= expected target) "Workspace navigation reached an unexpected tab." {:expected expected :target target})
+                 (assoc world :active-tab target)))}
    {:pattern #"^keyboard focus enters the workspace tabs$"
     :handler (fn [world _ _] world)}
    {:pattern #"^keyboard focus moves to workspace tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world example [tab-key]] (support/assert! (= (command-id example tab-key) (:active-tab world)) "Workspace focus is incorrect." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (= (workspace-tab-label example tab-key) (:active-tab world)) "Workspace focus is incorrect." {}) world)}
    {:pattern #"^key <([A-Za-z0-9_]+)> is pressed$"
     :handler (fn [world example [key]] (assoc world :pressed-key (command-id example key)))}
    {:pattern #"^keyboard focus moves into the panel for tab <([A-Za-z0-9_]+)>$"
-    :handler (fn [world example [tab-key]] (support/assert! (and (= "Tab" (:pressed-key world)) (= (command-id example tab-key) (:active-tab world))) "Tab key did not leave workspace navigation." {}) world)}
+    :handler (fn [world example [tab-key]] (support/assert! (and (= "Tab" (:pressed-key world)) (= (workspace-tab-label example tab-key) (:active-tab world))) "Tab key did not leave workspace navigation." {}) world)}
    {:pattern #"^workspace navigation command <([A-Za-z0-9_]+)> runs$"
     :handler (fn [world example [id-key]]
                (let [world (require-wiring world tabs-wired? "Workspace navigation command is not wired.")
@@ -147,5 +233,5 @@
     :handler (fn [world _ _] (dissoc world :pending-sequence))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:51:24.502274992+02:00", :module-hash "2007445990", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1978799929"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-115564348"} {:id "defn/tabs-wired?", :kind "defn", :line 15, :end-line nil, :hash "-1561432839"} {:id "defn/editor-wired?", :kind "defn", :line 23, :end-line nil, :hash "-1153408800"} {:id "defn-/require-wiring", :kind "defn-", :line 30, :end-line nil, :hash "-148584365"} {:id "defn-/command-id", :kind "defn-", :line 35, :end-line nil, :hash "-316749086"} {:id "defn-/sequence", :kind "defn-", :line 36, :end-line nil, :hash "-1899006383"} {:id "def/handlers", :kind "def", :line 38, :end-line nil, :hash "1868572257"}]}
+;; {:version 1, :tested-at "2026-07-14T02:38:24.651381716+02:00", :module-hash "-642566601", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1978799929"} {:id "defn-/inspect", :kind "defn-", :line 5, :end-line nil, :hash "-115564348"} {:id "defn/tabs-wired?", :kind "defn", :line 15, :end-line nil, :hash "-1561432839"} {:id "defn/editor-wired?", :kind "defn", :line 23, :end-line nil, :hash "-1153408800"} {:id "defn-/require-wiring", :kind "defn-", :line 30, :end-line nil, :hash "-148584365"} {:id "defn-/command-id", :kind "defn-", :line 35, :end-line nil, :hash "-316749086"} {:id "defn-/sequence", :kind "defn-", :line 36, :end-line nil, :hash "-1899006383"} {:id "def/workspace-tab-labels", :kind "def", :line 37, :end-line nil, :hash "954809956"} {:id "def/workspace-navigation-keys", :kind "def", :line 38, :end-line nil, :hash "-1593744239"} {:id "defn-/workspace-tab-label", :kind "defn-", :line 40, :end-line nil, :hash "-644152035"} {:id "defn-/workspace-navigation-key", :kind "defn-", :line 46, :end-line nil, :hash "1687996369"} {:id "defn-/workspace-navigation-destination", :kind "defn-", :line 52, :end-line nil, :hash "-856399467"} {:id "form/12/defonce", :kind "defonce", :line 59, :end-line nil, :hash "-2144812567"} {:id "defn-/load-workspace-panel-containment!", :kind "defn-", :line 61, :end-line nil, :hash "2025129671"} {:id "defn-/workspace-panel-containment!", :kind "defn-", :line 69, :end-line nil, :hash "-1306523167"} {:id "def/handlers", :kind "def", :line 72, :end-line nil, :hash "-1665341377"}]}
 ;; clj-mutate-manifest-end
