@@ -297,6 +297,13 @@ function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): P
     try { return match.exists && new RegExp(rule.parameters ?? "").test(String(match.value)) ? undefined : { message:"Value does not match pattern", expected:rule.parameters ?? "pattern", actual }; }
     catch { return { message:"Invalid regular expression", expected:rule.parameters ?? "pattern", actual }; }
   }
+  if (operator === "numeric-range") {
+    const [minimumText = "", maximumText = ""] = rule.parameters?.split(",") ?? [];
+    const minimum = minimumText === "" ? undefined : Number(minimumText); const maximum = maximumText === "" ? undefined : Number(maximumText);
+    const value = typeof match.value === "number" ? match.value : Number.NaN;
+    const inRange = match.exists && Number.isFinite(value) && (minimum === undefined || value >= minimum) && (maximum === undefined || value <= maximum);
+    return inRange ? undefined : { message:"Value is outside range", expected:`${minimumText || "no minimum"} to ${maximumText || "no maximum"}`, actual };
+  }
   if (operator === "item-count") {
     const minimum = Number(rule.parameters ?? 0);
     return match.exists && Array.isArray(match.value) && match.value.length >= minimum ? undefined : { message:"Too few items", expected:`minimum ${minimum} items`, actual };

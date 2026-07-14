@@ -17,9 +17,9 @@
 (defn- observation! [] (or @observation (load-observation!)))
 
 (defn- assert-availability-example! [example observed]
-  (when-let [property-type (support/example-value example "property_type")]
-    (let [rule-type (support/require-example example "rule_type")
-          expected (support/require-example example "availability")]
+  (when-let [expected (support/example-value example "availability")]
+    (let [property-type (support/require-example example "property_type")
+          rule-type (support/require-example example "rule_type")]
       (support/assert! (= expected (get-in observed [:availability (keyword (str property-type ":" rule-type))]))
                        "Property type compatibility changed." {:example example}))))
 
@@ -30,7 +30,19 @@
 
 (defn- assert-example! [example observed]
   (assert-availability-example! example observed)
-  (assert-search-example! example observed))
+  (assert-search-example! example observed)
+  (when-let [parameter-controls (support/example-value example "parameter_controls")]
+    (let [property-type (support/require-example example "property_type")
+          rule-type (support/require-example example "rule_type")]
+      (support/assert! (= parameter-controls (get-in observed [:configurationControls (keyword (str property-type ":" rule-type))]))
+                       "Built-in rule configuration controls changed." {:example example})))
+  (when-let [configuration (support/example-value example "configuration")]
+    (let [rule-type (support/require-example example "rule_type")
+          expected-result (support/require-example example "creation_result")
+          expected-assistance (support/require-example example "assistance")
+          actual (get-in observed [:validations (keyword (str rule-type ":" configuration))])]
+      (support/assert! (= {:creationResult expected-result :assistance expected-assistance} actual)
+                       "Local built-in rule validation changed." {:example example}))))
 
 (defn- assert-picker! [example observed]
   (support/assert! (= {:label "Add rule" :pickerAbsent true :inlineResults true :expandedMenu true} (:closed observed))
@@ -52,6 +64,31 @@
                    "Empty search recovery changed the working draft or failed to restore results." observed)
   (support/assert! (= {:selected "Required" :configured true :escapeClosed true :layoutUnchanged true} (:keyboard observed))
                    "Keyboard selection or dismissal changed the schema editor layout." observed)
+  (support/assert! (= {:severity true :message "Issue message (optional)" :reusable "Save as reusable rule in Rule Library" :reusableDefault false :actions true :readable true} (:configurationCommon observed))
+                   "Common local-rule controls or the 320px layout changed." observed)
+  (support/assert! (= {:initial {:blocked true :assistance "Add at least one allowed value"}
+                       :entered {:values ["ABC-1" "XYZ-2"] :editable true :removable true :createAvailable true}}
+                      (:allowedValues observed))
+                   "Repeatable allowed-value editing or readiness changed." observed)
+  (support/assert! (= {:checked {:nameRequired true :description true :explanation "This reusable rule will be available to other schemas." :blankBlocked true}
+                       :unchecked {:fieldsHidden true :values ["ABC-1" "XYZ-2"] :severity "warning" :message "Use an approved SKU"}}
+                      (:reusableToggle observed))
+                   "Reusable-rule fields did not preserve local configuration." observed)
+  (support/assert! (= {:count 1 :operator "allowed-values" :parameters "ABC-1,XYZ-2" :severity "warning" :message "Use an approved SKU"
+                       :activeCount " (1 active rules)" :libraryUnchanged true :currentRules 0 :currentVersion 3 :closed true :focusReturned true}
+                      (:localCreation observed))
+                   "Local rule creation did not stay in the working draft." observed)
+  (support/assert! (= {:libraryCount 1 :version 1 :type "string" :attachmentCount 1 :sameIdentity true :localCount 1
+                       :details {:parameters "ABC-1,XYZ-2" :severity "warning" :message "Use an approved SKU" :description "SKUs accepted by fulfilment"}
+                       :closed true :focusReturned true}
+                      (:reusableCreation observed))
+                   "Reusable rule creation lost identity or configuration." observed)
+  (support/assert! (= {:back {:choices ["Required" "Exact value" "Allowed values" "Regular expression" "Text length" "Digits only"]
+                              :heading "Add rule for product.sku · type string"}
+                       :cancel {:closed true :focusReturned true}
+                       :unchanged true}
+                      (:navigation observed))
+                   "Back or Cancel created a rule or lost picker focus." observed)
   (assert-example! example observed))
 
 (defn- transition [world example _captures {:keys [text]}]

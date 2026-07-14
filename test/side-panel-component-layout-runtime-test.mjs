@@ -1508,7 +1508,80 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   const editorAfter = q("#schema-editor").getBoundingClientRect(); keyboard.escapeClosed = !dialog.open; keyboard.layoutUnchanged = editorBefore.width === editorAfter.width && editorBefore.left === editorAfter.left;
   const model = await import("/data-layer-schema-property-rule-picker.js");
   const availability = Object.fromEntries([["string","Required"],["string","Exact value"],["string","Regular expression"],["string","Text length"],["string","Digits only"],["number","Numeric range"],["array","Item count"],["number","Regular expression"],["object","Allowed values"]].map(([type, rule]) => [type + ":" + rule, model.ruleTypeAvailability(type, rule)]));
-  return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard };
+  const openConfiguration = (path, rule) => { q('#schema-property-tree button[aria-label="Add rule for ' + path + '"]').click(); click(dialog, rule); return q("#schema-local-rule-configuration"); };
+  const parameterDescription = (rule) => {
+    const parameters = q("#schema-local-rule-parameters");
+    if (rule === "Required" || rule === "Digits only") return parameters.textContent.includes("No parameter controls") && parameters.querySelectorAll("input, select").length === 0 ? "no parameter controls" : "unexpected controls";
+    if (rule === "Exact value") return parameters.querySelector('label[for="schema-local-rule-exactValue"]')?.textContent === "Exact value" && q("#schema-local-rule-exactValue").type === "text" ? "one type-aware Exact value field" : "missing Exact value";
+    if (rule === "Allowed values") return parameters.querySelector("#schema-local-rule-allowed-values") && q("#schema-local-rule-allowed-value-1").type === "text" ? "repeatable type-aware value fields" : "missing allowed values";
+    if (rule === "Regular expression") return parameters.querySelector('label[for="schema-local-rule-pattern"]')?.textContent === "Pattern" ? "Pattern" : "missing Pattern";
+    if (rule === "Text length") { const input = q("#schema-local-rule-exactLength"); return input.min === "0" && input.step === "1" ? "non-negative Exact length" : "invalid Exact length"; }
+    if (rule === "Numeric range") return q("#schema-local-rule-minimum").type === "number" && q("#schema-local-rule-maximum").type === "number" ? "optional Minimum and Maximum" : "missing range";
+    const input = q("#schema-local-rule-minimumItemCount"); return input.min === "0" && input.step === "1" ? "non-negative Minimum item count" : "invalid item count";
+  };
+  const configurationControls = {};
+  let configurationCommon;
+  for (const [path, type, rule] of [["page_type","string","Required"],["page_type","string","Exact value"],["page_type","string","Allowed values"],["page_type","string","Regular expression"],["page_type","string","Text length"],["page_type","string","Digits only"],["revenue","number","Numeric range"],["items","array","Item count"]]) {
+    const form = openConfiguration(path, rule); configurationControls[type + ":" + rule] = parameterDescription(rule);
+    if (!configurationCommon) configurationCommon = {
+      severity:Boolean(q("#schema-local-rule-severity")), message:q("#schema-local-rule-message").previousElementSibling.textContent,
+      reusable:q("#schema-local-rule-reusable").parentElement.textContent.trim(), reusableDefault:q("#schema-local-rule-reusable").checked,
+      actions:["Create rule", "Back to rule choices", "Cancel"].every((label) => Array.from(form.querySelectorAll("button")).some(({ textContent }) => textContent === label)),
+      readable:form.scrollWidth <= dialog.clientWidth && dialog.getBoundingClientRect().width <= innerWidth,
+    };
+    click(form, "Back to rule choices"); click(dialog, "Cancel");
+  }
+  const validationDrafts = [
+    ["Exact value:no value", model.createRuleConfiguration("Exact value", "string")],
+    ["Regular expression:malformed pattern [", { ...model.createRuleConfiguration("Regular expression", "string"), pattern:"[" }],
+    ["Text length:exact length -1", { ...model.createRuleConfiguration("Text length", "string"), exactLength:"-1" }],
+    ["Numeric range:neither boundary", model.createRuleConfiguration("Numeric range", "number")],
+    ["Numeric range:minimum 10 and maximum 5", { ...model.createRuleConfiguration("Numeric range", "number"), minimum:"10", maximum:"5" }],
+    ["Item count:minimum 1.5", { ...model.createRuleConfiguration("Item count", "array"), minimumItemCount:"1.5" }],
+  ];
+  const validations = Object.fromEntries(validationDrafts.map(([key, draft]) => { const result = model.validateRuleConfiguration(draft); return [key, { creationResult:result.ready ? "available" : "blocked", assistance:result.assistance }]; }));
+  const setValue = (selector, value, eventName = "input") => { const element = q(selector); element.value = value; element.dispatchEvent(new Event(eventName, { bubbles:true })); return element; };
+  openConfiguration("product.sku", "Allowed values");
+  const allowedValues = { initial:{ blocked:q("#schema-local-rule-configuration button[type=submit]").disabled, assistance:q("#schema-local-rule-assistance").textContent } };
+  setValue("#schema-local-rule-allowed-value-1", "ABC-1"); click(dialog, "Add another value"); setValue("#schema-local-rule-allowed-value-2", "XYZ-2");
+  const allowedInputs = Array.from(dialog.querySelectorAll("#schema-local-rule-allowed-values input"));
+  allowedValues.entered = { values:allowedInputs.map(({ value }) => value), editable:allowedInputs.every(({ disabled }) => !disabled), removable:dialog.querySelectorAll("#schema-local-rule-allowed-values button").length === 3, createAvailable:!q("#schema-local-rule-configuration button[type=submit]").disabled };
+  setValue("#schema-local-rule-severity", "warning", "change"); setValue("#schema-local-rule-message", "Use an approved SKU");
+  q("#schema-local-rule-reusable").checked = true; q("#schema-local-rule-reusable").dispatchEvent(new Event("change", { bubbles:true }));
+  const reusableToggle = { checked:{ nameRequired:q("#schema-local-rule-name").required, description:Boolean(q("#schema-local-rule-description")), explanation:q("#schema-local-rule-reusable-explanation").textContent, blankBlocked:q("#schema-local-rule-configuration button[type=submit]").disabled } };
+  q("#schema-local-rule-reusable").checked = false; q("#schema-local-rule-reusable").dispatchEvent(new Event("change", { bubbles:true }));
+  reusableToggle.unchecked = { fieldsHidden:!dialog.querySelector("#schema-local-rule-name") && !dialog.querySelector("#schema-local-rule-description"), values:Array.from(dialog.querySelectorAll("#schema-local-rule-allowed-values input")).map(({ value }) => value), severity:q("#schema-local-rule-severity").value, message:q("#schema-local-rule-message").value };
+  const libraryBeforeLocal = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")).length;
+  click(dialog, "Create rule");
+  let storedAfterLocal = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  const localRules = storedAfterLocal.workingDraft.attachedRules.filter(({ id, propertyPath }) => id.startsWith("local-rule:") && propertyPath === "/product/sku");
+  const localCreation = {
+    count:localRules.length, operator:localRules[0]?.operator, parameters:localRules[0]?.parameters, severity:localRules[0]?.severity, message:localRules[0]?.message,
+    activeCount:q('#schema-property-tree [data-schema-property-path="product.sku"] span:not(.schema-property-metadata)').textContent,
+    libraryUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")).length === libraryBeforeLocal,
+    currentRules:(storedAfterLocal.attachedRules ?? []).length, currentVersion:storedAfterLocal.version,
+    closed:!dialog.open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for product.sku",
+  };
+  openConfiguration("product.sku", "Allowed values"); setValue("#schema-local-rule-allowed-value-1", "ABC-1"); click(dialog, "Add another value"); setValue("#schema-local-rule-allowed-value-2", "XYZ-2");
+  setValue("#schema-local-rule-severity", "warning", "change"); setValue("#schema-local-rule-message", "Use an approved SKU");
+  q("#schema-local-rule-reusable").checked = true; q("#schema-local-rule-reusable").dispatchEvent(new Event("change", { bubbles:true }));
+  setValue("#schema-local-rule-name", "Approved product SKUs"); setValue("#schema-local-rule-description", "SKUs accepted by fulfilment"); click(dialog, "Create rule");
+  const libraryAfterReusable = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
+  const approved = libraryAfterReusable.filter(({ name }) => name === "Approved product SKUs"); storedAfterLocal = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  const approvedAttachments = storedAfterLocal.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === approved[0]?.id && propertyPath === "/product/sku");
+  const reusableCreation = {
+    libraryCount:approved.length, version:approved[0]?.version, type:approved[0]?.applicableType, attachmentCount:approvedAttachments.length,
+    sameIdentity:approvedAttachments[0]?.id === approved[0]?.id, localCount:storedAfterLocal.workingDraft.attachedRules.filter(({ id, propertyPath }) => id.startsWith("local-rule:") && propertyPath === "/product/sku").length,
+    details:{ parameters:approved[0]?.parameters, severity:approved[0]?.severity, message:approved[0]?.message, description:approved[0]?.description },
+    closed:!dialog.open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for product.sku",
+  };
+  const beforeNavigation = { schemas:localStorage.getItem("my-chrome-utilities.schema-library.v1"), rules:localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") };
+  openConfiguration("product.sku", "Allowed values"); setValue("#schema-local-rule-allowed-value-1", "partial"); click(dialog, "Back to rule choices");
+  const navigation = { back:{ choices:Array.from(dialog.querySelectorAll('[aria-label="Create a rule"] button')).map(({ textContent }) => textContent), heading:q("#schema-property-rule-picker-heading").textContent } };
+  click(dialog, "Allowed values"); setValue("#schema-local-rule-allowed-value-1", "partial"); click(dialog, "Cancel");
+  navigation.cancel = { closed:!dialog.open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for product.sku" };
+  navigation.unchanged = beforeNavigation.schemas === localStorage.getItem("my-chrome-utilities.schema-library.v1") && beforeNavigation.rules === localStorage.getItem("my-chrome-utilities.schema-rule-library.v1");
+  return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard, configurationControls, configurationCommon, validations, allowedValues, reusableToggle, localCreation, reusableCreation, navigation };
 })()`;
 
 const schemaManualPropertyRuntime = `(async () => {
@@ -2633,7 +2706,8 @@ try {
       }
       if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
         await evaluate(socket, `(() => {
-          const current = { id:"schema-page-view", name:"Page view", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[], attachedRules:[], pendingChanges:[] } };
+          const document = { type:"object", properties:{ page_type:{ type:"string" }, product:{ type:"object", properties:{ sku:{ type:"string" } } }, revenue:{ type:"number" }, items:{ type:"array", items:{ type:"object" } } } };
+          const current = { id:"schema-page-view", name:"Page view", version:3, published:true, document, assignments:[], workingDraft:{ baseVersion:3, sourceVersion:3, document, assignments:[], attachedRules:[], pendingChanges:[] } };
           const rules = [
             { id:"rule:approved", name:"Approved pages", kind:"Allowed values · string", operator:"allowed values", parameters:"homepage, checkout", description:"Public pages", applicableType:"string", version:2, enabled:true },
             { id:"rule:number", name:"Revenue range", kind:"Numeric range · number", operator:"numeric range", parameters:"0-100", applicableType:"number", version:3, enabled:true },
