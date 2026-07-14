@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import {
   canonicalNestedPath,
   ensureNestedSchemaPath,
+  inspectSpecificIndexRuleTarget,
   nestedTargetChoices,
   resolveNestedValues,
   validateNestedRuleTarget,
 } from "../dist/data-layer-schema-nested-path.js";
 
 const valueTypes = ["string", "number", "boolean", "object", "array"];
+const invalidIndexes = ["", "-1", "+1", "1.5", "1e2", "index", "9007199254740992"];
 let seed = 0x3c6ef372;
 
 function nextToken() {
@@ -93,6 +95,24 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(inspection.result, "accepted", "an ensured path must be valid for rule authoring");
   assert.equal(inspection.canonicalPath, templatePath);
   assert.equal(inspection.targetType, targetType);
+
+  const specificIndex = sample * 7919;
+  assert.deepEqual(inspectSpecificIndexRuleTarget(ensured.document, "groups", ` ${specificIndex} `), {
+    result:"accepted",
+    assistance:`Item ${specificIndex + 1} at zero-based index ${specificIndex}`,
+    canonicalPath:`/groups/${specificIndex}`,
+    targetType:"object",
+  }, "safe non-negative indices must normalize to an exact array-item target");
+  assert.deepEqual(inspectSpecificIndexRuleTarget(ensured.document, "/groups", invalidIndexes[sample % invalidIndexes.length]), {
+    result:"blocked",
+    assistance:"Enter a non-negative array index",
+    canonicalPath:`/groups/${invalidIndexes[sample % invalidIndexes.length]}`,
+  }, "malformed or unsafe indices must be rejected without changing their entered path");
+  assert.deepEqual(inspectSpecificIndexRuleTarget(ensured.document, "/stable", String(specificIndex)), {
+    result:"blocked",
+    assistance:"stable is not an array",
+    canonicalPath:`/stable/${specificIndex}`,
+  }, "specific-index targets must identify an array schema path");
 
   const repeated = ensureNestedSchemaPath(ensured.document, templatePath, targetType);
   assert.deepEqual(repeated.document, ensured.document, "ensuring an existing path must be idempotent");
