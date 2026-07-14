@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=ee0fe580ac09ccddfb7658b89fe066cb3b7a92bb485f83a08677f517f39206ca
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T17:47:56.270070303Z","feature_name":"Data layer schema publication Live revalidation","feature_path":"features/data-layer-schema-publication-live-revalidation.feature","background_hash":"3c1ce017d7d1fd5e98e37b2b93d939f47570bfffeb82878fea9b0a27a6636182","implementation_hash":"sha256:a4cfd6127ff238ecab0780a12d36fe898b533eae45fb9b71d0130b5632b4311c","scenarios":[{"index":1,"name":"Data layer schema publication Live revalidation 002","scenario_hash":"9d863c2f16a235538a2335c4146079b25a710d3601687b953e3c4277c647c772","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T17:47:56.270070303Z"},{"index":2,"name":"Data layer schema publication Live revalidation 003","scenario_hash":"3f967e00e90ecc14670f468d3057253df7631fabe56e7f48f3953a6675ba9ece","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T17:47:56.270070303Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema publication Live revalidation
 
   Background:

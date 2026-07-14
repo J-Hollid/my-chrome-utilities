@@ -114,12 +114,9 @@
     (assoc world :defect-library-mode mode)))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{})
-   #(contains? entry-modes %)
-   :defect-library-mode
-   transition))
+  (support/feature-mode-handlers
+   feature-files entry-modes :defect-library-mode transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T18:05:52.507116186+02:00", :module-hash "-34520936", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-274521560"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1831855263"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1676478283"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1298890372"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "337029558"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 75, :hash "342476112"} {:id "def/model-example-values", :kind "def", :line 77, :end-line 88, :hash "-361254237"} {:id "def/runtime-example-values", :kind "def", :line 90, :end-line 100, :hash "1478147884"} {:id "defn-/validate-example!", :kind "defn-", :line 102, :end-line 106, :hash "-1940833225"} {:id "defn-/transition", :kind "defn-", :line 108, :end-line 114, :hash "-688615441"} {:id "def/handlers", :kind "def", :line 116, :end-line 121, :hash "-61858494"}]}
+;; {:version 1, :tested-at "2026-07-14T19:46:58.763213426+02:00", :module-hash "1091216031", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-274521560"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1831855263"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1676478283"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1298890372"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "337029558"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 75, :hash "342476112"} {:id "def/model-example-values", :kind "def", :line 77, :end-line 88, :hash "-361254237"} {:id "def/runtime-example-values", :kind "def", :line 90, :end-line 100, :hash "1478147884"} {:id "defn-/validate-example!", :kind "defn-", :line 102, :end-line 106, :hash "-1940833225"} {:id "defn-/transition", :kind "defn-", :line 108, :end-line 114, :hash "-688615441"} {:id "def/handlers", :kind "def", :line 116, :end-line 118, :hash "1013793018"}]}
 ;; clj-mutate-manifest-end
