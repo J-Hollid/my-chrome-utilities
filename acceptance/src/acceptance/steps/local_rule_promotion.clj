@@ -114,11 +114,10 @@
    "Local-rule promotion example value was outside the specified contract."))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{})
-   #(contains? entry-modes %)
-   :local-rule-promotion-mode
-   (fn [world example _captures {:keys [text]}]
-     (support/mode-transition
-      world example text entry-modes :local-rule-promotion-mode
-      verify-model! validate-example! #(assert-runtime! (runtime-observation!))))))
+  (support/verified-feature-mode-handlers
+   feature-files entry-modes :local-rule-promotion-mode
+   verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T20:36:48.378744606+02:00", :module-hash "639211678", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1497160872"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-214841804"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1185159144"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "78750384"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-1751960169"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 85, :hash "-798774580"} {:id "def/example-values", :kind "def", :line 87, :end-line 109, :hash "-1784017255"} {:id "defn-/validate-example!", :kind "defn-", :line 111, :end-line 114, :hash "-129864397"} {:id "def/handlers", :kind "def", :line 116, :end-line 119, :hash "-2073274511"}]}
+;; clj-mutate-manifest-end

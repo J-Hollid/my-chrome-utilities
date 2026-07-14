@@ -1,15 +1,9 @@
 (ns acceptance.local-rule-promotion-steps-test
-  (:require [acceptance.runtime :as runtime]
+  (:require [acceptance.feature-support :as feature-support]
             [acceptance.steps.all :as all]
             [acceptance.steps.local-rule-promotion :as promotion]
-            [aps.gherkin :as gherkin]
-            [clojure.set :as set]
-            [clojure.test :refer [deftest is]]))
+            [clojure.test :refer [deftest]]))
 
 (deftest verifies-local-rule-promotion-features
-  (is (set/subset? (set promotion/handlers) (set all/handlers)))
-  (doseq [feature-file promotion/feature-files]
-    (is (= :passed
-           (:status (runtime/run-feature! (gherkin/parse-file feature-file)
-                                          promotion/handlers)))
-        feature-file)))
+  (feature-support/verify-feature-suite!
+   promotion/feature-files promotion/handlers all/handlers))
