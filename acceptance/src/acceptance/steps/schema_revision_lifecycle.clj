@@ -14,6 +14,7 @@
     "legacy storage contains Product listing revisions 1, 2, 3, and 4 as separately selectable schemas"
     "a valid new-schema draft named Checkout has not been published"
     "the operator adds page_type to a Product listing working draft based on current revision 3"
+    "the operator adds page_type from its event property row to a Product listing working draft based on current revision 3"
     "Product listing revision 2 is selected in Revision history"
     "Product listing has current revision 4 and no working draft"
     "Product listing has current revision 4 and a working draft with 3 pending changes"})
@@ -118,7 +119,7 @@
                    "Legacy revision rows did not migrate to one stable schema." observation)
   (support/assert! (= expected-ui (:ui observation))
                    "Revision history UI changed lifecycle state or exposed an assignable draft or historical row." observation)
-  (support/assert! (= ["Add property from this event" "Review draft" "Publish revision"] (:completionActions observation))
+  (support/assert! (= ["Review draft" "Publish revision"] (:completionActions observation))
                    "Guided draft completion actions are missing or unordered." observation)
   (assert-policy-example! example observation))
 

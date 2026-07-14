@@ -1,4 +1,5 @@
 import { pathConditionResult, pathConditionsResult, } from "./data-layer-path-conditions.js";
+import { parseTargetExpression, resolveTargetValues } from "./data-layer-recursive-property-tree.js";
 export { pathConditionResult, pathConditionsResult };
 const requirements = {
     String: ["Must be present", "Must be one of these values", "Must match a pattern", "Must have this length"],
@@ -11,7 +12,8 @@ const requirements = {
 const stageOrder = ["property", "destination", "requirement", "scope", "review"];
 const continuationStageOrder = ["property", "requirement", "scope", "review"];
 export function guidedValidationStages(draft) {
-    return draft.continuation ? continuationStageOrder : stageOrder;
+    const order = draft.continuation ? continuationStageOrder : stageOrder;
+    return draft.propertyEntry ? order.filter((stage) => stage !== "property") : order;
 }
 function slug(value) {
     return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -39,7 +41,15 @@ function flattenedProperties(value, prefix = "") {
     });
 }
 function valueAtPath(payload, path) {
+    if (path.startsWith("/") || path.startsWith("$"))
+        return resolveTargetValues(payload, path)[0];
     return path.split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, payload);
+}
+export function createGuidedValidationForProperty(event, path) {
+    return { ...selectGuidedProperty(createGuidedValidationDraft(event), path), stage: "destination", propertyEntry: true };
+}
+export function createGuidedContinuationForProperty(event, candidate, path) {
+    return { ...selectGuidedContinuationProperty(createGuidedContinuationDraft(event, candidate), path, candidate), stage: "requirement", propertyEntry: true };
 }
 function eventPasses(property) {
     return property ? detectedValueType(property.observedValue) === property.expectedType : false;
@@ -96,6 +106,38 @@ export function selectGuidedProperty(draft, path) {
     const property = { path, observedValue, detectedType, expectedType: detectedType, typeSource: "detected from this event" };
     const { requirement: _requirement, ...withoutRequirement } = draft;
     return { ...withoutRequirement, property, allowedValues: [], requirementCorrectionRequired: false, preview: previewFor(property) };
+}
+export function retargetGuidedValidation(draft, path, expectedType) {
+    const observedValues = resolveTargetValues(draft.event.payload, path);
+    const observedValue = observedValues[0];
+    const detectedType = observedValue === undefined
+        ? expectedType ?? draft.property?.detectedType ?? "String"
+        : detectedValueType(observedValue);
+    const chosenType = expectedType ?? detectedType;
+    const property = {
+        path,
+        observedValue,
+        detectedType,
+        expectedType: chosenType,
+        typeSource: expectedType ? "explicit override" : "detected from this event",
+    };
+    const incompatible = draft.requirement !== undefined && !compatibleRequirements(chosenType).includes(draft.requirement);
+    return {
+        ...draft,
+        property,
+        ...(draft.property && draft.property.path !== path ? { targetReplacementReview: { previous: draft.property, proposed: property } } : {}),
+        allowedValues: draft.requirement === "Must be one of these values" && observedValue !== undefined ? [String(observedValue)] : draft.allowedValues,
+        requirementCorrectionRequired: incompatible,
+        preview: previewFor(property),
+    };
+}
+export function resolveGuidedTargetReplacement(draft, choice) {
+    const { targetReplacementReview: _review, ...rest } = draft;
+    if (choice === "accept" && rest.requirementCorrectionRequired) {
+        const { requirement: _requirement, ...withoutRequirement } = rest;
+        return { ...withoutRequirement, allowedValues: [], requirementCorrectionRequired: false };
+    }
+    return rest;
 }
 export function selectGuidedContinuationProperty(draft, path, candidate) {
     return applyGuidedSchemaCandidate(selectGuidedProperty(draft, path), candidate);
@@ -181,18 +223,33 @@ function matchingAssignment(draft, candidate) {
 }
 export function schemaDestinationOptions(draft, candidates) {
     return candidates.map((candidate) => {
-        const propertyType = draft.property ? candidate.propertyTypes[draft.property.path] : undefined;
+        const propertyType = draft.property ? candidatePropertyType(candidate, draft.property.path) : undefined;
+        const propertyLabel = draft.property?.path.startsWith("/") && !draft.property.path.slice(1).includes("/")
+            ? draft.property.path.slice(1)
+            : draft.property?.path;
         const targetMismatch = candidate.target !== draft.advanced.target;
         const typeMismatch = Boolean(propertyType && draft.property && propertyType !== draft.property.expectedType);
         const explanation = targetMismatch
             ? `schema validates ${candidate.target}, not ${draft.advanced.target}`
             : typeMismatch
-                ? `${draft.property?.path} expects ${propertyType}`
+                ? `${propertyLabel} expects ${propertyType}`
                 : propertyType
-                    ? `${draft.property?.path} accepts ${draft.property?.expectedType} rules`
-                    : `${draft.property?.path ?? "property"} will be added`;
+                    ? `${propertyLabel} accepts ${draft.property?.expectedType} rules`
+                    : `${propertyLabel ?? "property"} will be added`;
         return { ...candidate, available: !targetMismatch && !typeMismatch, explanation };
     });
+}
+function candidatePropertyType(candidate, path) {
+    const alternatives = [path];
+    if (path.startsWith("/"))
+        alternatives.push(path.slice(1).replaceAll("/", "."));
+    if (path.startsWith("$")) {
+        try {
+            alternatives.push(parseTargetExpression(path).map((segment) => segment.kind === "property" ? segment.value : segment.kind === "every" ? "*" : String(segment.value)).join("."));
+        }
+        catch { /* invalid paths have no schema prefill */ }
+    }
+    return alternatives.map((candidatePath) => candidate.propertyTypes[candidatePath]).find((value) => value !== undefined);
 }
 export function assignmentScopeSummary(assignments) {
     const assignment = assignments?.find(({ enabled }) => enabled !== false);
@@ -281,7 +338,7 @@ export function applyGuidedSchemaCandidate(draft, candidate, assignmentId) {
             ? "the compatible assignment"
             : "required from readable assignment choices";
     const schemaSource = `${candidate.name} version ${candidate.version}`;
-    const expectedType = draft.property ? candidate.propertyTypes[draft.property.path] : undefined;
+    const expectedType = draft.property ? candidatePropertyType(candidate, draft.property.path) : undefined;
     const property = draft.property && expectedType
         ? { ...draft.property, expectedType, typeSource: "explicit override" }
         : draft.property;

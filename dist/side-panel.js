@@ -443,6 +443,7 @@ if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
     localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
 let guidedContinuationSelections = restoreGuidedContinuationSelections(localStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+let guidedPropertyReturn;
 let schemaDraft;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
@@ -479,7 +480,7 @@ catch {
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
     schemaCandidates: guidedSchemaCandidates,
     publish: persistPublishedGuidedValidation,
-    close: () => { showDataLayerView("Live"); renderLiveObserver(); },
+    close: () => { showDataLayerView("Live"); renderLiveObserver(); restoreGuidedPropertyReturn(); },
     saved: finishGuidedValidationSave,
 });
 let replaySequences = [];
@@ -917,6 +918,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
             createValidation: (selected) => {
                 openGuidedValidationForEvent(selected);
             },
+            addPropertyValidation: (selected, path) => openGuidedValidationForProperty(selected, path),
             draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
             startDefectReport: (selected) => {
                 if (liveObserverElements.eventInspector) {
@@ -1156,7 +1158,7 @@ function renderSchemaDraft() {
         ])];
     if (!propertyPaths.includes(selectedSchemaPropertyPath))
         selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
-    schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
+    const propertyItems = propertyPaths.map((path) => {
         const item = document.createElement("li");
         item.dataset.schemaPropertyPath = path;
         if (path === selectedSchemaPropertyPath)
@@ -1235,7 +1237,28 @@ function renderSchemaDraft() {
         }
         item.append(label, metadata, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view);
         return item;
-    }));
+    });
+    const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]]));
+    const roots = [];
+    propertyPaths.forEach((path) => {
+        const item = itemByPath.get(path);
+        const parentPath = propertyPaths
+            .filter((candidate) => candidate !== path && path.startsWith(`${candidate}.`))
+            .sort((left, right) => right.length - left.length)[0];
+        const parent = parentPath ? itemByPath.get(parentPath) : undefined;
+        if (!parent) {
+            roots.push(item);
+            return;
+        }
+        let children = Array.from(parent.children).find((child) => child instanceof HTMLUListElement && child.classList.contains("schema-property-children"));
+        if (!children) {
+            children = document.createElement("ul");
+            children.className = "schema-property-children";
+            parent.append(children);
+        }
+        children.append(item);
+    });
+    schemaPropertyTree.replaceChildren(...roots);
     const existing = schemas.find((schema) => schema.name === draft.name);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     if (schemaEditorParent) {
@@ -1652,6 +1675,30 @@ function openGuidedValidationForEvent(event, schema) {
     if (liveObserverElements.eventInspector)
         liveObserverElements.eventInspector.hidden = true;
 }
+function openGuidedValidationForProperty(event, path) {
+    const inspector = liveObserverElements.eventInspector;
+    const feed = liveObserverElements.eventFeed;
+    guidedPropertyReturn = { eventId: event.id, path, expanded: Array.from(inspector?.querySelectorAll("details[open][data-property-path]") ?? []).map(({ dataset }) => dataset.propertyPath).filter(Boolean), inspectorScroll: inspector?.scrollTop ?? 0, feedScroll: feed?.scrollTop ?? 0 };
+    const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
+    guidedValidationFlow.openProperty(guidedEvent(event), path, schema ? guidedSchemaCandidate(schema, true) : undefined);
+    if (inspector)
+        inspector.hidden = true;
+}
+function restoreGuidedPropertyReturn() {
+    const snapshot = guidedPropertyReturn;
+    if (!snapshot)
+        return;
+    openLiveInspector(snapshot.eventId, true);
+    const inspector = liveObserverElements.eventInspector;
+    const feed = liveObserverElements.eventFeed;
+    for (const path of snapshot.expanded)
+        inspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
+    if (inspector)
+        inspector.scrollTop = snapshot.inspectorScroll;
+    if (feed)
+        feed.scrollTop = snapshot.feedScroll;
+    inspector?.querySelector(`button[aria-label="Add validation for ${CSS.escape(snapshot.path)}"]`)?.focus({ preventScroll: true });
+}
 function persistGuidedContinuation(event, schemaId) {
     guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
     localStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
@@ -1732,7 +1779,8 @@ function finishGuidedValidationSave(result) {
         return;
     persistGuidedContinuation(event, result.schema.id);
     openLiveInspector(event.id, true);
-    liveObserverElements.eventInspector?.querySelector('[data-action="add-property-validation"]')?.focus({ preventScroll: true });
+    if (guidedPropertyReturn)
+        restoreGuidedPropertyReturn();
 }
 function persistPublishedGuidedValidation(result) {
     const rule = result.schema.rules[0];
