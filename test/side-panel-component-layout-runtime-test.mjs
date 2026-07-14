@@ -38,13 +38,15 @@ let validationPresenceSemanticsObservation;
 let defectLibraryObservation;
 let schemaPublicationRefreshObservation;
 let allowedValueExpansionObservation;
+let localRulePromotionObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
+const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
   : process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1" ? [720]
@@ -3117,6 +3119,93 @@ const defectLibraryRuntime = `(async () => {
   return { nav,actualReportedLinks,openedFromIssue,returnedToIssue,restoredCount,filteredCount,edited,recopy:writes[0],lifecycle:{resolved,reopened,archived},confirmation,afterDelete,stored:{count:stored.defects.length,status:stored.defects[0].status,description:stored.defects[0].report.description,notes:stored.defects[0].notes},renderCases,differences,wildcardMatch,actionResults,actionWrites,linked:{sessions:linked.savedSessions.sessions.length,id:linked.library.defects[0].savedSession.id,contains:linked.library.defects[0].savedSession.containsMatchingIssue,immutable:Object.isFrozen(linked.savedSessions.sessions[0])},statuses:{resolved:defects.issueTriage(issue(),resolvedLibrary).state,archived:defects.issueTriage(issue(),archivedLibrary).state} };
 })()`;
 
+const localRulePromotionSeedRuntime = `(() => {
+  localStorage.clear();
+  const assignment={id:"assignment:page-view",sourceId:"history",eventName:"page_view",target:"payload",versionPolicy:"follow latest",enabled:true};
+  const document={type:"object",properties:{page_type:{type:"string"},site:{type:"string"}}};
+  const conditionGroup={operator:"All",predicates:[{propertyPath:"/site",operator:"Equals",comparison:{type:"string",value:"consumer"},detectedType:"string"}]};
+  const local40={id:"local-40",name:"Known page types",version:1,propertyPath:"/page_type",operator:"exact-value",parameters:"product"};
+  const local41={id:"local-41",name:"Known page types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product","content"],applicableType:"string",severity:"warning",message:"Use a known page type",conditionGroup,enabled:true};
+  const local42={id:"local-42",name:"Other page types",version:1,propertyPath:"/page_type",operator:"regular-expression",parameters:"^product"};
+  const published={...local41,allowedValues:["product"]};
+  const schema={id:"schema:page-view",name:"Page view",version:3,published:true,document,assignments:[assignment],attachedRules:[published],revisionHistory:[],workingDraft:{baseVersion:3,sourceVersion:3,document,assignments:[assignment],attachedRules:[local40,local41,local42],pendingChanges:["Document page ownership"]}};
+  const other={id:"schema:other",name:"Other",version:1,published:true,document:{type:"object",properties:{other:{type:"string"}}},assignments:[],attachedRules:[],revisionHistory:[]};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema,other]));
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+  return true;
+})()`;
+
+const localRulePromotionOpenRuntime = `(() => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  q("#data-layer-view-schemas").click();
+  Array.from(q("#schema-list").querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();
+  const property=q('li[data-schema-property-path="page_type"]'); const disclosure=q("details[data-attached-rules]",property); disclosure.open=true;
+  const row=q('.schema-attached-rule[data-rule-id="local-41"]',property); const action=q(".local-rule-promotion-action",row);
+  const detail=q("#schema-detail"); detail.style.maxBlockSize="180px"; detail.scrollTop=47; action.focus({preventScroll:true});
+  return {localCount:row.querySelectorAll(".local-rule-promotion-action:enabled").length,reusableCount:0,inheritedCount:0,scroll:detail.scrollTop,focused:document.activeElement?.dataset.ruleId};
+})()`;
+
+const localRulePromotionReusableOriginRuntime = `(() => {
+  const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const source=schemas[0].workingDraft.attachedRules.find(({id})=>id==="local-41");
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{...source,kind:"Allowed values",version:2,attachments:[schemas[0].id],revisionHistory:[]} ])); return true;
+})()`;
+
+const localRulePromotionOriginCountRuntime = `(() => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;}; q("#data-layer-view-schemas").click(); Array.from(q("#schema-list").querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click(); const row=q('.schema-attached-rule[data-rule-id="local-41"]'); return row.querySelectorAll(".local-rule-promotion-action:enabled").length;
+})()`;
+
+const localRulePromotionInheritedSeedRuntime = `(() => {
+  localStorage.clear(); const document={type:"object",properties:{page_type:{type:"string"}}}; const inherited={id:"local-41",name:"Known page types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product","content"]};
+  const parent={id:"schema:parent",name:"Parent",version:1,published:true,document,assignments:[],attachedRules:[inherited],revisionHistory:[]}; const child={id:"schema:page-view",name:"Page view",version:3,published:true,document,assignments:[],parentSchemaId:parent.id,attachedRules:[],revisionHistory:[],workingDraft:{baseVersion:3,sourceVersion:3,document,assignments:[],parentSchemaId:parent.id,attachedRules:[],pendingChanges:[]}};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([child,parent])); localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]"); return true;
+})()`;
+
+const localRulePromotionInheritedCountRuntime = `(() => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;}; q("#data-layer-view-schemas").click(); Array.from(q("#schema-list").querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click(); const inherited=q("#schema-inherited-rule-groups"); if(!inherited.textContent.includes("local-41"))throw new Error("Inherited stable identity was not rendered"); return inherited.querySelectorAll(".local-rule-promotion-action:enabled").length;
+})()`;
+
+const localRulePromotionReviewRuntime = `(() => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const review=q("#local-rule-promotion-review"); const rect=review.getBoundingClientRect();
+  const observation={summary:q("#local-rule-promotion-summary",review).textContent,configuration:q("#local-rule-promotion-configuration",review).textContent,name:q("#local-rule-promotion-name",review).value,required:q("#local-rule-promotion-name",review).required,focus:document.activeElement?.id,withinWidth:rect.left>=0&&rect.right<=innerWidth};
+  Array.from(review.querySelectorAll("button")).find(({textContent})=>textContent==="Cancel").click();
+  const property=q('li[data-schema-property-path="page_type"]'); const action=q('.schema-attached-rule[data-rule-id="local-41"] .local-rule-promotion-action',property); action.focus({preventScroll:true});
+  return {observation,cancelled:{focus:document.activeElement?.dataset.ruleId,open:q("details[data-attached-rules]",property).open,scroll:q("#schema-detail").scrollTop}};
+})()`;
+
+const localRulePromotionPrepareConfirmRuntime = `(() => {
+  const review=document.querySelector("#local-rule-promotion-review");
+  Object.defineProperty(Crypto.prototype,"randomUUID",{value:()=>"51",configurable:true});
+  const name=review.querySelector("#local-rule-promotion-name"); name.value="Approved page types"; name.dispatchEvent(new Event("input",{bubbles:true}));
+  const description=review.querySelector("#local-rule-promotion-description"); description.value="Known storefront page types"; description.dispatchEvent(new Event("input",{bubbles:true}));
+  const examples=review.querySelector("#local-rule-promotion-examples"); examples.value="product, content"; examples.dispatchEvent(new Event("input",{bubbles:true}));
+  const confirm=Array.from(review.querySelectorAll("button")).find(({textContent})=>textContent==="Confirm promotion"); confirm.focus({preventScroll:true});
+  return {disabled:confirm.disabled,focus:document.activeElement===confirm};
+})()`;
+
+const localRulePromotionFailureRuntime = (failureKey) => `(() => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const action=q('.schema-attached-rule[data-rule-id="local-41"] .local-rule-promotion-action'); action.click();
+  const review=q("#local-rule-promotion-review"); const name=q("#local-rule-promotion-name",review); name.value="Approved page types"; name.dispatchEvent(new Event("input",{bubbles:true}));
+  const schemaKey="my-chrome-utilities.schema-library.v1",ruleKey="my-chrome-utilities.schema-rule-library.v1"; const before=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];
+  const original=Storage.prototype.setItem; let failed=false; Storage.prototype.setItem=function(key,value){if(key===${JSON.stringify(failureKey)}&&!failed){failed=true;throw new Error("simulated persistence failure");}return original.call(this,key,value);};
+  try { Array.from(review.querySelectorAll("button")).find(({textContent})=>textContent==="Confirm promotion").click(); } finally { Storage.prototype.setItem=original; }
+  const after=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)]; const result={unchanged:before[0]===after[0]&&before[1]===after[1],local:q('.schema-attached-rule[data-rule-id="local-41"]')!==null,rules:JSON.parse(after[1]).length,assistance:q("#local-rule-promotion-assistance",review).textContent};
+  Array.from(review.querySelectorAll("button")).find(({textContent})=>textContent==="Cancel").click(); action.focus({preventScroll:true}); return result;
+})()`;
+
+const localRulePromotionAfterRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0)); await pause();
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const rules=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")); const page=schemas.find(({id})=>id==="schema:page-view");
+  const property=q('li[data-schema-property-path="page_type"]'); const replacement=q('.schema-attached-rule[data-rule-id="reusable-51"]',property);
+  const beforePublish={rule:rules[0],ids:page.workingDraft.attachedRules.map(({id})=>id),paths:page.workingDraft.attachedRules.map(({propertyPath})=>propertyPath),neighbors:[JSON.stringify(page.workingDraft.attachedRules[0]),JSON.stringify(page.workingDraft.attachedRules[2])],pending:page.workingDraft.pendingChanges,publishedId:page.attachedRules[0].id,focus:document.activeElement?.dataset.ruleId,open:q("details[data-attached-rules]",property).open,scroll:q("#schema-detail").scrollTop,noHorizontal:document.documentElement.scrollWidth<=innerWidth};
+  q("#save-schema").click(); q("#confirm-schema-revision").click(); await pause();
+  const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const published=stored.find(({id})=>id==="schema:page-view"); const historical=published.revisionHistory.find(({version})=>version===3); const verification=await import("/data-layer-schema-verification.js"); const event={sourceId:"history",eventName:"page_view",payload:{page_type:"unknown",site:"consumer"},rawInput:[]};
+  const currentEvaluation=verification.validateWithSchema(event,published,stored).evaluations.find(({ruleId})=>ruleId==="reusable-51"); const historicalEvaluation=verification.validateWithSchema(event,historical,[historical]).evaluations.find(({ruleId})=>ruleId==="local-41");
+  return {beforePublish,afterPublish:{version:published.version,currentId:currentEvaluation.ruleId,historicalId:historicalEvaluation.ruleId,otherIds:stored.find(({id})=>id==="schema:other").attachedRules.map(({id})=>id)}};
+})()`;
+
 const allowedValueExpansionSeedRuntime = `(async () => {
   const defects = await import("/data-layer-defect-library.js");
   localStorage.clear();
@@ -3326,6 +3415,47 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, localRulePromotionSeedRuntime); await reloadPanel(socket);
+      const localOrigin = await evaluate(socket, localRulePromotionOpenRuntime);
+      await evaluate(socket, localRulePromotionReusableOriginRuntime); await reloadPanel(socket);
+      const reusableCount = await evaluate(socket, localRulePromotionOriginCountRuntime);
+      await evaluate(socket, localRulePromotionInheritedSeedRuntime); await reloadPanel(socket);
+      const inheritedCount = await evaluate(socket, localRulePromotionInheritedCountRuntime);
+      await evaluate(socket, localRulePromotionSeedRuntime); await reloadPanel(socket);
+      const initial = {...await evaluate(socket, localRulePromotionOpenRuntime),localCount:localOrigin.localCount,reusableCount,inheritedCount};
+      await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      const review = await evaluate(socket, localRulePromotionReviewRuntime);
+      const failures = [
+        await evaluate(socket, localRulePromotionFailureRuntime("my-chrome-utilities.schema-rule-library.v1")),
+        await evaluate(socket, localRulePromotionFailureRuntime("my-chrome-utilities.schema-library.v1")),
+      ];
+      await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      const prepared = await evaluate(socket, localRulePromotionPrepareConfirmRuntime);
+      await socket.call("Input.dispatchKeyEvent", { type:"keyDown", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      await socket.call("Input.dispatchKeyEvent", { type:"keyUp", key:" ", code:"Space", windowsVirtualKeyCode:32 });
+      const completed = await evaluate(socket, localRulePromotionAfterRuntime);
+      await reloadPanel(socket);
+      const reloaded = await evaluate(socket, `(() => { const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const rules=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")); return {rules:rules.map(({id,version})=>[id,version]),attachments:schemas.find(({id})=>id==="schema:page-view").attachedRules.map(({id,version})=>[id,version])}; })()`);
+      localRulePromotionObservation={initial,review,failures,prepared,...completed,reloaded};
+      assert.deepEqual({localCount:initial.localCount,reusableCount:initial.reusableCount,inheritedCount:initial.inheritedCount,focused:initial.focused},{localCount:1,reusableCount:0,inheritedCount:0,focused:"local-41"});
+      assert.match(review.observation.summary,/Page view revision 3 working draft.*\/page_type.*local-41/);
+      assert.match(review.observation.configuration,/allowed-values.*string product.*warning.*Use a known page type.*enabled/);
+      assert.deepEqual({name:review.observation.name,required:review.observation.required,focus:review.observation.focus,withinWidth:review.observation.withinWidth},{name:"",required:true,focus:"local-rule-promotion-heading",withinWidth:true});
+      assert.deepEqual({focus:review.cancelled.focus,open:review.cancelled.open},{focus:"local-41",open:true});
+      assert.equal(failures.every(({unchanged,local,rules,assistance})=>unchanged&&local&&rules===0&&assistance.includes("simulated persistence failure")),true);
+      assert.deepEqual(prepared,{disabled:false,focus:true});
+      assert.deepEqual(completed.beforePublish.ids,["local-40","reusable-51","local-42"]);
+      assert.deepEqual(completed.beforePublish.paths,["/page_type","/page_type","/page_type"]);
+      assert.equal(completed.beforePublish.rule.id,"reusable-51"); assert.equal(completed.beforePublish.rule.version,1); assert.deepEqual(completed.beforePublish.rule.allowedValues,["product","content"]); assert.equal(completed.beforePublish.rule.severity,"warning"); assert.equal(completed.beforePublish.rule.message,"Use a known page type");
+      assert.deepEqual(completed.beforePublish.pending,["Document page ownership","Promote local rule local-41 to reusable rule reusable-51"]);
+      assert.deepEqual({publishedId:completed.beforePublish.publishedId,focus:completed.beforePublish.focus,open:completed.beforePublish.open,noHorizontal:completed.beforePublish.noHorizontal},{publishedId:"local-41",focus:"reusable-51",open:true,noHorizontal:true});
+      assert.deepEqual(completed.afterPublish,{version:4,currentId:"reusable-51",historicalId:"local-41",otherIds:[]});
+      assert.deepEqual(reloaded,{rules:[["reusable-51",1]],attachments:[["local-40",1],["reusable-51",1],["local-42",1]]});
+      socket.close(); continue;
+    }
     if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, allowedValueExpansionSeedRuntime); await reloadPanel(socket);
       allowedValueExpansionObservation = await evaluate(socket, allowedValueExpansionRuntime);
@@ -4326,6 +4456,9 @@ try {
   }
   if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));
+  }
+  if (process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ localRulePromotion:localRulePromotionObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

@@ -14,6 +14,7 @@
                         [acceptance.steps-support-test]
                         [acceptance.side-panel-steps-test]
                         [acceptance.allowed-value-expansion-steps-test]
+                        [acceptance.local-rule-promotion-steps-test]
                         [acceptance.command-registry-steps-test]
                         [acceptance.conditional-validation-rules-steps-test]
                         [acceptance.defect-library-steps-test]
@@ -55,6 +56,7 @@
                                                 'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
                                                 'acceptance.allowed-value-expansion-steps-test
+                                                'acceptance.local-rule-promotion-steps-test
                                                 'acceptance.command-registry-steps-test
                                                 'acceptance.conditional-validation-rules-steps-test
                                                 'acceptance.defect-library-steps-test

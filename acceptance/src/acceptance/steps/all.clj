@@ -23,6 +23,7 @@
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
+            [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
@@ -52,6 +53,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               local-rule-promotion/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
