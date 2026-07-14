@@ -37,6 +37,7 @@
                         [acceptance.fresh-live-session-steps-test]
                         [acceptance.guided-assignment-coverage-steps-test]
                         [acceptance.guided-rule-parameter-integrity-steps-test]
+                        [acceptance.missing-event-defect-report-steps-test]
                         [acceptance.schema-property-removal-steps-test]
                         [acceptance.schema-property-rule-picker-steps-test]
                         [acceptance.recursive-property-validation-steps-test]
@@ -73,6 +74,7 @@
                                                 'acceptance.fresh-live-session-steps-test
                                                 'acceptance.guided-assignment-coverage-steps-test
                                                 'acceptance.guided-rule-parameter-integrity-steps-test
+                                                'acceptance.missing-event-defect-report-steps-test
                                                 'acceptance.schema-property-removal-steps-test
                                                 'acceptance.schema-property-rule-picker-steps-test
                                                 'acceptance.recursive-property-validation-steps-test

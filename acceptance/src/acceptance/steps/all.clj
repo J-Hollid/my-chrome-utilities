@@ -21,6 +21,7 @@
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
+            [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
@@ -47,6 +48,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               missing-event-defect-report/handlers
                schema-documentation/handlers
                conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
@@ -95,5 +97,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T16:06:28.703840277+02:00", :module-hash "-1698782925", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 46, :hash "-1929193661"} {:id "def/handlers", :kind "def", :line 48, :end-line 95, :hash "1331548619"}]}
+;; {:version 1, :tested-at "2026-07-14T16:29:45.409268981+02:00", :module-hash "1671264018", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 47, :hash "880205281"} {:id "def/handlers", :kind "def", :line 49, :end-line 97, :hash "1568491315"}]}
 ;; clj-mutate-manifest-end
