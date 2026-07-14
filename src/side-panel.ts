@@ -1753,11 +1753,13 @@ function restoreLocalRulePromotionPresentation(ruleId: string, focusOrigin: bool
 }
 
 function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string, trigger: HTMLButtonElement): void {
-  const schema = schemaDraft && schemas.find(({ id }) => id === schemaDraft?.id);
+  const storedSchema = schemaDraft && schemas.find(({ id }) => id === schemaDraft?.id);
+  const schema = storedSchema ?? schemaDraft;
   if (!schema) return;
+  const editorContext = storedSchema ? "editable" as const : "new-schema" as const;
   let review: ReturnType<typeof reviewLocalRulePromotion>;
   try {
-    review = reviewLocalRulePromotion({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId });
+    review = reviewLocalRulePromotion({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, editorContext });
   } catch (error) {
     if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Promotion is no longer available.";
     return;
@@ -1771,9 +1773,11 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
     },
     confirm(selected) {
       const result = selected.action === "create"
-        ? promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, ...selected })
-        : promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, action:"use-existing", reusableRuleId:selected.reusableRuleId });
-      const nextSchemas = schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate);
+        ? promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, editorContext, ...selected })
+        : promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, editorContext, action:"use-existing", reusableRuleId:selected.reusableRuleId });
+      const nextSchemas = storedSchema
+        ? schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate)
+        : schemas;
       const nextRules = storedPromotionRules(result.reusableRules);
       persistLocalRulePromotion(localStorage, {
         schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,
@@ -1781,7 +1785,7 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
         ruleKey:SCHEMA_RULE_STORAGE_KEY,
         ruleValue:JSON.stringify(nextRules),
       });
-      schemas = nextSchemas; reusableSchemaRules = nextRules; schemaDraft = schemaEditorDraft(result.schema);
+      schemas = nextSchemas; reusableSchemaRules = nextRules; schemaDraft = storedSchema ? schemaEditorDraft(result.schema) : result.schema;
       return () => {
         renderSchemas(); renderSchemaWorkflowRows(); renderSchemaDraft();
         restoreLocalRulePromotionPresentation(result.replacementRuleId, false);
@@ -1912,7 +1916,8 @@ function renderSchemaDraft(): void {
       toggle.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, (item) => ({ ...item, enabled:item.enabled === false })));
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
       remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
-      const promotion = storedSchema && localRulePromotionAvailability({ schema:storedSchema, reusableRules:promotionReusableRules(), propertyPath:persistedPath, sourceRuleId:rule.id }).available
+      const promotionSchema = storedSchema ?? draft;
+      const promotion = localRulePromotionAvailability({ schema:promotionSchema, reusableRules:promotionReusableRules(), propertyPath:persistedPath, sourceRuleId:rule.id, editorContext:storedSchema ? "editable" : "new-schema" }).available
         ? document.createElement("button")
         : undefined;
       if (promotion) {

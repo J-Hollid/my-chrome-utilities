@@ -15,7 +15,7 @@ const input={schema,reusableRules:[],propertyPath:"/page_type",sourceRuleId:"loc
 assert.deepEqual(localRulePromotionAvailability(input),{available:true});
 assert.equal(localRulePromotionAvailability({...input,sourceRuleId:"missing"}).available,false);
 assert.equal(localRulePromotionAvailability({...input,reusableRules:[{...local41,id:"local-41",kind:"Allowed values",version:2}]}).available,false);
-assert.equal(localRulePromotionAvailability({...input,schema:{...schema,workingDraft:undefined}}).available,false);
+assert.equal(localRulePromotionAvailability({...input,schema:{...schema,workingDraft:undefined}}).available,true);
 
 const review=reviewLocalRulePromotion(input);
 assert.deepEqual(review.source,{schema:{id:schema.id,name:"Page view",version:3},propertyPath:"/page_type",rule:{id:"local-41",name:"Known page types",version:1,operator:"allowed-values",allowedValues:["product","content"],applicableType:"string",severity:"warning",message:"Use a known page type",conditionGroup,enabled:true}});
