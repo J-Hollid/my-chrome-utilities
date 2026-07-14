@@ -122,10 +122,11 @@
                    "Missing nested schema model nodes were not identified." observed))
 
 (defn- assert-validation-results! [observed]
-  (support/assert! (= [{:instancePath "/products/1/id" :templatePath "/products/*/id"}
-                       {:instancePath "/products/1/name" :templatePath "/products/*/name"}]
+  (support/assert! (= [{:instancePath "/products/1/name" :templatePath "/products/*/name"}]
                       (get-in observed [:validation :products]))
                    "Wildcard item-property issues lost concrete or template paths." observed)
+  (support/assert! (= ["/products/1/id"] (get-in observed [:validation :productsNotApplicable]))
+                   "Missing optional wildcard targets were not rendered as Not applicable." observed)
   (support/assert! (= {:issues 0 :itemCountAvailable true} (get-in observed [:validation :emptyProducts]))
                    "Empty arrays produced item-property issues or lost item-count authoring." observed)
   (support/assert! (= {:wildcardMatches 3 :exactMatches 1 :issues 0} (get-in observed [:validation :combined]))

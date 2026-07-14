@@ -44,17 +44,16 @@ const conditionalProduct = assignSchema({
   }],
 }, { sourceId:"history", eventName:"product_detail", target:"payload" });
 const conditionalResult = (payload) => validateEvent({ sourceId:"history", eventName:"product_detail", payload, rawInput:[] }, [conditionalProduct]);
-for (const payload of [
-  { page_type:"product_detail", oOrder:{} },
-  { page_type:"product_detail", oOrder:{ aProducts:[] } },
-]) {
-  const result = conditionalResult(payload);
-  assert.equal(result.state, "1 issues");
-  assert.equal(result.issues.length, 1);
-  assert.equal(result.issues[0].instancePath, "/oOrder/aProducts");
-  assert.equal(result.issues[0].conditionSummary, "When page_type equals product_detail, oOrder.aProducts must contain at least 1 item");
-  assert.equal(result.evaluations[0].status, "error");
-}
+const absentConditionalTarget = conditionalResult({ page_type:"product_detail", oOrder:{} });
+assert.equal(absentConditionalTarget.state, "Valid");
+assert.equal(absentConditionalTarget.issues.length, 0);
+assert.equal(absentConditionalTarget.evaluations[0].status, "not-applicable");
+const emptyConditionalTarget = conditionalResult({ page_type:"product_detail", oOrder:{ aProducts:[] } });
+assert.equal(emptyConditionalTarget.state, "1 issues");
+assert.equal(emptyConditionalTarget.issues.length, 1);
+assert.equal(emptyConditionalTarget.issues[0].instancePath, "/oOrder/aProducts");
+assert.equal(emptyConditionalTarget.issues[0].conditionSummary, "When page_type equals product_detail, oOrder.aProducts must contain at least 1 item");
+assert.equal(emptyConditionalTarget.evaluations[0].status, "error");
 const passingConditional = conditionalResult({ page_type:"product_detail", oOrder:{ aProducts:[{ sku:"ABC" }] } });
 assert.equal(passingConditional.state, "Valid");
 assert.equal(passingConditional.evaluations[0].status, "pass");

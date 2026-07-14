@@ -33,7 +33,7 @@
                  [(:count stored) (:summary stored)])
               "The conditional rule was not stored atomically with its readable summary."
               stored)
-    (require! (= [["Failed" 1] ["Failed" 1] ["Passed" 0] ["Not applicable" 0] ["Not applicable" 0]]
+    (require! (= [["Not applicable" 0] ["Failed" 1] ["Passed" 0] ["Not applicable" 0] ["Not applicable" 0]]
                  (mapv (juxt :result :issues) evaluations))
               "Conditional production evaluation did not gate its consequence."
               evaluations)
