@@ -43,6 +43,7 @@ import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateC
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
@@ -453,6 +454,7 @@ let liveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot;
+const liveInspectorPresentation = new Map();
 let savedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
 let defectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
 let selectedDefectId;
@@ -829,6 +831,9 @@ async function confirmDetachSelectedTarget() {
     renderObservationTargetContext();
 }
 function showDataLayerView(view, focus = false) {
+    if (liveObserverState.view === "Live" && view !== "Live" && liveObserverState.inspectorEventId) {
+        liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation());
+    }
     liveObserverState = { ...liveObserverState, view };
     if (savedSessionLiveFeed) {
         savedSessionLiveFeed = { ...savedSessionLiveFeed, savedView: structuredClone(liveObserverState) };
@@ -836,6 +841,8 @@ function showDataLayerView(view, focus = false) {
     }
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
+    if (view === "Live" && liveObserverState.inspectorEventId)
+        restoreLiveInspectorPresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
     if (view === "Defects")
         renderDefects();
 }
@@ -1069,6 +1076,9 @@ function openMissingEventBuilder(entryPoint, initialSchemaId) {
     });
 }
 function closeInspectorAndReturnToEvents() {
+    const selectedId = liveObserverState.inspectorEventId;
+    if (selectedId)
+        liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation());
     const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
     synchronizeSavedSessionFeedView();
@@ -1079,7 +1089,42 @@ function closeInspectorAndReturnToEvents() {
     }
     inspectorReturnSnapshot = undefined;
 }
+function captureLiveInspectorPresentation() {
+    const inspector = liveObserverElements.eventInspector;
+    const focused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    const focusedPropertyPath = focused?.closest(".live-validation-property")?.dataset.propertyPath;
+    return {
+        showNonApplicableProperties: inspector?.querySelector('[aria-label="Properties"]')?.dataset.showNonApplicableProperties === "true",
+        expandedPropertyPaths: Array.from(inspector?.querySelectorAll("details[open][data-property-path]") ?? [])
+            .map(({ dataset }) => dataset.propertyPath).filter((path) => Boolean(path)),
+        expandedRulePaths: Array.from(inspector?.querySelectorAll('.live-validation-property[data-property-path] .live-property-status[aria-expanded="true"]') ?? [])
+            .map((button) => button.closest(".live-validation-property")?.dataset.propertyPath).filter((path) => Boolean(path)),
+        ...(focused?.id ? { focusedId: focused.id } : {}),
+        ...(focusedPropertyPath ? { focusedPropertyPath } : {}),
+        scrollTop: inspector?.scrollTop ?? 0,
+    };
+}
+function restoreLiveInspectorPresentation(snapshot) {
+    if (!snapshot)
+        return;
+    const inspector = liveObserverElements.eventInspector;
+    for (const path of snapshot.expandedPropertyPaths)
+        inspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
+    for (const path of snapshot.expandedRulePaths) {
+        const disclosure = inspector?.querySelector(`.live-validation-property[data-property-path="${CSS.escape(path)}"] .live-property-status`);
+        if (disclosure?.getAttribute("aria-expanded") !== "true")
+            disclosure?.click();
+    }
+    if (inspector)
+        inspector.scrollTop = snapshot.scrollTop;
+    const focusTarget = snapshot.focusedId ? document.getElementById(snapshot.focusedId) : undefined;
+    (focusTarget ?? (snapshot.focusedPropertyPath ? inspector?.querySelector(`.live-validation-property[data-property-path="${CSS.escape(snapshot.focusedPropertyPath)}"]`) : undefined))?.focus({ preventScroll: true });
+}
 function openLiveInspector(eventId, preserveReturnSnapshot = false) {
+    const previousEventId = liveObserverState.inspectorEventId;
+    if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
+        liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation());
+    }
     if (!preserveReturnSnapshot) {
         inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
     }
@@ -1087,6 +1132,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     liveObserverState = selectLiveEvent(liveObserverState, eventId, split ? "split" : "stacked");
     synchronizeSavedSessionFeedView();
     const event = liveObserverState.events.find(({ id }) => id === eventId);
+    const presentation = liveInspectorPresentation.get(eventId);
     if (event)
         renderLiveInspector(liveObserverElements, triagedEvent(event), createLiveInspectorActions({
             currentPageUrl: () => liveObserverState.pageUrl,
@@ -1182,7 +1228,8 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                     document.getElementById(focusedId)?.focus({ preventScroll: true });
                 setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
             },
-        }));
+        }), presentation ? { showNonApplicableProperties: presentation.showNonApplicableProperties } : {});
+    restoreLiveInspectorPresentation(presentation);
     renderLiveObserver();
     backToEventsButton?.focus({ preventScroll: true });
 }
@@ -2826,6 +2873,21 @@ function recheckCapturedSchemaValidation() {
     if (schemaResult)
         schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
 }
+function refreshCurrentLiveAfterSchemaPublication() {
+    const current = savedSessionLiveFeed?.currentView ?? liveObserverState;
+    const refreshed = revalidateCurrentLiveSession(current, schemas, manualSchemaOverrides);
+    if (savedSessionLiveFeed) {
+        savedSessionLiveFeed = { ...savedSessionLiveFeed, currentView: refreshed.state };
+        persistSavedSessionFeed();
+    }
+    else {
+        liveObserverState = refreshed.state;
+        renderLiveObserver();
+        if (liveObserverState.inspectorEventId)
+            openLiveInspector(liveObserverState.inspectorEventId, true);
+    }
+    return refreshed.revalidatedEventIds.length;
+}
 function renderSchemaValidationRecords() {
     schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent: `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"} · ${record.checkedAt}` })));
 }
@@ -4068,12 +4130,13 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     }
     persistSchemaLibrary();
     localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    const refreshedEventCount = refreshCurrentLiveAfterSchemaPublication();
     schemaDraft = undefined;
     renderSchemaDraft();
     renderSchemas();
     renderSchemaWorkflowRows();
     if (schemaResult)
-        schemaResult.textContent = `Published ${saved.name} revision ${saved.version}.`;
+        schemaResult.textContent = `Published ${saved.name} revision ${saved.version}. Revalidated ${refreshedEventCount} current Live ${refreshedEventCount === 1 ? "event" : "events"}.`;
     if (schemaRevisionReview?.open)
         schemaRevisionReview.close();
     if (schemaRevisionReview)

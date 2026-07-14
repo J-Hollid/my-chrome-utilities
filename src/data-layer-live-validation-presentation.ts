@@ -132,3 +132,41 @@ export function buildValidationPropertyTree(
   for (const name of missingRoots) if (!roots.some((root) => root.name === name)) roots.push(node(name, undefined, name));
   return roots;
 }
+
+function hasApplicableEvidence(node: ValidationPropertyNode): boolean {
+  return node.evaluations.some(({ status }) => status !== "not-applicable")
+    || node.children.some(hasApplicableEvidence)
+    || (node.specificItems ?? []).some(hasApplicableEvidence);
+}
+
+function presentPropertyNode(node: ValidationPropertyNode, showNonApplicable: boolean): ValidationPropertyNode | undefined {
+  const children = node.children
+    .map((child) => presentPropertyNode(child, showNonApplicable))
+    .filter((child): child is ValidationPropertyNode => Boolean(child));
+  const specificItems = (node.specificItems ?? [])
+    .map((child) => presentPropertyNode(child, showNonApplicable))
+    .filter((child): child is ValidationPropertyNode => Boolean(child));
+  if (!showNonApplicable && node.missing && !hasApplicableEvidence(node)) return undefined;
+  const evaluations = showNonApplicable
+    ? node.evaluations
+    : node.evaluations.filter(({ status }) => status !== "not-applicable");
+  const summary = propertyValidationSummary(evaluations);
+  const displayedSummary = !showNonApplicable && !node.missing && evaluations.length === 0
+    && node.evaluations.some(({ status }) => status === "not-applicable")
+    ? { ...summary, status:"No applicable rules" }
+    : summary;
+  const aggregate = [...children, ...specificItems].reduce((counts, child) => ({
+    errors:counts.errors + child.summary.errors + child.aggregate.errors,
+    warnings:counts.warnings + child.summary.warnings + child.aggregate.warnings,
+  }), { errors:0, warnings:0 });
+  return { ...node, evaluations, summary:displayedSummary, aggregate, children, specificItems };
+}
+
+export function presentValidationPropertyTree(
+  nodes: readonly ValidationPropertyNode[],
+  showNonApplicable: boolean,
+): ValidationPropertyNode[] {
+  return nodes
+    .map((node) => presentPropertyNode(node, showNonApplicable))
+    .filter((node): node is ValidationPropertyNode => Boolean(node));
+}
