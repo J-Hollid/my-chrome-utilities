@@ -1,6 +1,6 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import type { SchemaAssignment, SchemaDefinition, ValidationTarget } from "./data-layer-schema-verification.js";
-import { expectedPayloadPresentation, missingEventActualPresentation } from "./data-layer-unified-defect-builder.js";
+import { expectedPayloadPresentation, missingEventActualPresentation, type ExpectedPayloadDraft } from "./data-layer-unified-defect-builder.js";
 
 export interface MissingEventScopeEvent {
   id: string;
@@ -72,6 +72,7 @@ export interface MissingEventReport {
   expected: string;
   expectedPayload: unknown;
   expectedResponseSources: Readonly<Record<string, "schema-provided value" | "operator custom response">>;
+  expectedResponseProvenance: ExpectedPayloadDraft["responseProvenance"];
   summary: string;
   description: string;
   expectedExplanation: string;
@@ -93,6 +94,7 @@ export interface MissingEventReport {
 export interface MissingEventReportComposition {
   expectedPayload?: unknown;
   expectedResponseSources?: Readonly<Record<string, "schema-provided value" | "operator custom response">>;
+  expectedResponseProvenance?: ExpectedPayloadDraft["responseProvenance"];
   summary?: string;
   description?: string;
   expectedExplanation?: string;
@@ -346,6 +348,7 @@ export function createMissingEventReport(
     expected,
     expectedPayload,
     expectedResponseSources:clone(composition.expectedResponseSources ?? {}),
+    expectedResponseProvenance:clone(composition.expectedResponseProvenance ?? {}),
     summary:composition.summary ?? `Missing event: ${expectation.eventName}`,
     description:composition.description ?? `${expectation.eventName} was expected during ${draft.scope.pathname}, but no matching event was captured.`,
     expectedExplanation:composition.expectedExplanation ?? expectation.explanation,
@@ -387,7 +390,10 @@ export function generateMissingEventRepresentations(report: MissingEventReport):
     : `Selected page visit ${report.scope.pathname} (${report.scope.id}); 0 matching events`;
   const expectedPayload = clone(report.expectedPayload ?? {});
   const payloadSentence = expectedPayloadPresentation(report.expectation.eventName, expectedPayload);
-  const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => `${pointer} response source: ${source}`).join("\n");
+  const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => {
+    const provenance = report.expectedResponseProvenance?.[pointer];
+    return `${pointer} response source: ${source}${provenance ? ` (${provenance.name ?? provenance.id} revision ${provenance.version})` : ""}`;
+  }).join("\n");
   const expectedResult = [report.expected, report.expectedExplanation, payloadSentence, expectedSources, JSON.stringify(expectedPayload, null, 2)].filter(Boolean).join("\n");
   const sections: Array<[string, string]> = [
     ["Summary", report.summary ?? `Missing event: ${report.expectation.eventName}`],

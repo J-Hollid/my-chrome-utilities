@@ -1,4 +1,4 @@
-import { addExpectedArrayItem, duplicateExpectedArrayItem, expectedPayloadFields, removeExpectedArrayItem, removeExpectedPayloadValue, setExpectedPayloadValue, } from "./data-layer-unified-defect-builder.js";
+import { addExpectedArrayItem, duplicateExpectedArrayItem, expectedPayloadFields, normalizedExpectedPayloadSchema, removeExpectedArrayItem, removeExpectedPayloadValue, setExpectedPayloadValue, } from "./data-layer-unified-defect-builder.js";
 function element(tag, text) {
     const result = document.createElement(tag);
     if (text !== undefined)
@@ -19,12 +19,17 @@ function templatePointer(pointer) {
     return pointer.replace(/\/\d+(?=\/|$)/g, "/0");
 }
 export function renderExpectedPayloadEditor(root, schema, state) {
+    const normalizedSchema = normalizedExpectedPayloadSchema(schema);
     const fieldTemplates = expectedPayloadFields(schema);
     const fieldAt = (pointer) => fieldTemplates.find((field) => field.pointer === templatePointer(pointer));
-    const update = (draft) => {
+    const issueText = (pointer) => state.issues?.().filter((issue) => issue.instancePath === pointer).map(({ message }) => message).join("; ") ?? "";
+    const update = (draft, focusAfterRender) => {
+        const scrollTop = root.scrollTop;
         state.update(draft);
         render();
         state.refresh();
+        root.scrollTop = scrollTop;
+        focusAfterRender?.()?.focus({ preventScroll: true });
     };
     const renderLeaf = (definition, path, pointer, required) => {
         const field = fieldAt(pointer) ?? { path, pointer, type: definition.type ?? "value", required, schemaValues: [] };
@@ -73,13 +78,30 @@ export function renderExpectedPayloadEditor(root, schema, state) {
         custom.addEventListener("input", () => {
             if (definition.type === "number" && custom.value === "")
                 return;
-            update(setExpectedPayloadValue(schema, state.draft(), pointer, { method: "custom", value: custom.value }));
+            state.update(setExpectedPayloadValue(schema, state.draft(), pointer, { method: "custom", value: custom.value }));
+            const message = issueText(pointer);
+            issue.textContent = message;
+            issue.hidden = !message;
+            custom.setAttribute("aria-invalid", String(Boolean(message)));
+            source.textContent = state.draft().responseSources[pointer] ?? "Choose a schema value or enter a custom response.";
+            provenance.textContent = "";
+            state.refresh();
         });
         customLabel.append(custom);
         wrapper.append(customLabel);
         const source = element("output", state.draft().responseSources[pointer] ?? "Choose a schema value or enter a custom response.");
         source.dataset.expectedResponseSource = pointer;
         wrapper.append(source);
+        const provenanceValue = state.draft().responseProvenance?.[pointer];
+        const provenance = element("output", provenanceValue ? `${provenanceValue.name ?? provenanceValue.id} revision ${provenanceValue.version}` : "");
+        provenance.dataset.expectedResponseProvenance = pointer;
+        wrapper.append(provenance);
+        const message = issueText(pointer);
+        const issue = element("p", message);
+        issue.dataset.expectedPayloadIssue = pointer;
+        issue.hidden = !message;
+        wrapper.append(issue);
+        custom.setAttribute("aria-invalid", String(Boolean(message)));
         return wrapper;
     };
     const renderNode = (definition, path, pointer, required) => {
@@ -104,11 +126,22 @@ export function renderExpectedPayloadEditor(root, schema, state) {
         const items = Array.isArray(values) ? values : [];
         const add = element("button", `Add ${path} item`);
         add.type = "button";
-        add.addEventListener("click", () => update(addExpectedArrayItem(schema, state.draft(), pointer)));
+        if (!definition.items) {
+            add.disabled = true;
+            add.setAttribute("aria-disabled", "true");
+        }
+        else
+            add.addEventListener("click", () => update(addExpectedArrayItem(schema, state.draft(), pointer), () => {
+                const created = Array.from(root.querySelectorAll("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${items.length}`);
+                return created?.querySelector("input, button") ?? add;
+            }));
         container.append(add);
+        if (!definition.items)
+            container.append(element("p", `The array item type must be defined before ${path} items can be added.`));
         if (!items.length && definition.items) {
             const template = element("p", `Array item template: ${path}.0 · ${definition.items.type ?? "value"}`);
             template.dataset.expectedArrayItemTemplate = `${path}.0`;
+            template.dataset.jsonPointer = `${pointer}/0`;
             for (const field of fieldTemplates.filter(({ path: fieldPath }) => fieldPath.startsWith(`${path}.0.`)))
                 template.append(element("span", ` ${field.path} · ${field.type}${field.required ? " · required" : ""}`));
             container.append(template);
@@ -120,10 +153,17 @@ export function renderExpectedPayloadEditor(root, schema, state) {
             item.append(element("summary", `${path}.${index} · ${definition.items?.type ?? "value"}`));
             const duplicate = element("button", `Duplicate ${path} item ${index + 1}`);
             duplicate.type = "button";
-            duplicate.addEventListener("click", () => update(duplicateExpectedArrayItem(schema, state.draft(), pointer, index)));
+            duplicate.addEventListener("click", () => update(duplicateExpectedArrayItem(schema, state.draft(), pointer, index), () => {
+                const created = Array.from(root.querySelectorAll("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${index + 1}`);
+                return created?.querySelector("input, button") ?? null;
+            }));
             const remove = element("button", `Remove ${path} item ${index + 1}`);
             remove.type = "button";
-            remove.addEventListener("click", () => update(removeExpectedArrayItem(schema, state.draft(), pointer, index)));
+            remove.addEventListener("click", () => update(removeExpectedArrayItem(schema, state.draft(), pointer, index), () => {
+                const retainedIndex = Math.min(index, items.length - 2);
+                const retained = Array.from(root.querySelectorAll("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${retainedIndex}`);
+                return retained?.querySelector("input, button") ?? Array.from(root.querySelectorAll("button")).find((button) => button.textContent === `Add ${path} item`) ?? null;
+            }));
             item.append(duplicate, remove);
             if (definition.items)
                 item.append(renderNode(definition.items, `${path}.${index}`, `${pointer}/${index}`, true));
@@ -135,9 +175,9 @@ export function renderExpectedPayloadEditor(root, schema, state) {
         const heading = element("h6", "Expected payload from schema");
         const tree = element("section");
         tree.setAttribute("aria-label", "Recursive expected payload editor");
-        if (schema.document.type === "object") {
-            const requiredProperties = new Set(schema.document.required ?? []);
-            for (const [property, child] of Object.entries(schema.document.properties ?? {}))
+        if (normalizedSchema.document.type === "object") {
+            const requiredProperties = new Set(normalizedSchema.document.required ?? []);
+            for (const [property, child] of Object.entries(normalizedSchema.document.properties ?? {}))
                 tree.append(renderNode(child, property, `/${property.replaceAll("~", "~0").replaceAll("/", "~1")}`, requiredProperties.has(property)));
         }
         root.replaceChildren(heading, tree);

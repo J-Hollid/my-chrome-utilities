@@ -2,7 +2,7 @@ import { acceptMissingEventReplacements, changeMissingEventScope, confirmMissing
 import { appendDetailControls } from "./data-layer-defect-report-ui-controls.js";
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
-import { createExpectedPayloadDraft, expectedPayloadComplete, expectedPayloadPresentation, missingEventActualPresentation, reconcileMissingEventJourney, reconcileMissingEventJourneyWithReview, } from "./data-layer-unified-defect-builder.js";
+import { createExpectedPayloadDraft, expectedPayloadComplete, expectedPayloadEvaluation, expectedPayloadPresentation, missingEventActualPresentation, reconcileMissingEventJourney, reconcileMissingEventJourneyWithReview, } from "./data-layer-unified-defect-builder.js";
 import { renderExpectedPayloadEditor } from "./data-layer-missing-event-expected-payload-ui.js";
 function element(tag, text) {
     const result = document.createElement(tag);
@@ -98,6 +98,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             ...report,
             expectedPayload: structuredClone(expectedPayloadDraft?.payload ?? {}),
             expectedResponseSources: structuredClone(expectedPayloadDraft?.responseSources ?? {}),
+            expectedResponseProvenance: structuredClone(expectedPayloadDraft?.responseProvenance ?? {}),
             summary: detailEdits.summary ?? report.summary,
             description: detailEdits.description ?? report.description,
             expectedExplanation: detailEdits.expectedExplanation ?? draft.expectation?.explanation ?? "",
@@ -110,6 +111,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
     const reportReady = () => Boolean(draft.expectation?.confirmed
         && expectedPayloadDraft
         && expectedPayloadComplete(draft.expectation.schema, expectedPayloadDraft)
+        && expectedPayloadEvaluation(draft.expectation.schema, expectedPayloadDraft).state === "Valid"
         && (!draft.verification.warningVisible || draft.override));
     const currentReport = () => reportReady() ? completedReport() : undefined;
     const updateDraft = (next) => {
@@ -234,8 +236,17 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
                 draft: () => expectedPayloadDraft,
                 update: (next) => { expectedPayloadDraft = next; },
                 refresh: () => refreshPreview(),
+                issues: () => expectedPayloadEvaluation(selected.schema, expectedPayloadDraft).issues,
             });
             expectation.append(properties);
+            const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
+            const evaluationState = element("output", evaluation.state);
+            evaluationState.dataset.expectedPayloadValidation = "state";
+            const evaluationIssues = element("ul");
+            evaluationIssues.setAttribute("aria-label", "Expected payload validation issues");
+            for (const issue of evaluation.issues)
+                evaluationIssues.append(element("li", `${issue.instancePath || "/"}: ${issue.message}`));
+            expectation.append(evaluationState, evaluationIssues);
             if (!selected.assignment) {
                 const acknowledgement = element("label", "I acknowledge that no enabled covering assignment proves this expectation");
                 const checkbox = element("input");
@@ -328,6 +339,19 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             const steps = journey.map(({ text }) => text).join("\n");
             const timeline = sharedReport.timeline.length ? sharedReport.timeline.map(({ captureTime, name, source, pathname }) => `${captureTime} · ${name} · ${source} · ${pathname}`).join("\n") : "No supporting captured events selected";
             const report = currentReport();
+            if (selected && expectedPayloadDraft) {
+                const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
+                const canQuery = typeof root.querySelector === "function";
+                const evaluationState = canQuery ? root.querySelector('[data-expected-payload-validation="state"]') : null;
+                if (evaluationState)
+                    evaluationState.textContent = evaluation.state;
+                const issueList = canQuery ? root.querySelector('[aria-label="Expected payload validation issues"]') : null;
+                if (issueList) {
+                    issueList.replaceChildren();
+                    for (const issue of evaluation.issues)
+                        issueList.append(element("li", `${issue.instancePath || "/"}: ${issue.message}`));
+                }
+            }
             if (report) {
                 const representations = generateMissingEventRepresentations(report);
                 preview.innerHTML = representations.previewHtml;

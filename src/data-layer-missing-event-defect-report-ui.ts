@@ -23,6 +23,7 @@ import type { DefectReportContext } from "./data-layer-defect-report-browser.js"
 import {
   createExpectedPayloadDraft,
   expectedPayloadComplete,
+  expectedPayloadEvaluation,
   expectedPayloadPresentation,
   missingEventActualPresentation,
   reconcileMissingEventJourney,
@@ -160,6 +161,7 @@ export function renderMissingEventDefectReportBuilder(
       ...report,
       expectedPayload:structuredClone(expectedPayloadDraft?.payload ?? {}),
       expectedResponseSources:structuredClone(expectedPayloadDraft?.responseSources ?? {}),
+      expectedResponseProvenance:structuredClone(expectedPayloadDraft?.responseProvenance ?? {}),
       summary:detailEdits.summary ?? report.summary,
       description:detailEdits.description ?? report.description,
       expectedExplanation:detailEdits.expectedExplanation ?? draft.expectation?.explanation ?? "",
@@ -174,6 +176,7 @@ export function renderMissingEventDefectReportBuilder(
     draft.expectation?.confirmed
     && expectedPayloadDraft
     && expectedPayloadComplete(draft.expectation.schema, expectedPayloadDraft)
+    && expectedPayloadEvaluation(draft.expectation.schema, expectedPayloadDraft).state === "Valid"
     && (!draft.verification.warningVisible || draft.override),
   );
 
@@ -273,8 +276,14 @@ export function renderMissingEventDefectReportBuilder(
         draft:() => expectedPayloadDraft!,
         update:(next) => { expectedPayloadDraft = next; },
         refresh:() => refreshPreview(),
+        issues:() => expectedPayloadEvaluation(selected.schema, expectedPayloadDraft!).issues,
       });
       expectation.append(properties);
+      const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
+      const evaluationState = element("output", evaluation.state); evaluationState.dataset.expectedPayloadValidation = "state";
+      const evaluationIssues = element("ul"); evaluationIssues.setAttribute("aria-label", "Expected payload validation issues");
+      for (const issue of evaluation.issues) evaluationIssues.append(element("li", `${issue.instancePath || "/"}: ${issue.message}`));
+      expectation.append(evaluationState, evaluationIssues);
       if (!selected.assignment) {
         const acknowledgement = element("label", "I acknowledge that no enabled covering assignment proves this expectation");
         const checkbox = element("input"); checkbox.type = "checkbox"; checkbox.checked = selected.warningAcknowledged;
@@ -341,6 +350,17 @@ export function renderMissingEventDefectReportBuilder(
       const steps = journey.map(({ text }) => text).join("\n");
       const timeline = sharedReport.timeline.length ? sharedReport.timeline.map(({ captureTime, name, source, pathname }) => `${captureTime} · ${name} · ${source} · ${pathname}`).join("\n") : "No supporting captured events selected";
       const report = currentReport();
+      if (selected && expectedPayloadDraft) {
+        const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
+        const canQuery = typeof root.querySelector === "function";
+        const evaluationState = canQuery ? root.querySelector<HTMLOutputElement>('[data-expected-payload-validation="state"]') : null;
+        if (evaluationState) evaluationState.textContent = evaluation.state;
+        const issueList = canQuery ? root.querySelector<HTMLUListElement>('[aria-label="Expected payload validation issues"]') : null;
+        if (issueList) {
+          issueList.replaceChildren();
+          for (const issue of evaluation.issues) issueList.append(element("li", `${issue.instancePath || "/"}: ${issue.message}`));
+        }
+      }
       if (report) {
         const representations = generateMissingEventRepresentations(report);
         preview.innerHTML = representations.previewHtml;
