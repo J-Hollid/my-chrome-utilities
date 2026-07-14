@@ -3,7 +3,7 @@ import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js"
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 import { buildValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
-import { buildRecursivePropertyTree } from "./data-layer-recursive-property-tree.js";
+import { buildRecursivePropertyTree, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 export function findLiveObserverElements(root = document) {
     return {
         livePanel: root.querySelector("#data-layer-panel-live"),
@@ -123,6 +123,8 @@ function renderPropertyNode(node, addValidation) {
     item.tabIndex = -1;
     item.dataset.validationTreatment = node.summary.treatment;
     item.dataset.propertyPath = node.technicalPath ?? node.path;
+    if (node.expression)
+        item.dataset.propertyExpression = node.expression;
     const row = document.createElement("div");
     row.className = "live-validation-property-row";
     const name = document.createElement("code");
@@ -235,7 +237,9 @@ function recursiveValidationTree(payload, evaluations, issues) {
         return { ...node, technicalPath: `/${node.path.replaceAll(".", "/")}`, expression: `$${node.path.split(".").map((segment) => `[${JSON.stringify(segment)}]`).join("")}`, children, specificItems: [], aggregate };
     };
     const convert = (node) => {
-        const normalized = node.path.slice(1).replaceAll("/", ".");
+        const normalized = parseTargetExpression(node.expression)
+            .map((segment) => segment.kind === "property" ? segment.value : segment.kind === "every" ? "*" : String(segment.value))
+            .join(".");
         const legacy = legacyByPath.get(normalized);
         const children = node.children.map(convert);
         if (!node.detectedTypes.includes("Array"))
@@ -331,12 +335,27 @@ export function renderLiveInspector(elements, event, actionHandlers) {
                 if (disclosure.hasAttribute("open"))
                     previousOpen.add(disclosure.dataset.propertyPath ?? "");
         const terms = query.split(/\s+/).filter(Boolean);
-        const matches = (text) => terms.every((term) => text?.toLowerCase().includes(term));
-        for (const row of Array.from(propertyList.querySelectorAll(".live-validation-property")))
-            row.hidden = Boolean(query) && !matches(row.textContent);
+        const rows = Array.from(propertyList.querySelectorAll(".live-validation-property"));
+        const matches = query ? rows.filter((row) => {
+            if (row.closest(".live-property-specific-items"))
+                return false;
+            const ownRow = Array.from(row.children).find((child) => child.classList.contains("live-validation-property-row"));
+            const searchable = `${row.dataset.propertyPath ?? ""} ${ownRow?.textContent ?? ""}`.toLowerCase();
+            return terms.every((term) => searchable.includes(term));
+        }) : [];
+        const visible = new Set(matches);
+        for (const match of matches) {
+            let parent = match.parentElement?.closest(".live-validation-property");
+            while (parent) {
+                visible.add(parent);
+                parent = parent.parentElement?.closest(".live-validation-property");
+            }
+        }
+        for (const row of rows)
+            row.hidden = Boolean(query) && !visible.has(row);
         for (const disclosure of disclosures) {
             if (query)
-                disclosure.toggleAttribute("open", matches(disclosure.textContent));
+                disclosure.toggleAttribute("open", matches.some((row) => disclosure.contains(row)));
             else
                 disclosure.toggleAttribute("open", previousOpen.has(disclosure.dataset.propertyPath ?? ""));
         }

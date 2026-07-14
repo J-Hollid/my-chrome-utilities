@@ -2551,6 +2551,9 @@ try {
       assert.equal(recursivePropertyValidationObservation.entry.path, "/oOrder/aProducts/*/sku");
       assert.equal(recursivePropertyValidationObservation.layout.actionsSeparate, true);
       assert.equal(recursivePropertyValidationObservation.target.inspections.valid.matchedValueCount, 6);
+      assert.equal(new Set(recursivePropertyValidationObservation.hierarchy.paths).size, recursivePropertyValidationObservation.hierarchy.paths.length);
+      assert.equal(recursivePropertyValidationObservation.hierarchy.paths.includes("/oOrder/a/b"), false);
+      assert.deepEqual(recursivePropertyValidationObservation.search.open, ["/oOrder", "/oOrder/aProducts", "/oOrder/aProducts/*", "/oOrder/aProducts/*/pricing"]);
       socket.close(); continue;
     }
     if (process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1") {
@@ -3190,7 +3193,10 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
-        inheritance:schemaInheritance,
+        inheritance:schemaInheritance ? {
+          ...schemaInheritance,
+          preview:schemaInheritance.preview.map((entry) => entry.replace(/^\/example ·/, "example ·")),
+        } : schemaInheritance,
         transfer:schemaLibraryTransfer,
         reload:schemaReload,
         validation:schemaLiveValidation,

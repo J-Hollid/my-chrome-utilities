@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=26ba804132624c4ca195f9f64ad9f65cbaed8f399057777753192d7720e395c6
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T09:26:45.059489493Z","feature_name":"Data layer recursive property tree","feature_path":"features/data-layer-recursive-property-tree.feature","background_hash":"350abc1497960e38db4285aef51ddd843604696d8e18102a595275e8643899f3","implementation_hash":"sha256:92baae7dd38e46c8e304521a96cfb58be96c50fb39deafbb03d44e1ebfc1a734","scenarios":[{"index":0,"name":"Data layer recursive property tree 001","scenario_hash":"6bc094b01b61b45b376ad7d9ec7ac768f94cffdd459cddf79e47695ed0bbba31","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:32.375823862Z"},{"index":4,"name":"Data layer recursive property tree 005","scenario_hash":"ddfec418912e291eeebba9418b4e44812c17a88a6aee99745f9660d3f81a507f","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:32.375823862Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer recursive property tree
 
   Background:
