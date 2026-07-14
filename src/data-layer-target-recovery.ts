@@ -1,5 +1,7 @@
 import {
   attachedObservationTarget,
+  registerObservationTarget,
+  type ObservationTarget,
   type ObservationTargetState,
 } from "./data-layer-observation-targets.js";
 import type { DataLayerSessionState } from "./data-layer-session.js";
@@ -8,6 +10,11 @@ export interface AttachedTargetRecoveryRequest {
   readonly sessionId: string;
   readonly targetId: string;
   readonly tabId: number;
+}
+
+export interface TargetRecoveryResult {
+  state: ObservationTargetState;
+  applied: boolean;
 }
 
 export function captureAttachedTargetRecovery(
@@ -43,4 +50,26 @@ export function attachedTargetRecoveryIsCurrent(
     targetState.selectedTargetId === request.targetId &&
     targetState.attachedTargetId === request.targetId
   );
+}
+
+export function completeAttachedTargetRecovery(
+  targetState: ObservationTargetState,
+  sessionState: DataLayerSessionState,
+  request: AttachedTargetRecoveryRequest,
+  recoveredTarget: ObservationTarget,
+): TargetRecoveryResult {
+  if (
+    !attachedTargetRecoveryIsCurrent(targetState, sessionState, request) ||
+    recoveredTarget.id !== request.targetId
+  ) {
+    return { state: targetState, applied: false };
+  }
+
+  return {
+    state: registerObservationTarget(targetState, {
+      ...recoveredTarget,
+      priorSession: true,
+    }),
+    applied: true,
+  };
 }

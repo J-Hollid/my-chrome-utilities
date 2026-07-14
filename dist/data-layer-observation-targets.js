@@ -70,20 +70,6 @@ export function registerObservationTarget(state, target) {
             : [...state.targets, target],
     };
 }
-export function completeAttachedObservationTargetRecovery(state, expectedTargetId, recoveredTarget) {
-    if (state.selectedTargetId !== expectedTargetId ||
-        state.attachedTargetId !== expectedTargetId ||
-        recoveredTarget.id !== expectedTargetId) {
-        return { state, applied: false };
-    }
-    return {
-        state: registerObservationTarget(state, {
-            ...recoveredTarget,
-            priorSession: true,
-        }),
-        applied: true,
-    };
-}
 export function refreshDiscoveredObservationTargets(state, discovered) {
     const retainedIds = new Set([
         state.selectedTargetId,

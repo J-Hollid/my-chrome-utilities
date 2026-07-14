@@ -97,3 +97,7 @@
   (support/semantic-handlers
    (support/feature-step-specs [feature-file] #{})
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T13:57:15.503048731+02:00", :module-hash "2144237799", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "180047937"} {:id "def/feature-file", :kind "def", :line 7, :end-line 7, :hash "2023395075"} {:id "form/2/defonce", :kind "defonce", :line 8, :end-line 8, :hash "140063040"} {:id "defn-/require-observation!", :kind "defn-", :line 10, :end-line 11, :hash "-619313877"} {:id "defn/validate-runtime-observation!", :kind "defn", :line 13, :end-line 35, :hash "1199261827"} {:id "defn-/run-runtime-observation!", :kind "defn-", :line 37, :end-line 49, :hash "-782958495"} {:id "defn/runtime-observation!", :kind "defn", :line 51, :end-line 55, :hash "-1871172751"} {:id "defn-/example-value", :kind "defn-", :line 57, :end-line 58, :hash "369719940"} {:id "defn-/matching-case", :kind "defn-", :line 60, :end-line 67, :hash "1522448729"} {:id "defn-/assert-example!", :kind "defn-", :line 69, :end-line 72, :hash "1138006849"} {:id "defn/validate-example!", :kind "defn", :line 74, :end-line 89, :hash "1037170978"} {:id "defn-/transition", :kind "defn-", :line 91, :end-line 94, :hash "-839577765"} {:id "def/handlers", :kind "def", :line 96, :end-line 99, :hash "1551695576"}]}
+;; clj-mutate-manifest-end

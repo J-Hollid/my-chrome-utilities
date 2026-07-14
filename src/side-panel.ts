@@ -23,7 +23,6 @@ import {
 import {
   attachedObservationTarget,
   attachSelectedObservationTarget,
-  completeAttachedObservationTargetRecovery,
   createObservationTarget,
   createObservationTargetState,
   findObservationTargets,
@@ -100,6 +99,7 @@ import { endLiveSession } from "./data-layer-live-session-end.js";
 import {
   attachedTargetRecoveryIsCurrent,
   captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
 } from "./data-layer-target-recovery.js";
 import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
 import {
@@ -882,9 +882,10 @@ async function recoverAttachedObservationTarget(): Promise<void> {
         observationPageLoadId(recovered.tabId),
       );
       if (!recoveryIsCurrent()) return;
-      const recovery = completeAttachedObservationTargetRecovery(
+      const recovery = completeAttachedTargetRecovery(
         observationTargetState,
-        target.id,
+        dataLayerSessionState,
+        recoveryRequest,
         recovered,
       );
       if (!recovery.applied) return;
