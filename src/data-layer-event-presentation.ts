@@ -5,6 +5,7 @@ export interface CaptureContext {
   sourceId: string;
   sourceKind: string;
   pageUrl: string;
+  pageLoadId?: string;
   destination: string;
 }
 
@@ -47,7 +48,7 @@ export function canonicalCapturedEvent(
   sourceTime?: string,
 ): SourceEvent {
   return {
-    id: `${context.sessionId}:${context.sourceId}:${context.pageUrl}:${ordinal}`,
+    id: `${context.sessionId}:${context.sourceId}:${context.pageLoadId ?? context.pageUrl}:${ordinal}`,
     sessionId: context.sessionId,
     sourceId: context.sourceId,
     sourceKind: context.sourceKind,
@@ -55,6 +56,7 @@ export function canonicalCapturedEvent(
     captureTime,
     ...(sourceTime ? { sourceTime } : {}),
     pageUrl: context.pageUrl,
+    ...(context.pageLoadId ? { pageLoadId: context.pageLoadId } : {}),
     payload: inputPayload(rawInput),
     rawInput: clone(rawInput),
     validation: "Not checked" as ValidationState,

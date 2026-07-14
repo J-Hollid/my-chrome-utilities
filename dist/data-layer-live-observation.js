@@ -37,7 +37,7 @@ async function injectMessageBridge(tabId, channelId, eventType) {
     });
 }
 async function injectHistoryArrayHook(tabId, historyPath, channelId, eventType) {
-    await chrome.scripting.executeScript({
+    const [injection] = await chrome.scripting.executeScript({
         target: { tabId },
         world: "MAIN",
         args: [historyPath, channelId, eventType],
@@ -51,12 +51,12 @@ async function injectHistoryArrayHook(tabId, historyPath, channelId, eventType) 
                 if (current === null ||
                     typeof current !== "object" ||
                     !(part in current)) {
-                    return;
+                    return { installed: false, rawValues: [] };
                 }
                 current = current[part];
             }
             if (!Array.isArray(current)) {
-                return;
+                return { installed: false, rawValues: [] };
             }
             const historyArray = current;
             const registryWindow = globalThis;
@@ -86,8 +86,26 @@ async function injectHistoryArrayHook(tabId, historyPath, channelId, eventType) 
                 };
             }
             entry.channels[channel] = eventName;
+            return { installed: true, rawValues: [...historyArray] };
         },
     });
+    return injection?.result ?? { installed: false, rawValues: [] };
+}
+export function historySnapshotPageObject(historyPath, rawValues) {
+    const parts = historyPath
+        .split(".")
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+    const root = {};
+    let current = root;
+    parts.forEach((part, index) => {
+        const value = index === parts.length - 1 ? [...rawValues] : {};
+        current[part] = value;
+        if (index < parts.length - 1) {
+            current = value;
+        }
+    });
+    return root;
 }
 function cleanupHistoryArrayHook(tabId, historyPath, channelId) {
     void chrome.scripting.executeScript({
@@ -116,22 +134,43 @@ export async function startLiveHistoryPushCapture(options) {
     }
     const channelId = makeChannelId();
     const eventType = pageEventType(channelId);
+    const pendingEntries = [];
+    let snapshotDelivered = false;
+    let hookInstalled = false;
     const listener = (message, sender) => {
         if (sender.tab?.id === tabId &&
             isLiveHistoryPushMessage(message, channelId)) {
-            options.onEntry({
+            const entry = {
                 rawValue: message.rawValue,
                 timestamp: message.timestamp,
-            });
+            };
+            if (snapshotDelivered) {
+                options.onEntry(entry);
+            }
+            else {
+                pendingEntries.push(entry);
+            }
         }
     };
     chrome.runtime.onMessage.addListener(listener);
     try {
         await injectMessageBridge(tabId, channelId, eventType);
-        await injectHistoryArrayHook(tabId, options.historyPath, channelId, eventType);
+        const snapshot = await injectHistoryArrayHook(tabId, options.historyPath, channelId, eventType);
+        hookInstalled = snapshot.installed;
+        if (snapshot.installed) {
+            options.onSnapshot?.({
+                historyPath: options.historyPath,
+                rawValues: snapshot.rawValues,
+            });
+        }
+        snapshotDelivered = true;
+        pendingEntries.splice(0).forEach(options.onEntry);
     }
     catch (error) {
         chrome.runtime.onMessage.removeListener(listener);
+        if (hookInstalled) {
+            cleanupHistoryArrayHook(tabId, options.historyPath, channelId);
+        }
         throw error;
     }
     return () => {

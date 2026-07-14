@@ -17,6 +17,9 @@ export function restartObservation(sessionState, observerState, options) {
     return attachHistoryArrayObserver({ ...observerState, sessionState }, {
         historyPath: session.historyPath,
         pageUrl: options.pageUrl,
+        ...(options.pageLoadId === undefined
+            ? {}
+            : { pageLoadId: options.pageLoadId }),
         ...(options.pageObject === undefined
             ? {}
             : { pageObject: options.pageObject }),

@@ -22,7 +22,7 @@ function inputPayload(raw) {
 }
 export function canonicalCapturedEvent(context, rawInput, captureTime, ordinal, sourceTime) {
     return {
-        id: `${context.sessionId}:${context.sourceId}:${context.pageUrl}:${ordinal}`,
+        id: `${context.sessionId}:${context.sourceId}:${context.pageLoadId ?? context.pageUrl}:${ordinal}`,
         sessionId: context.sessionId,
         sourceId: context.sourceId,
         sourceKind: context.sourceKind,
@@ -30,6 +30,7 @@ export function canonicalCapturedEvent(context, rawInput, captureTime, ordinal, 
         captureTime,
         ...(sourceTime ? { sourceTime } : {}),
         pageUrl: context.pageUrl,
+        ...(context.pageLoadId ? { pageLoadId: context.pageLoadId } : {}),
         payload: inputPayload(rawInput),
         rawInput: clone(rawInput),
         validation: "Not checked",

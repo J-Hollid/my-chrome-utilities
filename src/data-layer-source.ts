@@ -32,6 +32,7 @@ export interface SourceEvent {
   captureTime: string;
   sourceTime?: string;
   pageUrl: string;
+  pageLoadId?: string;
   payload: unknown;
   rawInput: unknown;
   validation: ValidationState;
