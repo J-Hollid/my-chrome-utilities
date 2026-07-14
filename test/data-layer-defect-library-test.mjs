@@ -10,6 +10,7 @@ import {
   createValidationDefect,
   defectLifecycleAction,
   editDefect,
+  eventContainsDefectIssue,
   issueTriage,
   matchingDefects,
   requestDefectDeletion,
@@ -50,6 +51,15 @@ assert.equal(canonicalAffectedPath("/commerce/currency"), "/commerce/currency");
 
 const originalReport = structuredClone(report);
 const defect = createValidationDefect({ id:"defect:currency", now, report, issues:[issue()], notes:"" });
+assert.equal(eventContainsDefectIssue({
+  id:"purchase:1", name:"purchase", sourceId:"event-history", payload:{}, rawInput:[],
+  validationDetails:{
+    schema:{ id:"schema:checkout", name:"Checkout", version:2 },
+    assignment:{ sourceId:"event-history", eventName:"purchase", target:"payload" },
+    evaluations:[],
+    issues:[{ instancePath:"/commerce/currency", templatePath:"/commerce/currency", message:"Known currency", expected:"EUR,USD", actual:"GBP", schemaName:"Checkout", schemaVersion:2, schemaLocation:"#/commerce/currency", rule:"Known currencies v2" }],
+  },
+}, defect), true);
 assert.deepEqual(report, originalReport, "creating a defect mutated the completed report");
 assert.deepEqual(defect, {
   id:"defect:currency", type:"Validation issue", status:"Reported", createdAt:now, updatedAt:now,
@@ -125,5 +135,13 @@ const writes = [];
 const copyResult = await completeDefectReportAction(createDefectLibrary(), defect, "Save as reported defect and copy", { writeText:async (text) => writes.push(text) }, () => "Jira representation");
 assert.equal(copyResult.library.defects.length, 1);
 assert.deepEqual(writes, ["Jira representation"]);
+
+for (const corrupted of [
+  { ...defect, issues:[{ evidence:issue() }] },
+  { ...defect, issues:[{ match:defect.issues[0].match, evidence:{ ...issue(), ruleRevision:"2" } }] },
+  { ...defect, savedSession:{ id:"saved:one", containsMatchingIssue:"yes" } },
+]) {
+  assert.deepEqual(restoreDefectLibrary(JSON.stringify({ defects:[corrupted] })), createDefectLibrary());
+}
 
 console.log("data-layer defect library tests passed");

@@ -176,6 +176,13 @@ function sameIdentity(left: IssueMatchIdentity, right: IssueMatchIdentity): bool
   return sameBase(left, right) && left.ruleRevision === right.ruleRevision;
 }
 
+export function eventContainsDefectIssue(event: LiveEvent, defect: ReportedDefect): boolean {
+  return currentDefectIssues(event).some((issue) => {
+    const identity = issueMatchIdentity(issue);
+    return defect.issues.some(({ match }) => sameIdentity(match, identity));
+  });
+}
+
 function createDefect(options: {
   id: string;
   now: string;
@@ -304,6 +311,44 @@ export function serializeDefectLibrary(library: DefectLibrary): string {
   return JSON.stringify({ defects:library.defects });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasString(record: Record<string, unknown>, field: string): boolean {
+  return typeof record[field] === "string";
+}
+
+function isIssueMatchIdentity(value: unknown): value is IssueMatchIdentity {
+  if (!isRecord(value)) return false;
+  return ["sourceId", "eventName", "schemaId", "validationTarget", "canonicalPath", "ruleId"]
+    .every((field) => hasString(value, field))
+    && typeof value.ruleRevision === "number"
+    && Number.isFinite(value.ruleRevision);
+}
+
+function isCurrentDefectIssue(value: unknown): value is CurrentDefectIssue {
+  if (!isRecord(value)) return false;
+  return ["sourceId", "eventName", "schemaId", "validationTarget", "concretePath", "ruleId"]
+    .every((field) => hasString(value, field))
+    && typeof value.ruleRevision === "number"
+    && Number.isFinite(value.ruleRevision)
+    && ["templatePath", "expected", "pageUrl", "captureTime", "sourceName", "schemaName", "ruleName"]
+      .every((field) => value[field] === undefined || hasString(value, field));
+}
+
+function isStoredDefectIssue(value: unknown): value is StoredDefectIssue {
+  return isRecord(value)
+    && isIssueMatchIdentity(value.match)
+    && isCurrentDefectIssue(value.evidence);
+}
+
+function isSavedSessionLink(value: unknown): value is NonNullable<ReportedDefect["savedSession"]> {
+  return isRecord(value)
+    && hasString(value, "id")
+    && typeof value.containsMatchingIssue === "boolean";
+}
+
 function isDefect(value: unknown): value is ReportedDefect {
   if (!value || typeof value !== "object") return false;
   const defect = value as Partial<ReportedDefect>;
@@ -313,7 +358,10 @@ function isDefect(value: unknown): value is ReportedDefect {
     && typeof defect.createdAt === "string"
     && typeof defect.updatedAt === "string"
     && typeof defect.notes === "string"
-    && Array.isArray(defect.issues);
+    && isRecord(defect.report)
+    && Array.isArray(defect.issues)
+    && defect.issues.every(isStoredDefectIssue)
+    && (defect.savedSession === undefined || isSavedSessionLink(defect.savedSession));
 }
 
 export function restoreDefectLibrary(serialized: string | null): DefectLibrary {

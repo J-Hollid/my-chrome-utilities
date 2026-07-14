@@ -72,6 +72,12 @@ function sameBase(left, right) {
 function sameIdentity(left, right) {
     return sameBase(left, right) && left.ruleRevision === right.ruleRevision;
 }
+export function eventContainsDefectIssue(event, defect) {
+    return currentDefectIssues(event).some((issue) => {
+        const identity = issueMatchIdentity(issue);
+        return defect.issues.some(({ match }) => sameIdentity(match, identity));
+    });
+}
 function createDefect(options) {
     return clone({
         id: options.id,
@@ -158,6 +164,40 @@ export function defectLifecycleAction(defect) {
 export function serializeDefectLibrary(library) {
     return JSON.stringify({ defects: library.defects });
 }
+function isRecord(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+function hasString(record, field) {
+    return typeof record[field] === "string";
+}
+function isIssueMatchIdentity(value) {
+    if (!isRecord(value))
+        return false;
+    return ["sourceId", "eventName", "schemaId", "validationTarget", "canonicalPath", "ruleId"]
+        .every((field) => hasString(value, field))
+        && typeof value.ruleRevision === "number"
+        && Number.isFinite(value.ruleRevision);
+}
+function isCurrentDefectIssue(value) {
+    if (!isRecord(value))
+        return false;
+    return ["sourceId", "eventName", "schemaId", "validationTarget", "concretePath", "ruleId"]
+        .every((field) => hasString(value, field))
+        && typeof value.ruleRevision === "number"
+        && Number.isFinite(value.ruleRevision)
+        && ["templatePath", "expected", "pageUrl", "captureTime", "sourceName", "schemaName", "ruleName"]
+            .every((field) => value[field] === undefined || hasString(value, field));
+}
+function isStoredDefectIssue(value) {
+    return isRecord(value)
+        && isIssueMatchIdentity(value.match)
+        && isCurrentDefectIssue(value.evidence);
+}
+function isSavedSessionLink(value) {
+    return isRecord(value)
+        && hasString(value, "id")
+        && typeof value.containsMatchingIssue === "boolean";
+}
 function isDefect(value) {
     if (!value || typeof value !== "object")
         return false;
@@ -168,7 +208,10 @@ function isDefect(value) {
         && typeof defect.createdAt === "string"
         && typeof defect.updatedAt === "string"
         && typeof defect.notes === "string"
-        && Array.isArray(defect.issues);
+        && isRecord(defect.report)
+        && Array.isArray(defect.issues)
+        && defect.issues.every(isStoredDefectIssue)
+        && (defect.savedSession === undefined || isSavedSessionLink(defect.savedSession));
 }
 export function restoreDefectLibrary(serialized) {
     if (!serialized)
