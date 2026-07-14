@@ -96,12 +96,14 @@
    example-values example (filter #(support/example-value example %) (keys example-values))
    "Schema publication refresh example value was outside the specified contract."))
 
+(defn- transition [world example _captures {:keys [text]}]
+  (support/mode-transition
+   world example text entry-modes :schema-publication-refresh-mode
+   verify-model! validate-example! #(assert-runtime! (runtime-observation!))))
+
 (def handlers
   (support/stateful-semantic-handlers
    (support/feature-step-specs feature-files #{})
    #(contains? entry-modes %)
    :schema-publication-refresh-mode
-   (fn [world example _captures {:keys [text]}]
-     (support/mode-transition
-      world example text entry-modes :schema-publication-refresh-mode
-      verify-model! validate-example! #(assert-runtime! (runtime-observation!))))))
+   transition))
