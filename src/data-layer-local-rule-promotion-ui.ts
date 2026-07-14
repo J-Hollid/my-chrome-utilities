@@ -50,7 +50,10 @@ export function createLocalRulePromotionDialog(): LocalRulePromotionDialogContro
       heading.textContent = "Promote to reusable rule";
       const summary = document.createElement("p");
       summary.id = "local-rule-promotion-summary";
-      summary.textContent = `${review.source.schema.name} revision ${review.source.schema.version} working draft · ${review.source.propertyPath} · ${review.source.rule.name ?? review.source.rule.id} (${review.source.rule.id}) revision ${review.source.rule.version}`;
+      const sourceContext = review.source.createsWorkingDraft
+        ? "source for a new working draft"
+        : "working draft";
+      summary.textContent = `${review.source.schema.name} revision ${review.source.schema.version} ${sourceContext} · ${review.source.propertyPath} · ${review.source.rule.name ?? review.source.rule.id} (${review.source.rule.id}) revision ${review.source.rule.version}`;
       const configuration = document.createElement("p");
       configuration.id = "local-rule-promotion-configuration";
       const values = review.source.rule.allowedValues?.map(typedValue).join(", ") ?? review.source.rule.parameters ?? "no parameters";

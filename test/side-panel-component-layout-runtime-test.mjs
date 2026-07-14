@@ -41,6 +41,7 @@ let defectLibraryObservation;
 let schemaPublicationRefreshObservation;
 let allowedValueExpansionObservation;
 let localRulePromotionObservation;
+let localRulePromotionAvailabilityObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -48,6 +49,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -3319,6 +3321,43 @@ const localRulePromotionSeedRuntime = `(() => {
   return true;
 })()`;
 
+const localRulePromotionAvailabilitySeedRuntime = `(() => {
+  localStorage.clear();
+  const assignment={id:"assignment:page-view",sourceId:"history",eventName:"page_view",target:"payload",versionPolicy:"follow latest",enabled:true};
+  const document={type:"object",properties:{"/page_type":{type:"string"},"/page_name":{type:"string"}}};
+  const local41={id:"local-41",name:"Known page types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product","content"],applicableType:"string",severity:"warning",message:"Use a known page type",enabled:true};
+  const local42={id:"local-42",name:"Required page name",version:1,propertyPath:"/page_name",operator:"required",enabled:true};
+  const schema={id:"schema:page-view",name:"Page view",version:3,published:true,document,assignments:[assignment],attachedRules:[local41,local42],revisionHistory:[]};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+  return true;
+})()`;
+
+const localRulePromotionAvailabilityRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label||textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const set=(selector,value,event="input")=>{const input=q(selector);input.value=value;input.dispatchEvent(new Event(event,{bubbles:true}));return input;};
+  const schemaKey="my-chrome-utilities.schema-library.v1",ruleKey="my-chrome-utilities.schema-rule-library.v1";
+  const stored=()=>JSON.parse(localStorage.getItem(schemaKey)); const page=()=>stored().find(({id})=>id==="schema:page-view");
+  const openPage=()=>{q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Page view"));click(row,"Edit working draft");};
+  const property=(canonical)=>q('[data-schema-property-canonical-path="'+canonical+'"]');
+  const promotion=(id,canonical="/page_type")=>{const host=property(canonical);q("details[data-attached-rules]",host).open=true;return q('.schema-attached-rule[data-rule-id="'+id+'"] .local-rule-promotion-action',host);};
+  const initialSchemaBytes=JSON.stringify(page()); const initialStorage=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];
+  openPage(); const initialAction=promotion("local-41");
+  const initial={controlCount:initialAction.parentElement.querySelectorAll(".local-rule-promotion-action:enabled").length,noWorkingDraft:page().workingDraft===undefined,canonicalRows:document.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length,identity:initialAction.dataset.ruleId,path:initialAction.dataset.propertyPath};
+  initialAction.click(); const firstReview=q("#local-rule-promotion-summary").textContent; click(q("#local-rule-promotion-review"),"Cancel");
+  const cancelled={storageUnchanged:initialStorage[0]===localStorage.getItem(schemaKey)&&initialStorage[1]===localStorage.getItem(ruleKey),noWorkingDraft:page().workingDraft===undefined};
+  q("#close-schema-editor").click();openPage();cancelled.reopenedCount=promotion("local-41").parentElement.querySelectorAll(".local-rule-promotion-action:enabled").length;
+  const failureBefore=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];promotion("local-41").click();set("#local-rule-promotion-name","Approved page types");const original=Storage.prototype.setItem;let failed=false;Storage.prototype.setItem=function(key,value){if(key===schemaKey&&!failed){failed=true;throw new Error("simulated availability failure");}return original.call(this,key,value);};try{click(q("#local-rule-promotion-review"),"Confirm promotion");}finally{Storage.prototype.setItem=original;}const failure={storageUnchanged:failureBefore[0]===localStorage.getItem(schemaKey)&&failureBefore[1]===localStorage.getItem(ruleKey),assistance:q("#local-rule-promotion-assistance").textContent,controlRetained:Boolean(document.querySelector('.schema-attached-rule[data-rule-id="local-41"] .local-rule-promotion-action:enabled')),noDraft:page().workingDraft===undefined};click(q("#local-rule-promotion-review"),"Cancel");
+  Object.defineProperty(Crypto.prototype,"randomUUID",{value:()=>"51",configurable:true});promotion("local-41").click();set("#local-rule-promotion-name","Approved page types");click(q("#local-rule-promotion-review"),"Confirm promotion");await pause();
+  const after=page();const library=JSON.parse(localStorage.getItem(ruleKey));const promoted={review:firstReview,workingDraft:Boolean(after.workingDraft),draftIds:after.workingDraft.attachedRules.map(({id})=>id),libraryIds:library.map(({id})=>id),sameIdentity:after.workingDraft.attachedRules[0].id===library[0].id,publishedUnchanged:JSON.stringify({...after,workingDraft:undefined})===initialSchemaBytes,canonicalRows:document.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length,reusableControl:Boolean(document.querySelector('.schema-attached-rule[data-rule-id="reusable-51"] .local-rule-promotion-action'))};
+  q("#save-schema").click();q("#confirm-schema-revision").click();await pause();openPage();
+  const reopened={version:page().version,local42Count:promotion("local-42","/page_name").parentElement.querySelectorAll(".local-rule-promotion-action:enabled").length,reusableCount:document.querySelectorAll('.schema-attached-rule[data-rule-id="reusable-51"] .local-rule-promotion-action').length,noWorkingDraftBeforeAction:page().workingDraft===undefined};
+  q("#close-schema-editor").click();q("#create-schema").click();set("#schema-editor-name","Temporary schema");q("#add-schema-property").click();set("#schema-manual-property-path","page_type");click(q("#schema-manual-property-dialog"),"Add property");click(property("/page_type"),"Add rule");click(q("#schema-property-rule-picker"),"Allowed values");set("#schema-local-rule-allowed-value-1","product");click(q("#schema-property-rule-picker"),"Create rule");const tempLocal=q('.schema-attached-rule[data-rule-id^="local-rule:"]',property("/page_type"));const tempId=tempLocal.dataset.ruleId;const tempPromotion=q(".local-rule-promotion-action",tempLocal);tempPromotion.click();set("#local-rule-promotion-name","Standalone page types");click(q("#local-rule-promotion-review"),"Confirm promotion");await pause();const rulesAfterNew=JSON.parse(localStorage.getItem(ruleKey));q("#close-schema-editor").click();const newSchema={localId:tempId,promotedCount:rulesAfterNew.filter(({name})=>name==="Standalone page types").length,standaloneAttachments:rulesAfterNew.find(({name})=>name==="Standalone page types")?.attachments??[],schemaStorageUnchanged:stored().length===1,provisionalAbsent:!localStorage.getItem(schemaKey).includes("Temporary schema")};
+  return {initial,cancelled,failure,promoted,reopened,newSchema};
+})()`;
+
 const localRulePromotionOpenRuntime = `(() => {
   const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
   q("#data-layer-view-schemas").click();
@@ -3632,6 +3671,24 @@ try {
       await reloadPanel(socket);
       schemaRulePropertyIdentityObservation = await evaluate(socket, schemaRulePropertyIdentityRuntime);
       socket.close(); continue;
+    }
+    if (process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, localRulePromotionAvailabilitySeedRuntime); await reloadPanel(socket);
+      localRulePromotionAvailabilityObservation=await evaluate(socket,localRulePromotionAvailabilityRuntime);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.initial,{controlCount:1,noWorkingDraft:true,canonicalRows:1,identity:"local-41",path:"/page_type"});
+      assert.match(localRulePromotionAvailabilityObservation.promoted.review,/Page view revision 3 source for a new working draft.*\/page_type.*local-41/);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.cancelled,{storageUnchanged:true,noWorkingDraft:true,reopenedCount:1});
+      assert.equal(localRulePromotionAvailabilityObservation.failure.storageUnchanged&&localRulePromotionAvailabilityObservation.failure.controlRetained&&localRulePromotionAvailabilityObservation.failure.noDraft,true);
+      assert.match(localRulePromotionAvailabilityObservation.failure.assistance,/simulated availability failure/);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.promoted.draftIds,["reusable-51","local-42"]);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.promoted.libraryIds,["reusable-51"]);
+      assert.equal(localRulePromotionAvailabilityObservation.promoted.workingDraft&&localRulePromotionAvailabilityObservation.promoted.sameIdentity&&localRulePromotionAvailabilityObservation.promoted.publishedUnchanged,true);
+      assert.deepEqual([localRulePromotionAvailabilityObservation.promoted.canonicalRows,localRulePromotionAvailabilityObservation.promoted.reusableControl],[1,false]);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.reopened,{version:4,local42Count:1,reusableCount:0,noWorkingDraftBeforeAction:true});
+      assert.equal(localRulePromotionAvailabilityObservation.newSchema.promotedCount,1);
+      assert.deepEqual(localRulePromotionAvailabilityObservation.newSchema.standaloneAttachments,[]);
+      assert.equal(localRulePromotionAvailabilityObservation.newSchema.schemaStorageUnchanged&&localRulePromotionAvailabilityObservation.newSchema.provisionalAbsent,true);
+      socket.close();continue;
     }
     if (process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, localRulePromotionSeedRuntime); await reloadPanel(socket);
@@ -4719,6 +4776,9 @@ try {
   }
   if (process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ localRulePromotion:localRulePromotionObservation }));
+  }
+  if (process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ localRulePromotionAvailability:localRulePromotionAvailabilityObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
