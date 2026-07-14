@@ -123,6 +123,7 @@ function sourceRule(input: LocalRulePromotionInput): ResolvedPromotionSource | u
     rule.id === input.sourceRuleId && normalizePath(rule.propertyPath ?? "") === path);
   const draftRule = matchingRule(input.schema.workingDraft?.attachedRules);
   if (draftRule) return { rule:draftRule, origin:"working-draft" };
+  if (input.schema.workingDraft) return undefined;
   const currentRule = matchingRule(input.schema.attachedRules);
   if (!currentRule) return undefined;
   return {

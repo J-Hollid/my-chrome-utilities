@@ -148,6 +148,91 @@ for (let sample = 0; sample < 200; sample += 1) {
     assert.deepEqual(created.revisionHistory, []);
   }
 
+  const { workingDraft:_workingDraft, ...currentSchema } = schema;
+  const currentInput = {
+    schema:currentSchema,
+    reusableRules:[unrelatedReusable],
+    propertyPath:`//nested//value_${sample}/`,
+    sourceRuleId:sourceId,
+    editorContext:"editable",
+  };
+  const currentSnapshot = structuredClone(currentInput);
+  assert.deepEqual(localRulePromotionAvailability(currentInput), { available:true },
+    "current-revision local rules must be promotable before a draft exists");
+  const currentReview = reviewLocalRulePromotion(currentInput);
+  assert.equal(currentReview.source.createsWorkingDraft, true,
+    "current-revision reviews must disclose lazy working-draft creation");
+  const currentReplacementId = `current-reusable-${sample}-${nextToken()}`;
+  const promotedCurrent = promoteLocalRule({
+    ...currentInput,
+    action:"create",
+    name:`Current promoted ${sample}`,
+    createId:() => currentReplacementId,
+  });
+  assert.deepEqual(currentInput, currentSnapshot,
+    "current-revision promotion must not mutate its schema or reusable library");
+  assert.deepEqual(promotedCurrent.schema.attachedRules, currentSchema.attachedRules,
+    "lazy draft creation must preserve the published attachment list");
+  assert.equal(currentSchema.workingDraft, undefined,
+    "availability, review, and promotion must not back-mutate the published schema");
+  assert.equal(promotedCurrent.schema.workingDraft.baseVersion, currentSchema.version);
+  assert.equal(promotedCurrent.schema.workingDraft.sourceVersion, currentSchema.version);
+  assert.deepEqual(promotedCurrent.schema.workingDraft.pendingChanges, [
+    `Promote local rule ${sourceId} to reusable rule ${currentReplacementId}`,
+  ]);
+  const currentReplacement = promotedCurrent.schema.workingDraft.attachedRules[0];
+  assert.deepEqual({
+    ...currentReplacement,
+    id:publishedRule.id,
+    name:publishedRule.name,
+    version:publishedRule.version,
+  }, publishedRule, "current-revision promotion must preserve the complete source configuration");
+  assert.deepEqual(promotedCurrent.reusableRules.at(-1).attachments, [schemaId]);
+
+  const provisionalSource = { ...source, propertyPath };
+  const provisionalSchema = {
+    id:`provisional-${sample}-${nextToken()}`,
+    name:`Provisional ${sample}`,
+    version:1,
+    published:false,
+    document,
+    assignments:[],
+    attachedRules:[sibling, provisionalSource],
+  };
+  const provisionalInput = {
+    schema:provisionalSchema,
+    reusableRules:[unrelatedReusable],
+    propertyPath,
+    sourceRuleId:sourceId,
+    editorContext:"new-schema",
+  };
+  const provisionalSnapshot = structuredClone(provisionalInput);
+  assert.deepEqual(localRulePromotionAvailability(provisionalInput), { available:true });
+  assert.equal(reviewLocalRulePromotion(provisionalInput).source.createsWorkingDraft, undefined,
+    "new-schema promotion must remain in the provisional schema without creating a draft");
+  const provisionalReplacementId = `standalone-${sample}-${nextToken()}`;
+  const promotedProvisional = promoteLocalRule({
+    ...provisionalInput,
+    action:"create",
+    name:`Standalone ${sample}`,
+    createId:() => provisionalReplacementId,
+  });
+  assert.deepEqual(provisionalInput, provisionalSnapshot,
+    "provisional promotion must not mutate its schema or reusable library");
+  assert.equal(promotedProvisional.schema.workingDraft, undefined);
+  assert.deepEqual(promotedProvisional.schema.attachedRules[0], sibling,
+    "provisional promotion must conserve unrelated attachment order");
+  assert.equal(promotedProvisional.schema.attachedRules[1].id, provisionalReplacementId);
+  assert.deepEqual(promotedProvisional.reusableRules.at(-1).attachments, [],
+    "a reusable rule promoted from a discardable schema must remain standalone");
+
+  assert.equal(localRulePromotionAvailability({ ...currentInput, editorContext:"read-only" }).available, false,
+    "historical read-only rules must not be promotable");
+  assert.equal(localRulePromotionAvailability({
+    ...currentInput,
+    reusableRules:[{ ...unrelatedReusable, id:sourceId }],
+  }).available, false, "reusable identities must never expose another promotion action");
+
   assert.equal(localRulePromotionAvailability({
     ...input,
     schema:promoted.schema,

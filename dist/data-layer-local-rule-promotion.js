@@ -48,6 +48,8 @@ function sourceRule(input) {
     const draftRule = matchingRule(input.schema.workingDraft?.attachedRules);
     if (draftRule)
         return { rule: draftRule, origin: "working-draft" };
+    if (input.schema.workingDraft)
+        return undefined;
     const currentRule = matchingRule(input.schema.attachedRules);
     if (!currentRule)
         return undefined;
