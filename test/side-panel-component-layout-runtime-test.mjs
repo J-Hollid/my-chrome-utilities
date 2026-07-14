@@ -32,6 +32,7 @@ let workspacePanelContainmentObservation;
 let recursivePropertyValidationObservation;
 let guidedAssignmentCoverageObservation;
 let conditionalValidationRulesObservation;
+let schemaDocumentationObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -39,6 +40,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
@@ -1747,6 +1749,171 @@ const conditionalValidationRulesRuntime = `(async () => {
   return { editor, stored:{ count:stored.workingDraft.attachedRules.length, rule:storedRule, summary:conditionalCore.conditionalRuleSummary({ conditionGroup:storedRule.conditionGroup, consequence:{ propertyPath:storedRule.propertyPath, operator:storedRule.operator, parameters:storedRule.parameters } }) }, evaluations, groups, truthGroups, predicateCases, invalidConfigurations, presentation, lifecycle };
 })()`;
 
+const schemaDocumentationRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click();
+  click(q("#schema-list"), "Edit working draft");
+  q("#schema-editor-description").value = "Product detail commerce event";
+  q("#save-schema-description").click();
+  const propertyRow = q('[data-schema-property-path="oOrder.aProducts.*.product_id"]');
+  propertyRow.querySelector(".schema-property-documentation-control").click();
+  propertyRow.querySelector('input[id^="schema-documentation-name-"]').value = "Product identifier";
+  propertyRow.querySelector('textarea[id^="schema-documentation-description-"]').value = "Stable identifier used by fulfilment";
+  propertyRow.querySelector('input[value="Save documentation"]').click();
+  const storedAfterEdit = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const productAfterEdit = storedAfterEdit.find(({ id }) => id === "schema-product-detail");
+  const editor = {
+    schemaDescription:productAfterEdit.workingDraft.documentation.description,
+    paths:Object.keys(productAfterEdit.workingDraft.documentation.properties),
+    property:productAfterEdit.workingDraft.documentation.properties["/oOrder/aProducts/*/product_id"],
+    currentDescription:productAfterEdit.documentation.description,
+    ruleCount:productAfterEdit.workingDraft.attachedRules.length,
+    currentVersion:productAfterEdit.version,
+  };
+
+  const core = await import("/data-layer-schema-verification.js");
+  const documentationCore = await import("/data-layer-schema-documentation.js");
+  const ui = await import("/data-layer-live-observer-ui.js");
+  const actionsCore = await import("/data-layer-live-inspector-actions.js");
+  const currentProduct = { ...productAfterEdit, documentation:productAfterEdit.workingDraft.documentation };
+  const payload = { page_type:"product_detail", currency:"EUR", items:[{ product_id:"SKU-1" }], oOrder:{ aProducts:[{ product_id:"P-1" }] } };
+  const result = core.validateWithSchema({ sourceId:"event-history", eventName:"product_detail", payload, rawInput:[] }, currentProduct, storedAfterEdit);
+  const elements = ui.findLiveObserverElements();
+  const actions = actionsCore.createLiveInspectorActions({ currentPageUrl:()=>"https://shop.example/product", writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:()=>{}, validationState:()=>result.state, updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  q("#data-layer-view-live").click(); elements.eventInspector.hidden = false;
+  ui.renderLiveInspector(elements, { id:"documented", name:"product_detail", sourceId:"event-history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/product", payload, rawInput:[], validation:result.state, validationDetails:{ issues:result.issues, evaluations:result.evaluations ?? [], schema:result.schema, documentation:result.documentation } }, actions);
+  const inspector = elements.eventInspector;
+  const pageRow = q('[data-property-path="/page_type"]');
+  const wildcardRow = q('[data-property-path="/items/0/product_id"]');
+  const syntheticRow = q('[data-property-path="/oOrder/order_id"]');
+  const currencyRow = q('[data-property-path="/currency"]');
+  const information = pageRow.querySelector(".live-property-documentation-control");
+  information.dispatchEvent(new Event("pointerenter", { bubbles:true }));
+  const hoverText = pageRow.querySelector(".live-property-documentation-preview").textContent;
+  information.focus(); const focusPreview = !pageRow.querySelector(".live-property-documentation-preview").hidden;
+  information.click();
+  const persistent = pageRow.querySelector(".live-property-documentation-details");
+  const persistentText = persistent.querySelector("p").textContent;
+  persistent.dispatchEvent(new KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  const focusAfterEscape = document.activeElement === information;
+  const search = q("#live-property-search");
+  const searchResults = ["page_type", "Page classification", "documentationExecuted"].map((query) => { search.value = query; search.dispatchEvent(new Event("input", { bubbles:true })); return !pageRow.hidden; });
+  const unsafe = "<img src=x onerror=globalThis.documentationExecuted=true><script>globalThis.documentationExecuted=true</script>";
+  const presentation = {
+    schemaDescription:inspector.textContent.includes("Product detail commerce event"),
+    mapped:pageRow.textContent.includes("Page classification"),
+    wildcard:wildcardRow.textContent.includes("Stable product identifier"),
+    synthetic:syntheticRow.textContent.includes("Stable order identifier"),
+    unmatchedControl:currencyRow.querySelectorAll(".live-property-documentation-control").length,
+    hoverText, persistentText, plainText:hoverText === unsafe && !pageRow.querySelector("img, script") && globalThis.documentationExecuted !== true,
+    focusPreview, closed:persistent.hidden, focusReturned:focusAfterEscape,
+    accessible:{ name:information.getAttribute("aria-label"), described:Boolean(information.getAttribute("aria-describedby")), expanded:information.getAttribute("aria-expanded") },
+    searchVisible:searchResults.every(Boolean),
+    payloadUnchanged:JSON.stringify(payload) === JSON.stringify({ page_type:"product_detail", currency:"EUR", items:[{ product_id:"SKU-1" }], oOrder:{ aProducts:[{ product_id:"P-1" }] } }),
+    validationUnchanged:result.state,
+  };
+
+  const parent = storedAfterEdit.find(({ id }) => id === "schema-generic-commerce");
+  const inheritedProduct = { ...currentProduct, parentSchemaId:parent.id };
+  const inherited = documentationCore.resolveEffectiveSchemaDocumentation(inheritedProduct, [parent, inheritedProduct]);
+  const locallyOverridden = { ...inheritedProduct, documentation:documentationCore.setPropertyDocumentation(inheritedProduct.documentation, "/currency", { displayName:"Checkout currency", description:"Local currency meaning" }) };
+  const local = documentationCore.resolveEffectiveSchemaDocumentation(locallyOverridden, [parent, locallyOverridden]);
+  const restoredDocumentation = documentationCore.setPropertyDocumentation(locallyOverridden.documentation, "/currency", { displayName:"", description:"" });
+  const restored = documentationCore.resolveEffectiveSchemaDocumentation({ ...locallyOverridden, documentation:restoredDocumentation }, [parent, { ...locallyOverridden, documentation:restoredDocumentation }]);
+  const inheritance = {
+    inherited:[inherited.properties["/currency"].description, inherited.properties["/currency"].origin.name, inherited.properties["/currency"].inherited],
+    local:[local.properties["/currency"].description, local.properties["/currency"].origin.name, local.properties["/currency"].inherited],
+    restored:[restored.properties["/currency"].description, restored.properties["/currency"].origin.name],
+    parentUnchanged:parent.documentation.properties["/currency"].description,
+  };
+
+  const pinnedAssignment = { ...currentProduct.assignments[0], schemaVersion:3, versionPolicy:"pinned" };
+  const v3 = { ...currentProduct, assignments:[pinnedAssignment], documentation:documentationCore.setPropertyDocumentation(currentProduct.documentation, "/page_type", { displayName:"Page classification", description:"Revision 3 description" }) };
+  const v4 = { ...currentProduct, version:4, assignments:[pinnedAssignment], revisionHistory:[core.schemaRevision(v3, 3)], documentation:documentationCore.setPropertyDocumentation(currentProduct.documentation, "/page_type", { displayName:"Page classification", description:"Revision 4 description" }) };
+  const documentedEvent = { sourceId:"event-history", eventName:"product_detail", payload, rawInput:[] };
+  const pinnedResult = core.validateEvent(documentedEvent, [v4], "https://shop.example/product");
+  const latestV4 = { ...v4, assignments:[{ ...pinnedAssignment, versionPolicy:"follow latest", schemaVersion:undefined }] };
+  const latestResult = core.validateEvent(documentedEvent, [latestV4], "https://shop.example/product");
+  const manualResult = core.validateWithSchema(documentedEvent, core.schemaRevision(v4, 3), [v4]);
+  const savedValidationDetails = structuredClone({ schema:pinnedResult.schema, documentation:pinnedResult.documentation });
+  const revisions = {
+    pinned:documentationCore.resolvePropertyDocumentation(pinnedResult.documentation, "/page_type").description,
+    current:documentationCore.resolvePropertyDocumentation(latestResult.documentation, "/page_type").description,
+    pinnedSource:pinnedResult.documentation.properties["/page_type"].origin.name + " revision " + pinnedResult.documentation.properties["/page_type"].origin.version,
+    currentSource:latestResult.documentation.properties["/page_type"].origin.name + " revision " + latestResult.documentation.properties["/page_type"].origin.version,
+    manual:documentationCore.resolvePropertyDocumentation(manualResult.documentation, "/page_type").description,
+    saved:documentationCore.resolvePropertyDocumentation(savedValidationDetails.documentation, "/page_type").description,
+  };
+
+  const exported = core.serializeSchemaLibrary(storedAfterEdit);
+  const reloaded = core.restoreSchemaLibrary(exported);
+  const legacy = core.restoreSchemaLibrary(JSON.stringify([{ id:"legacy", name:"Legacy", version:1, document:{ type:"object" }, assignments:[] }]));
+  const lifecycle = {
+    current:reloaded.find(({ id }) => id === "schema-product-detail").documentation.properties["/page_type"].description,
+    draft:reloaded.find(({ id }) => id === "schema-product-detail").workingDraft.documentation.properties["/oOrder/aProducts/*/product_id"].description,
+    historical:reloaded.find(({ id }) => id === "schema-product-detail").revisionHistory[0].documentation.properties["/page_type"].description,
+    exactlyOnce:Object.keys(reloaded.find(({ id }) => id === "schema-product-detail").workingDraft.documentation.properties).length,
+    legacyDocumentation:legacy[0].documentation ?? null,
+  };
+
+  q("#data-layer-view-schemas").click();
+  click(q("#schema-list"), "Edit working draft");
+  const removalRow = q('[data-schema-property-path="oOrder.aProducts.*.product_id"]');
+  removalRow.querySelector('button[aria-label^="Remove property"]').click();
+  const removalSummary = q("#schema-property-removal-summary").textContent;
+  click(q("#schema-property-removal-dialog"), "Remove property");
+  const afterRemoval = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ id }) => id === "schema-product-detail").workingDraft;
+  click(document, "Undo");
+  const afterUndo = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ id }) => id === "schema-product-detail").workingDraft;
+  const removal = {
+    reviewShowsDocumentation:removalSummary.includes("/oOrder/aProducts/*/product_id"),
+    removed:{ property:!afterRemoval.document.properties.oOrder.properties.aProducts.items.properties.product_id, rules:afterRemoval.attachedRules.length, documentation:Object.keys(afterRemoval.documentation.properties).includes("/oOrder/aProducts/*/product_id") },
+    restored:{ property:Boolean(afterUndo.document.properties.oOrder.properties.aProducts.items.properties.product_id), rules:afterUndo.attachedRules.length, documentation:afterUndo.documentation.properties["/oOrder/aProducts/*/product_id"].description },
+  };
+  const interactionCases = [
+    { interaction:"pointer hover", presentation:"a non-blocking information preview" },
+    { interaction:"keyboard focus", presentation:"a non-blocking information preview" },
+    { interaction:"click or Enter", presentation:"persistent additional information" },
+  ];
+  const mappingCases = [
+    ["/page_type", "Page classification", "Business classification of page", "/page_type"],
+    ["/items/*/product_id", "Product identifier", "Stable product identifier", "/items/0/product_id"],
+    ["/oOrder/aProducts/*/product_id", "Product identifier", "Stable product identifier", "/oOrder/aProducts/0/product_id"],
+    ["/oOrder/order_id", "Order identifier", "Stable order identifier", "/oOrder/order_id"],
+    ["no matching path", "none", "none", "/currency"],
+  ].map(([mappingPath, displayName, description, renderedPath]) => {
+    const documentation = mappingPath === "no matching path"
+      ? {}
+      : { properties:{ [mappingPath]:{ displayName, description } } };
+    const mappedSchema = { ...currentProduct, parentSchemaId:undefined, documentation };
+    const mappedResult = core.validateWithSchema(documentedEvent, mappedSchema, [mappedSchema]);
+    ui.renderLiveInspector(elements, { id:"mapping", name:"product_detail", sourceId:"event-history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/product", payload, rawInput:[], validation:mappedResult.state, validationDetails:{ issues:mappedResult.issues, evaluations:mappedResult.evaluations ?? [], schema:mappedResult.schema, documentation:mappedResult.documentation } }, actions);
+    const row = q('[data-property-path="' + renderedPath + '"]');
+    const control = row.querySelector(".live-property-documentation-control");
+    const missing = Boolean(row.querySelector('[data-missing="true"]'));
+    const payloadState = (missing ? "missing expected " : "observed ") + renderedPath;
+    const wildcard = mappingPath.includes("*");
+    return {
+      mappingPath,
+      displayName:row.querySelector(".live-property-display-name")?.textContent ?? "none",
+      description:control ? row.querySelector(".live-property-documentation-preview").textContent : "none",
+      payloadState,
+      eventProperty:payloadState,
+      renderedPath:row.dataset.propertyPath,
+      presentation:!control ? "no documentation control" : wildcard ? "wildcard mapped information" : missing ? "mapped synthetic-row information" : "mapped name and description",
+      documentationResult:!control ? "no empty documentation control" : wildcard ? "wildcard information on the concrete item" : missing ? "mapped information on the synthetic row" : "mapped information on " + renderedPath,
+    };
+  });
+  const revisionCases = [
+    { eventContext:"automatic assignment pinned to revision 3", description:revisions.pinned, source:revisions.pinnedSource },
+    { eventContext:"automatic assignment following current revision 4", description:revisions.current, source:revisions.currentSource },
+    { eventContext:"manual schema selection of revision 3", description:revisions.manual, source:revisions.pinnedSource },
+    { eventContext:"saved event recorded with revision 3", description:revisions.saved, source:revisions.pinnedSource },
+  ];
+  return { editor, presentation, inheritance, revisions, lifecycle, removal, interactionCases, mappingCases, revisionCases };
+})()`;
+
 const schemaPropertyRulePickerRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -3076,6 +3243,49 @@ try {
       socket.close();
       continue;
     }
+    if (width === 720 && process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const unsafe = "<img src=x onerror=globalThis.documentationExecuted=true><script>globalThis.documentationExecuted=true</script>";
+        const document = {
+          type:"object",
+          required:["page_type", "oOrder"],
+          properties:{
+            page_type:{ type:"string" },
+            currency:{ type:"string" },
+            items:{ type:"array", items:{ type:"object", properties:{ product_id:{ type:"string" } } } },
+            oOrder:{
+              type:"object",
+              required:["order_id", "aProducts"],
+              properties:{
+                order_id:{ type:"string" },
+                aProducts:{ type:"array", items:{ type:"object", required:["product_id"], properties:{ product_id:{ type:"string" } } } },
+              },
+            },
+          },
+        };
+        const assignment = { id:"assignment:product-detail", schemaId:"schema-product-detail", schemaVersion:3, sourceId:"event-history", eventName:"product_detail", target:"payload", versionPolicy:"pinned", enabled:true };
+        const rule = { id:"rule:product-id", name:"Product identifier required", version:1, propertyPath:"/oOrder/aProducts/*/product_id", operator:"required", severity:"error" };
+        const documentation = { description:"Revision 3 original", properties:{ "/page_type":{ displayName:"Page classification", description:unsafe }, "/items/*/product_id":{ displayName:"Product identifier", description:"Stable product identifier" }, "/oOrder/order_id":{ displayName:"Order identifier", description:"Stable order identifier" } } };
+        const historical = { id:"schema-product-detail", name:"Product detail", version:2, published:true, document, assignments:[assignment], attachedRules:[rule], documentation:{ description:"Historical schema", properties:{ "/page_type":{ displayName:"Page classification", description:"Historical description" } } } };
+        const product = { id:"schema-product-detail", name:"Product detail", version:3, published:true, document, assignments:[assignment], attachedRules:[rule], documentation, revisionHistory:[historical], workingDraft:{ baseVersion:3, sourceVersion:3, document, assignments:[assignment], attachedRules:[rule], documentation, pendingChanges:[] } };
+        const parent = { id:"schema-generic-commerce", name:"Generic commerce", version:2, published:true, document:{ type:"object", properties:{ currency:{ type:"string" } } }, assignments:[], documentation:{ properties:{ "/currency":{ displayName:"Currency", description:"Inherited currency" } } } };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([product, parent]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaDocumentationObservation = await evaluate(socket, schemaDocumentationRuntime);
+      assert.deepEqual(schemaDocumentationObservation.editor.paths, ["/page_type", "/items/*/product_id", "/oOrder/order_id", "/oOrder/aProducts/*/product_id"], "Schema documentation editor did not persist one canonical entry");
+      assert.equal(schemaDocumentationObservation.editor.schemaDescription, "Product detail commerce event");
+      assert.equal(schemaDocumentationObservation.editor.currentDescription, "Revision 3 original");
+      assert.equal(schemaDocumentationObservation.editor.ruleCount, 1);
+      assert.deepEqual({ mapped:schemaDocumentationObservation.presentation.mapped, wildcard:schemaDocumentationObservation.presentation.wildcard, synthetic:schemaDocumentationObservation.presentation.synthetic, unmatchedControl:schemaDocumentationObservation.presentation.unmatchedControl, plainText:schemaDocumentationObservation.presentation.plainText, focusReturned:schemaDocumentationObservation.presentation.focusReturned, searchVisible:schemaDocumentationObservation.presentation.searchVisible }, { mapped:true, wildcard:true, synthetic:true, unmatchedControl:0, plainText:true, focusReturned:true, searchVisible:true }, "Live documentation presentation lost mapped, wildcard, synthetic, safe, or searchable information");
+      assert.deepEqual(schemaDocumentationObservation.inheritance, { inherited:["Inherited currency", "Generic commerce", true], local:["Local currency meaning", "Product detail", false], restored:["Inherited currency", "Generic commerce"], parentUnchanged:"Inherited currency" }, "Documentation inheritance and local override resolution diverged");
+      assert.deepEqual(schemaDocumentationObservation.removal, { reviewShowsDocumentation:true, removed:{ property:true, rules:0, documentation:false }, restored:{ property:true, rules:1, documentation:"Stable identifier used by fulfilment" } }, "Property removal and undo did not update documentation atomically");
+      assert.equal(schemaDocumentationObservation.lifecycle.legacyDocumentation, null);
+      socket.close(); continue;
+    }
     if (width === 720 && process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         const document = { type:"object", properties:{ page_type:{ type:"string" }, currency:{ type:"string" }, oOrder:{ type:"object", properties:{ aProducts:{ type:"array", items:{ type:"object" } } } } } };
@@ -3673,6 +3883,9 @@ try {
   }
   if (process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ conditionalValidationRules:conditionalValidationRulesObservation }));
+  }
+  if (process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaDocumentation:schemaDocumentationObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

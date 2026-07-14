@@ -1,14 +1,13 @@
 (ns acceptance.conditional-validation-rules-steps-test
   (:require [acceptance.runtime :as runtime]
+            [acceptance.feature-support :as feature-support]
             [acceptance.steps.conditional-validation-rules :as conditional]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest covers-every-conditional-validation-step
-  (doseq [feature-file conditional/feature-files
-          :let [feature (gherkin/parse-file feature-file)]
-          text (map :text (concat (:background feature) (mapcat :steps (:scenarios feature))))]
-    (is (some #(re-matches (:pattern %) text) conditional/handlers) text)))
+  (doseq [text (feature-support/unhandled-step-texts conditional/feature-files conditional/handlers)]
+    (is false text)))
 
 (deftest binds-every-conditional-validation-example
   (let [observation (conditional/browser-observation!)]

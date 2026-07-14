@@ -23,6 +23,7 @@ import {
   type ValidationPropertyNode,
 } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression, type RecursivePropertyNode } from "./data-layer-recursive-property-tree.js";
+import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
 
 export interface LiveObserverElements {
   livePanel: HTMLElement | null;
@@ -171,12 +172,15 @@ function propertyStatusSymbol(symbol: string): string {
   return symbol === "check" ? "✓" : symbol === "warning" ? "⚠" : symbol === "error" ? "!" : "○";
 }
 
-function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path: string, trigger: HTMLButtonElement) => void): HTMLLIElement {
+function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path: string, trigger: HTMLButtonElement) => void, schemaDocumentation?: ResolvedSchemaDocumentation): HTMLLIElement {
   const item = document.createElement("li"); item.className = "live-validation-property"; item.id = `live-property-${node.path.replace(/[^a-z0-9]+/gi, "-")}`; item.tabIndex = -1; item.dataset.validationTreatment = node.summary.treatment;
   item.dataset.propertyPath = node.technicalPath ?? node.path;
   if (node.expression) item.dataset.propertyExpression = node.expression;
   const row = document.createElement("div"); row.className = "live-validation-property-row";
   const name = document.createElement("code"); name.textContent = node.name;
+  const documentation = schemaDocumentation ? resolvePropertyDocumentation(schemaDocumentation, node.technicalPath ?? node.path) : undefined;
+  if (documentation) row.dataset.documentationSearch = schemaDocumentationSearchText(node.technicalPath ?? node.path, documentation);
+  const displayName = document.createElement("span"); displayName.className = "live-property-display-name"; displayName.textContent = documentation?.displayName ?? "";
   const value = document.createElement("span"); value.textContent = node.valueLabel; if (node.missing) value.dataset.missing = "true";
   const status = document.createElement("button"); status.type = "button"; status.className = "live-property-status"; status.id = `${item.id}-status`; status.setAttribute("aria-expanded", "false"); status.textContent = `${propertyStatusSymbol(node.summary.symbolName)} ${node.summary.status}`;
   const preview = document.createElement("div"); preview.className = "live-property-issue-preview"; preview.id = `${item.id}-preview`; preview.setAttribute("role", "tooltip"); preview.hidden = true;
@@ -202,7 +206,26 @@ function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path:
     status.click(); event.preventDefault();
   });
   status.addEventListener("click", () => { disclosure.hidden = !disclosure.hidden; status.setAttribute("aria-expanded", String(!disclosure.hidden)); });
-  row.append(name, value, status);
+  row.append(name, ...(documentation?.displayName ? [displayName] : []), value, status);
+  if (documentation) {
+    const information = document.createElement("button"); information.type = "button"; information.className = "live-property-documentation-control"; information.textContent = "Information";
+    const documentationId = `${item.id}-documentation`; const previewId = `${documentationId}-preview`;
+    information.setAttribute("aria-label", `Information for ${documentation.displayName || node.name}`); information.setAttribute("aria-describedby", previewId); information.setAttribute("aria-expanded", "false");
+    const documentationPreview = document.createElement("div"); documentationPreview.id = previewId; documentationPreview.className = "live-property-documentation-preview"; documentationPreview.setAttribute("role", "tooltip"); documentationPreview.hidden = true; documentationPreview.textContent = documentation.description;
+    const persistent = document.createElement("section"); persistent.id = documentationId; persistent.className = "live-property-documentation-details"; persistent.hidden = true; persistent.tabIndex = -1; persistent.setAttribute("aria-label", `${documentation.displayName || node.name} documentation`);
+    const persistentDescription = document.createElement("p"); persistentDescription.textContent = documentation.description;
+    const provenance = document.createElement("p"); provenance.textContent = `${documentation.origin.name} revision ${documentation.origin.version}${documentation.inherited ? " · inherited" : " · local"}`;
+    persistent.append(persistentDescription, provenance);
+    const showDocumentationPreview = () => { if (persistent.hidden) documentationPreview.hidden = false; };
+    const hideDocumentationPreview = () => { if (document.activeElement !== information) documentationPreview.hidden = true; };
+    information.addEventListener("pointerenter", showDocumentationPreview); information.addEventListener("pointerleave", () => globalThis.setTimeout(hideDocumentationPreview, 0));
+    information.addEventListener("focus", showDocumentationPreview); information.addEventListener("blur", () => globalThis.setTimeout(hideDocumentationPreview, 0));
+    const closePersistent = () => { persistent.hidden = true; information.setAttribute("aria-expanded", "false"); information.focus({ preventScroll:true }); };
+    information.addEventListener("click", () => { persistent.hidden = !persistent.hidden; documentationPreview.hidden = true; information.setAttribute("aria-expanded", String(!persistent.hidden)); if (!persistent.hidden) persistent.focus({ preventScroll:true }); });
+    information.addEventListener("keydown", (event) => { if (event.key === "Escape") { closePersistent(); event.preventDefault(); } });
+    persistent.addEventListener("keydown", (event) => { if (event.key === "Escape") { closePersistent(); event.preventDefault(); } });
+    row.append(information); item.append(documentationPreview, persistent);
+  }
   if (addValidation) { const add = document.createElement("button"); add.type = "button"; add.textContent = "Add validation"; add.className = "live-property-add-validation"; add.dataset.action = "add-property-validation"; add.setAttribute("aria-label", `Add validation for ${node.technicalPath ?? node.path}`); add.addEventListener("click", () => addValidation(node.technicalPath ?? node.path, add)); row.append(add); }
   if (node.aggregate.errors || node.aggregate.warnings) {
     const aggregate = document.createElement("span"); aggregate.className = "live-property-aggregate"; aggregate.textContent = [node.aggregate.errors ? `${node.aggregate.errors} error${node.aggregate.errors === 1 ? "" : "s"}` : "", node.aggregate.warnings ? `${node.aggregate.warnings} warning${node.aggregate.warnings === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and "); row.append(aggregate);
@@ -211,9 +234,9 @@ function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path:
   if (node.children.length) {
     const nested = document.createElement("details"); const nestedSummary = document.createElement("summary"); nestedSummary.textContent = `Expand ${node.name}`;
     nested.dataset.propertyPath = node.technicalPath ?? node.path;
-    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation))); nested.append(nestedSummary, list); item.append(nested);
+    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation))); nested.append(nestedSummary, list); item.append(nested);
   }
-  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation))); specific.append(summary, list); item.append(specific); }
+  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation))); specific.append(summary, list); item.append(specific); }
   return item;
 }
 
@@ -285,6 +308,7 @@ export function renderLiveInspector(
   appendSummaryItem(summary, "Destination", event.destination);
   appendSummaryItem(summary, "Validation", event.validation ?? "Not checked");
   if (event.validationDetails?.schema) appendSummaryItem(summary, "Assigned schema", `${event.validationDetails.schema.name} version ${event.validationDetails.schema.version}`);
+  if (event.validationDetails?.documentation?.description) appendSummaryItem(summary, "Schema description", `${event.validationDetails.documentation.description} · ${event.validationDetails.documentation.descriptionOrigin?.name ?? event.validationDetails.schema?.name ?? "Schema"} revision ${event.validationDetails.documentation.descriptionOrigin?.version ?? event.validationDetails.schema?.version ?? "current"}`);
   appendSummaryItem(summary, "Provenance", event.provenance);
 
   const payload = document.createElement("section");
@@ -295,7 +319,7 @@ export function renderLiveInspector(
   const searchLabel = document.createElement("label"); searchLabel.htmlFor = "live-property-search"; searchLabel.textContent = "Search properties"; const propertySearch = document.createElement("input"); propertySearch.id = "live-property-search"; propertySearch.type = "search";
   const propertyTree = recursiveValidationTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
   const addValidation = actionHandlers.addPropertyValidation ? (path: string, trigger: HTMLButtonElement) => actionHandlers.addPropertyValidation?.(event, path, trigger) : undefined;
-  propertyList.replaceChildren(...propertyTree.map((node) => renderPropertyNode(node, addValidation)));
+  propertyList.replaceChildren(...propertyTree.map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation)));
   const previousOpen = new Set<string>(); let searchActive = false;
   propertySearch.addEventListener("input", () => {
     const query = propertySearch.value.trim().toLowerCase();
@@ -306,7 +330,7 @@ export function renderLiveInspector(
     const matches = query ? rows.filter((row) => {
       if (row.closest(".live-property-specific-items")) return false;
       const ownRow = Array.from(row.children).find((child) => child.classList.contains("live-validation-property-row"));
-      const searchable = `${row.dataset.propertyPath ?? ""} ${ownRow?.textContent ?? ""}`.toLowerCase();
+      const searchable = `${row.dataset.propertyPath ?? ""} ${ownRow?.textContent ?? ""} ${ownRow instanceof HTMLElement ? ownRow.dataset.documentationSearch ?? "" : ""}`.toLowerCase();
       return terms.every((term) => searchable.includes(term));
     }) : [];
     const visible = new Set<HTMLLIElement>(matches);

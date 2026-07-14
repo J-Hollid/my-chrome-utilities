@@ -1,6 +1,7 @@
 import type { SourceEvent } from "./data-layer-source.js";
 import type { ValidationIssue } from "./data-layer-schema-verification.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+import type { ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
 import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-feed-query.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
@@ -28,6 +29,7 @@ export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureT
       issues: readonly ValidationIssue[];
       evaluations: readonly ValidationEvaluation[];
       schema?: { id: string; name: string; version: number };
+      documentation?: ResolvedSchemaDocumentation;
       assignment?: { id?: string; name?: string; sourceId?: string; eventName?: string; target?: string; priority?: number; domainCondition?: string; pathnameCondition?: string; versionPolicy?: string; enabled?: boolean };
     };
   };

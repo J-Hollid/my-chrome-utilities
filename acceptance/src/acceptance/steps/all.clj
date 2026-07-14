@@ -30,6 +30,7 @@
             [acceptance.steps.saved-session-live-feed :as saved-session-live-feed]
             [acceptance.steps.schema-verification :as schema-verification]
             [acceptance.steps.schema-revision-lifecycle :as schema-revision-lifecycle]
+            [acceptance.steps.schema-documentation :as schema-documentation]
             [acceptance.steps.schema-nested-path :as schema-nested-path]
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
@@ -45,6 +46,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               schema-documentation/handlers
                conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
                fresh-live-session/handlers
@@ -91,5 +93,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T15:04:23.033780373+02:00", :module-hash "2048880538", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 44, :hash "1148273214"} {:id "def/handlers", :kind "def", :line 46, :end-line 91, :hash "-1433982629"}]}
+;; {:version 1, :tested-at "2026-07-14T15:45:34.844703169+02:00", :module-hash "2056571626", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 45, :hash "-442075318"} {:id "def/handlers", :kind "def", :line 47, :end-line 93, :hash "748717702"}]}
 ;; clj-mutate-manifest-end

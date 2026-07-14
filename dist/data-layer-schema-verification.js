@@ -1,6 +1,7 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
+import { resolveEffectiveSchemaDocumentation, } from "./data-layer-schema-documentation.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -42,6 +43,7 @@ export function createSchemaWorkingDraft(schema, sourceVersion = schema.version)
             ...(source.attachedRules ? { attachedRules: clone(source.attachedRules) } : {}),
             ...(source.parentSchemaId ? { parentSchemaId: source.parentSchemaId } : {}),
             ...(source.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(source.inheritedRuleOverrides) } : {}),
+            ...(source.documentation !== undefined ? { documentation: clone(source.documentation) } : {}),
             pendingChanges: [],
         },
     };
@@ -60,7 +62,7 @@ export function publishSchemaWorkingDraft(schema) {
     if (!draft)
         throw new Error("Schema has no working draft to publish.");
     const snapshot = schemaSnapshot(schema);
-    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, ...current } = snapshot;
+    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = snapshot;
     return {
         ...current,
         version: schema.published === false ? 1 : schema.version + 1,
@@ -70,6 +72,7 @@ export function publishSchemaWorkingDraft(schema) {
         ...(draft.attachedRules ? { attachedRules: clone(draft.attachedRules) } : {}),
         ...(draft.parentSchemaId ? { parentSchemaId: draft.parentSchemaId } : {}),
         ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(draft.inheritedRuleOverrides) } : {}),
+        ...(draft.documentation !== undefined ? { documentation: clone(draft.documentation) } : {}),
         revisionHistory: schema.published === false ? [] : [...(schema.revisionHistory ?? []).map(schemaSnapshot), snapshot],
     };
 }
@@ -87,17 +90,35 @@ export function restoreSchemaRevisionDraft(schema, version) {
     const restored = createSchemaWorkingDraft(withoutDraft, version);
     return { ...restored, workingDraft: { ...restored.workingDraft, pendingChanges: [`Restore revision ${version}`] } };
 }
-export function duplicateSchemaRevision(schema, version) {
+export function duplicateSchemaRevision(schema, version, schemas = []) {
     const source = schemaRevision(schema, version);
     if (!source)
         throw new Error(`Schema revision ${version} does not exist.`);
-    const { revisionHistory: _history, workingDraft: _draft, ...duplicate } = duplicateSchema(source, `${schema.name} revision ${version} copy`);
+    const { revisionHistory: _history, workingDraft: _draft, ...duplicate } = duplicateSchema(source, `${schema.name} revision ${version} copy`, schemas);
     return { ...duplicate, version: 1, published: false, assignments: [] };
 }
 export function reviseSchema(schema, document) {
     return publishSchemaWorkingDraft(updateSchemaWorkingDraft(schema, { document }, "Update schema document"));
 }
-export function duplicateSchema(schema, name) { return { ...clone(schema), id: schemaId(name, schema.version), name }; }
+export function duplicateSchema(schema, name, schemas = []) {
+    const duplicate = { ...clone(schema), id: schemaId(name, schema.version), name };
+    if (!schemas.length)
+        return duplicate;
+    const effective = resolveEffectiveSchemaDocumentation(schema, schemas);
+    const properties = Object.fromEntries(Object.entries(effective.properties).map(([path, entry]) => [path, {
+            displayName: entry.displayName,
+            description: entry.description,
+        }]));
+    return {
+        ...duplicate,
+        ...(effective.description || Object.keys(properties).length ? {
+            documentation: {
+                ...(effective.description ? { description: effective.description } : {}),
+                ...(Object.keys(properties).length ? { properties } : {}),
+            },
+        } : {}),
+    };
+}
 export function assignableSchemas(schemas) {
     return schemas.filter(({ published }) => published !== false).map(clone);
 }
@@ -437,6 +458,10 @@ function inheritedSchemaProvenance(schema, schemas) {
     }
     return parents;
 }
+function effectiveDocumentation(schema, schemas) {
+    const documentation = resolveEffectiveSchemaDocumentation(schema, schemas);
+    return documentation.description || Object.keys(documentation.properties).length ? documentation : undefined;
+}
 export function validateEvent(event, schemas, pageUrl) {
     if (pageUrl) {
         const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
@@ -447,7 +472,8 @@ export function validateEvent(event, schemas, pageUrl) {
             const issues = [];
             collectSchemaIssues(value, resolution.schema, schemas, issues);
             const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-            return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, resolution.schema, schemas), schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+            const documentation = effectiveDocumentation(resolution.schema, schemas);
+            return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, resolution.schema, schemas), schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, ...(documentation ? { documentation } : {}), target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
         }
     }
     const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
@@ -457,14 +483,16 @@ export function validateEvent(event, schemas, pageUrl) {
     const issues = [];
     collectSchemaIssues(value, match.schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
-    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, match.schema, schemas), schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+    const documentation = effectiveDocumentation(match.schema, schemas);
+    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, match.schema, schemas), schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, ...(documentation ? { documentation } : {}), target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event, schema, schemas, target = schema.assignments[0]?.target ?? "payload") {
     const value = target === "payload" ? event.payload : event.rawInput;
     const issues = [];
     collectSchemaIssues(value, schema, schemas, issues);
     const inheritedFrom = inheritedSchemaProvenance(schema, schemas);
-    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, schema, schemas), schema: { id: schema.id, name: schema.name, version: schema.version }, target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+    const documentation = effectiveDocumentation(schema, schemas);
+    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, schema, schemas), schema: { id: schema.id, name: schema.name, version: schema.version }, ...(documentation ? { documentation } : {}), target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validationSummary(results) { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings") && !result.state.includes("error")).length, Issues: results.filter((result) => result.state.endsWith("issues") || result.state.includes("error") && result.state !== "Assignment error").length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
