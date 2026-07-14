@@ -6,7 +6,6 @@ import {
 } from "../../dist/data-layer-observer.js";
 import {
   attachSelectedObservationTarget,
-  completeAttachedObservationTargetRecovery,
   createObservationTarget,
   registerObservationTarget,
   restoreAttachedObservationTarget,
@@ -15,6 +14,7 @@ import {
 import {
   attachedTargetRecoveryIsCurrent,
   captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
 } from "../../dist/data-layer-target-recovery.js";
 import { createLiveObserverState } from "../../dist/data-layer-live-observer.js";
 import { beginDataLayerTestingSession } from "../../dist/data-layer-session-start.js";
@@ -86,7 +86,7 @@ function completeStaleRecovery(targetState, sessionState, request) {
   if (!attachedTargetRecoveryIsCurrent(targetState, sessionState, request)) {
     return { targetState, applied:false };
   }
-  const completion = completeAttachedObservationTargetRecovery(
+  const completion = completeAttachedTargetRecovery(
     targetState,
     request.targetId,
     { ...oldTarget, title:"Recovered Checkout" },

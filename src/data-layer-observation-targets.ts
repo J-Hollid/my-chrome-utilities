@@ -36,11 +36,6 @@ export interface TargetOperationResult {
   result: string;
 }
 
-export interface TargetRecoveryResult {
-  state: ObservationTargetState;
-  applied: boolean;
-}
-
 const accessExplanations: Record<ObservationTargetAccessState, string> = {
   Ready: "Page can be observed",
   "Permission required": "Site access is required",
@@ -135,28 +130,6 @@ export function registerObservationTarget(
     targets: existing
       ? state.targets.map((candidate) => candidate.id === target.id ? target : candidate)
       : [...state.targets, target],
-  };
-}
-
-export function completeAttachedObservationTargetRecovery(
-  state: ObservationTargetState,
-  expectedTargetId: string,
-  recoveredTarget: ObservationTarget,
-): TargetRecoveryResult {
-  if (
-    state.selectedTargetId !== expectedTargetId ||
-    state.attachedTargetId !== expectedTargetId ||
-    recoveredTarget.id !== expectedTargetId
-  ) {
-    return { state, applied: false };
-  }
-
-  return {
-    state: registerObservationTarget(state, {
-      ...recoveredTarget,
-      priorSession: true,
-    }),
-    applied: true,
   };
 }
 

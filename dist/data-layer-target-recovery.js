@@ -1,4 +1,4 @@
-import { attachedObservationTarget, } from "./data-layer-observation-targets.js";
+import { attachedObservationTarget, registerObservationTarget, } from "./data-layer-observation-targets.js";
 export function captureAttachedTargetRecovery(targetState, sessionState) {
     const target = attachedObservationTarget(targetState);
     const session = sessionState.session;
@@ -20,5 +20,19 @@ export function attachedTargetRecoveryIsCurrent(targetState, sessionState, reque
         session.tabId === request.tabId &&
         targetState.selectedTargetId === request.targetId &&
         targetState.attachedTargetId === request.targetId);
+}
+export function completeAttachedTargetRecovery(state, expectedTargetId, recoveredTarget) {
+    if (state.selectedTargetId !== expectedTargetId ||
+        state.attachedTargetId !== expectedTargetId ||
+        recoveredTarget.id !== expectedTargetId) {
+        return { state, applied: false };
+    }
+    return {
+        state: registerObservationTarget(state, {
+            ...recoveredTarget,
+            priorSession: true,
+        }),
+        applied: true,
+    };
 }
 //# sourceMappingURL=data-layer-target-recovery.js.map

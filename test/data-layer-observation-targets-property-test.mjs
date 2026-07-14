@@ -17,6 +17,11 @@ import {
   selectObservationTarget,
   updateObservationTargetAccess,
 } from "../dist/data-layer-observation-targets.js";
+import {
+  attachedTargetRecoveryIsCurrent,
+  captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
+} from "../dist/data-layer-target-recovery.js";
 
 for (let sample = 0; sample < 100; sample += 1) {
   const targets = [
@@ -85,6 +90,68 @@ for (let sample = 0; sample < 100; sample += 1) {
       timeline: [],
     },
   };
+  const recoveryRequest = captureAttachedTargetRecovery(switched, session);
+  assert.deepEqual(recoveryRequest, {
+    sessionId: session.session.id,
+    targetId: checkout.id,
+    tabId: checkout.tabId,
+  });
+  assert.equal(
+    attachedTargetRecoveryIsCurrent(switched, session, recoveryRequest),
+    true,
+  );
+
+  const recoveredCheckout = {
+    ...checkout,
+    title: `Recovered checkout ${sample}`,
+  };
+  const completedRecovery = completeAttachedTargetRecovery(
+    switched,
+    checkout.id,
+    recoveredCheckout,
+  );
+  assert.equal(completedRecovery.applied, true);
+  assert.equal(completedRecovery.state.targets.length, switched.targets.length);
+  assert.equal(
+    completedRecovery.state.targets.find(({ id }) => id === checkout.id)?.title,
+    recoveredCheckout.title,
+  );
+  assert.equal(
+    completedRecovery.state.targets.find(({ id }) => id === checkout.id)
+      ?.priorSession,
+    true,
+  );
+
+  const released = detachObservationTarget(switched);
+  const releasedRecovery = completeAttachedTargetRecovery(
+    released,
+    checkout.id,
+    recoveredCheckout,
+  );
+  assert.equal(releasedRecovery.applied, false);
+  assert.equal(releasedRecovery.state, released);
+  assert.equal(
+    attachedTargetRecoveryIsCurrent(released, session, recoveryRequest),
+    false,
+  );
+
+  const selectedElsewhere = selectObservationTarget(switched, confirmation.id);
+  assert.equal(
+    attachedTargetRecoveryIsCurrent(
+      selectedElsewhere,
+      session,
+      recoveryRequest,
+    ),
+    false,
+  );
+  const mismatchedTargetRecovery = completeAttachedTargetRecovery(
+    switched,
+    checkout.id,
+    confirmation,
+  );
+  assert.equal(mismatchedTargetRecovery.applied, false);
+  assert.equal(mismatchedTargetRecovery.state, switched);
+
   const ended = endLiveSession(session, restored);
   assert.equal(ended.sessionState.session?.status, "ended");
   assert.equal(ended.targetState.attachedTargetId, undefined);
@@ -92,6 +159,18 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.deepEqual(endedAgain.sessionState, ended.sessionState);
   assert.deepEqual(endedAgain.targetState, ended.targetState);
   assert.equal(endedAgain.releasedTargetId, undefined);
+  assert.equal(
+    captureAttachedTargetRecovery(switched, ended.sessionState),
+    undefined,
+  );
+  assert.equal(
+    attachedTargetRecoveryIsCurrent(
+      switched,
+      ended.sessionState,
+      recoveryRequest,
+    ),
+    false,
+  );
 
   const permissionLost = updateObservationTargetAccess(
     switched,

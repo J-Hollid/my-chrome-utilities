@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import {
   attachSelectedObservationTarget,
   closeObservationTarget,
-  completeAttachedObservationTargetRecovery,
   createObservationTarget,
   createObservationTargetState,
   detachObservationTarget,
@@ -19,8 +18,9 @@ import {
 import { findCommand, runCommandById } from "../dist/commands.js";
 import { closeObservationTargetPicker, showObservationTargetPicker } from "../dist/data-layer-observation-targets-ui.js";
 import {
-  captureAttachedTargetRecovery,
   attachedTargetRecoveryIsCurrent,
+  captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
 } from "../dist/data-layer-target-recovery.js";
 
 const checkout = createObservationTarget({
@@ -85,7 +85,7 @@ const releasedForNewTarget = selectObservationTarget(
   detachObservationTarget(recoveringOldTarget),
   newTarget.id,
 );
-const staleBeforeStart = completeAttachedObservationTargetRecovery(
+const staleBeforeStart = completeAttachedTargetRecovery(
   releasedForNewTarget,
   checkout.id,
   { ...checkout, title:"Stale checkout" },
@@ -97,7 +97,7 @@ assert.deepEqual(staleBeforeStart.state.targets.map(({ id }) => id), [checkout.i
 assert.equal(attachedTargetRecoveryIsCurrent(releasedForNewTarget, { session:{ ...oldSession.session, status:"ended" } }, recoveryRequest), false);
 
 const attachedNewTarget = attachSelectedObservationTarget(releasedForNewTarget).state;
-const staleAfterStart = completeAttachedObservationTargetRecovery(
+const staleAfterStart = completeAttachedTargetRecovery(
   attachedNewTarget,
   checkout.id,
   { ...checkout, title:"Stale checkout" },
@@ -108,7 +108,7 @@ assert.equal(staleAfterStart.state.attachedTargetId, newTarget.id);
 assert.equal(attachedTargetRecoveryIsCurrent(attachedNewTarget, { session:{ id:"session-new", status:"active", tabId:73 } }, recoveryRequest), false);
 assert.equal(attachedTargetRecoveryIsCurrent(recoveringOldTarget, oldSession, recoveryRequest), true);
 
-const currentRecovery = completeAttachedObservationTargetRecovery(
+const currentRecovery = completeAttachedTargetRecovery(
   recoveringOldTarget,
   checkout.id,
   { ...checkout, title:"Recovered checkout" },
