@@ -72,6 +72,7 @@ assert.equal(feed.mode, "Saved session");
 assert.equal(feed.readOnly, true);
 assert.equal(feed.startLiveObserver, false);
 assert.equal(feed.session.id, saved.id);
+assert.notEqual(feed.session, saved);
 assert.deepEqual(feed.savedView.events.map(({ id }) => id), savedEvents.map(({ id }) => id));
 assert.deepEqual(feed.currentView.events.map(({ id }) => id), ["current-page", "purchase"]);
 assert.notEqual(feed.savedView.events, saved.events);
@@ -113,6 +114,22 @@ assert.equal(restored?.session.name, "Checkout journey");
 assert.equal(restored?.savedView.inspectorEventId, "saved-18");
 assert.equal(restored?.savedScrollTop, 275);
 assert.equal(restored?.startLiveObserver, false);
+assert.notEqual(restored?.session, saved);
+
+const tampered = JSON.parse(serializeSavedSessionLiveFeed(withBackground));
+tampered.savedView.events = [{
+  id:"forged-event",
+  name:"forged",
+  sourceId:"forged-source",
+  captureTime:"2026-07-14T00:00:00Z",
+  payload:{ forged:true },
+}];
+tampered.savedView.pageUrl = "https://attacker.invalid/";
+tampered.savedView.inspectorEventId = "forged-event";
+const restoredFromTamperedView = restoreSavedSessionLiveFeed(JSON.stringify(tampered), library);
+assert.deepEqual(restoredFromTamperedView?.savedView.events.map(({ id }) => id), savedEvents.map(({ id }) => id));
+assert.equal(restoredFromTamperedView?.savedView.pageUrl, saved.pageScope);
+assert.equal(restoredFromTamperedView?.savedView.inspectorEventId, undefined);
 
 const compared = revalidateSavedSessionLiveFeed(withBackground, (event) => ({
   state:event.id === "saved-18" ? "1 issues" : "Valid",

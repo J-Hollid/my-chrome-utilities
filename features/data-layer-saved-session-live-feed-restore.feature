@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=41ea144ed26e30462afab46ce5a5b4529f405c381b465622d50f278aaea3a663
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T00:16:29.635595782Z","feature_name":"Data layer saved session Live feed restore","feature_path":"features/data-layer-saved-session-live-feed-restore.feature","background_hash":"26e13ced0962db1e3ec2ea8afdec65a7ae937029a0c34905da53da782e19f6be","implementation_hash":"sha256:1c2c2c23fda67593ac7f4094f418a2c04b92b3264eccf0083d7b3bf77c358683","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer saved session Live feed restore
 
   Background:

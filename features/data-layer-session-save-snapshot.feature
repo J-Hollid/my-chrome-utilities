@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=5680177e0d627c1b2a115bee519c9403bea1f09077f95a97e784e04b63d95394
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T00:16:33.913255868Z","feature_name":"Data layer session save snapshot","feature_path":"features/data-layer-session-save-snapshot.feature","background_hash":"e13f3bacd55f82d91f97dbfb1cc346c35bbf238a0b927c03e40ace487867d090","implementation_hash":"sha256:58bb1cee1c3f9575a2179c0d6ed418a0d284557727f7037c91fb3792197b3443","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer session save snapshot
 
   Background:
