@@ -107,7 +107,8 @@ for (let sample = 0; sample < 100; sample += 1) {
   };
   const completedRecovery = completeAttachedTargetRecovery(
     switched,
-    checkout.id,
+    session,
+    recoveryRequest,
     recoveredCheckout,
   );
   assert.equal(completedRecovery.applied, true);
@@ -125,7 +126,8 @@ for (let sample = 0; sample < 100; sample += 1) {
   const released = detachObservationTarget(switched);
   const releasedRecovery = completeAttachedTargetRecovery(
     released,
-    checkout.id,
+    session,
+    recoveryRequest,
     recoveredCheckout,
   );
   assert.equal(releasedRecovery.applied, false);
@@ -146,7 +148,8 @@ for (let sample = 0; sample < 100; sample += 1) {
   );
   const mismatchedTargetRecovery = completeAttachedTargetRecovery(
     switched,
-    checkout.id,
+    session,
+    recoveryRequest,
     confirmation,
   );
   assert.equal(mismatchedTargetRecovery.applied, false);

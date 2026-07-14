@@ -884,7 +884,8 @@ async function recoverAttachedObservationTarget(): Promise<void> {
       if (!recoveryIsCurrent()) return;
       const recovery = completeAttachedTargetRecovery(
         observationTargetState,
-        target.id,
+        dataLayerSessionState,
+        recoveryRequest,
         recovered,
       );
       if (!recovery.applied) return;

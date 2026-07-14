@@ -88,7 +88,8 @@ function completeStaleRecovery(targetState, sessionState, request) {
   }
   const completion = completeAttachedTargetRecovery(
     targetState,
-    request.targetId,
+    sessionState,
+    request,
     { ...oldTarget, title:"Recovered Checkout" },
   );
   return { targetState:completion.state, applied:completion.applied };

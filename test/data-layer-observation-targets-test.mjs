@@ -87,7 +87,8 @@ const releasedForNewTarget = selectObservationTarget(
 );
 const staleBeforeStart = completeAttachedTargetRecovery(
   releasedForNewTarget,
-  checkout.id,
+  { session:{ ...oldSession.session, status:"ended" } },
+  recoveryRequest,
   { ...checkout, title:"Stale checkout" },
 );
 assert.equal(staleBeforeStart.applied, false);
@@ -99,7 +100,8 @@ assert.equal(attachedTargetRecoveryIsCurrent(releasedForNewTarget, { session:{ .
 const attachedNewTarget = attachSelectedObservationTarget(releasedForNewTarget).state;
 const staleAfterStart = completeAttachedTargetRecovery(
   attachedNewTarget,
-  checkout.id,
+  { session:{ id:"session-new", status:"active", tabId:73 } },
+  recoveryRequest,
   { ...checkout, title:"Stale checkout" },
 );
 assert.equal(staleAfterStart.applied, false);
@@ -110,7 +112,8 @@ assert.equal(attachedTargetRecoveryIsCurrent(recoveringOldTarget, oldSession, re
 
 const currentRecovery = completeAttachedTargetRecovery(
   recoveringOldTarget,
-  checkout.id,
+  oldSession,
+  recoveryRequest,
   { ...checkout, title:"Recovered checkout" },
 );
 assert.equal(currentRecovery.applied, true);

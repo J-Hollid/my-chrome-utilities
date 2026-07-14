@@ -53,20 +53,20 @@ export function attachedTargetRecoveryIsCurrent(
 }
 
 export function completeAttachedTargetRecovery(
-  state: ObservationTargetState,
-  expectedTargetId: string,
+  targetState: ObservationTargetState,
+  sessionState: DataLayerSessionState,
+  request: AttachedTargetRecoveryRequest,
   recoveredTarget: ObservationTarget,
 ): TargetRecoveryResult {
   if (
-    state.selectedTargetId !== expectedTargetId ||
-    state.attachedTargetId !== expectedTargetId ||
-    recoveredTarget.id !== expectedTargetId
+    !attachedTargetRecoveryIsCurrent(targetState, sessionState, request) ||
+    recoveredTarget.id !== request.targetId
   ) {
-    return { state, applied: false };
+    return { state: targetState, applied: false };
   }
 
   return {
-    state: registerObservationTarget(state, {
+    state: registerObservationTarget(targetState, {
       ...recoveredTarget,
       priorSession: true,
     }),

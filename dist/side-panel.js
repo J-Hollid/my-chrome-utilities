@@ -659,7 +659,7 @@ async function recoverAttachedObservationTarget() {
             const observation = await tabPageObservation(recovered.tabId, recovered.pageUrl, session.historyPath, observationPageLoadId(recovered.tabId));
             if (!recoveryIsCurrent())
                 return;
-            const recovery = completeAttachedTargetRecovery(observationTargetState, target.id, recovered);
+            const recovery = completeAttachedTargetRecovery(observationTargetState, dataLayerSessionState, recoveryRequest, recovered);
             if (!recovery.applied)
                 return;
             observationTargetState = recovery.state;

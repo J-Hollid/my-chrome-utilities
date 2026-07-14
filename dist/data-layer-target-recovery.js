@@ -21,14 +21,13 @@ export function attachedTargetRecoveryIsCurrent(targetState, sessionState, reque
         targetState.selectedTargetId === request.targetId &&
         targetState.attachedTargetId === request.targetId);
 }
-export function completeAttachedTargetRecovery(state, expectedTargetId, recoveredTarget) {
-    if (state.selectedTargetId !== expectedTargetId ||
-        state.attachedTargetId !== expectedTargetId ||
-        recoveredTarget.id !== expectedTargetId) {
-        return { state, applied: false };
+export function completeAttachedTargetRecovery(targetState, sessionState, request, recoveredTarget) {
+    if (!attachedTargetRecoveryIsCurrent(targetState, sessionState, request) ||
+        recoveredTarget.id !== request.targetId) {
+        return { state: targetState, applied: false };
     }
     return {
-        state: registerObservationTarget(state, {
+        state: registerObservationTarget(targetState, {
             ...recoveredTarget,
             priorSession: true,
         }),
