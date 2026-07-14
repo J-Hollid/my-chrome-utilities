@@ -194,6 +194,7 @@ import {
   currentDefectIssues,
   DEFECT_LIBRARY_STORAGE_KEY,
   editDefect,
+  eventContainsDefectIssue,
   presentedEventTriage,
   requestDefectDeletion,
   restoreDefectLibrary,
@@ -1172,11 +1173,7 @@ function closeDefect(): void {
 }
 
 function matchingEventForDefect(defect: ReportedDefect): LiveEvent | undefined {
-  return liveObserverState.events.find((event) => currentDefectIssues(event).some((current) => defect.issues.some(({ match }) => {
-    const canonicalPath = current.templatePath ?? current.concretePath;
-    return match.sourceId === current.sourceId && match.eventName === current.eventName && match.schemaId === current.schemaId
-      && match.validationTarget === current.validationTarget && match.canonicalPath === canonicalPath && match.ruleId === current.ruleId && match.ruleRevision === current.ruleRevision;
-  })));
+  return liveObserverState.events.find((event) => eventContainsDefectIssue(event, defect));
 }
 
 function renderDefects(): void {
