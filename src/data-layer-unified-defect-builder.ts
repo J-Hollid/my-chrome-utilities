@@ -1,4 +1,5 @@
 import type { ReproductionManualStep, ReproductionPathnameStep } from "./data-layer-defect-report.js";
+import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { validateWithSchema, type AttachedSchemaRule, type JsonSchema, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
 
 export interface ExpectedPropertyChoice {
@@ -66,76 +67,8 @@ function pointerSegment(value: string): string {
   return value.replaceAll("~", "~0").replaceAll("/", "~1");
 }
 
-function pointerSegments(pointer: string): string[] {
-  return pointer.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
-}
-
-function arraySegment(segment: string | undefined): boolean {
-  return segment === "*" || /^\d+$/.test(segment ?? "");
-}
-
-function mergeSchema(left: JsonSchema | undefined, right: JsonSchema): JsonSchema {
-  if (!left) return structuredClone(right);
-  const merged: JsonSchema = { ...structuredClone(left), ...structuredClone(right) };
-  if (left.properties || right.properties) merged.properties = { ...structuredClone(left.properties ?? {}), ...structuredClone(right.properties ?? {}) };
-  const items = left.items && right.items ? mergeSchema(left.items, right.items) : right.items ?? left.items;
-  if (items) merged.items = structuredClone(items);
-  if (left.required || right.required) merged.required = [...new Set([...(left.required ?? []), ...(right.required ?? [])])];
-  return merged;
-}
-
-function insertSchemaPath(root: JsonSchema, segments: readonly string[], definition: JsonSchema): void {
-  let current = root;
-  segments.forEach((segment, index) => {
-    const last = index === segments.length - 1;
-    if (arraySegment(segment)) {
-      current.type ??= "array";
-      if (last) current.items = mergeSchema(current.items, definition);
-      else {
-        current.items ??= { type:arraySegment(segments[index + 1]) ? "array" : "object" };
-        current = current.items;
-      }
-      return;
-    }
-    current.type ??= "object";
-    current.properties ??= {};
-    if (last) current.properties[segment] = mergeSchema(current.properties[segment], definition);
-    else {
-      current.properties[segment] ??= { type:arraySegment(segments[index + 1]) ? "array" : "object" };
-      current = current.properties[segment];
-    }
-  });
-}
-
-function markRequiredPath(root: JsonSchema, segments: readonly string[]): void {
-  let current = root;
-  segments.forEach((segment, index) => {
-    if (arraySegment(segment)) {
-      if (current.items) current = current.items;
-      return;
-    }
-    current.required = [...new Set([...(current.required ?? []), segment])];
-    if (index < segments.length - 1 && current.properties?.[segment]) current = current.properties[segment];
-  });
-}
-
-function normalizeExpectedPayloadDocument(document: JsonSchema): JsonSchema {
-  const { properties, required, ...rest } = structuredClone(document);
-  const normalized: JsonSchema = { ...rest, ...(document.type === "object" ? { properties:{} } : {}) };
-  for (const [storedPath, storedDefinition] of Object.entries(properties ?? {})) {
-    const definition = normalizeExpectedPayloadDocument(storedDefinition);
-    const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
-    insertSchemaPath(normalized, segments, definition);
-  }
-  for (const storedPath of required ?? []) {
-    const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
-    markRequiredPath(normalized, segments);
-  }
-  return normalized;
-}
-
 export function normalizedExpectedPayloadSchema(schema: SchemaDefinition): SchemaDefinition {
-  return { ...structuredClone(schema), document:normalizeExpectedPayloadDocument(schema.document) };
+  return { ...structuredClone(schema), document:normalizeCanonicalSchemaDocument(schema.document) };
 }
 
 function schemaAtPointer(schema: JsonSchema, pointer: string): JsonSchema | undefined {

@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.canonical-declared-property-validation :as canonical-declared-property-validation]
             [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
@@ -55,7 +56,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat cross-tab-reattachment/handlers
+  (vec (concat canonical-declared-property-validation/handlers
+               cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
