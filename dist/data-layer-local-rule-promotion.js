@@ -1,4 +1,4 @@
-import { createSchemaWorkingDraft } from "./data-layer-schema-verification.js";
+import { createSchemaWorkingDraft, } from "./data-layer-schema-verification.js";
 function clone(value) { return structuredClone(value); }
 function normalizePath(path) {
     const segments = path.trim().split("/").filter(Boolean);
@@ -40,7 +40,7 @@ function semanticConfiguration(rule) {
 function semanticallyEquivalent(left, right) {
     return JSON.stringify(semanticConfiguration(left)) === JSON.stringify(semanticConfiguration(right));
 }
-function sourceRule(input) {
+function resolvePromotionSource(input) {
     if (input.editorContext === "read-only")
         return undefined;
     const path = normalizePath(input.propertyPath);
@@ -59,7 +59,7 @@ function sourceRule(input) {
     };
 }
 export function localRulePromotionAvailability(input) {
-    const source = sourceRule(input);
+    const source = resolvePromotionSource(input);
     if (!source)
         return { available: false, reason: "The local rule is no longer attached at this property path" };
     if (input.reusableRules.some(({ id }) => id === source.rule.id))
@@ -70,7 +70,7 @@ export function reviewLocalRulePromotion(input) {
     const availability = localRulePromotionAvailability(input);
     if (!availability.available)
         throw new Error(availability.reason);
-    const source = sourceRule(input);
+    const source = resolvePromotionSource(input);
     const rule = source.rule;
     return {
         source: {
@@ -151,7 +151,7 @@ export function promoteLocalRule(input) {
         };
         reusableRules.push(destination);
     }
-    const resolved = sourceRule(input);
+    const resolved = resolvePromotionSource(input);
     const editableSchema = resolved.origin === "current-revision"
         ? createSchemaWorkingDraft(input.schema)
         : clone(input.schema);

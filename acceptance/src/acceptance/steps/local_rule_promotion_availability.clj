@@ -90,13 +90,15 @@
    "promotion_control_count" #{"1" "0"}})
 
 (defn- validate-example! [mode example]
-  (let [domains (if (= mode :runtime) runtime-example-values model-example-values)]
-    (support/validate-example-domain!
-     domains example
-     (filter #(support/example-value example %) (keys domains))
-     "Local-rule promotion availability example value was outside the specified contract.")))
+  (support/validate-mode-example-domain!
+   mode runtime-example-values model-example-values example
+   "Local-rule promotion availability example value was outside the specified contract."))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :local-rule-promotion-availability-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T01:58:05.692911522+02:00", :module-hash "408742919", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-310207037"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-322997423"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-943764037"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "1932710129"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "1599978361"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 67, :hash "-1361067821"} {:id "def/model-example-values", :kind "def", :line 69, :end-line 82, :hash "-2051029187"} {:id "def/runtime-example-values", :kind "def", :line 84, :end-line 90, :hash "-1842178080"} {:id "defn-/validate-example!", :kind "defn-", :line 92, :end-line 95, :hash "-1031706754"} {:id "def/handlers", :kind "def", :line 97, :end-line 100, :hash "-974955451"}]}
+;; clj-mutate-manifest-end
