@@ -29,8 +29,9 @@
                         [acceptance.live-observer-steps-test]
                         [acceptance.live-event-presentation-steps-test]
                         [acceptance.observation-targets-steps-test]
-                            [acceptance.event-library-editor-steps-test]
-                            [acceptance.information-architecture-steps-test]
+                        [acceptance.event-library-editor-steps-test]
+                        [acceptance.fresh-live-session-steps-test]
+                        [acceptance.information-architecture-steps-test]
                         [acceptance.schema-verification-steps-test]
                         [acceptance.schema-workspace-runtime-steps-test]
                         [acceptance.saved-sessions-steps-test]
@@ -56,6 +57,7 @@
                                                 'acceptance.live-event-presentation-steps-test
                                                 'acceptance.observation-targets-steps-test
                                                 'acceptance.event-library-editor-steps-test
+                                                'acceptance.fresh-live-session-steps-test
                                                 'acceptance.information-architecture-steps-test
                                                 'acceptance.schema-verification-steps-test
                                                 'acceptance.schema-workspace-runtime-steps-test

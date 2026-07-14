@@ -88,6 +88,7 @@ import {
   type DataLayerSessionState,
 } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
+import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
 import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
 import {
@@ -321,6 +322,7 @@ const liveNotificationController = createLiveNotificationController(
   (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); },
 );
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
+const startFreshSessionButton = document.querySelector<HTMLButtonElement>("#start-fresh-session");
 const saveLiveSessionDialog = document.querySelector<HTMLDialogElement>("#save-live-session-dialog");
 const saveLiveSessionForm = document.querySelector<HTMLFormElement>("#save-live-session-form");
 const saveLiveSessionHeading = document.querySelector<HTMLElement>("#save-live-session-heading");
@@ -328,6 +330,12 @@ const saveLiveSessionName = document.querySelector<HTMLInputElement>("#save-live
 const saveLiveSessionSummary = document.querySelector<HTMLElement>("#save-live-session-summary");
 const confirmSaveLiveSessionButton = document.querySelector<HTMLButtonElement>("#confirm-save-live-session");
 const cancelSaveLiveSessionButton = document.querySelector<HTMLButtonElement>("#cancel-save-live-session");
+const freshSessionConfirmation = document.querySelector<HTMLDialogElement>("#fresh-session-confirmation");
+const freshSessionConfirmationHeading = document.querySelector<HTMLElement>("#fresh-session-confirmation-heading");
+const freshSessionConfirmationSummary = document.querySelector<HTMLElement>("#fresh-session-confirmation-summary");
+const saveAndStartFreshSessionButton = document.querySelector<HTMLButtonElement>("#save-and-start-fresh-session");
+const discardAndStartFreshSessionButton = document.querySelector<HTMLButtonElement>("#discard-and-start-fresh-session");
+const cancelFreshSessionButton = document.querySelector<HTMLButtonElement>("#cancel-fresh-session");
 const savedSessionLiveBanner = document.querySelector<HTMLElement>("#saved-session-live-banner");
 const savedSessionLiveSummary = document.querySelector<HTMLElement>("#saved-session-live-summary");
 const savedSessionBackgroundStatus = document.querySelector<HTMLElement>("#saved-session-background-status");
@@ -590,12 +598,14 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
   pageUrl: globalThis.location.href,
   sources: [{ id: "event-history", name: "Event history", status: "Connected" }],
 });
+liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
 let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
 let savedSessionLiveFeed: SavedSessionLiveFeed | undefined = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
 if (savedSessionLiveFeed) liveObserverState = savedSessionLiveFeed.savedView;
 let archivedSavedSession: ArchivedSession | undefined;
 let pendingSessionSaveDraft: SessionSaveDraft | undefined;
+let startFreshAfterSessionSave = false;
 const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
 let savedThroughEventCount = Math.max(0, Number(localStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
@@ -712,6 +722,10 @@ function renderLiveContextActions(): void {
       pathStatus: currentTargetPathStatus,
     }),
   );
+  if (startFreshSessionButton) {
+    startFreshSessionButton.hidden = !activeSession;
+    startFreshSessionButton.disabled = Boolean(savedSessionLiveFeed);
+  }
 }
 
 function targetFromTab(
@@ -1013,6 +1027,7 @@ function renderSavedSessionLiveBanner(): void {
     if (pauseCaptureButton) pauseCaptureButton.disabled = false;
     if (resumeCaptureButton) resumeCaptureButton.disabled = false;
     if (saveLiveSessionButton) saveLiveSessionButton.disabled = false;
+    if (startFreshSessionButton) startFreshSessionButton.disabled = false;
     return;
   }
   const summary = savedSessionSummary(feed.session);
@@ -1029,6 +1044,7 @@ function renderSavedSessionLiveBanner(): void {
   if (pauseCaptureButton) pauseCaptureButton.disabled = true;
   if (resumeCaptureButton) resumeCaptureButton.disabled = true;
   if (saveLiveSessionButton) saveLiveSessionButton.disabled = true;
+  if (startFreshSessionButton) startFreshSessionButton.disabled = true;
 }
 
 function renderLiveObserver(): void {
@@ -3098,10 +3114,9 @@ copyPageUrlButton?.addEventListener("click", () => {
   void copyLivePageUrl();
 });
 
-saveLiveSessionButton?.addEventListener("click", () => {
-  if (savedSessionLiveFeed) return;
+function currentSessionSaveDraft(): SessionSaveDraft {
   const now = new Date().toISOString();
-  pendingSessionSaveDraft = createSessionSaveDraft({
+  return createSessionSaveDraft({
     id: `live-${Date.now()}`,
     pageScope: liveObserverState.pageUrl,
     startedAt: liveObserverState.events[0]?.captureTime ?? now,
@@ -3127,14 +3142,63 @@ saveLiveSessionButton?.addEventListener("click", () => {
     })),
     provenance: { source: "live-observer", capturedAt: now },
   });
+}
+
+function openSessionSaveDialog(startFreshAfterSave = false): void {
+  if (savedSessionLiveFeed) return;
+  startFreshAfterSessionSave = startFreshAfterSave;
+  pendingSessionSaveDraft = currentSessionSaveDraft();
   if (saveLiveSessionName) saveLiveSessionName.value = "";
   if (confirmSaveLiveSessionButton) confirmSaveLiveSessionButton.disabled = true;
+  if (saveLiveSessionHeading) saveLiveSessionHeading.textContent = startFreshAfterSave ? "Save session before starting fresh" : "Save session snapshot";
+  if (confirmSaveLiveSessionButton) confirmSaveLiveSessionButton.textContent = startFreshAfterSave ? "Save and start fresh" : "Save snapshot";
   if (saveLiveSessionSummary) {
     const summary = pendingSessionSaveDraft.summary;
     saveLiveSessionSummary.textContent = `${summary.pageScope} · ${summary.eventCount} events · ${summary.sourceCount} sources · ${summary.validationSummary}`;
   }
   saveLiveSessionDialog?.showModal();
   saveLiveSessionHeading?.focus({ preventScroll:true });
+}
+
+function startFreshSession(): void {
+  if (savedSessionLiveFeed) return;
+  const session = dataLayerSessionState.session;
+  if (!session) return;
+  const fresh = startFreshLiveSession(
+    dataLayerSessionState,
+    liveObserverState,
+    dataLayerObserverState,
+    newDataLayerSessionId(session.tabId),
+  );
+  if (!fresh.started) return;
+  dataLayerSessionState = fresh.sessionState;
+  liveObserverState = fresh.liveObserverState;
+  dataLayerObserverState = fresh.observerState;
+  presentedSourceEventCount = 0;
+  savedThroughEventCount = 0;
+  localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+  inspectorReturnSnapshot = undefined;
+  savedInspectorTemplateId = undefined;
+  if (guidedValidationFlow.currentDraft()) guidedValidationFlow.close();
+  persistAndRenderObservationState();
+  renderLiveObserver();
+  if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = 0;
+  setLiveSessionMessage("Fresh session started with 0 captured events.");
+  startFreshSessionButton?.focus({ preventScroll:true });
+}
+
+saveLiveSessionButton?.addEventListener("click", () => openSessionSaveDialog());
+startFreshSessionButton?.addEventListener("click", () => {
+  const availability = freshSessionAvailability({
+    eventCount:liveObserverState.events.length,
+    savedThroughEventCount,
+    savedSessionMode:Boolean(savedSessionLiveFeed),
+  });
+  if (availability.action === "unavailable") return;
+  if (availability.action === "start") { startFreshSession(); return; }
+  if (freshSessionConfirmationSummary) freshSessionConfirmationSummary.textContent = `${availability.unsavedEventCount} unsaved events would be discarded.`;
+  freshSessionConfirmation?.showModal();
+  freshSessionConfirmationHeading?.focus({ preventScroll:true });
 });
 
 saveLiveSessionName?.addEventListener("input", () => {
@@ -3151,16 +3215,38 @@ saveLiveSessionForm?.addEventListener("submit", (event) => {
   persistSavedSessionLibrary();
   saveLiveSessionDialog?.close();
   renderSavedSessions();
+  if (startFreshAfterSessionSave) {
+    startFreshAfterSessionSave = false;
+    startFreshSession();
+    return;
+  }
   setLiveSessionMessage(`Saved immutable snapshot ${name}; capture state unchanged.`);
   saveLiveSessionButton?.focus({ preventScroll:true });
 });
 const closeSaveLiveSessionDialog = () => {
   pendingSessionSaveDraft = undefined;
+  const returnToFreshAction = startFreshAfterSessionSave;
+  startFreshAfterSessionSave = false;
   if (saveLiveSessionDialog?.open) saveLiveSessionDialog.close();
-  saveLiveSessionButton?.focus({ preventScroll:true });
+  (returnToFreshAction ? startFreshSessionButton : saveLiveSessionButton)?.focus({ preventScroll:true });
 };
 cancelSaveLiveSessionButton?.addEventListener("click", closeSaveLiveSessionDialog);
 saveLiveSessionDialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeSaveLiveSessionDialog(); });
+
+const closeFreshSessionConfirmation = () => {
+  if (freshSessionConfirmation?.open) freshSessionConfirmation.close();
+  startFreshSessionButton?.focus({ preventScroll:true });
+};
+cancelFreshSessionButton?.addEventListener("click", closeFreshSessionConfirmation);
+freshSessionConfirmation?.addEventListener("cancel", (event) => { event.preventDefault(); closeFreshSessionConfirmation(); });
+saveAndStartFreshSessionButton?.addEventListener("click", () => {
+  if (freshSessionConfirmation?.open) freshSessionConfirmation.close();
+  openSessionSaveDialog(true);
+});
+discardAndStartFreshSessionButton?.addEventListener("click", () => {
+  if (freshSessionConfirmation?.open) freshSessionConfirmation.close();
+  startFreshSession();
+});
 
 returnToCurrentLiveFeedButton?.addEventListener("click", () => {
   if (!savedSessionLiveFeed) return;
