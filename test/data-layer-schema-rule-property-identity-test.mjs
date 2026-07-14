@@ -34,6 +34,8 @@ assert.deepEqual(
   "path-keyed, nested, array, and inherited definitions must share one ordered canonical row identity",
 );
 assert.equal(rows.filter(({ canonicalPath }) => canonicalPath === "/page_type").length, 1);
+rows[0].schema.type = "number";
+assert.equal(pathKeyed.properties["/page_type"].type, "string", "row metadata must not expose a mutable draft-document reference");
 
 const draft = {
   id:"schema-page-view",

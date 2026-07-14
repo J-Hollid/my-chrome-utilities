@@ -34,7 +34,10 @@
     (support/assert! (and (= identities (:identities initial))
                           (= [1 1 1 1] [(:pageTypeRows initial) (:pageLevelRows initial) (:nestedRows initial) (:inheritedRows initial)])
                           (str/includes? (:metadata initial) "type string")
-                          (str/includes? (:documentation initial) "Business page type"))
+                          (str/includes? (:documentation initial) "Business page type")
+                          (str/includes? (get-in initial [:arrayPicker :heading]) "type array")
+                          (true? (get-in initial [:arrayPicker :itemCount]))
+                          (false? (get-in initial [:arrayPicker :regularExpression])))
                      "Production property rows did not expose one ordered canonical identity with metadata and documentation."
                      initial)
     (support/assert! (and (= 1 (:rules required))
@@ -103,13 +106,15 @@
    "canonical_path" #{"/page_levels/0" "/products/*/name" "/customer/id"}})
 
 (defn- validate-example! [mode example]
-  (let [domains (if (= mode :runtime) runtime-example-values model-example-values)]
-    (support/validate-example-domain!
-     domains example
-     (filter #(support/example-value example %) (keys domains))
-     "Schema rule property identity example value was outside the specified contract.")))
+  (support/validate-mode-example-domain!
+   mode runtime-example-values model-example-values example
+   "Schema rule property identity example value was outside the specified contract."))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :schema-rule-property-identity-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T00:57:30.848976235+02:00", :module-hash "-1564752606", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1406492449"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "10464539"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "298562887"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-148459447"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "381604718"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 81, :hash "1715989740"} {:id "def/model-example-values", :kind "def", :line 83, :end-line 99, :hash "-2094573518"} {:id "def/runtime-example-values", :kind "def", :line 101, :end-line 106, :hash "883065861"} {:id "defn-/validate-example!", :kind "defn-", :line 108, :end-line 111, :hash "-1723056156"} {:id "def/handlers", :kind "def", :line 113, :end-line 116, :hash "-422892444"}]}
+;; clj-mutate-manifest-end

@@ -1,4 +1,4 @@
-import { canonicalRulePropertyPath } from "./data-layer-schema-property-rule-picker.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 function documentRows(document, origin) {
     const rows = [];
     const visit = (schema, prefix) => {
@@ -6,10 +6,10 @@ function documentRows(document, origin) {
             const canonicalPath = name.trim().startsWith("/")
                 ? canonicalRulePropertyPath(name)
                 : canonicalRulePropertyPath(`${prefix}/${name}`);
-            rows.push({ canonicalPath, displayPath: canonicalPath.slice(1).replaceAll("/", "."), origin, schema: child });
+            rows.push({ canonicalPath, displayPath: canonicalPath.slice(1).replaceAll("/", "."), origin, schema: structuredClone(child) });
             if (child.type === "array" && child.items) {
                 const itemPath = `${canonicalPath}/*`;
-                rows.push({ canonicalPath: itemPath, displayPath: itemPath.slice(1).replaceAll("/", "."), origin, schema: child.items });
+                rows.push({ canonicalPath: itemPath, displayPath: itemPath.slice(1).replaceAll("/", "."), origin, schema: structuredClone(child.items) });
                 visit(child.items, itemPath);
             }
             else
