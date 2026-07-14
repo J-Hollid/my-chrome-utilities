@@ -181,6 +181,7 @@ import {
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
@@ -338,6 +339,7 @@ const liveNotificationController = createLiveNotificationController(
 );
 const saveLiveSessionButton = document.querySelector<HTMLButtonElement>("#save-live-session");
 const startFreshSessionButton = document.querySelector<HTMLButtonElement>("#start-fresh-session");
+const reportMissingEventButton = document.querySelector<HTMLButtonElement>("#report-missing-event");
 const saveLiveSessionDialog = document.querySelector<HTMLDialogElement>("#save-live-session-dialog");
 const saveLiveSessionForm = document.querySelector<HTMLFormElement>("#save-live-session-form");
 const saveLiveSessionHeading = document.querySelector<HTMLElement>("#save-live-session-heading");
@@ -1152,6 +1154,46 @@ function currentLiveSessionSummary() {
   });
 }
 
+let missingEventBuilderController: MissingEventBuilderController | undefined;
+
+function currentMissingEventVisits() {
+  const archived = savedSessionLiveFeed?.session;
+  const visits = missingEventVisits(liveObserverState.events, currentLiveSessionSummary().pageUrl, Boolean(archived));
+  return archived
+    ? visits.map((visit) => ({ ...visit, startedAt:archived.startedAt, endedAt:archived.endedAt, immutable:true as const }))
+    : visits;
+}
+
+function openMissingEventBuilder(entryPoint: string, initialSchemaId?: string): void {
+  const inspector = liveObserverElements.eventInspector;
+  if (!inspector) return;
+  showDataLayerView("Live");
+  const split = globalThis.innerWidth >= 700;
+  if (liveObserverElements.eventList) liveObserverElements.eventList.hidden = !split;
+  inspector.hidden = false;
+  backToEventsButton && (backToEventsButton.hidden = split);
+  missingEventBuilderController = renderMissingEventDefectReportBuilder(
+    inspector,
+    currentMissingEventVisits(),
+    assignableSchemas(schemas),
+    {
+      entryPoint,
+      ...(initialSchemaId ? { initialSchemaId } : {}),
+      navigation:{
+        backToSelectedVisit:closeInspectorAndReturnToEvents,
+        backToLiveFeed:closeInspectorAndReturnToEvents,
+        focusReportMissingEvent:() => reportMissingEventButton?.focus({ preventScroll:true }),
+        openMatchingEvent:(eventId, restoreBuilder) => {
+          openLiveInspector(eventId, true);
+          const returnAction = document.createElement("button"); returnAction.type = "button"; returnAction.textContent = "Return to missing-event report";
+          returnAction.addEventListener("click", () => { inspector.hidden = false; restoreBuilder(); });
+          inspector.append(returnAction);
+        },
+      },
+    },
+  );
+}
+
 function closeInspectorAndReturnToEvents(): void {
   const returnSnapshot = inspectorReturnSnapshot;
   liveObserverState = closeLiveInspector(liveObserverState);
@@ -1346,26 +1388,27 @@ function renderSchemas(): void {
   if (schemaEmptyState) schemaEmptyState.hidden = visible.length > 0;
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
-    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const remove = document.createElement("button");
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
     const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
     const pending = schema.workingDraft?.pendingChanges.length ?? 0;
     const history = schemaRevisionChoices(schema).length;
     item.textContent = schema.published === false
       ? `${schema.name} · unpublished draft · ${pending} pending changes. `
       : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-    revise.type = duplicate.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; remove.textContent = "Delete";
+    revise.type = duplicate.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
     revise.addEventListener("click", () => {
       schemaDraft = schemaEditorDraft(schema);
       renderSchemaDraft();
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+    reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
       if (children.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return; }
       pendingSchemaDeletion = schema;
       if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
       if (schemaDeleteReview) { schemaDeleteReview.hidden = false; schemaDeleteReview.showModal(); }
-    }); item.append(revise, duplicate, remove); return item;
+    }); item.append(revise, duplicate, reportMissing, remove); return item;
   }));
 }
 
@@ -3689,6 +3732,7 @@ function startFreshSession(): void {
 }
 
 saveLiveSessionButton?.addEventListener("click", () => openSessionSaveDialog());
+reportMissingEventButton?.addEventListener("click", () => openMissingEventBuilder(savedSessionLiveFeed ? "saved session" : "Live session actions"));
 startFreshSessionButton?.addEventListener("click", () => {
   const availability = freshSessionAvailability({
     eventCount:liveObserverState.events.length,

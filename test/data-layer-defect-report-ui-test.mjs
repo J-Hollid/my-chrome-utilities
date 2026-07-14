@@ -6,6 +6,7 @@ import {
   createLiveDefectReportNavigation,
   renderDefectReportBuilder,
 } from "../dist/data-layer-defect-report-ui.js";
+import { missingEventVisits, renderMissingEventDefectReportBuilder } from "../dist/data-layer-missing-event-defect-report-ui.js";
 import { validateEvent } from "../dist/data-layer-schema-verification.js";
 
 class FakeElement {
@@ -34,6 +35,14 @@ class FakeElement {
       const firstOption = children.find((child) => child instanceof FakeElement && child.tagName === "OPTION");
       if (firstOption) this.value = firstOption.value;
     }
+  }
+  prepend(...children) {
+    for (const child of children) {
+      if (!(child instanceof FakeElement)) continue;
+      child.remove();
+      child.parent = this;
+    }
+    this.children = [...children, ...this.children];
   }
   replaceChildren(...children) {
     for (const child of this.children) if (child instanceof FakeElement) child.parent = undefined;
@@ -622,6 +631,74 @@ assert.deepEqual(productSchemaResponses, ["product", "content"]);
 assert.match(productGenericInline, /page_type: product OR content/);
 assert.match(productCommentedInline, /page_type: &quot;product&quot;, \/\/ must be of type product or content/);
 assert.deepEqual(productPayload, { page_type: "product test" });
+
+const missingSchema = {
+  id:"schema-checkout-purchase",
+  name:"Checkout purchase",
+  version:4,
+  document:{ type:"object" },
+  assignments:[{
+    id:"assignment:checkout",
+    name:"Checkout assignment",
+    sourceId:"event-history",
+    eventName:"purchase",
+    target:"payload",
+    domainCondition:"shop.example",
+    pathnameCondition:"/checkout",
+    enabled:true,
+  }],
+};
+const missingVisits = missingEventVisits([
+  { id:"checkout-pageview", name:"pageview", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:00Z", validation:"Valid", payload:{ page_type:"checkout" } },
+], "https://shop.example/checkout");
+const missingRoot = new FakeElement("section");
+const missingCopies = [];
+let missingBackVisit = 0;
+let missingBackFeed = 0;
+const missingController = renderMissingEventDefectReportBuilder(missingRoot, missingVisits, [missingSchema], {
+  entryPoint:"Live session actions",
+  initialSchemaId:missingSchema.id,
+  navigation:{ backToSelectedVisit:() => { missingBackVisit += 1; }, backToLiveFeed:() => { missingBackFeed += 1; } },
+  writeClipboard:async (text) => { missingCopies.push(text); },
+});
+assert.equal(descendants(missingRoot).some(({ textContent }) => textContent === "Back to captured event"), false);
+element(missingRoot, ({ textContent }) => textContent === "Back to selected page visit").dispatch("click");
+element(missingRoot, ({ textContent }) => textContent === "Back to Live feed").dispatch("click");
+assert.deepEqual([missingBackVisit, missingBackFeed], [1, 1]);
+element(missingRoot, ({ textContent }) => textContent === "Confirm at least one matching event was expected").dispatch("click");
+assert.equal(element(missingRoot, ({ attributes }) => attributes.get("aria-label") === "Matching event warning").hidden, true);
+element(missingRoot, ({ textContent }) => textContent === "Create missing-event report").dispatch("click");
+assert.equal(missingController.report().type, "Missing event");
+assert.equal(missingController.report().capturedEventId, undefined);
+assert.match(element(missingRoot, ({ attributes }) => attributes.get("aria-label") === "Final missing-event report preview").innerHTML, /No matching purchase event was captured/);
+element(missingRoot, ({ textContent }) => textContent === "Copy for Jira Cloud").dispatch("click");
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(missingCopies.length, 1);
+assert.match(missingCopies[0], /Checkout purchase revision 4/);
+
+const matchVisits = missingEventVisits([
+  ...missingVisits[0].events,
+  { id:"purchase-match", name:"purchase", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:01Z", validation:"Valid", payload:{ order_id:"42" } },
+], "https://shop.example/checkout");
+const warningRoot = new FakeElement("section");
+let openedMatch;
+const warningController = renderMissingEventDefectReportBuilder(warningRoot, matchVisits, [missingSchema], {
+  entryPoint:"schema row actions",
+  initialSchemaId:missingSchema.id,
+  navigation:{
+    backToSelectedVisit() {},
+    backToLiveFeed() {},
+    openMatchingEvent(eventId, restore) { openedMatch = eventId; restore(); },
+  },
+});
+element(warningRoot, ({ textContent }) => textContent === "Confirm at least one matching event was expected").dispatch("click");
+assert.equal(element(warningRoot, ({ attributes }) => attributes.get("aria-label") === "Matching event warning").hidden, false);
+assert.match(element(warningRoot, ({ tagName, textContent }) => tagName === "H5" && textContent.includes("matching event")).textContent, /^1 matching event/);
+element(warningRoot, ({ textContent }) => textContent === "Open matching event").dispatch("click");
+assert.equal(openedMatch, "purchase-match");
+element(warningRoot, ({ textContent }) => textContent === "Create missing-event report anyway").dispatch("click");
+assert.equal(warningController.report().override.matchingCount, 1);
+assert.equal(warningController.report().matchingEventEvidence[0].id, "purchase-match");
 
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
