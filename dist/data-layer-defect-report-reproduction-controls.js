@@ -277,5 +277,6 @@ export function appendReproductionControls(controls, steps, context, state, opti
         renderComposer();
     });
     controls.append(startLabel, generate);
+    renderSteps();
 }
 //# sourceMappingURL=data-layer-defect-report-reproduction-controls.js.map

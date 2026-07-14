@@ -216,12 +216,10 @@ export function overrideMissingEventWarning(draft, explanation) {
         override: { matchingCount: draft.verification.matchingCount, ...(explanation?.trim() ? { explanation: explanation.trim() } : {}) },
     };
 }
-export function createMissingEventReport(draft, timelineEventIds = [], manualSteps = [], composition = {}) {
+function composeMissingEventReport(draft, timelineEventIds = [], manualSteps = [], composition = {}) {
     const expectation = draft.expectation;
-    if (!expectation?.confirmed)
-        throw new Error("Confirm the event expectation before creating the report.");
-    if (draft.verification.matchingCount > 0 && !draft.override)
-        throw new Error("Record an explicit override before completing the missing-event report.");
+    if (!expectation)
+        throw new Error("Select an event expectation before previewing the report.");
     const expected = `At least one ${expectation.eventName} event matching ${expectation.schema.name} revision ${expectation.schema.version} was expected`;
     const { events: _events, ...scope } = clone(draft.scope);
     const expectedPayload = clone(composition.expectedPayload ?? {});
@@ -239,6 +237,9 @@ export function createMissingEventReport(draft, timelineEventIds = [], manualSte
         summary: composition.summary ?? `Missing event: ${expectation.eventName}`,
         description: composition.description ?? `${expectation.eventName} was expected during ${draft.scope.pathname}, but no matching event was captured.`,
         expectedExplanation: composition.expectedExplanation ?? expectation.explanation,
+        ...(composition.expectedResultAdditionalText?.trim()
+            ? { expectedResultAdditionalText: composition.expectedResultAdditionalText.trim() }
+            : {}),
         schema: {
             id: expectation.schema.id,
             name: expectation.schema.name,
@@ -258,6 +259,16 @@ export function createMissingEventReport(draft, timelineEventIds = [], manualSte
         timeline: clone(draft.scope.events.filter(({ id }) => timelineEventIds.includes(id))),
     };
 }
+export function createMissingEventReport(draft, timelineEventIds = [], manualSteps = [], composition = {}) {
+    if (!draft.expectation?.confirmed)
+        throw new Error("Confirm the event expectation before creating the report.");
+    if (draft.verification.matchingCount > 0 && !draft.override)
+        throw new Error("Record an explicit override before completing the missing-event report.");
+    return composeMissingEventReport(draft, timelineEventIds, manualSteps, composition);
+}
+export function createMissingEventReportPreview(draft, timelineEventIds = [], manualSteps = [], composition = {}) {
+    return composeMissingEventReport(draft, timelineEventIds, manualSteps, composition);
+}
 function escapeHtml(value) {
     return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
@@ -270,15 +281,14 @@ export function generateMissingEventRepresentations(report) {
         : `Selected page visit ${report.scope.pathname} (${report.scope.id}); 0 matching events`;
     const expectedPayload = clone(report.expectedPayload ?? {});
     const payloadSentence = expectedPayloadPresentation(report.expectation.eventName, expectedPayload);
-    const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => {
-        const provenance = report.expectedResponseProvenance?.[pointer];
-        return `${pointer} response source: ${source}${provenance ? ` (${provenance.name ?? provenance.id} revision ${provenance.version})` : ""}`;
-    }).join("\n");
-    const expectedResult = [report.expected, report.expectedExplanation, payloadSentence, expectedSources, JSON.stringify(expectedPayload, null, 2)].filter(Boolean).join("\n");
+    const additionalText = report.expectedResultAdditionalText?.trim() ?? "";
+    const expectedPayloadJson = JSON.stringify(expectedPayload, null, 2);
+    const expectedResult = [additionalText, payloadSentence, expectedPayloadJson].filter(Boolean).join("\n");
+    const numberedSteps = report.reproductionSteps.map((step, index) => `${index + 1}. ${step}`).join("\n");
     const sections = [
         ["Summary", report.summary ?? `Missing event: ${report.expectation.eventName}`],
         ["Description", report.description ?? `${report.expectation.eventName} was expected during ${report.scope.pathname}, but no matching event was captured.`],
-        ["Steps to reproduce", report.reproductionSteps.join("\n")],
+        ["Steps to reproduce", numberedSteps],
         ["Actual result", report.absenceEvidence],
         ["Expected result", expectedResult],
         ["Schema expectation", `${report.schema.name} revision ${report.schema.version}\n${assignment}\nSchema rules and documentation are expectation context, not observed capture evidence.`],
@@ -286,9 +296,17 @@ export function generateMissingEventRepresentations(report) {
         ["Supporting timeline", report.timeline.length ? report.timeline.map(({ captureTime, name, sourceId, pageUrl }) => `${captureTime ?? "time unavailable"} · ${name} · ${sourceId} · ${pageUrl}`).join("\n") : "No supporting captured events selected"],
     ];
     const previewText = sections.map(([heading, content]) => `${heading}\n${content}`).join("\n\n");
-    const previewHtml = sections.map(([heading, content]) => heading === "Expected result"
-        ? `<h2>${escapeHtml(heading)}</h2><p>${escapeHtml([report.expected, report.expectedExplanation, payloadSentence, expectedSources].filter(Boolean).join("\n")).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(JSON.stringify(expectedPayload, null, 2))}</pre>`
-        : `<h2>${escapeHtml(heading)}</h2><p>${escapeHtml(content).replaceAll("\n", "<br>")}</p>`).join("");
+    const previewHtml = sections.map(([heading, content]) => {
+        const renderedHeading = `<h2>${escapeHtml(heading)}</h2>`;
+        if (heading === "Expected result") {
+            const prose = additionalText ? `<p>${escapeHtml(additionalText).replaceAll("\n", "<br>")}</p>` : "";
+            return `${renderedHeading}${prose}<p>${escapeHtml(payloadSentence)}</p><pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(expectedPayloadJson)}</pre>`;
+        }
+        if (heading === "Steps to reproduce") {
+            return `${renderedHeading}<ol>${report.reproductionSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`;
+        }
+        return `${renderedHeading}<p>${escapeHtml(content).replaceAll("\n", "<br>")}</p>`;
+    }).join("");
     return { previewHtml, previewText, jiraText: previewText, expectedPayload };
 }
 //# sourceMappingURL=data-layer-missing-event-defect-report.js.map

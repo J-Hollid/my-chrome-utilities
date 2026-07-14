@@ -1,4 +1,4 @@
-import { acceptMissingEventReplacements, changeMissingEventScope, confirmMissingEventExpectation, createMissingEventDraft, createMissingEventReport, editMissingEventExpectation, generateMissingEventRepresentations, overrideMissingEventWarning, selectMissingEventAssignment, selectMissingEventSchema, verifyMissingEventAbsence, } from "./data-layer-missing-event-defect-report.js";
+import { acceptMissingEventReplacements, changeMissingEventScope, confirmMissingEventExpectation, createMissingEventDraft, createMissingEventReport, createMissingEventReportPreview, editMissingEventExpectation, generateMissingEventRepresentations, overrideMissingEventWarning, selectMissingEventAssignment, selectMissingEventSchema, verifyMissingEventAbsence, } from "./data-layer-missing-event-defect-report.js";
 import { appendDetailControls } from "./data-layer-defect-report-ui-controls.js";
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
@@ -90,8 +90,8 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
         defectVisitId: draft.scope.id,
         timeline: draft.visits.flatMap((visit) => visit.events.map((event) => ({ id: event.id, captureTime: event.captureTime ?? visit.startedAt, name: event.name, source: event.sourceName ?? event.sourceId, pathname: visit.pathname, validation: event.validation ?? "Not checked", ...(event.payload !== undefined ? { payload: structuredClone(event.payload) } : {}) }))),
     });
-    const completedReport = () => {
-        const report = createMissingEventReport(draft);
+    const composedReport = (complete) => {
+        const report = complete ? createMissingEventReport(draft) : createMissingEventReportPreview(draft);
         const journey = reconcileMissingEventJourney(draft.visits, reproductionStartVisitId, draft.scope.id, sharedReport.reproductionSteps, { eventName: draft.expectation?.eventName ?? "event", sourceId: draft.expectation?.sourceId ?? "source" });
         const selectedTimeline = new Set(timelineSelections.map(({ eventId }) => eventId));
         return {
@@ -101,19 +101,28 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             expectedResponseProvenance: structuredClone(expectedPayloadDraft?.responseProvenance ?? {}),
             summary: detailEdits.summary ?? report.summary,
             description: detailEdits.description ?? report.description,
-            expectedExplanation: detailEdits.expectedExplanation ?? draft.expectation?.explanation ?? "",
-            reproductionSteps: journey.map(({ text }) => text),
+            expectedExplanation: draft.expectation?.explanation ?? "",
+            ...(detailEdits.expectedResultAdditionalText?.trim()
+                ? { expectedResultAdditionalText: detailEdits.expectedResultAdditionalText.trim() }
+                : {}),
+            reproductionSteps: journey.map((step) => step.kind === "assertion"
+                ? `Expect ${draft.expectation?.eventName ?? "event"} to be pushed`
+                : step.text.replace(/^\d+\.\s*/, "")),
             reproductionStartVisitId,
             reproductionEndpointVisitId: draft.scope.id,
             timeline: draft.visits.flatMap(({ events }) => events).filter((event) => selectedTimeline.has(event.id)),
         };
     };
+    const completedReport = () => composedReport(true);
     const reportReady = () => Boolean(draft.expectation?.confirmed
         && expectedPayloadDraft
         && expectedPayloadComplete(draft.expectation.schema, expectedPayloadDraft)
         && expectedPayloadEvaluation(draft.expectation.schema, expectedPayloadDraft).state === "Valid"
         && (!draft.verification.warningVisible || draft.override));
     const currentReport = () => reportReady() ? completedReport() : undefined;
+    const currentPreviewReport = () => draft.expectation && expectedPayloadDraft
+        ? composedReport(reportReady())
+        : undefined;
     const updateDraft = (next) => {
         draft = next;
         options.onDraftChange?.(draft);
@@ -300,13 +309,16 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             startLabel: "From pathname ",
             initialStartVisitId: reproductionStartVisitId,
             onStartVisitChange: (visitId) => { reproductionStartVisitId = visitId; refreshPreview(); },
-            finalStep: () => ({ text: `Expect ${selected?.eventName || "expected event"} to be pushed to ${selected?.sourceId || "expected source"} during ${draft.scope.pathname}`, visitId: draft.scope.id, pathname: draft.scope.pathname }),
+            finalStep: () => ({ text: `Expect ${selected?.eventName || "expected event"} to be pushed`, visitId: draft.scope.id, pathname: draft.scope.pathname }),
         });
         appendTimelineControls(timelineComposer, timelineEntries, commonContext(), commonState, {
             selections: timelineSelections,
             onSelectionsChange: (next) => { timelineSelections = next.map((selection) => ({ ...selection })); },
         });
-        appendDetailControls(detailControls, detailEdits, () => refreshPreview());
+        appendDetailControls(detailControls, detailEdits, () => refreshPreview(), {
+            field: "expectedResultAdditionalText",
+            label: "Expected result additional text (optional)",
+        });
         if (reproductionReview.length) {
             const review = element("section");
             review.setAttribute("aria-label", "Reproduction steps outside selected journey");
@@ -339,6 +351,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             const steps = journey.map(({ text }) => text).join("\n");
             const timeline = sharedReport.timeline.length ? sharedReport.timeline.map(({ captureTime, name, source, pathname }) => `${captureTime} · ${name} · ${source} · ${pathname}`).join("\n") : "No supporting captured events selected";
             const report = currentReport();
+            const previewReport = currentPreviewReport();
             if (selected && expectedPayloadDraft) {
                 const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
                 const canQuery = typeof root.querySelector === "function";
@@ -352,8 +365,8 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
                         issueList.append(element("li", `${issue.instancePath || "/"}: ${issue.message}`));
                 }
             }
-            if (report) {
-                const representations = generateMissingEventRepresentations(report);
+            if (previewReport) {
+                const representations = generateMissingEventRepresentations(previewReport);
                 preview.innerHTML = representations.previewHtml;
                 legacyPreview.innerHTML = representations.previewHtml;
             }
@@ -362,7 +375,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
                 const capture = draft.verification.warningVisible
                     ? `${draft.verification.matchingCount} matching event(s) found; explicit override is required.`
                     : `Selected page visit ${draft.scope.pathname} (${draft.scope.id}).`;
-                for (const [headingText, content] of [["Summary", summary], ["Description", description], ["Steps to reproduce", steps], ["Actual result", actual], ["Expected result", `${detailEdits.expectedExplanation ?? ""}\n${expectedText}`.trim()], ["Schema expectation", selected ? `${selected.schema.name} revision ${selected.schema.version} · ${selected.sourceId}/${selected.eventName}/${selected.target}` : "Incomplete"], ["Capture evidence", capture], ["Supporting timeline", timeline]]) {
+                for (const [headingText, content] of [["Summary", summary], ["Description", description], ["Steps to reproduce", steps], ["Actual result", actual], ["Expected result", `${detailEdits.expectedResultAdditionalText ?? ""}\n${expectedText}`.trim()], ["Schema expectation", selected ? `${selected.schema.name} revision ${selected.schema.version} · ${selected.sourceId}/${selected.eventName}/${selected.target}` : "Incomplete"], ["Capture evidence", capture], ["Supporting timeline", timeline]]) {
                     preview.append(element("h2", headingText), element("p", content));
                 }
                 legacyPreview.innerHTML = preview.innerHTML;
@@ -371,7 +384,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
             for (const input of Array.from(detailControls.querySelectorAll("[data-report-field]"))) {
                 const field = input.dataset.reportField;
                 if (input.dataset.edited !== "true")
-                    input.value = field === "summary" ? summary : field === "description" ? description : expectedText;
+                    input.value = field === "summary" ? summary : field === "description" ? description : "";
             }
         };
         const writeCurrent = async (report) => {
