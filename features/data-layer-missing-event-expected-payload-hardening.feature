@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=23a330b7228a835cb0ea1c4adc2d3b6d9c459c8fbd23e29435d969e3491700f5
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T22:02:16.793131680Z","feature_name":"Data layer missing-event expected payload hardening","feature_path":"features/data-layer-missing-event-expected-payload-hardening.feature","background_hash":"5cd749571bbea3346cf9f6ab727a8e54e3050c5d6017b514827141440c25ac05","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer missing-event expected payload hardening 001","scenario_hash":"ff9a09a7f24b902bdb61ea597914ad969e5e79462dd39b48d47f58d9d9d9003c","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:02:16.793131680Z"},{"index":5,"name":"Data layer missing-event expected payload hardening 006","scenario_hash":"e0e06da6fb5b934d4b63ba220e3fd1b7b827cfcd7089379561269e4f74439131","mutation_count":35,"result":{"Total":35,"Killed":35,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:02:16.793131680Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer missing-event expected payload hardening
 
   Background:

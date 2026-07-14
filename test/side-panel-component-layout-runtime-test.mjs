@@ -3041,6 +3041,9 @@ const missingEventDefectReportRuntime = `(async () => {
   const flat=ui.renderMissingEventDefectReportBuilder(host,[productVisit,emptyNestedVisit],[flatSchema],{entryPoint:"Live session actions",initialSchemaId:flatSchema.id,writeClipboard:async(text)=>{flatCopied=text;},saveReportedDefect:async(report)=>{flatSaved=structuredClone(report);}});
   const flatPointers=Array.from(host.querySelectorAll("[data-json-pointer]")).map(({dataset})=>dataset.jsonPointer);
   button(host,"Add page_levels item").click();
+  const initialPageLevelItem=q(host,'[data-expected-array-item="/page_levels/0"]');
+  const initialPageLevelInput=q(initialPageLevelItem,'[data-expected-payload-input="/page_levels/0"]');
+  const initialItem={input:initialPageLevelInput.value,focused:initialPageLevelItem.contains(document.activeElement)};
   const pageLevelChoice=Array.from(host.querySelectorAll("label")).find(({textContent})=>textContent.trim()==="Use schema value d")?.querySelector("input"); if(!pageLevelChoice) throw new Error("Missing page-level choice"); pageLevelChoice.click();
   button(host,"Confirm at least one matching event was expected").click();
   enter(host,"/page_type","invalid");
@@ -3053,7 +3056,7 @@ const missingEventDefectReportRuntime = `(async () => {
   button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
   const untypedButton=button(host,"Add untyped_list item");
   window.removeEventListener("error",onRuntimeError); window.removeEventListener("unhandledrejection",onRuntimeError);
-  const flatObservation={pointers:flatPointers,escapedAbsent:!flatPointers.some((pointer)=>pointer.includes("~1")),schemaUnchanged:JSON.stringify(flatSchema)===storedFlatSchema,runtimeErrors,payload:flatReport.expectedPayload,provenance:flatReport.expectedResponseProvenance,typed,invalid:invalidState,validation:q(host,'[data-expected-payload-validation="state"]').textContent,actions:flatActions,untyped:{disabled:untypedButton.disabled,assistance:host.textContent.includes("array item type must be defined")},fits:host.scrollWidth<=320,narrativeCount:(flatRepresentation.previewText.match(/pageview is fired with/g)??[]).length,preCount:q(host,'[aria-label="Final report preview"]').querySelectorAll("pre").length,compactAbsent:!flatRepresentation.previewText.includes('{"page_levels"'),copiedSame:flatCopied===flatRepresentation.jiraText,savedPayload:flatSaved.expectedPayload};
+  const flatObservation={pointers:flatPointers,escapedAbsent:!flatPointers.some((pointer)=>pointer.includes("~1")),schemaUnchanged:JSON.stringify(flatSchema)===storedFlatSchema,runtimeErrors,initialItem,payload:flatReport.expectedPayload,provenance:flatReport.expectedResponseProvenance,typed,invalid:invalidState,validation:q(host,'[data-expected-payload-validation="state"]').textContent,actions:flatActions,untyped:{disabled:untypedButton.disabled,assistance:host.textContent.includes("array item type must be defined")},fits:host.scrollWidth<=320,narrativeCount:(flatRepresentation.previewText.match(/pageview is fired with/g)??[]).length,preCount:q(host,'[aria-label="Final report preview"]').querySelectorAll("pre").length,compactAbsent:!flatRepresentation.previewText.includes('{"page_levels"'),copiedSame:flatCopied===flatRepresentation.jiraText,savedPayload:flatSaved.expectedPayload};
 
   host.replaceChildren();
   let rejectedSaveCalls=0;
@@ -3632,6 +3635,7 @@ try {
       assert.deepEqual(flat.payload, { page_levels:["d"], page_type:"product_detail", page_section:"product", login_status:"logged in", b_id:"123" });
       assert.equal(flat.pointers.includes("/page_levels/0") && flat.pointers.includes("/page_type") && flat.escapedAbsent, true);
       assert.equal(flat.schemaUnchanged, true); assert.deepEqual(flat.runtimeErrors, []);
+      assert.deepEqual(flat.initialItem, { input:"", focused:true });
       assert.equal(flat.typed.every(({value,same,focused,caret})=>same&&focused&&caret===value.length), true);
       assert.equal(flat.typed.at(-1).value, "logged in");
       assert.deepEqual(flat.invalid.actions, [true,true,true]); assert.match(flat.invalid.issue, /allowed/i);

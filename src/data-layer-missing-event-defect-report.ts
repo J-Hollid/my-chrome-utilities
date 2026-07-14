@@ -1,6 +1,6 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import type { SchemaAssignment, SchemaDefinition, ValidationTarget } from "./data-layer-schema-verification.js";
-import { expectedPayloadPresentation, missingEventActualPresentation, type ExpectedPayloadDraft } from "./data-layer-unified-defect-builder.js";
+import { expectedPayloadPresentation, missingEventActualPresentation, type ExpectedResponseProvenanceMap } from "./data-layer-unified-defect-builder.js";
 
 export interface MissingEventScopeEvent {
   id: string;
@@ -72,7 +72,7 @@ export interface MissingEventReport {
   expected: string;
   expectedPayload: unknown;
   expectedResponseSources: Readonly<Record<string, "schema-provided value" | "operator custom response">>;
-  expectedResponseProvenance: ExpectedPayloadDraft["responseProvenance"];
+  expectedResponseProvenance: Readonly<ExpectedResponseProvenanceMap>;
   summary: string;
   description: string;
   expectedExplanation: string;
@@ -94,7 +94,7 @@ export interface MissingEventReport {
 export interface MissingEventReportComposition {
   expectedPayload?: unknown;
   expectedResponseSources?: Readonly<Record<string, "schema-provided value" | "operator custom response">>;
-  expectedResponseProvenance?: ExpectedPayloadDraft["responseProvenance"];
+  expectedResponseProvenance?: Readonly<ExpectedResponseProvenanceMap>;
   summary?: string;
   description?: string;
   expectedExplanation?: string;

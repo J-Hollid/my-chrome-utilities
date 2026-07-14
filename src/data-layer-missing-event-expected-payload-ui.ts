@@ -87,7 +87,7 @@ export function renderExpectedPayloadEditor(
     const customLabel = element("label", `Custom value for ${path} `);
     const custom = element("input"); custom.dataset.expectedPayloadInput = pointer;
     custom.type = definition.type === "number" ? "number" : "text";
-    custom.value = current === undefined ? "" : String(current);
+    custom.value = current == null ? "" : String(current);
     custom.addEventListener("input", () => {
       if (definition.type === "number" && custom.value === "") return;
       state.update(setExpectedPayloadValue(schema, state.draft(), pointer, { method:"custom", value:custom.value }));
