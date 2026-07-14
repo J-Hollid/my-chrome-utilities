@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canonicalPathForTargetIntent,
   ensureNestedSchemaPath,
+  inspectSpecificIndexRuleTarget,
   nestedTargetChoices,
   validateNestedRuleTarget,
 } from "../dist/data-layer-schema-nested-path.js";
@@ -44,6 +45,23 @@ for (const [path, result, assistance, type] of [
   assert.equal(inspected.assistance, assistance, path);
   assert.equal(inspected.targetType, type, path);
 }
+
+assert.deepEqual(inspectSpecificIndexRuleTarget(document, "/fruits", "1"), {
+  result:"accepted",
+  assistance:"Item 2 at zero-based index 1",
+  canonicalPath:"/fruits/1",
+  targetType:"string",
+});
+assert.deepEqual(inspectSpecificIndexRuleTarget(document, "/fruits", "-1"), {
+  result:"blocked",
+  assistance:"Enter a non-negative array index",
+  canonicalPath:"/fruits/-1",
+});
+assert.deepEqual(inspectSpecificIndexRuleTarget(document, "/order", "1"), {
+  result:"blocked",
+  assistance:"order is not an array",
+  canonicalPath:"/order/1",
+});
 
 const ensured = ensureNestedSchemaPath({ type:"object" }, "/products/*/id", "number");
 assert.deepEqual(ensured.createdNodes, ["/products", "/products/*", "/products/*/id"]);
