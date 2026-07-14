@@ -4,6 +4,23 @@ const numericOperators = ["Is greater than", "Is at least", "Is less than", "Is 
 export function typedComparisonValue(value) {
     return { type: value === null ? "null" : typeof value, value };
 }
+export function comparisonValueFromInput(input, type) {
+    const value = input.trim();
+    if (!value)
+        return undefined;
+    if (type === "number") {
+        const number = Number(value);
+        return Number.isFinite(number) ? typedComparisonValue(number) : undefined;
+    }
+    if (type === "boolean") {
+        return value === "true" ? typedComparisonValue(true)
+            : value === "false" ? typedComparisonValue(false)
+                : undefined;
+    }
+    if (type === "null")
+        return value === "null" ? typedComparisonValue(null) : undefined;
+    return type === "string" ? typedComparisonValue(input) : undefined;
+}
 export function operatorsForConditionType(type) {
     if (type === "string")
         return [...existenceOperators, ...equalityOperators, "Matches pattern"];

@@ -1,3 +1,8 @@
+import {
+  validateConditionalRule,
+  type ConditionalRulePredicate,
+} from "./data-layer-conditional-validation-rules.js";
+
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
 export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count";
 
@@ -187,7 +192,3 @@ export function configuredRuleDetails(configuration: RuleConfiguration): { opera
   if (configuration.ruleType === "Numeric range") return { operator:"numeric-range", parameters:`${configuration.minimum.trim()},${configuration.maximum.trim()}` };
   return { operator:"item-count", parameters:configuration.minimumItemCount };
 }
-import {
-  validateConditionalRule,
-  type ConditionalRulePredicate,
-} from "./data-layer-conditional-validation-rules.js";

@@ -63,42 +63,61 @@
                    (str "Conditional validation example did not match " key ".")
                    {:key key :example example :actual actual}))
 
+(defn- matching-row [example rows comparisons]
+  (first
+   (filter
+    (fn [row]
+      (every? (fn [[key observed]]
+                (= (example-value example key) (observed row)))
+              comparisons))
+    rows)))
+
+(defn- expected-value [key]
+  #(example-value % key))
+
+(defn- validate-row-example! [example observation {:keys [rows comparisons assertions]}]
+  (let [row (matching-row example (rows observation) comparisons)]
+    (doseq [[key expected observed] assertions]
+      (assert-example! (expected example) (observed row) key example))))
+
+(def example-validators
+  [["products_value"
+    {:rows :evaluations
+     :comparisons [["page_type_value" :page_type]
+                   ["products_value" :products]]
+     :assertions [["rule_result" (expected-value "rule_result") :result]
+                  ["issue_count" (expected-value "issue_count") (comp str :issues)]]}]
+   ["observed_state"
+    {:rows :predicateCases
+     :comparisons [["observed_state" :observedState]
+                   ["predicate" :predicate]
+                   ["configured_value" :configuredValue]]
+     :assertions [["predicate_result" (expected-value "predicate_result") (comp str :result)]]}]
+   ["invalid_configuration"
+    {:rows :invalidConfigurations
+     :comparisons [["invalid_configuration" :configuration]]
+     :assertions [["recovery_message" (expected-value "recovery_message") :assistance]
+                  ["rule cannot be saved" (constantly false) :ready]]}]
+   ["first_result"
+    {:rows :truthGroups
+     :comparisons [["group_operator" :operator]
+                   ["first_result" (comp str :first)]
+                   ["second_result" (comp str :second)]]
+     :assertions [["consequence_behavior" (expected-value "consequence_behavior") :behavior]]}]
+   ["currency_value"
+    {:rows :groups
+     :comparisons [["group_operator" :operator]
+                   ["page_type_value" :page_type]
+                   ["currency_value" :currency]]
+     :assertions [["invocation_count" (expected-value "invocation_count") (comp str :invocationCount)]
+                  ["rule_result" (expected-value "rule_result") :result]]}]])
+
 (defn validate-example! [example observation]
-  (cond
-    (example-value example "products_value")
-    (let [row (first (filter #(and (= (example-value example "page_type_value") (:page_type %))
-                                   (= (example-value example "products_value") (:products %)))
-                             (:evaluations observation)))]
-      (assert-example! (example-value example "rule_result") (:result row) "rule_result" example)
-      (assert-example! (example-value example "issue_count") (str (:issues row)) "issue_count" example))
-
-    (example-value example "observed_state")
-    (let [row (first (filter #(and (= (example-value example "observed_state") (:observedState %))
-                                   (= (example-value example "predicate") (:predicate %))
-                                   (= (example-value example "configured_value") (:configuredValue %)))
-                             (:predicateCases observation)))]
-      (assert-example! (example-value example "predicate_result") (str (:result row)) "predicate_result" example))
-
-    (example-value example "invalid_configuration")
-    (let [row (first (filter #(= (example-value example "invalid_configuration") (:configuration %))
-                             (:invalidConfigurations observation)))]
-      (assert-example! (example-value example "recovery_message") (:assistance row) "recovery_message" example)
-      (assert-example! false (:ready row) "rule cannot be saved" example))
-
-    (example-value example "first_result")
-    (let [row (first (filter #(and (= (example-value example "group_operator") (:operator %))
-                                   (= (example-value example "first_result") (str (:first %)))
-                                   (= (example-value example "second_result") (str (:second %))))
-                             (:truthGroups observation)))]
-      (assert-example! (example-value example "consequence_behavior") (:behavior row) "consequence_behavior" example))
-
-    (example-value example "currency_value")
-    (let [row (first (filter #(and (= (example-value example "group_operator") (:operator %))
-                                   (= (example-value example "page_type_value") (:page_type %))
-                                   (= (example-value example "currency_value") (:currency %)))
-                             (:groups observation)))]
-      (assert-example! (example-value example "invocation_count") (str (:invocationCount row)) "invocation_count" example)
-      (assert-example! (example-value example "rule_result") (:result row) "rule_result" example)))
+  (some (fn [[key validation]]
+          (when (example-value example key)
+            (validate-row-example! example observation validation)
+            true))
+        example-validators)
   observation)
 
 (defn- transition [world example _captures _spec]
@@ -112,3 +131,7 @@
    entry-step-texts
    :conditional-validation-rules
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T15:04:33.707269939+02:00", :module-hash "-517188206", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1393853260"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2067815109"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-2040109592"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 21, :hash "889540147"} {:id "defn-/require!", :kind "defn-", :line 23, :end-line 24, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 26, :end-line 56, :hash "1838091347"} {:id "defn-/example-value", :kind "defn-", :line 58, :end-line 59, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 61, :end-line 64, :hash "1583223720"} {:id "defn-/matching-row", :kind "defn-", :line 66, :end-line 73, :hash "1214301808"} {:id "defn-/expected-value", :kind "defn-", :line 75, :end-line 76, :hash "-1174460561"} {:id "defn-/validate-row-example!", :kind "defn-", :line 78, :end-line 81, :hash "565976123"} {:id "def/example-validators", :kind "def", :line 83, :end-line 113, :hash "-806894585"} {:id "defn/validate-example!", :kind "defn", :line 115, :end-line 121, :hash "1256792150"} {:id "defn-/transition", :kind "defn-", :line 123, :end-line 126, :hash "197079151"} {:id "def/handlers", :kind "def", :line 128, :end-line 133, :hash "1225550685"}]}
+;; clj-mutate-manifest-end

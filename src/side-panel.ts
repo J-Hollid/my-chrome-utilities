@@ -224,7 +224,7 @@ import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-l
 import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation } from "./data-layer-schema-documentation.js";
-import { conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
+import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
   findSequenceReplayElements,
@@ -2201,13 +2201,6 @@ function valueAtSchemaPath(value: unknown, path: string): { exists: boolean; val
   return { exists:true, value:current };
 }
 
-function typedConditionInput(value: string, type: ConditionPropertyType) {
-  if (type === "number") return typedComparisonValue(Number(value));
-  if (type === "boolean") return typedComparisonValue(value === "true");
-  if (type === "null") return typedComparisonValue(null);
-  return typedComparisonValue(value);
-}
-
 function initialConditionPredicate(consequencePath: string): ConditionalRulePredicate {
   const choices = schemaDraft ? schemaDocumentPaths(schemaDraft.document).filter((path) => path !== consequencePath) : [];
   const path = choices.find((candidate) => candidate === "page_type") ?? choices[0] ?? "";
@@ -2271,10 +2264,16 @@ function renderConditionalRuleConfiguration(path: string, configuration: RuleCon
     });
     comparison.addEventListener("input", () => {
       if (predicate.operator === "Is one of") {
-        predicate.comparisons = comparison.value.split(",").map((value) => value.trim()).filter(Boolean).map((value) => typedConditionInput(value, predicate.detectedType ?? "string"));
+        const values = comparison.value.split(",").map((value) => value.trim()).filter(Boolean);
+        const comparisons = values.map((value) => comparisonValueFromInput(value, predicate.detectedType ?? "string"));
+        predicate.comparisons = comparisons.every((value): value is NonNullable<typeof value> => value !== undefined)
+          ? comparisons
+          : [];
         delete predicate.comparison;
       } else {
-        predicate.comparison = typedConditionInput(comparison.value, predicate.detectedType ?? "string");
+        const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string");
+        if (value) predicate.comparison = value;
+        else delete predicate.comparison;
         delete predicate.comparisons;
       }
       refreshValidation();
