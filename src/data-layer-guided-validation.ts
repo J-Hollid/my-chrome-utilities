@@ -139,13 +139,21 @@ export interface GuidedValidationDraft {
   targetReplacementReview?: { previous: GuidedProperty; proposed: GuidedProperty };
 }
 
+export interface PublishedGuidedRule {
+  path: string;
+  expectedType: GuidedValueType;
+  requirement: GuidedRequirement;
+  values: readonly string[];
+  reusableRuleId?: string;
+}
+
 export interface PublishedGuidedValidation {
   schema: {
     id: string;
     name: string;
     version: number;
     pending: true;
-    rules: readonly { path: string; expectedType: GuidedValueType; requirement: GuidedRequirement; values: readonly string[]; reusableRuleId?: string }[];
+    rules: readonly PublishedGuidedRule[];
   };
   reusableRules: readonly { id: string; name: string; requirement: GuidedRequirement; values: readonly string[] }[];
   assignment: {
