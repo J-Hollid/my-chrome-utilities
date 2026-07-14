@@ -1,4 +1,4 @@
-import type { JsonSchema } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
 
 export type ManualPropertyValueType = "string" | "number" | "boolean" | "object" | "array";
 export type ManualArrayItemType = Exclude<ManualPropertyValueType, "array">;

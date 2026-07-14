@@ -44,6 +44,17 @@ assert.deepEqual(extra.issues, [{
 const wrongType = validateWithSchema(event({ page_type:42, login_status:"logged in", page_levels:["product"] }), schema, [schema]);
 assert.deepEqual(wrongType.issues.map(({ instancePath, message }) => [instancePath, message]), [["/page_type", "Type mismatch"]]);
 assert.equal(wrongType.issues.some(({ message }) => message === "Undeclared property"), false);
+const normalizedSchema = { ...schema, document:{
+  type:"object", additionalProperties:false, required:["page_type"], properties:{
+    page_type:{ type:"string" }, login_status:{ type:"string" },
+    page_levels:{ type:"array", items:{ type:"string" } },
+  },
+} };
+assert.deepEqual(
+  validateWithSchema(event({ page_type:42, login_status:"logged in", page_levels:["product"] }), normalizedSchema, [normalizedSchema]),
+  wrongType,
+  "equivalent nested and path-keyed declarations must suppress the same redundant rule failures",
+);
 
 const missing = validateWithSchema(event({ login_status:"logged in", page_levels:["product"] }), schema, [schema]);
 assert.deepEqual(missing.issues.map(({ instancePath, message }) => [instancePath, message]), [["/page_type", "Required value"]]);
