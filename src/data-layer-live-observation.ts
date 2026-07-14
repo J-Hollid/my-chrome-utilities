@@ -9,7 +9,13 @@ export interface LiveHistoryEntry {
 export interface LiveHistoryPushCaptureOptions {
   tabId?: number;
   historyPath: string;
+  onSnapshot?: (snapshot: LiveHistoryActivationSnapshot) => void;
   onEntry: (entry: LiveHistoryEntry) => void;
+}
+
+export interface LiveHistoryActivationSnapshot {
+  historyPath: string;
+  rawValues: readonly unknown[];
 }
 
 export type StopLiveHistoryPushCapture = () => void;
@@ -81,12 +87,16 @@ async function injectHistoryArrayHook(
   historyPath: string,
   channelId: string,
   eventType: string,
-): Promise<void> {
-  await chrome.scripting.executeScript({
+): Promise<{ installed: boolean; rawValues: unknown[] }> {
+  const [injection] = await chrome.scripting.executeScript({
     target: { tabId },
     world: "MAIN",
     args: [historyPath, channelId, eventType],
-    func: (path: string, channel: string, eventName: string): void => {
+    func: (
+      path: string,
+      channel: string,
+      eventName: string,
+    ): { installed: boolean; rawValues: unknown[] } => {
       type RegistryEntry = {
         array: unknown[];
         originalPush: Array<unknown>["push"];
@@ -111,14 +121,14 @@ async function injectHistoryArrayHook(
           typeof current !== "object" ||
           !(part in current)
         ) {
-          return;
+          return { installed: false, rawValues: [] };
         }
 
         current = (current as Record<string, unknown>)[part];
       }
 
       if (!Array.isArray(current)) {
-        return;
+        return { installed: false, rawValues: [] };
       }
 
       const historyArray = current;
@@ -158,8 +168,33 @@ async function injectHistoryArrayHook(
       }
 
       entry.channels[channel] = eventName;
+      return { installed: true, rawValues: [...historyArray] };
     },
   });
+
+  return injection?.result ?? { installed: false, rawValues: [] };
+}
+
+export function historySnapshotPageObject(
+  historyPath: string,
+  rawValues: readonly unknown[],
+): unknown {
+  const parts = historyPath
+    .split(".")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  const root: Record<string, unknown> = {};
+  let current = root;
+
+  parts.forEach((part, index) => {
+    const value = index === parts.length - 1 ? [...rawValues] : {};
+    current[part] = value;
+    if (index < parts.length - 1) {
+      current = value as Record<string, unknown>;
+    }
+  });
+
+  return root;
 }
 
 function cleanupHistoryArrayHook(
@@ -213,6 +248,9 @@ export async function startLiveHistoryPushCapture(
 
   const channelId = makeChannelId();
   const eventType = pageEventType(channelId);
+  const pendingEntries: LiveHistoryEntry[] = [];
+  let snapshotDelivered = false;
+  let hookInstalled = false;
   const listener = (
     message: unknown,
     sender: chrome.runtime.MessageSender,
@@ -221,10 +259,15 @@ export async function startLiveHistoryPushCapture(
       sender.tab?.id === tabId &&
       isLiveHistoryPushMessage(message, channelId)
     ) {
-      options.onEntry({
+      const entry = {
         rawValue: message.rawValue,
         timestamp: message.timestamp,
-      });
+      };
+      if (snapshotDelivered) {
+        options.onEntry(entry);
+      } else {
+        pendingEntries.push(entry);
+      }
     }
   };
 
@@ -232,14 +275,26 @@ export async function startLiveHistoryPushCapture(
 
   try {
     await injectMessageBridge(tabId, channelId, eventType);
-    await injectHistoryArrayHook(
+    const snapshot = await injectHistoryArrayHook(
       tabId,
       options.historyPath,
       channelId,
       eventType,
     );
+    hookInstalled = snapshot.installed;
+    if (snapshot.installed) {
+      options.onSnapshot?.({
+        historyPath: options.historyPath,
+        rawValues: snapshot.rawValues,
+      });
+    }
+    snapshotDelivered = true;
+    pendingEntries.splice(0).forEach(options.onEntry);
   } catch (error) {
     chrome.runtime.onMessage.removeListener(listener);
+    if (hookInstalled) {
+      cleanupHistoryArrayHook(tabId, options.historyPath, channelId);
+    }
     throw error;
   }
 

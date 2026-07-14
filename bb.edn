@@ -28,6 +28,7 @@
                         [acceptance.operator-interface-steps-test]
                         [acceptance.live-observer-steps-test]
                         [acceptance.live-event-presentation-steps-test]
+                        [acceptance.lossless-observation-activation-steps-test]
                         [acceptance.observation-targets-steps-test]
                         [acceptance.event-library-editor-steps-test]
                         [acceptance.fresh-live-session-steps-test]
@@ -58,6 +59,7 @@
                                                 'acceptance.operator-interface-steps-test
                                                 'acceptance.live-observer-steps-test
                                                 'acceptance.live-event-presentation-steps-test
+                                                'acceptance.lossless-observation-activation-steps-test
                                                 'acceptance.observation-targets-steps-test
                                                 'acceptance.event-library-editor-steps-test
                                                 'acceptance.fresh-live-session-steps-test

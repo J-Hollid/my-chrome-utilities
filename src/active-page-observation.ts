@@ -104,12 +104,14 @@ function observerAttachOptions(
   pageUrl: string,
   readResult: ActivePageReadResult,
   tabId?: number,
+  pageLoadId?: string,
 ): ActivePageObservationResult {
   const options: ActivePageObservationResult = {
     historyPath,
     pageUrl,
     pageAccessStatus: readResult.pageAccessStatus,
     ...(tabId === undefined ? {} : { tabId }),
+    ...(pageLoadId === undefined ? {} : { pageLoadId }),
   };
 
   return readResult.pageAccessStatus === pageAccessAvailable
@@ -138,6 +140,7 @@ export async function tabPageObservation(
   tabId: number,
   pageUrl: string,
   historyPath: string,
+  pageLoadId?: string,
 ): Promise<ActivePageObservationResult> {
   const readResult = await activeTabPageObject(tabId, historyPath);
   return observerAttachOptions(
@@ -145,5 +148,6 @@ export async function tabPageObservation(
     pageUrl,
     readResult,
     tabId,
+    pageLoadId,
   );
 }

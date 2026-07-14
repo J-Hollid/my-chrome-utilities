@@ -9,7 +9,8 @@ import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObserv
 import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, stopHistoryArrayObserver, } from "./data-layer-observer.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
-import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
+import { initialObservationActivationState, nextObservationActivation, observationActivationIsCurrent, } from "./data-layer-observation-activation.js";
+import { historySnapshotPageObject, startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
 import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
 import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
@@ -407,7 +408,7 @@ let dataLayerObserverState = {
     sourceEvents: [],
 };
 let stopLiveHistoryPushCapture = () => { };
-let liveHistoryCaptureGeneration = 0;
+let liveHistoryActivationState = initialObservationActivationState;
 let presentedSourceEventCount = 0;
 let observationRefreshTimeoutId;
 let observationRefreshState = initialObservationRefreshState;
@@ -654,7 +655,7 @@ async function recoverAttachedObservationTarget() {
         });
         const session = dataLayerSessionState.session;
         if (session?.status === "active") {
-            const observation = await tabPageObservation(recovered.tabId, recovered.pageUrl, session.historyPath);
+            const observation = await tabPageObservation(recovered.tabId, recovered.pageUrl, session.historyPath, observationPageLoadId(recovered.tabId));
             if (observation.pageAccessStatus === "page access available") {
                 dataLayerObserverState = attachHistoryArrayObserver({
                     ...dataLayerObserverState,
@@ -718,7 +719,7 @@ async function attachSelectedTarget() {
         setObservationTargetResult("End current session before attaching selected target");
         return;
     }
-    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath());
+    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath(), observationPageLoadId(target.tabId));
     if (observation.pageAccessStatus !== "page access available") {
         observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
         setObservationTargetResult("Permission required");
@@ -2919,6 +2920,9 @@ function restartLiveHistoryCaptureIfActive(observation) {
         void startLiveHistoryCapture(observation);
     }
 }
+function observationPageLoadId(tabId) {
+    return `tab:${tabId}:page-load:${observationRefreshState.observedPageLoadSequence}`;
+}
 async function currentTargetObservation(historyPath) {
     const target = attachedObservationTarget(observationTargetState)
         ?? selectedObservationTarget(observationTargetState);
@@ -2926,10 +2930,10 @@ async function currentTargetObservation(historyPath) {
         setObservationTargetResult("Selection required");
         return undefined;
     }
-    return tabPageObservation(target.tabId, target.pageUrl, historyPath);
+    return tabPageObservation(target.tabId, target.pageUrl, historyPath, observationPageLoadId(target.tabId));
 }
 function cancelLiveHistoryCaptureRuntime() {
-    liveHistoryCaptureGeneration += 1;
+    liveHistoryActivationState = nextObservationActivation(liveHistoryActivationState).state;
     stopLiveHistoryPushCapture();
     stopLiveHistoryPushCapture = () => { };
 }
@@ -2939,25 +2943,39 @@ function stopLiveHistoryCapture() {
 }
 async function startLiveHistoryCapture(observation) {
     cancelLiveHistoryCaptureRuntime();
-    const captureGeneration = liveHistoryCaptureGeneration;
+    const captureGeneration = liveHistoryActivationState.generation;
     try {
         const stopCapture = await startLiveHistoryPushCapture({
             ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }),
             historyPath: observation.historyPath,
+            onSnapshot: ({ historyPath, rawValues }) => {
+                if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
+                    return;
+                dataLayerObserverState = attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, {
+                    ...observation,
+                    historyPath,
+                    pageObject: historySnapshotPageObject(historyPath, rawValues),
+                    requestId: `activation:${captureGeneration}`,
+                });
+                updateSessionFromObserverState();
+                persistAndRenderObservationState();
+            },
             onEntry: ({ rawValue, timestamp }) => {
+                if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
+                    return;
                 dataLayerObserverState = appendObservedHistoryEntry(dataLayerObserverState, rawValue, timestamp);
                 updateSessionFromObserverState();
                 persistAndRenderObservationState();
             },
         });
-        if (captureGeneration !== liveHistoryCaptureGeneration) {
+        if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
             stopCapture();
             return;
         }
         stopLiveHistoryPushCapture = stopCapture;
     }
     catch {
-        if (captureGeneration === liveHistoryCaptureGeneration) {
+        if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
             stopLiveHistoryPushCapture = () => { };
         }
     }
@@ -3012,7 +3030,7 @@ async function runObservationRefresh(request) {
         return;
     }
     const nextRequest = capturePageEntryForRefresh(request);
-    const observation = await tabPageObservation(nextRequest.tabId, nextRequest.pageUrl, session.historyPath);
+    const observation = await tabPageObservation(nextRequest.tabId, nextRequest.pageUrl, session.historyPath, observationPageLoadId(nextRequest.tabId));
     if (!observationRefreshRequestIsCurrent(observationRefreshState, nextRequest) ||
         !activeSessionTabMatches(nextRequest.tabId)) {
         return;

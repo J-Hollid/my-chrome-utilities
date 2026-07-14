@@ -44,6 +44,9 @@ export function restartObservation(
     {
       historyPath: session.historyPath,
       pageUrl: options.pageUrl,
+      ...(options.pageLoadId === undefined
+        ? {}
+        : { pageLoadId: options.pageLoadId }),
       ...(options.pageObject === undefined
         ? {}
         : { pageObject: options.pageObject }),

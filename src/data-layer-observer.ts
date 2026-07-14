@@ -40,6 +40,7 @@ export interface DataLayerHistoryObserver {
   status: DataLayerObserverStatus;
   historyPath: string;
   pageUrl: string;
+  pageLoadId?: string;
   activeCount: number;
 }
 
@@ -64,6 +65,7 @@ export interface DataLayerHistoryObserverState {
 export interface HistoryArrayObserverAttachOptions {
   historyPath: string;
   pageUrl: string;
+  pageLoadId?: string;
   pageObject?: unknown;
   pageAccessStatus?: PageAccessStatus;
   requestId?: string;
@@ -96,6 +98,7 @@ function captureContext(
     sourceId: "event-history",
     sourceKind: "Data Layer",
     pageUrl: observer.pageUrl,
+    ...(observer.pageLoadId ? { pageLoadId: observer.pageLoadId } : {}),
     destination: observer.historyPath,
   };
 }
@@ -151,11 +154,12 @@ function captureExistingHistoryEntries(
   }
 
   const captureTime = new Date().toISOString();
+  const pageScope = observer.pageLoadId ?? observer.pageUrl;
   const captured = historyArray.reduce<DataLayerHistoryObserverState>(
     (nextState, rawValue, index) =>
       importedOnce(
         nextState.subscription ?? { imported: new Set(), activeCount: 0 },
-        observer.pageUrl,
+        pageScope,
         observer.historyPath,
         index,
       )
@@ -170,7 +174,7 @@ function captureExistingHistoryEntries(
     ...captured,
     subscription: markImported(
       captured.subscription ?? { imported: new Set(), activeCount: 0 },
-      observer.pageUrl,
+      pageScope,
       observer.historyPath,
       historyArray.length,
     ),
@@ -212,6 +216,7 @@ export function attachHistoryArrayObserver(
     status,
     historyPath: options.historyPath,
     pageUrl: options.pageUrl,
+    ...(options.pageLoadId ? { pageLoadId: options.pageLoadId } : {}),
     activeCount: status === "ready" ? 1 : 0,
   };
   const nextState: DataLayerHistoryObserverState = {
@@ -274,7 +279,7 @@ export function appendObservedHistoryEntry(
     pushReturn,
     subscription: markImported(
       captured.subscription ?? { imported: new Set(), activeCount: 0 },
-      observer.pageUrl,
+      observer.pageLoadId ?? observer.pageUrl,
       observer.historyPath,
       historyArray.length,
     ),
