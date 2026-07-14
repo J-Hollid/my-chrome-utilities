@@ -63,42 +63,61 @@
                    (str "Conditional validation example did not match " key ".")
                    {:key key :example example :actual actual}))
 
+(defn- matching-row [example rows comparisons]
+  (first
+   (filter
+    (fn [row]
+      (every? (fn [[key observed]]
+                (= (example-value example key) (observed row)))
+              comparisons))
+    rows)))
+
+(defn- expected-value [key]
+  #(example-value % key))
+
+(defn- validate-row-example! [example observation {:keys [rows comparisons assertions]}]
+  (let [row (matching-row example (rows observation) comparisons)]
+    (doseq [[key expected observed] assertions]
+      (assert-example! (expected example) (observed row) key example))))
+
+(def example-validators
+  [["products_value"
+    {:rows :evaluations
+     :comparisons [["page_type_value" :page_type]
+                   ["products_value" :products]]
+     :assertions [["rule_result" (expected-value "rule_result") :result]
+                  ["issue_count" (expected-value "issue_count") (comp str :issues)]]}]
+   ["observed_state"
+    {:rows :predicateCases
+     :comparisons [["observed_state" :observedState]
+                   ["predicate" :predicate]
+                   ["configured_value" :configuredValue]]
+     :assertions [["predicate_result" (expected-value "predicate_result") (comp str :result)]]}]
+   ["invalid_configuration"
+    {:rows :invalidConfigurations
+     :comparisons [["invalid_configuration" :configuration]]
+     :assertions [["recovery_message" (expected-value "recovery_message") :assistance]
+                  ["rule cannot be saved" (constantly false) :ready]]}]
+   ["first_result"
+    {:rows :truthGroups
+     :comparisons [["group_operator" :operator]
+                   ["first_result" (comp str :first)]
+                   ["second_result" (comp str :second)]]
+     :assertions [["consequence_behavior" (expected-value "consequence_behavior") :behavior]]}]
+   ["currency_value"
+    {:rows :groups
+     :comparisons [["group_operator" :operator]
+                   ["page_type_value" :page_type]
+                   ["currency_value" :currency]]
+     :assertions [["invocation_count" (expected-value "invocation_count") (comp str :invocationCount)]
+                  ["rule_result" (expected-value "rule_result") :result]]}]])
+
 (defn validate-example! [example observation]
-  (cond
-    (example-value example "products_value")
-    (let [row (first (filter #(and (= (example-value example "page_type_value") (:page_type %))
-                                   (= (example-value example "products_value") (:products %)))
-                             (:evaluations observation)))]
-      (assert-example! (example-value example "rule_result") (:result row) "rule_result" example)
-      (assert-example! (example-value example "issue_count") (str (:issues row)) "issue_count" example))
-
-    (example-value example "observed_state")
-    (let [row (first (filter #(and (= (example-value example "observed_state") (:observedState %))
-                                   (= (example-value example "predicate") (:predicate %))
-                                   (= (example-value example "configured_value") (:configuredValue %)))
-                             (:predicateCases observation)))]
-      (assert-example! (example-value example "predicate_result") (str (:result row)) "predicate_result" example))
-
-    (example-value example "invalid_configuration")
-    (let [row (first (filter #(= (example-value example "invalid_configuration") (:configuration %))
-                             (:invalidConfigurations observation)))]
-      (assert-example! (example-value example "recovery_message") (:assistance row) "recovery_message" example)
-      (assert-example! false (:ready row) "rule cannot be saved" example))
-
-    (example-value example "first_result")
-    (let [row (first (filter #(and (= (example-value example "group_operator") (:operator %))
-                                   (= (example-value example "first_result") (str (:first %)))
-                                   (= (example-value example "second_result") (str (:second %))))
-                             (:truthGroups observation)))]
-      (assert-example! (example-value example "consequence_behavior") (:behavior row) "consequence_behavior" example))
-
-    (example-value example "currency_value")
-    (let [row (first (filter #(and (= (example-value example "group_operator") (:operator %))
-                                   (= (example-value example "page_type_value") (:page_type %))
-                                   (= (example-value example "currency_value") (:currency %)))
-                             (:groups observation)))]
-      (assert-example! (example-value example "invocation_count") (str (:invocationCount row)) "invocation_count" example)
-      (assert-example! (example-value example "rule_result") (:result row) "rule_result" example)))
+  (some (fn [[key validation]]
+          (when (example-value example key)
+            (validate-row-example! example observation validation)
+            true))
+        example-validators)
   observation)
 
 (defn- transition [world example _captures _spec]
