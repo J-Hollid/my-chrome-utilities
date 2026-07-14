@@ -1,3 +1,4 @@
+import { createSchemaWorkingDraft } from "./data-layer-schema-verification.js";
 function clone(value) { return structuredClone(value); }
 function normalizePath(path) {
     const segments = path.trim().split("/").filter(Boolean);
@@ -40,16 +41,28 @@ function semanticallyEquivalent(left, right) {
     return JSON.stringify(semanticConfiguration(left)) === JSON.stringify(semanticConfiguration(right));
 }
 function sourceRule(input) {
+    if (input.editorContext === "read-only")
+        return undefined;
     const path = normalizePath(input.propertyPath);
-    return input.schema.workingDraft?.attachedRules?.find((rule) => rule.id === input.sourceRuleId && normalizePath(rule.propertyPath ?? "") === path);
+    const matchingRule = (rules) => rules?.find((rule) => rule.id === input.sourceRuleId && normalizePath(rule.propertyPath ?? "") === path);
+    const draftRule = matchingRule(input.schema.workingDraft?.attachedRules);
+    if (draftRule)
+        return { rule: draftRule, origin: "working-draft" };
+    if (input.schema.workingDraft)
+        return undefined;
+    const currentRule = matchingRule(input.schema.attachedRules);
+    if (!currentRule)
+        return undefined;
+    return {
+        rule: currentRule,
+        origin: input.editorContext === "new-schema" ? "new-schema" : "current-revision",
+    };
 }
 export function localRulePromotionAvailability(input) {
-    if (!input.schema.workingDraft)
-        return { available: false, reason: "Only working-draft rules can be promoted" };
     const source = sourceRule(input);
     if (!source)
         return { available: false, reason: "The local rule is no longer attached at this property path" };
-    if (input.reusableRules.some(({ id }) => id === source.id))
+    if (input.reusableRules.some(({ id }) => id === source.rule.id))
         return { available: false, reason: "The attachment already refers to a reusable rule" };
     return { available: true };
 }
@@ -57,12 +70,14 @@ export function reviewLocalRulePromotion(input) {
     const availability = localRulePromotionAvailability(input);
     if (!availability.available)
         throw new Error(availability.reason);
-    const rule = sourceRule(input);
+    const source = sourceRule(input);
+    const rule = source.rule;
     return {
         source: {
             schema: { id: input.schema.id, name: input.schema.name, version: input.schema.version },
             propertyPath: normalizePath(input.propertyPath),
             rule: configuredRule(rule),
+            ...(source.origin === "current-revision" ? { createsWorkingDraft: true } : {}),
         },
         equivalentRules: input.reusableRules.filter((candidate) => semanticallyEquivalent(rule, candidate)).map(clone),
         reusableRules: input.reusableRules.map(clone),
@@ -131,14 +146,19 @@ export function promoteLocalRule(input) {
             ...reusableConfiguration(source),
             ...(input.description?.trim() ? { description: input.description.trim() } : {}),
             ...(input.examples?.trim() ? { examples: input.examples.trim() } : {}),
-            attachments: [input.schema.id],
+            attachments: input.editorContext === "new-schema" ? [] : [input.schema.id],
             revisionHistory: [],
         };
         reusableRules.push(destination);
     }
-    const workingDraft = clone(input.schema.workingDraft);
+    const resolved = sourceRule(input);
+    const editableSchema = resolved.origin === "current-revision"
+        ? createSchemaWorkingDraft(input.schema)
+        : clone(input.schema);
+    const workingDraft = editableSchema.workingDraft ? clone(editableSchema.workingDraft) : undefined;
+    const sourceAttachments = workingDraft?.attachedRules ?? editableSchema.attachedRules ?? [];
     let replaced = false;
-    const attachedRules = (workingDraft.attachedRules ?? []).map((candidate) => {
+    const attachedRules = sourceAttachments.map((candidate) => {
         if (candidate.id !== input.sourceRuleId || normalizePath(candidate.propertyPath ?? "") !== review.source.propertyPath)
             return clone(candidate);
         replaced = true;
@@ -147,9 +167,17 @@ export function promoteLocalRule(input) {
     if (!replaced)
         throw new Error("The local rule is no longer attached at this property path.");
     const pendingChange = `Promote local rule ${source.id} to reusable rule ${destination.id}`;
+    if (!workingDraft) {
+        return {
+            schema: { ...editableSchema, attachedRules },
+            reusableRules,
+            changed: true,
+            replacementRuleId: destination.id,
+        };
+    }
     return {
         schema: {
-            ...clone(input.schema),
+            ...editableSchema,
             workingDraft: { ...workingDraft, attachedRules, pendingChanges: [...workingDraft.pendingChanges, pendingChange] },
         },
         reusableRules,

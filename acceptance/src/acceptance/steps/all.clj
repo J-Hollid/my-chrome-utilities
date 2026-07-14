@@ -25,6 +25,7 @@
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
+            [acceptance.steps.local-rule-promotion-availability :as local-rule-promotion-availability]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
@@ -64,6 +65,7 @@
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
                local-rule-promotion/handlers
+               local-rule-promotion-availability/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
