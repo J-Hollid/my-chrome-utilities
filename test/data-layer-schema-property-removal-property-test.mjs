@@ -132,6 +132,34 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(propertyAt(pruned, ["root", branch]), undefined, "an empty manual ancestor must be pruned");
   assert.deepEqual(pruned.properties.root.required, [], "pruning must remove the deleted manual ancestor's required reference");
   assert.deepEqual(pruned.required, ["root"], "pruning must retain references to observed ancestors that remain present");
+
+  const arrayDocument = {
+    type:"object",
+    required:["items"],
+    properties:{
+      items:{
+        type:"array",
+        items:{
+          type:"object",
+          required:[leaf, sibling],
+          properties:{
+            [leaf]:{ type:"number", propertyOrigin:"manual" },
+            [sibling]:{ type:"string" },
+          },
+        },
+      },
+    },
+  };
+  const arrayLeafPath = `/items/*/${leaf}`;
+  assert.deepEqual(
+    inspectSchemaPropertyRemoval(arrayDocument, [], "/items").descendants,
+    ["/items/*", `/items/*/${leaf}`, `/items/*/${sibling}`],
+    "inspection must enumerate item schemas and their property descendants",
+  );
+  const arrayLeafRemoved = removeSchemaProperty(arrayDocument, [], arrayLeafPath).document;
+  assert.equal(arrayLeafRemoved.properties.items.items.properties[leaf], undefined);
+  assert.deepEqual(arrayLeafRemoved.properties.items.items.required, [sibling]);
+  assert.deepEqual(arrayLeafRemoved.required, ["items"]);
 }
 
 console.log("schema property removal properties: 200 generated cases passed");
