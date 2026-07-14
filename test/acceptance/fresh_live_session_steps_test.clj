@@ -39,4 +39,10 @@
             :rendered ["purchase"]}})
 
 (deftest accepts-a-complete-fresh-session-browser-observation
-  (is (nil? (#'fresh-live-session/assert-observation! valid-observation))))
+  (is (nil? (#'fresh-live-session/assert-observation! valid-observation)))
+  (is (nil? (#'fresh-live-session/assert-observation!
+             {:event_count "0" :save_state "nothing to save"}
+             valid-observation)))
+  (is (nil? (#'fresh-live-session/assert-observation!
+             {:event_count "12" :save_state "all saved"}
+             valid-observation))))
