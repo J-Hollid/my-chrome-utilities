@@ -15,7 +15,8 @@
                        "/oOrder/aProducts/*"
                        "/oOrder/aProducts/*/pricing/amount"
                        "/orders/*/items/*/sku"
-                       "/oOrder/aProducts/1/sku"]}
+                       "/oOrder/aProducts/1/sku"
+                       "/oOrder/a~1b/~0name"]}
    :layout {:actionsSeparate true :noOverflow true :actionWidths [44 52 80]}
    :search {:open ["/oOrder"
                    "/oOrder/aProducts"
@@ -59,3 +60,11 @@
 
 (deftest accepts-a-complete-recursive-property-browser-observation
   (is (nil? (#'recursive/assert-observation! valid-observation))))
+
+(deftest recognizes-only-canonical-scenario-outline-rows
+  (is (#'recursive/canonical-example-rows
+       {"surface" "Live event inspector"}))
+  (is (#'recursive/canonical-example?
+       {:surface "Live event inspector"}))
+  (is (not (#'recursive/canonical-example-rows
+            {"surface" "Live event inspectoR"}))))

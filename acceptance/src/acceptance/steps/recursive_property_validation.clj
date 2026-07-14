@@ -1,5 +1,6 @@
 (ns acceptance.steps.recursive-property-validation
   (:require [acceptance.steps.support :as support]
+            [aps.gherkin :as gherkin]
             [clojure.string :as str]))
 
 (def feature-files
@@ -11,6 +12,16 @@
   #{"captured event order_complete contains object oOrder"
     "captured event order_complete is open in the Live event inspector"
     "Add validation was started from event property /oOrder/aProducts/*/sku"})
+
+(def ^:private canonical-example-rows
+  (->> feature-files
+       (mapcat (fn [feature-file]
+                 (mapcat :examples (:scenarios (gherkin/parse-file feature-file)))))
+       set))
+
+(defn- canonical-example? [example]
+  (canonical-example-rows
+   (into {} (map (fn [[key value]] [(name key) value])) example)))
 
 (defonce ^:private observation (atom nil))
 
@@ -37,19 +48,21 @@
        (get-in observed [:hierarchy :empty])])
    "Recursive property hierarchy changed." observed)
   (support/assert!
-   (every? (set (get-in observed [:hierarchy :paths]))
-           ["/oOrder" "/oOrder/aProducts" "/oOrder/aProducts/*"
-            "/oOrder/aProducts/*/pricing/amount" "/orders/*/items/*/sku"
-            "/oOrder/aProducts/1/sku"])
+   (let [paths (get-in observed [:hierarchy :paths])]
+     (and (every? (set paths)
+                  ["/oOrder" "/oOrder/aProducts" "/oOrder/aProducts/*"
+                   "/oOrder/aProducts/*/pricing/amount" "/orders/*/items/*/sku"
+                   "/oOrder/aProducts/1/sku" "/oOrder/a~1b/~0name"])
+          (not-any? #{"/oOrder/a/b" "/oOrder/a/b/~name"} paths)))
    "Recursive technical paths are incomplete." observed)
   (support/assert!
    (= [true true true true true]
       [(get-in observed [:layout :actionsSeparate])
        (get-in observed [:layout :noOverflow])
        (every? #(>= % 44) (get-in observed [:layout :actionWidths]))
-       (every? (set (get-in observed [:search :open]))
-               ["/oOrder" "/oOrder/aProducts" "/oOrder/aProducts/*"
-                "/oOrder/aProducts/*/pricing"])
+       (= ["/oOrder" "/oOrder/aProducts" "/oOrder/aProducts/*"
+           "/oOrder/aProducts/*/pricing"]
+          (get-in observed [:search :open]))
        (= ["/oOrder"] (get-in observed [:search :restored]))])
    "Search or narrow layout behavior changed." observed)
   (support/assert!
@@ -117,7 +130,10 @@
        (get-in observed [:target :slashEscaped])])
    "Slash-path normalization changed." observed))
 
-(defn- transition [world _example _captures {:keys [text]}]
+(defn- transition [world example _captures {:keys [text]}]
+  (support/assert! (or (empty? example) (canonical-example? example))
+                   "Scenario outline values do not match a supported behavior row."
+                   {:step text :example example})
   (let [world (if (entry-steps text)
                 (assoc world :recursive-property-validation (observation!))
                 world)
@@ -135,3 +151,7 @@
            :handler (fn [world example captures]
                       (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:26:27.959663486+02:00", :module-hash "1331680655", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1599784536"} {:id "def/feature-files", :kind "def", :line 6, :end-line nil, :hash "1775874140"} {:id "def/entry-steps", :kind "def", :line 11, :end-line nil, :hash "930167089"} {:id "def/canonical-example-rows", :kind "def", :line 16, :end-line nil, :hash "-978946583"} {:id "defn-/canonical-example?", :kind "defn-", :line 22, :end-line nil, :hash "-923902321"} {:id "form/5/defonce", :kind "defonce", :line 26, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 28, :end-line nil, :hash "-2006733646"} {:id "defn-/observation!", :kind "defn-", :line 36, :end-line nil, :hash "-775394783"} {:id "defn-/assert-observation!", :kind "defn-", :line 38, :end-line nil, :hash "586752416"} {:id "defn-/transition", :kind "defn-", :line 133, :end-line nil, :hash "1561573305"} {:id "def/handlers", :kind "def", :line 145, :end-line nil, :hash "-801819168"}]}
+;; clj-mutate-manifest-end
