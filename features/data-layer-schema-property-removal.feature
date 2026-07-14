@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=513cf158946ebd7146650c8df1b62fed2b2dc21a5bff49bc7b747e2e5353e3d2
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T07:57:17.333799548Z","feature_name":"Data layer schema property removal","feature_path":"features/data-layer-schema-property-removal.feature","background_hash":"4055b373c09d05f3adc87a79090b14759b2da70a6c43d55203020e5e6357dd42","implementation_hash":"sha256:a2d2e6a1f196595e58b3fb780d774b8918b9f1e195947ec5239c611c46b820b8","scenarios":[{"index":4,"name":"Data layer schema property removal 005","scenario_hash":"f935ac06a4bda562478e16856c02554d51d6f3e1d1dece08358f90665863edcd","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:57:17.333799548Z"},{"index":6,"name":"Data layer schema property removal 007","scenario_hash":"65bee62590aaca951f35d78fe53570891c851c2a0453ea1ec47cdd3c9dae000a","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:57:17.333799548Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property removal
 
   Background:

@@ -44,4 +44,22 @@
             :version 3}}})
 
 (deftest accepts-a-complete-property-removal-browser-observation
-  (is (nil? (#'schema-property-removal/assert-observation! valid-observation))))
+  (is (nil? (#'schema-property-removal/assert-observation! valid-observation)))
+  (doseq [example [{:removed_property "/commerce/order/id"
+                    :ancestor "/commerce/order"
+                    :ancestor_origin "manual"
+                    :ancestor_outcome "removed from the working draft"}
+                   {:removed_property "/commerce/order/id"
+                    :ancestor "/commerce"
+                    :ancestor_origin "observed"
+                    :ancestor_outcome "retained in the working draft"}
+                   {:removed_property "/debug"
+                    :tree_order "before /items"
+                    :focus_destination "/items"}
+                   {:removed_property "/items"
+                    :tree_order "after /debug"
+                    :focus_destination "/debug"}
+                   {:removed_property "/page_type"
+                    :tree_order "only property"
+                    :focus_destination "Add property"}]]
+    (is (nil? (#'schema-property-removal/assert-observation! example valid-observation)))))

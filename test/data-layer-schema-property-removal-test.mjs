@@ -70,3 +70,38 @@ assert.ok(lastManualLeaf.document.properties.commerce, "observed empty ancestors
 const lastProperty = removeSchemaProperty({ type:"object", required:["page_type"], properties:{ page_type:{ type:"string" } } }, [], "/page_type");
 assert.deepEqual(lastProperty.document.properties, {});
 assert.deepEqual(lastProperty.document.required, []);
+
+const arrayDocument = {
+  type:"object",
+  required:["products"],
+  properties:{
+    products:{
+      type:"array",
+      items:{
+        type:"object",
+        required:["id", "name"],
+        properties:{ id:{ type:"number" }, name:{ type:"string" } },
+      },
+    },
+  },
+};
+assert.deepEqual(inspectSchemaPropertyRemoval(arrayDocument, [], "/products").descendants, [
+  "/products/*",
+  "/products/*/id",
+  "/products/*/name",
+]);
+const arrayLeafRemoval = removeSchemaProperty(arrayDocument, [], "/products/*/id");
+assert.equal(arrayLeafRemoval.document.properties.products.items.properties.id, undefined);
+assert.deepEqual(arrayLeafRemoval.document.properties.products.items.required, ["name"]);
+assert.deepEqual(arrayLeafRemoval.document.required, ["products"]);
+
+const manualLeaf = {
+  type:"object",
+  required:["debug"],
+  properties:{ debug:{ type:"string", propertyOrigin:"manual" } },
+};
+assert.deepEqual(
+  removeSchemaProperty(manualLeaf, [], "/debug/missing").document,
+  manualLeaf,
+  "a missing descendant must not prune an unchanged manual leaf",
+);
