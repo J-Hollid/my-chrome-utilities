@@ -107,7 +107,10 @@ assert.equal(twoChangeDraft.version, 3);
 assert.equal(twoChangeDraft.id, "schema-product-listing");
 assert.equal(twoChangeDraft.document.properties.page_type, undefined);
 assert.deepEqual(twoChangeDraft.workingDraft.pendingChanges, ["Add page_type rule", "Add page_name rule"]);
-assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([twoChangeDraft]))[0].workingDraft, twoChangeDraft.workingDraft);
+assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([twoChangeDraft]))[0].workingDraft, {
+  ...twoChangeDraft.workingDraft,
+  attachedRules:[{ ...twoChangeDraft.workingDraft.attachedRules[0], propertyPath:"/page_type", parameters:"product,listing" }],
+});
 
 const inheritedProduct = {
   ...stableProduct,

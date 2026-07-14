@@ -54,6 +54,55 @@ function schemaSlug(name: string): string { return name.toLowerCase().replace(/[
 function schemaId(name: string, version: number): string { return `schema:${schemaSlug(name)}:${version}`; }
 function stableSchemaId(name: string): string { return `schema-${schemaSlug(name)}`; }
 
+function canonicalAttachedRulePath(path: string): string {
+  return `/${path.trim().replaceAll(".", "/").split("/").filter(Boolean).join("/")}`;
+}
+
+function documentContainsPath(document: JsonSchema, path: string): boolean {
+  let current: JsonSchema | undefined = document;
+  for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {
+    current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
+    if (!current) return false;
+  }
+  return true;
+}
+
+function exactLegacyParameterPrefix(parameters: string, propertyPath: string): string | undefined {
+  const canonical = canonicalAttachedRulePath(propertyPath);
+  const alternatives = new Set([canonical, canonical.slice(1), propertyPath.trim()]);
+  return [...alternatives].find((candidate) => parameters.startsWith(`${candidate}:`));
+}
+
+function effectiveAttachedRule(rule: AttachedSchemaRule, document?: JsonSchema): AttachedSchemaRule {
+  let propertyPath = rule.propertyPath ? canonicalAttachedRulePath(rule.propertyPath) : undefined;
+  let parameters = rule.parameters;
+  if (!propertyPath && parameters && document) {
+    const separator = parameters.indexOf(":");
+    const legacyTarget = separator > 0 ? parameters.slice(0, separator).trim() : "";
+    if (legacyTarget && documentContainsPath(document, legacyTarget)) propertyPath = canonicalAttachedRulePath(legacyTarget);
+  }
+  if (propertyPath && parameters !== undefined) {
+    const prefix = exactLegacyParameterPrefix(parameters, propertyPath);
+    if (prefix) parameters = parameters.slice(prefix.length + 1);
+    if (rule.operator?.replaceAll("_", "-").toLowerCase() === "required"
+      && canonicalAttachedRulePath(parameters) === propertyPath) parameters = undefined;
+  }
+  const { propertyPath:_propertyPath, parameters:_parameters, ...rest } = rule;
+  return {
+    ...rest,
+    ...(propertyPath ? { propertyPath } : {}),
+    ...(parameters !== undefined ? { parameters } : {}),
+  };
+}
+
+function canonicalSchemaRules(schema: SchemaDefinition): SchemaDefinition {
+  const normalized = clone(schema);
+  if (normalized.attachedRules) normalized.attachedRules = normalized.attachedRules.map((rule) => effectiveAttachedRule(rule, normalized.document));
+  if (normalized.workingDraft?.attachedRules) normalized.workingDraft.attachedRules = normalized.workingDraft.attachedRules.map((rule) => effectiveAttachedRule(rule, normalized.workingDraft?.document));
+  if (normalized.revisionHistory) normalized.revisionHistory = normalized.revisionHistory.map(canonicalSchemaRules);
+  return normalized;
+}
+
 function schemaSnapshot(schema: SchemaDefinition): SchemaDefinition {
   const { revisionHistory: _history, workingDraft: _draft, ...snapshot } = clone(schema);
   return snapshot;
@@ -71,8 +120,8 @@ function assignmentForSchema(assignment: SchemaAssignment, id: string): SchemaAs
 export function createSchema(name: string, version: number, document: JsonSchema): SchemaDefinition {
   return { id: schemaId(name, version), name, version, document: clone(document), assignments: [] };
 }
-export function importSchema(serialized: string): SchemaDefinition { return clone(JSON.parse(serialized) as SchemaDefinition); }
-export function exportSchema(schema: SchemaDefinition): string { return JSON.stringify(schema); }
+export function importSchema(serialized: string): SchemaDefinition { return canonicalSchemaRules(JSON.parse(serialized) as SchemaDefinition); }
+export function exportSchema(schema: SchemaDefinition): string { return JSON.stringify(canonicalSchemaRules(schema)); }
 export function assignSchema(schema: SchemaDefinition, assignment: SchemaAssignment): SchemaDefinition {
   return { ...schema, assignments: [...schema.assignments.filter((item) => !(item.sourceId === assignment.sourceId && item.eventName === assignment.eventName && item.target === assignment.target)), clone(assignment)] };
 }
@@ -218,18 +267,18 @@ export function resolveSchemaAssignment(
 }
 
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
-export function serializeSchemaLibrary(schemas: readonly SchemaDefinition[]): string { return JSON.stringify(schemas); }
+export function serializeSchemaLibrary(schemas: readonly SchemaDefinition[]): string { return JSON.stringify(schemas.map(canonicalSchemaRules)); }
 export interface SchemaLibraryExport<TRule> { version: 1; schemas: SchemaDefinition[]; rules: TRule[]; }
 export function schemaLibraryExportIdentitySnapshot<T extends { id: string }>(items: readonly T[]): string[] { return items.map(({ id }) => id); }
 export function createSchemaLibraryExport<TRule>(schemas: readonly SchemaDefinition[], rules: readonly TRule[]): SchemaLibraryExport<TRule> {
-  return { version:1, schemas:schemas.map(clone), rules:rules.map(clone) };
+  return { version:1, schemas:schemas.map(canonicalSchemaRules), rules:rules.map(clone) };
 }
 export function serializeSchemaLibraryExport<TRule>(schemas: readonly SchemaDefinition[], rules: readonly TRule[]): string { return `${JSON.stringify(createSchemaLibraryExport(schemas, rules), null, 2)}\n`; }
 export function migrateSchemaLibrary(schemas: readonly SchemaDefinition[]): SchemaDefinition[] {
   const groups = new Map<string, SchemaDefinition[]>();
   for (const schema of schemas) {
     const key = schema.name.trim().toLowerCase();
-    groups.set(key, [...(groups.get(key) ?? []), clone(schema)]);
+    groups.set(key, [...(groups.get(key) ?? []), canonicalSchemaRules(schema)]);
   }
   return [...groups.values()].map((group) => {
     if (group.length === 1) return group[0] as SchemaDefinition;
@@ -336,13 +385,23 @@ function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): P
 }
 
 function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: ValidationIssue[], rules = schema.attachedRules ?? []): void {
-  for (const rule of rules) {
+  for (const storedRule of rules) {
+    const rule = effectiveAttachedRule(storedRule, schema.document);
     if (rule.enabled === false) continue;
     if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) continue;
     if (rule.propertyPath?.startsWith("/")) {
       for (const match of resolveNestedValues(value, rule.propertyPath)) {
         const failure = nestedRuleFailure(rule, match);
-        if (failure) result.push(issueFromAttachedRule(rule, schema, { instancePath:match.concretePath, templatePath:match.templatePath, ...failure }));
+        if (failure) {
+          const allowedValues = rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values"
+            ? rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []
+            : [];
+          result.push(issueFromAttachedRule(rule, schema, {
+            instancePath:match.concretePath,
+            ...(storedRule.propertyPath?.startsWith("/") || match.templatePath.includes("*") ? { templatePath:match.templatePath } : {}),
+            ...failure,
+          }, allowedValues));
+        }
       }
       continue;
     }
@@ -371,7 +430,8 @@ function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, s
 }
 
 function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
-  return rules.filter(({ enabled }) => enabled !== false).flatMap<ValidationEvaluation>((rule): ValidationEvaluation[] => {
+  return rules.filter(({ enabled }) => enabled !== false).flatMap<ValidationEvaluation>((storedRule): ValidationEvaluation[] => {
+    const rule = effectiveAttachedRule(storedRule, schema.document);
     if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) {
       const summary = rule.propertyPath && rule.operator
         ? conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath, operator:rule.operator, ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } })
@@ -388,6 +448,40 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
         schemaName:schema.name,
         schemaVersion:schema.version,
       }];
+    }
+    if (rule.propertyPath?.startsWith("/")) {
+      return resolveNestedValues(value, rule.propertyPath).map((match): ValidationEvaluation => {
+        const failure = nestedRuleFailure(rule, match);
+        if (!failure) return {
+          propertyPath:match.concretePath,
+          status:"pass",
+          message:rule.message ?? `${rule.name ?? rule.id} passed`,
+          expected:rule.parameters ?? "rule satisfied",
+          actual:match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing",
+          rule:rule.name ?? rule.id,
+          ruleVersion:rule.version,
+          severity:rule.severity ?? "error",
+          schemaName:schema.name,
+          schemaVersion:schema.version,
+        };
+        const issue = issueFromAttachedRule(rule, schema, {
+          instancePath:match.concretePath,
+          ...(storedRule.propertyPath?.startsWith("/") || match.templatePath.includes("*") ? { templatePath:match.templatePath } : {}),
+          ...failure,
+        });
+        return {
+          propertyPath:issue.instancePath,
+          status:issue.severity === "warning" ? "warning" : "error",
+          message:issue.message,
+          expected:issue.expected,
+          actual:issue.actual,
+          rule:rule.name ?? rule.id,
+          ruleVersion:rule.version,
+          severity:issue.severity ?? "error",
+          schemaName:schema.name,
+          schemaVersion:schema.version,
+        };
+      });
     }
     const issues: ValidationIssue[] = [];
     attachedRuleIssues(value, schema, issues, [rule]);
