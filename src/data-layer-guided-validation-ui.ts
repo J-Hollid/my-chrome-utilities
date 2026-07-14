@@ -1,6 +1,7 @@
 import {
   addAllowedValue,
   applyGuidedSchemaCandidate,
+  assignmentConfigurationRequired,
   advanceGuidedValidation,
   backGuidedValidation,
   compatibleRequirements,
@@ -144,12 +145,6 @@ export function createGuidedValidationFlow(
         if (!result.valid) return [{ id:"guided-new-schema-name", message:result.assistance }];
       }
       if (draft.destination.kind === "existing" && !draft.destination.schemaId) return [{ id:"guided-existing-schemas", message:"Choose an available existing schema" }];
-      if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
-        return [{ id:"guided-compatible-assignments", message:"Choose a compatible assignment" }];
-      }
-    }
-    if (draft.continuation && draft.stage === "requirement" && draft.assignmentResolution?.selection === "required from readable assignment choices") {
-      return [{ id:"guided-compatible-assignments", message:"Choose a compatible assignment" }];
     }
     return [];
   }
@@ -295,8 +290,12 @@ export function createGuidedValidationFlow(
   function renderScopeStage(container: HTMLElement): void {
     if (!draft) return;
     const prefill = element("fieldset"); prefill.id = "guided-routing-prefills"; prefill.append(element("legend", "Event and assignment values"));
+    const assignmentName = labelledInput("guided-assignment-name", "Assignment name", draft.advanced.assignmentName, "Name the reviewed assignment configuration.");
+    assignmentName.input.addEventListener("change", () => setDraft({ ...draft!, advanced:{ ...draft!.advanced, assignmentName:assignmentName.input.value } }, "Assignment name updated."));
     const domain = labelledInput("guided-scope-domain", "Domain", draft.scope.domain, draft.prefillSources.domain);
     domain.input.addEventListener("change", () => setDraft(setGuidedScope(draft!, { ...draft!.scope, domain:domain.input.value }), "Domain updated."));
+    const pathname = labelledInput("guided-scope-pathname", "Pathname", draft.scope.pathname, draft.prefillSources.pathname);
+    pathname.input.addEventListener("change", () => setDraft(setGuidedScope(draft!, { ...draft!.scope, pathname:pathname.input.value }), "Pathname updated."));
     const eventName = labelledInput("guided-scope-event", "Event name", draft.event.name, draft.prefillSources.eventName);
     eventName.input.addEventListener("change", () => {
       const { eventName: _source, ...prefillSources } = draft!.prefillSources;
@@ -313,7 +312,7 @@ export function createGuidedValidationFlow(
       const value = target.input.value === "raw input" ? "raw input" : "payload";
       setDraft({ ...draft!, advanced:{ ...draft!.advanced, target:value }, prefillSources }, "Validation target updated.");
     });
-    prefill.append(domain.wrapper, eventName.wrapper, source.wrapper, target.wrapper);
+    prefill.append(assignmentName.wrapper, domain.wrapper, pathname.wrapper, eventName.wrapper, source.wrapper, target.wrapper);
     const choices = element("fieldset"); choices.append(element("legend", "Where should this validation apply?"));
     for (const [kind, labelText] of Object.entries(scopeLabels) as [GuidedScopeKind, string][]) {
       const label = element("label"); const input = element("input"); input.type = "radio"; input.name = "guided-scope"; input.value = kind; input.checked = draft.scope.kind === kind; input.addEventListener("change", () => updateScope(kind)); label.append(input, ` ${labelText}`); choices.append(label);
@@ -374,7 +373,6 @@ export function createGuidedValidationFlow(
       summary.append(change); container.append(summary);
     }
 
-    renderCompatibleAssignments(container);
     renderPrefillReplacementReview(container);
     if (schemaPickerOpen) {
       renderGuidedSchemaPicker({
@@ -390,7 +388,11 @@ export function createGuidedValidationFlow(
   }
 
   function renderCompatibleAssignments(container: HTMLElement): void {
-    if (!draft || draft.assignmentResolution?.selection !== "required from readable assignment choices") return;
+    if (
+      !draft ||
+      !assignmentConfigurationRequired(draft) ||
+      draft.assignmentResolution?.selection !== "required from readable assignment choices"
+    ) return;
     const candidates = effects.schemaCandidates();
     const assignments = element("fieldset"); assignments.id = "guided-compatible-assignments"; assignments.append(element("legend", "Choose a compatible assignment"));
     for (const [index, assignment] of draft.assignmentResolution.compatibleAssignments.entries()) {

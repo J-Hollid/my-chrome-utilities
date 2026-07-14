@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   addAllowedValue,
   applyGuidedSchemaCandidate,
+  assignmentConfigurationRequired,
+  assignmentDraftAfterGuidedSave,
+  assignmentGuidedAction,
   assignmentScopeSummary,
   advanceGuidedValidation,
   compatibleRequirements,
@@ -11,6 +14,7 @@ import {
   createGuidedValidationForProperty,
   guidedValidationStages,
   guidedAssignmentsMatch,
+  guidedAssignmentCoversEvent,
   pathConditionResult,
   pathConditionsResult,
   publishGuidedValidation,
@@ -37,6 +41,87 @@ const event = {
   pageUrl:"http://127.0.0.1:4173/",
   payload:{ page_type:"product_list", count:2, active:true, products:[], commerce:{} },
 };
+const orderEvent = {
+  id:"event:order-complete",
+  name:"order_complete",
+  sourceId:"event-history",
+  pageUrl:"https://shop.example/orders/confirmed",
+  payload:{ order_id:"ORDER-1", currency:"EUR", value:42 },
+};
+const orderAssignment = {
+  id:"assignment:orders",
+  name:"shop order pages",
+  sourceId:"event-history",
+  eventName:"order_complete",
+  target:"payload",
+  domainCondition:"*.example",
+  pathnameCondition:"/orders/*",
+  priority:250,
+  versionPolicy:"follow latest",
+  enabled:true,
+};
+assert.equal(guidedAssignmentCoversEvent(orderAssignment, orderEvent, "payload"), true);
+assert.equal(guidedAssignmentCoversEvent({ ...orderAssignment, pathnameCondition:"/products/*" }, orderEvent, "payload"), false);
+assert.equal(guidedAssignmentCoversEvent({ ...orderAssignment, enabled:false }, orderEvent, "payload"), false);
+
+const orderPropertyDraft = setGuidedRequirement(
+  createGuidedValidationForProperty(orderEvent, "order_id"),
+  "Must be present",
+);
+const orderSchema = {
+  id:"schema-order-completed",
+  name:"Order completed",
+  version:3,
+  target:"payload",
+  propertyTypes:{},
+  assignments:[orderAssignment],
+};
+const coveredOrderDraft = applyGuidedSchemaCandidate(orderPropertyDraft, orderSchema);
+assert.equal(assignmentConfigurationRequired(coveredOrderDraft), false);
+assert.ok(!guidedValidationStages(coveredOrderDraft).includes("scope"));
+assert.equal(coveredOrderDraft.assignmentResolution.coveringAssignments.length, 1);
+assert.equal(assignmentGuidedAction(coveredOrderDraft), "reuse the covering assignment");
+const coveredOrderReview = advanceGuidedValidation(advanceGuidedValidation(coveredOrderDraft));
+assert.equal(coveredOrderReview.stage, "review");
+assert.equal(publishGuidedValidation(coveredOrderReview, false).destination.assignmentAction, "reuse the covering assignment");
+
+const uncoveredOrderDraft = applyGuidedSchemaCandidate(orderPropertyDraft, {
+  ...orderSchema,
+  assignments:[{ ...orderAssignment, pathnameCondition:"/products/*" }],
+});
+assert.equal(assignmentConfigurationRequired(uncoveredOrderDraft), true);
+assert.ok(guidedValidationStages(uncoveredOrderDraft).includes("scope"));
+assert.equal(assignmentGuidedAction(uncoveredOrderDraft), "add the reviewed assignment as a pending change");
+
+const twoCoveringOrderDraft = applyGuidedSchemaCandidate(orderPropertyDraft, {
+  ...orderSchema,
+  assignments:[
+    orderAssignment,
+    { ...orderAssignment, id:"assignment:orders-secondary", name:"secondary order coverage", priority:100 },
+  ],
+});
+assert.equal(assignmentConfigurationRequired(twoCoveringOrderDraft), false);
+assert.equal(twoCoveringOrderDraft.assignmentResolution.coveringAssignments.length, 2);
+assert.equal(assignmentGuidedAction(twoCoveringOrderDraft), "reuse existing schema coverage");
+
+const pendingCoveredOrderDraft = applyGuidedSchemaCandidate(orderPropertyDraft, {
+  ...orderSchema,
+  assignments:[{ ...orderAssignment, pending:true }],
+});
+assert.equal(assignmentGuidedAction(pendingCoveredOrderDraft), "reuse the covering pending assignment");
+const preservedAssignments = assignmentDraftAfterGuidedSave(
+  [orderAssignment],
+  { ...orderAssignment, id:"assignment:replacement", name:"replacement" },
+  "reuse the covering pending assignment",
+);
+assert.deepEqual(preservedAssignments, [orderAssignment]);
+assert.equal(preservedAssignments[0].priority, 250);
+assert.equal(preservedAssignments[0].versionPolicy, "follow latest");
+assert.equal(assignmentDraftAfterGuidedSave(
+  [orderAssignment],
+  { ...orderAssignment, id:"assignment:confirmed", name:"confirmed orders", pathnameCondition:"/confirmed/*" },
+  "add the reviewed assignment as a pending change",
+).length, 2);
 const propertyEntry = createGuidedValidationForProperty({ ...event, payload:{ oOrder:{ orderId:"ORDER-1", products:[{ sku:"A" }, { sku:"B" }] } } }, "/oOrder/products/*/sku");
 assert.equal(propertyEntry.stage, "destination"); assert.equal(propertyEntry.property.path, "/oOrder/products/*/sku"); assert.equal(propertyEntry.property.detectedType, "String"); assert.equal(propertyEntry.property.observedValue, "A"); assert.ok(!guidedValidationStages(propertyEntry).includes("property"));
 const retargetedEntry = retargetGuidedValidation(propertyEntry, '$["oOrder"]["products"][*]["missing"]', "Number");
@@ -71,7 +156,7 @@ const continuationCandidate = {
 const continuation = createGuidedContinuationDraft(event, continuationCandidate);
 assert.equal(continuation.stage, "property");
 assert.deepEqual(continuation.continuation, { schemaId:"schema-product-listing", schemaName:"Product listing", schemaVersion:3 });
-assert.deepEqual(guidedValidationStages(continuation), ["property", "requirement", "scope", "review"]);
+assert.deepEqual(guidedValidationStages(continuation), ["property", "requirement", "review"]);
 assert.equal(continuation.destination.schemaId, "schema-product-listing");
 assert.equal(continuation.assignmentResolution.selection, "the compatible assignment");
 assert.equal(continuation.prefillSources.target, "Product listing version 3");
@@ -89,8 +174,9 @@ const twoAssignments = [
 ];
 const ambiguousCandidate = { ...continuationCandidate, assignments:twoAssignments };
 const ambiguousContinuation = selectGuidedContinuationProperty(createGuidedContinuationDraft(event, ambiguousCandidate), "page_name", ambiguousCandidate);
-assert.equal(ambiguousContinuation.assignmentResolution.selection, "required from readable assignment choices");
+assert.equal(ambiguousContinuation.assignmentResolution.selection, "the compatible assignment");
 assert.deepEqual(ambiguousContinuation.assignmentResolution.compatibleAssignments.map(({ name }) => name), ["Product pages", "Alternate product pages"]);
+assert.deepEqual(ambiguousContinuation.assignmentResolution.coveringAssignments.map(({ name }) => name), ["Product pages"]);
 assert.equal(advanceGuidedValidation(ambiguousContinuation).stage, "requirement");
 assert.equal(initial.advanced.versionPolicy, "Pinned");
 assert.equal(initial.persisted, false);
@@ -204,8 +290,15 @@ const schemaWithOneAssignment = {
     enabled:true,
   }],
 };
+const shopSelected = selectGuidedProperty(
+  createGuidedValidationDraft({
+    ...event,
+    pageUrl:"https://shop.example/products/field-notebook",
+  }),
+  "page_type",
+);
 const schemaPrefilled = applyGuidedSchemaCandidate(
-  { ...selected, stage:"destination" },
+  { ...shopSelected, stage:"destination" },
   schemaWithOneAssignment,
 );
 assert.equal(schemaPrefilled.assignmentResolution.selection, "the compatible assignment");
@@ -220,24 +313,24 @@ assert.equal(schemaPrefilled.prefillSources.domain, "Generic shop pages assignme
 assert.equal(advanceGuidedValidation(schemaPrefilled).stage, "requirement");
 
 const withoutCompatibleAssignment = applyGuidedSchemaCandidate(
-  { ...selected, stage:"destination" },
+  { ...shopSelected, stage:"destination" },
   { ...schemaWithOneAssignment, assignments:[] },
 );
 assert.equal(withoutCompatibleAssignment.assignmentResolution.selection, "Create a new assignment");
-assert.equal(withoutCompatibleAssignment.scope.domain, "127.0.0.1");
+assert.equal(withoutCompatibleAssignment.scope.domain, "shop.example");
 
 const withTwoCompatibleAssignments = applyGuidedSchemaCandidate(
-  { ...selected, stage:"destination" },
+  { ...shopSelected, stage:"destination" },
   {
     ...schemaWithOneAssignment,
     assignments:[
       schemaWithOneAssignment.assignments[0],
-      { ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-home", name:"Generic home", domainCondition:"home.example" },
+      { ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-all", name:"Generic all shops", domainCondition:"*.example" },
     ],
   },
 );
 assert.equal(withTwoCompatibleAssignments.assignmentResolution.selection, "required from readable assignment choices");
-assert.equal(withTwoCompatibleAssignments.scope.domain, "127.0.0.1");
+assert.equal(withTwoCompatibleAssignments.scope.domain, "shop.example");
 
 const operatorScoped = setGuidedScope(schemaPrefilled, {
   ...schemaPrefilled.scope,
@@ -247,15 +340,19 @@ const replacementProposed = applyGuidedSchemaCandidate(operatorScoped, {
   ...schemaWithOneAssignment,
   id:"schema:generic:5",
   version:5,
-  assignments:[{ ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-new", name:"Generic replacement", domainCondition:"replacement.example" }],
+  assignments:[{ ...schemaWithOneAssignment.assignments[0], id:"assignment:generic-new", name:"Generic replacement", domainCondition:"*.example" }],
 });
 assert.equal(replacementProposed.scope.domain, "operator.example");
 assert.deepEqual(replacementProposed.prefillReplacementReview?.map(({ field, currentValue, proposedValue }) => ({ field, currentValue, proposedValue })), [
-  { field:"domain", currentValue:"operator.example", proposedValue:"replacement.example" },
+  { field:"domain", currentValue:"operator.example", proposedValue:"*.example" },
 ]);
 assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "keep").scope.domain, "operator.example");
-assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "accept").scope.domain, "replacement.example");
-const matchedBeforeRoutingEdit = applyGuidedSchemaCandidate({ ...scoped, stage:"destination" }, schemaWithOneAssignment);
+assert.equal(resolveGuidedPrefillReplacement(replacementProposed, "accept").scope.domain, "*.example");
+const matchedBeforeRoutingEdit = applyGuidedSchemaCandidate({
+  ...setGuidedRequirement(shopSelected, "Must be one of these values"),
+  allowedValues:["product_list", "homepage"],
+  stage:"destination",
+}, schemaWithOneAssignment);
 const routingEditedAfterDestination = setGuidedScope(matchedBeforeRoutingEdit, {
   ...matchedBeforeRoutingEdit.scope,
   kind:"current-path",
@@ -296,7 +393,7 @@ assert.equal(local.assignment.eventName, "pageview");
 assert.equal(local.assignment.target, "payload");
 assert.equal(local.assignment.versionPolicy, "pinned");
 assert.equal(local.destination.kind, "existing");
-assert.equal(local.destination.assignmentAction, "reuse the matching enabled assignment");
+assert.equal(local.destination.assignmentAction, "reuse the covering assignment");
 assert.equal(local.schema.version, 3);
 assert.equal(local.schema.id, "schema:listing:3");
 assert.equal(local.schema.pending, true);

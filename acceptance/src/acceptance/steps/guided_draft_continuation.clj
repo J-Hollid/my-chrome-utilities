@@ -33,13 +33,9 @@
              :actions ["Review draft" "Publish revision" "Use a different schema"]
              :sectionCount 1 :genericAbsent true}
    :opened {:context "Adding to Product listing draft"
-            :stages ["Define requirement" "Choose event scope" "Review validation"]}
+            :stages ["Define requirement" "Review validation"]}
    :requirement {:heading "Define requirement" :destinationAbsent true :selectedSchema "schema-product-listing"}
-   :prefill {:target "payload" :targetSource "Product listing version 3"
-             :source "event-history" :sourceSource "Product pages assignment"
-             :domain "127.0.0.1" :domainSource "Product pages assignment"
-             :eventName "pageview" :eventSource "Product pages assignment"
-             :path "/" :pathSource "Product pages assignment" :editable true}
+   :prefill {:configurationAbsent true :selectionAbsent true}
    :review {:name "Product listing" :status "Working draft based on revision 3 · 2 pending changes" :checkoutUnchanged true}
    :publication {:review "Product listing working draft will be compared with current revision 3; confirmation publishes revision 4."
                  :productCurrent 3 :checkoutUnchanged true}

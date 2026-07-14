@@ -217,7 +217,7 @@ import {
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./data-layer-schema-verification.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
-import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
+import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
@@ -1832,7 +1832,15 @@ function guidedSchemaCandidate(schema: SchemaDefinition, continueWorkingDraft = 
       ...(assignment.domainCondition ? { domainCondition:assignment.domainCondition } : {}),
       ...(assignment.pathnameCondition ? { pathnameCondition:assignment.pathnameCondition } : {}),
       ...(assignment.pathConditions ? { pathConditions:assignment.pathConditions } : {}),
+      ...(assignment.priority !== undefined ? { priority:assignment.priority } : {}),
+      ...(assignment.versionPolicy ? { versionPolicy:assignment.versionPolicy } : {}),
       ...(assignment.enabled !== undefined ? { enabled:assignment.enabled } : {}),
+      ...(continueWorkingDraft && !schema.assignments.some((published) =>
+        published.id && assignment.id
+          ? published.id === assignment.id
+          : guidedAssignmentsMatch(published, assignment))
+        ? { pending:true }
+        : {}),
     })),
   };
 }
@@ -1949,7 +1957,7 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
   if (!rule) return;
   const assignment: SchemaAssignment = {
     id:result.assignment.id,
-    name:`${result.schema.name} automatic`,
+    name:result.assignment.name,
     sourceId:result.assignment.sourceId,
     eventName:result.assignment.eventName,
     target:result.assignment.target,
@@ -1979,15 +1987,14 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
   const previousSchema = result.destination.previousSchemaId
     ? schemas.find(({ id }) => id === result.destination.previousSchemaId)
     : undefined;
-  const matchingAssignment = previousSchema?.assignments.find((candidate) =>
-    candidate.enabled !== false
-    && guidedAssignmentsMatch(candidate, assignment));
   const currentDraft = previousSchema?.workingDraft;
   const draftAssignments = currentDraft?.assignments ?? previousSchema?.assignments ?? [];
   const draftRules = currentDraft?.attachedRules ?? previousSchema?.attachedRules ?? [];
-  const pendingAssignments = result.destination.assignmentAction === "reuse the matching enabled assignment" && matchingAssignment
-    ? draftAssignments
-    : [...draftAssignments, assignment];
+  const pendingAssignments = assignmentDraftAfterGuidedSave(
+    draftAssignments,
+    assignment,
+    result.destination.assignmentAction,
+  );
   const pendingDocument = mergeGuidedDocument(currentDraft?.document ?? previousSchema?.document ?? { type:"object" }, guidedPropertyDocument(rule.path, rule.expectedType));
   const pendingRules = [...draftRules.filter((candidate) => candidate.id !== attachedRule.id || candidate.propertyPath !== attachedRule.propertyPath), attachedRule];
   const schema = previousSchema

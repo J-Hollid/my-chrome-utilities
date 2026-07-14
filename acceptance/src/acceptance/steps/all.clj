@@ -12,6 +12,7 @@
             [acceptance.steps.event-feed-query :as event-feed-query]
             [acceptance.steps.fresh-live-session :as fresh-live-session]
             [acceptance.steps.guided-validation :as guided-validation]
+            [acceptance.steps.guided-assignment-coverage :as guided-assignment-coverage]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
@@ -43,6 +44,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               guided-assignment-coverage/handlers
                fresh-live-session/handlers
                lossless-observation-activation/handlers
                recursive-property-validation/handlers

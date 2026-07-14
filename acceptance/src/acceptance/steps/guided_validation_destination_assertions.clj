@@ -69,12 +69,15 @@
       (str/includes? review "version 4")]))
 
 (defn- revision-review [example observation]
-  (let [state (example-value example "assignment_state")
+  (let [state (example-value example "assignment_coverage")
         expected-action (example-value example "assignment_action")
-        key (if (= state "matching exists") :matching :absent)
+        key (get {"an enabled published assignment covers the event" :matching
+                  "an enabled working-draft assignment covers the event" :pending
+                  "no enabled published or pending assignment covers it" :absent}
+                 state)
         result (get-in observation [:production :destinations key])]
-    (support/assert! (contains? #{"matching exists" "matching absent"} state)
-                     "Assignment state must use the supported matching vocabulary."
+    (support/assert! key
+                     "Assignment coverage must use the supported published, pending, or absent vocabulary."
                      {:example example})
     (support/assert! (str/includes? (:review result) "Rule attachment path: page_type")
                      "Existing schema review omitted the rule attachment path." {:result result})
@@ -111,31 +114,25 @@
   (support/assert! (= [{:expectedType "String"
                         :expectedTypeSource "String — Generic pageview version 4"
                         :target "payload"}
-                       {:domain "shop.example"
-                        :domainSource "Generic shop pages assignment"
-                        :eventName "pageview"
-                        :eventNameSource "Generic shop pages assignment"
-                        :source "event-history"
-                        :sourceSource "Generic shop pages assignment"
-                        :pathCondition "/products/*"}]
+                       {:configurationAbsent true :selectionAbsent true}]
                       [(:schemaPrefillRequirement observation) (:schemaPrefillScope observation)])
-                   "Schema and compatible-assignment values were not prefilled with readable provenance."
+                   "A covering assignment did not retain schema prefill while omitting redundant assignment controls."
                    {:observation observation}))
 
-(def assignment-scope-expectations
-  {"use captured event values as editable defaults" ["127.0.0.1" false]
-   "prefill its domain and path conditions" ["shop.example" true]
-   "do not prefill scope before the operator chooses" ["127.0.0.1" false]})
-
 (defn- assignment-resolution [example observation]
-  (let [count (parse-long (example-value example "compatible_assignment_count"))
-        expected-selection (example-value example "assignment_selection")
-        expected-scope (get assignment-scope-expectations (example-value example "scope_behavior"))
-        result (find-first #(= count (:count %)) (get-in observation [:production :assignmentResolutions]))
-        observed-scope [(:domain result) (boolean (seq (:pathConditions result)))]]
-    (support/assert! (= [expected-selection expected-scope] [(:selection result) observed-scope])
-                     "Compatible-assignment cardinality produced the wrong selection or scope behavior."
+  (let [state (example-value example "assignment_state")
+        expected [(example-value example "configuration_visibility")
+                  (example-value example "assignment_action")
+                  (example-value example "continuation_result")]
+        result (find-first #(= state (:state %)) (get-in observation [:production :assignmentCoverage]))]
+    (support/assert! (= expected [(:configuration result) (:action result) (:continuation result)])
+                     "Assignment coverage produced the wrong configuration, action, or continuation behavior."
                      {:example example :result result})))
+
+(defn- assignment-action [example observation]
+  (if (support/example-value example "assignment_coverage")
+    (revision-review example observation)
+    (assignment-resolution example observation)))
 
 (defn- replacement-review [_example observation]
   (support/assert! (= [["Keep current values" "Accept schema-derived values"]
@@ -174,13 +171,12 @@
    #{"the destination targets existing Product listing version 3"
      "the draft defines an allowed-values rule for page_type"
      "existing schema Product listing version 3 is selected"
-     "matching assignment state is <assignment_state>"
+     "assignment coverage for the captured event is <assignment_coverage>"
      "the validation review is displayed"
      "it identifies page_type as the rule attachment path"
      "it states that the rule will be added to the Product listing working draft based on version 3"
      "Product listing version 3 remains current until the working draft is published"
-     "no Product listing version 4 exists before publication"
-     "assignment action is <assignment_action>"}
+     "no Product listing version 4 exists before publication"}
    revision-review
    #{"the review has destination <schema_destination>"
      "the operator activates Add validation to draft and persistence completes"
@@ -196,7 +192,7 @@
      "no partial schema, rule, assignment, or revision is persisted"}
    failed-save
    #{"the destination choice has accepted Generic pageview version 4"
-     "it has one enabled assignment compatible with the captured event"
+     "one enabled assignment covers the captured event"
      "the requirement stage is displayed"
      "page_type expected type is prefilled from Generic pageview version 4"
      "validation target is prefilled from the schema"
@@ -204,11 +200,13 @@
      "every prefilled value identifies Generic pageview version 4 or its assignment as its source"
      "the operator can change each prefilled value before review"}
    schema-prefill
-   #{"the selected destination has <compatible_assignment_count> compatible assignments"
-     "assignment resolution runs"
-     "assignment selection is <assignment_selection>"
-     "scope behavior is <scope_behavior>"}
+   #{"the selected schema has assignment state <assignment_state>"
+     "assignment coverage is evaluated for the captured event"
+     "assignment configuration is <configuration_visibility>"
+     "property-rule creation is <continuation_result>"}
    assignment-resolution
+   #{"assignment action is <assignment_action>"}
+   assignment-action
    #{"the operator has changed a schema-derived scope value"
      "a different schema destination or assignment is selected"
      "the changed value is not silently overwritten"
