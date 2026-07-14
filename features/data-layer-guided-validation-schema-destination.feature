@@ -6,12 +6,12 @@
 Feature: Data layer guided validation schema destination
 
   Background:
-    Given a guided validation draft has selected payload property page_type
+    Given Add validation started from payload property page_type
 
   # Data layer guided validation schema destination 001
   Scenario: Data layer guided validation schema destination 001
     Given no working-draft continuation context is selected
-    When property selection continues
+    When the guided validation flow opens
     Then the schema destination stage is displayed before requirement and scope
     And the operator can choose Create a new schema or Add to an existing schema
     And no schema destination is selected without operator input
@@ -69,7 +69,7 @@ Feature: Data layer guided validation schema destination
     Then the review and guided validation flow close
     And the originating Live event inspector is restored
     And a visible status confirms <saved_result>
-    And keyboard focus returns to Add property from this event
+    And keyboard focus returns to Add validation for page_type
 
     Examples:
       | schema_destination          | saved_result                                      |

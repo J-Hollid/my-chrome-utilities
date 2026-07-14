@@ -25,7 +25,7 @@ Feature: Data layer guided validation form assistance
 
   # Data layer guided validation form assistance 003
   Scenario: Data layer guided validation form assistance 003
-    When the operator moves through property, schema destination, requirement, scope, and review stages
+    When the operator moves through schema destination, requirement, scope, and review stages
     Then the current stage and completed stages are exposed visually and programmatically
     And stage headings describe the current task
     And Back returns to the previous stage with its state preserved

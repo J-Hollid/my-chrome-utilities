@@ -11,15 +11,16 @@ Feature: Data layer guided validation creation
   # Data layer guided validation creation 001
   Scenario: Data layer guided validation creation 001
     Given no working-draft continuation context is selected
-    When the operator activates Create validation from this event
-    Then a guided validation draft opens at property selection
+    When the operator activates Add validation for property page_type
+    Then a guided validation draft opens at schema destination with page_type selected
     And the draft retains event pageview, its captured source, payload, domain 127.0.0.1, and pathname /
+    And no separate property-selection stage is displayed
     And no schema, rule, or assignment is persisted
 
   # Data layer guided validation creation 002
   Scenario: Data layer guided validation creation 002
-    Given the operator selects property page_type
-    And chooses a schema destination
+    Given Add validation was started from property page_type
+    And the operator chooses a schema destination
     And configures Must be one of these values with product_list and homepage
     And chooses This domain on all paths
     When the review is displayed
