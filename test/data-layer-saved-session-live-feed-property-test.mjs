@@ -98,6 +98,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.deepEqual(feed.currentView, currentSnapshot, "opening must preserve current feed analysis state");
   assert.deepEqual(feed.savedView.events.map(({ id }) => id), savedEvents.map(({ id }) => id), "archive events must retain capture order");
   assert.equal(feed.savedView.sources.length, new Set(savedEvents.map(({ sourceId }) => sourceId)).size);
+  assert.notEqual(feed.session, session, "opening must isolate the archived session boundary");
   assert.equal(feed.readOnly, true);
   assert.equal(feed.startLiveObserver, false);
 
@@ -135,7 +136,16 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.ok(restored, "valid persisted feed state must restore");
   assert.deepEqual(JSON.parse(serializeSavedSessionLiveFeed(restored)), JSON.parse(serialized), "saved-feed persistence must round trip stably");
   assert.equal(restored.startLiveObserver, false);
+  assert.notEqual(restored.session, session, "restoring must isolate the archived session boundary");
   assert.equal(restoreSavedSessionLiveFeed(serialized, { sessions:[] }), undefined, "missing archives must invalidate persisted feed state");
+  const tampered = JSON.parse(serialized);
+  tampered.savedView.events = [{ id:`forged-${sample}`, name:"forged", sourceId:"forged", captureTime:session.startedAt }];
+  tampered.savedView.pageUrl = "https://attacker.invalid/";
+  tampered.savedView.inspectorEventId = `forged-${sample}`;
+  const restoredFromTamperedView = restoreSavedSessionLiveFeed(JSON.stringify(tampered), library);
+  assert.deepEqual(restoredFromTamperedView.savedView.events.map(({ id }) => id), savedEvents.map(({ id }) => id), "restore must derive archived events from the saved-session library");
+  assert.equal(restoredFromTamperedView.savedView.pageUrl, pageScope, "restore must derive archive scope from the saved-session library");
+  assert.equal(restoredFromTamperedView.savedView.inspectorEventId, undefined, "restore must discard inspector selections outside the archive");
 
   const compared = revalidateSavedSessionLiveFeed(withBackground, () => ({
     state:"Valid",

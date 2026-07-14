@@ -59,6 +59,10 @@
 
 (defn- assert-initial-model! [initial]
   (let [model (:model initial)]
+    (support/assert! (= {:background 4 :currentCount 18 :savedCount 18
+                         :returnLabel "Return to current Live feed · 4 new events"}
+                        (:productionBackground initial))
+                     "Production live-history callback did not remain isolated behind the archive." initial)
     (support/assert! (= {:savedOrder (mapv #(str "saved-" %) (range 1 19))
                          :currentCount 18
                          :savedCount 18
@@ -96,8 +100,9 @@
                         :background "Live capture continues in the background · 4 new events"
                         :returnLabel "Return to current Live feed · 4 new events"
                         :selected "purchase"
+                        :scrollTop 275
                         :observer "Disconnected"}
-                       (select-keys (:restored reload) [:mode :banner :background :returnLabel :selected :observer]))
+                       (select-keys (:restored reload) [:mode :banner :background :returnLabel :selected :scrollTop :observer]))
                    "Reload did not restore the selected saved feed and background status." reload)
   (support/assert! (and (str/includes? (:comparison reload) "revisions 3 and 4")
                         (str/includes? (:comparison reload) "original results unchanged")
@@ -135,3 +140,7 @@
            :applies? (fn [world] (or (entry-steps (:text spec)) (:saved-session-live-feed world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T02:16:21.681752679+02:00", :module-hash "-1478103238", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1178839830"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "705456916"} {:id "def/entry-steps", :kind "def", :line 10, :end-line nil, :hash "-2107388724"} {:id "form/3/defonce", :kind "defonce", :line 20, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line nil, :hash "-547569961"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line nil, :hash "-775394783"} {:id "defn-/assert-initial-actions!", :kind "defn-", :line 32, :end-line nil, :hash "-2076566139"} {:id "defn-/assert-initial-banner!", :kind "defn-", :line 45, :end-line nil, :hash "-1985464640"} {:id "defn-/assert-initial-analysis!", :kind "defn-", :line 54, :end-line nil, :hash "-622821036"} {:id "defn-/assert-initial-model!", :kind "defn-", :line 60, :end-line nil, :hash "1264665629"} {:id "defn-/assert-initial-linked-and-imported!", :kind "defn-", :line 79, :end-line nil, :hash "-179937930"} {:id "defn-/assert-initial!", :kind "defn-", :line 90, :end-line nil, :hash "2026495002"} {:id "defn-/assert-reload!", :kind "defn-", :line 97, :end-line nil, :hash "2145638317"} {:id "defn-/assert-observation!", :kind "defn-", :line 126, :end-line nil, :hash "406949664"} {:id "defn-/transition", :kind "defn-", :line 130, :end-line nil, :hash "-488746180"} {:id "def/handlers", :kind "def", :line 137, :end-line nil, :hash "1733355050"}]}
+;; clj-mutate-manifest-end
