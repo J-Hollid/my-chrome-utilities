@@ -45,6 +45,11 @@ assert.deepEqual(searchRecursivePropertyTree(tree, "pricing amount", new Set(["/
   expanded:["/oOrder", "/oOrder/aProducts", "/oOrder/aProducts/*", "/oOrder/aProducts/*/pricing"],
   restoreExpanded:["/oOrder"],
 });
+assert.deepEqual(searchRecursivePropertyTree(tree, "/oOrder/aProducts/*/1", new Set()), {
+  matches:["/oOrder/aProducts/*/1"],
+  expanded:["/oOrder", "/oOrder/aProducts", "/oOrder/aProducts/*"],
+  restoreExpanded:[],
+});
 
 const parsed = parseTargetExpression('$["oOrder"]["aProducts"][*]["details"][1]');
 assert.deepEqual(parsed.map(({ kind, value }) => [kind, value]), [["property","oOrder"],["property","aProducts"],["every",null],["property","details"],["index",1]]);

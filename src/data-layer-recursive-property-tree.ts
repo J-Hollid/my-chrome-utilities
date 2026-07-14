@@ -80,11 +80,15 @@ export function buildRecursivePropertyTree(payload: unknown): RecursivePropertyN
   return Object.entries(payload as Record<string, unknown>).map(([name, value]) => buildNode(name, `/${pointerToken(name)}`, [value], 1, [propertySegment(name)]));
 }
 
-function flatten(nodes: readonly RecursivePropertyNode[]): RecursivePropertyNode[] { return nodes.flatMap((node) => [node, ...flatten(node.children), ...flatten(node.specificItems)]); }
+function flattenSearchable(nodes: readonly RecursivePropertyNode[]): RecursivePropertyNode[] {
+  return nodes.flatMap((node) => [node, ...flattenSearchable(node.children)]);
+}
 
 export function searchRecursivePropertyTree(tree: readonly RecursivePropertyNode[], query: string, expanded: ReadonlySet<string>): { matches:string[]; expanded:string[]; restoreExpanded:string[] } {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const matches = flatten(tree).filter((node) => !node.path.split("/").some((token) => /^\d+$/.test(token)) && terms.every((term) => `${node.label} ${node.path}`.toLowerCase().includes(term))).map(({ path }) => path);
+  const matches = flattenSearchable(tree)
+    .filter((node) => terms.every((term) => `${node.label} ${node.path}`.toLowerCase().includes(term)))
+    .map(({ path }) => path);
   const opened = unique(matches.flatMap((path) => {
     const tokens = path.split("/").slice(1); return tokens.slice(0, -1).map((_, index) => `/${tokens.slice(0, index + 1).join("/")}`);
   }));
