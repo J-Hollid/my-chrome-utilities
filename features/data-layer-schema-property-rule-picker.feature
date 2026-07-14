@@ -115,3 +115,94 @@ Feature: Data layer schema property rule picker
       | picker_input                                        | selection_outcome                   |
       | Arrow key navigation followed by Enter             | the selected rule action runs       |
       | Escape                                              | no rule is created or attached      |
+
+  # Data layer schema property rule picker 011
+  Scenario Outline: Data layer schema property rule picker 011
+    Given property <property_name> has type <property_type>
+    When the operator selects built-in rule <rule_type>
+    Then configuration controls are <parameter_controls>
+    And Severity, optional issue message, Save as reusable rule in Rule Library, Create rule, Back to rule choices, and Cancel are available
+    And Save as reusable rule in Rule Library is an unchecked checkbox by default
+    And configuration controls remain readable and reachable at 320 CSS px wide
+
+    Examples:
+      | property_name | property_type | rule_type          | parameter_controls                  |
+      | page_type     | string        | Required           | no parameter controls               |
+      | page_type     | string        | Exact value        | one type-aware Exact value field    |
+      | page_type     | string        | Allowed values     | repeatable type-aware value fields  |
+      | page_type     | string        | Regular expression | Pattern                             |
+      | page_type     | string        | Text length        | non-negative Exact length           |
+      | page_type     | string        | Digits only        | no parameter controls               |
+      | revenue       | number        | Numeric range      | optional Minimum and Maximum        |
+      | items         | array         | Item count         | non-negative Minimum item count     |
+
+  # Data layer schema property rule picker 012
+  Scenario: Data layer schema property rule picker 012
+    Given Allowed values configuration is open for product.sku of type string
+    When no allowed value has been entered
+    Then Create rule is blocked with reason Add at least one allowed value
+    When the operator adds values ABC-1 and XYZ-2
+    Then each value can be edited or removed independently
+    And Create rule becomes available
+
+  # Data layer schema property rule picker 013
+  Scenario Outline: Data layer schema property rule picker 013
+    Given built-in rule <rule_type> has configuration <configuration>
+    When local rule validation runs
+    Then creation result is <creation_result>
+    And assistance is <assistance>
+
+    Examples:
+      | rule_type          | configuration                 | creation_result | assistance                            |
+      | Exact value        | no value                      | blocked         | Enter an exact value                  |
+      | Regular expression | malformed pattern [           | blocked         | Correct the regular expression        |
+      | Text length        | exact length -1               | blocked         | Enter a non-negative whole number     |
+      | Numeric range      | neither boundary              | blocked         | Enter at least one boundary           |
+      | Numeric range      | minimum 10 and maximum 5      | blocked         | Make minimum less than maximum        |
+      | Item count         | minimum 1.5                   | blocked         | Enter a non-negative whole number     |
+
+  # Data layer schema property rule picker 014
+  Scenario: Data layer schema property rule picker 014
+    Given Allowed values configuration for product.sku contains ABC-1 and XYZ-2
+    And Save as reusable rule in Rule Library is unchecked
+    When the operator creates the rule with severity warning and issue message Use an approved SKU
+    Then 1 local Allowed values rule is attached to product.sku in the Page view working draft
+    And product.sku active-rule count increases by 1
+    And no rule is added to the Rule Library
+    And the current published Page view revision remains unchanged
+    And the dialog closes and focus returns to Add rule for product.sku
+
+  # Data layer schema property rule picker 015
+  Scenario: Data layer schema property rule picker 015
+    Given Allowed values configuration is open for product.sku
+    When the operator checks Save as reusable rule in Rule Library
+    Then Rule name is displayed and required
+    And optional Description is displayed
+    And the form explains that the reusable rule will be available to other schemas
+    And Create rule remains blocked until Rule name is non-blank
+    When the operator unchecks Save as reusable rule in Rule Library
+    Then reusable-rule fields are hidden
+    And the configured allowed values, severity, and issue message remain unchanged
+
+  # Data layer schema property rule picker 016
+  Scenario: Data layer schema property rule picker 016
+    Given Allowed values configuration for product.sku contains ABC-1 and XYZ-2
+    And Save as reusable rule in Rule Library is checked with name Approved product SKUs and description SKUs accepted by fulfilment
+    When the operator creates the rule with severity warning and issue message Use an approved SKU
+    Then Approved product SKUs version 1 is added once to the Rule Library for type string
+    And the same reusable rule identity is attached once to product.sku in the Page view working draft
+    And no duplicate local rule is created
+    And its allowed values, severity, issue message, and description are retained
+    And the dialog closes and focus returns to Add rule for product.sku
+
+  # Data layer schema property rule picker 017
+  Scenario Outline: Data layer schema property rule picker 017
+    Given partially completed Allowed values configuration is open for product.sku
+    When the operator activates <navigation_action>
+    Then <selection_outcome>
+    And no local or reusable rule is created or attached
+
+    Examples:
+      | navigation_action   | selection_outcome                                       |
+      | Back to rule choices | compatible rule choices return for product.sku          |
+      | Cancel               | the dialog closes and focus returns to Add rule for product.sku |
