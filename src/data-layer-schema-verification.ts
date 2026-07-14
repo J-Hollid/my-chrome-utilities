@@ -1,6 +1,6 @@
 import type { ValidationState } from "./data-layer-source.js";
 import { urlConditionsMatch, type PathCondition } from "./data-layer-path-conditions.js";
-import { resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
+import { canonicalNestedPath, resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 import {
   conditionGroupAppliesToValue,
@@ -55,7 +55,7 @@ function schemaId(name: string, version: number): string { return `schema:${sche
 function stableSchemaId(name: string): string { return `schema-${schemaSlug(name)}`; }
 
 function canonicalAttachedRulePath(path: string): string {
-  return `/${path.trim().replaceAll(".", "/").split("/").filter(Boolean).join("/")}`;
+  return canonicalNestedPath(path);
 }
 
 function documentContainsPath(document: JsonSchema, path: string): boolean {
