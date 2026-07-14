@@ -11,4 +11,9 @@ export interface ValidationEvaluation {
   severity: string;
   schemaName: string;
   schemaVersion: number;
+  ruleId?: string;
+  operator?: string;
+  schemaId?: string;
+  actualValue?: unknown;
+  allowedValues?: readonly (string | number | boolean | null)[];
 }

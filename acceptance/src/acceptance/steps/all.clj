@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
@@ -51,6 +52,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
                validation-presence-semantics/handlers

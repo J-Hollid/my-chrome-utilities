@@ -4,6 +4,7 @@ import {
 } from "./data-layer-event-library-editor.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
 import type { ValidationState } from "./data-layer-source.js";
+import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 
 export interface LiveInspectorActions {
   copyPayload(event: LiveEvent): Promise<void>;
@@ -11,6 +12,7 @@ export interface LiveInspectorActions {
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
+  expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
@@ -38,6 +40,7 @@ export interface LiveInspectorActionEffects {
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
+  expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
   openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
@@ -82,6 +85,7 @@ export function createLiveInspectorActions(
     ...(effects.createSchema ? { createSchema(event: LiveEvent) { effects.createSchema?.(event); } } : {}),
     ...(effects.createValidation ? { createValidation(event: LiveEvent) { effects.createValidation?.(event); } } : {}),
     ...(effects.addPropertyValidation ? { addPropertyValidation(event: LiveEvent, path: string, trigger: HTMLButtonElement) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
+    ...(effects.expandAllowedValue ? { expandAllowedValue(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement) { effects.expandAllowedValue?.(event, evaluation, trigger); } } : {}),
     ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),
     ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
     ...(effects.openReportedDefect ? { openReportedDefect(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),

@@ -44,6 +44,7 @@ import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replac
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
+import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./data-layer-allowed-value-expansion.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
@@ -1120,6 +1121,180 @@ function restoreLiveInspectorPresentation(snapshot) {
     const focusTarget = snapshot.focusedId ? document.getElementById(snapshot.focusedId) : undefined;
     (focusTarget ?? (snapshot.focusedPropertyPath ? inspector?.querySelector(`.live-validation-property[data-property-path="${CSS.escape(snapshot.focusedPropertyPath)}"]`) : undefined))?.focus({ preventScroll: true });
 }
+function expansionReusableRules() {
+    return reusableSchemaRules.map((rule) => ({
+        ...structuredClone(rule),
+        version: rule.version ?? 1,
+        ...(rule.revisionHistory ? {
+            revisionHistory: rule.revisionHistory.map((snapshot) => ({ ...structuredClone(snapshot), id: rule.id })),
+        } : {}),
+    }));
+}
+function storedReusableRule(rule) {
+    const { revisionHistory, ...current } = structuredClone(rule);
+    return {
+        ...current,
+        name: rule.name ?? rule.id,
+        version: rule.version,
+        ...(revisionHistory ? {
+            revisionHistory: revisionHistory.map((snapshot) => ({
+                name: snapshot.name ?? rule.name ?? rule.id,
+                kind: snapshot.kind ?? rule.kind,
+                version: snapshot.version ?? 1,
+                ...(snapshot.enabled !== undefined ? { enabled: snapshot.enabled } : {}),
+                ...(snapshot.operator ? { operator: snapshot.operator } : {}),
+                ...(snapshot.parameters !== undefined ? { parameters: snapshot.parameters } : {}),
+                ...(snapshot.allowedValues ? { allowedValues: structuredClone(snapshot.allowedValues) } : {}),
+                ...(snapshot.severity ? { severity: snapshot.severity } : {}),
+                ...(snapshot.message ? { message: snapshot.message } : {}),
+                ...(snapshot.conditionGroup ? { conditionGroup: structuredClone(snapshot.conditionGroup) } : {}),
+            })),
+        } : {}),
+    };
+}
+function persistAllowedValueExpansion(nextSchemas, nextRules) {
+    const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+    try {
+        localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+    }
+    catch (error) {
+        if (previousSchemas === null)
+            localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+        else
+            localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+        if (previousRules === null)
+            localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+        else
+            localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+        throw error;
+    }
+}
+function allowedValueText(value) {
+    if (value === null)
+        return "null";
+    if (typeof value === "string")
+        return `string ${value}`;
+    return `${typeof value} ${String(value)}`;
+}
+function expansionDestinationLabel(destination) {
+    return {
+        "assigned-schema-draft": "Update assigned schema working draft",
+        "parent-schema-draft": "Edit parent working draft",
+        "assigned-schema-override": "Create assigned-schema override",
+        "reusable-rule-revision": "Revise reusable rule",
+    }[destination];
+}
+function openAllowedValueExpansionReview(event, evaluation, trigger) {
+    const assignedSchemaId = event.validationDetails?.schema?.id;
+    const inspector = liveObserverElements.eventInspector;
+    if (!assignedSchemaId || !inspector)
+        return;
+    const input = { schemas, reusableRules: expansionReusableRules(), assignedSchemaId, evidence: evaluation };
+    let review;
+    try {
+        review = reviewAllowedValueExpansion(input);
+    }
+    catch (error) {
+        setLiveSessionMessage(error instanceof Error ? error.message : "The allowed value review is unavailable.");
+        return;
+    }
+    inspector.querySelector("#allowed-value-expansion-review")?.remove();
+    liveInspectorPresentation.set(event.id, captureLiveInspectorPresentation());
+    const dialog = document.createElement("dialog");
+    dialog.id = "allowed-value-expansion-review";
+    dialog.setAttribute("aria-labelledby", "allowed-value-expansion-heading");
+    const heading = document.createElement("h5");
+    heading.id = "allowed-value-expansion-heading";
+    heading.tabIndex = -1;
+    heading.textContent = "Review allowed value addition";
+    const summary = document.createElement("p");
+    summary.id = "allowed-value-expansion-summary";
+    summary.textContent = `${review.assignedSchema.name} revision ${review.assignedSchema.version} · ${review.propertyPath} · ${review.rule.name} revision ${review.rule.version} · currently allows ${review.currentValues.map(allowedValueText).join(", ") || "no values"} · proposed ${allowedValueText(review.proposedValue)}.`;
+    const publication = document.createElement("p");
+    publication.textContent = "The published schema remains unchanged until its working draft is published.";
+    const pending = document.createElement("p");
+    pending.id = "allowed-value-expansion-pending";
+    pending.textContent = review.alreadyPending ? "This value is already pending in the existing working draft." : "No schema or rule will change until you choose a destination and confirm.";
+    const pinned = document.createElement("p");
+    pinned.id = "allowed-value-expansion-pinned-warning";
+    pinned.textContent = review.pinnedAssignmentWarning ?? "";
+    pinned.hidden = !review.pinnedAssignmentWarning;
+    const destinations = document.createElement("fieldset");
+    const legend = document.createElement("legend");
+    legend.textContent = "Destination";
+    destinations.append(legend);
+    for (const [index, destination] of review.destinations.entries()) {
+        const label = document.createElement("label");
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "allowed-value-expansion-destination";
+        radio.value = destination;
+        radio.checked = index === 0;
+        label.append(radio, ` ${expansionDestinationLabel(destination)}`);
+        destinations.append(label);
+    }
+    const feedback = document.createElement("output");
+    feedback.id = "allowed-value-expansion-feedback";
+    feedback.setAttribute("aria-live", "polite");
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.id = "confirm-allowed-value-expansion";
+    confirm.textContent = review.alreadyPending ? "Keep existing pending value" : "Confirm addition";
+    const openDraft = document.createElement("button");
+    openDraft.type = "button";
+    openDraft.id = "open-allowed-value-working-draft";
+    openDraft.textContent = "Open working draft";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    const close = (restoreFocus = true) => { if (dialog.open)
+        dialog.close(); dialog.remove(); if (restoreFocus)
+        trigger.focus({ preventScroll: true }); };
+    const selectedDestination = () => dialog.querySelector('input[name="allowed-value-expansion-destination"]:checked')?.value;
+    const openAffectedDraft = (destination = selectedDestination()) => {
+        const targetId = destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId;
+        const target = schemas.find(({ id }) => id === targetId && Boolean(id));
+        close(false);
+        trigger.focus({ preventScroll: true });
+        if (!target)
+            return;
+        showDataLayerView("Schemas");
+        schemaDraft = schemaEditorDraft(target);
+        renderSchemaDraft();
+        schemaEditorName?.focus({ preventScroll: true });
+    };
+    confirm.addEventListener("click", () => {
+        const destination = selectedDestination();
+        if (!destination)
+            return;
+        try {
+            const applied = applyAllowedValueExpansion({ ...input, destination });
+            const nextRules = applied.reusableRules.map(storedReusableRule);
+            persistAllowedValueExpansion(applied.schemas, nextRules);
+            schemas = applied.schemas;
+            reusableSchemaRules = nextRules;
+            renderSchemas();
+            renderSchemaWorkflowRows();
+            close(false);
+            openLiveInspector(event.id, true);
+            const action = liveObserverElements.eventInspector?.querySelector(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`);
+            (action ?? liveObserverElements.eventInspector?.querySelector(`[data-property-path="${CSS.escape(evaluation.propertyPath)}"]`))?.focus({ preventScroll: true });
+            setLiveSessionMessage(applied.changed ? `${allowedValueText(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
+        }
+        catch (error) {
+            feedback.textContent = error instanceof Error ? error.message : "The allowed value could not be added.";
+        }
+    });
+    openDraft.addEventListener("click", () => openAffectedDraft());
+    cancel.addEventListener("click", () => close());
+    dialog.addEventListener("cancel", (domEvent) => { domEvent.preventDefault(); close(); });
+    dialog.append(heading, summary, publication, pending, pinned, destinations, feedback, confirm, openDraft, cancel);
+    inspector.append(dialog);
+    dialog.showModal();
+    heading.focus({ preventScroll: true });
+}
 function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     const previousEventId = liveObserverState.inspectorEventId;
     if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
@@ -1165,6 +1340,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 openGuidedValidationForEvent(selected);
             },
             addPropertyValidation: (selected, path) => openGuidedValidationForProperty(selected, path),
+            expandAllowedValue: (selected, evaluation, trigger) => openAllowedValueExpansionReview(selected, evaluation, trigger),
             draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
             startDefectReport: (selected) => {
                 if (liveObserverElements.eventInspector) {

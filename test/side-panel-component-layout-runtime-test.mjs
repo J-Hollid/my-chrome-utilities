@@ -37,13 +37,15 @@ let missingEventDefectReportObservation;
 let validationPresenceSemanticsObservation;
 let defectLibraryObservation;
 let schemaPublicationRefreshObservation;
+let allowedValueExpansionObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
+const componentWidths = process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
   : process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1" ? [720]
@@ -3115,6 +3117,56 @@ const defectLibraryRuntime = `(async () => {
   return { nav,actualReportedLinks,openedFromIssue,returnedToIssue,restoredCount,filteredCount,edited,recopy:writes[0],lifecycle:{resolved,reopened,archived},confirmation,afterDelete,stored:{count:stored.defects.length,status:stored.defects[0].status,description:stored.defects[0].report.description,notes:stored.defects[0].notes},renderCases,differences,wildcardMatch,actionResults,actionWrites,linked:{sessions:linked.savedSessions.sessions.length,id:linked.library.defects[0].savedSession.id,contains:linked.library.defects[0].savedSession.containsMatchingIssue,immutable:Object.isFrozen(linked.savedSessions.sessions[0])},statuses:{resolved:defects.issueTriage(issue(),resolvedLibrary).state,archived:defects.issueTriage(issue(),archivedLibrary).state} };
 })()`;
 
+const allowedValueExpansionSeedRuntime = `(async () => {
+  const defects = await import("/data-layer-defect-library.js");
+  localStorage.clear();
+  const assignment = { id:"assignment:page-view", sourceId:"history", eventName:"page_view", target:"payload", priority:10, versionPolicy:"follow latest", enabled:true };
+  const document = { type:"object", properties:{ page_type:{ type:"string" }, site:{ type:"string" } } };
+  const rule = { id:"stable-id-41", name:"Known page types", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product,content", severity:"error", message:"Choose a known page type", conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/site", operator:"Equals", comparison:{ type:"string", value:"consumer" }, detectedType:"string" }] } };
+  const schema = { id:"schema:otelo-pageview", name:"Otelo - Generic Pageview", version:2, published:true, document, assignments:[assignment], attachedRules:[rule], revisionHistory:[], workingDraft:{ baseVersion:2, sourceVersion:2, document, assignments:[assignment], attachedRules:[rule], pendingChanges:["Document checkout ownership"] } };
+  localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([schema]));
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+  const payload = { page_type:"product_test", site:"consumer" };
+  const rawInput = ["page_view",payload];
+  const timeline = [{ type:"observed", url:"https://shop.example/products/test", timestamp:"2026-07-14T13:00:00Z", observerPath:"dataLayer", id:"event:page-view", name:"page_view", sessionId:"session:allowed-value", sourceId:"history", sourceKind:"Data layer", pageUrl:"https://shop.example/products/test", payload, rawInput, rawValue:rawInput, validation:"Not checked" }];
+  localStorage.setItem("dataLayerTestingSession", JSON.stringify({ session:{ id:"session:allowed-value", status:"active", freshBoundary:true, tabId:1, historyPath:"dataLayer", startUrl:"https://shop.example/products/test", currentUrl:"https://shop.example/products/test", timeline } }));
+  const issue = { sourceId:"history", eventName:"page_view", schemaId:schema.id, validationTarget:"payload", concretePath:"/page_type", templatePath:"/page_type", ruleId:rule.id, ruleRevision:1, actual:"product_test", expected:"product,content", pageUrl:"https://shop.example/products/test", captureTime:"2026-07-14T13:00:00Z", sourceName:"history", schemaName:schema.name, ruleName:rule.name };
+  const defect = defects.createValidationDefect({ id:"defect:page-type-v2", now:"2026-07-14T13:01:00Z", report:{ summary:"page_view has unknown page type" }, issues:[issue] });
+  localStorage.setItem(defects.DEFECT_LIBRARY_STORAGE_KEY, defects.serializeDefectLibrary({ defects:[defect] }));
+  return true;
+})()`;
+
+const allowedValueExpansionRuntime = `(async () => {
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const q = (selector, root=document) => { const value=root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const click = (label, root=document) => { const value=Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label || candidate.textContent.startsWith(label)); if (!value) throw new Error("Missing action " + label); value.click(); return value; };
+  q("#live-event-feed button").click(); click("Validate",q("#live-event-inspector")); await pause(); q("#back-to-events").click(); q("#live-event-feed button").click();
+  const inspector=q("#live-event-inspector"); const property=q('[data-property-path="/page_type"]'); q(".live-property-status",property).click();
+  const actions=()=>Array.from(property.querySelectorAll(".live-allowed-value-expansion"));
+  const action=actions()[0]; inspector.style.height="220px"; inspector.style.overflow="auto"; inspector.scrollTop=37; action.focus({preventScroll:true});
+  const initial={ count:actions().length, ruleId:action.dataset.ruleId, ruleVersion:action.dataset.ruleVersion, status:q("#live-inspector-validation-summary").textContent, schema:q('dt[data-field="assigned schema"] + dd').textContent, raw:q("#live-raw-json pre").textContent, expanded:q(".live-property-status",property).getAttribute("aria-expanded") };
+  action.click();
+  const review=q("#allowed-value-expansion-review"); const rect=review.getBoundingClientRect();
+  const reviewState={ summary:q("#allowed-value-expansion-summary",review).textContent, publication:review.textContent.includes("published schema remains unchanged"), focus:document.activeElement?.id, destination:q('input[name="allowed-value-expansion-destination"]:checked',review).value, withinWidth:rect.left>=0 && rect.right<=innerWidth };
+  click("Cancel",review);
+  const cancelled={ focused:document.activeElement?.dataset.ruleId, expanded:q(".live-property-status",property).getAttribute("aria-expanded"), scroll:inspector.scrollTop };
+  action.click(); click("Confirm addition",q("#allowed-value-expansion-review")); await pause();
+  const storedAfter=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  const draftRule=storedAfter.workingDraft.attachedRules.find(({id})=>id==="stable-id-41");
+  const afterConfirm={ values:draftRule.allowedValues, pending:storedAfter.workingDraft.pendingChanges, publishedParameters:storedAfter.attachedRules[0].parameters, publishedValues:storedAfter.attachedRules[0].allowedValues ?? null, condition:draftRule.conditionGroup.predicates[0].comparison.value, severity:draftRule.severity, message:draftRule.message, focused:document.activeElement?.dataset.ruleId, expanded:q('.live-property-status',q('[data-property-path="/page_type"]')).getAttribute("aria-expanded"), scroll:inspector.scrollTop };
+  const storedOnce=localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  q('.live-allowed-value-expansion[data-rule-id="stable-id-41"]').click();
+  const duplicateReview=q("#allowed-value-expansion-review"); const alreadyPending=q("#allowed-value-expansion-pending",duplicateReview).textContent; click("Keep existing pending value",duplicateReview); await pause();
+  const duplicateUnchanged=storedOnce===localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  q('.live-allowed-value-expansion[data-rule-id="stable-id-41"]').click(); click("Open working draft",q("#allowed-value-expansion-review"));
+  const openedDraft={ schemaView:q("#data-layer-view-schemas").getAttribute("aria-selected"), editor:!q("#schema-editor").hidden, focused:document.activeElement?.id, values:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0].workingDraft.attachedRules[0].allowedValues };
+  q("#data-layer-view-live").click(); const returned={ event:q("#live-event-inspector h4").textContent, expanded:q('.live-property-status',q('[data-property-path="/page_type"]')).getAttribute("aria-expanded"), scroll:inspector.scrollTop };
+  q("#data-layer-view-schemas").click(); q("#save-schema").click(); q("#confirm-schema-revision").click(); await pause(); q("#data-layer-view-live").click();
+  const published=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0]; const finalProperty=q('[data-property-path="/page_type"]');
+  const afterPublish={ version:published.version, values:published.attachedRules[0].allowedValues, actionCount:finalProperty.querySelectorAll(".live-allowed-value-expansion").length, status:q("#live-inspector-validation-summary").textContent, feed:q("#live-event-feed button").textContent, schema:q('dt[data-field="assigned schema"] + dd').textContent, raw:q("#live-raw-json pre").textContent, defectStates:Array.from(inspector.querySelectorAll(".live-new-defect-state,.live-reported-defect-link")).map(({textContent})=>textContent) };
+  return { initial,review:reviewState,cancelled,afterConfirm,alreadyPending,duplicateUnchanged,openedDraft,returned,afterPublish };
+})()`;
+
 const schemaPublicationRefreshSeedRuntime = `(async () => {
   const defects = await import("/data-layer-defect-library.js");
   const sessions = await import("/data-layer-saved-sessions.js");
@@ -3274,6 +3326,31 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, allowedValueExpansionSeedRuntime); await reloadPanel(socket);
+      allowedValueExpansionObservation = await evaluate(socket, allowedValueExpansionRuntime);
+      assert.deepEqual(allowedValueExpansionObservation.initial, {
+        count:1, ruleId:"stable-id-41", ruleVersion:"1", status:"Validation failed, 1 error",
+        schema:"Otelo - Generic Pageview version 2",
+        raw:'{\n  "page_type": "product_test",\n  "site": "consumer"\n}', expanded:"true",
+      });
+      assert.match(allowedValueExpansionObservation.review.summary, /Otelo - Generic Pageview revision 2.*\/page_type.*Known page types revision 1.*string product.*string content.*string product_test/);
+      assert.deepEqual({ publication:allowedValueExpansionObservation.review.publication,focus:allowedValueExpansionObservation.review.focus,destination:allowedValueExpansionObservation.review.destination,withinWidth:allowedValueExpansionObservation.review.withinWidth }, { publication:true,focus:"allowed-value-expansion-heading",destination:"assigned-schema-draft",withinWidth:true });
+      assert.deepEqual(allowedValueExpansionObservation.cancelled, { focused:"stable-id-41",expanded:"true",scroll:37 });
+      assert.deepEqual(allowedValueExpansionObservation.afterConfirm.values, ["product","content","product_test"]);
+      assert.deepEqual(allowedValueExpansionObservation.afterConfirm.pending, ["Document checkout ownership","Allow string product_test for /page_type in Known page types (stable-id-41)"]);
+      assert.deepEqual({ publishedParameters:allowedValueExpansionObservation.afterConfirm.publishedParameters,publishedValues:allowedValueExpansionObservation.afterConfirm.publishedValues,condition:allowedValueExpansionObservation.afterConfirm.condition,severity:allowedValueExpansionObservation.afterConfirm.severity,message:allowedValueExpansionObservation.afterConfirm.message }, { publishedParameters:"product,content",publishedValues:null,condition:"consumer",severity:"error",message:"Choose a known page type" });
+      assert.deepEqual({ focused:allowedValueExpansionObservation.afterConfirm.focused,expanded:allowedValueExpansionObservation.afterConfirm.expanded,scroll:allowedValueExpansionObservation.afterConfirm.scroll }, { focused:"stable-id-41",expanded:"true",scroll:37 });
+      assert.match(allowedValueExpansionObservation.alreadyPending, /already pending/i); assert.equal(allowedValueExpansionObservation.duplicateUnchanged,true);
+      assert.deepEqual(allowedValueExpansionObservation.openedDraft, { schemaView:"true",editor:true,focused:"schema-editor-name",values:["product","content","product_test"] });
+      assert.deepEqual(allowedValueExpansionObservation.returned, { event:"page_view",expanded:"true",scroll:37 });
+      assert.deepEqual(allowedValueExpansionObservation.afterPublish, {
+        version:3, values:["product","content","product_test"], actionCount:0,
+        status:"Validation passed", feed:"page_view · 13:00:00 · history · Valid · 0 new issues", schema:"Otelo - Generic Pageview version 3",
+        raw:'{\n  "page_type": "product_test",\n  "site": "consumer"\n}', defectStates:[],
+      });
+      socket.close(); continue;
+    }
     if (process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, schemaPublicationRefreshSeedRuntime); await reloadPanel(socket);
       schemaPublicationRefreshObservation = await evaluate(socket, schemaPublicationRefreshRuntime);
@@ -4246,6 +4323,9 @@ try {
   }
   if (process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPublicationRefresh:schemaPublicationRefreshObservation }));
+  }
+  if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
