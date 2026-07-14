@@ -53,7 +53,7 @@
                    "Schema assignment edit did not persist its production priority." {:observation observation})
   (support/assert! (= "active-inherited" (get-in observation [:inheritance :groups 0 :state]))
                    "Inherited rules did not render in their active state group." {:observation observation})
-  (support/assert! (some #{"example · Known page types v1 · inherited from Checkout schema v2"}
+  (support/assert! (some #{"/example · Known page types v1 · inherited from Checkout schema v2"}
                          (get-in observation [:inheritance :preview]))
                    "Effective-rule preview did not identify the inherited rule origin." {:observation observation})
   (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation])))
