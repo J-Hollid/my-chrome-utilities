@@ -12,13 +12,12 @@
 (defonce browser-observation (atom nil))
 
 (defn browser-observation! []
-  (or @browser-observation
-      (reset! browser-observation
-              (support/load-browser-observation!
-               {:adapter-env "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER"
-                :observation-key :schemaDocumentation
-                :runtime-error "Schema documentation browser runtime failed."
-                :missing-error "Schema documentation browser evidence is missing."}))))
+  (support/cached-browser-observation!
+   browser-observation
+   {:adapter-env "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER"
+    :observation-key :schemaDocumentation
+    :runtime-error "Schema documentation browser runtime failed."
+    :missing-error "Schema documentation browser evidence is missing."}))
 
 (defn- require! [condition message data]
   (support/assert! condition message data))
@@ -85,7 +84,10 @@
    ["mapping_path"
     {:rows :mappingCases
      :match ["mapping_path" :mappingPath]
-     :assertions [["event_property" :eventProperty]
+     :assertions [["display_name" :displayName]
+                  ["description" :description]
+                  ["payload_state" :payloadState]
+                  ["event_property" :eventProperty]
                   ["rendered_path" :renderedPath]
                   ["presentation" :presentation]
                   ["documentation_result" :documentationResult]]}]
@@ -96,17 +98,13 @@
                   ["expected_source" :source]]}]])
 
 (defn validate-example! [example observation]
-  (some (fn [[key validation]]
-          (when (example-value example key)
-            (validate-row-example! example observation validation)
-            true))
-        example-validators)
-  observation)
+  (support/validate-observation-example!
+   example observation example-validators validate-row-example!))
 
 (defn- transition [world example _captures _spec]
-  (let [observation (validate-browser-observation! (browser-observation!))]
-    (validate-example! example observation)
-    (assoc world :schema-documentation observation)))
+  (support/validated-observation-transition
+   world example :schema-documentation
+   browser-observation! validate-browser-observation! validate-example!))
 
 (def handlers
   (support/stateful-semantic-handlers
@@ -114,3 +112,7 @@
    entry-step-texts
    :schema-documentation
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T15:46:13.813530117+02:00", :module-hash "-1287966778", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "1559077087"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "408470076"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-1032966563"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 20, :hash "-870121229"} {:id "defn-/require!", :kind "defn-", :line 22, :end-line 23, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 25, :end-line 59, :hash "-462236105"} {:id "defn-/example-value", :kind "defn-", :line 61, :end-line 62, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 64, :end-line 67, :hash "1087626945"} {:id "defn-/matching-row", :kind "defn-", :line 69, :end-line 70, :hash "-1482700621"} {:id "defn-/validate-row-example!", :kind "defn-", :line 72, :end-line 77, :hash "29449947"} {:id "def/example-validators", :kind "def", :line 79, :end-line 98, :hash "-719167331"} {:id "defn/validate-example!", :kind "defn", :line 100, :end-line 102, :hash "1286172312"} {:id "defn-/transition", :kind "defn-", :line 104, :end-line 107, :hash "-2144339220"} {:id "def/handlers", :kind "def", :line 109, :end-line 114, :hash "-1429198756"}]}
+;; clj-mutate-manifest-end

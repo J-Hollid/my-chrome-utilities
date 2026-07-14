@@ -4,7 +4,7 @@ import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-lay
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 import { buildValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
-import { resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
+import { resolvePropertyDocumentation, schemaDocumentationSearchText } from "./data-layer-schema-documentation.js";
 export function findLiveObserverElements(root = document) {
     return {
         livePanel: root.querySelector("#data-layer-panel-live"),
@@ -132,7 +132,7 @@ function renderPropertyNode(node, addValidation, schemaDocumentation) {
     name.textContent = node.name;
     const documentation = schemaDocumentation ? resolvePropertyDocumentation(schemaDocumentation, node.technicalPath ?? node.path) : undefined;
     if (documentation)
-        row.dataset.documentationSearch = `${documentation.displayName} ${documentation.description}`;
+        row.dataset.documentationSearch = schemaDocumentationSearchText(node.technicalPath ?? node.path, documentation);
     const displayName = document.createElement("span");
     displayName.className = "live-property-display-name";
     displayName.textContent = documentation?.displayName ?? "";
