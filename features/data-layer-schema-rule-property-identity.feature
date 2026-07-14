@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=765d34061f28ca58e6161c624908814c1d18f4b260b8bf69ae8e630d41058ca0
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T22:57:54.327695392Z","feature_name":"Data layer schema rule property identity","feature_path":"features/data-layer-schema-rule-property-identity.feature","background_hash":"cd38ea476247c0c62b2d9b6fca32e96e369acb5a05486e15af4fa40129d623b7","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer schema rule property identity 001","scenario_hash":"4243d98620d4a1a11f22b05e8a345afff0054a6eab1a96b4972cac886b084fdd","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:57:54.327695392Z"},{"index":1,"name":"Data layer schema rule property identity 002","scenario_hash":"0223cc4acf126c25785d51e8efaf4d731a615ecac65615eba5f0a23182870558","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:57:54.327695392Z"},{"index":3,"name":"Data layer schema rule property identity 004","scenario_hash":"759b3ce978c5ed1bcfbea778d38f9911c526dc85c4ed0a881a07c2bd5740adf9","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:57:54.327695392Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema rule property identity
 
   Background:

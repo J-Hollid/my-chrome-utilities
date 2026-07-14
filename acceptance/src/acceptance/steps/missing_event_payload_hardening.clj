@@ -94,17 +94,10 @@
    "selected_value" #{"d" "e" "product_detail" "logged in"}
    "stored_value" #{"d" "e" "product_detail" "logged in"}})
 
-(defn- example-domains [mode]
-  (case mode
-    :runtime runtime-example-values
-    :model model-example-values))
-
 (defn- validate-example! [mode example]
-  (let [domains (example-domains mode)]
-    (support/validate-example-domain!
-     domains example
-     (filter #(support/example-value example %) (keys domains))
-     "Missing-event payload hardening example value was outside the specified contract.")))
+  (support/validate-mode-example-domain!
+   mode runtime-example-values model-example-values example
+   "Missing-event payload hardening example value was outside the specified contract."))
 
 (def handlers
   (support/verified-feature-mode-handlers
@@ -112,5 +105,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T00:01:41.442986343+02:00", :module-hash "804769343", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1617418705"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1556493410"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1272479189"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-626384650"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-1216782882"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 73, :hash "1500628485"} {:id "def/model-example-values", :kind "def", :line 75, :end-line 86, :hash "-77094124"} {:id "def/runtime-example-values", :kind "def", :line 88, :end-line 95, :hash "767240036"} {:id "defn-/example-domains", :kind "defn-", :line 97, :end-line 100, :hash "890692836"} {:id "defn-/validate-example!", :kind "defn-", :line 102, :end-line 107, :hash "-1191250962"} {:id "def/handlers", :kind "def", :line 109, :end-line 112, :hash "-398579982"}]}
+;; {:version 1, :tested-at "2026-07-15T00:57:21.111835248+02:00", :module-hash "1222543768", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1617418705"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1556493410"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1272479189"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-626384650"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-1216782882"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 73, :hash "1500628485"} {:id "def/model-example-values", :kind "def", :line 75, :end-line 86, :hash "-77094124"} {:id "def/runtime-example-values", :kind "def", :line 88, :end-line 95, :hash "767240036"} {:id "defn-/validate-example!", :kind "defn-", :line 97, :end-line 100, :hash "-376045871"} {:id "def/handlers", :kind "def", :line 102, :end-line 105, :hash "-398579982"}]}
 ;; clj-mutate-manifest-end

@@ -1,4 +1,5 @@
 import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
+export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
     "Exact value": ["string", "number", "boolean"],
@@ -15,10 +16,6 @@ const builtIns = Object.keys(compatibility).map((name) => ({
     kind: name,
     operator: name.toLowerCase(),
 }));
-export function canonicalRulePropertyPath(path) {
-    const segments = path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
-    return `/${segments.join("/")}`;
-}
 export function ruleTypeAvailability(propertyType, ruleType) {
     return compatibility[ruleType].includes(propertyType) ? "available" : "unavailable";
 }

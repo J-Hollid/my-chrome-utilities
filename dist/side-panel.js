@@ -55,7 +55,8 @@ import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription } from "./data-layer-schema-documentation.js";
@@ -1456,9 +1457,9 @@ function showSchemaSubview(id) {
 function schemaDocumentPaths(document) {
     return schemaPropertyRows(document).map(({ displayPath }) => displayPath);
 }
-function schemaPropertyAt(document, path) {
+function schemaPropertyAt(document, path, inheritedDocuments = []) {
     const canonicalPath = canonicalRulePropertyPath(path);
-    return schemaPropertyRows(document).find((row) => row.canonicalPath === canonicalPath)?.schema;
+    return schemaPropertyRows(document, inheritedDocuments).find((row) => row.canonicalPath === canonicalPath)?.schema;
 }
 function promotionReusableRules() {
     return reusableSchemaRules.map((rule) => ({
@@ -2429,10 +2430,8 @@ function defineSchemaProperty(document, path) {
     return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: defineSchemaProperty(properties[name] ?? { type: "object" }, rest) } };
 }
 function schemaPropertyType(path) {
-    let document = schemaDraft?.document;
-    for (const segment of path.split("."))
-        document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
-    return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+    const property = schemaDraft && schemaPropertyAt(schemaDraft.document, path, schemaParentDocuments());
+    return property?.type === "number" || property?.type === "array" || property?.type === "object" || property?.type === "boolean" ? property.type : "string";
 }
 function closeSchemaPropertyRulePicker() {
     if (schemaPropertyRulePicker.open)

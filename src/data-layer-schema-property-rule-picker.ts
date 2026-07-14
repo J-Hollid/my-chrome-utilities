@@ -2,6 +2,9 @@ import {
   validateConditionalRule,
   type ConditionalRulePredicate,
 } from "./data-layer-conditional-validation-rules.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+
+export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
 export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count";
@@ -69,11 +72,6 @@ const builtIns: readonly PropertyRuleChoice[] = (Object.keys(compatibility) as S
   kind:name,
   operator:name.toLowerCase(),
 }));
-
-export function canonicalRulePropertyPath(path: string): string {
-  const segments = path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
-  return `/${segments.join("/")}`;
-}
 
 export function ruleTypeAvailability(propertyType: SchemaPropertyType, ruleType: SchemaRuleType): "available" | "unavailable" {
   return compatibility[ruleType].includes(propertyType) ? "available" : "unavailable";

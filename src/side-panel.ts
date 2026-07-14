@@ -258,7 +258,8 @@ import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation } from "./data-layer-schema-documentation.js";
@@ -1701,9 +1702,9 @@ function schemaDocumentPaths(document: SchemaDefinition["document"]): string[] {
   return schemaPropertyRows(document).map(({ displayPath }) => displayPath);
 }
 
-function schemaPropertyAt(document: SchemaDefinition["document"], path: string): SchemaDefinition["document"] | undefined {
+function schemaPropertyAt(document: SchemaDefinition["document"], path: string, inheritedDocuments: readonly SchemaDefinition["document"][] = []): SchemaDefinition["document"] | undefined {
   const canonicalPath = canonicalRulePropertyPath(path);
-  return schemaPropertyRows(document).find((row) => row.canonicalPath === canonicalPath)?.schema;
+  return schemaPropertyRows(document, inheritedDocuments).find((row) => row.canonicalPath === canonicalPath)?.schema;
 }
 
 function promotionReusableRules(): PromotableReusableRule[] {
@@ -2519,9 +2520,8 @@ function defineSchemaProperty(document: SchemaDefinition["document"], path: read
 }
 
 function schemaPropertyType(path: string): SchemaPropertyType {
-  let document = schemaDraft?.document;
-  for (const segment of path.split(".")) document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
-  return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+  const property = schemaDraft && schemaPropertyAt(schemaDraft.document, path, schemaParentDocuments());
+  return property?.type === "number" || property?.type === "array" || property?.type === "object" || property?.type === "boolean" ? property.type : "string";
 }
 
 function closeSchemaPropertyRulePicker(): void {

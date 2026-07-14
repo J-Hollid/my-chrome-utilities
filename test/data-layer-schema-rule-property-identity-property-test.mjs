@@ -52,6 +52,8 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(rows.find(({ canonicalPath }) => canonicalPath === `/${names[0]}`).origin, "local",
     "a local definition must win over an inherited definition with the same identity");
   assert.deepEqual(inputs, inputSnapshot, "row derivation must not mutate schema documents");
+  rows[0].schema.type = "object";
+  assert.deepEqual(inputs, inputSnapshot, "row metadata must not provide a mutation path into schema documents");
 
   const targetIndex = sample % localCanonicalPaths.length;
   const targetPath = localCanonicalPaths[targetIndex];
