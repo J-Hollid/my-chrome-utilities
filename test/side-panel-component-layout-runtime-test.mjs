@@ -29,6 +29,7 @@ const requestedBrowserAdapter = Object.entries(process.env).some(([name, value])
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
@@ -436,10 +437,30 @@ const singleLiveEventFeedRuntime = `(async () => {
 const savedSessionLiveFeedRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  let pushListener; let channelId;
+  const captured = Array.from({ length:14 }, (_, index) => ({ event:index === 13 ? "purchase" : "current", index }));
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async (options) => {
+      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      return [{ result:{ queue:{ history:captured } } }];
+    } },
+    runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
+  };
+  q("#choose-observation-target").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click(); q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
   q("#data-layer-view-sessions").click();
   const row = Array.from(q("#saved-session-list").children).find(({ textContent }) => textContent.includes("Checkout journey"));
   const actions = Array.from(row.querySelectorAll("button")).map(({ textContent }) => textContent);
   click(row, "Open in Live feed");
+  if (!pushListener || !channelId) throw new Error("Production live-history callback was not attached");
+  for (let index = 0; index < 4; index += 1) pushListener({ type:"my-chrome-utilities.data-layer-history-entry", channelId, rawValue:{ event:"background", index }, timestamp:"2026-07-13T10:2" + index + ":00Z" }, { tab:{ id:23 } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const productionFeed = JSON.parse(localStorage.getItem("my-chrome-utilities.saved-session-live-feed.v1"));
+  const productionBackground = { background:productionFeed.backgroundEventCount, currentCount:productionFeed.currentView.events.length, savedCount:productionFeed.savedView.events.length, returnLabel:q("#return-to-current-live-feed").textContent };
+  q("#return-to-current-live-feed").click(); q("#end-data-layer-testing").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#data-layer-view-sessions").click(); click(row, "Open in Live feed");
   const banner = q("#saved-session-live-banner");
   const open = {
     liveSelected:q("#data-layer-view-live").getAttribute("aria-selected") === "true",
@@ -469,7 +490,7 @@ const savedSessionLiveFeedRuntime = `(async () => {
   const linked = sessions.resumeSavedSession(sessions.openSavedSession(library, saved.id), "https://example.test/confirmation");
   const draft = model.createSessionSaveDraft({ id:"active", pageScope:current.pageUrl, startedAt:currentEvents[0].captureTime, endedAt:currentEvents.at(-1).captureTime, events:currentEvents });
   return {
-    actions, open, analysisActions,
+    actions, open, analysisActions, productionBackground,
     model:{ savedOrder:persisted.savedView.events.map(({ id }) => id), currentCount:persisted.currentView.events.length, savedCount:persisted.session.events.length, background:persisted.backgroundEventCount, currentSelected:persisted.currentView.inspectorEventId, currentFilter:persisted.currentView.query.conditions[0].values[0], currentScroll:persisted.currentScrollTop, savedSelected:restored.savedView.inspectorEventId, savedScroll:restored.savedScrollTop, observerStarts:restored.startLiveObserver },
     imported:{ ids:imported.events.map(({ id }) => id), sources:imported.events.map(({ sourceId }) => sourceId), payload:imported.events[17].payload, rawInput:imported.events[17].rawInput, pageUrl:imported.events[17].pageUrl, provenance:imported.events[17].provenance },
     linked:{ parent:linked.activeSession.parentSavedSessionId, events:linked.activeSession.events.length, savedEvents:saved.events.length },
@@ -2265,21 +2286,23 @@ try {
     if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
       socket.close(); continue;
     }
-    schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
-    assert.deepEqual(schemaViewContainmentObservation, {
-      containedControls:true,
-      editorContainsActions:true,
-      closeReviewContainsActions:true,
-      assignmentContainsPolicy:true,
-      standaloneAssignmentPolicy:0,
-      presentationByView:{
-        Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-        Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
-      },
-      editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
-      restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
-    }, `Schema view containment violated its ${width}px browser contract`);
+    if (runSchemaViewContainmentRuntime) {
+      schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
+      assert.deepEqual(schemaViewContainmentObservation, {
+        containedControls:true,
+        editorContainsActions:true,
+        closeReviewContainsActions:true,
+        assignmentContainsPolicy:true,
+        standaloneAssignmentPolicy:0,
+        presentationByView:{
+          Live:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Library:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+          Sessions:{ panelDisplay:"none", painted:false, focusable:false, closeReviewOpen:false },
+        },
+        editorStates:{ assignmentWasOpen:true, assignmentHiddenWhileAway:true, ruleWasOpen:true, ruleHiddenWhileAway:true },
+        restored:{ editorVisible:true, name:"Unsaved checkout schema", closeReviewOpen:false },
+      }, `Schema view containment violated its ${width}px browser contract`);
+    }
     payloadPathFilterPickerObservation = await evaluate(socket, payloadPathFilterPickerRuntime);
     assert.deepEqual(payloadPathFilterPickerObservation, {
       initialFieldOptions:["Choose field", "Event name", "Source", "Adapter kind", "Pathname", "Payload property", "Validation state", "Schema", "Validation rule", "Rule severity", "Affected property"],

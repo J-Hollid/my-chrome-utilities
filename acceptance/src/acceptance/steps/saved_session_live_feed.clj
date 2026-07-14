@@ -29,7 +29,7 @@
 
 (defn- observation! [] (or @observation (load-observation!)))
 
-(defn- assert-initial! [initial]
+(defn- assert-initial-actions! [initial]
   (support/assert! (= ["Open in Live feed" "Start linked capture" "Rename" "Export" "Create sequence" "Delete"]
                       (:actions initial))
                    "Saved session action hierarchy changed." initial)
@@ -40,36 +40,59 @@
                         :captureDisabled [true true true]
                         :storedCount 18}
                        (select-keys (:open initial) [:liveSelected :mode :eventCount :observer :captureDisabled :storedCount]))
-                   "Opening the archive did not create a read-only Live feed." initial)
-  (support/assert! (and (str/includes? (get-in initial [:open :banner]) "Checkout journey")
-                        (str/includes? (get-in initial [:open :banner]) "Read-only archive")
-                        (str/includes? (get-in initial [:open :banner]) "18 events")
-                        (str/includes? (get-in initial [:open :banner]) "No observer was started"))
-                   "Saved-session banner content changed." initial)
+                   "Opening the archive did not create a read-only Live feed." initial))
+
+(defn- assert-initial-banner! [initial]
+  (let [banner (get-in initial [:open :banner])]
+    (support/assert! (= [true true true true]
+                        [(str/includes? banner "Checkout journey")
+                         (str/includes? banner "Read-only archive")
+                         (str/includes? banner "18 events")
+                         (str/includes? banner "No observer was started")])
+                     "Saved-session banner content changed." initial)))
+
+(defn- assert-initial-analysis! [initial]
   (support/assert! (every? (set (:analysisActions initial))
                            ["Copy payload" "Save to Library" "Create schema"
                             "Create validation from this event" "Create defect report" "Revalidate"])
-                   "Saved events lost current-feed analysis actions." initial)
+                   "Saved events lost current-feed analysis actions." initial))
+
+(defn- assert-initial-model! [initial]
   (let [model (:model initial)]
-    (support/assert! (and (= (mapv #(str "saved-" %) (range 1 19)) (:savedOrder model))
-                          (= 18 (:currentCount model))
-                          (= 18 (:savedCount model))
-                          (= 4 (:background model))
-                          (= "purchase" (:currentSelected model))
-                          (= "purchase" (:currentFilter model))
-                          (= 480 (:currentScroll model))
-                          (= "saved-18" (:savedSelected model))
-                          (= 275 (:savedScroll model))
-                          (false? (:observerStarts model)))
-                     "Saved/current feed isolation or persisted analysis state changed." model))
+    (support/assert! (= {:background 4 :currentCount 18 :savedCount 18
+                         :returnLabel "Return to current Live feed · 4 new events"}
+                        (:productionBackground initial))
+                     "Production live-history callback did not remain isolated behind the archive." initial)
+    (support/assert! (= {:savedOrder (mapv #(str "saved-" %) (range 1 19))
+                         :currentCount 18
+                         :savedCount 18
+                         :background 4
+                         :currentSelected "purchase"
+                         :currentFilter "purchase"
+                         :currentScroll 480
+                         :savedSelected "saved-18"
+                         :savedScroll 275
+                         :observerStarts false}
+                        model)
+                     "Saved/current feed isolation or persisted analysis state changed." model)))
+
+(defn- assert-initial-linked-and-imported! [initial]
   (support/assert! (= {:parent "saved:checkout" :events 0 :savedEvents 18} (:linked initial))
                    "Linked capture did not start empty and preserve its parent archive." initial)
-  (support/assert! (and (= (mapv #(str "saved-" %) (range 1 19)) (get-in initial [:imported :ids]))
-                        (= {:index 18} (get-in initial [:imported :payload]))
-                        (= ["purchase" 18] (get-in initial [:imported :rawInput]))
-                        (= "https://example.test/checkout" (get-in initial [:imported :pageUrl]))
-                        (= {:adapter "history" :imported true} (get-in initial [:imported :provenance])))
+  (support/assert! (= {:ids (mapv #(str "saved-" %) (range 1 19))
+                       :payload {:index 18}
+                       :rawInput ["purchase" 18]
+                       :pageUrl "https://example.test/checkout"
+                       :provenance {:adapter "history" :imported true}}
+                      (select-keys (:imported initial) [:ids :payload :rawInput :pageUrl :provenance]))
                    "Imported saved event identity or evidence changed." initial))
+
+(defn- assert-initial! [initial]
+  (assert-initial-actions! initial)
+  (assert-initial-banner! initial)
+  (assert-initial-analysis! initial)
+  (assert-initial-model! initial)
+  (assert-initial-linked-and-imported! initial))
 
 (defn- assert-reload! [reload]
   (support/assert! (= {:mode "saved-session"
@@ -77,8 +100,9 @@
                         :background "Live capture continues in the background · 4 new events"
                         :returnLabel "Return to current Live feed · 4 new events"
                         :selected "purchase"
+                        :scrollTop 275
                         :observer "Disconnected"}
-                       (select-keys (:restored reload) [:mode :banner :background :returnLabel :selected :observer]))
+                       (select-keys (:restored reload) [:mode :banner :background :returnLabel :selected :scrollTop :observer]))
                    "Reload did not restore the selected saved feed and background status." reload)
   (support/assert! (and (str/includes? (:comparison reload) "revisions 3 and 4")
                         (str/includes? (:comparison reload) "original results unchanged")
@@ -116,3 +140,7 @@
            :applies? (fn [world] (or (entry-steps (:text spec)) (:saved-session-live-feed world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T02:16:21.681752679+02:00", :module-hash "-1478103238", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1178839830"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "705456916"} {:id "def/entry-steps", :kind "def", :line 10, :end-line nil, :hash "-2107388724"} {:id "form/3/defonce", :kind "defonce", :line 20, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line nil, :hash "-547569961"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line nil, :hash "-775394783"} {:id "defn-/assert-initial-actions!", :kind "defn-", :line 32, :end-line nil, :hash "-2076566139"} {:id "defn-/assert-initial-banner!", :kind "defn-", :line 45, :end-line nil, :hash "-1985464640"} {:id "defn-/assert-initial-analysis!", :kind "defn-", :line 54, :end-line nil, :hash "-622821036"} {:id "defn-/assert-initial-model!", :kind "defn-", :line 60, :end-line nil, :hash "1264665629"} {:id "defn-/assert-initial-linked-and-imported!", :kind "defn-", :line 79, :end-line nil, :hash "-179937930"} {:id "defn-/assert-initial!", :kind "defn-", :line 90, :end-line nil, :hash "2026495002"} {:id "defn-/assert-reload!", :kind "defn-", :line 97, :end-line nil, :hash "2145638317"} {:id "defn-/assert-observation!", :kind "defn-", :line 126, :end-line nil, :hash "406949664"} {:id "defn-/transition", :kind "defn-", :line 130, :end-line nil, :hash "-488746180"} {:id "def/handlers", :kind "def", :line 137, :end-line nil, :hash "1733355050"}]}
+;; clj-mutate-manifest-end

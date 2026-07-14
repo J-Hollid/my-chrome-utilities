@@ -146,16 +146,35 @@ export function openSavedSessionLiveFeed(
   session: SavedSession,
   options: { scrollTop?: number } = {},
 ): SavedSessionLiveFeed {
+  const archivedSession = clone(session);
   return {
     mode:"Saved session",
     readOnly:true,
     startLiveObserver:false,
-    session,
+    session:archivedSession,
     currentView:clone(currentView),
-    savedView:savedObserverView(session),
+    savedView:savedObserverView(archivedSession),
     currentScrollTop:Math.max(0, options.scrollTop ?? 0),
     savedScrollTop:0,
     backgroundEventCount:0,
+  };
+}
+
+function restoreSavedObserverView(
+  session: SavedSession,
+  persisted: LiveObserverState,
+): LiveObserverState {
+  const archived = savedObserverView(session);
+  const inspectorEventId = persisted.inspectorEventId;
+  return {
+    ...archived,
+    ...(persisted.query ? { query:clone(persisted.query) } : {}),
+    ...(inspectorEventId && archived.events.some(({ id }) => id === inspectorEventId)
+      ? { inspectorEventId }
+      : {}),
+    ...(typeof persisted.listVisible === "boolean"
+      ? { listVisible:persisted.listVisible }
+      : {}),
   };
 }
 
@@ -244,13 +263,14 @@ export function restoreSavedSessionLiveFeed(
     const parsed = JSON.parse(serialized) as Partial<SerializedSavedSessionLiveFeed>;
     const session = library.sessions.find(({ id }) => id === parsed.sessionId);
     if (parsed.version !== 1 || !session || !parsed.currentView || !parsed.savedView) return undefined;
+    const archivedSession = clone(session);
     return {
       mode:"Saved session",
       readOnly:true,
       startLiveObserver:false,
-      session,
+      session:archivedSession,
       currentView:clone(parsed.currentView),
-      savedView:clone(parsed.savedView),
+      savedView:restoreSavedObserverView(archivedSession, parsed.savedView),
       currentScrollTop:Math.max(0, parsed.currentScrollTop ?? 0),
       savedScrollTop:Math.max(0, parsed.savedScrollTop ?? 0),
       backgroundEventCount:Math.max(0, parsed.backgroundEventCount ?? 0),
