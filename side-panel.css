@@ -46,7 +46,7 @@
 .live-validation-property-row > :is(.live-property-status,.live-property-add-validation) { grid-row:2; min-width:min(100%,8rem); }
 .live-validation-property-row > .live-property-status { grid-column:1; }
 .live-validation-property-row > .live-property-add-validation { grid-column:2; }
-.live-validation-property-row [data-missing="true"] { font-weight:700; color:var(--danger); }
+.live-validation-property-row [data-missing="true"] { font-weight:700; }
 .live-property-status { min-height:36px; }
 .live-property-aggregate { grid-column:1/-1; font-weight:700; }
 .live-property-issue-preview { position:relative; z-index:2; margin:.25rem; padding:.45rem; border:1px solid var(--line); background:var(--surface); box-shadow:0 .35rem 1rem color-mix(in srgb,var(--text) 18%,transparent); }

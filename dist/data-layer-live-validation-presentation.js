@@ -92,4 +92,37 @@ export function buildValidationPropertyTree(payload, evaluations, issues) {
             roots.push(node(name, undefined, name));
     return roots;
 }
+function hasApplicableEvidence(node) {
+    return node.evaluations.some(({ status }) => status !== "not-applicable")
+        || node.children.some(hasApplicableEvidence)
+        || (node.specificItems ?? []).some(hasApplicableEvidence);
+}
+function presentPropertyNode(node, showNonApplicable) {
+    const children = node.children
+        .map((child) => presentPropertyNode(child, showNonApplicable))
+        .filter((child) => Boolean(child));
+    const specificItems = (node.specificItems ?? [])
+        .map((child) => presentPropertyNode(child, showNonApplicable))
+        .filter((child) => Boolean(child));
+    if (!showNonApplicable && node.missing && !hasApplicableEvidence(node))
+        return undefined;
+    const evaluations = showNonApplicable
+        ? node.evaluations
+        : node.evaluations.filter(({ status }) => status !== "not-applicable");
+    const summary = propertyValidationSummary(evaluations);
+    const displayedSummary = !showNonApplicable && !node.missing && evaluations.length === 0
+        && node.evaluations.some(({ status }) => status === "not-applicable")
+        ? { ...summary, status: "No applicable rules" }
+        : summary;
+    const aggregate = [...children, ...specificItems].reduce((counts, child) => ({
+        errors: counts.errors + child.summary.errors + child.aggregate.errors,
+        warnings: counts.warnings + child.summary.warnings + child.aggregate.warnings,
+    }), { errors: 0, warnings: 0 });
+    return { ...node, evaluations, summary: displayedSummary, aggregate, children, specificItems };
+}
+export function presentValidationPropertyTree(nodes, showNonApplicable) {
+    return nodes
+        .map((node) => presentPropertyNode(node, showNonApplicable))
+        .filter((node) => Boolean(node));
+}
 //# sourceMappingURL=data-layer-live-validation-presentation.js.map

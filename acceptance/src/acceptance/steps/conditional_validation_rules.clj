@@ -41,10 +41,11 @@
                  (mapv (juxt :result :invocationCount) groups))
               "All and Any groups invoked their consequence incorrectly."
               groups)
-    (require! (= [1 "/oOrder/aProducts" true true true true 0]
+    (require! (= [1 "/oOrder/aProducts" true true true true true 0]
                  [(:issueCount presentation) (:expectedPath presentation) (:conditionShown presentation)
                   (:consequenceShown presentation) (:triggerNotFailing presentation)
-                  (:notApplicableShown presentation) (:notApplicableIssues presentation)])
+                  (:notApplicableHiddenByDefault presentation) (:notApplicableShown presentation)
+                  (:notApplicableIssues presentation)])
               "Live validation did not attribute the conditional outcome to the consequence path."
               presentation)
     (require! (and (:atomic lifecycle)
