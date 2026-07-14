@@ -63,14 +63,31 @@ assert.deepEqual(payloadDraft.payload,{page_name:"test",products:[{id:1,name:"ro
 assert.deepEqual(payloadDraft.responseSources,{"/page_name":"schema-provided value","/products/0/id":"operator custom response","/products/0/name":"operator custom response"});
 assert.equal(expectedPayloadComplete(recursiveSchema,payloadDraft),true);
 assert.equal(expectedPayloadPresentation("pageview",payloadDraft.payload),'pageview is fired with {"page_name":"test","products":[{"id":1,"name":"robot"}]}');
+payloadDraft=addExpectedArrayItem(recursiveSchema,payloadDraft,"/products");
+payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/products/1/id",{method:"custom",value:"2"});
+payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/products/1/name",{method:"schema-value",value:"vehicle"});
 payloadDraft=duplicateExpectedArrayItem(recursiveSchema,payloadDraft,"/products",0);
-assert.deepEqual(payloadDraft.payload.products,[{id:1,name:"robot"},{id:1,name:"robot"}]);
+assert.deepEqual(payloadDraft.payload.products,[{id:1,name:"robot"},{id:1,name:"robot"},{id:2,name:"vehicle"}]);
+assert.equal(payloadDraft.responseSources["/products/1/name"],"operator custom response");
+assert.equal(payloadDraft.responseSources["/products/2/name"],"schema-provided value");
 payloadDraft=removeExpectedArrayItem(recursiveSchema,payloadDraft,"/products",1);
 assert.equal(payloadDraft.responseSources["/products/0/id"],"operator custom response");
 assert.equal(payloadDraft.responseSources["/products/0/name"],"operator custom response");
+assert.equal(payloadDraft.responseSources["/products/1/name"],"schema-provided value");
 payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/logged_in",{method:"schema-value",value:false});
 assert.equal(payloadDraft.payload.logged_in,false);
 assert.equal(expectedPayloadComplete(recursiveSchema,payloadDraft),true);
+
+const optionalArraySchema={
+  id:"schema:optional-array",name:"Optional array",version:1,
+  document:{type:"object",properties:{tags:{type:"array",items:{type:"string"}}}},
+  assignments:[],attachedRules:[],
+};
+let optionalArrayDraft=createExpectedPayloadDraft(optionalArraySchema);
+assert.deepEqual(optionalArrayDraft.payload,{});
+optionalArrayDraft=addExpectedArrayItem(optionalArraySchema,optionalArrayDraft,"/tags");
+optionalArrayDraft=setExpectedPayloadValue(optionalArraySchema,optionalArrayDraft,"/tags/0",{method:"custom",value:"reviewed"});
+assert.deepEqual(optionalArrayDraft.payload,{tags:["reviewed"]});
 
 const visits=[{id:"products",pathname:"/products"},{id:"checkout",pathname:"/checkout"},{id:"confirmation",pathname:"/confirmation"}];
 const initial=reconcileMissingEventJourney(visits,"products","checkout",[],{eventName:"purchase",sourceId:"event-history"});
