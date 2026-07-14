@@ -35,8 +35,11 @@ export interface ExpectedPayloadField {
 export interface ExpectedPayloadDraft {
   payload:Record<string, unknown>;
   responseSources:Record<string, "schema-provided value" | "operator custom response">;
-  responseProvenance?:Record<string, Pick<AttachedSchemaRule, "id" | "name" | "version" | "propertyPath">>;
+  responseProvenance?:ExpectedResponseProvenanceMap;
 }
+
+export type ExpectedResponseProvenance = Pick<AttachedSchemaRule, "id" | "name" | "version" | "propertyPath">;
+export type ExpectedResponseProvenanceMap = Record<string, ExpectedResponseProvenance>;
 
 function normalizedOperator(value: string | undefined): string {
   return value?.replaceAll("_", "-").replaceAll(" ", "-").toLocaleLowerCase() ?? "";

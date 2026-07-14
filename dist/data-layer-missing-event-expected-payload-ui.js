@@ -74,7 +74,7 @@ export function renderExpectedPayloadEditor(root, schema, state) {
         const custom = element("input");
         custom.dataset.expectedPayloadInput = pointer;
         custom.type = definition.type === "number" ? "number" : "text";
-        custom.value = current === undefined ? "" : String(current);
+        custom.value = current == null ? "" : String(current);
         custom.addEventListener("input", () => {
             if (definition.type === "number" && custom.value === "")
                 return;
