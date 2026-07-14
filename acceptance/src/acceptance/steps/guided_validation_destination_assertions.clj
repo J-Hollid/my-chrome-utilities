@@ -69,12 +69,15 @@
       (str/includes? review "version 4")]))
 
 (defn- revision-review [example observation]
-  (let [state (example-value example "assignment_state")
+  (let [state (example-value example "assignment_coverage")
         expected-action (example-value example "assignment_action")
-        key (if (= state "matching exists") :matching :absent)
+        key (get {"an enabled published assignment covers the event" :matching
+                  "an enabled working-draft assignment covers the event" :pending
+                  "no enabled published or pending assignment covers it" :absent}
+                 state)
         result (get-in observation [:production :destinations key])]
-    (support/assert! (contains? #{"matching exists" "matching absent"} state)
-                     "Assignment state must use the supported matching vocabulary."
+    (support/assert! key
+                     "Assignment coverage must use the supported published, pending, or absent vocabulary."
                      {:example example})
     (support/assert! (str/includes? (:review result) "Rule attachment path: page_type")
                      "Existing schema review omitted the rule attachment path." {:result result})
@@ -84,18 +87,30 @@
                      "Existing schema review used the wrong assignment action."
                      {:example example :result result})))
 
+(def ^:private successful-save-expectations
+  {"new Signal Shop pageview"
+   {:feature "draft Signal Shop pageview was created"
+    :runtime "Draft Signal Shop pageview was created."}
+   "existing Product listing v3"
+   {:feature "validation was added to Product listing draft"
+    :runtime "Validation was added to Product listing draft."}})
+
 (defn- successful-save [example observation]
   (let [destination (example-value example "schema_destination")
         saved-result (example-value example "saved_result")
+        expected (get successful-save-expectations destination)
         result (if (str/starts-with? destination "new ") (:saved observation) (:existingSaved observation))]
-    (support/assert! (contains? #{"new Signal Shop pageview" "existing Product listing v3"} destination)
+    (support/assert! expected
                      "Schema destination must identify a supported reviewed destination."
+                     {:example example})
+    (support/assert! (= (:feature expected) saved-result)
+                     "Schema-destination confirmation example changed."
                      {:example example})
     (support/assert! (= [true true true]
                         [(:flowClosed result) (:inspectorRestored result) (:focusReturned result)])
                      "Successful schema-destination save did not close, restore, and return focus."
                      {:example example :result result})
-    (support/assert! (str/includes? (str/lower-case (:status result)) (str/lower-case saved-result))
+    (support/assert! (= (:runtime expected) (:status result))
                      "Successful schema-destination save did not show its confirmation."
                      {:example example :result result})))
 
@@ -111,31 +126,25 @@
   (support/assert! (= [{:expectedType "String"
                         :expectedTypeSource "String — Generic pageview version 4"
                         :target "payload"}
-                       {:domain "shop.example"
-                        :domainSource "Generic shop pages assignment"
-                        :eventName "pageview"
-                        :eventNameSource "Generic shop pages assignment"
-                        :source "event-history"
-                        :sourceSource "Generic shop pages assignment"
-                        :pathCondition "/products/*"}]
+                       {:configurationAbsent true :selectionAbsent true}]
                       [(:schemaPrefillRequirement observation) (:schemaPrefillScope observation)])
-                   "Schema and compatible-assignment values were not prefilled with readable provenance."
+                   "A covering assignment did not retain schema prefill while omitting redundant assignment controls."
                    {:observation observation}))
 
-(def assignment-scope-expectations
-  {"use captured event values as editable defaults" ["127.0.0.1" false]
-   "prefill its domain and path conditions" ["shop.example" true]
-   "do not prefill scope before the operator chooses" ["127.0.0.1" false]})
-
 (defn- assignment-resolution [example observation]
-  (let [count (parse-long (example-value example "compatible_assignment_count"))
-        expected-selection (example-value example "assignment_selection")
-        expected-scope (get assignment-scope-expectations (example-value example "scope_behavior"))
-        result (find-first #(= count (:count %)) (get-in observation [:production :assignmentResolutions]))
-        observed-scope [(:domain result) (boolean (seq (:pathConditions result)))]]
-    (support/assert! (= [expected-selection expected-scope] [(:selection result) observed-scope])
-                     "Compatible-assignment cardinality produced the wrong selection or scope behavior."
+  (let [state (example-value example "assignment_state")
+        expected [(example-value example "configuration_visibility")
+                  (example-value example "assignment_action")
+                  (example-value example "continuation_result")]
+        result (find-first #(= state (:state %)) (get-in observation [:production :assignmentCoverage]))]
+    (support/assert! (= expected [(:configuration result) (:action result) (:continuation result)])
+                     "Assignment coverage produced the wrong configuration, action, or continuation behavior."
                      {:example example :result result})))
+
+(defn- assignment-action [example observation]
+  (if (support/example-value example "assignment_coverage")
+    (revision-review example observation)
+    (assignment-resolution example observation)))
 
 (defn- replacement-review [_example observation]
   (support/assert! (= [["Keep current values" "Accept schema-derived values"]
@@ -174,13 +183,12 @@
    #{"the destination targets existing Product listing version 3"
      "the draft defines an allowed-values rule for page_type"
      "existing schema Product listing version 3 is selected"
-     "matching assignment state is <assignment_state>"
+     "assignment coverage for the captured event is <assignment_coverage>"
      "the validation review is displayed"
      "it identifies page_type as the rule attachment path"
      "it states that the rule will be added to the Product listing working draft based on version 3"
      "Product listing version 3 remains current until the working draft is published"
-     "no Product listing version 4 exists before publication"
-     "assignment action is <assignment_action>"}
+     "no Product listing version 4 exists before publication"}
    revision-review
    #{"the review has destination <schema_destination>"
      "the operator activates Add validation to draft and persistence completes"
@@ -196,7 +204,7 @@
      "no partial schema, rule, assignment, or revision is persisted"}
    failed-save
    #{"the destination choice has accepted Generic pageview version 4"
-     "it has one enabled assignment compatible with the captured event"
+     "one enabled assignment covers the captured event"
      "the requirement stage is displayed"
      "page_type expected type is prefilled from Generic pageview version 4"
      "validation target is prefilled from the schema"
@@ -204,11 +212,13 @@
      "every prefilled value identifies Generic pageview version 4 or its assignment as its source"
      "the operator can change each prefilled value before review"}
    schema-prefill
-   #{"the selected destination has <compatible_assignment_count> compatible assignments"
-     "assignment resolution runs"
-     "assignment selection is <assignment_selection>"
-     "scope behavior is <scope_behavior>"}
+   #{"the selected schema has assignment state <assignment_state>"
+     "assignment coverage is evaluated for the captured event"
+     "assignment configuration is <configuration_visibility>"
+     "property-rule creation is <continuation_result>"}
    assignment-resolution
+   #{"assignment action is <assignment_action>"}
+   assignment-action
    #{"the operator has changed a schema-derived scope value"
      "a different schema destination or assignment is selected"
      "the changed value is not silently overwritten"
@@ -222,5 +232,5 @@
                    {:step text}))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T00:33:51.591255787+02:00", :module-hash "-2052959161", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1678299692"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line nil, :hash "-1416813660"} {:id "defn-/find-first", :kind "defn-", :line 9, :end-line nil, :hash "942117298"} {:id "defn-/destination-choice", :kind "defn-", :line 12, :end-line nil, :hash "874551229"} {:id "defn-/new-schema-name", :kind "defn-", :line 21, :end-line nil, :hash "-1054318475"} {:id "defn-/existing-option", :kind "defn-", :line 39, :end-line nil, :hash "1347961657"} {:id "defn-/isolated-working-draft-review?", :kind "defn-", :line 65, :end-line nil, :hash "1136396150"} {:id "defn-/revision-review", :kind "defn-", :line 71, :end-line nil, :hash "-1169592804"} {:id "defn-/successful-save", :kind "defn-", :line 87, :end-line nil, :hash "1710354139"} {:id "defn-/failed-save", :kind "defn-", :line 102, :end-line nil, :hash "327703264"} {:id "defn-/schema-prefill", :kind "defn-", :line 110, :end-line nil, :hash "-620786608"} {:id "def/assignment-scope-expectations", :kind "def", :line 125, :end-line nil, :hash "1672998917"} {:id "defn-/assignment-resolution", :kind "defn-", :line 130, :end-line nil, :hash "-1110233269"} {:id "defn-/replacement-review", :kind "defn-", :line 140, :end-line nil, :hash "1239151997"} {:id "def/assertions", :kind "def", :line 153, :end-line nil, :hash "-1057327777"} {:id "defn/default-assertion", :kind "defn", :line 219, :end-line nil, :hash "2057136094"}]}
+;; {:version 1, :tested-at "2026-07-14T14:42:05.411841657+02:00", :module-hash "-1407487327", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1678299692"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line 7, :hash "-1416813660"} {:id "defn-/find-first", :kind "defn-", :line 9, :end-line 10, :hash "942117298"} {:id "defn-/destination-choice", :kind "defn-", :line 12, :end-line 19, :hash "874551229"} {:id "defn-/new-schema-name", :kind "defn-", :line 21, :end-line 37, :hash "-1054318475"} {:id "defn-/existing-option", :kind "defn-", :line 39, :end-line 63, :hash "620402717"} {:id "defn-/isolated-working-draft-review?", :kind "defn-", :line 65, :end-line 69, :hash "1136396150"} {:id "defn-/revision-review", :kind "defn-", :line 71, :end-line 88, :hash "2124054012"} {:id "def/successful-save-expectations", :kind "def", :line 90, :end-line 96, :hash "23186373"} {:id "defn-/successful-save", :kind "defn-", :line 98, :end-line 115, :hash "-769240431"} {:id "defn-/failed-save", :kind "defn-", :line 117, :end-line 123, :hash "327703264"} {:id "defn-/schema-prefill", :kind "defn-", :line 125, :end-line 132, :hash "475918946"} {:id "defn-/assignment-resolution", :kind "defn-", :line 134, :end-line 142, :hash "299517715"} {:id "defn-/assignment-action", :kind "defn-", :line 144, :end-line 147, :hash "-70875715"} {:id "defn-/replacement-review", :kind "defn-", :line 149, :end-line 160, :hash "-2135809213"} {:id "def/assertions", :kind "def", :line 162, :end-line 227, :hash "257738528"} {:id "defn/default-assertion", :kind "defn", :line 229, :end-line 232, :hash "2057136094"}]}
 ;; clj-mutate-manifest-end

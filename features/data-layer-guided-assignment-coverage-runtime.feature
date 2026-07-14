@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d84a721b6a995b8a5025c50d740386d5797d2627b2631d0d2d951662a761230d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T12:42:30.190550972Z","feature_name":"Data layer guided assignment coverage runtime","feature_path":"features/data-layer-guided-assignment-coverage-runtime.feature","background_hash":"97494f7f7850bc3f0883b7cd1d8cf10b0a82386834d7fcfcf9b57470c7dfd6bf","implementation_hash":"sha256:eb9911e46c4103ed1d7cef2591909f69124a550ea12e59c1143976294dc424b8","scenarios":[{"index":0,"name":"Data layer guided assignment coverage runtime 001","scenario_hash":"49ea2574e3acb6a7bd05e55e708b62f8eebf967a72822a80f0ca8e37fdbb994a","mutation_count":7,"result":{"Total":7,"Killed":7,"Survived":0,"Errors":0},"tested_at":"2026-07-14T12:38:59.418086051Z"},{"index":1,"name":"Data layer guided assignment coverage runtime 002","scenario_hash":"78d3118a45362d2294a61f30759c5c4a35b77ec290c66c279fb148a8ece00ea1","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T12:38:59.418086051Z"},{"index":2,"name":"Data layer guided assignment coverage runtime 003","scenario_hash":"c75433a82365e2d36528b2fc5f7afb3ec8878c464a57b82a9fef738fdcbf816a","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T12:38:59.418086051Z"},{"index":3,"name":"Data layer guided assignment coverage runtime 004","scenario_hash":"ee390c1873de06a24bf904408bd95c2e74efe582009f97a1d56ec1d03cf5b42c","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T12:38:59.418086051Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided assignment coverage runtime
 
   Background:

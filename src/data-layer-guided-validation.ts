@@ -1,6 +1,7 @@
 import {
   pathConditionResult,
   pathConditionsResult,
+  urlConditionsMatch,
   type PathCondition,
   type PathMatchType,
 } from "./data-layer-path-conditions.js";
@@ -54,7 +55,10 @@ export interface GuidedSchemaCandidate {
     domainCondition?: string;
     pathnameCondition?: string;
     pathConditions?: readonly GuidedPathCondition[];
+    priority?: number;
+    versionPolicy?: "pinned" | "follow latest";
     enabled?: boolean;
+    pending?: boolean;
   }[];
 }
 
@@ -67,7 +71,17 @@ export interface GuidedAssignmentIdentity {
   domainCondition?: string;
   pathnameCondition?: string;
   pathConditions?: readonly GuidedPathCondition[];
+  priority?: number;
+  versionPolicy?: "pinned" | "follow latest";
+  enabled?: boolean;
+  pending?: boolean;
 }
+
+export type GuidedAssignmentAction =
+  | "reuse the covering assignment"
+  | "reuse the covering pending assignment"
+  | "reuse existing schema coverage"
+  | "add the reviewed assignment as a pending change";
 
 export type GuidedSchemaDestination =
   | { kind: "new"; schemaName: string }
@@ -98,6 +112,7 @@ export interface GuidedValidationDraft {
   assignmentResolution?: {
     selection: "Create a new assignment" | "the compatible assignment" | "required from readable assignment choices";
     compatibleAssignments: readonly GuidedAssignmentIdentity[];
+    coveringAssignments: readonly GuidedAssignmentIdentity[];
     selectedAssignmentId?: string;
   };
   prefillSources: Readonly<Record<string, string>>;
@@ -111,6 +126,7 @@ export interface GuidedValidationDraft {
     ruleName: string;
     severity: "Error" | "Warning";
     message: string;
+    assignmentName: string;
     sourceId: string;
     target: "payload" | "raw input";
     priority: number;
@@ -134,6 +150,7 @@ export interface PublishedGuidedValidation {
   reusableRules: readonly { id: string; name: string; requirement: GuidedRequirement; values: readonly string[] }[];
   assignment: {
     id: string;
+    name: string;
     schemaId: string;
     sourceId: string;
     eventName: string;
@@ -149,7 +166,7 @@ export interface PublishedGuidedValidation {
     kind: "new" | "existing";
     previousSchemaId?: string;
     previousVersion?: number;
-    assignmentAction: "reuse the matching enabled assignment" | "add the reviewed assignment as a pending change";
+    assignmentAction: GuidedAssignmentAction;
   };
   readableRequirement: string;
 }
@@ -168,7 +185,9 @@ const continuationStageOrder: readonly GuidedValidationStage[] = ["property", "r
 
 export function guidedValidationStages(draft: GuidedValidationDraft): readonly GuidedValidationStage[] {
   const order = draft.continuation ? continuationStageOrder : stageOrder;
-  return draft.propertyEntry ? order.filter((stage) => stage !== "property") : order;
+  return order.filter((stage) =>
+    (!draft.propertyEntry || stage !== "property") &&
+    (stage !== "scope" || assignmentConfigurationRequired(draft)));
 }
 
 function slug(value: string): string {
@@ -237,6 +256,7 @@ export function createGuidedValidationDraft(event: GuidedValidationDraft["event"
       ruleName:`${event.name} requirement`,
       severity:"Error",
       message:`Validate ${event.name} from ${event.sourceId}`,
+      assignmentName:`${event.name} on ${url.hostname}`,
       sourceId:event.sourceId,
       target:"payload",
       priority:100,
@@ -512,6 +532,27 @@ function compatibleCapturedAssignments(
     }));
 }
 
+export function guidedAssignmentCoversEvent(
+  assignment: GuidedAssignmentIdentity,
+  event: Pick<GuidedValidationDraft["event"], "sourceId" | "name" | "pageUrl">,
+  target: "payload" | "raw input",
+): boolean {
+  if (
+    assignment.enabled === false ||
+    assignment.sourceId !== event.sourceId ||
+    assignment.eventName !== event.name ||
+    assignment.target !== target
+  ) {
+    return false;
+  }
+  return urlConditionsMatch(event.pageUrl, assignment);
+}
+
+export function assignmentConfigurationRequired(draft: GuidedValidationDraft): boolean {
+  if (draft.destination?.kind === "new") return true;
+  return (draft.assignmentResolution?.coveringAssignments.length ?? 0) === 0;
+}
+
 function scopeFromAssignment(draft: GuidedValidationDraft, assignment: GuidedAssignmentIdentity): GuidedScope {
   const conditions = assignment.pathConditions ? [...assignment.pathConditions] : [];
   const kind: GuidedScopeKind = conditions.length
@@ -545,12 +586,14 @@ export function applyGuidedSchemaCandidate(
   assignmentId?: string,
 ): GuidedValidationDraft {
   const compatibleAssignments = compatibleCapturedAssignments(draft, candidate);
+  const coveringAssignments = compatibleAssignments.filter((assignment) =>
+    guidedAssignmentCoversEvent(assignment, draft.event, candidate.target));
   const selectedAssignment = assignmentId
-    ? compatibleAssignments.find((assignment) => assignment.id === assignmentId)
-    : compatibleAssignments.length === 1
-      ? compatibleAssignments[0]
+    ? coveringAssignments.find((assignment) => assignment.id === assignmentId)
+    : coveringAssignments.length === 1
+      ? coveringAssignments[0]
       : undefined;
-  const selection = compatibleAssignments.length === 0
+  const selection = coveringAssignments.length === 0
     ? "Create a new assignment" as const
     : selectedAssignment
       ? "the compatible assignment" as const
@@ -580,6 +623,7 @@ export function applyGuidedSchemaCandidate(
     assignmentResolution:{
       selection,
       compatibleAssignments,
+      coveringAssignments,
       ...(selectedAssignment?.id ? { selectedAssignmentId:selectedAssignment.id } : {}),
     },
     prefillSources:schemaSources,
@@ -627,16 +671,39 @@ export function resolveGuidedPrefillReplacement(
   return rest;
 }
 
-function selectedAssignmentStillMatches(draft: GuidedValidationDraft): boolean {
-  if (draft.destination?.kind !== "existing") return false;
+function coveringAssignmentsStillMatch(draft: GuidedValidationDraft): GuidedAssignmentIdentity[] {
+  if (draft.destination?.kind !== "existing") return [];
   const resolution = draft.assignmentResolution;
-  if (!resolution) return draft.destination.matchingAssignment;
-  const selected = resolution.selectedAssignmentId
-    ? resolution.compatibleAssignments.find(({ id }) => id === resolution.selectedAssignmentId)
-    : resolution.selection === "the compatible assignment" && resolution.compatibleAssignments.length === 1
-      ? resolution.compatibleAssignments[0]
-      : undefined;
-  return selected ? guidedAssignmentsMatch(selected, reviewedAssignment(draft)) : false;
+  if (!resolution) return [];
+  return resolution.coveringAssignments.filter((assignment) =>
+    guidedAssignmentCoversEvent(assignment, draft.event, draft.advanced.target) &&
+    (!draft.scopeEdited || guidedAssignmentsMatch(assignment, reviewedAssignment(draft))));
+}
+
+export function assignmentGuidedAction(draft: GuidedValidationDraft): GuidedAssignmentAction {
+  if (draft.destination?.kind !== "existing") {
+    return "add the reviewed assignment as a pending change";
+  }
+  if (!draft.assignmentResolution) {
+    return draft.destination.matchingAssignment
+      ? "reuse the covering assignment"
+      : "add the reviewed assignment as a pending change";
+  }
+  const covering = coveringAssignmentsStillMatch(draft);
+  if (covering.length > 1) return "reuse existing schema coverage";
+  if (covering[0]?.pending) return "reuse the covering pending assignment";
+  if (covering.length === 1) return "reuse the covering assignment";
+  return "add the reviewed assignment as a pending change";
+}
+
+export function assignmentDraftAfterGuidedSave<T>(
+  assignments: readonly T[],
+  assignment: T,
+  action: GuidedAssignmentAction,
+): T[] {
+  return action === "add the reviewed assignment as a pending change"
+    ? [...assignments, assignment]
+    : [...assignments];
 }
 
 export function existingSchemaDestination(
@@ -659,7 +726,7 @@ function reviewText(draft: GuidedValidationDraft): string {
     : draft.requirement.toLowerCase();
   const destination = draft.destination.kind === "new"
     ? `New schema draft ${draft.destination.schemaName} will be created and remain unavailable until publication.`
-    : `The rule will be added to the ${draft.destination.schemaName} working draft based on version ${draft.destination.schemaVersion}. ${draft.destination.schemaName} version ${draft.destination.schemaVersion} remains current until the working draft is published. Assignment action: ${selectedAssignmentStillMatches(draft) ? "reuse the matching enabled assignment" : "add the reviewed assignment as a pending change"}.`;
+    : `The rule will be added to the ${draft.destination.schemaName} working draft based on version ${draft.destination.schemaVersion}. ${draft.destination.schemaName} version ${draft.destination.schemaVersion} remains current until the working draft is published. Assignment action: ${assignmentGuidedAction(draft)}.`;
   return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
 }
 
@@ -693,7 +760,8 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
   const pathnameCondition = scope.kind === "current-path" ? scope.pathname : undefined;
   const domainCondition = scope.kind === "everywhere" ? undefined : scope.domain;
   const assignment = {
-    id:`assignment:${schemaId}:${slug(draft.event.name)}`,
+    id:`assignment:${schemaId}:${slug(draft.advanced.assignmentName)}`,
+    name:draft.advanced.assignmentName,
     schemaId,
     sourceId:draft.advanced.sourceId,
     eventName:draft.event.name,
@@ -714,9 +782,7 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
       ...(draft.destination.kind === "existing"
         ? { previousSchemaId:draft.destination.schemaId, previousVersion:draft.destination.schemaVersion }
         : {}),
-      assignmentAction:draft.destination.kind === "existing" && selectedAssignmentStillMatches(draft)
-        ? "reuse the matching enabled assignment"
-        : "add the reviewed assignment as a pending change",
+      assignmentAction:assignmentGuidedAction(draft),
     },
     readableRequirement:`${draft.property.path} must be ${draft.allowedValues.join(" or ") || draft.requirement.toLowerCase()}`,
   };
