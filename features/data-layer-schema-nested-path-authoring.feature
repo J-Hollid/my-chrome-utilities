@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7a934612c408f2b1983493e0216fd86dc9d4ab09baa59bfe465bd6c16ed4f38a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T07:26:56.915603244Z","feature_name":"Data layer schema nested path authoring","feature_path":"features/data-layer-schema-nested-path-authoring.feature","background_hash":"9d557f20ffa14dd62c853bb0e2748cc3047b18d44b3a78c7029c0373b8f74a62","implementation_hash":"sha256:b1a476a3fac4ae62b1f19e3469902dc9a3fd2f9fbf84aab41e737122c702f3ef","scenarios":[{"index":2,"name":"Data layer schema nested path authoring 003","scenario_hash":"4a9eced4d4ddff662e0aac541ac3e3af184e49c78ab6547f68f57d2cd76fc4e8","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:26:56.915603244Z"},{"index":5,"name":"Data layer schema nested path authoring 006","scenario_hash":"13f80139edd6ee92aa93ee27479ae0cee4b0c0d77f03fb137eb0d853318ab3c8","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:26:56.915603244Z"},{"index":6,"name":"Data layer schema nested path authoring 007","scenario_hash":"1121e23cc98601c3528e9934f1dabdb4ba74fda5a675a716efb20e4b52e7b475","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:26:56.915603244Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema nested path authoring
 
   Background:

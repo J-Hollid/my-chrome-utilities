@@ -208,7 +208,7 @@ import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js
 import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
-import { ensureNestedSchemaPath } from "./data-layer-schema-nested-path.js";
+import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, reusableRulesForProperty, type SchemaPropertyType } from "./data-layer-schema-property-rule-picker.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
@@ -1924,16 +1924,18 @@ schemaPropertyRulePicker.addEventListener("keydown", (event) => {
 });
 
 schemaSpecificIndex.addEventListener("input", () => {
-  const index = Number(schemaSpecificIndex.value);
-  const valid = schemaSpecificIndex.value !== "" && Number.isInteger(index) && index >= 0;
-  confirmSchemaSpecificIndex.disabled = !valid;
-  schemaSpecificIndexAssistance.textContent = valid ? `Item ${index + 1} at zero-based index ${index}` : "Enter a non-negative array index";
+  if (!schemaDraft || !specificIndexArrayPath) return;
+  const inspection = inspectSpecificIndexRuleTarget(schemaDraft.document, specificIndexArrayPath, schemaSpecificIndex.value);
+  confirmSchemaSpecificIndex.disabled = inspection.result !== "accepted";
+  schemaSpecificIndexAssistance.textContent = inspection.assistance;
 });
 schemaSpecificIndexForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const index = Number(schemaSpecificIndex.value);
-  if (!specificIndexArrayPath || !specificIndexTrigger || !Number.isInteger(index) || index < 0) return;
-  schemaSpecificIndexDialog.close(); openSchemaPropertyRulePicker(`${specificIndexArrayPath}.${index}`, specificIndexTrigger);
+  if (!schemaDraft || !specificIndexArrayPath || !specificIndexTrigger) return;
+  const inspection = inspectSpecificIndexRuleTarget(schemaDraft.document, specificIndexArrayPath, schemaSpecificIndex.value);
+  if (inspection.result !== "accepted") return;
+  schemaSpecificIndexDialog.close();
+  openSchemaPropertyRulePicker(inspection.canonicalPath.slice(1).replaceAll("/", "."), specificIndexTrigger);
 });
 const closeSpecificIndexDialog = () => { if (schemaSpecificIndexDialog.open) schemaSpecificIndexDialog.close(); specificIndexTrigger?.focus({ preventScroll:true }); };
 cancelSchemaSpecificIndex.addEventListener("click", closeSpecificIndexDialog);
