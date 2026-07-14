@@ -15,6 +15,7 @@
             [acceptance.steps.guided-validation :as guided-validation]
             [acceptance.steps.guided-assignment-coverage :as guided-assignment-coverage]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
+            [acceptance.steps.guided-rule-parameter-integrity :as guided-rule-parameter-integrity]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -54,6 +55,7 @@
                recursive-property-validation/handlers
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
+               guided-rule-parameter-integrity/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers
