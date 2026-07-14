@@ -1,10 +1,20 @@
 import assert from "node:assert/strict";
 
 import {
+  addExpectedArrayItem,
+  createExpectedPayloadDraft,
+  duplicateExpectedArrayItem,
+  expectedPayloadComplete,
+  expectedPayloadFields,
+  expectedPayloadPresentation,
   expectedPropertyChoices,
   expectedPropertyPresentation,
   missingEventActualPresentation,
   reconcileMissingEventJourney,
+  reconcileMissingEventJourneyWithReview,
+  removeExpectedArrayItem,
+  removeExpectedPayloadValue,
+  setExpectedPayloadValue,
 } from "../dist/data-layer-unified-defect-builder.js";
 
 let seed = 0x64656665;
@@ -81,6 +91,95 @@ for (let sample = 0; sample < 200; sample += 1) {
     source:"operator custom response",
   });
 
+  const allowedName = `item-${sample}-${nextToken()}`;
+  const payloadSchema = {
+    id:`payload-schema-${sample}`,
+    name:`Payload schema ${sample}`,
+    version:sample % 7 + 1,
+    document:{
+      type:"object",
+      required:["label", "items"],
+      properties:{
+        label:{ type:"string" },
+        items:{
+          type:"array",
+          items:{
+            type:"object",
+            required:["id", "name"],
+            properties:{ id:{ type:"number" }, name:{ type:"string" } },
+          },
+        },
+        enabled:{ type:"boolean" },
+      },
+    },
+    assignments:[],
+    attachedRules:[{
+      id:`item-name-rule-${sample}`,
+      name:`Item name ${sample}`,
+      version:1,
+      propertyPath:"/items/*/name",
+      operator:["allowed-values", "allowed_values", "Allowed values"][sample % 3],
+      allowedValues:[allowedName],
+    }],
+  };
+  const payloadSchemaSnapshot = structuredClone(payloadSchema);
+  const fields = expectedPayloadFields(payloadSchema);
+  assert.deepEqual(fields.map(({ pointer }) => pointer), [
+    "/label", "/items", "/items/0", "/items/0/id", "/items/0/name", "/enabled",
+  ]);
+  assert.deepEqual(fields.find(({ pointer }) => pointer === "/items/0/name").schemaValues, [allowedName],
+    "array indexes must match wildcard schema rules");
+
+  const emptyDraft = createExpectedPayloadDraft(payloadSchema);
+  assert.deepEqual(emptyDraft, { payload:{ items:[] }, responseSources:{} });
+  assert.equal(expectedPayloadComplete(payloadSchema, emptyDraft), false,
+    "required arrays must contain a complete item");
+  let payloadDraft = setExpectedPayloadValue(payloadSchema, emptyDraft, "/label", {
+    method:"custom", value:sample,
+  });
+  payloadDraft = addExpectedArrayItem(payloadSchema, payloadDraft, "/items");
+  assert.equal(expectedPayloadComplete(payloadSchema, payloadDraft), false,
+    "required array item fields must be populated");
+  payloadDraft = setExpectedPayloadValue(payloadSchema, payloadDraft, "/items/0/id", {
+    method:"custom", value:String(sample + 0.5),
+  });
+  payloadDraft = setExpectedPayloadValue(payloadSchema, payloadDraft, "/items/0/name", {
+    method:"schema-value", value:allowedName,
+  });
+  payloadDraft = setExpectedPayloadValue(payloadSchema, payloadDraft, "/enabled", {
+    method:"custom", value:sample % 2 === 0 ? "true" : "false",
+  });
+  assert.deepEqual(Object.keys(payloadDraft.payload), ["label", "items", "enabled"],
+    "payload keys must follow schema order regardless of edit order");
+  assert.deepEqual(payloadDraft.payload, {
+    label:String(sample),
+    items:[{ id:sample + 0.5, name:allowedName }],
+    enabled:sample % 2 === 0,
+  });
+  assert.equal(expectedPayloadComplete(payloadSchema, payloadDraft), true);
+  assert.equal(expectedPayloadPresentation(`event-${sample}`, payloadDraft.payload),
+    `event-${sample} is fired with ${JSON.stringify(payloadDraft.payload)}`);
+  assert.deepEqual(emptyDraft, { payload:{ items:[] }, responseSources:{} },
+    "payload operations must not mutate earlier drafts");
+  assert.deepEqual(payloadSchema, payloadSchemaSnapshot,
+    "payload derivation and edits must not mutate the schema");
+  assert.throws(() => setExpectedPayloadValue(payloadSchema, payloadDraft, "/items/0/name", {
+    method:"schema-value", value:`outside-${sample}`,
+  }), /schema-provided value/i);
+
+  const duplicated = duplicateExpectedArrayItem(payloadSchema, payloadDraft, "/items", 0);
+  assert.deepEqual(duplicated.payload.items, [payloadDraft.payload.items[0], payloadDraft.payload.items[0]]);
+  assert.equal(duplicated.responseSources["/items/1/id"], "operator custom response");
+  assert.equal(duplicated.responseSources["/items/1/name"], "schema-provided value");
+  const shifted = removeExpectedArrayItem(payloadSchema, duplicated, "/items", 0);
+  assert.deepEqual(shifted.payload.items, [payloadDraft.payload.items[0]]);
+  assert.equal(shifted.responseSources["/items/0/id"], "operator custom response");
+  assert.equal(shifted.responseSources["/items/0/name"], "schema-provided value");
+  const withoutOptional = removeExpectedPayloadValue(shifted, "/enabled");
+  assert.equal(expectedPayloadComplete(payloadSchema, withoutOptional), true);
+  assert.equal(withoutOptional.responseSources["/enabled"], undefined);
+  assert.equal(expectedPayloadComplete(payloadSchema, removeExpectedPayloadValue(withoutOptional, "/label")), false);
+
   const visitCount = sample % 6 + 3;
   const visits = Array.from({ length:visitCount }, (_, index) => ({
     id:`visit-${sample}-${index}`,
@@ -111,13 +210,14 @@ for (let sample = 0; sample < 200; sample += 1) {
     eventName:`event-${sample}`,
     sourceId:`source-${sample}`,
   };
-  const journey = reconcileMissingEventJourney(
+  const reconciled = reconcileMissingEventJourneyWithReview(
     visits,
     visits[startIndex].id,
     visits[endIndex].id,
     previous,
     expectation,
   );
+  const journey = reconciled.journey;
 
   assert.deepEqual(previous, previousSnapshot, "journey reconciliation must not mutate prior steps");
   assert.deepEqual(visits, Array.from({ length:visitCount }, (_, index) => ({
@@ -136,6 +236,10 @@ for (let sample = 0; sample < 200; sample += 1) {
     }).map(({ id }) => id),
     "manual steps must retain visit-local order and be discarded outside the selected range",
   );
+  assert.deepEqual(reconciled.review.map(({ id }) => id), previous.filter(({ visitId }) => {
+    const index = visits.findIndex(({ id }) => id === visitId);
+    return index < startIndex || index > endIndex;
+  }).map(({ id }) => id), "manual steps outside the selected range must be returned for review");
   assert.deepEqual(journey.map(({ text }, index) => text.match(/^\d+\./)?.[0]),
     journey.map((_, index) => `${index + 1}.`), "journey numbering must be contiguous");
   const assertion = journey.at(-1);
@@ -156,7 +260,7 @@ for (let sample = 0; sample < 200; sample += 1) {
     pathname:visits[endIndex].pathname,
     startedAt:`start-${sample}`,
     endedAt:`end-${sample}`,
-  }), `No matching ${expectation.eventName} event was pushed or observed in ${expectation.sourceId} during ${visits[endIndex].pathname} from start-${sample} to end-${sample}.`);
+  }), `No matching ${expectation.eventName} event was pushed or observed in ${expectation.sourceId} during the selected ${visits[endIndex].pathname} page visit.`);
 }
 
 assert.throws(() => reconcileMissingEventJourney(

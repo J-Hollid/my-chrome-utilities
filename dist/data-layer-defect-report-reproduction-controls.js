@@ -11,7 +11,7 @@ function appendStepPresentation(item, text, controls, guidance) {
         guidance.className = "defect-reproduction-step-guidance";
     item.append(...[text, actions, guidance].filter((element) => Boolean(element)));
 }
-export function appendReproductionControls(controls, steps, context, state) {
+export function appendReproductionControls(controls, steps, context, state, options = {}) {
     let selectedVisitId;
     let stage = "idle";
     let draft;
@@ -22,13 +22,19 @@ export function appendReproductionControls(controls, steps, context, state) {
     const rowHosts = new Map();
     const adjustActions = new Map();
     const startLabel = document.createElement("label");
-    startLabel.textContent = "Reproduction starts at ";
+    startLabel.textContent = options.startLabel ?? "Reproduction starts at ";
     const startVisit = document.createElement("select");
     startVisit.id = "defect-reproduction-start";
     const defectVisitIndex = context.visits.findIndex(({ id }) => id === context.defectVisitId);
+    const availableStartVisitIds = new Set();
     for (const visit of context.visits.slice(0, defectVisitIndex + 1)) {
+        availableStartVisitIds.add(visit.id);
         startVisit.append(Object.assign(document.createElement("option"), { value: visit.id, textContent: visit.pathname }));
     }
+    if (options.initialStartVisitId && availableStartVisitIds.has(options.initialStartVisitId))
+        startVisit.value = options.initialStartVisitId;
+    startVisit.addEventListener("change", () => options.onStartVisitChange?.(startVisit.value));
+    startLabel.append(startVisit);
     const generate = document.createElement("button");
     generate.type = "button";
     generate.textContent = "Generate pathname steps";
@@ -57,7 +63,7 @@ export function appendReproductionControls(controls, steps, context, state) {
         addActions.clear();
         rowHosts.clear();
         adjustActions.clear();
-        steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
+        const rendered = state.report().reproductionSteps.map((step, index) => {
             const item = document.createElement("li");
             item.dataset.reproductionStepKind = step.kind;
             item.dataset.visitId = step.visitId;
@@ -125,7 +131,16 @@ export function appendReproductionControls(controls, steps, context, state) {
             });
             appendStepPresentation(item, input, [add]);
             return item;
-        }));
+        });
+        const final = options.finalStep?.();
+        if (final) {
+            const item = document.createElement("li");
+            item.dataset.reproductionStepKind = "assertion";
+            item.dataset.visitId = final.visitId;
+            item.textContent = `${rendered.length + 1}. ${final.text.replace(/^\d+\.\s*/, "")}`;
+            rendered.push(item);
+        }
+        steps.replaceChildren(...rendered);
         if (stage !== "idle")
             renderComposer();
     };

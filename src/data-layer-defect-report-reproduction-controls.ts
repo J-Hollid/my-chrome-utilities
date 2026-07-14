@@ -13,6 +13,13 @@ import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-con
 
 type ComposerStage = "idle" | "templates" | "configure";
 
+export interface ReproductionControlOptions {
+  startLabel?: string;
+  initialStartVisitId?: string;
+  onStartVisitChange?(visitId: string): void;
+  finalStep?(): { text:string; visitId:string; pathname:string };
+}
+
 function copyTemplate(template: ReproductionStepTemplate): ReproductionStepTemplate {
   return { ...template };
 }
@@ -34,6 +41,7 @@ export function appendReproductionControls(
   steps: HTMLElement,
   context: DefectReportContext,
   state: DefectReportBuilderState,
+  options: ReproductionControlOptions = {},
 ): void {
   let selectedVisitId: string | undefined;
   let stage: ComposerStage = "idle";
@@ -45,12 +53,17 @@ export function appendReproductionControls(
   const rowHosts = new Map<string, HTMLLIElement>();
   const adjustActions = new Map<string, HTMLButtonElement>();
 
-  const startLabel = document.createElement("label"); startLabel.textContent = "Reproduction starts at ";
+  const startLabel = document.createElement("label"); startLabel.textContent = options.startLabel ?? "Reproduction starts at ";
   const startVisit = document.createElement("select"); startVisit.id = "defect-reproduction-start";
   const defectVisitIndex = context.visits.findIndex(({ id }) => id === context.defectVisitId);
+  const availableStartVisitIds = new Set<string>();
   for (const visit of context.visits.slice(0, defectVisitIndex + 1)) {
+    availableStartVisitIds.add(visit.id);
     startVisit.append(Object.assign(document.createElement("option"), { value: visit.id, textContent: visit.pathname }));
   }
+  if (options.initialStartVisitId && availableStartVisitIds.has(options.initialStartVisitId)) startVisit.value = options.initialStartVisitId;
+  startVisit.addEventListener("change", () => options.onStartVisitChange?.(startVisit.value));
+  startLabel.append(startVisit);
   const generate = document.createElement("button"); generate.type = "button"; generate.textContent = "Generate pathname steps";
   const composer = document.createElement("section"); composer.className = "defect-reproduction-composer"; composer.setAttribute("aria-label", "Reproduction step composer");
 
@@ -78,7 +91,7 @@ export function appendReproductionControls(
     addActions.clear();
     rowHosts.clear();
     adjustActions.clear();
-    steps.replaceChildren(...state.report().reproductionSteps.map((step, index) => {
+    const rendered = state.report().reproductionSteps.map((step, index) => {
       const item = document.createElement("li");
       item.dataset.reproductionStepKind = step.kind;
       item.dataset.visitId = step.visitId;
@@ -124,7 +137,16 @@ export function appendReproductionControls(
         state.refresh();
       });
       appendStepPresentation(item, input, [add]); return item;
-    }));
+    });
+    const final = options.finalStep?.();
+    if (final) {
+      const item = document.createElement("li");
+      item.dataset.reproductionStepKind = "assertion";
+      item.dataset.visitId = final.visitId;
+      item.textContent = `${rendered.length + 1}. ${final.text.replace(/^\d+\.\s*/, "")}`;
+      rendered.push(item);
+    }
+    steps.replaceChildren(...rendered);
     if (stage !== "idle") renderComposer();
   };
 
