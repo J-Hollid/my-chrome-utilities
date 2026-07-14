@@ -15,6 +15,7 @@
             [acceptance.steps.guided-validation :as guided-validation]
             [acceptance.steps.guided-assignment-coverage :as guided-assignment-coverage]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
+            [acceptance.steps.guided-rule-parameter-integrity :as guided-rule-parameter-integrity]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -54,6 +55,7 @@
                recursive-property-validation/handlers
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
+               guided-rule-parameter-integrity/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers
@@ -93,5 +95,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T15:45:34.844703169+02:00", :module-hash "2056571626", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 45, :hash "-442075318"} {:id "def/handlers", :kind "def", :line 47, :end-line 93, :hash "748717702"}]}
+;; {:version 1, :tested-at "2026-07-14T16:06:28.703840277+02:00", :module-hash "-1698782925", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 46, :hash "-1929193661"} {:id "def/handlers", :kind "def", :line 48, :end-line 95, :hash "1331548619"}]}
 ;; clj-mutate-manifest-end
