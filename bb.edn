@@ -15,6 +15,7 @@
                         [acceptance.side-panel-steps-test]
                         [acceptance.allowed-value-expansion-steps-test]
                         [acceptance.local-rule-promotion-steps-test]
+                        [acceptance.unified-defect-builder-steps-test]
                         [acceptance.command-registry-steps-test]
                         [acceptance.conditional-validation-rules-steps-test]
                         [acceptance.defect-library-steps-test]
@@ -57,6 +58,7 @@
                                                 'acceptance.side-panel-steps-test
                                                 'acceptance.allowed-value-expansion-steps-test
                                                 'acceptance.local-rule-promotion-steps-test
+                                                'acceptance.unified-defect-builder-steps-test
                                                 'acceptance.command-registry-steps-test
                                                 'acceptance.conditional-validation-rules-steps-test
                                                 'acceptance.defect-library-steps-test

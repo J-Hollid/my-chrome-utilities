@@ -48,11 +48,13 @@
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
+            [acceptance.steps.unified-defect-builder :as unified-defect-builder]
             [acceptance.steps.validation-presence-semantics :as validation-presence-semantics]
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               unified-defect-builder/handlers
                local-rule-promotion/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
