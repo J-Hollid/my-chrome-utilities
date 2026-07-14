@@ -35,7 +35,7 @@ import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./d
 import { renderJiraReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./data-layer-missing-event-defect-report-ui.js";
 import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
-import { addDefect, attachSavedSessionToDefect, cancelDefectDeletion, confirmDefectDeletion, createMissingEventDefect, createValidationDefect, currentDefectIssues, DEFECT_LIBRARY_STORAGE_KEY, editDefect, presentedEventTriage, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus, } from "./data-layer-defect-library.js";
+import { addDefect, attachSavedSessionToDefect, cancelDefectDeletion, confirmDefectDeletion, createMissingEventDefect, createValidationDefect, currentDefectIssues, DEFECT_LIBRARY_STORAGE_KEY, editDefect, eventContainsDefectIssue, presentedEventTriage, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus, } from "./data-layer-defect-library.js";
 import { findDefectLibraryElements, renderDefectLibrary } from "./data-layer-defect-library-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
@@ -893,11 +893,7 @@ function closeDefect() {
         master.scrollTop = defectListScrollTop;
 }
 function matchingEventForDefect(defect) {
-    return liveObserverState.events.find((event) => currentDefectIssues(event).some((current) => defect.issues.some(({ match }) => {
-        const canonicalPath = current.templatePath ?? current.concretePath;
-        return match.sourceId === current.sourceId && match.eventName === current.eventName && match.schemaId === current.schemaId
-            && match.validationTarget === current.validationTarget && match.canonicalPath === canonicalPath && match.ruleId === current.ruleId && match.ruleRevision === current.ruleRevision;
-    })));
+    return liveObserverState.events.find((event) => eventContainsDefectIssue(event, defect));
 }
 function renderDefects() {
     const filtered = filteredDefectLibrary();

@@ -173,5 +173,6 @@ for (let sample = 0; sample < 200; sample += 1) {
 assert.deepEqual(restoreDefectLibrary(null), createDefectLibrary());
 assert.deepEqual(restoreDefectLibrary("not json"), createDefectLibrary());
 assert.deepEqual(restoreDefectLibrary('{"defects":[{"id":1}]}'), createDefectLibrary());
+assert.deepEqual(restoreDefectLibrary('{"defects":[{"id":"defect","type":"Validation issue","status":"Reported","createdAt":"now","updatedAt":"now","report":{},"notes":"","issues":[{}]}]}'), createDefectLibrary());
 
 console.log("defect library properties: 200 generated cases passed");
