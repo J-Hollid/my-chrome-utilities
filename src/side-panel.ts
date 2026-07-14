@@ -210,7 +210,7 @@ import { guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValid
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
@@ -1387,8 +1387,8 @@ function renderSchemaDraft(): void {
     const property = localProperty ?? inheritedProperty;
     const metadata = document.createElement("span"); metadata.className = "schema-property-metadata";
     metadata.textContent = `${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
-    const persistedPath = path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
-    const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedPath);
+    const persistedPath = canonicalRulePropertyPath(path);
+    const attached = (draft.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === persistedPath);
     const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
     const add = document.createElement("button"); add.type = "button"; add.textContent = "Add rule"; add.className = "schema-property-add-rule"; add.setAttribute("aria-label", `Add rule for ${path}`);
     add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
@@ -1977,10 +1977,6 @@ function schemaPropertyType(path: string): SchemaPropertyType {
   return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
 }
 
-function persistedSchemaRulePath(path: string): string {
-  return path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
-}
-
 function closeSchemaPropertyRulePicker(): void {
   if (schemaPropertyRulePicker.open) schemaPropertyRulePicker.close();
   schemaRulePickerTrigger?.focus({ preventScroll:true });
@@ -2035,7 +2031,7 @@ function createConfiguredSchemaRule(path: string, configuration: RuleConfigurati
     renderSchemaWorkflowRows();
   }
   closeSchemaPropertyRulePicker();
-  attachReusableRule(path, rule, true);
+  attachReusableRule(path, rule);
   schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true });
 }
 
@@ -2103,7 +2099,7 @@ function renderSchemaPropertyRulePicker(): void {
   const results = document.createElement("div"); results.id = "schema-property-rule-results";
   const normalized = previousQuery.trim().toLowerCase();
   const builtIns = builtInRulesForProperty(propertyType).filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
-  const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedSchemaRulePath(path)).map(({ id }) => id));
+  const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === canonicalRulePropertyPath(path)).map(({ id }) => id));
   const reusable = reusableRulesForProperty(reusableSchemaRules, propertyType, previousQuery, attachedIds);
   const resultButton = (label: string, metadata: string, action: () => void, disabled = false) => {
     const article = document.createElement("article"); const button = document.createElement("button"); const detail = document.createElement("p");
@@ -2167,9 +2163,9 @@ const closeSpecificIndexDialog = () => { if (schemaSpecificIndexDialog.open) sch
 cancelSchemaSpecificIndex.addEventListener("click", closeSpecificIndexDialog);
 schemaSpecificIndexDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSpecificIndexDialog(); });
 
-function attachReusableRule(path: string, rule: ReusableSchemaRule, canonicalPath = false): void {
+function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
   if (!schemaDraft) return;
-  const propertyPath = canonicalPath ? `/${path.replaceAll(".", "/")}` : persistedSchemaRulePath(path);
+  const propertyPath = canonicalRulePropertyPath(path);
   const attachment = {
     id: rule.id,
     name: rule.name,
@@ -2191,7 +2187,7 @@ function attachReusableRule(path: string, rule: ReusableSchemaRule, canonicalPat
 function updateAttachedRule(path: string, id: string, update: (rule: NonNullable<SchemaDefinition["attachedRules"]>[number]) => NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined): void {
   if (!schemaDraft) return;
   const attachedRules = (schemaDraft.attachedRules ?? []).flatMap((rule) => {
-    if (rule.id !== id || rule.propertyPath !== path) return [rule];
+    if (rule.id !== id || canonicalRulePropertyPath(rule.propertyPath ?? "") !== canonicalRulePropertyPath(path)) return [rule];
     const next = update(rule);
     return next ? [next] : [];
   });

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   applicablePropertyTypesForRule,
   builtInRulesForProperty,
+  canonicalRulePropertyPath,
   configuredRuleDetails,
   createRuleConfiguration,
   ruleConfigurationControls,
@@ -10,6 +11,9 @@ import {
   reusableRulesForProperty,
   ruleTypeAvailability,
 } from "../dist/data-layer-schema-property-rule-picker.js";
+
+assert.equal(canonicalRulePropertyPath("page_type"), "/page_type");
+assert.equal(canonicalRulePropertyPath(" /product . sku/ "), "/product/sku");
 
 assert.deepEqual(applicablePropertyTypesForRule({ id:"explicit", name:"Explicit", kind:"Numeric range · number", applicableType:"string" }), ["string"]);
 

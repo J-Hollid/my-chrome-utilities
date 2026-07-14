@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   builtInRulesForProperty,
+  canonicalRulePropertyPath,
   configuredRuleDetails,
   createRuleConfiguration,
   reusableRulesForProperty,
@@ -47,6 +48,11 @@ for (let sample = 0; sample < 200; sample += 1) {
   const propertyType = propertyTypes[sample % propertyTypes.length];
   const incompatibleType = propertyTypes[(sample + 1) % propertyTypes.length];
   const token = nextToken();
+  assert.equal(
+    canonicalRulePropertyPath(` /root_${token} . child_${sample}/ `),
+    `/root_${token}/child_${sample}`,
+    "rule paths must use one canonical slash representation",
+  );
   const compatible = {
     id:`compatible-${token}`,
     name:`Rule ${token}`,
