@@ -85,8 +85,9 @@ export function renderExpectedPayloadEditor(
       label.prepend(radio); wrapper.append(label);
     }
     const customLabel = element("label", `Custom value for ${path} `);
-    const custom = element("input"); custom.dataset.expectedPayloadInput = pointer;
-    custom.type = definition.type === "number" ? "number" : "text";
+    const custom = definition.type === "string" ? element("textarea") : element("input");
+    custom.dataset.expectedPayloadInput = pointer;
+    if (custom instanceof HTMLInputElement) custom.type = definition.type === "number" ? "number" : "text";
     custom.value = current == null ? "" : String(current);
     custom.addEventListener("input", () => {
       if (definition.type === "number" && custom.value === "") return;

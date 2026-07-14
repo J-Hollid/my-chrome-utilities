@@ -55,7 +55,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1" ? [720]
-  : process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" || process.env.UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" || process.env.UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER === "1" || process.env.MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1" ? [720]
@@ -3035,6 +3035,8 @@ const eventLibraryDeletionRuntime = `import("./data-layer-event-library-deletion
 const missingEventDefectReportRuntime = `(async () => {
   const model = await import("/data-layer-missing-event-defect-report.js");
   const ui = await import("/data-layer-missing-event-defect-report-ui.js");
+  const defectLibrary = await import("/data-layer-defect-library.js");
+  const defectLibraryUi = await import("/data-layer-defect-library-ui.js");
   const q = (root, selector) => { const value = root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
   const button = (root, label) => { const value = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!value) throw new Error("Missing " + label); return value; };
   const enter = (root, pointer, value) => { const input=q(root, '[data-expected-payload-input="' + pointer + '"]'); input.value=value; input.dispatchEvent(new Event("input",{bubbles:true})); };
@@ -3122,6 +3124,33 @@ const missingEventDefectReportRuntime = `(async () => {
   button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
   const nestedObservation={tree:nestedTreeText,payload:nestedReport.expectedPayload,sources:nestedReport.expectedResponseSources,duplicatedItems,itemCount:nestedReport.expectedPayload.products.length,preview:nestedRepresentation.previewText,html:nestedRepresentation.previewHtml,noCreate:!Array.from(host.querySelectorAll("button")).some(({textContent})=>textContent?.includes("Create missing-event report")),noInterval:!host.textContent.includes("Observation interval"),actions:nestedActions,combined:{saves:nestedSaves,copiedSame:nestedCopied===nestedRepresentation.jiraText,feedback:host.querySelector('output[aria-live="polite"]')?.textContent}};
 
+  host.replaceChildren(); host.style.width="720px";
+  const fidelitySchema={...nestedSchema,document:{type:"object",required:["page_type","products"],properties:{page_type:{type:"string"},products:nestedSchema.document.properties.products}},attachedRules:[{id:"page-type",name:"Page type requirement",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product_detail","content"]}]};
+  let fidelityCopied=""; let fidelitySaved;
+  const fidelity=ui.renderMissingEventDefectReportBuilder(host,[productVisit,emptyNestedVisit],[fidelitySchema],{entryPoint:"Live session actions",initialSchemaId:fidelitySchema.id,writeClipboard:async(text)=>{fidelityCopied=text;},saveReportedDefect:async(report)=>{fidelitySaved=structuredClone(report);}});
+  const finalPreview=()=>q(host,'[aria-label="Final report preview"]');
+  const expectedNodes=(root=finalPreview())=>{const heading=Array.from(root.querySelectorAll("h2")).find(({textContent})=>textContent==="Expected result");const nodes=[];for(let node=heading?.nextElementSibling;node&&node.tagName!=="H2";node=node.nextElementSibling)nodes.push(node);return nodes;};
+  const stepNodes=(root=finalPreview())=>{const heading=Array.from(root.querySelectorAll("h2")).find(({textContent})=>textContent==="Steps to reproduce");return Array.from(heading?.nextElementSibling?.querySelectorAll("li")??[]).map(({textContent})=>textContent);};
+  const additional=q(host,'[data-report-field="expectedResultAdditionalText"]');
+  const incomplete={additional:{value:additional.value,tag:additional.tagName},preCount:expectedNodes().filter(({tagName})=>tagName==="PRE").length,preLines:expectedNodes().find(({tagName})=>tagName==="PRE")?.textContent.split("\\n").length,paragraphHasJson:expectedNodes().filter(({tagName})=>tagName==="P").some(({textContent})=>textContent.includes('"page_type"'))};
+  choose(host,"Use schema value product_detail"); button(host,"Add products item").click(); enter(host,"/products/0/id","1"); enter(host,"/products/0/name","robot");
+  button(host,"Generate pathname steps").click(); q(host,'[data-add-reproduction-step="visit:products"]').click(); button(host,"Click component").click(); const component=q(host,'[data-reproduction-field="componentName"]'); component.value="Robot"; component.dispatchEvent(new Event("input",{bubbles:true})); button(host,"Add step").click();
+  const beforeConfirmation={additional:additional.value,payload:JSON.parse(expectedNodes().find(({tagName})=>tagName==="PRE").textContent),structure:expectedNodes().map(({tagName})=>tagName),steps:stepNodes()};
+  additional.value="Checkout <should> & must emit it\\non the next line"; additional.dispatchEvent(new Event("input",{bubbles:true}));
+  button(host,"Confirm at least one matching event was expected").click();
+  const completeReport=fidelity.report(); const completeRepresentation=model.generateMissingEventRepresentations(completeReport);
+  const complete={structure:expectedNodes().map(({tagName})=>tagName),steps:stepNodes(),narrativeCount:(finalPreview().textContent.match(/pageview is fired with/g)??[]).length,preCount:expectedNodes().filter(({tagName})=>tagName==="PRE").length,additionalBeforeNarrative:completeRepresentation.previewText.indexOf("Checkout <should>")<completeRepresentation.previewText.indexOf("pageview is fired with"),sources:completeReport.expectedResponseSources,provenance:completeReport.expectedResponseProvenance,literalText:finalPreview().textContent.includes("Checkout <should> & must emit it"),markupAbsent:!finalPreview().querySelector("should")};
+  enter(host,"/products/0/name",'robot <&> "quoted"\\nline two'); additional.value="Edited <text> & line one\\nline two"; additional.dispatchEvent(new Event("input",{bubbles:true})); const manual=q(host,'[data-reproduction-step-kind="manual"] button[data-adjust-step]'); manual.click(); const editedComponent=q(host,'[data-reproduction-field="componentName"]'); editedComponent.value="Robot card"; editedComponent.dispatchEvent(new Event("input",{bubbles:true})); button(host,"Save changes").click();
+  const editedReport=fidelity.report(); const editedRepresentation=model.generateMissingEventRepresentations(editedReport); const editedSteps=stepNodes(); const edited={payload:editedReport.expectedPayload,additional:editedReport.expectedResultAdditionalText,steps:editedSteps,preCount:expectedNodes().filter(({tagName})=>tagName==="PRE").length,narrativeCount:(finalPreview().textContent.match(/pageview is fired with/g)??[]).length,staleAbsent:!finalPreview().textContent.includes("Checkout <should>")&&!finalPreview().textContent.includes('"name": "robot"')&&!editedSteps.includes("Click Robot")};
+  button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
+  const storedDefect=defectLibrary.createMissingEventDefect({id:"defect:fidelity",now:"2026-07-15T00:00:00Z",report:fidelitySaved}); const restoredLibrary=defectLibrary.restoreDefectLibrary(defectLibrary.serializeDefectLibrary({defects:[storedDefect]}));
+  const detail=document.createElement("section"); document.body.append(detail); let recopied="";
+  defectLibraryUi.renderDefectLibrary({count:null,list:null,empty:null,detail,confirmation:null},restoredLibrary.defects,storedDefect.id,undefined,{open:()=>{},close:()=>{},save:()=>{},recopy:(id)=>{recopied=model.generateMissingEventRepresentations(restoredLibrary.defects.find((item)=>item.id===id).report).jiraText;},updateStatus:()=>{},attachCurrentSession:()=>{},openLinkedSession:()=>{},requestDelete:()=>{},cancelDelete:()=>{},confirmDelete:()=>{}});
+  button(detail,"Recopy for Jira Cloud").click(); const reopened=q(detail,'[aria-label="Final report preview"]'); const reopenedRepresentation=model.generateMissingEventRepresentations(restoredLibrary.defects[0].report);
+  const expectedReopened=document.createElement("section"); expectedReopened.innerHTML=reopenedRepresentation.previewHtml;
+  const persistence={savedPayload:fidelitySaved.expectedPayload,savedAdditional:fidelitySaved.expectedResultAdditionalText,savedSources:fidelitySaved.expectedResponseSources,copiedSame:fidelityCopied===editedRepresentation.jiraText,reopenedSame:reopened.innerHTML===expectedReopened.innerHTML,recopiedSame:recopied===editedRepresentation.jiraText,reopenedPre:reopened.querySelectorAll("pre").length,reopenedSteps:Array.from(reopened.querySelectorAll("ol li")).map(({textContent})=>textContent),provenanceHidden:![reopened.textContent,fidelityCopied,recopied].some((text)=>/response source|schema-provided value|operator custom response|Page type requirement revision/i.test(text)),plainBreaks:fidelityCopied.includes("Edited <text> & line one\\nline two\\npageview is fired with\\n{\\n  \\\"page_type\\\"")};
+  detail.remove();
+
   host.replaceChildren(); host.style.width="320px";
   const storedFlatSchema=JSON.stringify(flatSchema); let flatCopied=""; let flatSaved;
   const runtimeErrors=[]; const onRuntimeError=(event)=>runtimeErrors.push(String(event.reason ?? event.error ?? event.message));
@@ -3171,7 +3200,7 @@ const missingEventDefectReportRuntime = `(async () => {
   const schemaRowEntries = Array.from(document.querySelectorAll("#schema-list button")).filter(({ textContent }) => textContent === "Report missing event").length;
   host.remove();
   return {
-    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, unified:{initial:unifiedInitial,complete:unifiedComplete,nested:nestedObservation,flat:flatObservation,failures:failureObservation},
+    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, fidelity:{incomplete,beforeConfirmation,complete,edited,persistence}, unified:{initial:unifiedInitial,complete:unifiedComplete,nested:nestedObservation,flat:flatObservation,failures:failureObservation},
     zero:{ replacement:{ review:replacementReview, acceptedEventName, intervalControls }, verification:zeroVerification, report:{ type:zeroReport.type, capturedEventId:zeroReport.capturedEventId ?? null, actual:zeroReport.actual, absenceEvidence:zeroReport.absenceEvidence, expected:zeroReport.expected, expectedPayload:zeroReport.expectedPayload, schema:zeroReport.schema.name + " revision " + zeroReport.schema.version, payload:zeroReport.payload ?? null, capture:zeroReport.capture ?? null, issues:zeroReport.validationIssues.length, timeline:zeroReport.timeline.map(({ id }) => id) }, preview:zeroRepresentations.previewText, jira:zeroRepresentations.jiraText, copied, savedCount },
     warning:{ before:warningBefore, openedEvent, restored, override:{ count:overrideReport.override.matchingCount, evidence:overrideReport.matchingEventEvidence.map(({ id }) => id), eventPayload:overrideReport.matchingEventEvidence[0].payload, preview:overrideRepresentations.previewText, jira:overrideRepresentations.jiraText } },
     scope:{ zero:scopeZero, match:scopeMatch }, expectationCases, matchCounts,
@@ -3732,7 +3761,7 @@ try {
       assert.deepEqual(validationPresenceSemanticsObservation.liveInspector, { hiddenByDefault:true,revealed:true,issueRows:0,invalidMissing:false });
       socket.close(); continue;
     }
-    if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" || process.env.UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER === "1") {
+    if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" || process.env.UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER === "1" || process.env.MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         const assignment = { id:"assignment:checkout-purchase", name:"Checkout purchase", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
         const schema = { id:"schema-checkout-purchase", name:"Checkout purchase", version:4, published:true, document:{ type:"object", properties:{ transaction_id:{ type:"string" } } }, assignments:[assignment] };
@@ -3767,6 +3796,22 @@ try {
       assert.deepEqual([flat.narrativeCount,flat.preCount,flat.compactAbsent,flat.copiedSame], [1,1,true,true]);
       assert.deepEqual(flat.savedPayload, flat.payload);
       assert.deepEqual(missingEventDefectReportObservation.unified.failures, { copyFailure:"Copy failed", saveFailure:"Save failed", rejectedSaveCalls:1, unchanged:true, reportPayload:{ order_id:"A-123", currency:"EUR" } });
+      if (process.env.MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER === "1") {
+        const fidelity=missingEventDefectReportObservation.fidelity;
+        assert.deepEqual(fidelity.incomplete, { additional:{ value:"", tag:"TEXTAREA" }, preCount:1, preLines:3, paragraphHasJson:false });
+        assert.deepEqual(fidelity.beforeConfirmation.payload, { page_type:"product_detail", products:[{ id:1, name:"robot" }] });
+        assert.deepEqual(fidelity.beforeConfirmation.structure, ["P","PRE"]);
+        assert.deepEqual(fidelity.beforeConfirmation.steps, ["Visit /products","Click Robot","Visit /checkout","Expect pageview to be pushed"]);
+        assert.deepEqual(fidelity.complete.structure, ["P","P","PRE"]);
+        assert.deepEqual([fidelity.complete.narrativeCount,fidelity.complete.preCount,fidelity.complete.additionalBeforeNarrative,fidelity.complete.literalText,fidelity.complete.markupAbsent], [1,1,true,true,true]);
+        assert.deepEqual(fidelity.complete.sources, { "/page_type":"schema-provided value", "/products/0/id":"operator custom response", "/products/0/name":"operator custom response" });
+        assert.deepEqual(fidelity.complete.provenance["/page_type"], { id:"page-type", name:"Page type requirement", version:1, propertyPath:"/page_type" });
+        assert.deepEqual([fidelity.edited.preCount,fidelity.edited.narrativeCount,fidelity.edited.staleAbsent], [1,1,true]);
+        assert.equal(fidelity.edited.payload.products[0].name, 'robot <&> "quoted"\nline two');
+        assert.deepEqual(fidelity.persistence.reopenedSteps, ["Visit /products","Click Robot card","Visit /checkout","Expect pageview to be pushed"]);
+        assert.deepEqual([fidelity.persistence.copiedSame,fidelity.persistence.reopenedSame,fidelity.persistence.recopiedSame,fidelity.persistence.reopenedPre,fidelity.persistence.provenanceHidden,fidelity.persistence.plainBreaks], [true,true,true,1,true,true]);
+        assert.deepEqual(fidelity.persistence.savedSources, fidelity.complete.sources);
+      }
       socket.close(); continue;
     }
     if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
@@ -4656,6 +4701,9 @@ try {
   }
   if (process.env.UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ unifiedDefectBuilder:missingEventDefectReportObservation }));
+  }
+  if (process.env.MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ missingEventReportFidelity:missingEventDefectReportObservation?.fidelity }));
   }
   if (process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ validationPresenceSemantics:validationPresenceSemanticsObservation }));
