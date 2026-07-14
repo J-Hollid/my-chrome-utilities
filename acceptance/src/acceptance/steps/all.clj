@@ -30,6 +30,7 @@
             [acceptance.steps.saved-session-live-feed :as saved-session-live-feed]
             [acceptance.steps.schema-verification :as schema-verification]
             [acceptance.steps.schema-revision-lifecycle :as schema-revision-lifecycle]
+            [acceptance.steps.schema-documentation :as schema-documentation]
             [acceptance.steps.schema-nested-path :as schema-nested-path]
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
@@ -45,6 +46,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               schema-documentation/handlers
                conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
                fresh-live-session/handlers

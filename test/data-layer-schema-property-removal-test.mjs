@@ -105,3 +105,14 @@ assert.deepEqual(
   manualLeaf,
   "a missing descendant must not prune an unchanged manual leaf",
 );
+
+const documentation = { properties:{
+  "/commerce":{ displayName:"Commerce", description:"Commerce data" },
+  "/commerce/order/id":{ displayName:"Order identifier", description:"Stable order identifier" },
+  "/page_type":{ displayName:"Page type", description:"Page classification" },
+} };
+const documentedInspection = inspectSchemaPropertyRemoval(document, attachments, "/commerce", documentation);
+assert.deepEqual(documentedInspection.affectedDocumentationPaths, ["/commerce", "/commerce/order/id"]);
+const documentedRemoval = removeSchemaProperty(document, attachments, "/commerce", documentation);
+assert.deepEqual(documentedRemoval.documentation.properties, { "/page_type":documentation.properties["/page_type"] });
+assert.deepEqual(undoSchemaPropertyRemoval(documentedRemoval).documentation, documentation);

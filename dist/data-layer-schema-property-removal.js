@@ -1,3 +1,4 @@
+import { removePropertyDocumentation } from "./data-layer-schema-documentation.js";
 function segments(path) {
     return path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
 }
@@ -22,7 +23,7 @@ function descendantPaths(property, prefix) {
 function normalizedRulePath(rule) {
     return canonical(rule.propertyPath ?? "");
 }
-export function inspectSchemaPropertyRemoval(document, attachedRules, path) {
+export function inspectSchemaPropertyRemoval(document, attachedRules, path, documentation) {
     const propertyPath = canonical(path);
     const descendants = descendantPaths(propertyAt(document, segments(path)), propertyPath);
     const affectedRuleAttachments = attachedRules
@@ -32,11 +33,14 @@ export function inspectSchemaPropertyRemoval(document, attachedRules, path) {
     })
         .map((rule) => structuredClone(rule))
         .sort((left, right) => normalizedRulePath(left).localeCompare(normalizedRulePath(right)));
+    const affectedDocumentationPaths = Object.keys(documentation?.properties ?? {})
+        .filter((candidate) => candidate === propertyPath || candidate.startsWith(`${propertyPath}/`));
     return {
         propertyPath,
         descendants,
         affectedRuleAttachments,
-        requiresConfirmation: descendants.length > 0 || affectedRuleAttachments.length > 0,
+        ...(documentation === undefined ? {} : { affectedDocumentationPaths }),
+        requiresConfirmation: descendants.length > 0 || affectedRuleAttachments.length > 0 || affectedDocumentationPaths.length > 0,
     };
 }
 function withoutReference(values, property) {
@@ -102,9 +106,9 @@ function removeAtPath(document, path) {
         },
     };
 }
-export function removeSchemaProperty(document, attachedRules, path) {
+export function removeSchemaProperty(document, attachedRules, path, documentation) {
     const propertyPath = canonical(path);
-    const inspection = inspectSchemaPropertyRemoval(document, attachedRules, propertyPath);
+    const inspection = inspectSchemaPropertyRemoval(document, attachedRules, propertyPath, documentation);
     const affected = new Set(inspection.affectedRuleAttachments.map(normalizedRulePath));
     return {
         propertyPath,
@@ -112,12 +116,17 @@ export function removeSchemaProperty(document, attachedRules, path) {
         attachedRules: attachedRules.filter((rule) => !affected.has(normalizedRulePath(rule))).map((rule) => structuredClone(rule)),
         previousDocument: structuredClone(document),
         previousAttachedRules: attachedRules.map((rule) => structuredClone(rule)),
+        ...(documentation === undefined ? {} : {
+            documentation: removePropertyDocumentation(documentation, propertyPath),
+            previousDocumentation: structuredClone(documentation),
+        }),
     };
 }
 export function undoSchemaPropertyRemoval(removal) {
     return {
         document: structuredClone(removal.previousDocument),
         attachedRules: removal.previousAttachedRules.map((rule) => structuredClone(rule)),
+        ...(removal.previousDocumentation === undefined ? {} : { documentation: structuredClone(removal.previousDocumentation) }),
     };
 }
 //# sourceMappingURL=data-layer-schema-property-removal.js.map
