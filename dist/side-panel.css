@@ -194,6 +194,27 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   overflow-wrap: anywhere;
 }
 
+#schema-local-rule-configuration,
+#schema-local-rule-parameters,
+#schema-local-rule-allowed-values {
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+#schema-local-rule-configuration input:not([type="checkbox"]),
+#schema-local-rule-configuration select,
+#schema-local-rule-configuration textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
+.schema-local-rule-value {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .schema-property-add-rule {
   padding: 0.25rem 0.5rem;
 }

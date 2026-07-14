@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import {
   applicablePropertyTypesForRule,
   builtInRulesForProperty,
+  configuredRuleDetails,
+  createRuleConfiguration,
+  ruleConfigurationControls,
+  validateRuleConfiguration,
   reusableRulesForProperty,
   ruleTypeAvailability,
 } from "../dist/data-layer-schema-property-rule-picker.js";
@@ -35,3 +39,59 @@ const legacyReusable = [
 ];
 assert.deepEqual(reusableRulesForProperty(legacyReusable, "string", "", new Set()).map(({ id }) => id), ["legacy-values"]);
 assert.deepEqual(reusableRulesForProperty(legacyReusable, "object", "", new Set()), []);
+
+const expectedControls = {
+  "Required":[],
+  "Exact value":["Exact value"],
+  "Allowed values":["Allowed values"],
+  "Regular expression":["Pattern"],
+  "Text length":["Exact length"],
+  "Digits only":[],
+  "Numeric range":["Minimum", "Maximum"],
+  "Item count":["Minimum item count"],
+};
+for (const [ruleType, labels] of Object.entries(expectedControls)) {
+  const propertyType = ruleType === "Numeric range" ? "number" : ruleType === "Item count" ? "array" : "string";
+  assert.deepEqual(ruleConfigurationControls(ruleType, propertyType).map(({ label }) => label), labels);
+}
+assert.equal(ruleConfigurationControls("Exact value", "number")[0].inputType, "number");
+assert.equal(ruleConfigurationControls("Exact value", "boolean")[0].inputType, "select");
+assert.equal(ruleConfigurationControls("Allowed values", "number")[0].inputType, "number");
+assert.equal(ruleConfigurationControls("Allowed values", "boolean")[0].inputType, "select");
+assert.equal(ruleConfigurationControls("Text length", "string")[0].minimum, 0);
+assert.equal(ruleConfigurationControls("Item count", "array")[0].step, 1);
+
+const configuration = createRuleConfiguration("Allowed values", "string");
+assert.deepEqual(configuration, {
+  ruleType:"Allowed values",
+  propertyType:"string",
+  exactValue:"",
+  allowedValues:[""],
+  pattern:"",
+  exactLength:"",
+  minimum:"",
+  maximum:"",
+  minimumItemCount:"",
+  severity:"error",
+  message:"",
+  saveReusable:false,
+  reusableName:"",
+  description:"",
+});
+
+const validationCases = [
+  [{ ...createRuleConfiguration("Exact value", "string") }, "Enter an exact value"],
+  [{ ...createRuleConfiguration("Allowed values", "string") }, "Add at least one allowed value"],
+  [{ ...createRuleConfiguration("Regular expression", "string"), pattern:"[" }, "Correct the regular expression"],
+  [{ ...createRuleConfiguration("Text length", "string"), exactLength:"-1" }, "Enter a non-negative whole number"],
+  [{ ...createRuleConfiguration("Numeric range", "number") }, "Enter at least one boundary"],
+  [{ ...createRuleConfiguration("Numeric range", "number"), minimum:"10", maximum:"5" }, "Make minimum less than maximum"],
+  [{ ...createRuleConfiguration("Item count", "array"), minimumItemCount:"1.5" }, "Enter a non-negative whole number"],
+  [{ ...createRuleConfiguration("Allowed values", "string"), allowedValues:["ABC-1"], saveReusable:true }, "Enter a rule name"],
+];
+for (const [draft, assistance] of validationCases) assert.deepEqual(validateRuleConfiguration(draft), { ready:false, assistance });
+
+const readyAllowed = { ...configuration, allowedValues:["ABC-1", "XYZ-2"], severity:"warning", message:"Use an approved SKU" };
+assert.deepEqual(validateRuleConfiguration(readyAllowed), { ready:true, assistance:"Ready to create rule" });
+assert.deepEqual(configuredRuleDetails(readyAllowed), { operator:"allowed-values", parameters:"ABC-1,XYZ-2" });
+assert.deepEqual(configuredRuleDetails({ ...createRuleConfiguration("Numeric range", "number"), minimum:"10" }), { operator:"numeric-range", parameters:"10," });
