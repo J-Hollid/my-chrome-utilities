@@ -28,6 +28,7 @@ export function createLiveInspectorActions(effects) {
         ...(effects.createSchema ? { createSchema(event) { effects.createSchema?.(event); } } : {}),
         ...(effects.createValidation ? { createValidation(event) { effects.createValidation?.(event); } } : {}),
         ...(effects.addPropertyValidation ? { addPropertyValidation(event, path, trigger) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
+        ...(effects.expandAllowedValue ? { expandAllowedValue(event, evaluation, trigger) { effects.expandAllowedValue?.(event, evaluation, trigger); } } : {}),
         ...(effects.draftContinuation ? { draftContinuation(event) { return effects.draftContinuation?.(event); } } : {}),
         ...(effects.startDefectReport ? { startDefectReport(event) { effects.startDefectReport?.(event); } } : {}),
         ...(effects.openReportedDefect ? { openReportedDefect(defectId, event, issueIndex, trigger) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),

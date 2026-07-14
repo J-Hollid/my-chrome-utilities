@@ -266,6 +266,33 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   gap: 0.5rem;
 }
 
+#local-rule-promotion-review {
+  box-sizing: border-box;
+  inline-size: min(34rem, calc(100vw - 1rem));
+  max-inline-size: calc(100vw - 1rem);
+  max-block-size: calc(100vh - 1rem);
+  overflow: auto;
+}
+
+#local-rule-promotion-review fieldset,
+#local-rule-promotion-review output,
+#local-rule-promotion-review p {
+  overflow-wrap: anywhere;
+}
+
+#local-rule-promotion-review textarea,
+#local-rule-promotion-review input[type="text"] {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+.schema-attached-rule {
+  margin-block: 0.35rem;
+  padding: 0.35rem;
+  overflow-wrap: anywhere;
+  border-inline-start: 2px solid var(--line);
+}
+
 .schema-property-metadata {
   display: block;
   color: var(--muted, #555);

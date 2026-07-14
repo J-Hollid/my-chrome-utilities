@@ -65,7 +65,7 @@ export function buildValidationPropertyTree(payload, evaluations, issues) {
     const byPath = new Map();
     for (const evaluation of allEvaluations) {
         const path = normalizedPath(evaluation.propertyPath);
-        byPath.set(path, [...(byPath.get(path) ?? []), { ...evaluation, propertyPath: path }]);
+        byPath.set(path, [...(byPath.get(path) ?? []), { ...evaluation }]);
     }
     const records = payload && typeof payload === "object" ? payload : { value: payload };
     function node(name, value, path) {

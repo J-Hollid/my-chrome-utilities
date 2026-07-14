@@ -14,7 +14,7 @@ import {
 } from "./data-layer-schema-documentation.js";
 
 export type ValidationTarget = "payload" | "raw input";
-export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
+export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
   baseVersion: number;
   sourceVersion: number;
@@ -347,6 +347,19 @@ function issueFromAttachedRule(
   };
 }
 
+function configuredAllowedValues(rule: AttachedSchemaRule): readonly (string | number | boolean | null)[] {
+  if (rule.allowedValues) return rule.allowedValues;
+  const parameters = rule.parameters ?? "";
+  const values = !rule.propertyPath && parameters.includes(":") ? parameters.slice(parameters.indexOf(":") + 1) : parameters;
+  return values.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function ruleAllowsValue(rule: AttachedSchemaRule, value: unknown): boolean {
+  return rule.allowedValues
+    ? rule.allowedValues.some((candidate) => Object.is(candidate, value))
+    : configuredAllowedValues(rule).includes(String(value));
+}
+
 function observedValueText(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === undefined) return "undefined";
@@ -371,8 +384,8 @@ function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): P
   }
   if (operator === "digits-only") return match.exists && typeof match.value === "string" && /^\d+$/.test(match.value) ? undefined : { message:"Value contains non-digits", expected:"digits only", actual };
   if (operator === "allowed-values" || operator === "allowed values") {
-    const values = rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
-    return match.exists && values.includes(String(match.value)) ? undefined : { message:"Value is not allowed", expected:values.join(","), actual };
+    const values = configuredAllowedValues(rule);
+    return match.exists && ruleAllowsValue(rule, match.value) ? undefined : { message:"Value is not allowed", expected:values.map(String).join(","), actual };
   }
   if (operator === "regular-expression" || operator === "regular expression") {
     try { return match.exists && new RegExp(rule.parameters ?? "").test(String(match.value)) ? undefined : { message:"Value does not match pattern", expected:rule.parameters ?? "pattern", actual }; }
@@ -402,7 +415,7 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
         const failure = nestedRuleFailure(rule, match);
         if (failure) {
           const allowedValues = rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values"
-            ? rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []
+            ? configuredAllowedValues(rule).map(String)
             : [];
           result.push(issueFromAttachedRule(rule, schema, {
             instancePath:match.concretePath,
@@ -417,10 +430,10 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
     if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing" }));
     const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
     if (!record || !property || !(property in record)) continue;
-    const allowedValues = rule.operator === "allowed-values" && constraint
-      ? constraint.split(",").map((item) => item.trim()).filter(Boolean)
+    const allowedValues = rule.operator === "allowed-values"
+      ? configuredAllowedValues(rule).map(String)
       : [];
-    if (rule.operator === "allowed-values" && constraint && !allowedValues.includes(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value is not allowed", expected:constraint, actual:String(record[property]) }, allowedValues));
+    if (rule.operator === "allowed-values" && (constraint || rule.allowedValues) && !ruleAllowsValue(rule, record[property])) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value is not allowed", expected:allowedValues.map(String).join(","), actual:String(record[property]) }, allowedValues));
     if (rule.operator === "regular-expression" && constraint) { try { if (!new RegExp(constraint).test(String(record[property]))) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Value does not match pattern", expected:constraint, actual:String(record[property]) })); } catch { result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Invalid regular expression", expected:constraint, actual:String(record[property]) })); } }
   }
 }
@@ -435,6 +448,13 @@ function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, s
     attachedRuleIssues(value, parent, result, (parent.attachedRules ?? []).filter((rule) => !rule.propertyPath || !disabled.has(rule.propertyPath)));
     parentId = parent.parentSchemaId;
   }
+}
+
+function allowedValueEvaluationEvidence(rule: AttachedSchemaRule, schema: SchemaDefinition, actualValue: unknown): Partial<ValidationEvaluation> {
+  const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase();
+  return operator === "allowed-values"
+    ? { ruleId:rule.id, operator:"allowed-values", schemaId:schema.id, actualValue, allowedValues:configuredAllowedValues(rule) }
+    : {};
 }
 
 function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
@@ -501,6 +521,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
           severity:issue.severity ?? "error",
           schemaName:schema.name,
           schemaVersion:schema.version,
+          ...allowedValueEvaluationEvidence(rule, schema, match.value),
         };
       });
     }
@@ -513,7 +534,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
     const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
     if (!present && operator !== "required") return [{ propertyPath, status:"not-applicable" as const, message:rule.message ?? `${rule.name ?? rule.id} is not applicable because the optional target is absent`, expected:rule.parameters?.split(":", 2)[1] ?? "optional value rule", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
     if (!issues.length) return [{ propertyPath, status:"pass" as const, message:rule.message ?? `${rule.name ?? rule.id} passed`, expected:rule.parameters?.split(":", 2)[1] ?? "rule satisfied", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
-    return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }));
+    return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version, ...allowedValueEvaluationEvidence(rule, schema, record?.[propertyPath]) }));
   });
 }
 
