@@ -32,6 +32,7 @@ import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, r
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./data-layer-missing-event-defect-report-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
@@ -93,6 +94,7 @@ const { copyPageUrlButton } = liveSessionSummaryElements;
 const liveNotificationController = createLiveNotificationController((message) => renderLiveSessionMessage(liveObserverElements, message), (clear, delayMs) => { globalThis.setTimeout(clear, delayMs); });
 const saveLiveSessionButton = document.querySelector("#save-live-session");
 const startFreshSessionButton = document.querySelector("#start-fresh-session");
+const reportMissingEventButton = document.querySelector("#report-missing-event");
 const saveLiveSessionDialog = document.querySelector("#save-live-session-dialog");
 const saveLiveSessionForm = document.querySelector("#save-live-session-form");
 const saveLiveSessionHeading = document.querySelector("#save-live-session-heading");
@@ -899,6 +901,42 @@ function currentLiveSessionSummary() {
         connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
     });
 }
+let missingEventBuilderController;
+function currentMissingEventVisits() {
+    const archived = savedSessionLiveFeed?.session;
+    const visits = missingEventVisits(liveObserverState.events, currentLiveSessionSummary().pageUrl, Boolean(archived));
+    return archived
+        ? visits.map((visit) => ({ ...visit, startedAt: archived.startedAt, endedAt: archived.endedAt, immutable: true }))
+        : visits;
+}
+function openMissingEventBuilder(entryPoint, initialSchemaId) {
+    const inspector = liveObserverElements.eventInspector;
+    if (!inspector)
+        return;
+    showDataLayerView("Live");
+    const split = globalThis.innerWidth >= 700;
+    if (liveObserverElements.eventList)
+        liveObserverElements.eventList.hidden = !split;
+    inspector.hidden = false;
+    backToEventsButton && (backToEventsButton.hidden = split);
+    missingEventBuilderController = renderMissingEventDefectReportBuilder(inspector, currentMissingEventVisits(), assignableSchemas(schemas), {
+        entryPoint,
+        ...(initialSchemaId ? { initialSchemaId } : {}),
+        navigation: {
+            backToSelectedVisit: closeInspectorAndReturnToEvents,
+            backToLiveFeed: closeInspectorAndReturnToEvents,
+            focusReportMissingEvent: () => reportMissingEventButton?.focus({ preventScroll: true }),
+            openMatchingEvent: (eventId, restoreBuilder) => {
+                openLiveInspector(eventId, true);
+                const returnAction = document.createElement("button");
+                returnAction.type = "button";
+                returnAction.textContent = "Return to missing-event report";
+                returnAction.addEventListener("click", () => { inspector.hidden = false; restoreBuilder(); });
+                inspector.append(returnAction);
+            },
+        },
+    });
+}
 function closeInspectorAndReturnToEvents() {
     const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
@@ -1090,6 +1128,7 @@ function renderSchemas() {
             const item = document.createElement("li");
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
+            const reportMissing = document.createElement("button");
             const remove = document.createElement("button");
             const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
             const pending = schema.workingDraft?.pendingChanges.length ?? 0;
@@ -1097,15 +1136,17 @@ function renderSchemas() {
             item.textContent = schema.published === false
                 ? `${schema.name} · unpublished draft · ${pending} pending changes. `
                 : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = remove.type = "button";
+            revise.type = duplicate.type = reportMissing.type = remove.type = "button";
             revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
+            reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
                 schemaDraft = schemaEditorDraft(schema);
                 renderSchemaDraft();
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+            reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
             remove.addEventListener("click", () => {
                 const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
                 if (children.length) {
@@ -1121,7 +1162,7 @@ function renderSchemas() {
                     schemaDeleteReview.showModal();
                 }
             });
-            item.append(revise, duplicate, remove);
+            item.append(revise, duplicate, reportMissing, remove);
             return item;
         }));
 }
@@ -3651,6 +3692,7 @@ function startFreshSession() {
     startFreshSessionButton?.focus({ preventScroll: true });
 }
 saveLiveSessionButton?.addEventListener("click", () => openSessionSaveDialog());
+reportMissingEventButton?.addEventListener("click", () => openMissingEventBuilder(savedSessionLiveFeed ? "saved session" : "Live session actions"));
 startFreshSessionButton?.addEventListener("click", () => {
     const availability = freshSessionAvailability({
         eventCount: liveObserverState.events.length,

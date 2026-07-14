@@ -21,6 +21,7 @@
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
+            [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
@@ -47,6 +48,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               missing-event-defect-report/handlers
                schema-documentation/handlers
                conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
