@@ -40,7 +40,7 @@ Feature: Data layer guided validation schema destination
 
     Examples:
       | schema_name          | schema_target | property_state | availability | explanation                              |
-      | Generic pageview     | payload       | absent         | selectable   | page_type will be added                   |
+      | Existing pageview    | payload       | absent         | selectable   | page_type will be added                   |
       | Product listing      | payload       | String         | selectable   | page_type accepts String rules            |
       | Numeric page types   | payload       | Number         | unavailable  | page_type expects Number                  |
       | Raw pageview         | raw input     | absent         | unavailable  | schema validates raw input, not payload   |
