@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=41c844bc7d5a785f6d664a81a4fc8084a0ac2880c07dc49400ba3efd2fb2ed75
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T18:37:54.525481151Z","feature_name":"Data layer unified defect report builder","feature_path":"features/data-layer-unified-defect-report-builder.feature","background_hash":"18c1b62499d38343e28617deb55496d9b394301f99c463f78d53d85acabf7453","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer unified defect report builder 001","scenario_hash":"7c7d04925b1ca8d3d300c6c95dedeeb216ca0d573213af48949a3d89424a9d7f","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:54.525481151Z"},{"index":3,"name":"Data layer unified defect report builder 004","scenario_hash":"a0f0a0adb38d02beb94df02af11fe756d4d60dfd1ccade34a7d98e4932239008","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:54.525481151Z"},{"index":5,"name":"Data layer unified defect report builder 006","scenario_hash":"65c2513ad034d465bbe7dc855f9c43456d59bfffdb2db5ae300146b1463e05b1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:54.525481151Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer unified defect report builder
 
   Background:

@@ -1,15 +1,9 @@
 (ns acceptance.allowed-value-expansion-steps-test
-  (:require [acceptance.runtime :as runtime]
+  (:require [acceptance.feature-support :as feature-support]
             [acceptance.steps.all :as all]
             [acceptance.steps.allowed-value-expansion :as expansion]
-            [aps.gherkin :as gherkin]
-            [clojure.set :as set]
-            [clojure.test :refer [deftest is]]))
+            [clojure.test :refer [deftest]]))
 
 (deftest verifies-allowed-value-expansion-features
-  (is (set/subset? (set expansion/handlers) (set all/handlers)))
-  (doseq [feature-file expansion/feature-files]
-    (is (= :passed
-           (:status (runtime/run-feature! (gherkin/parse-file feature-file)
-                                          expansion/handlers)))
-        feature-file)))
+  (feature-support/verify-feature-suite!
+   expansion/feature-files expansion/handlers all/handlers))

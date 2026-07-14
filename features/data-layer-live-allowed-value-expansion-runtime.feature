@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=85b5de23b8da48fd05750d2256336019013941a8606cd89fe2daf539b0b5b6f4
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T18:37:31.813167892Z","feature_name":"Data layer Live allowed-value expansion runtime","feature_path":"features/data-layer-live-allowed-value-expansion-runtime.feature","background_hash":"8b8b1a76be138480e56b0bb5e4a1307c8f706152991bb7d921ac8a79d9668ea3","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer Live allowed-value expansion runtime 001","scenario_hash":"90cfa6150e2db4bb6371b2f226b958de86573253e9db1a66e3fa41cb212470ab","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:31.813167892Z"},{"index":2,"name":"Data layer Live allowed-value expansion runtime 003","scenario_hash":"2e1460430f559dda6e75200392f12635b2f5bf22afe60f7e3ca503b9869e6d89","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:31.813167892Z"},{"index":3,"name":"Data layer Live allowed-value expansion runtime 004","scenario_hash":"0c02a90a2a0b0300a3d1154d23d067fc3db4270b0db60f62a02dab885de33ae4","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:31.813167892Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live allowed-value expansion runtime
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=0b63302db2e83f8d191fd0ddbc02948bb9c39d2006114962aa7f7c69ba3e6736
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T18:37:21.048607315Z","feature_name":"Data layer Live allowed-value expansion","feature_path":"features/data-layer-live-allowed-value-expansion.feature","background_hash":"fd185ae2da3fa741206551eeb044e2818640063b1719a477a920b770d71699f3","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer Live allowed-value expansion 001","scenario_hash":"8db8c3843ad56b79cd44c839b1078ed286e5519da3a87cb2212779a66ec86489","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:21.048607315Z"},{"index":3,"name":"Data layer Live allowed-value expansion 004","scenario_hash":"f119ae86efe827c595b4189b7ed5ac90db17b1116d27408eeb63d119628f2a11","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:21.048607315Z"},{"index":6,"name":"Data layer Live allowed-value expansion 007","scenario_hash":"1d5b953757a284d24353dfb202b43797e41d09721eb9f5f20e61638a4a8f9891","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T18:37:21.048607315Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live allowed-value expansion
 
   Background:
@@ -137,4 +142,3 @@ Feature: Data layer Live allowed-value expansion
     Then navigation restores the same captured event and property disclosure when available
     And feed and inspector scroll position are preserved
     And keyboard focus returns to the originating action or its working-draft continuation
-
