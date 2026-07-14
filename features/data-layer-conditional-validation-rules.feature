@@ -1,0 +1,108 @@
+Feature: Data layer conditional validation rules
+
+  Background:
+    Given schema Product event is being edited
+    And its validation target is one complete captured data layer event
+
+  # Data layer conditional validation rules 001
+  Scenario: Data layer conditional validation rules 001
+    Given property /oOrder/aProducts has an Item count rule with minimum 1
+    When the operator makes the rule conditional
+    And adds condition /page_type Equals product_detail
+    Then the Item count rule is retained as the consequence
+    And the rule summary states When page_type equals product_detail, oOrder.aProducts must contain at least 1 item
+    And the trigger path and consequence path are stored in the same conditional rule
+    And no JavaScript or free-form executable expression is requested or stored
+
+  # Data layer conditional validation rules 002
+  Scenario Outline: Data layer conditional validation rules 002
+    Given conditional rule When /page_type Equals product_detail, /oOrder/aProducts must contain at least 1 item
+    And an event has page_type <page_type_value> and aProducts <products_value>
+    When the event is validated
+    Then the conditional rule result is <rule_result>
+    And the event receives <issue_count> issues from the conditional rule
+
+    Examples:
+      | page_type_value | products_value | rule_result    | issue_count |
+      | product_detail  | missing        | Failed         | 1           |
+      | product_detail  | empty array    | Failed         | 1           |
+      | product_detail  | 1 item         | Passed         | 0           |
+      | category        | empty array    | Not applicable | 0           |
+
+  # Data layer conditional validation rules 003
+  Scenario Outline: Data layer conditional validation rules 003
+    Given a trigger property has <observed_state>
+    When trigger predicate <predicate> is evaluated against <configured_value>
+    Then the predicate result is <predicate_result>
+
+    Examples:
+      | observed_state        | predicate       | configured_value      | predicate_result |
+      | present with null     | Exists          | none                  | true             |
+      | absent                | Does not exist  | none                  | true             |
+      | string product_detail | Equals          | string product_detail | true             |
+      | number 1              | Equals          | string 1              | false            |
+      | absent                | Does not equal  | string internal       | false            |
+      | string checkout       | Is one of       | page, checkout        | true             |
+      | string product_detail | Matches pattern | ^product_             | true             |
+      | number 6              | Is greater than | number 5              | true             |
+      | number 5              | Is at least     | number 5              | true             |
+      | number 4              | Is less than    | number 5              | true             |
+      | number 5              | Is at most      | number 5              | true             |
+      | string 5              | Is greater than | number 4              | false            |
+
+  # Data layer conditional validation rules 004
+  Scenario Outline: Data layer conditional validation rules 004
+    Given the conditional rule has predicates /page_type Equals product_detail and /currency Equals EUR
+    And its condition group uses <group_operator>
+    When predicate results are <first_result> and <second_result>
+    Then the consequence is <consequence_behavior>
+
+    Examples:
+      | group_operator | first_result | second_result | consequence_behavior |
+      | All            | true         | true          | evaluated             |
+      | All            | true         | false         | Not applicable        |
+      | Any            | true         | false         | evaluated             |
+      | Any            | false        | false         | Not applicable        |
+
+  # Data layer conditional validation rules 005
+  Scenario Outline: Data layer conditional validation rules 005
+    Given a conditional rule draft has <invalid_configuration>
+    When conditional rule validation runs
+    Then the rule cannot be attached or saved
+    And local assistance states <recovery_message>
+
+    Examples:
+      | invalid_configuration                   | recovery_message                          |
+      | no trigger predicate                    | Add at least one condition                |
+      | trigger without a property path         | Choose a condition property               |
+      | Equals without a comparison value       | Enter a comparison value                  |
+      | malformed Matches pattern value         | Correct the regular expression            |
+      | Is greater than on a string trigger      | Choose an operator compatible with string |
+      | consequence rule with invalid parameters | Correct the consequence rule              |
+
+  # Data layer conditional validation rules 006
+  Scenario: Data layer conditional validation rules 006
+    Given the page_type condition is satisfied
+    And /oOrder/aProducts is missing
+    When validation results are presented
+    Then the failure is attributed to expected path /oOrder/aProducts
+    And a synthetic missing-property row is available at that path
+    And rule details identify the condition summary, Failed result, expected item count, and actual Missing value
+    And the condition property page_type is not marked as failing
+
+  # Data layer conditional validation rules 007
+  Scenario: Data layer conditional validation rules 007
+    Given the page_type condition is not satisfied
+    When validation results are presented
+    Then the conditional rule is retained with result Not applicable
+    And it creates no error or warning
+    And rule details identify which condition was not satisfied
+    And Not applicable is not counted as Passed or Failed
+
+  # Data layer conditional validation rules 008
+  Scenario: Data layer conditional validation rules 008
+    Given a conditional rule has a stable identity, trigger conditions, group operator, and consequence rule
+    When it is saved locally, saved as reusable, revised, inherited, exported, imported, and reloaded
+    Then each lifecycle operation preserves the conditional rule as one atomic definition
+    And trigger paths, typed comparison values, group operator, consequence parameters, severity, and issue message are retained
+    And changing a reusable conditional rule creates a new version without mutating schemas pinned to an earlier version

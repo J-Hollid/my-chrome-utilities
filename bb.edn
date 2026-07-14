@@ -14,6 +14,7 @@
                         [acceptance.steps-support-test]
                         [acceptance.side-panel-steps-test]
                         [acceptance.command-registry-steps-test]
+                        [acceptance.conditional-validation-rules-steps-test]
                         [acceptance.cross-tab-reattachment-steps-test]
                         [acceptance.palette-steps-test]
                         [acceptance.hotkey-keymap-steps-test]
@@ -47,6 +48,7 @@
                                                 'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
                                                 'acceptance.command-registry-steps-test
+                                                'acceptance.conditional-validation-rules-steps-test
                                                 'acceptance.cross-tab-reattachment-steps-test
                                                 'acceptance.palette-steps-test
                                                 'acceptance.hotkey-keymap-steps-test

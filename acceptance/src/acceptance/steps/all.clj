@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
@@ -44,6 +45,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
                fresh-live-session/handlers
                lossless-observation-activation/handlers

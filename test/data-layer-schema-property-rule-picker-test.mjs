@@ -81,6 +81,9 @@ assert.deepEqual(configuration, {
   saveReusable:false,
   reusableName:"",
   description:"",
+  applyOnlyWhen:false,
+  conditionGroupOperator:"All",
+  conditions:[],
 });
 
 const validationCases = [

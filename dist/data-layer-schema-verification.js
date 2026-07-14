@@ -1,5 +1,6 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
+import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -241,6 +242,12 @@ function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
         severity: rule.severity ?? "error",
         origin: `${schema.name} v${schema.version}`,
         ...(allowedValues.length ? { allowedValues } : {}),
+        ...(rule.conditionGroup && rule.propertyPath && rule.operator ? {
+            conditionSummary: conditionalRuleSummary({
+                conditionGroup: rule.conditionGroup,
+                consequence: { propertyPath: rule.propertyPath, operator: rule.operator, ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}) },
+            }),
+        } : {}),
     };
 }
 function nestedRuleFailure(rule, match) {
@@ -292,6 +299,8 @@ function attachedRuleIssues(value, schema, result, rules = schema.attachedRules 
     for (const rule of rules) {
         if (rule.enabled === false)
             continue;
+        if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup))
+            continue;
         if (rule.propertyPath?.startsWith("/")) {
             for (const match of resolveNestedValues(value, rule.propertyPath)) {
                 const failure = nestedRuleFailure(rule, match);
@@ -339,6 +348,23 @@ function inheritedAttachedRuleIssues(value, schema, schemas, result) {
 }
 function attachedRuleEvaluations(value, schema, rules) {
     return rules.filter(({ enabled }) => enabled !== false).flatMap((rule) => {
+        if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) {
+            const summary = rule.propertyPath && rule.operator
+                ? conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: rule.propertyPath, operator: rule.operator, ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}) } })
+                : "Conditional rule";
+            return [{
+                    propertyPath: rule.propertyPath ?? "",
+                    status: "not-applicable",
+                    message: `Not applicable: ${summary}`,
+                    expected: summary,
+                    actual: "condition not satisfied",
+                    rule: rule.name ?? rule.id,
+                    ruleVersion: rule.version,
+                    severity: rule.severity ?? "error",
+                    schemaName: schema.name,
+                    schemaVersion: schema.version,
+                }];
+        }
         const issues = [];
         attachedRuleIssues(value, schema, issues, [rule]);
         const propertyPath = rule.propertyPath ?? rule.parameters?.split(":", 1)[0]?.split(",", 1)[0]?.trim() ?? "";
