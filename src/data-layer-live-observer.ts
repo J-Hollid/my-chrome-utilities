@@ -2,11 +2,12 @@ import type { SourceEvent } from "./data-layer-source.js";
 import type { ValidationIssue } from "./data-layer-schema-verification.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 import type { ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
+import type { PresentedEventTriage } from "./data-layer-defect-library.js";
 import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-feed-query.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 
-export const dataLayerViews = ["Live", "Library", "Sessions", "Schemas"] as const;
+export const dataLayerViews = ["Live", "Library", "Sessions", "Defects", "Schemas"] as const;
 export type DataLayerView = (typeof dataLayerViews)[number];
 export type LiveStatus = "Live" | "Paused";
 export type InspectorLayout = "stacked" | "split";
@@ -25,6 +26,7 @@ export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureT
     sourceName?: string;
     destination?: string;
     keyProperties?: Readonly<Record<string, unknown>>;
+    defectTriage?: PresentedEventTriage;
     validationDetails?: {
       issues: readonly ValidationIssue[];
       evaluations: readonly ValidationEvaluation[];

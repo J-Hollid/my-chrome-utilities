@@ -102,7 +102,8 @@ function eventRow(
   const identity = document.createElement("span"); identity.className = "live-event-row-identity"; identity.textContent = [event.name, compactTime, sourceName].filter(Boolean).join(" · ");
   const badge = document.createElement("span"); badge.className = "live-validation-badge"; badge.dataset.symbol = visual.symbolName; badge.setAttribute("aria-label", validation); badge.textContent = ` · ${visual.badgeText}`;
   const summary = document.createElement("span"); summary.className = "live-event-row-summary"; summary.textContent = summaryText ? ` · ${summaryText}` : "";
-  button.append(identity, badge, summary);
+  const triage = document.createElement("span"); triage.className = "live-defect-triage-badge"; triage.textContent = event.defectTriage ? ` · ${event.defectTriage.state}` : "";
+  button.append(identity, badge, triage, summary);
   button.addEventListener("click", () => openEvent(event.id));
   item.append(button);
   return item;
@@ -268,11 +269,11 @@ function recursiveValidationTree(payload: unknown, evaluations: readonly Validat
   return roots;
 }
 
-function renderEventLevelIssues(event: LiveEvent): HTMLElement {
+function renderEventLevelIssues(event: LiveEvent, actionHandlers: LiveInspectorActions): HTMLElement {
   const section = document.createElement("section"); section.id = "live-event-validation-issues"; section.setAttribute("aria-labelledby", "live-event-validation-issues-heading");
   const heading = document.createElement("h5"); heading.id = "live-event-validation-issues-heading"; heading.textContent = "Event-level issues";
   const list = document.createElement("ul");
-  list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue) => {
+  list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue, issueIndex) => {
     const item = document.createElement("li");
     const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
     const text = `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
@@ -280,6 +281,19 @@ function renderEventLevelIssues(event: LiveEvent): HTMLElement {
       const targetId = `live-property-${path.replace(/[^a-z0-9]+/gi, "-")}`;
       const link = document.createElement("button"); link.type = "button"; link.textContent = `${path}: ${text}`; link.addEventListener("click", () => document.getElementById(targetId)?.focus({ preventScroll:false })); item.append(link);
     } else item.textContent = `Event: ${text}`;
+    const issueTriage = event.defectTriage?.issueDetails[issueIndex];
+    if (issueTriage?.state === "Reported") {
+      for (const defect of issueTriage.defectLinks) {
+        const reported = document.createElement("button"); reported.type = "button"; reported.className = "live-reported-defect-link"; reported.textContent = `Reported · ${defect.label}`;
+        reported.dataset.issueIndex = String(issueIndex); reported.dataset.defectId = defect.id;
+        reported.addEventListener("click", () => actionHandlers.openReportedDefect?.(defect.id, event, issueIndex, reported)); item.append(reported);
+      }
+    } else if (issueTriage) {
+      const state = document.createElement("span"); state.className = "live-new-defect-state"; state.textContent = issueTriage.state; item.append(state);
+      if (actionHandlers.startDefectReport) {
+        const create = document.createElement("button"); create.type = "button"; create.textContent = "Create defect report"; create.addEventListener("click", () => actionHandlers.startDefectReport?.(event)); item.append(create);
+      }
+    }
     return item;
   }));
   section.append(heading, list); return section;
@@ -424,7 +438,7 @@ export function renderLiveInspector(
     actions.append(continuation);
   }
   actions.append(feedback);
-  const issues = renderEventLevelIssues(event); issues.tabIndex = -1;
+  const issues = renderEventLevelIssues(event, actionHandlers); issues.tabIndex = -1;
   elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, issues, payload, rawJson, raw, actions);
 }
 

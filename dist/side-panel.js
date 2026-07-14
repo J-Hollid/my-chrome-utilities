@@ -32,7 +32,11 @@ import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, r
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { renderJiraReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./data-layer-missing-event-defect-report-ui.js";
+import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
+import { addDefect, attachSavedSessionToDefect, cancelDefectDeletion, confirmDefectDeletion, createMissingEventDefect, createValidationDefect, currentDefectIssues, DEFECT_LIBRARY_STORAGE_KEY, editDefect, presentedEventTriage, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus, } from "./data-layer-defect-library.js";
+import { findDefectLibraryElements, renderDefectLibrary } from "./data-layer-defect-library-ui.js";
 import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
 import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
@@ -122,6 +126,13 @@ const savedSessionCount = document.querySelector("#saved-session-count");
 const savedSessionConfirmation = document.querySelector("#saved-session-confirmation");
 const cancelSavedSessionDeleteButton = document.querySelector("#cancel-saved-session-delete");
 const confirmSavedSessionDeleteButton = document.querySelector("#confirm-saved-session-delete");
+const defectLibraryElements = findDefectLibraryElements();
+const defectLibrarySearch = document.querySelector("#defect-library-search");
+const defectLibraryStatus = document.querySelector("#defect-library-status");
+const defectLibraryType = document.querySelector("#defect-library-type");
+const defectLibraryEvent = document.querySelector("#defect-library-event");
+const defectLibrarySchema = document.querySelector("#defect-library-schema");
+const defectLibraryPath = document.querySelector("#defect-library-path");
 const eventLibraryEditorElements = findEventLibraryEditorElements();
 const libraryDraftSchemaSelector = document.createElement("select");
 libraryDraftSchemaSelector.id = "library-draft-schema-selector";
@@ -443,6 +454,10 @@ let liveObserverState = createLiveObserverState({
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot;
 let savedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
+let defectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
+let selectedDefectId;
+let defectReturn;
+let defectListScrollTop = 0;
 let savedSessionLiveFeed = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
 if (savedSessionLiveFeed)
     liveObserverState = savedSessionLiveFeed.savedView;
@@ -821,6 +836,120 @@ function showDataLayerView(view, focus = false) {
     }
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
+    if (view === "Defects")
+        renderDefects();
+}
+function persistDefectLibrary() {
+    localStorage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
+}
+function triagedEvent(event) {
+    return { ...event, defectTriage: presentedEventTriage(event, defectLibrary) };
+}
+function filteredDefectLibrary() {
+    return searchDefects(defectLibrary, {
+        query: defectLibrarySearch?.value ?? "",
+        status: (defectLibraryStatus?.value || "All"),
+        type: (defectLibraryType?.value || "All"),
+        eventName: defectLibraryEvent?.value ?? "",
+        schema: defectLibrarySchema?.value ?? "",
+        path: defectLibraryPath?.value ?? "",
+    });
+}
+function defectReportText(defect) {
+    return defect.type === "Missing event"
+        ? generateMissingEventRepresentations(defect.report).jiraText
+        : renderJiraReport(defect.report).text;
+}
+async function recopyDefect(defectId) {
+    const defect = defectLibrary.defects.find(({ id }) => id === defectId);
+    if (!defect || !navigator.clipboard?.writeText)
+        return;
+    await navigator.clipboard.writeText(defectReportText(defect));
+}
+function openDefect(defectId, trigger) {
+    selectedDefectId = defectId;
+    if (!defectReturn)
+        defectListScrollTop = document.querySelector("#defect-library-master")?.scrollTop ?? 0;
+    showDataLayerView("Defects");
+    renderDefects();
+    if (trigger)
+        trigger.dataset.openedDefect = defectId;
+}
+function closeDefect() {
+    const returning = defectReturn;
+    selectedDefectId = undefined;
+    defectReturn = undefined;
+    if (returning) {
+        showDataLayerView("Live");
+        openLiveInspector(returning.eventId, true);
+        liveObserverElements.eventInspector?.querySelector(`.live-reported-defect-link[data-issue-index="${returning.issueIndex}"]`)?.focus({ preventScroll: true });
+        if (liveObserverElements.eventList)
+            liveObserverElements.eventList.scrollTop = returning.listScrollTop;
+        return;
+    }
+    renderDefects();
+    const master = document.querySelector("#defect-library-master");
+    if (master)
+        master.scrollTop = defectListScrollTop;
+}
+function matchingEventForDefect(defect) {
+    return liveObserverState.events.find((event) => currentDefectIssues(event).some((current) => defect.issues.some(({ match }) => {
+        const canonicalPath = current.templatePath ?? current.concretePath;
+        return match.sourceId === current.sourceId && match.eventName === current.eventName && match.schemaId === current.schemaId
+            && match.validationTarget === current.validationTarget && match.canonicalPath === canonicalPath && match.ruleId === current.ruleId && match.ruleRevision === current.ruleRevision;
+    })));
+}
+function renderDefects() {
+    const filtered = filteredDefectLibrary();
+    const selected = selectedDefectId ? defectLibrary.defects.find(({ id }) => id === selectedDefectId) : undefined;
+    const visible = selected && !filtered.some(({ id }) => id === selected.id) ? [...filtered, selected] : filtered;
+    renderDefectLibrary(defectLibraryElements, visible, selectedDefectId, defectLibrary.deletionConfirmationId, {
+        open: (id, trigger) => openDefect(id, trigger),
+        close: closeDefect,
+        save: (id, report, notes) => {
+            defectLibrary = editDefect(defectLibrary, id, { report, notes }, new Date().toISOString());
+            persistDefectLibrary();
+            renderDefects();
+        },
+        recopy: (id) => { void recopyDefect(id); },
+        updateStatus: (id, status) => {
+            defectLibrary = updateDefectStatus(defectLibrary, id, status, new Date().toISOString());
+            persistDefectLibrary();
+            renderDefects();
+            renderLiveObserver();
+        },
+        attachCurrentSession: (id) => {
+            const draft = currentSessionSaveDraft();
+            const result = attachSavedSessionToDefect(defectLibrary, savedSessionLibrary, id, draft.completed, `Evidence for ${id}`, new Date().toISOString());
+            defectLibrary = result.library;
+            savedSessionLibrary = result.savedSessions;
+            persistDefectLibrary();
+            persistSavedSessionLibrary();
+            renderSavedSessions();
+            renderDefects();
+        },
+        openLinkedSession: (id) => {
+            const defect = defectLibrary.defects.find((candidate) => candidate.id === id);
+            const session = savedSessionLibrary.sessions.find((candidate) => candidate.id === defect?.savedSession?.id);
+            if (!defect || !session)
+                return;
+            openSessionInLiveFeed(session);
+            const matching = matchingEventForDefect(defect);
+            if (matching)
+                openLiveInspector(matching.id);
+        },
+        requestDelete: (id) => { defectLibrary = requestDefectDeletion(defectLibrary, id); renderDefects(); },
+        cancelDelete: () => { defectLibrary = cancelDefectDeletion(defectLibrary); renderDefects(); },
+        confirmDelete: () => {
+            const deleted = defectLibrary.deletionConfirmationId;
+            defectLibrary = confirmDefectDeletion(defectLibrary);
+            if (selectedDefectId === deleted)
+                selectedDefectId = undefined;
+            persistDefectLibrary();
+            renderDefects();
+            renderLiveObserver();
+        },
+    });
 }
 function renderSavedSessionLiveBanner() {
     const feed = savedSessionLiveFeed;
@@ -863,7 +992,7 @@ function renderSavedSessionLiveBanner() {
         startFreshSessionButton.disabled = true;
 }
 function renderLiveObserver() {
-    renderLiveObserverState(liveObserverElements, liveObserverState, openLiveInspector);
+    renderLiveObserverState(liveObserverElements, { ...liveObserverState, events: liveObserverState.events.map(triagedEvent) }, openLiveInspector);
     if (liveEventQuery)
         renderEventFeedQueryBuilder(liveEventQuery, liveObserverState.events, liveObserverState.query ?? { conditions: [] }, (query) => { liveObserverState = setLiveQuery(liveObserverState, query); synchronizeSavedSessionFeedView(); renderLiveObserver(); });
     if (liveEventsEmptyState)
@@ -922,6 +1051,12 @@ function openMissingEventBuilder(entryPoint, initialSchemaId) {
     missingEventBuilderController = renderMissingEventDefectReportBuilder(inspector, currentMissingEventVisits(), assignableSchemas(schemas), {
         entryPoint,
         ...(initialSchemaId ? { initialSchemaId } : {}),
+        saveReportedDefect: (report) => {
+            const defect = createMissingEventDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report });
+            defectLibrary = addDefect(defectLibrary, defect).library;
+            persistDefectLibrary();
+            renderDefects();
+        },
         navigation: {
             backToSelectedVisit: closeInspectorAndReturnToEvents,
             backToLiveFeed: closeInspectorAndReturnToEvents,
@@ -957,7 +1092,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     synchronizeSavedSessionFeedView();
     const event = liveObserverState.events.find(({ id }) => id === eventId);
     if (event)
-        renderLiveInspector(liveObserverElements, event, createLiveInspectorActions({
+        renderLiveInspector(liveObserverElements, triagedEvent(event), createLiveInspectorActions({
             currentPageUrl: () => liveObserverState.pageUrl,
             writeClipboard: async (text) => {
                 if (!navigator.clipboard?.writeText) {
@@ -996,8 +1131,32 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                         createDefectReportAction: () => liveObserverElements.eventInspector
                             ?.querySelector("#live-inspector-action-create-defect-report") ?? null,
                         closeToLiveFeed: closeInspectorAndReturnToEvents,
-                    }));
+                    }), {
+                        save: async (report, options) => {
+                            const selectedPointers = new Set(report.evidence.validation.map(({ pointer }) => pointer));
+                            const issues = currentDefectIssues(selected).filter((issue) => selectedPointers.has(issue.concretePath));
+                            const defect = createValidationDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report, issues });
+                            const result = addDefect(defectLibrary, defect, options.saveSeparately);
+                            if (result.added) {
+                                defectLibrary = result.library;
+                                persistDefectLibrary();
+                                renderDefects();
+                                renderLiveObserver();
+                            }
+                            if (options.copy && navigator.clipboard?.writeText)
+                                await navigator.clipboard.writeText(renderJiraReport(report).text);
+                            return result.added
+                                ? { feedback: options.copy ? "Reported defect saved and copied for Jira Cloud." : "Reported defect saved." }
+                                : { feedback: "A reported defect already matches the selected issue.", existing: result.existing.map((existing) => ({ id: existing.id, label: String(existing.report?.summary ?? existing.id) })) };
+                        },
+                        openExisting: (id) => openDefect(id),
+                        updateExisting: (id, report) => { defectLibrary = editDefect(defectLibrary, id, { report }, new Date().toISOString()); persistDefectLibrary(); openDefect(id); },
+                    });
                 }
+            },
+            openReportedDefect: (defectId, selected, issueIndex) => {
+                defectReturn = { eventId: selected.id, issueIndex, listScrollTop: liveObserverElements.eventList?.scrollTop ?? 0 };
+                openDefect(defectId);
             },
             validationAvailable: (selected) => Boolean(validateEvent({
                 sourceId: selected.sourceId,
@@ -3785,6 +3944,10 @@ revalidateSavedSessionButton?.addEventListener("click", () => {
 });
 liveObserverElements.eventList?.addEventListener("scroll", () => synchronizeSavedSessionFeedView());
 savedSessionSearch?.addEventListener("input", renderSavedSessions);
+for (const filter of [defectLibrarySearch, defectLibraryStatus, defectLibraryType, defectLibraryEvent, defectLibrarySchema, defectLibraryPath]) {
+    filter?.addEventListener("input", renderDefects);
+    filter?.addEventListener("change", renderDefects);
+}
 eventTemplateSearch?.addEventListener("input", renderEventTemplateLibrary);
 templateEmptyRecovery?.addEventListener("click", () => {
     if (eventTemplateSearch?.value.trim()) {
@@ -4529,6 +4692,7 @@ if (savedSessionLiveFeed && liveObserverElements.eventList)
 if (savedSessionLiveFeed?.savedView.inspectorEventId)
     openLiveInspector(savedSessionLiveFeed.savedView.inspectorEventId, true);
 renderSavedSessions();
+renderDefects();
 renderEventTemplateLibrary();
 renderSchemas();
 renderSchemaWorkflowRows();

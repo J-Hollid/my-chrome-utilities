@@ -1,6 +1,6 @@
 import { filterEventsByQuery } from "./data-layer-event-feed-query.js";
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
-export const dataLayerViews = ["Live", "Library", "Sessions", "Schemas"];
+export const dataLayerViews = ["Live", "Library", "Sessions", "Defects", "Schemas"];
 export function dataLayerViewForNavigationKey(current, key) {
     const index = dataLayerViews.indexOf(current);
     if (key === "Home")

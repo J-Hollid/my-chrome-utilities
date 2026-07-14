@@ -10,7 +10,7 @@ function heading(level, text) {
     element.textContent = text;
     return element;
 }
-export function renderDefectReportBuilder(root, event, clipboard = browserDefectReportClipboard(), sessionEvents = [event], navigation) {
+export function renderDefectReportBuilder(root, event, clipboard = browserDefectReportClipboard(), sessionEvents = [event], navigation, persistence) {
     let report = createDefectReport(defectCapturedEvent(event));
     const context = defectReportContext(sessionEvents, event.id);
     const selectedChoices = new Map();
@@ -30,6 +30,9 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     preview.setAttribute("aria-label", "Final report preview");
     const feedback = document.createElement("output");
     feedback.setAttribute("aria-live", "polite");
+    const duplicateReview = document.createElement("section");
+    duplicateReview.setAttribute("aria-label", "Existing reported defects");
+    duplicateReview.hidden = true;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.textContent = "Copy for Jira Cloud";
@@ -51,6 +54,28 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     backToEvent.addEventListener("click", () => navigation?.backToCapturedEvent());
     backToFeed.addEventListener("click", () => navigation?.backToLiveFeed());
     builderHeader.append(backToEvent, backToFeed, title);
+    const persist = async (copyAfterSave, saveSeparately = false) => {
+        if (!persistence)
+            return;
+        const result = await persistence.save(lastGenerated, { copy: copyAfterSave, saveSeparately });
+        feedback.textContent = result.feedback;
+        duplicateReview.replaceChildren();
+        duplicateReview.hidden = !result.existing?.length;
+        if (result.existing?.length) {
+            duplicateReview.append(heading("h5", "This issue is already reported"));
+            for (const existing of result.existing)
+                duplicateReview.append(Object.assign(document.createElement("button"), { type: "button", textContent: `Open existing defect · ${existing.label}`, onclick: () => persistence.openExisting(existing.id) }));
+            const update = document.createElement("button");
+            update.type = "button";
+            update.textContent = "Update existing defect";
+            update.onclick = () => persistence.updateExisting(result.existing[0].id, lastGenerated);
+            const separate = document.createElement("button");
+            separate.type = "button";
+            separate.textContent = "Save separately";
+            separate.onclick = () => { void persist(copyAfterSave, true); };
+            duplicateReview.append(update, separate);
+        }
+    };
     let lastGenerated = generateReportDetails(report);
     const refresh = () => {
         let corrected = report;
@@ -79,7 +104,20 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     appendReproductionControls(reproductionControls, reproductionSteps, context, state);
     appendTimelineControls(timelineFilters, timelineList, context, state);
     appendDetailControls(detailControls, detailEdits, refresh);
-    root.replaceChildren(builderHeader, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, feedback);
+    const persistenceActions = document.createElement("section");
+    persistenceActions.setAttribute("aria-label", "Reported defect actions");
+    if (persistence) {
+        const save = document.createElement("button");
+        save.type = "button";
+        save.textContent = "Save as reported defect";
+        save.onclick = () => { void persist(false); };
+        const saveAndCopy = document.createElement("button");
+        saveAndCopy.type = "button";
+        saveAndCopy.textContent = "Save as reported defect and copy";
+        saveAndCopy.onclick = () => { void persist(true); };
+        persistenceActions.append(save, saveAndCopy);
+    }
+    root.replaceChildren(builderHeader, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, persistenceActions, duplicateReview, feedback);
     refresh();
     title.focus({ preventScroll: true });
 }
