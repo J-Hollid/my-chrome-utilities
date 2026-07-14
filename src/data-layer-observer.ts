@@ -72,6 +72,14 @@ export interface HistoryArrayObserverAttachOptions {
   importExisting?: boolean;
 }
 
+export interface HistoryArraySnapshotAttachOptions {
+  historyPath: string;
+  pageUrl: string;
+  pageLoadId?: string;
+  rawValues: readonly unknown[];
+  requestId?: string;
+}
+
 function pathParts(path: string): string[] {
   return path
     .split(".")
@@ -87,6 +95,25 @@ function valueAtPath(pageObject: unknown, path: string): unknown {
 
     return (current as Record<string, unknown>)[part];
   }, pageObject);
+}
+
+function pageObjectForHistorySnapshot(
+  historyPath: string,
+  rawValues: readonly unknown[],
+): unknown {
+  const parts = pathParts(historyPath);
+  const root: Record<string, unknown> = {};
+  let current = root;
+
+  parts.forEach((part, index) => {
+    const value = index === parts.length - 1 ? [...rawValues] : {};
+    current[part] = value;
+    if (index < parts.length - 1) {
+      current = value as Record<string, unknown>;
+    }
+  });
+
+  return root;
 }
 
 function captureContext(
@@ -236,6 +263,26 @@ export function attachHistoryArrayObserver(
   return status === "ready" && options.importExisting !== false
     ? captureExistingHistoryEntries(nextState, observer)
     : nextState;
+}
+
+export function attachHistoryArraySnapshot(
+  state: DataLayerHistoryObserverState,
+  options: HistoryArraySnapshotAttachOptions,
+): DataLayerHistoryObserverState {
+  return attachHistoryArrayObserver(state, {
+    historyPath: options.historyPath,
+    pageUrl: options.pageUrl,
+    ...(options.pageLoadId === undefined
+      ? {}
+      : { pageLoadId: options.pageLoadId }),
+    pageObject: pageObjectForHistorySnapshot(
+      options.historyPath,
+      options.rawValues,
+    ),
+    ...(options.requestId === undefined
+      ? {}
+      : { requestId: options.requestId }),
+  });
 }
 
 export function reinstallHistoryArrayObserver(

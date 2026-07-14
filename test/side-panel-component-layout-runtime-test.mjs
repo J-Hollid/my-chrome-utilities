@@ -3193,10 +3193,7 @@ try {
         rules:schemaWorkspaceRuntime.propertyRule,
         assignment:schemaWorkspaceRuntime.assignment,
         sourceCreation:schemaSourceCreation,
-        inheritance:schemaInheritance ? {
-          ...schemaInheritance,
-          preview:schemaInheritance.preview.map((entry) => entry.replace(/^\/example ·/, "example ·")),
-        } : schemaInheritance,
+        inheritance:schemaInheritance,
         transfer:schemaLibraryTransfer,
         reload:schemaReload,
         validation:schemaLiveValidation,

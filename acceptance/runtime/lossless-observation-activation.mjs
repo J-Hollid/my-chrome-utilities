@@ -1,10 +1,8 @@
-import {
-  historySnapshotPageObject,
-  startLiveHistoryPushCapture,
-} from "../../dist/data-layer-live-observation.js";
+import { startLiveHistoryPushCapture } from "../../dist/data-layer-live-observation.js";
 import {
   appendObservedHistoryEntry,
   attachHistoryArrayObserver,
+  attachHistoryArraySnapshot,
 } from "../../dist/data-layer-observer.js";
 import {
   initialObservationActivationState,
@@ -83,11 +81,11 @@ async function waitForMainCall(runtime, count) {
 }
 
 function snapshotState(state, pageUrl, pageLoadId, rawValues, requestId) {
-  return attachHistoryArrayObserver(state, {
+  return attachHistoryArraySnapshot(state, {
     historyPath:path,
     pageUrl,
     pageLoadId,
-    pageObject:historySnapshotPageObject(path, rawValues),
+    rawValues,
     requestId,
   });
 }
@@ -173,7 +171,14 @@ async function delayedPathScenario() {
   const stop = await retry.completion;
   array.push(raw("event-5"), raw("event-6"));
   await Promise.resolve();
-  const result = { historyPath:path, pageUrl:"https://example.test/delayed", pageLoadId:"load-3", feed:eventNames(retry.state()), activeChannels:Object.keys(globalThis.__myChromeUtilitiesHistoryPushObservers[path].channels).length };
+  const result = {
+    historyPath:path,
+    pageUrl:"https://example.test/delayed",
+    pageLoadId:"load-3",
+    pageLoadIds:retry.state().sourceEvents.map(({ pageLoadId }) => pageLoadId),
+    feed:eventNames(retry.state()),
+    activeChannels:Object.keys(globalThis.__myChromeUtilitiesHistoryPushObservers[path].channels).length,
+  };
   stop();
   return result;
 }
@@ -269,6 +274,7 @@ async function staleGenerationScenario() {
     historyPath:path,
     stalePageUrl:"https://example.test/old",
     currentPageUrl:"https://example.test/current",
+    staleEvent:"old-view",
     staleGenerationId:"generation-1",
     currentGenerationId:"generation-2",
     feed:eventNames(observerState),

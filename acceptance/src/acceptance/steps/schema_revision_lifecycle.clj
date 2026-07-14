@@ -131,12 +131,12 @@
     world))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (entry-steps (:text spec)) (:schema-revision-lifecycle world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs [feature-file] #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs [feature-file] #{})
+   entry-steps
+   :schema-revision-lifecycle
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T00:33:51.903027631+02:00", :module-hash "325267102", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "854328778"} {:id "def/feature-file", :kind "def", :line 4, :end-line nil, :hash "1100543844"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line nil, :hash "-1618529344"} {:id "def/entry-steps", :kind "def", :line 7, :end-line nil, :hash "63856129"} {:id "defn-/load-observation!", :kind "defn-", :line 21, :end-line nil, :hash "1102314959"} {:id "defn-/observation!", :kind "defn-", :line 29, :end-line nil, :hash "204904339"} {:id "def/expected-working-draft", :kind "def", :line 31, :end-line nil, :hash "547774403"} {:id "def/expected-publication", :kind "def", :line 44, :end-line nil, :hash "29558741"} {:id "def/expected-history", :kind "def", :line 53, :end-line nil, :hash "168465605"} {:id "def/expected-migration", :kind "def", :line 59, :end-line nil, :hash "1243713517"} {:id "def/expected-ui", :kind "def", :line 67, :end-line nil, :hash "-116718411"} {:id "def/policy-keys", :kind "def", :line 93, :end-line nil, :hash "-2123497748"} {:id "defn-/policy-revision", :kind "defn-", :line 97, :end-line nil, :hash "1831898148"} {:id "defn-/assert-policy-example!", :kind "defn-", :line 100, :end-line nil, :hash "558105691"} {:id "defn-/assert-lifecycle!", :kind "defn-", :line 108, :end-line nil, :hash "-404978707"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line nil, :hash "-813049935"} {:id "def/handlers", :kind "def", :line 132, :end-line nil, :hash "350285377"}]}
+;; {:version 1, :tested-at "2026-07-14T12:55:34.80828593+02:00", :module-hash "1135142399", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "854328778"} {:id "def/feature-file", :kind "def", :line 4, :end-line 4, :hash "1100543844"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line 5, :hash "-1618529344"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 20, :hash "-261594173"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line 28, :hash "1102314959"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line 30, :hash "204904339"} {:id "def/expected-working-draft", :kind "def", :line 32, :end-line 43, :hash "547774403"} {:id "def/expected-publication", :kind "def", :line 45, :end-line 52, :hash "29558741"} {:id "def/expected-history", :kind "def", :line 54, :end-line 58, :hash "168465605"} {:id "def/expected-migration", :kind "def", :line 60, :end-line 66, :hash "1243713517"} {:id "def/expected-ui", :kind "def", :line 68, :end-line 92, :hash "-116718411"} {:id "def/policy-keys", :kind "def", :line 94, :end-line 96, :hash "-2123497748"} {:id "defn-/policy-revision", :kind "defn-", :line 98, :end-line 99, :hash "1831898148"} {:id "defn-/assert-policy-example!", :kind "defn-", :line 101, :end-line 107, :hash "558105691"} {:id "defn-/assert-lifecycle!", :kind "defn-", :line 109, :end-line 124, :hash "2131606462"} {:id "defn-/transition", :kind "defn-", :line 126, :end-line 131, :hash "-813049935"} {:id "def/handlers", :kind "def", :line 133, :end-line 138, :hash "-427037792"}]}
 ;; clj-mutate-manifest-end

@@ -10,7 +10,7 @@ export function nextObservationActivation(
   state: ObservationActivationState,
 ): { state: ObservationActivationState; generation: number } {
   const generation = state.generation + 1;
-  return { state:{ generation }, generation };
+  return { state: { generation }, generation };
 }
 
 export function observationActivationIsCurrent(

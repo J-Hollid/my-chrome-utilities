@@ -175,28 +175,6 @@ async function injectHistoryArrayHook(
   return injection?.result ?? { installed: false, rawValues: [] };
 }
 
-export function historySnapshotPageObject(
-  historyPath: string,
-  rawValues: readonly unknown[],
-): unknown {
-  const parts = historyPath
-    .split(".")
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-  const root: Record<string, unknown> = {};
-  let current = root;
-
-  parts.forEach((part, index) => {
-    const value = index === parts.length - 1 ? [...rawValues] : {};
-    current[part] = value;
-    if (index < parts.length - 1) {
-      current = value as Record<string, unknown>;
-    }
-  });
-
-  return root;
-}
-
 function cleanupHistoryArrayHook(
   tabId: number,
   historyPath: string,

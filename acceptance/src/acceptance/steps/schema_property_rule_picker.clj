@@ -157,12 +157,12 @@
     world))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (= entry-step (:text spec)) (:schema-property-rule-picker world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs [feature-file] #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs [feature-file] #{})
+   #{entry-step}
+   :schema-property-rule-picker
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T10:08:44.056687393+02:00", :module-hash "2072505914", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "110500236"} {:id "def/feature-file", :kind "def", :line 5, :end-line nil, :hash "-1761985661"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line nil, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line nil, :hash "-684177608"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line nil, :hash "1271028503"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-775394783"} {:id "def/availability-examples", :kind "def", :line 19, :end-line nil, :hash "1125325596"} {:id "def/search-examples", :kind "def", :line 30, :end-line nil, :hash "-481968028"} {:id "def/configuration-control-examples", :kind "def", :line 38, :end-line nil, :hash "-1398554654"} {:id "defn-/assert-availability-example!", :kind "defn-", :line 48, :end-line nil, :hash "-974534531"} {:id "defn-/assert-search-example!", :kind "defn-", :line 58, :end-line nil, :hash "-1774368180"} {:id "defn-/assert-example!", :kind "defn-", :line 66, :end-line nil, :hash "-476443398"} {:id "defn-/assert-picker!", :kind "defn-", :line 105, :end-line nil, :hash "-961932228"} {:id "defn-/transition", :kind "defn-", :line 152, :end-line nil, :hash "1019694489"} {:id "def/handlers", :kind "def", :line 159, :end-line nil, :hash "789228454"}]}
+;; {:version 1, :tested-at "2026-07-14T12:55:38.310806848+02:00", :module-hash "-346794507", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "110500236"} {:id "def/feature-file", :kind "def", :line 5, :end-line 5, :hash "-1761985661"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line 7, :hash "-684177608"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line 15, :hash "1271028503"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line 17, :hash "-775394783"} {:id "def/availability-examples", :kind "def", :line 19, :end-line 28, :hash "1125325596"} {:id "def/search-examples", :kind "def", :line 30, :end-line 36, :hash "-481968028"} {:id "def/configuration-control-examples", :kind "def", :line 38, :end-line 46, :hash "-1398554654"} {:id "defn-/assert-availability-example!", :kind "defn-", :line 48, :end-line 56, :hash "-974534531"} {:id "defn-/assert-search-example!", :kind "defn-", :line 58, :end-line 64, :hash "-1774368180"} {:id "defn-/assert-example!", :kind "defn-", :line 66, :end-line 103, :hash "-476443398"} {:id "defn-/assert-picker!", :kind "defn-", :line 105, :end-line 150, :hash "1386113620"} {:id "defn-/transition", :kind "defn-", :line 152, :end-line 157, :hash "1019694489"} {:id "def/handlers", :kind "def", :line 159, :end-line 164, :hash "-1688861492"}]}
 ;; clj-mutate-manifest-end

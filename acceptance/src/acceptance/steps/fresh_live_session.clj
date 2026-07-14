@@ -123,19 +123,18 @@
    (assert-immediate-start-example! example (:initial observed))))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (entry-steps text) (assoc world :fresh-live-session (observation!)) world)
-        observed (:fresh-live-session world)]
-    (support/assert! observed "Fresh Live session browser adapter was not executed." {:step text})
-    (assert-observation! example observed)
-    world))
+  (support/stateful-transition
+   world example text entry-steps :fresh-live-session observation!
+   "Fresh Live session browser adapter was not executed."
+   assert-observation!))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world] (or (entry-steps (:text spec)) (:fresh-live-session world)))
-           :handler (fn [world example captures] (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-steps
+   :fresh-live-session
+   transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T09:42:48.165824111+02:00", :module-hash "1885787329", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "478676903"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "2051227790"} {:id "def/entry-steps", :kind "def", :line 7, :end-line nil, :hash "-1039711001"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line nil, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line nil, :hash "2004277215"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line nil, :hash "-775394783"} {:id "defn-/assert-confirmation-and-cancel!", :kind "defn-", :line 22, :end-line nil, :hash "-371080887"} {:id "defn-/assert-save-and-immediate-starts!", :kind "defn-", :line 41, :end-line nil, :hash "-1902218024"} {:id "defn-/assert-discard-boundary-and-reload!", :kind "defn-", :line 64, :end-line nil, :hash "346508822"} {:id "defn-/assert-read-only-archive!", :kind "defn-", :line 90, :end-line nil, :hash "90303784"} {:id "def/immediate-start-examples", :kind "def", :line 99, :end-line nil, :hash "-964723482"} {:id "defn-/assert-immediate-start-example!", :kind "defn-", :line 103, :end-line nil, :hash "-70025797"} {:id "defn-/assert-observation!", :kind "defn-", :line 116, :end-line nil, :hash "1375727255"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line nil, :hash "-1978786369"} {:id "def/handlers", :kind "def", :line 132, :end-line nil, :hash "974046422"}]}
+;; {:version 1, :tested-at "2026-07-14T12:57:11.949225984+02:00", :module-hash "-1575966602", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "478676903"} {:id "def/feature-files", :kind "def", :line 5, :end-line 5, :hash "2051227790"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 8, :hash "-1039711001"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line 18, :hash "2004277215"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line 20, :hash "-775394783"} {:id "defn-/assert-confirmation-and-cancel!", :kind "defn-", :line 22, :end-line 39, :hash "-371080887"} {:id "defn-/assert-save-and-immediate-starts!", :kind "defn-", :line 41, :end-line 62, :hash "-1902218024"} {:id "defn-/assert-discard-boundary-and-reload!", :kind "defn-", :line 64, :end-line 88, :hash "1507147952"} {:id "defn-/assert-read-only-archive!", :kind "defn-", :line 90, :end-line 97, :hash "90303784"} {:id "def/immediate-start-examples", :kind "def", :line 99, :end-line 101, :hash "-964723482"} {:id "defn-/assert-immediate-start-example!", :kind "defn-", :line 103, :end-line 114, :hash "-70025797"} {:id "defn-/assert-observation!", :kind "defn-", :line 116, :end-line 123, :hash "1375727255"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line 129, :hash "-1532082332"} {:id "def/handlers", :kind "def", :line 131, :end-line 136, :hash "938376941"}]}
 ;; clj-mutate-manifest-end

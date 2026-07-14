@@ -299,7 +299,7 @@ export function renderLiveInspector(
   const previousOpen = new Set<string>(); let searchActive = false;
   propertySearch.addEventListener("input", () => {
     const query = propertySearch.value.trim().toLowerCase();
-    const disclosures = Array.from(propertyList.querySelectorAll<HTMLElement>("details"));
+    const disclosures = Array.from(propertyList.querySelectorAll<HTMLDetailsElement>("details"));
     if (query && !searchActive) for (const disclosure of disclosures) if (disclosure.hasAttribute("open")) previousOpen.add(disclosure.dataset.propertyPath ?? "");
     const terms = query.split(/\s+/).filter(Boolean);
     const rows = Array.from(propertyList.querySelectorAll<HTMLLIElement>(".live-validation-property"));
