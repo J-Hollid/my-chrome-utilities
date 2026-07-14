@@ -1,4 +1,4 @@
-import { pathConditionResult, pathConditionsResult, } from "./data-layer-path-conditions.js";
+import { pathConditionResult, pathConditionsResult, urlConditionsMatch, } from "./data-layer-path-conditions.js";
 import { parseTargetExpression, resolveTargetValues } from "./data-layer-recursive-property-tree.js";
 export { pathConditionResult, pathConditionsResult };
 const requirements = {
@@ -303,12 +303,6 @@ function compatibleCapturedAssignments(draft, candidate) {
         ...(assignment.pathConditions ? { pathConditions: [...assignment.pathConditions] } : {}),
     }));
 }
-function globMatches(value, pattern) {
-    if (!pattern || pattern === "any")
-        return true;
-    const expression = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`;
-    return new RegExp(expression, "i").test(value);
-}
 export function guidedAssignmentCoversEvent(assignment, event, target) {
     if (assignment.enabled === false ||
         assignment.sourceId !== event.sourceId ||
@@ -316,11 +310,7 @@ export function guidedAssignmentCoversEvent(assignment, event, target) {
         assignment.target !== target) {
         return false;
     }
-    const url = new URL(event.pageUrl);
-    const pathMatches = assignment.pathConditions?.length
-        ? pathConditionsResult(assignment.pathConditions, url.pathname).matches
-        : globMatches(url.pathname, assignment.pathnameCondition);
-    return globMatches(url.hostname, assignment.domainCondition) && pathMatches;
+    return urlConditionsMatch(event.pageUrl, assignment);
 }
 export function assignmentConfigurationRequired(draft) {
     if (draft.destination?.kind === "new")

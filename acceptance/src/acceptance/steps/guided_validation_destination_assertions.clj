@@ -87,18 +87,30 @@
                      "Existing schema review used the wrong assignment action."
                      {:example example :result result})))
 
+(def ^:private successful-save-expectations
+  {"new Signal Shop pageview"
+   {:feature "draft Signal Shop pageview was created"
+    :runtime "Draft Signal Shop pageview was created."}
+   "existing Product listing v3"
+   {:feature "validation was added to Product listing draft"
+    :runtime "Validation was added to Product listing draft."}})
+
 (defn- successful-save [example observation]
   (let [destination (example-value example "schema_destination")
         saved-result (example-value example "saved_result")
+        expected (get successful-save-expectations destination)
         result (if (str/starts-with? destination "new ") (:saved observation) (:existingSaved observation))]
-    (support/assert! (contains? #{"new Signal Shop pageview" "existing Product listing v3"} destination)
+    (support/assert! expected
                      "Schema destination must identify a supported reviewed destination."
+                     {:example example})
+    (support/assert! (= (:feature expected) saved-result)
+                     "Schema-destination confirmation example changed."
                      {:example example})
     (support/assert! (= [true true true]
                         [(:flowClosed result) (:inspectorRestored result) (:focusReturned result)])
                      "Successful schema-destination save did not close, restore, and return focus."
                      {:example example :result result})
-    (support/assert! (str/includes? (str/lower-case (:status result)) (str/lower-case saved-result))
+    (support/assert! (= (:runtime expected) (:status result))
                      "Successful schema-destination save did not show its confirmation."
                      {:example example :result result})))
 
@@ -220,5 +232,5 @@
                    {:step text}))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T00:33:51.591255787+02:00", :module-hash "-2052959161", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1678299692"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line nil, :hash "-1416813660"} {:id "defn-/find-first", :kind "defn-", :line 9, :end-line nil, :hash "942117298"} {:id "defn-/destination-choice", :kind "defn-", :line 12, :end-line nil, :hash "874551229"} {:id "defn-/new-schema-name", :kind "defn-", :line 21, :end-line nil, :hash "-1054318475"} {:id "defn-/existing-option", :kind "defn-", :line 39, :end-line nil, :hash "1347961657"} {:id "defn-/isolated-working-draft-review?", :kind "defn-", :line 65, :end-line nil, :hash "1136396150"} {:id "defn-/revision-review", :kind "defn-", :line 71, :end-line nil, :hash "-1169592804"} {:id "defn-/successful-save", :kind "defn-", :line 87, :end-line nil, :hash "1710354139"} {:id "defn-/failed-save", :kind "defn-", :line 102, :end-line nil, :hash "327703264"} {:id "defn-/schema-prefill", :kind "defn-", :line 110, :end-line nil, :hash "-620786608"} {:id "def/assignment-scope-expectations", :kind "def", :line 125, :end-line nil, :hash "1672998917"} {:id "defn-/assignment-resolution", :kind "defn-", :line 130, :end-line nil, :hash "-1110233269"} {:id "defn-/replacement-review", :kind "defn-", :line 140, :end-line nil, :hash "1239151997"} {:id "def/assertions", :kind "def", :line 153, :end-line nil, :hash "-1057327777"} {:id "defn/default-assertion", :kind "defn", :line 219, :end-line nil, :hash "2057136094"}]}
+;; {:version 1, :tested-at "2026-07-14T14:42:05.411841657+02:00", :module-hash "-1407487327", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1678299692"} {:id "defn-/example-value", :kind "defn-", :line 6, :end-line 7, :hash "-1416813660"} {:id "defn-/find-first", :kind "defn-", :line 9, :end-line 10, :hash "942117298"} {:id "defn-/destination-choice", :kind "defn-", :line 12, :end-line 19, :hash "874551229"} {:id "defn-/new-schema-name", :kind "defn-", :line 21, :end-line 37, :hash "-1054318475"} {:id "defn-/existing-option", :kind "defn-", :line 39, :end-line 63, :hash "620402717"} {:id "defn-/isolated-working-draft-review?", :kind "defn-", :line 65, :end-line 69, :hash "1136396150"} {:id "defn-/revision-review", :kind "defn-", :line 71, :end-line 88, :hash "2124054012"} {:id "def/successful-save-expectations", :kind "def", :line 90, :end-line 96, :hash "23186373"} {:id "defn-/successful-save", :kind "defn-", :line 98, :end-line 115, :hash "-769240431"} {:id "defn-/failed-save", :kind "defn-", :line 117, :end-line 123, :hash "327703264"} {:id "defn-/schema-prefill", :kind "defn-", :line 125, :end-line 132, :hash "475918946"} {:id "defn-/assignment-resolution", :kind "defn-", :line 134, :end-line 142, :hash "299517715"} {:id "defn-/assignment-action", :kind "defn-", :line 144, :end-line 147, :hash "-70875715"} {:id "defn-/replacement-review", :kind "defn-", :line 149, :end-line 160, :hash "-2135809213"} {:id "def/assertions", :kind "def", :line 162, :end-line 227, :hash "257738528"} {:id "defn/default-assertion", :kind "defn", :line 229, :end-line 232, :hash "2057136094"}]}
 ;; clj-mutate-manifest-end

@@ -1,6 +1,7 @@
 import {
   pathConditionResult,
   pathConditionsResult,
+  urlConditionsMatch,
   type PathCondition,
   type PathMatchType,
 } from "./data-layer-path-conditions.js";
@@ -531,12 +532,6 @@ function compatibleCapturedAssignments(
     }));
 }
 
-function globMatches(value: string, pattern: string | undefined): boolean {
-  if (!pattern || pattern === "any") return true;
-  const expression = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`;
-  return new RegExp(expression, "i").test(value);
-}
-
 export function guidedAssignmentCoversEvent(
   assignment: GuidedAssignmentIdentity,
   event: Pick<GuidedValidationDraft["event"], "sourceId" | "name" | "pageUrl">,
@@ -550,11 +545,7 @@ export function guidedAssignmentCoversEvent(
   ) {
     return false;
   }
-  const url = new URL(event.pageUrl);
-  const pathMatches = assignment.pathConditions?.length
-    ? pathConditionsResult(assignment.pathConditions, url.pathname).matches
-    : globMatches(url.pathname, assignment.pathnameCondition);
-  return globMatches(url.hostname, assignment.domainCondition) && pathMatches;
+  return urlConditionsMatch(event.pageUrl, assignment);
 }
 
 export function assignmentConfigurationRequired(draft: GuidedValidationDraft): boolean {

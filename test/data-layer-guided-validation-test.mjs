@@ -62,6 +62,14 @@ const orderAssignment = {
 };
 assert.equal(guidedAssignmentCoversEvent(orderAssignment, orderEvent, "payload"), true);
 assert.equal(guidedAssignmentCoversEvent({ ...orderAssignment, pathnameCondition:"/products/*" }, orderEvent, "payload"), false);
+assert.equal(guidedAssignmentCoversEvent({
+  ...orderAssignment,
+  pathnameCondition:undefined,
+  pathConditions:[
+    { matchType:"Regular expression", expression:"[" },
+    { matchType:"Exact path", expression:"/orders/confirmed" },
+  ],
+}, orderEvent, "payload"), true);
 assert.equal(guidedAssignmentCoversEvent({ ...orderAssignment, enabled:false }, orderEvent, "payload"), false);
 
 const orderPropertyDraft = setGuidedRequirement(

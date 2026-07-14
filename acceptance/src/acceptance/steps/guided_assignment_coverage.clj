@@ -6,13 +6,12 @@
 (defonce browser-observation (atom nil))
 
 (defn- observation! []
-  (or @browser-observation
-      (reset! browser-observation
-              (support/load-browser-observation!
-               {:adapter-env "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER"
-                :observation-key :guidedAssignmentCoverage
-                :runtime-error "Guided assignment coverage browser runtime failed."
-                :missing-error "Guided assignment coverage browser evidence is missing."}))))
+  (support/cached-browser-observation!
+   browser-observation
+   {:adapter-env "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER"
+    :observation-key :guidedAssignmentCoverage
+    :runtime-error "Guided assignment coverage browser runtime failed."
+    :missing-error "Guided assignment coverage browser evidence is missing."}))
 
 (defn- require-observation! [condition message observation]
   (support/assert! condition message {:observation observation}))
@@ -114,3 +113,7 @@
   (support/semantic-handlers
    (support/feature-step-specs [feature-file] #{})
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T14:37:42.706982902+02:00", :module-hash "1400938863", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "813440774"} {:id "def/feature-file", :kind "def", :line 5, :end-line 5, :hash "548524383"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1618529344"} {:id "defn-/observation!", :kind "defn-", :line 8, :end-line 14, :hash "-92125886"} {:id "defn-/require-observation!", :kind "defn-", :line 16, :end-line 17, :hash "-619313877"} {:id "defn/validate-browser-observation!", :kind "defn", :line 19, :end-line 59, :hash "325368015"} {:id "defn/browser-observation!", :kind "defn", :line 61, :end-line 62, :hash "-1900744807"} {:id "defn-/example-value", :kind "defn-", :line 64, :end-line 65, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 67, :end-line 70, :hash "-793654877"} {:id "defn/validate-example!", :kind "defn", :line 72, :end-line 105, :hash "-1430073915"} {:id "defn-/transition", :kind "defn-", :line 107, :end-line 110, :hash "1573289377"} {:id "def/handlers", :kind "def", :line 112, :end-line 115, :hash "1551695576"}]}
+;; clj-mutate-manifest-end

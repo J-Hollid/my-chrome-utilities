@@ -9,6 +9,12 @@ function pathnameOf(pathOrUrl) {
 function escapeRegex(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+function globMatches(value, pattern) {
+    if (!pattern || pattern === "any")
+        return true;
+    const expression = `^${pattern.split("*").map(escapeRegex).join(".*")}$`;
+    return new RegExp(expression, "i").test(value);
+}
 export function pathConditionResult(condition, pathOrUrl) {
     const pathname = pathnameOf(pathOrUrl);
     try {
@@ -32,5 +38,12 @@ export function pathConditionsResult(conditions, pathOrUrl) {
             return { ...result, matchingCondition: condition };
     }
     return { valid: true, matches: false };
+}
+export function urlConditionsMatch(pageUrl, conditions) {
+    const url = new URL(pageUrl);
+    const pathMatches = conditions.pathConditions?.length
+        ? conditions.pathConditions.some((condition) => pathConditionResult(condition, url.pathname).matches)
+        : globMatches(url.pathname, conditions.pathnameCondition);
+    return globMatches(url.hostname, conditions.domainCondition) && pathMatches;
 }
 //# sourceMappingURL=data-layer-path-conditions.js.map

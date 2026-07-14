@@ -1,4 +1,4 @@
-import { pathConditionResult } from "./data-layer-path-conditions.js";
+import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
 function clone(value) { return structuredClone(value); }
@@ -140,22 +140,10 @@ export function schemaInheritanceConflict(schema, schemas) {
     return undefined;
 }
 export function searchSchemas(schemas, query) { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
-function glob(value, pattern) {
-    if (!pattern || pattern === "any")
-        return true;
-    const expression = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`;
-    return new RegExp(expression, "i").test(value);
-}
-function assignmentPathMatches(pathname, assignment) {
-    if (!assignment.pathConditions?.length)
-        return glob(pathname, assignment.pathnameCondition);
-    return assignment.pathConditions.some((condition) => pathConditionResult(condition, pathname).matches);
-}
 export function resolveSchemaAssignment(event, pageUrl, schemas) {
-    const url = new URL(pageUrl);
     const matches = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })))
         .filter(({ assignment }) => assignment.enabled !== false && assignment.sourceId === event.sourceId && assignment.eventName === event.eventName)
-        .filter(({ assignment }) => glob(url.hostname, assignment.domainCondition) && assignmentPathMatches(url.pathname, assignment));
+        .filter(({ assignment }) => urlConditionsMatch(pageUrl, assignment));
     if (matches.length === 0)
         return {};
     const highest = Math.max(...matches.map(({ assignment }) => assignment.priority ?? 0));

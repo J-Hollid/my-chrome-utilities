@@ -11,6 +11,12 @@ export interface PathConditionResult {
   error?: string;
 }
 
+export interface UrlConditions {
+  domainCondition?: string;
+  pathnameCondition?: string;
+  pathConditions?: readonly PathCondition[];
+}
+
 function pathnameOf(pathOrUrl: string): string {
   try { return new URL(pathOrUrl).pathname || "/"; }
   catch { return pathOrUrl.split(/[?#]/, 1)[0] || "/"; }
@@ -18,6 +24,12 @@ function pathnameOf(pathOrUrl: string): string {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function globMatches(value: string, pattern: string | undefined): boolean {
+  if (!pattern || pattern === "any") return true;
+  const expression = `^${pattern.split("*").map(escapeRegex).join(".*")}$`;
+  return new RegExp(expression, "i").test(value);
 }
 
 export function pathConditionResult(condition: PathCondition, pathOrUrl: string): PathConditionResult {
@@ -44,4 +56,12 @@ export function pathConditionsResult(
     if (result.matches) return { ...result, matchingCondition:condition };
   }
   return { valid:true, matches:false };
+}
+
+export function urlConditionsMatch(pageUrl: string, conditions: UrlConditions): boolean {
+  const url = new URL(pageUrl);
+  const pathMatches = conditions.pathConditions?.length
+    ? conditions.pathConditions.some((condition) => pathConditionResult(condition, url.pathname).matches)
+    : globMatches(url.pathname, conditions.pathnameCondition);
+  return globMatches(url.hostname, conditions.domainCondition) && pathMatches;
 }

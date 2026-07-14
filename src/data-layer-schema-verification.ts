@@ -1,5 +1,5 @@
 import type { ValidationState } from "./data-layer-source.js";
-import { pathConditionResult, type PathCondition } from "./data-layer-path-conditions.js";
+import { urlConditionsMatch, type PathCondition } from "./data-layer-path-conditions.js";
 import { resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 import {
@@ -173,26 +173,14 @@ export function schemaInheritanceConflict(schema: SchemaDefinition, schemas: rea
 }
 export function searchSchemas(schemas: readonly SchemaDefinition[], query: string): SchemaDefinition[] { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
 
-function glob(value: string, pattern: string | undefined): boolean {
-  if (!pattern || pattern === "any") return true;
-  const expression = `^${pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`;
-  return new RegExp(expression, "i").test(value);
-}
-
-function assignmentPathMatches(pathname: string, assignment: SchemaAssignment): boolean {
-  if (!assignment.pathConditions?.length) return glob(pathname, assignment.pathnameCondition);
-  return assignment.pathConditions.some((condition) => pathConditionResult(condition, pathname).matches);
-}
-
 export function resolveSchemaAssignment(
   event: Pick<ValidatableEvent, "sourceId" | "eventName">,
   pageUrl: string,
   schemas: readonly SchemaDefinition[],
 ): AssignmentResolution {
-  const url = new URL(pageUrl);
   const matches = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })))
     .filter(({ assignment }) => assignment.enabled !== false && assignment.sourceId === event.sourceId && assignment.eventName === event.eventName)
-    .filter(({ assignment }) => glob(url.hostname, assignment.domainCondition) && assignmentPathMatches(url.pathname, assignment));
+    .filter(({ assignment }) => urlConditionsMatch(pageUrl, assignment));
   if (matches.length === 0) return {};
   const highest = Math.max(...matches.map(({ assignment }) => assignment.priority ?? 0));
   const selected = matches.filter(({ assignment }) => (assignment.priority ?? 0) === highest);
