@@ -9,6 +9,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
+            [acceptance.steps.defect-library :as defect-library]
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.event-feed-query :as event-feed-query]
             [acceptance.steps.fresh-live-session :as fresh-live-session]
@@ -49,6 +50,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               defect-library/handlers
                validation-presence-semantics/handlers
                missing-event-defect-report/handlers
                schema-documentation/handlers

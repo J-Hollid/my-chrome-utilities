@@ -24,6 +24,7 @@
         <button id="data-layer-view-live" type="button" role="tab" aria-controls="data-layer-panel-live" aria-selected="true">Live</button>
         <button id="data-layer-view-library" type="button" role="tab" aria-controls="data-layer-panel-library" aria-selected="false" tabindex="-1">Library</button>
         <button id="data-layer-view-sessions" type="button" role="tab" aria-controls="data-layer-panel-sessions" aria-selected="false" tabindex="-1">Sessions</button>
+        <button id="data-layer-view-defects" type="button" role="tab" aria-controls="data-layer-panel-defects" aria-selected="false" tabindex="-1">Defects</button>
         <button id="data-layer-view-schemas" type="button" role="tab" aria-controls="data-layer-panel-schemas" aria-selected="false" tabindex="-1">Schemas</button>
       </div>
       <section id="data-layer-panel-live" role="tabpanel" aria-labelledby="data-layer-view-live">
@@ -193,6 +194,21 @@
           <button id="confirm-saved-session-delete" type="button" hidden>Confirm deletion</button>
         </section>
         <aside id="saved-session-detail" aria-label="Saved session detail"><h4>Session details</h4><p>Select a saved session to review its captured events and replay options.</p></aside>
+      </section>
+      <section id="data-layer-panel-defects" role="tabpanel" aria-labelledby="data-layer-view-defects" hidden>
+        <h3>Defects</h3>
+        <section id="defect-library-master" aria-label="Defect Library">
+          <label for="defect-library-search">Search defects</label><input id="defect-library-search" type="search" />
+          <label for="defect-library-status">Status</label><select id="defect-library-status"><option>All</option><option>Reported</option><option>Resolved</option><option>Archived</option></select>
+          <label for="defect-library-type">Type</label><select id="defect-library-type"><option>All</option><option>Validation issue</option><option>Missing event</option></select>
+          <label for="defect-library-event">Event</label><input id="defect-library-event" type="search" />
+          <label for="defect-library-schema">Schema</label><input id="defect-library-schema" type="search" />
+          <label for="defect-library-path">Path</label><input id="defect-library-path" type="search" />
+          <output id="defect-library-count" aria-live="polite"></output><ul id="defect-library-list"></ul>
+          <section id="defect-library-empty-state" class="panel-empty-state"><h4>No reported defects</h4><p>Save a completed validation-issue or Missing event report.</p></section>
+          <section id="defect-delete-confirmation" aria-label="Delete defect confirmation" hidden></section>
+        </section>
+        <aside id="defect-library-detail" aria-label="Defect detail" hidden></aside>
       </section>
       <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden>
         <h3>Schemas</h3><div id="schema-subviews" role="tablist" aria-label="Schema Library"><button id="schema-subview-schemas" role="tab" aria-selected="true" aria-controls="schema-master" type="button">Schemas</button><button id="schema-subview-rules" role="tab" aria-selected="false" aria-controls="schema-rule-library" tabindex="-1" type="button">Rule Library</button><button id="schema-subview-assignments" role="tab" aria-selected="false" aria-controls="schema-assignments" tabindex="-1" type="button">Assignments</button></div>

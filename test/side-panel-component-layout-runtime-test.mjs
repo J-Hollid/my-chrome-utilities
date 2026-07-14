@@ -35,6 +35,7 @@ let conditionalValidationRulesObservation;
 let schemaDocumentationObservation;
 let missingEventDefectReportObservation;
 let validationPresenceSemanticsObservation;
+let defectLibraryObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -42,6 +43,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1" ? [720]
@@ -3036,6 +3038,67 @@ const validationPresenceSemanticsRuntime = `(async () => {
   return { operators, requiredCases, nullValue:{ status:nullResult.evaluations[0].status, actual:nullResult.evaluations[0].actual, issueActual:nullResult.issues[0].actual }, nested:{ issues:nested.issues.map(({ rule, instancePath }) => [rule.replace(/ v\\d+$/, ""),instancePath]), notApplicable:nested.evaluations.filter(({ status }) => status === "not-applicable").map(({ propertyPath }) => propertyPath), wildcardPasses:nested.evaluations.filter(({ rule,status }) => rule === "Wildcard value" && status === "pass").length }, conditionalCases, equivalent:{ legacy:legacy.evaluations[0].status, inherited:inherited.evaluations[0].status, issues:legacy.issues.length+inherited.issues.length }, liveSummary };
 })()`;
 
+const defectLibrarySeedRuntime = `(async () => {
+  const defects = await import("/data-layer-defect-library.js");
+  const sessions = await import("/data-layer-saved-sessions.js");
+  const feed = await import("/data-layer-saved-session-live-feed.js");
+  const report = { summary:"purchase has invalid currency", description:"Original details", expectedExplanation:"Use EUR or USD", editable:["summary","description","expectedExplanation"], event:{ id:"purchase:1", name:"purchase", source:"Event history", pageUrl:"https://shop.example/checkout", pathname:"/checkout", captureTime:"2026-07-14T14:00:00Z", payload:{ commerce:{ currency:"GBP" } }, schema:{ name:"Checkout", version:2 }, issues:[] }, issues:[], actual:{ payload:{ commerce:{ currency:"GBP" } }, differences:[{ pointer:"/commerce/currency", marker:"−", treatment:"red", value:"GBP" }] }, expected:{ payload:{ commerce:{ currency:"EUR" } }, corrections:[{ issueId:"currency", pointer:"/commerce/currency", operation:"replace", response:"EUR", marker:"+" }], explanations:["Use EUR or USD"] }, reproductionSteps:[], timeline:[], evidence:{ schema:"Checkout version 2", validation:[{ rule:"Known currencies", ruleVersion:2, severity:"error", pointer:"/commerce/currency", constraint:"EUR,USD", actual:"GBP" }], capture:{ eventName:"purchase", source:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T14:00:00Z" } } };
+  const issue = { sourceId:"event-history", eventName:"purchase", schemaId:"schema:checkout", validationTarget:"payload", concretePath:"/commerce/currency", templatePath:"/commerce/currency", ruleId:"rule:known-currencies", ruleRevision:2, actual:"GBP", expected:"EUR,USD", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T14:00:00Z", sourceName:"Event history", schemaName:"Checkout", ruleName:"Known currencies" };
+  const validation = defects.createValidationDefect({ id:"defect:currency", now:"2026-07-14T14:01:00Z", report, issues:[issue], notes:"Initial note" });
+  const missingReport = { type:"Missing event", actual:"No purchase", expected:"purchase", schema:{ id:"schema:checkout", name:"Checkout", version:2, rules:[] }, expectation:{ sourceId:"event-history", eventName:"purchase", target:"payload", pageUrl:"https://shop.example/checkout", explanation:"Purchase expected" }, scope:{ id:"visit:1", pageUrl:"https://shop.example/checkout", pathname:"/checkout", startedAt:"2026-07-14T14:00:00Z", endedAt:"2026-07-14T14:01:00Z" }, validationIssues:[], matchingEventEvidence:[], reproductionSteps:[], timeline:[] };
+  const missing = defects.createMissingEventDefect({ id:"defect:missing", now:"2026-07-14T14:01:00Z", report:missingReport, notes:"Missing checkout" });
+  localStorage.setItem(defects.DEFECT_LIBRARY_STORAGE_KEY, defects.serializeDefectLibrary({ defects:[validation,missing] }));
+  const savedEvent={ id:"purchase:1",sourceId:"event-history",sourceName:"Event history",name:"purchase",payload:{commerce:{currency:"GBP"}},rawInput:[],pageUrl:"https://shop.example/checkout",captureTime:"2026-07-14T14:00:00Z",validation:"1 issues",validationDetails:{schema:{id:"schema:checkout",name:"Checkout",version:2},assignment:{sourceId:"event-history",eventName:"purchase",target:"payload"},evaluations:[],issues:[{instancePath:"/commerce/currency",templatePath:"/commerce/currency",message:"Known currency",expected:"EUR,USD",actual:"GBP",schemaName:"Checkout",schemaVersion:2,schemaLocation:"#/commerce/currency",rule:"Known currencies v2",severity:"error"}]}};
+  const saved=sessions.saveCompletedSession(sessions.createSavedSessionLibrary(),{id:"session:seed",pageScope:"https://shop.example/checkout",startedAt:"2026-07-14T14:00:00Z",endedAt:"2026-07-14T14:01:00Z",events:[savedEvent]},"Defect evidence");
+  localStorage.setItem(feed.SAVED_SESSION_LIBRARY_STORAGE_KEY,sessions.serializeSavedSessionLibrary(saved));
+  return { report, issue };
+})()`;
+
+const defectLibraryRuntime = `(async () => {
+  const defects = await import("/data-layer-defect-library.js");
+  const observer = await import("/data-layer-live-observer.js");
+  const observerUi = await import("/data-layer-live-observer-ui.js");
+  const sessions = await import("/data-layer-saved-sessions.js");
+  const q = (selector, root=document) => { const value=root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const click = (label, root=document) => { const value=Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label || candidate.textContent.startsWith(label)); if (!value) throw new Error("Missing action " + label); value.click(); return value; };
+  const nav = Array.from(q("#data-layer-views").querySelectorAll("button")).map((button) => button.textContent);
+  q("#data-layer-view-sessions").click(); click("Open in Live feed",q("#saved-session-list")); const liveList=q("#live-event-list"); liveList.style.height="1px"; liveList.style.overflow="auto"; const spacer=document.createElement("div"); spacer.style.height="1200px"; liveList.append(spacer); liveList.scrollTop=480; q("#live-event-feed button").click();
+  const actualReportedLinks=q("#live-event-inspector").querySelectorAll(".live-reported-defect-link").length; const originScroll=q("#live-event-list").scrollTop; q("#live-event-inspector .live-reported-defect-link").click();
+  const openedFromIssue={ view:q('#data-layer-view-defects').getAttribute("aria-selected"), detail:q("#defect-library-detail").hidden };
+  click("Back to Defects",q("#defect-library-detail"));
+  const returnedToIssue={ view:q('#data-layer-view-live').getAttribute("aria-selected"), event:q("#live-event-inspector h4").textContent, focused:document.activeElement?.classList.contains("live-reported-defect-link"), scrollPreserved:q("#live-event-list").scrollTop===originScroll };
+  q("#data-layer-view-defects").click();
+  const restoredCount = q("#defect-library-list").children.length;
+  const search = q("#defect-library-search"); search.value="Initial note"; search.dispatchEvent(new Event("input", { bubbles:true })); const filteredCount=q("#defect-library-list").children.length; search.value=""; search.dispatchEvent(new Event("input", { bubbles:true }));
+  q('[data-defect-id="defect:currency"] button').click();
+  const detail=q("#defect-library-detail"); q('[data-defect-field="description"]',detail).value="Edited details"; q('[data-defect-field="notes"]',detail).value="Jira https://jira.example/browse/DL-42"; click("Save defect edits",detail);
+  const edited={ description:q('[data-defect-field="description"]',detail).value, notes:q('[data-defect-field="notes"]',detail).value, safeLink:{ href:q('[aria-label="Note links"] a',detail).href, target:q('[aria-label="Note links"] a',detail).target, rel:q('[aria-label="Note links"] a',detail).rel } };
+  const writes=[]; Object.defineProperty(navigator,"clipboard",{ configurable:true, value:{ writeText:async (text) => writes.push(text) } }); click("Recopy for Jira Cloud",detail); await new Promise((resolve) => setTimeout(resolve,0));
+  click("Resolve",detail); const resolved=q("#defect-library-detail p").textContent; click("Reopen",detail); const reopened=q("#defect-library-detail p").textContent; click("Archive",detail); const archived=q("#defect-library-detail p").textContent; click("Back to Defects",detail);
+  q('[data-defect-id="defect:missing"] button').click(); click("Delete",detail); const confirmation=q("#defect-delete-confirmation").textContent; click("Confirm deletion",q("#defect-delete-confirmation")); const afterDelete=q("#defect-library-list").children.length;
+  const stored=defects.restoreDefectLibrary(localStorage.getItem(defects.DEFECT_LIBRARY_STORAGE_KEY));
+  const issue=(overrides={}) => ({ sourceId:"event-history", eventName:"purchase", schemaId:"schema:checkout", validationTarget:"payload", concretePath:"/commerce/currency", templatePath:"/commerce/currency", ruleId:"rule:known-currencies", ruleRevision:2, actual:"GBP", expected:"EUR,USD", pageUrl:"https://shop.example/checkout", sourceName:"Event history", schemaName:"Checkout", ruleName:"Known currencies", ...overrides });
+  const report=stored.defects[0].report;
+  const active=defects.createValidationDefect({ id:"active:currency", now:"2026-07-14T14:00:00Z", report, issues:[issue()] });
+  const orderIssue=issue({ concretePath:"/order_id", templatePath:"/order_id", ruleId:"rule:required-order", ruleName:"Required order" });
+  const activeOrder=defects.createValidationDefect({ id:"active:order", now:"2026-07-14T14:00:00Z", report:{ ...report, summary:"purchase has missing order id" }, issues:[orderIssue] });
+  const event={ id:"purchase:1", name:"purchase", sourceId:"event-history", sourceName:"Event history", captureTime:"2026-07-14T14:00:00Z", pageUrl:"https://shop.example/checkout", payload:{ commerce:{ currency:"GBP" } }, rawInput:[], validation:"2 issues", validationDetails:{ schema:{ id:"schema:checkout", name:"Checkout", version:2 }, assignment:{ sourceId:"event-history", eventName:"purchase", target:"payload" }, evaluations:[], issues:[{ instancePath:"/commerce/currency", templatePath:"/commerce/currency", message:"Known currency", expected:"EUR,USD", actual:"GBP", schemaName:"Checkout", schemaVersion:2, schemaLocation:"#/commerce/currency", rule:"Known currencies v2", severity:"error" },{ instancePath:"/order_id", templatePath:"/order_id", message:"Required", expected:"value", actual:"missing", schemaName:"Checkout", schemaVersion:2, schemaLocation:"#/order_id", rule:"Required order v2", severity:"error" }] } };
+  const renderCases=[[],[active],[active,activeOrder]].map((reported) => {
+    const triage=defects.presentedEventTriage(event,{ defects:reported }); const presented={ ...event, defectTriage:triage };
+    const host=document.createElement("section"); host.innerHTML='<section id="data-layer-panel-live"><section id="live-event-list"><ul id="live-event-feed"></ul></section><aside id="live-event-inspector"></aside><button id="back-to-events"></button></section>'; document.body.append(host);
+    const elements=observerUi.findLiveObserverElements(host); observerUi.renderLiveObserverState(elements,{ ...observer.createLiveObserverState({ pageUrl:event.pageUrl, sources:[] }), events:[presented] },()=>{});
+    observerUi.renderLiveInspector(elements,presented,{ copyPayload:async()=>{},saveToLibrary:()=>{},startDefectReport:()=>{},openReportedDefect:()=>{},validationAvailability:()=>({enabled:true}),validate:()=>{},manualSchemaChoices:()=>[],selectManualSchema:()=>{} });
+    const result={ triage:triage.state, feed:q("#live-event-feed",host).textContent, validation:q("#live-inspector-validation-summary",host).textContent, reported:host.querySelectorAll(".live-reported-defect-link").length, fresh:host.querySelectorAll(".live-new-defect-state").length }; host.remove(); return result;
+  });
+  const differences=[[{actual:"CAD"},"Reported"],[{pageUrl:"https://other.example"},"Reported"],[{sourceId:"other"},"New"],[{eventName:"refund"},"New"],[{schemaId:"schema:other"},"New"],[{validationTarget:"raw input"},"New"],[{concretePath:"/other",templatePath:"/other"},"New"],[{ruleId:"rule:other"},"New"],[{ruleRevision:3},"Review required"]].map(([difference]) => defects.issueTriage(issue(difference),{ defects:[active] }).state);
+  const wildcard=defects.createValidationDefect({ id:"active:sku", now:"2026-07-14T14:00:00Z", report, issues:[issue({ concretePath:"/products/0/sku", templatePath:"/products/*/sku", ruleId:"rule:sku" })] });
+  const wildcardMatch=defects.matchingDefects(issue({ concretePath:"/products/3/sku", templatePath:"/products/*/sku", ruleId:"rule:sku" }),{ defects:[wildcard] }).map(({id})=>id);
+  const actionWrites=[]; const actionResults=[]; for (const action of ["Copy for Jira Cloud","Save as reported defect","Save as reported defect and copy"]) { const result=await defects.completeDefectReportAction(defects.createDefectLibrary(),active,action,{writeText:async(text)=>actionWrites.push(text)},()=>"jira"); actionResults.push([action,result.library.defects.length,result.copied]); }
+  const completed={ id:"session:one",pageScope:event.pageUrl,startedAt:event.captureTime,endedAt:event.captureTime,events:[event] }; const linked=defects.attachSavedSessionToDefect({defects:[active]},sessions.createSavedSessionLibrary(),active.id,completed,"Evidence","2026-07-14T14:02:00Z");
+  const resolvedLibrary=defects.updateDefectStatus({defects:[active]},active.id,"Resolved","2026-07-14T14:03:00Z"); const archivedLibrary=defects.updateDefectStatus({defects:[active]},active.id,"Archived","2026-07-14T14:03:00Z");
+  return { nav,actualReportedLinks,openedFromIssue,returnedToIssue,restoredCount,filteredCount,edited,recopy:writes[0],lifecycle:{resolved,reopened,archived},confirmation,afterDelete,stored:{count:stored.defects.length,status:stored.defects[0].status,description:stored.defects[0].report.description,notes:stored.defects[0].notes},renderCases,differences,wildcardMatch,actionResults,actionWrites,linked:{sessions:linked.savedSessions.sessions.length,id:linked.library.defects[0].savedSession.id,contains:linked.library.defects[0].savedSession.containsMatchingIssue,immutable:Object.isFrozen(linked.savedSessions.sessions[0])},statuses:{resolved:defects.issueTriage(issue(),resolvedLibrary).state,archived:defects.issueTriage(issue(),archivedLibrary).state} };
+})()`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -3134,6 +3197,29 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, defectLibrarySeedRuntime); await reloadPanel(socket);
+      defectLibraryObservation = await evaluate(socket, defectLibraryRuntime);
+      assert.deepEqual(defectLibraryObservation.nav, ["Live","Library","Sessions","Defects","Schemas"]);
+      assert.equal(defectLibraryObservation.actualReportedLinks, 1);
+      assert.deepEqual(defectLibraryObservation.openedFromIssue, { view:"true",detail:false });
+      assert.deepEqual(defectLibraryObservation.returnedToIssue, { view:"true",event:"purchase",focused:true,scrollPreserved:true });
+      assert.equal(defectLibraryObservation.restoredCount, 2); assert.equal(defectLibraryObservation.filteredCount, 1);
+      assert.deepEqual(defectLibraryObservation.edited.safeLink, { href:"https://jira.example/browse/DL-42", target:"_blank", rel:"noopener noreferrer" });
+      assert.match(defectLibraryObservation.recopy, /Edited details/);
+      assert.match(defectLibraryObservation.lifecycle.resolved, /Resolved/); assert.match(defectLibraryObservation.lifecycle.reopened, /Reported/); assert.match(defectLibraryObservation.lifecycle.archived, /Archived/);
+      assert.match(defectLibraryObservation.confirmation, /Captured evidence and saved sessions remain unchanged/); assert.equal(defectLibraryObservation.afterDelete, 1);
+      assert.deepEqual(defectLibraryObservation.stored, { count:1,status:"Archived",description:"Edited details",notes:"Jira https://jira.example/browse/DL-42" });
+      assert.deepEqual(defectLibraryObservation.renderCases.map(({triage,reported,fresh}) => [triage,reported,fresh]), [["2 new issues",0,2],["1 new and 1 reported",1,1],["all 2 issues reported",2,0]]);
+      assert.equal(defectLibraryObservation.renderCases.every(({feed,validation}) => feed.includes("2 issues") && validation.startsWith("Validation failed")), true);
+      assert.deepEqual(defectLibraryObservation.differences, ["Reported","Reported","New","New","New","New","New","New","Review required"]);
+      assert.deepEqual(defectLibraryObservation.wildcardMatch, ["active:sku"]);
+      assert.deepEqual(defectLibraryObservation.actionResults, [["Copy for Jira Cloud",0,true],["Save as reported defect",1,false],["Save as reported defect and copy",1,true]]);
+      assert.deepEqual(defectLibraryObservation.actionWrites, ["jira","jira"]);
+      assert.deepEqual(defectLibraryObservation.linked, { sessions:1,id:"saved:session:one",contains:true,immutable:true });
+      assert.deepEqual(defectLibraryObservation.statuses, { resolved:"Possible regression treated New",archived:"New" });
+      socket.close(); continue;
+    }
     if (process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1") {
       validationPresenceSemanticsObservation = await evaluate(socket, validationPresenceSemanticsRuntime);
       assert.equal(validationPresenceSemanticsObservation.operators.every(({ status, issues, state }) => status === "not-applicable" && issues === 0 && state === "Valid"), true);
@@ -4052,6 +4138,9 @@ try {
   }
   if (process.env.VALIDATION_PRESENCE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ validationPresenceSemantics:validationPresenceSemanticsObservation }));
+  }
+  if (process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ defectLibrary:defectLibraryObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

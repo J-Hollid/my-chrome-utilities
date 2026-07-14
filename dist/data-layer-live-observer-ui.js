@@ -60,7 +60,10 @@ function eventRow(event, selected, openEvent) {
     const summary = document.createElement("span");
     summary.className = "live-event-row-summary";
     summary.textContent = summaryText ? ` · ${summaryText}` : "";
-    button.append(identity, badge, summary);
+    const triage = document.createElement("span");
+    triage.className = "live-defect-triage-badge";
+    triage.textContent = event.defectTriage ? ` · ${event.defectTriage.state}` : "";
+    button.append(identity, badge, triage, summary);
     button.addEventListener("click", () => openEvent(event.id));
     item.append(button);
     return item;
@@ -313,7 +316,7 @@ function recursiveValidationTree(payload, evaluations, issues) {
             roots.push(copyLegacy(legacy));
     return roots;
 }
-function renderEventLevelIssues(event) {
+function renderEventLevelIssues(event, actionHandlers) {
     const section = document.createElement("section");
     section.id = "live-event-validation-issues";
     section.setAttribute("aria-labelledby", "live-event-validation-issues-heading");
@@ -321,7 +324,7 @@ function renderEventLevelIssues(event) {
     heading.id = "live-event-validation-issues-heading";
     heading.textContent = "Event-level issues";
     const list = document.createElement("ul");
-    list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue) => {
+    list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue, issueIndex) => {
         const item = document.createElement("li");
         const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
         const text = `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
@@ -335,6 +338,32 @@ function renderEventLevelIssues(event) {
         }
         else
             item.textContent = `Event: ${text}`;
+        const issueTriage = event.defectTriage?.issueDetails[issueIndex];
+        if (issueTriage?.state === "Reported") {
+            for (const defect of issueTriage.defectLinks) {
+                const reported = document.createElement("button");
+                reported.type = "button";
+                reported.className = "live-reported-defect-link";
+                reported.textContent = `Reported · ${defect.label}`;
+                reported.dataset.issueIndex = String(issueIndex);
+                reported.dataset.defectId = defect.id;
+                reported.addEventListener("click", () => actionHandlers.openReportedDefect?.(defect.id, event, issueIndex, reported));
+                item.append(reported);
+            }
+        }
+        else if (issueTriage) {
+            const state = document.createElement("span");
+            state.className = "live-new-defect-state";
+            state.textContent = issueTriage.state;
+            item.append(state);
+            if (actionHandlers.startDefectReport) {
+                const create = document.createElement("button");
+                create.type = "button";
+                create.textContent = "Create defect report";
+                create.addEventListener("click", () => actionHandlers.startDefectReport?.(event));
+                item.append(create);
+            }
+        }
         return item;
     }));
     section.append(heading, list);
@@ -509,7 +538,7 @@ export function renderLiveInspector(elements, event, actionHandlers) {
         actions.append(continuation);
     }
     actions.append(feedback);
-    const issues = renderEventLevelIssues(event);
+    const issues = renderEventLevelIssues(event, actionHandlers);
     issues.tabIndex = -1;
     elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, issues, payload, rawJson, raw, actions);
 }

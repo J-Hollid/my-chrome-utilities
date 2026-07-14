@@ -13,6 +13,7 @@ export interface LiveInspectorActions {
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
+  openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
   manualSchemaChoices(event: LiveEvent): readonly { id: string; label: string }[];
@@ -39,6 +40,7 @@ export interface LiveInspectorActionEffects {
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
+  openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
   validationAvailable?(event: LiveEvent): boolean;
   validationState(event: LiveEvent): ValidationState;
@@ -82,6 +84,7 @@ export function createLiveInspectorActions(
     ...(effects.addPropertyValidation ? { addPropertyValidation(event: LiveEvent, path: string, trigger: HTMLButtonElement) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
     ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),
     ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
+    ...(effects.openReportedDefect ? { openReportedDefect(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),
     validationAvailability(event) {
       return effects.validationAvailable?.(event) === false
         ? { enabled: false, reason: "Select a schema to validate" }

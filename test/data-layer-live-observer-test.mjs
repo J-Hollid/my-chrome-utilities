@@ -4,6 +4,7 @@ import {
   createLiveObserverState,
   closeLiveInspector,
   dataLayerViewForNavigationKey,
+  dataLayerViews,
   filteredLiveEvents,
   liveEventWindow,
   pauseCapture,
@@ -16,6 +17,10 @@ import {
   updateLiveSourceStatus,
 } from "../dist/data-layer-live-observer.js";
 assert.equal(dataLayerViewForNavigationKey("Live", "ArrowRight"), "Library");
+assert.deepEqual(dataLayerViews, ["Live", "Library", "Sessions", "Defects", "Schemas"]);
+assert.equal(dataLayerViewForNavigationKey("Sessions", "ArrowRight"), "Defects");
+assert.equal(dataLayerViewForNavigationKey("Defects", "ArrowRight"), "Schemas");
+assert.equal(dataLayerViewForNavigationKey("Defects", "ArrowLeft"), "Sessions");
 assert.equal(dataLayerViewForNavigationKey("Schemas", "ArrowRight"), "Live");
 assert.equal(dataLayerViewForNavigationKey("Schemas", "Home"), "Live");
 assert.equal(dataLayerViewForNavigationKey("Live", "End"), "Schemas");
