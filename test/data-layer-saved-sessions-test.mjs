@@ -10,9 +10,11 @@ import {
   requestSavedSessionDeletion,
   renameSavedSession,
   resumeSavedSession,
+  restoreSavedSessionLibrary,
   saveCompletedSession,
   savedSessionSummary,
   searchSavedSessions,
+  serializeSavedSessionLibrary,
 } from "../dist/data-layer-saved-sessions.js";
 
 const completed = {
@@ -51,6 +53,10 @@ assert.deepEqual(restored.sessions[0].events, archived.session.events);
 assert.deepEqual(restored.sessions[0].provenance, archived.session.provenance);
 assert.equal(restored.sessions[0].immutable, true);
 assert.throws(() => importSavedSession(createSavedSessionLibrary(), "{}"), /Invalid saved session export/);
+const restoredLibrary = restoreSavedSessionLibrary(serializeSavedSessionLibrary(library));
+assert.deepEqual(restoredLibrary.sessions[0].events, library.sessions[0].events);
+assert.equal(restoredLibrary.sessions[0].immutable, true);
+assert.deepEqual(restoreSavedSessionLibrary("not json"), createSavedSessionLibrary());
 library = renameSavedSession(library, archived.session.id, "Checkout archive");
 assert.equal(library.sessions[0].name, "Checkout archive");
 assert.deepEqual(searchSavedSessions(library, "purchase").map(({ name }) => name), ["Checkout archive"]);

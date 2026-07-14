@@ -31,7 +31,7 @@ Feature: Data layer sessions operator layout
 
     Examples:
       | project_name         | session_name     | session_actions                                  |
-      | my-chrome-utilities | Checkout journey | Open archived, Resume, Create sequence, Export  |
+      | my-chrome-utilities | Checkout journey | Open in Live feed, Start linked capture, Create sequence, Export |
 
   # Data layer sessions operator layout 003
   Scenario Outline: Data layer sessions operator layout 003

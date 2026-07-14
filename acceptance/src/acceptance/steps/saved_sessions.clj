@@ -8,12 +8,12 @@
    "the saved session shows capture date, page scope, duration, source count, event count, and validation summary"
    "subsequent live capture cannot append events to the saved session"
    "saved session <session_name> contains event <event_name> from source <source_name>"
-   "saved session <session_name> is opened later"
-   "the observer workspace is visibly in Archived session mode"
+   "saved session <session_name> is opened in the Live feed later"
+   "the Live view is visibly in Saved session mode"
    "event <event_name> retains its source, page, capture order, payload, and raw input"
    "no live observer is started automatically"
-   "saved session <session_name> is open in Archived session mode"
-   "the user resumes capture from the saved session on page <page_url>"
+   "saved session <session_name> is selected in Sessions"
+   "the user starts linked capture from the saved session on page <page_url>"
    "a new active session is created and linked to <session_name>"
    "saved session <session_name> remains unchanged"
    "new events are captured only in the new active session"
@@ -24,7 +24,7 @@
    "saved sessions <session_names> are listed"
    "the user searches for <query>"
    "only saved sessions matching <query> by name, page, source, or event name are listed"
-   "session actions offer Open, Rename, Export, Create sequence, and Delete"
+   "session actions offer Open in Live feed, Start linked capture, Rename, Export, Create sequence, and Delete"
    "saved session <session_name> is listed"
    "the user requests deletion"
    "a confirmation names saved session <session_name>"
@@ -114,13 +114,13 @@
                        "Archived event fixture is not canonical." {})
       (assoc (inspect world) :sessions [(saved-session name [(event "event-1" event-name source)])]))
 
-    "saved session <session_name> is opened later"
+    "saved session <session_name> is opened in the Live feed later"
     (let [name (canonical-name! example)]
       (assoc world :archived (first (filter #(= name (:name %)) (:sessions world)))
-             :mode "Archived" :live-observer-started false))
+             :mode "Saved session" :live-observer-started false))
 
-    "the observer workspace is visibly in Archived session mode"
-    (do (support/assert! (= "Archived" (:mode world)) "Archived mode is not visible." {}) world)
+    "the Live view is visibly in Saved session mode"
+    (do (support/assert! (= "Saved session" (:mode world)) "Saved session mode is not visible." {}) world)
 
     "event <event_name> retains its source, page, capture order, payload, and raw input"
     (let [archived-event (first (:events (:archived world)))]
@@ -134,12 +134,12 @@
     (do (support/assert! (false? (:live-observer-started world))
                          "Opening an archive started live observation." {}) world)
 
-    "saved session <session_name> is open in Archived session mode"
+    "saved session <session_name> is selected in Sessions"
     (let [name (canonical-name! example)
           session (saved-session name [(event "event-1" "purchase" "Event history")])]
-      (assoc (inspect world) :archived session :archived-snapshot session :mode "Archived"))
+      (assoc (inspect world) :archived session :archived-snapshot session :mode "Saved session"))
 
-    "the user resumes capture from the saved session on page <page_url>"
+    "the user starts linked capture from the saved session on page <page_url>"
     (let [page (value example "page_url")]
       (support/assert! (= "https://example.test/confirmation" page)
                        "Resume page fixture is not canonical." {})
@@ -204,8 +204,8 @@
                               (= ["Checkout journey"] (mapv :name (:matches world))))
                          "Saved session search results are incorrect." {}) world)
 
-    "session actions offer Open, Rename, Export, Create sequence, and Delete"
-    (assoc world :actions ["Open" "Rename" "Export" "Create sequence" "Delete"])
+    "session actions offer Open in Live feed, Start linked capture, Rename, Export, Create sequence, and Delete"
+    (assoc world :actions ["Open in Live feed" "Start linked capture" "Rename" "Export" "Create sequence" "Delete"])
 
     "saved session <session_name> is listed"
     (let [name (canonical-name! example)]

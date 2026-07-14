@@ -22,6 +22,7 @@
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
             [acceptance.steps.saved-sessions :as saved-sessions]
+            [acceptance.steps.saved-session-live-feed :as saved-session-live-feed]
             [acceptance.steps.schema-verification :as schema-verification]
             [acceptance.steps.schema-revision-lifecycle :as schema-revision-lifecycle]
             [acceptance.steps.schema-nested-path :as schema-nested-path]
@@ -36,7 +37,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat guided-draft-continuation/handlers
+  (vec (concat saved-session-live-feed/handlers
+               guided-draft-continuation/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers

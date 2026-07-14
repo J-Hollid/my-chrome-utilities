@@ -28,6 +28,14 @@
       </div>
       <section id="data-layer-panel-live" role="tabpanel" aria-labelledby="data-layer-view-live">
         <h3>Live</h3>
+        <section id="saved-session-live-banner" aria-label="Saved session feed" hidden>
+          <strong>Saved session mode</strong>
+          <output id="saved-session-live-summary" aria-live="polite"></output>
+          <output id="saved-session-background-status" aria-live="polite"></output>
+          <button id="return-to-current-live-feed" type="button" data-action-variant="primary">Return to current Live feed</button>
+          <button id="revalidate-saved-session" type="button" data-action-variant="secondary">Revalidate with current schemas</button>
+          <output id="saved-session-validation-comparison" aria-live="polite"></output>
+        </section>
         <header id="live-session-header">
           <section id="live-session-summary" aria-label="Live session summary">
             <output id="live-session-status" data-status="ended" aria-live="polite">Ended</output>
@@ -68,6 +76,16 @@
           <button id="save-live-session" type="button" data-action-variant="secondary">Save session</button>
           <output id="live-session-message" aria-live="polite"></output>
         </header>
+        <dialog id="save-live-session-dialog" aria-labelledby="save-live-session-heading">
+          <form id="save-live-session-form">
+            <h4 id="save-live-session-heading" tabindex="-1">Save session snapshot</h4>
+            <label for="save-live-session-name">Session name</label>
+            <input id="save-live-session-name" type="text" autocomplete="off" />
+            <output id="save-live-session-summary" aria-live="polite"></output>
+            <button id="confirm-save-live-session" type="submit" data-action-variant="primary" disabled>Save snapshot</button>
+            <button id="cancel-save-live-session" type="button" data-action-variant="secondary">Cancel</button>
+          </form>
+        </dialog>
         <ul id="live-source-statuses" aria-label="Observation sources"></ul>
           <section id="live-event-list" aria-label="Observed event feed">
           <h4>Events</h4>
