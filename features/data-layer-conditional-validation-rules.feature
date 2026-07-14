@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=c4fb1fac31128cdfb9b513fa60fdb73c62f7cad66f11664b80db1b824bf6d1a3
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-14T13:06:29.723652880Z","feature_name":"Data layer conditional validation rules","feature_path":"features/data-layer-conditional-validation-rules.feature","background_hash":"4b7c7e25293a42e1befc1ca98c9c07fe75ca9fabdd36b4597baa4a30bcea2aaf","implementation_hash":"sha256:cf568b7933adaa747518c612b62c2088509f9c1511d587c96cae0992a79f5799","scenarios":[{"index":1,"name":"Data layer conditional validation rules 002","scenario_hash":"b5da8791f0e58f163e8b5bf7675cb5828eb8d6f16bb2407ff6d8c7b06739ce83","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:06:29.723652880Z"},{"index":2,"name":"Data layer conditional validation rules 003","scenario_hash":"e8de0687fc46b5c3fa871878e8638d01827b58bbb5fc58de51ad4e877e43e805","mutation_count":48,"result":{"Total":48,"Killed":48,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:06:29.723652880Z"},{"index":3,"name":"Data layer conditional validation rules 004","scenario_hash":"de58ba75eb06a61b6bf80a3aec38ba45cca22d029ffa5e66088f565b6302848d","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:06:29.723652880Z"},{"index":4,"name":"Data layer conditional validation rules 005","scenario_hash":"f3f5c39e9d1bd3ceb8a026f41d935c5ad19a882a8b77c3390b95e572f782a0cf","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:06:29.723652880Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer conditional validation rules
 
   Background:
@@ -29,7 +24,7 @@ Feature: Data layer conditional validation rules
 
     Examples:
       | page_type_value | products_value | rule_result    | issue_count |
-      | product_detail  | missing        | Failed         | 1           |
+      | product_detail  | missing        | Not applicable | 0           |
       | product_detail  | empty array    | Failed         | 1           |
       | product_detail  | 1 item         | Passed         | 0           |
       | category        | empty array    | Not applicable | 0           |
@@ -88,11 +83,12 @@ Feature: Data layer conditional validation rules
   # Data layer conditional validation rules 006
   Scenario: Data layer conditional validation rules 006
     Given the page_type condition is satisfied
-    And /oOrder/aProducts is missing
+    And a conditional Required rule targets /oOrder/aProducts/0
+    And /oOrder/aProducts/0 is missing
     When validation results are presented
-    Then the failure is attributed to expected path /oOrder/aProducts
+    Then the failure is attributed to expected path /oOrder/aProducts/0
     And a synthetic missing-property row is available at that path
-    And rule details identify the condition summary, Failed result, expected item count, and actual Missing value
+    And rule details identify the condition summary, Failed result, Required constraint, and actual Missing value
     And the condition property page_type is not marked as failing
 
   # Data layer conditional validation rules 007

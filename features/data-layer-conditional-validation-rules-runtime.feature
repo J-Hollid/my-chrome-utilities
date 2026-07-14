@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=b52fd6cf3e86542eb54c1e44549f8543aff2cc8e9fd71ba39cdc59652a8cedfd
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-14T13:05:32.143148673Z","feature_name":"Data layer conditional validation rules runtime","feature_path":"features/data-layer-conditional-validation-rules-runtime.feature","background_hash":"55e2399967af9296148d02a5074e22b201e1183ed127171aab9e2a3690a4c518","implementation_hash":"sha256:331cdb2078285141f76573c55f20e098b973fde7bf11584440cbfdcf94999f97","scenarios":[{"index":0,"name":"Data layer conditional validation rules runtime 001","scenario_hash":"0eb03c0f77e79d63eff0cdddae1e7a170c8b696ef2956b87b6525fe13e8cfa54","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:05:32.143148673Z"},{"index":1,"name":"Data layer conditional validation rules runtime 002","scenario_hash":"c15bcaee976cb685180eb464a056a3be62035e2e12141e2c485aefb4dd4a78a9","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-14T13:05:32.143148673Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer conditional validation rules runtime
 
   Background:
@@ -21,7 +16,7 @@ Feature: Data layer conditional validation rules runtime
 
     Examples:
       | page_type_value | products_value | rule_result    | issue_count |
-      | product_detail  | missing        | Failed         | 1           |
+      | product_detail  | missing        | Not applicable | 0           |
       | product_detail  | empty array    | Failed         | 1           |
       | product_detail  | 1 item         | Passed         | 0           |
       | category        | missing        | Not applicable | 0           |
@@ -54,9 +49,9 @@ Feature: Data layer conditional validation rules runtime
 
   # Data layer conditional validation rules runtime 004
   Scenario: Data layer conditional validation rules runtime 004
-    Given a saved conditional rule fails because /oOrder/aProducts is missing while /page_type equals product_detail
+    Given a saved conditional Required rule fails because /oOrder/aProducts/0 is missing while /page_type equals product_detail
     When the production Live inspector renders the validation result
-    Then exactly 1 issue is rendered for /oOrder/aProducts
+    Then exactly 1 issue is rendered for /oOrder/aProducts/0
     And the rendered details identify the trigger condition and consequence constraint
     And /page_type is not rendered as failing
     When page_type changes to category and the event is validated again
