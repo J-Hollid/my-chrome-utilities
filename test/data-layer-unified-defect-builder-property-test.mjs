@@ -5,11 +5,13 @@ import {
   createExpectedPayloadDraft,
   duplicateExpectedArrayItem,
   expectedPayloadComplete,
+  expectedPayloadEvaluation,
   expectedPayloadFields,
   expectedPayloadPresentation,
   expectedPropertyChoices,
   expectedPropertyPresentation,
   missingEventActualPresentation,
+  normalizedExpectedPayloadSchema,
   reconcileMissingEventJourney,
   reconcileMissingEventJourneyWithReview,
   removeExpectedArrayItem,
@@ -158,7 +160,14 @@ for (let sample = 0; sample < 200; sample += 1) {
   });
   assert.equal(expectedPayloadComplete(payloadSchema, payloadDraft), true);
   assert.equal(expectedPayloadPresentation(`event-${sample}`, payloadDraft.payload),
-    `event-${sample} is fired with ${JSON.stringify(payloadDraft.payload)}`);
+    `event-${sample} is fired with`);
+  assert.equal(expectedPayloadEvaluation(payloadSchema, payloadDraft).state, "Valid");
+  assert.deepEqual(payloadDraft.responseProvenance["/items/0/name"], {
+    id:`item-name-rule-${sample}`,
+    name:`Item name ${sample}`,
+    version:1,
+    propertyPath:"/items/*/name",
+  });
   assert.deepEqual(emptyDraft, { payload:{ items:[] }, responseSources:{} },
     "payload operations must not mutate earlier drafts");
   assert.deepEqual(payloadSchema, payloadSchemaSnapshot,
@@ -166,6 +175,14 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.throws(() => setExpectedPayloadValue(payloadSchema, payloadDraft, "/items/0/name", {
     method:"schema-value", value:`outside-${sample}`,
   }), /schema-provided value/i);
+  const invalidPayloadDraft = setExpectedPayloadValue(payloadSchema, payloadDraft, "/items/0/name", {
+    method:"custom", value:`outside-${sample}`,
+  });
+  const invalidEvaluation = expectedPayloadEvaluation(payloadSchema, invalidPayloadDraft);
+  assert.notEqual(invalidEvaluation.state, "Valid");
+  assert.ok(invalidEvaluation.issues.some(({ instancePath }) => instancePath === "/items/0/name"));
+  assert.equal(invalidPayloadDraft.responseProvenance?.["/items/0/name"], undefined,
+    "custom responses must clear schema-rule provenance");
 
   let withSibling = addExpectedArrayItem(payloadSchema, payloadDraft, "/items");
   withSibling = setExpectedPayloadValue(payloadSchema, withSibling, "/items/1/id", {
@@ -180,15 +197,82 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(duplicated.responseSources["/items/1/name"], "schema-provided value");
   assert.equal(duplicated.responseSources["/items/2/name"], "operator custom response",
     "duplicating before a sibling must shift that sibling's response provenance");
+  assert.deepEqual(duplicated.responseProvenance["/items/1/name"], payloadDraft.responseProvenance["/items/0/name"]);
+  assert.equal(duplicated.responseProvenance["/items/2/name"], undefined);
   const shifted = removeExpectedArrayItem(payloadSchema, duplicated, "/items", 0);
   assert.deepEqual(shifted.payload.items, [payloadDraft.payload.items[0], withSibling.payload.items[1]]);
   assert.equal(shifted.responseSources["/items/0/id"], "operator custom response");
   assert.equal(shifted.responseSources["/items/0/name"], "schema-provided value");
   assert.equal(shifted.responseSources["/items/1/name"], "operator custom response");
+  assert.deepEqual(shifted.responseProvenance["/items/0/name"], payloadDraft.responseProvenance["/items/0/name"]);
+  assert.equal(shifted.responseProvenance["/items/1/name"], undefined);
   const withoutOptional = removeExpectedPayloadValue(shifted, "/enabled");
   assert.equal(expectedPayloadComplete(payloadSchema, withoutOptional), true);
   assert.equal(withoutOptional.responseSources["/enabled"], undefined);
   assert.equal(expectedPayloadComplete(payloadSchema, removeExpectedPayloadValue(withoutOptional, "/label")), false);
+
+  const escapedPointer = `/meta~1${sample}~0value`;
+  const flatValue = `flat-${sample}-${nextToken()}`;
+  const flatSchema = {
+    id:`flat-schema-${sample}`,
+    name:`Flat schema ${sample}`,
+    version:sample % 7 + 1,
+    document:{
+      type:"object",
+      required:["/groups", "/groups/0/code", escapedPointer],
+      properties:{
+        "/groups":{ type:"array" },
+        "/groups/0/code":{ type:"string" },
+        [escapedPointer]:{ type:"string" },
+        "/untyped":{ type:"array" },
+      },
+    },
+    assignments:[],
+    attachedRules:[{
+      id:`flat-rule-${sample}`,
+      name:`Flat rule ${sample}`,
+      version:sample % 5 + 1,
+      propertyPath:"/groups/*/code",
+      operator:"allowed-values",
+      allowedValues:[flatValue],
+    }],
+  };
+  const flatSchemaSnapshot = structuredClone(flatSchema);
+  const normalized = normalizedExpectedPayloadSchema(flatSchema);
+  assert.deepEqual(normalizedExpectedPayloadSchema(normalized), normalized,
+    "normalizing an already normalized schema must be idempotent");
+  assert.deepEqual(flatSchema, flatSchemaSnapshot, "normalization must not mutate stored flat schemas");
+  assert.deepEqual(normalized.document.required, ["groups", `meta/${sample}~value`]);
+  assert.deepEqual(normalized.document.properties.groups, {
+    type:"array",
+    items:{ type:"object", properties:{ code:{ type:"string" } }, required:["code"] },
+  });
+  assert.deepEqual(expectedPayloadFields(flatSchema).map(({ pointer }) => pointer), [
+    "/groups", "/groups/0", "/groups/0/code", escapedPointer, "/untyped",
+  ]);
+
+  let flatDraft = createExpectedPayloadDraft(flatSchema);
+  assert.deepEqual(flatDraft.payload, { groups:[] });
+  flatDraft = addExpectedArrayItem(flatSchema, flatDraft, "/groups");
+  flatDraft = setExpectedPayloadValue(flatSchema, flatDraft, "/groups/0/code", {
+    method:"schema-value", value:flatValue,
+  });
+  flatDraft = setExpectedPayloadValue(flatSchema, flatDraft, escapedPointer, {
+    method:"custom", value:sample,
+  });
+  assert.deepEqual(flatDraft.payload, {
+    groups:[{ code:flatValue }],
+    [`meta/${sample}~value`]:String(sample),
+  });
+  assert.equal(expectedPayloadComplete(flatSchema, flatDraft), true);
+  assert.equal(expectedPayloadEvaluation(flatSchema, flatDraft).state, "Valid");
+  assert.deepEqual(flatDraft.responseProvenance["/groups/0/code"], {
+    id:`flat-rule-${sample}`,
+    name:`Flat rule ${sample}`,
+    version:sample % 5 + 1,
+    propertyPath:"/groups/*/code",
+  });
+  assert.throws(() => addExpectedArrayItem(flatSchema, flatDraft, "/untyped"), /item type must be defined/i);
 
   const visitCount = sample % 6 + 3;
   const visits = Array.from({ length:visitCount }, (_, index) => ({
