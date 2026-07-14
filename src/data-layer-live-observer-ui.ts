@@ -25,6 +25,7 @@ import {
 } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression, type RecursivePropertyNode } from "./data-layer-recursive-property-tree.js";
 import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
+import { allowedValueExpansionAvailability } from "./data-layer-allowed-value-expansion.js";
 
 export interface LiveObserverElements {
   livePanel: HTMLElement | null;
@@ -179,7 +180,12 @@ function propertyStatusSymbol(symbol: string): string {
   return symbol === "check" ? "✓" : symbol === "warning" ? "⚠" : symbol === "error" ? "!" : "○";
 }
 
-function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path: string, trigger: HTMLButtonElement) => void, schemaDocumentation?: ResolvedSchemaDocumentation): HTMLLIElement {
+function renderPropertyNode(
+  node: ValidationPropertyNode,
+  addValidation?: (path: string, trigger: HTMLButtonElement) => void,
+  schemaDocumentation?: ResolvedSchemaDocumentation,
+  expandAllowedValue?: (evaluation: ValidationEvaluation, trigger: HTMLButtonElement) => void,
+): HTMLLIElement {
   const item = document.createElement("li"); item.className = "live-validation-property"; item.id = `live-property-${node.path.replace(/[^a-z0-9]+/gi, "-")}`; item.tabIndex = -1; item.dataset.validationTreatment = node.summary.treatment;
   item.dataset.propertyPath = node.technicalPath ?? node.path;
   if (node.expression) item.dataset.propertyExpression = node.expression;
@@ -197,7 +203,17 @@ function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path:
   status.setAttribute("aria-describedby", preview.id);
   const disclosure = document.createElement("section"); disclosure.className = "live-property-rule-details"; disclosure.hidden = true;
   disclosure.setAttribute("aria-label", `${node.path} rule evaluations`);
-  const evaluationList = document.createElement("ul"); evaluationList.replaceChildren(...node.evaluations.map((evaluation) => Object.assign(document.createElement("li"), { textContent:`${evaluation.status}: ${evaluationText(evaluation)}` })));
+  const evaluationList = document.createElement("ul"); evaluationList.replaceChildren(...node.evaluations.map((evaluation) => {
+    const item = document.createElement("li"); item.textContent = `${evaluation.status}: ${evaluationText(evaluation)}`;
+    if (expandAllowedValue && allowedValueExpansionAvailability(evaluation).available) {
+      const add = document.createElement("button"); add.type = "button"; add.className = "live-allowed-value-expansion";
+      add.id = `live-allowed-value-${(evaluation.ruleId ?? "rule").replace(/[^a-z0-9]+/gi, "-")}`;
+      add.textContent = "Add this value to schema as an allowed value";
+      add.dataset.ruleId = evaluation.ruleId ?? ""; add.dataset.ruleVersion = String(evaluation.ruleVersion);
+      add.addEventListener("click", () => expandAllowedValue(evaluation, add)); item.append(add);
+    }
+    return item;
+  }));
   disclosure.append(evaluationList);
   let previewHovered = false;
   const showPreview = () => { if (primary) preview.hidden = false; };
@@ -241,9 +257,9 @@ function renderPropertyNode(node: ValidationPropertyNode, addValidation?: (path:
   if (node.children.length) {
     const nested = document.createElement("details"); const nestedSummary = document.createElement("summary"); nestedSummary.textContent = `Expand ${node.name}`;
     nested.dataset.propertyPath = node.technicalPath ?? node.path;
-    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation))); nested.append(nestedSummary, list); item.append(nested);
+    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue))); nested.append(nestedSummary, list); item.append(nested);
   }
-  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation))); specific.append(summary, list); item.append(specific); }
+  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue))); specific.append(summary, list); item.append(specific); }
   return item;
 }
 
@@ -341,6 +357,7 @@ export function renderLiveInspector(
   const searchLabel = document.createElement("label"); searchLabel.htmlFor = "live-property-search"; searchLabel.textContent = "Search properties"; const propertySearch = document.createElement("input"); propertySearch.id = "live-property-search"; propertySearch.type = "search";
   const propertyTree = recursiveValidationTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
   const addValidation = actionHandlers.addPropertyValidation ? (path: string, trigger: HTMLButtonElement) => actionHandlers.addPropertyValidation?.(event, path, trigger) : undefined;
+  const expandAllowedValue = actionHandlers.expandAllowedValue ? (evaluation: ValidationEvaluation, trigger: HTMLButtonElement) => actionHandlers.expandAllowedValue?.(event, evaluation, trigger) : undefined;
   let showNonApplicable = presentation.showNonApplicableProperties === true;
   const previousOpen = new Set<string>(); let searchActive = false;
   const applyPropertySearch = () => {
@@ -373,7 +390,7 @@ export function renderLiveInspector(
     nonApplicableVisibility.textContent = showNonApplicable ? "Hide non-applicable properties" : "Show non-applicable properties";
     nonApplicableVisibility.setAttribute("aria-pressed", String(showNonApplicable));
     propertyList.replaceChildren(...presentValidationPropertyTree(propertyTree, showNonApplicable)
-      .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation)));
+      .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation, expandAllowedValue)));
     for (const disclosure of Array.from(propertyList.querySelectorAll<HTMLDetailsElement>("details[data-property-path]"))) disclosure.toggleAttribute("open", openPaths.has(disclosure.dataset.propertyPath ?? ""));
     applyPropertySearch();
   };

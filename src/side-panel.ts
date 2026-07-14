@@ -247,6 +247,11 @@ import {
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
 import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./data-layer-schema-verification.js";
 import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
+import { applyAllowedValueExpansion, reviewAllowedValueExpansion, type ReusableAllowedValueRule } from "./data-layer-allowed-value-expansion.js";
+import { allowedValueText, openAllowedValueExpansionDialog } from "./data-layer-allowed-value-expansion-ui.js";
+import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, type PromotableReusableRule } from "./data-layer-local-rule-promotion.js";
+import { createLocalRulePromotionDialog } from "./data-layer-local-rule-promotion-ui.js";
+import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
@@ -459,6 +464,7 @@ const liveEventQuery = document.querySelector<HTMLElement>("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
+const schemaDetail = document.querySelector<HTMLElement>("#schema-detail");
 const schemaDetailEmpty = document.querySelector<HTMLElement>("#schema-detail-empty");
 const schemaEditorName = document.querySelector<HTMLInputElement>("#schema-editor-name");
 const schemaEditorDescription = document.querySelector<HTMLTextAreaElement>("#schema-editor-description");
@@ -546,6 +552,8 @@ const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
 document.body.append(schemaPropertyRulePicker);
+const localRulePromotionDialog = createLocalRulePromotionDialog();
+let pendingLocalRulePromotion: { trigger:HTMLButtonElement; propertyPath:string; sourceRuleId:string; scrollTop:number } | undefined;
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
@@ -722,7 +730,7 @@ const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validat
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
+interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
 let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   schemaCandidates: guidedSchemaCandidates,
@@ -1360,6 +1368,94 @@ function closeInspectorAndReturnToEvents(): void {
   inspectorReturnSnapshot = undefined;
 }
 
+function expansionReusableRules(): ReusableAllowedValueRule[] {
+  return reusableSchemaRules.map((rule) => ({
+    ...structuredClone(rule),
+    version:rule.version ?? 1,
+    ...(rule.revisionHistory ? {
+      revisionHistory:rule.revisionHistory.map((snapshot) => ({ ...structuredClone(snapshot), id:rule.id })),
+    } : {}),
+  }));
+}
+
+function storedReusableRule(rule: ReusableAllowedValueRule): ReusableSchemaRule {
+  const { revisionHistory, ...current } = structuredClone(rule);
+  return {
+    ...current,
+    name:rule.name ?? rule.id,
+    version:rule.version,
+    ...(revisionHistory ? {
+      revisionHistory:revisionHistory.map((snapshot) => ({
+        name:snapshot.name ?? rule.name ?? rule.id,
+        kind:snapshot.kind ?? rule.kind,
+        version:snapshot.version ?? 1,
+        ...(snapshot.enabled !== undefined ? { enabled:snapshot.enabled } : {}),
+        ...(snapshot.operator ? { operator:snapshot.operator } : {}),
+        ...(snapshot.parameters !== undefined ? { parameters:snapshot.parameters } : {}),
+        ...(snapshot.allowedValues ? { allowedValues:structuredClone(snapshot.allowedValues) } : {}),
+        ...(snapshot.severity ? { severity:snapshot.severity } : {}),
+        ...(snapshot.message ? { message:snapshot.message } : {}),
+        ...(snapshot.conditionGroup ? { conditionGroup:structuredClone(snapshot.conditionGroup) } : {}),
+      })),
+    } : {}),
+  };
+}
+
+function persistAllowedValueExpansion(nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): void {
+  const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+  const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+  try {
+    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+  } catch (error) {
+    if (previousSchemas === null) localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    else localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+    if (previousRules === null) localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+    else localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+    throw error;
+  }
+}
+
+function openAllowedValueExpansionReview(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void {
+  const assignedSchemaId = event.validationDetails?.schema?.id;
+  const inspector = liveObserverElements.eventInspector;
+  if (!assignedSchemaId || !inspector) return;
+  const input = { schemas, reusableRules:expansionReusableRules(), assignedSchemaId, evidence:evaluation };
+  let review: ReturnType<typeof reviewAllowedValueExpansion>;
+  try { review = reviewAllowedValueExpansion(input); }
+  catch (error) { setLiveSessionMessage(error instanceof Error ? error.message : "The allowed value review is unavailable."); return; }
+  liveInspectorPresentation.set(
+    event.id,
+    captureLiveInspectorPresentation(liveObserverElements.eventInspector),
+  );
+  openAllowedValueExpansionDialog({
+    inspector,
+    review,
+    trigger,
+    confirm(destination) {
+      const applied = applyAllowedValueExpansion({ ...input, destination });
+      const nextRules = applied.reusableRules.map(storedReusableRule);
+      persistAllowedValueExpansion(applied.schemas, nextRules);
+      schemas = applied.schemas; reusableSchemaRules = nextRules;
+      renderSchemas(); renderSchemaWorkflowRows();
+      return () => {
+        openLiveInspector(event.id, true);
+        const action = liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`);
+        (action ?? liveObserverElements.eventInspector?.querySelector<HTMLElement>(`[data-property-path="${CSS.escape(evaluation.propertyPath)}"]`))?.focus({ preventScroll:true });
+        setLiveSessionMessage(applied.changed ? `${allowedValueText(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
+      };
+    },
+    openDraft(destination) {
+      const targetId = destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId;
+      const target = schemas.find(({ id }) => id === targetId && Boolean(id));
+      trigger.focus({ preventScroll:true });
+      if (!target) return;
+      showDataLayerView("Schemas"); schemaDraft = schemaEditorDraft(target); renderSchemaDraft();
+      schemaEditorName?.focus({ preventScroll:true });
+    },
+  });
+}
+
 function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
   const previousEventId = liveObserverState.inspectorEventId;
   if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
@@ -1407,6 +1503,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       openGuidedValidationForEvent(selected);
     },
     addPropertyValidation: (selected, path) => openGuidedValidationForProperty(selected, path),
+    expandAllowedValue: (selected, evaluation, trigger) => openAllowedValueExpansionReview(selected, evaluation, trigger),
     draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
     startDefectReport: (selected) => {
       if (liveObserverElements.eventInspector) {
@@ -1614,6 +1711,91 @@ function schemaPropertyAt(document: SchemaDefinition["document"], path: string):
   return property;
 }
 
+function promotionReusableRules(): PromotableReusableRule[] {
+  return reusableSchemaRules.map((rule) => ({
+    ...structuredClone(rule),
+    version:rule.version ?? 1,
+    ...(rule.revisionHistory ? {
+      revisionHistory:rule.revisionHistory.map((snapshot) => ({ ...structuredClone(snapshot), id:rule.id })),
+    } : {}),
+  }));
+}
+
+function storedPromotionRules(rules: readonly PromotableReusableRule[]): ReusableSchemaRule[] {
+  return rules.map((rule) => {
+    const { revisionHistory, ...current } = structuredClone(rule);
+    return {
+      ...current,
+      ...(revisionHistory ? {
+        revisionHistory:revisionHistory.map((snapshot) => ({
+          name:snapshot.name ?? rule.name,
+          kind:snapshot.kind ?? rule.kind,
+          version:snapshot.version ?? 1,
+          ...(snapshot.enabled !== undefined ? { enabled:snapshot.enabled } : {}),
+          ...(snapshot.operator !== undefined ? { operator:snapshot.operator } : {}),
+          ...(snapshot.parameters !== undefined ? { parameters:snapshot.parameters } : {}),
+          ...(snapshot.allowedValues !== undefined ? { allowedValues:structuredClone(snapshot.allowedValues) } : {}),
+          ...(snapshot.severity !== undefined ? { severity:snapshot.severity } : {}),
+          ...(snapshot.message !== undefined ? { message:snapshot.message } : {}),
+          ...(snapshot.conditionGroup !== undefined ? { conditionGroup:structuredClone(snapshot.conditionGroup) } : {}),
+        })),
+      } : {}),
+    };
+  });
+}
+
+function restoreLocalRulePromotionPresentation(ruleId: string, focusOrigin: boolean): void {
+  const pending = pendingLocalRulePromotion;
+  if (!pending) return;
+  selectedSchemaPropertyPath = pending.propertyPath.slice(1).replaceAll("/", ".");
+  const property = schemaPropertyTree.querySelector<HTMLElement>(`li[data-schema-property-path="${CSS.escape(selectedSchemaPropertyPath)}"]`);
+  const disclosure = property?.querySelector<HTMLDetailsElement>("details[data-attached-rules]");
+  if (disclosure) disclosure.open = true;
+  if (schemaDetail) schemaDetail.scrollTop = pending.scrollTop;
+  if (focusOrigin) pending.trigger.focus({ preventScroll:true });
+  else property?.querySelector<HTMLElement>(`.schema-attached-rule[data-rule-id="${CSS.escape(ruleId)}"]`)?.focus({ preventScroll:true });
+}
+
+function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string, trigger: HTMLButtonElement): void {
+  const schema = schemaDraft && schemas.find(({ id }) => id === schemaDraft?.id);
+  if (!schema) return;
+  let review: ReturnType<typeof reviewLocalRulePromotion>;
+  try {
+    review = reviewLocalRulePromotion({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId });
+  } catch (error) {
+    if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Promotion is no longer available.";
+    return;
+  }
+  pendingLocalRulePromotion = { trigger, propertyPath, sourceRuleId, scrollTop:schemaDetail?.scrollTop ?? 0 };
+  localRulePromotionDialog.open({
+    review,
+    cancel() {
+      restoreLocalRulePromotionPresentation(sourceRuleId, true);
+      pendingLocalRulePromotion = undefined;
+    },
+    confirm(selected) {
+      const result = selected.action === "create"
+        ? promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, ...selected })
+        : promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, action:"use-existing", reusableRuleId:selected.reusableRuleId });
+      const nextSchemas = schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate);
+      const nextRules = storedPromotionRules(result.reusableRules);
+      persistLocalRulePromotion(localStorage, {
+        schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,
+        schemaValue:serializeSchemaLibrary(nextSchemas),
+        ruleKey:SCHEMA_RULE_STORAGE_KEY,
+        ruleValue:JSON.stringify(nextRules),
+      });
+      schemas = nextSchemas; reusableSchemaRules = nextRules; schemaDraft = schemaEditorDraft(result.schema);
+      return () => {
+        renderSchemas(); renderSchemaWorkflowRows(); renderSchemaDraft();
+        restoreLocalRulePromotionPresentation(result.replacementRuleId, false);
+        pendingLocalRulePromotion = undefined;
+        if (schemaResult) schemaResult.textContent = `Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`;
+      };
+    },
+  });
+}
+
 function renderSchemaDraft(): void {
   const draft = schemaDraft;
   if (schemaEditor) schemaEditor.hidden = !draft;
@@ -1724,6 +1906,7 @@ function renderSchemaDraft(): void {
     if (!attached.length) view.append("No rules attached to this property.");
     for (const rule of attached) {
       const row = document.createElement("div");
+      row.className = "schema-attached-rule"; row.dataset.ruleId = rule.id; row.dataset.propertyPath = persistedPath; row.tabIndex = -1;
       const conditionSummary = rule.conditionGroup && rule.propertyPath && rule.operator
         ? conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath, operator:rule.operator, ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } })
         : undefined;
@@ -1732,7 +1915,14 @@ function renderSchemaDraft(): void {
       toggle.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, (item) => ({ ...item, enabled:item.enabled === false })));
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove";
       remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
-      row.append(toggle, remove); view.append(row);
+      const promotion = storedSchema && localRulePromotionAvailability({ schema:storedSchema, reusableRules:promotionReusableRules(), propertyPath:persistedPath, sourceRuleId:rule.id }).available
+        ? document.createElement("button")
+        : undefined;
+      if (promotion) {
+        promotion.type = "button"; promotion.textContent = "Promote to reusable rule"; promotion.className = "local-rule-promotion-action"; promotion.dataset.ruleId = rule.id; promotion.dataset.propertyPath = persistedPath;
+        promotion.addEventListener("click", () => openLocalRulePromotionReview(persistedPath, rule.id, promotion));
+      }
+      row.append(...(promotion ? [promotion] : []), toggle, remove); view.append(row);
     }
     item.append(label, metadata, documentationSection, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view); return item;
   });

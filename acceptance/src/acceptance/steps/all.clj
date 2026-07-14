@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
@@ -22,6 +23,7 @@
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
+            [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
@@ -46,11 +48,15 @@
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
+            [acceptance.steps.unified-defect-builder :as unified-defect-builder]
             [acceptance.steps.validation-presence-semantics :as validation-presence-semantics]
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               unified-defect-builder/handlers
+               local-rule-promotion/handlers
+               allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
                validation-presence-semantics/handlers
@@ -103,5 +109,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T19:46:47.335765836+02:00", :module-hash "602337619", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 50, :hash "-1954469731"} {:id "def/handlers", :kind "def", :line 52, :end-line 103, :hash "-68315629"}]}
+;; {:version 1, :tested-at "2026-07-14T20:33:55.076325059+02:00", :module-hash "-720262053", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 53, :hash "666257448"} {:id "def/handlers", :kind "def", :line 55, :end-line 109, :hash "769456353"}]}
 ;; clj-mutate-manifest-end
