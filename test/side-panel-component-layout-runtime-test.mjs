@@ -33,6 +33,7 @@ let recursivePropertyValidationObservation;
 let guidedAssignmentCoverageObservation;
 let conditionalValidationRulesObservation;
 let schemaDocumentationObservation;
+let missingEventDefectReportObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -40,6 +41,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1" ? [720]
@@ -2928,6 +2930,88 @@ const eventLibraryDeletionRuntime = `import("./data-layer-event-library-deletion
   return { afterDelete:deletion.deleteEventTemplate([first, sameNamed], "template-7").map((item) => item.id), afterClear:deletion.clearEventLibrary([first, sameNamed]).length };
 })`;
 
+const missingEventDefectReportRuntime = `(async () => {
+  const model = await import("/data-layer-missing-event-defect-report.js");
+  const ui = await import("/data-layer-missing-event-defect-report-ui.js");
+  const q = (root, selector) => { const value = root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const button = (root, label) => { const value = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!value) throw new Error("Missing " + label); return value; };
+  const assignment = { id:"assignment:checkout-purchase", name:"Checkout purchase", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
+  const schema = { id:"schema-checkout-purchase", name:"Checkout purchase", version:4, published:true, document:{ type:"object", properties:{ transaction_id:{ type:"string" } } }, assignments:[assignment], attachedRules:[{ id:"transaction-required", name:"Transaction required", version:2, propertyPath:"/transaction_id", operator:"required" }], documentation:{ description:"Purchase expected after checkout confirmation" } };
+  const pageview = { id:"pageview", name:"pageview", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:01Z", validation:"Valid", payload:{ page_type:"checkout" } };
+  const purchase = (id, seconds) => ({ id, name:"purchase", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:" + seconds + "Z", validation:"Valid", payload:{ transaction_id:id } });
+  const visit = (id, events, immutable=false) => ({ id, pageUrl:"https://shop.example/checkout", pathname:"/checkout", startedAt:"2026-07-14T12:00:00Z", endedAt:"2026-07-14T12:01:00Z", events, immutable });
+  const zeroVisit = visit("visit:zero", [pageview]);
+  const matchVisit = visit("visit:match", [pageview, purchase("purchase-1", "30")]);
+  const host = document.createElement("section"); host.id = "missing-event-browser-fixture"; document.body.append(host);
+  let copied = ""; let openedEvent; let restored = false; let focused = false;
+  const zero = ui.renderMissingEventDefectReportBuilder(host, [zeroVisit], [schema], {
+    entryPoint:"Live session actions", initialSchemaId:schema.id,
+    writeClipboard:async (text) => { copied = text; },
+    navigation:{ backToSelectedVisit:()=>{}, backToLiveFeed:()=>{}, focusReportMissingEvent:()=>{ focused=true; } },
+  });
+  const navigation = Array.from(host.querySelectorAll("header button")).map(({ textContent }) => textContent);
+  const noCapturedNavigation = !Array.from(host.querySelectorAll("button")).some(({ textContent }) => textContent === "Back to captured event");
+  const expectedEventInput = Array.from(host.querySelectorAll("label")).find(({ textContent }) => textContent.startsWith("Expected event name"))?.querySelector("input");
+  expectedEventInput.value = "custom_purchase"; expectedEventInput.dispatchEvent(new Event("input", { bubbles:true }));
+  q(host, "#missing-event-schema").dispatchEvent(new Event("change", { bubbles:true }));
+  const replacementReview = q(host, '[aria-label="Expected-event replacement review"]').textContent;
+  button(host, "Accept schema-derived expected-event values").click();
+  const acceptedEventName = Array.from(host.querySelectorAll("label")).find(({ textContent }) => textContent.startsWith("Expected event name"))?.querySelector("input")?.value;
+  const intervalControls = ["Observation start (ISO)", "Observation end (ISO)"].every((label) => Array.from(host.querySelectorAll("label")).some(({ textContent }) => textContent.startsWith(label))) && Boolean(button(host, "Apply observation interval"));
+  button(host, "Confirm at least one matching event was expected").click();
+  const zeroVerification = { count:zero.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, ordinary:Boolean(button(host, "Create missing-event report")) };
+  q(host, "textarea").value = "Submit checkout"; q(host, "textarea").dispatchEvent(new Event("input", { bubbles:true }));
+  q(host, '[aria-label="Missing event evidence"] input[type="checkbox"]').click();
+  button(host, "Create missing-event report").click();
+  const zeroReport = zero.report(); const zeroRepresentations = model.generateMissingEventRepresentations(zeroReport);
+  button(host, "Copy for Jira Cloud").click(); await new Promise((resolve) => setTimeout(resolve, 0));
+  button(host, "Back to selected page visit").click();
+
+  host.replaceChildren();
+  const warning = ui.renderMissingEventDefectReportBuilder(host, [matchVisit, zeroVisit], [schema], {
+    entryPoint:"schema row actions", initialSchemaId:schema.id,
+    navigation:{ backToSelectedVisit:()=>{}, backToLiveFeed:()=>{}, openMatchingEvent:(id, restoreBuilder)=>{ openedEvent=id; restored=false; restoreBuilder(); restored=true; } },
+  });
+  button(host, "Confirm at least one matching event was expected").click();
+  const warningBefore = { count:warning.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, ordinaryAbsent:!Array.from(host.querySelectorAll("button")).some(({ textContent }) => textContent === "Create missing-event report"), evidence:q(host, '[aria-label="Matching event warning"]').textContent };
+  button(host, "Open matching event").click();
+  button(host, "Create missing-event report anyway").click();
+  const overrideReport = warning.report(); const overrideRepresentations = model.generateMissingEventRepresentations(overrideReport);
+
+  host.replaceChildren();
+  const scoped = ui.renderMissingEventDefectReportBuilder(host, [matchVisit, zeroVisit], [schema], { entryPoint:"Live session actions", initialSchemaId:schema.id });
+  button(host, "Confirm at least one matching event was expected").click();
+  const scopeSelect = q(host, "#missing-event-visit"); scopeSelect.value = zeroVisit.id; scopeSelect.dispatchEvent(new Event("change", { bubbles:true }));
+  button(host, "Confirm at least one matching event was expected").click();
+  const scopeZero = { count:scoped.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
+  q(host, "#missing-event-visit").value = matchVisit.id; q(host, "#missing-event-visit").dispatchEvent(new Event("change", { bubbles:true }));
+  button(host, "Confirm at least one matching event was expected").click();
+  const scopeMatch = { count:scoped.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
+
+  const second = { ...assignment, id:"assignment:secondary", name:"Secondary checkout" };
+  const disabled = { ...assignment, id:"assignment:disabled", enabled:false };
+  const expectationCases = [
+    { schema, action:"confirm the event expectation" },
+    { schema:{ ...schema, assignments:[assignment, second] }, action:"choose an assignment and confirm expectation" },
+    { schema:{ ...schema, assignments:[] }, action:"acknowledge warning and confirm expectation" },
+    { schema:{ ...schema, assignments:[disabled] }, action:"disabled assignment is non-authoritative" },
+  ].map(({ schema:current, action }) => { const draft=model.selectMissingEventSchema(model.createMissingEventDraft("Live session actions", [zeroVisit], [current]), current.id); return { enabled:draft.expectation.assignmentChoices.length, selected:draft.expectation.assignment?.id ?? null, disabled:draft.expectation.disabledAssignmentContext.length, action, assistance:draft.assistance }; });
+  const matchCounts = [0, 1, 2].map((count) => { const events=[pageview, ...Array.from({ length:count }, (_, index) => purchase("purchase-" + (index + 1), String(20 + index)))]; const draft=model.verifyMissingEventAbsence(model.confirmMissingEventExpectation(model.selectMissingEventSchema(model.createMissingEventDraft("Live session actions", [visit("visit:count:" + count, events)], [schema]), schema.id))); return { count:draft.verification.matchingCount, warning:draft.verification.warningVisible, continuation:draft.verification.matchingCount ? "available through explicit override" : "available without override" }; });
+  const savedEvents = [pageview]; const savedDraft = model.createMissingEventDraft("saved session", [visit("visit:saved", savedEvents, true)], [schema]); savedEvents.push(purchase("later-live", "40"));
+  const saved = model.verifyMissingEventAbsence(model.confirmMissingEventExpectation(model.selectMissingEventSchema(savedDraft, schema.id)));
+  const sideEntry = document.querySelector("#report-missing-event")?.textContent;
+  document.querySelector("#data-layer-view-schemas")?.click();
+  const schemaRowEntries = Array.from(document.querySelectorAll("#schema-list button")).filter(({ textContent }) => textContent === "Report missing event").length;
+  host.remove();
+  return {
+    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused },
+    zero:{ replacement:{ review:replacementReview, acceptedEventName, intervalControls }, verification:zeroVerification, report:{ type:zeroReport.type, capturedEventId:zeroReport.capturedEventId ?? null, actual:zeroReport.actual, expected:zeroReport.expected, schema:zeroReport.schema.name + " revision " + zeroReport.schema.version, payload:zeroReport.payload ?? null, capture:zeroReport.capture ?? null, issues:zeroReport.validationIssues.length, timeline:zeroReport.timeline.map(({ id }) => id) }, preview:zeroRepresentations.previewText, jira:zeroRepresentations.jiraText, copied },
+    warning:{ before:warningBefore, openedEvent, restored, override:{ count:overrideReport.override.matchingCount, evidence:overrideReport.matchingEventEvidence.map(({ id }) => id), eventPayload:overrideReport.matchingEventEvidence[0].payload, preview:overrideRepresentations.previewText, jira:overrideRepresentations.jiraText } },
+    scope:{ zero:scopeZero, match:scopeMatch }, expectationCases, matchCounts,
+    saved:{ immutable:saved.scope.immutable, count:saved.verification.matchingCount, sourceCount:savedEvents.length, snapshotCount:saved.scope.events.length },
+  };
+})()`;
+
 const workflowFocusRuntime = `Promise.all([
   import("./data-layer-event-library-editor-ui.js"),
   import("./data-layer-workflow-focus-ui.js"),
@@ -3026,6 +3110,23 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const assignment = { id:"assignment:checkout-purchase", name:"Checkout purchase", sourceId:"event-history", eventName:"purchase", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
+        const schema = { id:"schema-checkout-purchase", name:"Checkout purchase", version:4, published:true, document:{ type:"object", properties:{ transaction_id:{ type:"string" } } }, assignments:[assignment] };
+        localStorage.clear(); localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([schema])); localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]"); return true;
+      })()`);
+      await reloadPanel(socket);
+      missingEventDefectReportObservation = await evaluate(socket, missingEventDefectReportRuntime);
+      assert.deepEqual(missingEventDefectReportObservation.entries, { sideEntry:"Report missing event", schemaRowEntries:1 });
+      assert.deepEqual(missingEventDefectReportObservation.zero.verification, { count:0, warning:true, ordinary:true });
+      assert.deepEqual({ type:missingEventDefectReportObservation.zero.report.type, capturedEventId:missingEventDefectReportObservation.zero.report.capturedEventId, payload:missingEventDefectReportObservation.zero.report.payload, capture:missingEventDefectReportObservation.zero.report.capture, issues:missingEventDefectReportObservation.zero.report.issues }, { type:"Missing event", capturedEventId:null, payload:null, capture:null, issues:0 });
+      assert.deepEqual(missingEventDefectReportObservation.warning.before.count, 1);
+      assert.deepEqual(missingEventDefectReportObservation.warning.override.evidence, ["purchase-1"]);
+      assert.deepEqual(missingEventDefectReportObservation.scope, { zero:{ count:0, warning:true, override:null }, match:{ count:1, visible:true, override:null } });
+      assert.deepEqual(missingEventDefectReportObservation.saved, { immutable:true, count:0, sourceCount:2, snapshotCount:1 });
+      socket.close(); continue;
+    }
     if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
       recursivePropertyValidationObservation = await evaluate(socket, recursivePropertyValidationRuntime);
       assert.equal(recursivePropertyValidationObservation.entry.stage, "destination");
@@ -3907,6 +4008,9 @@ try {
   }
   if (process.env.SCHEMA_DOCUMENTATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaDocumentation:schemaDocumentationObservation }));
+  }
+  if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ missingEventDefectReport:missingEventDefectReportObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
