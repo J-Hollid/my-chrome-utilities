@@ -12,13 +12,19 @@ import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-con
 const resultWindowSize = 20;
 type ComposerStage = "idle" | "select" | "configure";
 
+export interface TimelineControlOptions {
+  selections?: readonly TimelineSelection[];
+  onSelectionsChange?(selections: readonly TimelineSelection[]): void;
+}
+
 export function appendTimelineControls(
   composer: HTMLElement,
   entries: HTMLElement,
   context: DefectReportContext,
   state: DefectReportBuilderState,
+  options: TimelineControlOptions = {},
 ): void {
-  let selections: TimelineSelection[] = [];
+  let selections: TimelineSelection[] = (options.selections ?? []).map((selection) => ({ ...selection }));
   let stage: ComposerStage = "idle";
   let filter: TimelineFilter = {};
   let visibleResults = resultWindowSize;
@@ -29,6 +35,7 @@ export function appendTimelineControls(
 
   const updateReport = () => {
     state.update({ ...state.report(), timeline: supportingTimeline(context.timeline, selections) });
+    options.onSelectionsChange?.(structuredClone(selections));
     state.refresh();
   };
 

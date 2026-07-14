@@ -27,16 +27,22 @@
 
 (defn- assert-runtime! [observed]
   (let [initial (get-in observed [:unified :initial])
-        complete (get-in observed [:unified :complete])]
+        complete (get-in observed [:unified :complete])
+        nested (get-in observed [:unified :nested])
+        failures (get-in observed [:unified :failures])]
     (support/assert! (and (every? (set (:stages initial)) ["Expected result" "Steps to reproduce" "Supporting timeline" "Report details"])
                           (:evidence initial)
                           (:commonControls initial)
                           (:copyDisabled initial)
-                          (:saveDisabled initial))
+                          (:saveDisabled initial)
+                          (:noCreate initial)
+                          (:noInterval initial)
+                          (= "/products" (:from initial))
+                          (= "/checkout" (:to initial)))
                      "The rendered missing-event path did not use the common production stages and composers."
                      observed)
-    (support/assert! (and (str/includes? (:schemaExpected initial) "order_id · required string")
-                          (str/includes? (:schemaExpected initial) "currency · one of EUR or USD")
+    (support/assert! (and (str/includes? (:schemaExpected initial) "order_id · string · required")
+                          (str/includes? (:schemaExpected initial) "Use schema value EUR")
                           (str/includes? (:preview initial) "Actual result")
                           (str/includes? (:preview initial) "Expected result"))
                      "Schema-derived expectations or the continuously rendered preview were absent."
@@ -48,6 +54,24 @@
                           (str/includes? (:preview complete) "Expect purchase to be pushed"))
                      "Completion did not retain absence evidence, schema identity, journey assertion, copy, and save."
                      observed)
+    (support/assert! (and (= {:page_name "test" :products [{:id 1 :name "robot"}]} (:payload nested))
+                          (= 2 (:duplicatedItems nested))
+                          (= 1 (:itemCount nested))
+                          (= [false false false] (:actions nested))
+                          (= 3 (count (:sources nested)))
+                          (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
+                          (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
+                          (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
+                          (str/includes? (:preview nested) "pageview is fired with {\"page_name\":\"test\",\"products\":[{\"id\":1,\"name\":\"robot\"}]}")
+                          (str/includes? (:html nested) "&quot;products&quot;: ["))
+                     "Recursive typed expected-payload editing or shared representation diverged."
+                     nested)
+    (support/assert! (and (= "Copy failed" (:copyFailure failures))
+                          (= "Save failed" (:saveFailure failures))
+                          (= 1 (:rejectedSaveCalls failures))
+                          (:unchanged failures))
+                     "A failed clipboard or persistence boundary changed the draft or announced success."
+                     failures)
     (support/assert! (and (= "Missing event" (get-in observed [:zero :report :type]))
                           (nil? (get-in observed [:zero :report :payload]))
                           (nil? (get-in observed [:zero :report :capture]))
@@ -60,14 +84,23 @@
 (def example-values
   {"defect_kind" #{"captured validation issue" "missing purchase event"}
    "evidence_stage" #{"selected issue and captured Actual result" "expected-event confirmation and absence verification" "validation issue selection and captured Actual result"}
-   "property" #{"currency" "order_id"}
-   "constraint" #{"one of EUR or USD" "required string"}
-   "response_choice" #{"Use generic constraint" "schema value EUR" "custom value A-123"}
-   "expected_presentation" #{"currency is EUR OR USD" "currency is EUR" "order_id is A-123"}
+   "property_path" #{"page_name" "products.0.id" "products.0.name" "logged_in"}
+   "property_type" #{"string" "number" "boolean"}
+   "schema_choices" #{"home and test" "none" "robot and vehicle" "true and false"}
+   "value_source" #{"schema" "custom"}
+   "entered_value" #{"test" "1" "robot" "false"}
+   "stored_value" #{"test" "1" "robot" "false"}
+   "json_pointer" #{"/page_name" "/products/0/id" "/products/0/name" "/logged_in"}
+   "json_type" #{"string" "number" "boolean"}
    "response_source" #{"schema constraint" "schema-provided value" "operator custom response"}
    "step_kind" #{"Click component" "Log in as user" "Scroll" "Custom step"}
    "step_input" #{"Checkout, sticky footer button" "returning customer" "bottom of the page" "Apply the free delivery filter"}
-   "step_text" #{"Click Checkout — sticky footer button" "Log in as returning customer" "Scroll to the bottom of the page" "Apply the free delivery filter"}})
+   "step_text" #{"Click Checkout — sticky footer button" "Log in as returning customer" "Scroll to the bottom of the page" "Apply the free delivery filter"}
+   "report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+   "successful_effect" #{"the current preview is written through the Jira clipboard integration" "one discoverable Missing event defect is persisted in Defects" "one defect is persisted and the same representation is written to clipboard"}
+   "failed_effect" #{"clipboard writing rejects" "Defect Library persistence rejects"}
+   "boundary" #{"Jira clipboard adapter" "Defect Library persistence"}
+   "failure_feedback" #{"Copy failed" "Save failed"}})
 
 (defn- validate-example! [_mode example]
   (support/validate-example-domain! example-values example

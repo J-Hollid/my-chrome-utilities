@@ -1,7 +1,7 @@
 import { removeTimelineSelection, saveTimelineSelection, supportingTimeline, timelineEventChoices, } from "./data-layer-defect-report.js";
 const resultWindowSize = 20;
-export function appendTimelineControls(composer, entries, context, state) {
-    let selections = [];
+export function appendTimelineControls(composer, entries, context, state, options = {}) {
+    let selections = (options.selections ?? []).map((selection) => ({ ...selection }));
     let stage = "idle";
     let filter = {};
     let visibleResults = resultWindowSize;
@@ -11,6 +11,7 @@ export function appendTimelineControls(composer, entries, context, state) {
     const adjustButtons = new Map();
     const updateReport = () => {
         state.update({ ...state.report(), timeline: supportingTimeline(context.timeline, selections) });
+        options.onSelectionsChange?.(structuredClone(selections));
         state.refresh();
     };
     const eventById = (eventId) => context.timeline.find(({ id }) => id === eventId);
