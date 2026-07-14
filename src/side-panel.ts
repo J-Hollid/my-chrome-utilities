@@ -71,6 +71,12 @@ import {
   type ObservationRefreshRequest,
 } from "./data-layer-observation-refresh.js";
 import {
+  initialObservationActivationState,
+  nextObservationActivation,
+  observationActivationIsCurrent,
+} from "./data-layer-observation-activation.js";
+import {
+  historySnapshotPageObject,
   startLiveHistoryPushCapture,
   type StopLiveHistoryPushCapture,
 } from "./data-layer-live-observation.js";
@@ -603,7 +609,7 @@ let dataLayerObserverState: DataLayerHistoryObserverState = {
   sourceEvents: [],
 };
 let stopLiveHistoryPushCapture: StopLiveHistoryPushCapture = () => {};
-let liveHistoryCaptureGeneration = 0;
+let liveHistoryActivationState = initialObservationActivationState;
 let presentedSourceEventCount = 0;
 let observationRefreshTimeoutId: number | undefined;
 let observationRefreshState = initialObservationRefreshState;
@@ -862,6 +868,7 @@ async function recoverAttachedObservationTarget(): Promise<void> {
         recovered.tabId,
         recovered.pageUrl,
         session.historyPath,
+        observationPageLoadId(recovered.tabId),
       );
       if (observation.pageAccessStatus === "page access available") {
         dataLayerObserverState = attachHistoryArrayObserver(
@@ -945,7 +952,12 @@ async function attachSelectedTarget(): Promise<void> {
     setObservationTargetResult("End current session before attaching selected target");
     return;
   }
-  const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath());
+  const observation = await tabPageObservation(
+    target.tabId,
+    target.pageUrl,
+    getHistoryArrayPath(),
+    observationPageLoadId(target.tabId),
+  );
   if (observation.pageAccessStatus !== "page access available") {
     observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
     setObservationTargetResult("Permission required");
@@ -2871,6 +2883,10 @@ function restartLiveHistoryCaptureIfActive(
   }
 }
 
+function observationPageLoadId(tabId: number): string {
+  return `tab:${tabId}:page-load:${observationRefreshState.observedPageLoadSequence}`;
+}
+
 async function currentTargetObservation(
   historyPath: string,
 ): Promise<ActivePageObservationResult | undefined> {
@@ -2880,11 +2896,18 @@ async function currentTargetObservation(
     setObservationTargetResult("Selection required");
     return undefined;
   }
-  return tabPageObservation(target.tabId, target.pageUrl, historyPath);
+  return tabPageObservation(
+    target.tabId,
+    target.pageUrl,
+    historyPath,
+    observationPageLoadId(target.tabId),
+  );
 }
 
 function cancelLiveHistoryCaptureRuntime(): void {
-  liveHistoryCaptureGeneration += 1;
+  liveHistoryActivationState = nextObservationActivation(
+    liveHistoryActivationState,
+  ).state;
   stopLiveHistoryPushCapture();
   stopLiveHistoryPushCapture = () => {};
 }
@@ -2898,12 +2921,27 @@ async function startLiveHistoryCapture(
   observation: ActivePageObservationResult,
 ): Promise<void> {
   cancelLiveHistoryCaptureRuntime();
-  const captureGeneration = liveHistoryCaptureGeneration;
+  const captureGeneration = liveHistoryActivationState.generation;
   try {
     const stopCapture = await startLiveHistoryPushCapture({
       ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }),
       historyPath: observation.historyPath,
+      onSnapshot: ({ historyPath, rawValues }) => {
+        if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) return;
+        dataLayerObserverState = attachHistoryArrayObserver(
+          { ...dataLayerObserverState, sessionState:dataLayerSessionState },
+          {
+            ...observation,
+            historyPath,
+            pageObject:historySnapshotPageObject(historyPath, rawValues),
+            requestId:`activation:${captureGeneration}`,
+          },
+        );
+        updateSessionFromObserverState();
+        persistAndRenderObservationState();
+      },
       onEntry: ({ rawValue, timestamp }) => {
+        if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) return;
         dataLayerObserverState = appendObservedHistoryEntry(
           dataLayerObserverState,
           rawValue,
@@ -2913,13 +2951,13 @@ async function startLiveHistoryCapture(
         persistAndRenderObservationState();
       },
     });
-    if (captureGeneration !== liveHistoryCaptureGeneration) {
+    if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
       stopCapture();
       return;
     }
     stopLiveHistoryPushCapture = stopCapture;
   } catch {
-    if (captureGeneration === liveHistoryCaptureGeneration) {
+    if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
       stopLiveHistoryPushCapture = () => {};
     }
   }
@@ -3009,6 +3047,7 @@ async function runObservationRefresh(
     nextRequest.tabId,
     nextRequest.pageUrl,
     session.historyPath,
+    observationPageLoadId(nextRequest.tabId),
   );
 
   if (

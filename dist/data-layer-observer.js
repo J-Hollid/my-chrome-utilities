@@ -21,6 +21,7 @@ function captureContext(state, observer) {
         sourceId: "event-history",
         sourceKind: "Data Layer",
         pageUrl: observer.pageUrl,
+        ...(observer.pageLoadId ? { pageLoadId: observer.pageLoadId } : {}),
         destination: observer.historyPath,
     };
 }
@@ -54,12 +55,13 @@ function captureExistingHistoryEntries(state, observer) {
         return state;
     }
     const captureTime = new Date().toISOString();
-    const captured = historyArray.reduce((nextState, rawValue, index) => importedOnce(nextState.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, index)
+    const pageScope = observer.pageLoadId ?? observer.pageUrl;
+    const captured = historyArray.reduce((nextState, rawValue, index) => importedOnce(nextState.subscription ?? { imported: new Set(), activeCount: 0 }, pageScope, observer.historyPath, index)
         ? nextState
         : captureObservedEntry(nextState, observedEntry(nextState, observer, rawValue, captureTime)), state);
     return {
         ...captured,
-        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, historyArray.length),
+        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, pageScope, observer.historyPath, historyArray.length),
     };
 }
 export function attachHistoryArrayObserver(state, options) {
@@ -89,6 +91,7 @@ export function attachHistoryArrayObserver(state, options) {
         status,
         historyPath: options.historyPath,
         pageUrl: options.pageUrl,
+        ...(options.pageLoadId ? { pageLoadId: options.pageLoadId } : {}),
         activeCount: status === "ready" ? 1 : 0,
     };
     const nextState = {
@@ -123,7 +126,7 @@ export function appendObservedHistoryEntry(state, rawValue, timestamp = new Date
     return {
         ...captured,
         pushReturn,
-        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageUrl, observer.historyPath, historyArray.length),
+        subscription: markImported(captured.subscription ?? { imported: new Set(), activeCount: 0 }, observer.pageLoadId ?? observer.pageUrl, observer.historyPath, historyArray.length),
     };
 }
 export function stopHistoryArrayObserver(state) {

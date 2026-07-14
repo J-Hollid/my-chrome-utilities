@@ -164,4 +164,25 @@ assert.deepEqual(
     .map(({ pageUrl }) => pageUrl),
   [context.pageUrl, checkoutUrl],
 );
+
+let reloadedObserverState = attachHistoryArrayObserver(
+  { sessionState, sourceEvents: [] },
+  {
+    historyPath: context.destination,
+    pageUrl: context.pageUrl,
+    pageLoadId: "load-1",
+    pageObject: { event:{ history:[["pageview", { page:"home" }]] } },
+    requestId: "load-1",
+  },
+);
+reloadedObserverState = attachHistoryArrayObserver(reloadedObserverState, {
+  historyPath: context.destination,
+  pageUrl: context.pageUrl,
+  pageLoadId: "load-2",
+  pageObject: { event:{ history:[["pageview", { page:"home" }]] } },
+  requestId: "load-2",
+});
+assert.equal(reloadedObserverState.sourceEvents.length, 2);
+assert.deepEqual(reloadedObserverState.sourceEvents.map(({ pageLoadId }) => pageLoadId), ["load-1", "load-2"]);
+assert.equal(new Set(reloadedObserverState.sourceEvents.map(({ id }) => id)).size, 2);
 assert.equal(stopHistoryArrayObserver(observerState).subscription.activeCount, 0);
