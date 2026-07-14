@@ -4,13 +4,13 @@
 
 (deftest dispatches-property-rule-example-assertions
   (is (nil? (#'picker/assert-example!
-             {"property_type" "string" "rule_type" "Required" "availability" "available"}
+             {"property_name" "page_type" "property_type" "string" "rule_type" "Required" "availability" "available"}
              {:availability {(keyword "string:Required") "available"}})))
   (is (nil? (#'picker/assert-example!
-             {"matched_metadata" "name"}
-             {:searches {:name ["Approved pages version 2"]}})))
+             {"query" "Approved pages" "matched_metadata" "rule name"}
+             {:searches {(keyword "rule name") ["Approved pages version 2"]}})))
   (is (nil? (#'picker/assert-example!
-             {"property_type" "array" "rule_type" "Item count" "parameter_controls" "non-negative Minimum item count"}
+             {"property_name" "items" "property_type" "array" "rule_type" "Item count" "parameter_controls" "non-negative Minimum item count"}
              {:configurationControls {(keyword "array:Item count") "non-negative Minimum item count"}})))
   (is (nil? (#'picker/assert-example!
              {"rule_type" "Numeric range"
@@ -18,4 +18,11 @@
               "creation_result" "available"
               "assistance" "Ready to create rule"}
              {:validations {(keyword "Numeric range:minimum 10 maximum 20")
-                            {:creationResult "available" :assistance "Ready to create rule"}}}))))
+                            {:creationResult "available" :assistance "Ready to create rule"}}})))
+  (is (nil? (#'picker/assert-example!
+             {"picker_input" "Escape" "selection_outcome" "no rule is created or attached"}
+             {:keyboard {:escapeClosed true}})))
+  (is (nil? (#'picker/assert-example!
+             {"navigation_action" "Cancel"
+              "selection_outcome" "the dialog closes and focus returns to Add rule for product.sku"}
+             {:navigation {:cancel {:closed true :focusReturned true}}}))))
