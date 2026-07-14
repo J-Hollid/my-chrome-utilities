@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=53ef9417f488d89e7bdf45c55c4dd3ebb0dc71e8b58d6e1abc61c2f72e5b9451
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T14:08:27.155274481Z","feature_name":"Data layer guided rule parameter integrity runtime","feature_path":"features/data-layer-guided-rule-parameter-integrity-runtime.feature","background_hash":"2c54c977d4fde557dbc4b3bd617f6b098b1acfb243837ee58ba520c439a6a6ee","implementation_hash":"sha256:d79d6bc46e8d3be2be03f78e2409431ae28a1bc7e1034dcee2b6f112d0b48cfb","scenarios":[{"index":1,"name":"Data layer guided rule parameter integrity runtime 002","scenario_hash":"ab5059cb74df2b45c404d9de95f297a89e847505ab6eae571b3b85ad6341ab3b","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:08:27.155274481Z"},{"index":3,"name":"Data layer guided rule parameter integrity runtime 004","scenario_hash":"720e384bda4841b46e5af2417f70c3a60006734f1c9271eb8098b955e2785488","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:08:27.155274481Z"},{"index":5,"name":"Data layer guided rule parameter integrity runtime 006","scenario_hash":"4649e70a018f07ea7a2f29a6e515ce2c8318fd3a0717a4616701f3678b971a5c","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:08:27.155274481Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided rule parameter integrity runtime
 
   Background:

@@ -1,3 +1,4 @@
+import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
 function guidedOperator(requirement) {
     if (requirement === "Must be one of these values")
         return "allowed-values";
@@ -14,12 +15,13 @@ function guidedParameters(rule) {
     return rule.values.join(",");
 }
 export function guidedAttachedRule(rule, name, localRuleId) {
+    const propertyPath = canonicalNestedPath(rule.path);
     const parameters = guidedParameters(rule);
     return {
-        id: rule.reusableRuleId ?? localRuleId ?? `local-rule:${rule.path}`,
+        id: rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,
         name,
         version: 1,
-        propertyPath: rule.path,
+        propertyPath,
         operator: guidedOperator(rule.requirement),
         ...(parameters !== undefined ? { parameters } : {}),
         severity: "error",

@@ -1,5 +1,5 @@
 import { urlConditionsMatch } from "./data-layer-path-conditions.js";
-import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
+import { canonicalNestedPath, resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
 import { resolveEffectiveSchemaDocumentation, } from "./data-layer-schema-documentation.js";
 function clone(value) { return structuredClone(value); }
@@ -8,7 +8,7 @@ function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-"
 function schemaId(name, version) { return `schema:${schemaSlug(name)}:${version}`; }
 function stableSchemaId(name) { return `schema-${schemaSlug(name)}`; }
 function canonicalAttachedRulePath(path) {
-    return `/${path.trim().replaceAll(".", "/").split("/").filter(Boolean).join("/")}`;
+    return canonicalNestedPath(path);
 }
 function documentContainsPath(document, path) {
     let current = document;

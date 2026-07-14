@@ -28,6 +28,7 @@ assert.deepEqual(attachment, {
 });
 assert.equal(guidedAttachedRule({ ...guidedRule, requirement:"Must be present", values:[] }).parameters, undefined);
 assert.equal(guidedAttachedRule({ ...guidedRule, requirement:"Must match a pattern", values:["^not logged in$"] }).parameters, "^not logged in$");
+assert.equal(guidedAttachedRule({ ...guidedRule, path:" login_status " }, "Known login status").propertyPath, "/login_status");
 
 const legacy = {
   ...createSchema("Login status", 1, { type:"object", properties:{ login_status:{ type:"string" } } }),

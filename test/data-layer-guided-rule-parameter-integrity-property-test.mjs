@@ -39,6 +39,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(attachment.propertyPath, path);
   assert.equal(attachment.operator, "allowed-values");
   assert.equal(attachment.parameters, values.join(","));
+  assert.equal(guidedAttachedRule({ ...publishedRule, path:property }, "Canonical").propertyPath, path);
   assert.equal(guidedAttachedRule({ ...publishedRule, requirement:"Must be present", values:[] }, "Required").parameters, undefined);
   assert.equal(guidedAttachedRule({ ...publishedRule, requirement:"Must match a pattern", values:[`^${values[0]}$`, "ignored"] }, "Pattern").parameters, `^${values[0]}$`);
 
