@@ -80,82 +80,98 @@
                    (str "Lossless observation runtime did not match example " key ".")
                    {:key key :example example :observation observation}))
 
+(defn- validate-first-activation! [example observation]
+  (let [{:keys [first]} observation]
+    (assert-example! (= (concat (csv (example-value example "handoff_events"))
+                                (csv (example-value example "live_events")))
+                        (:feed first)) "handoff_events/live_events" example observation)
+    (assert-example! (= (csv (example-value example "push_returns"))
+                        (mapv str (:pushReturns first))) "push_returns" example observation)
+    (assert-example! (= (repeat (count (:feed first)) (example-value example "page_load"))
+                        (:pageLoadIds first)) "page_load" example observation)
+    (assert-example! (= (example-value example "page_url") (:pageUrl first)) "page_url" example observation)))
+
+(defn- validate-history-sequence! [example observation observation-key label]
+  (let [result (observation-key observation)]
+    (assert-example! (= (concat (csv (example-value example "initial_events"))
+                                (csv (example-value example "handoff_events"))
+                                (csv (example-value example "live_events")))
+                        (:feed result)) label example observation)
+    (assert-example! (= (example-value example "page_url") (:pageUrl result)) "page_url" example observation)))
+
+(defn- validate-existing-history! [example observation]
+  (validate-history-sequence! example observation :second "initial/handoff/live events"))
+
+(defn- validate-delayed-history! [example observation]
+  (validate-history-sequence! example observation :delayed "delayed events"))
+
+(defn- validate-navigation! [example observation]
+  (let [navigation (:navigation observation)
+        expected (concat [(example-value example "first_page_event")]
+                         (csv (example-value example "handoff_events"))
+                         (csv (example-value example "live_events")))]
+    (assert-example! (= expected (map :name navigation)) "navigation events" example observation)
+    (assert-example! (= [(example-value example "first_page_load")
+                         (example-value example "current_page_load")]
+                        [(:pageLoadId (first navigation))
+                         (:pageLoadId (second navigation))])
+                     "navigation page loads" example observation)
+    (assert-example! (= (example-value example "first_page") (:pageUrl (first navigation))) "first_page" example observation)
+    (assert-example! (= (example-value example "current_page") (:pageUrl (second navigation))) "current_page" example observation)))
+
+(defn- validate-reload! [example observation]
+  (let [{:keys [reload]} observation
+        repeated (csv (example-value example "repeated_events"))]
+    (assert-example! (= (concat repeated repeated) (:feed reload)) "repeated_events" example observation)
+    (assert-example! (= (concat (repeat (count repeated) (example-value example "first_page_load"))
+                                (repeat (count repeated) (example-value example "current_page_load")))
+                        (:pageLoadIds reload)) "reload page loads" example observation)
+    (assert-example! (= (example-value example "current_page") (:pageUrl reload)) "current_page" example observation)))
+
+(defn- validate-repeat-activation! [example observation]
+  (let [{:keys [repeat]} observation]
+    (assert-example! (contains? #{"a readiness retry" "a capture restart"}
+                                (example-value example "repeat_action")) "repeat_action" example observation)
+    (assert-example! (= (concat (csv (example-value example "initial_events"))
+                                [(example-value example "live_event")])
+                        (:feed repeat)) "repeat events" example observation)
+    (assert-example! (= (str (:pushReturn repeat)) (example-value example "push_return")) "push_return" example observation)))
+
+(defn- validate-stale-generation! [example observation]
+  (let [{:keys [stale]} observation]
+    (doseq [[key actual] [["stale_generation" (:staleGenerationId stale)]
+                          ["current_generation" (:currentGenerationId stale)]
+                          ["stale_page" (:stalePageUrl stale)]
+                          ["current_page" (:currentPageUrl stale)]]]
+      (assert-example! (= (example-value example key) actual) key example observation))
+    (assert-example! (= [(example-value example "current_existing_event")
+                         (example-value example "current_live_event")]
+                        (:feed stale)) "current generation events" example observation)
+    (assert-example! (not (some #{(example-value example "stale_event")} (:feed stale))) "stale_event" example observation)))
+
+(defn- existing-history-example? [example]
+  (and (example-value example "initial_events")
+       (= "load-2" (example-value example "page_load"))))
+
+(def example-validators
+  [[#(example-value % "push_returns") validate-first-activation!]
+   [existing-history-example? validate-existing-history!]
+   [#(= "load-3" (example-value % "page_load")) validate-delayed-history!]
+   [#(example-value % "first_page_event") validate-navigation!]
+   [#(example-value % "repeated_events") validate-reload!]
+   [#(example-value % "repeat_action") validate-repeat-activation!]
+   [#(example-value % "stale_generation") validate-stale-generation!]])
+
+(defn- validate-scenario-example! [example observation]
+  (when-let [[_ validator] (some (fn [[matches? _ :as rule]]
+                                  (when (matches? example) rule))
+                                example-validators)]
+    (validator example observation)))
+
 (defn validate-example! [example observation]
-  (let [history-path (example-value example "history_path")]
-    (when history-path
-      (assert-example! (= history-path "queue.history") "history_path" example observation)))
-  (cond
-    (example-value example "push_returns")
-    (let [{:keys [first]} observation]
-      (assert-example! (= (concat (csv (example-value example "handoff_events"))
-                                  (csv (example-value example "live_events")))
-                          (:feed first)) "handoff_events/live_events" example observation)
-      (assert-example! (= (csv (example-value example "push_returns"))
-                          (mapv str (:pushReturns first))) "push_returns" example observation)
-      (assert-example! (= (repeat (count (:feed first)) (example-value example "page_load"))
-                          (:pageLoadIds first)) "page_load" example observation)
-      (assert-example! (= (example-value example "page_url") (:pageUrl first)) "page_url" example observation))
-
-    (and (example-value example "initial_events")
-         (= "load-2" (example-value example "page_load")))
-    (let [{:keys [second]} observation]
-      (assert-example! (= (concat (csv (example-value example "initial_events"))
-                                  (csv (example-value example "handoff_events"))
-                                  (csv (example-value example "live_events")))
-                          (:feed second)) "initial/handoff/live events" example observation)
-      (assert-example! (= (example-value example "page_url") (:pageUrl second)) "page_url" example observation))
-
-    (= "load-3" (example-value example "page_load"))
-    (let [{:keys [delayed]} observation]
-      (assert-example! (= (concat (csv (example-value example "initial_events"))
-                                  (csv (example-value example "handoff_events"))
-                                  (csv (example-value example "live_events")))
-                          (:feed delayed)) "delayed events" example observation)
-      (assert-example! (= (example-value example "page_url") (:pageUrl delayed)) "page_url" example observation))
-
-    (example-value example "first_page_event")
-    (let [navigation (:navigation observation)
-          expected (concat [(example-value example "first_page_event")]
-                           (csv (example-value example "handoff_events"))
-                           (csv (example-value example "live_events")))]
-      (assert-example! (= expected (map :name navigation)) "navigation events" example observation)
-      (assert-example! (= [(example-value example "first_page_load")
-                           (example-value example "current_page_load")]
-                          [(:pageLoadId (first navigation))
-                           (:pageLoadId (second navigation))])
-                       "navigation page loads" example observation)
-      (assert-example! (= (example-value example "first_page") (:pageUrl (first navigation))) "first_page" example observation)
-      (assert-example! (= (example-value example "current_page") (:pageUrl (second navigation))) "current_page" example observation))
-
-    (example-value example "repeated_events")
-    (let [{:keys [reload]} observation
-          repeated (csv (example-value example "repeated_events"))]
-      (assert-example! (= (concat repeated repeated) (:feed reload)) "repeated_events" example observation)
-      (assert-example! (= (concat (repeat (count repeated) (example-value example "first_page_load"))
-                                  (repeat (count repeated) (example-value example "current_page_load")))
-                          (:pageLoadIds reload)) "reload page loads" example observation)
-      (assert-example! (= (example-value example "current_page") (:pageUrl reload)) "current_page" example observation))
-
-    (example-value example "repeat_action")
-    (let [{:keys [repeat]} observation]
-      (assert-example! (contains? #{"a readiness retry" "a capture restart"}
-                                  (example-value example "repeat_action")) "repeat_action" example observation)
-      (assert-example! (= (concat (csv (example-value example "initial_events"))
-                                  [(example-value example "live_event")])
-                          (:feed repeat)) "repeat events" example observation)
-      (assert-example! (= (str (:pushReturn repeat)) (example-value example "push_return")) "push_return" example observation))
-
-    (example-value example "stale_generation")
-    (let [{:keys [stale]} observation]
-      (doseq [[key actual] [["stale_generation" (:staleGenerationId stale)]
-                            ["current_generation" (:currentGenerationId stale)]
-                            ["stale_page" (:stalePageUrl stale)]
-                            ["current_page" (:currentPageUrl stale)]]]
-        (assert-example! (= (example-value example key) actual) key example observation))
-      (assert-example! (= [(example-value example "current_existing_event")
-                           (example-value example "current_live_event")]
-                          (:feed stale)) "current generation events" example observation)
-      (assert-example! (not (some #{(example-value example "stale_event")} (:feed stale))) "stale_event" example observation)))
+  (when-let [history-path (example-value example "history_path")]
+    (assert-example! (= history-path "queue.history") "history_path" example observation))
+  (validate-scenario-example! example observation)
   observation)
 
 (defn- transition [world example _captures _spec]
