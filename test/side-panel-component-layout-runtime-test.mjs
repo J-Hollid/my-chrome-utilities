@@ -30,6 +30,7 @@ const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
+const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
@@ -2269,20 +2270,22 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
-    workspacePanelContainmentObservation = await evaluate(socket, workspacePanelContainmentRuntime);
-    assert.deepEqual(workspacePanelContainmentObservation, {
-      peers:true,
-      nested:false,
-      afterActivation:{
-        dataLayerHidden:true,
-        hotkeysHidden:false,
-        hotkeysVisible:true,
-        headingVisible:true,
-        searchVisible:true,
-        registeredGroupCount:3,
-        registeredGroupsVisible:true,
-      },
-    }, `Workspace panel containment violated its ${width}px browser contract`);
+    if (runWorkspacePanelContainmentRuntime) {
+      workspacePanelContainmentObservation = await evaluate(socket, workspacePanelContainmentRuntime);
+      assert.deepEqual(workspacePanelContainmentObservation, {
+        peers:true,
+        nested:false,
+        afterActivation:{
+          dataLayerHidden:true,
+          hotkeysHidden:false,
+          hotkeysVisible:true,
+          headingVisible:true,
+          searchVisible:true,
+          registeredGroupCount:3,
+          registeredGroupsVisible:true,
+        },
+      }, `Workspace panel containment violated its ${width}px browser contract`);
+    }
     if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
       socket.close(); continue;
     }
