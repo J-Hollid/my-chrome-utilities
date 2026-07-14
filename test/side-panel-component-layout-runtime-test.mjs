@@ -26,6 +26,8 @@ let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
 let freshLiveSessionObservation;
 let freshLiveSessionReloadObservation;
+let schemaPropertyRemovalObservation;
+let schemaPropertyRemovalReloadObservation;
 let workspacePanelContainmentObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -37,6 +39,7 @@ const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? 
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
   : process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
@@ -624,6 +627,51 @@ const freshLiveSessionReloadRuntime = `(() => {
     title:session.targetTitle,
     path:session.historyPath,
   };
+})()`;
+
+const schemaPropertyRemovalRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const element = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!element) throw new Error("Missing " + label); element.click(); return element; };
+  const stored = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ id }) => id === "page-view");
+  q("#data-layer-view-schemas").click();
+  const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
+  const tree = q("#schema-property-tree");
+  const actions = Array.from(tree.querySelectorAll("[data-schema-property-path]")).map((row) => ({ path:row.dataset.schemaPropertyPath, actions:Array.from(row.querySelectorAll("button")).map(({ textContent }) => textContent) }));
+  q('[data-schema-property-path="inherited_id"] button[aria-label^="Exclude inherited property"]').click();
+  const libraryAfterExclude = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const excluded = { absent:!tree.querySelector('[data-schema-property-path="inherited_id"]'), parentUnchanged:Boolean(libraryAfterExclude.find(({ id }) => id === "base").document.properties.inherited_id) };
+  const remove = (path) => q('[data-schema-property-path="' + path + '"] button[aria-label^="Remove property"]');
+  remove("debug").click();
+  const immediate = { absent:!tree.querySelector('[data-schema-property-path="debug"]'), feedback:q("#schema-property-removal-feedback").textContent, undo:!Array.from(document.querySelectorAll("button")).find(({ textContent }) => textContent === "Undo").hidden, currentHasDebug:Boolean(stored().document.properties.debug), draftHasDebug:Boolean(stored().workingDraft.document.properties.debug), focus:document.activeElement?.closest("[data-schema-property-path]")?.dataset.schemaPropertyPath };
+  click(document, "Undo");
+  const undone = { restored:Boolean(tree.querySelector('[data-schema-property-path="debug"]')), definition:stored().workingDraft.document.properties.debug, order:Array.from(tree.querySelectorAll("[data-schema-property-path]")).map(({ dataset }) => dataset.schemaPropertyPath) };
+  remove("items").click(); const itemsFocus = document.activeElement?.closest("[data-schema-property-path]")?.dataset.schemaPropertyPath; click(document, "Undo");
+  remove("debug").click();
+  q("#save-schema").click(); const publication = q("#schema-revision-review-summary").textContent; q("#cancel-schema-revision").click();
+  return { actions, excluded, immediate, undone, itemsFocus, publication, currentVersion:stored().version };
+})()`;
+
+const schemaPropertyRemovalReloadRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const element = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!element) throw new Error("Missing " + label); element.click(); return element; };
+  const stored = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ id }) => id === "page-view");
+  q("#data-layer-view-schemas").click(); const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
+  const tree = q("#schema-property-tree"); const remove = (path) => q('[data-schema-property-path="' + path + '"] button[aria-label^="Remove property"]');
+  const restored = { draftAbsent:!tree.querySelector('[data-schema-property-path="debug"]'), currentHasDebug:Boolean(stored().document.properties.debug), version:stored().version };
+  remove("commerce").click();
+  const dialog = q("#schema-property-removal-dialog"); const before = JSON.stringify(stored().workingDraft);
+  const confirmation = { open:dialog.open, summary:q("#schema-property-removal-summary").textContent, actions:Array.from(dialog.querySelectorAll("button")).map(({ textContent }) => textContent) };
+  click(dialog, "Cancel"); const cancelled = JSON.stringify(stored().workingDraft) === before;
+  remove("commerce").click(); click(dialog, "Remove property");
+  const after = stored(); const reusable = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
+  const confirmed = { commerceAbsent:!after.workingDraft.document.properties.commerce, required:after.workingDraft.document.required, localRules:after.workingDraft.attachedRules.length, reusable:Boolean(reusable.find(({ name }) => name === "Order identifier")), currentCommerce:Boolean(after.document.properties.commerce), currentRequired:after.document.required, version:after.version };
+  const model = await import("/data-layer-schema-property-removal.js");
+  const origins = { type:"object", properties:{ commerce:{ type:"object", properties:{ order:{ type:"object", propertyOrigin:"manual", properties:{ id:{ type:"string", propertyOrigin:"manual" } } } } } } };
+  const pruned = model.removeSchemaProperty(origins, [], "/commerce/order/id").document;
+  const ancestorOutcomes = { manualRemoved:!pruned.properties.commerce.properties.order, observedRetained:Boolean(pruned.properties.commerce) };
+  remove("items").click(); remove("page_type").click();
+  const empty = { count:Object.keys(stored().workingDraft.document.properties).length, publishBlocked:q("#save-schema").disabled, reason:q("#save-schema-reason").textContent, addAvailable:!q("#add-schema-property").disabled, focus:document.activeElement === q("#add-schema-property"), version:stored().version };
+  return { restored, confirmation, cancelled, confirmed, ancestorOutcomes, empty };
 })()`;
 
 const reproductionStepActionRowsRuntime = `(async () => {
@@ -2377,6 +2425,24 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const base = { id:"base", name:"Base", version:2, published:true, document:{ type:"object", properties:{ inherited_id:{ type:"string" } } }, assignments:[] };
+        const document = { type:"object", required:["page_type", "commerce", "debug", "items"], properties:{ page_type:{ type:"string" }, commerce:{ type:"object", required:["order"], properties:{ order:{ type:"object", propertyOrigin:"manual", required:["id", "value"], properties:{ id:{ type:"string", propertyOrigin:"manual" }, value:{ type:"number", propertyOrigin:"manual" } } } } }, debug:{ type:"boolean", propertyOrigin:"manual" }, items:{ type:"string", propertyOrigin:"manual" } } };
+        const attachedRules = [{ id:"rule:order-id", name:"Order identifier", version:2, propertyPath:"/commerce/order/id" }, { id:"rule:order-value", name:"Order value", version:1, propertyPath:"/commerce/order/value" }, { id:"rule:commerce", name:"Commerce shape", version:1, propertyPath:"/commerce" }];
+        const page = { id:"page-view", name:"Page view", version:3, published:true, parentSchemaId:"base", document, assignments:[], attachedRules, workingDraft:{ baseVersion:3, sourceVersion:3, parentSchemaId:"base", document, assignments:[], attachedRules, pendingChanges:[] } };
+        localStorage.clear(); localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([base, page])); localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify([{ id:"rule:order-id", name:"Order identifier", version:2, enabled:true }])); return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaPropertyRemovalObservation = await evaluate(socket, schemaPropertyRemovalRuntime);
+      await reloadPanel(socket);
+      schemaPropertyRemovalReloadObservation = await evaluate(socket, schemaPropertyRemovalReloadRuntime);
+      assert.equal(schemaPropertyRemovalObservation.immediate.absent, true);
+      assert.equal(schemaPropertyRemovalReloadObservation.restored.draftAbsent, true);
+      assert.equal(schemaPropertyRemovalReloadObservation.confirmed.reusable, true);
+      assert.equal(schemaPropertyRemovalReloadObservation.empty.publishBlocked, true);
+      socket.close(); continue;
+    }
     if (process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1") {
       freshLiveSessionObservation = await evaluate(socket, freshLiveSessionRuntime);
       assert.equal(freshLiveSessionObservation.initial.events, 12);
@@ -3128,6 +3194,9 @@ try {
   }
   if (process.env.FRESH_LIVE_SESSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ freshLiveSession:{ initial:freshLiveSessionObservation, reload:freshLiveSessionReloadObservation } }));
+  }
+  if (process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaPropertyRemoval:{ initial:schemaPropertyRemovalObservation, reload:schemaPropertyRemovalReloadObservation } }));
   }
   if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ workspacePanelContainment:workspacePanelContainmentObservation }));
