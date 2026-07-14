@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d921392e0512639b04c4483403a03d18d296eff373c8889b6e190de4639e17ac
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T11:57:41.539048724Z","feature_name":"Data layer cross-tab reattachment runtime","feature_path":"features/data-layer-cross-tab-reattachment-runtime.feature","background_hash":"2661500b6c42322288e40ee4da81e917da735cf83d8304683b65b5111145cea7","implementation_hash":"sha256:e408a374d5ba11defd0d63b9ca6c122d705add33aeb73bdaa8d0c753a9cef5e9","scenarios":[{"index":0,"name":"Data layer cross-tab reattachment runtime 001","scenario_hash":"62f2a253fae09f2082499fe60af55fc4af1c6a89bfee0bf64d4b88e9d2434c80","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T11:57:41.539048724Z"},{"index":1,"name":"Data layer cross-tab reattachment runtime 002","scenario_hash":"bb7affd8dc459011ab848b5304ef71f6a97e04384b05e4830778f5f859b1c0b8","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-14T11:57:41.539048724Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer cross-tab reattachment runtime
 
   Background:

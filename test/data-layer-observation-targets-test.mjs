@@ -4,9 +4,12 @@ import {
   closeObservationTarget,
   createObservationTarget,
   createObservationTargetState,
+  detachObservationTarget,
   endAndAttachObservationTarget,
   findObservationTargets,
   navigateObservationTarget,
+  registerObservationTarget,
+  restoreAttachedObservationTarget,
   selectObservationTarget,
   targetAccessExplanation,
   targetAccessForUrl,
@@ -14,6 +17,11 @@ import {
 } from "../dist/data-layer-observation-targets.js";
 import { findCommand, runCommandById } from "../dist/commands.js";
 import { closeObservationTargetPicker, showObservationTargetPicker } from "../dist/data-layer-observation-targets-ui.js";
+import {
+  attachedTargetRecoveryIsCurrent,
+  captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
+} from "../dist/data-layer-target-recovery.js";
 
 const checkout = createObservationTarget({
   tabId: 42,
@@ -55,6 +63,62 @@ assert.equal(closeObservationTarget(attachedCheckout, 42).sessionState, "Target 
 const permissionLost = updateObservationTargetAccess(attachedCheckout, checkout.id, "Permission required");
 assert.equal(permissionLost.attachedTargetId, undefined);
 assert.equal(permissionLost.sessionState, "Permission required");
+
+const newTarget = createObservationTarget({
+  tabId: 73,
+  windowId: 7,
+  pageUrl: "https://shop.example.test/order-confirmation",
+  title: "Order confirmation",
+});
+const recoveringOldTarget = registerObservationTarget(
+  restoreAttachedObservationTarget(checkout),
+  newTarget,
+);
+const oldSession = { session:{ id:"session-old", status:"active", tabId:42 } };
+const recoveryRequest = captureAttachedTargetRecovery(recoveringOldTarget, oldSession);
+assert.deepEqual(recoveryRequest, {
+  sessionId:"session-old",
+  targetId:checkout.id,
+  tabId:42,
+});
+const releasedForNewTarget = selectObservationTarget(
+  detachObservationTarget(recoveringOldTarget),
+  newTarget.id,
+);
+const staleBeforeStart = completeAttachedTargetRecovery(
+  releasedForNewTarget,
+  { session:{ ...oldSession.session, status:"ended" } },
+  recoveryRequest,
+  { ...checkout, title:"Stale checkout" },
+);
+assert.equal(staleBeforeStart.applied, false);
+assert.equal(staleBeforeStart.state.selectedTargetId, newTarget.id);
+assert.equal(staleBeforeStart.state.attachedTargetId, undefined);
+assert.deepEqual(staleBeforeStart.state.targets.map(({ id }) => id), [checkout.id, newTarget.id]);
+assert.equal(attachedTargetRecoveryIsCurrent(releasedForNewTarget, { session:{ ...oldSession.session, status:"ended" } }, recoveryRequest), false);
+
+const attachedNewTarget = attachSelectedObservationTarget(releasedForNewTarget).state;
+const staleAfterStart = completeAttachedTargetRecovery(
+  attachedNewTarget,
+  { session:{ id:"session-new", status:"active", tabId:73 } },
+  recoveryRequest,
+  { ...checkout, title:"Stale checkout" },
+);
+assert.equal(staleAfterStart.applied, false);
+assert.equal(staleAfterStart.state.selectedTargetId, newTarget.id);
+assert.equal(staleAfterStart.state.attachedTargetId, newTarget.id);
+assert.equal(attachedTargetRecoveryIsCurrent(attachedNewTarget, { session:{ id:"session-new", status:"active", tabId:73 } }, recoveryRequest), false);
+assert.equal(attachedTargetRecoveryIsCurrent(recoveringOldTarget, oldSession, recoveryRequest), true);
+
+const currentRecovery = completeAttachedTargetRecovery(
+  recoveringOldTarget,
+  oldSession,
+  recoveryRequest,
+  { ...checkout, title:"Recovered checkout" },
+);
+assert.equal(currentRecovery.applied, true);
+assert.equal(currentRecovery.state.targets.length, 2);
+assert.equal(currentRecovery.state.targets.find(({ id }) => id === checkout.id)?.title, "Recovered checkout");
 
 const commandEvents = [];
 for (const [id, action] of [

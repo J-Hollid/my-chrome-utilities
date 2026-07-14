@@ -16,6 +16,7 @@ import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistS
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
+import { attachedTargetRecoveryIsCurrent, captureAttachedTargetRecovery, completeAttachedTargetRecovery, } from "./data-layer-target-recovery.js";
 import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
 import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./data-layer-live-guided-workflow-ui.js";
 import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
@@ -644,18 +645,24 @@ async function requestSelectedTargetAccess(target) {
 }
 async function recoverAttachedObservationTarget() {
     const target = attachedObservationTarget(observationTargetState);
-    if (!target || typeof chrome === "undefined" || !chrome.tabs?.get)
+    const recoveryRequest = captureAttachedTargetRecovery(observationTargetState, dataLayerSessionState);
+    if (!target || !recoveryRequest || typeof chrome === "undefined" || !chrome.tabs?.get)
         return;
+    const recoveryIsCurrent = () => attachedTargetRecoveryIsCurrent(observationTargetState, dataLayerSessionState, recoveryRequest);
     try {
         const tab = await chrome.tabs.get(target.tabId);
+        if (!recoveryIsCurrent())
+            return;
         const recovered = targetFromTab(tab, target.currentWindow) ?? target;
-        observationTargetState = restoreAttachedObservationTarget({
-            ...recovered,
-            priorSession: true,
-        });
         const session = dataLayerSessionState.session;
         if (session?.status === "active") {
             const observation = await tabPageObservation(recovered.tabId, recovered.pageUrl, session.historyPath, observationPageLoadId(recovered.tabId));
+            if (!recoveryIsCurrent())
+                return;
+            const recovery = completeAttachedTargetRecovery(observationTargetState, dataLayerSessionState, recoveryRequest, recovered);
+            if (!recovery.applied)
+                return;
+            observationTargetState = recovery.state;
             if (observation.pageAccessStatus === "page access available") {
                 dataLayerObserverState = attachHistoryArrayObserver({
                     ...dataLayerObserverState,
@@ -673,6 +680,8 @@ async function recoverAttachedObservationTarget() {
         }
     }
     catch {
+        if (!recoveryIsCurrent())
+            return;
         observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Closed");
         stopLiveHistoryCapture();
         setObservationTargetResult("Target unavailable — Choose target");

@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
             [acceptance.steps.data-layer-page-context :as data-layer-page-context]
@@ -41,7 +42,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat fresh-live-session/handlers
+  (vec (concat cross-tab-reattachment/handlers
+               fresh-live-session/handlers
                lossless-observation-activation/handlers
                recursive-property-validation/handlers
                saved-session-live-feed/handlers

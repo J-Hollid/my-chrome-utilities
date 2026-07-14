@@ -96,6 +96,11 @@ import {
 import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
 import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
 import { endLiveSession } from "./data-layer-live-session-end.js";
+import {
+  attachedTargetRecoveryIsCurrent,
+  captureAttachedTargetRecovery,
+  completeAttachedTargetRecovery,
+} from "./data-layer-target-recovery.js";
 import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
 import {
   findLiveGuidedWorkflowElements,
@@ -854,14 +859,20 @@ async function requestSelectedTargetAccess(target: ObservationTarget): Promise<v
 
 async function recoverAttachedObservationTarget(): Promise<void> {
   const target = attachedObservationTarget(observationTargetState);
-  if (!target || typeof chrome === "undefined" || !chrome.tabs?.get) return;
+  const recoveryRequest = captureAttachedTargetRecovery(
+    observationTargetState,
+    dataLayerSessionState,
+  );
+  if (!target || !recoveryRequest || typeof chrome === "undefined" || !chrome.tabs?.get) return;
+  const recoveryIsCurrent = (): boolean => attachedTargetRecoveryIsCurrent(
+    observationTargetState,
+    dataLayerSessionState,
+    recoveryRequest,
+  );
   try {
     const tab = await chrome.tabs.get(target.tabId);
+    if (!recoveryIsCurrent()) return;
     const recovered = targetFromTab(tab, target.currentWindow) ?? target;
-    observationTargetState = restoreAttachedObservationTarget({
-      ...recovered,
-      priorSession: true,
-    });
     const session = dataLayerSessionState.session;
     if (session?.status === "active") {
       const observation = await tabPageObservation(
@@ -870,6 +881,15 @@ async function recoverAttachedObservationTarget(): Promise<void> {
         session.historyPath,
         observationPageLoadId(recovered.tabId),
       );
+      if (!recoveryIsCurrent()) return;
+      const recovery = completeAttachedTargetRecovery(
+        observationTargetState,
+        dataLayerSessionState,
+        recoveryRequest,
+        recovered,
+      );
+      if (!recovery.applied) return;
+      observationTargetState = recovery.state;
       if (observation.pageAccessStatus === "page access available") {
         dataLayerObserverState = attachHistoryArrayObserver(
           {
@@ -892,6 +912,7 @@ async function recoverAttachedObservationTarget(): Promise<void> {
       }
     }
   } catch {
+    if (!recoveryIsCurrent()) return;
     observationTargetState = updateObservationTargetAccess(
       observationTargetState,
       target.id,
