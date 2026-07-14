@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 
 import {
   builtInRulesForProperty,
+  canonicalRulePropertyPath,
+  configuredRuleDetails,
+  createRuleConfiguration,
   reusableRulesForProperty,
+  ruleConfigurationControls,
   ruleTypeAvailability,
+  validateRuleConfiguration,
 } from "../dist/data-layer-schema-property-rule-picker.js";
 
 const compatibility = {
@@ -43,6 +48,11 @@ for (let sample = 0; sample < 200; sample += 1) {
   const propertyType = propertyTypes[sample % propertyTypes.length];
   const incompatibleType = propertyTypes[(sample + 1) % propertyTypes.length];
   const token = nextToken();
+  assert.equal(
+    canonicalRulePropertyPath(` /root_${token} . child_${sample}/ `),
+    `/root_${token}/child_${sample}`,
+    "rule paths must use one canonical slash representation",
+  );
   const compatible = {
     id:`compatible-${token}`,
     name:`Rule ${token}`,
@@ -96,3 +106,83 @@ assert.deepEqual(
   [defaultVersionRule.id],
   "rules without an explicit version must remain searchable as version 1",
 );
+
+const validConfiguration = (ruleType, sample, token) => {
+  const propertyType = ruleType === "Numeric range"
+    ? "number"
+    : ruleType === "Item count"
+      ? "array"
+      : ruleType === "Exact value" || ruleType === "Allowed values"
+        ? ["string", "number", "boolean"][sample % 3]
+        : "string";
+  const configuration = createRuleConfiguration(ruleType, propertyType);
+  if (ruleType === "Exact value") configuration.exactValue = ` value-${token} `;
+  if (ruleType === "Allowed values") configuration.allowedValues = [` value-${token} `, "", `other-${sample}`];
+  if (ruleType === "Regular expression") configuration.pattern = `^value-${token}[0-9]*$`;
+  if (ruleType === "Text length") configuration.exactLength = ` ${sample} `;
+  if (ruleType === "Numeric range") {
+    configuration.minimum = ` ${sample - 100} `;
+    configuration.maximum = ` ${sample + 1} `;
+  }
+  if (ruleType === "Item count") configuration.minimumItemCount = ` ${sample} `;
+  return configuration;
+};
+
+const expectedDetails = (configuration) => {
+  const { ruleType } = configuration;
+  if (ruleType === "Required") return { operator:"required" };
+  if (ruleType === "Exact value") return { operator:"exact-value", parameters:configuration.exactValue };
+  if (ruleType === "Allowed values") return { operator:"allowed-values", parameters:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).join(",") };
+  if (ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
+  if (ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
+  if (ruleType === "Digits only") return { operator:"digits-only" };
+  if (ruleType === "Numeric range") return { operator:"numeric-range", parameters:`${configuration.minimum.trim()},${configuration.maximum.trim()}` };
+  return { operator:"item-count", parameters:configuration.minimumItemCount };
+};
+
+const invalidConfiguration = (ruleType, sample) => {
+  const configuration = validConfiguration(ruleType, sample, "invalid");
+  if (ruleType === "Exact value") configuration.exactValue = "   ";
+  if (ruleType === "Allowed values") configuration.allowedValues = ["", "   "];
+  if (ruleType === "Regular expression") configuration.pattern = "[";
+  if (ruleType === "Text length") configuration.exactLength = sample % 2 ? "-1" : "1.5";
+  if (ruleType === "Numeric range") {
+    configuration.minimum = sample % 3 === 0 ? "" : sample % 3 === 1 ? "not-a-number" : "10";
+    configuration.maximum = sample % 3 === 0 ? "" : sample % 3 === 1 ? "20" : "5";
+  }
+  if (ruleType === "Item count") configuration.minimumItemCount = sample % 2 ? "-1" : "1.5";
+  return configuration;
+};
+
+for (let sample = 0; sample < 200; sample += 1) {
+  const ruleType = ruleTypes[sample % ruleTypes.length];
+  const token = nextToken();
+  const configuration = validConfiguration(ruleType, sample, token);
+  const snapshot = structuredClone(configuration);
+
+  assert.deepEqual(validateRuleConfiguration(configuration), { ready:true, assistance:"Ready to create rule" }, "generated valid configurations must remain creatable");
+  assert.deepEqual(configuredRuleDetails(configuration), expectedDetails(configuration), "configured details must conserve the generated rule parameters");
+  assert.deepEqual(configuration, snapshot, "validation and formatting must not mutate configuration state");
+
+  const controls = ruleConfigurationControls(ruleType, configuration.propertyType);
+  assert.equal(new Set(controls.map(({ key }) => key)).size, controls.length, "configuration controls must have unique state keys");
+  assert.ok(controls.every(({ minimum, step }) => minimum === undefined || minimum >= 0 && step === 1), "bounded whole-number controls must expose non-negative unit steps");
+  if (ruleType === "Exact value" || ruleType === "Allowed values") {
+    assert.equal(controls[0].inputType, configuration.propertyType === "number" ? "number" : configuration.propertyType === "boolean" ? "select" : "text");
+  }
+
+  const reusable = { ...structuredClone(configuration), saveReusable:true, reusableName:"" };
+  assert.deepEqual(validateRuleConfiguration(reusable), { ready:false, assistance:"Enter a rule name" }, "reusable creation must require a non-blank name after local configuration is valid");
+  reusable.reusableName = ` Rule ${token} `;
+  assert.equal(validateRuleConfiguration(reusable).ready, true, "a generated reusable name must unblock an otherwise valid configuration");
+
+  if (ruleType !== "Required" && ruleType !== "Digits only") {
+    assert.equal(validateRuleConfiguration(invalidConfiguration(ruleType, sample)).ready, false, "generated malformed parameters must remain blocked");
+  }
+
+  const independent = createRuleConfiguration(ruleType, configuration.propertyType);
+  configuration.allowedValues.push(`mutated-${token}`);
+  assert.deepEqual(independent.allowedValues, [""], "new configurations must not share repeatable-value state");
+}
+
+console.log("schema property rule configuration properties: 200 generated cases passed");

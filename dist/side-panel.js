@@ -41,7 +41,7 @@ import { guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, reusableRulesForProperty } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
@@ -280,6 +280,7 @@ schemaManualPropertyDialog.append(schemaManualPropertyForm);
 document.body.append(schemaManualPropertyDialog);
 let schemaRulePickerPath;
 let schemaRulePickerTrigger;
+let schemaRuleConfiguration;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
@@ -1170,8 +1171,8 @@ function renderSchemaDraft() {
         const metadata = document.createElement("span");
         metadata.className = "schema-property-metadata";
         metadata.textContent = `${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
-        const persistedPath = path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
-        const attached = (draft.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedPath);
+        const persistedPath = canonicalRulePropertyPath(path);
+        const attached = (draft.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === persistedPath);
         const count = document.createElement("span");
         count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
         const add = document.createElement("button");
@@ -1836,20 +1837,200 @@ function schemaPropertyType(path) {
         document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
     return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
 }
-function persistedSchemaRulePath(path) {
-    return path.includes(".") ? `/${path.replaceAll(".", "/")}` : path;
-}
 function closeSchemaPropertyRulePicker() {
     if (schemaPropertyRulePicker.open)
         schemaPropertyRulePicker.close();
     schemaRulePickerTrigger?.focus({ preventScroll: true });
     schemaRulePickerPath = undefined;
+    schemaRuleConfiguration = undefined;
+}
+function configuredRuleInput(control, configuration, updateValidation) {
+    const label = document.createElement("label");
+    const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
+    input.id = `schema-local-rule-${control.key}`;
+    label.htmlFor = input.id;
+    label.textContent = `${control.label}${control.optional ? " (optional)" : ""}`;
+    if (input instanceof HTMLInputElement) {
+        input.type = control.inputType;
+        if (control.minimum !== undefined)
+            input.min = String(control.minimum);
+        if (control.step !== undefined)
+            input.step = String(control.step);
+    }
+    else
+        input.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose a value" }), Object.assign(document.createElement("option"), { value: "true", textContent: "true" }), Object.assign(document.createElement("option"), { value: "false", textContent: "false" }));
+    const current = control.key === "exactValue" ? configuration.exactValue
+        : control.key === "pattern" ? configuration.pattern
+            : control.key === "exactLength" ? configuration.exactLength
+                : control.key === "minimum" ? configuration.minimum
+                    : control.key === "maximum" ? configuration.maximum
+                        : configuration.minimumItemCount;
+    input.value = current;
+    input.addEventListener("input", () => {
+        if (control.key === "exactValue")
+            configuration.exactValue = input.value;
+        else if (control.key === "pattern")
+            configuration.pattern = input.value;
+        else if (control.key === "exactLength")
+            configuration.exactLength = input.value;
+        else if (control.key === "minimum")
+            configuration.minimum = input.value;
+        else if (control.key === "maximum")
+            configuration.maximum = input.value;
+        else if (control.key === "minimumItemCount")
+            configuration.minimumItemCount = input.value;
+        updateValidation();
+    });
+    const wrapper = document.createElement("div");
+    wrapper.append(label, input);
+    return wrapper;
+}
+function createConfiguredSchemaRule(path, configuration) {
+    if (!schemaDraft || !validateRuleConfiguration(configuration).ready)
+        return;
+    const details = configuredRuleDetails(configuration);
+    const id = configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`;
+    const name = configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`;
+    const rule = {
+        id, name, kind: configuration.ruleType, version: 1, enabled: true,
+        applicableType: configuration.propertyType,
+        operator: details.operator,
+        ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
+        severity: configuration.severity,
+        ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
+        ...(configuration.saveReusable && configuration.description.trim() ? { description: configuration.description.trim() } : {}),
+        ...(configuration.saveReusable && schemaDraft.id ? { attachments: [schemaDraft.id] } : {}),
+    };
+    if (configuration.saveReusable) {
+        reusableSchemaRules = [...reusableSchemaRules.filter((candidate) => candidate.id !== id), rule];
+        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+        renderSchemaWorkflowRows();
+    }
+    closeSchemaPropertyRulePicker();
+    attachReusableRule(path, rule);
+    schemaPropertyTree.querySelector(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll: true });
+}
+function renderSchemaLocalRuleConfiguration(path, configuration) {
+    const heading = document.createElement("h4");
+    heading.id = "schema-property-rule-picker-heading";
+    heading.textContent = `Configure ${configuration.ruleType} for ${path}`;
+    const context = document.createElement("p");
+    context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}`;
+    const form = document.createElement("form");
+    form.id = "schema-local-rule-configuration";
+    const parameters = document.createElement("fieldset");
+    parameters.id = "schema-local-rule-parameters";
+    parameters.append(Object.assign(document.createElement("legend"), { textContent: "Rule parameters" }));
+    const controls = ruleConfigurationControls(configuration.ruleType, configuration.propertyType);
+    if (!controls.length)
+        parameters.append(Object.assign(document.createElement("p"), { textContent: "No parameter controls" }));
+    const status = document.createElement("p");
+    status.id = "schema-local-rule-assistance";
+    status.setAttribute("role", "status");
+    const create = document.createElement("button");
+    create.type = "submit";
+    create.textContent = "Create rule";
+    const refreshValidation = () => { const validation = validateRuleConfiguration(configuration); create.disabled = !validation.ready; status.textContent = validation.assistance; };
+    for (const control of controls) {
+        if (!control.repeatable) {
+            parameters.append(configuredRuleInput(control, configuration, refreshValidation));
+            continue;
+        }
+        const values = document.createElement("fieldset");
+        values.id = "schema-local-rule-allowed-values";
+        values.append(Object.assign(document.createElement("legend"), { textContent: "Allowed values" }));
+        configuration.allowedValues.forEach((value, index) => {
+            const row = document.createElement("div");
+            row.className = "schema-local-rule-value";
+            const label = document.createElement("label");
+            const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
+            const remove = document.createElement("button");
+            input.id = `schema-local-rule-allowed-value-${index + 1}`;
+            if (input instanceof HTMLInputElement)
+                input.type = control.inputType === "number" ? "number" : "text";
+            else
+                input.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose a value" }), Object.assign(document.createElement("option"), { value: "true", textContent: "true" }), Object.assign(document.createElement("option"), { value: "false", textContent: "false" }));
+            input.value = value;
+            label.htmlFor = input.id;
+            label.textContent = `Allowed value ${index + 1}`;
+            remove.type = "button";
+            remove.textContent = `Remove value ${index + 1}`;
+            input.addEventListener("input", () => { configuration.allowedValues[index] = input.value; refreshValidation(); });
+            remove.addEventListener("click", () => { configuration.allowedValues.splice(index, 1); renderSchemaPropertyRulePicker(); });
+            row.append(label, input, remove);
+            values.append(row);
+        });
+        const add = document.createElement("button");
+        add.type = "button";
+        add.textContent = "Add another value";
+        add.addEventListener("click", () => { configuration.allowedValues.push(""); renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector(`#schema-local-rule-allowed-value-${configuration.allowedValues.length}`)?.focus(); });
+        values.append(add);
+        parameters.append(values);
+    }
+    const severityLabel = document.createElement("label");
+    const severity = document.createElement("select");
+    severityLabel.htmlFor = severity.id = "schema-local-rule-severity";
+    severityLabel.textContent = "Severity";
+    severity.append(...["error", "warning"].map((value) => Object.assign(document.createElement("option"), { value, textContent: value, selected: configuration.severity === value })));
+    severity.addEventListener("change", () => { configuration.severity = severity.value; refreshValidation(); });
+    const messageLabel = document.createElement("label");
+    const message = document.createElement("input");
+    message.id = "schema-local-rule-message";
+    messageLabel.htmlFor = message.id;
+    messageLabel.textContent = "Issue message (optional)";
+    message.value = configuration.message;
+    message.addEventListener("input", () => { configuration.message = message.value; });
+    const reusableLabel = document.createElement("label");
+    const reusable = document.createElement("input");
+    reusable.id = "schema-local-rule-reusable";
+    reusable.type = "checkbox";
+    reusable.checked = configuration.saveReusable;
+    reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
+    reusable.addEventListener("change", () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector("#schema-local-rule-reusable")?.focus(); });
+    form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, reusableLabel);
+    if (configuration.saveReusable) {
+        const explanation = document.createElement("p");
+        explanation.id = "schema-local-rule-reusable-explanation";
+        explanation.textContent = "This reusable rule will be available to other schemas.";
+        const nameLabel = document.createElement("label");
+        const name = document.createElement("input");
+        name.id = "schema-local-rule-name";
+        name.required = true;
+        name.value = configuration.reusableName;
+        nameLabel.htmlFor = name.id;
+        nameLabel.textContent = "Rule name";
+        name.addEventListener("input", () => { configuration.reusableName = name.value; refreshValidation(); });
+        const descriptionLabel = document.createElement("label");
+        const description = document.createElement("textarea");
+        description.id = "schema-local-rule-description";
+        description.value = configuration.description;
+        descriptionLabel.htmlFor = description.id;
+        descriptionLabel.textContent = "Description (optional)";
+        description.addEventListener("input", () => { configuration.description = description.value; });
+        form.append(explanation, nameLabel, name, descriptionLabel, description);
+    }
+    const back = document.createElement("button");
+    back.type = "button";
+    back.textContent = "Back to rule choices";
+    back.addEventListener("click", () => { schemaRuleConfiguration = undefined; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector("#schema-property-rule-search")?.focus(); });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", closeSchemaPropertyRulePicker);
+    form.append(status, create, back, cancel);
+    form.addEventListener("submit", (event) => { event.preventDefault(); createConfiguredSchemaRule(path, configuration); });
+    schemaPropertyRulePicker.replaceChildren(form);
+    refreshValidation();
 }
 function renderSchemaPropertyRulePicker() {
     const path = schemaRulePickerPath;
     if (!path)
         return;
     const propertyType = schemaPropertyType(path);
+    if (schemaRuleConfiguration) {
+        renderSchemaLocalRuleConfiguration(path, schemaRuleConfiguration);
+        return;
+    }
     const previousQuery = schemaPropertyRulePicker.querySelector("#schema-property-rule-search")?.value ?? "";
     const heading = document.createElement("h4");
     heading.id = "schema-property-rule-picker-heading";
@@ -1865,7 +2046,7 @@ function renderSchemaPropertyRulePicker() {
     results.id = "schema-property-rule-results";
     const normalized = previousQuery.trim().toLowerCase();
     const builtIns = builtInRulesForProperty(propertyType).filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
-    const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => rule.propertyPath === persistedSchemaRulePath(path)).map(({ id }) => id));
+    const attachedIds = new Set((schemaDraft?.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === canonicalRulePropertyPath(path)).map(({ id }) => id));
     const reusable = reusableRulesForProperty(reusableSchemaRules, propertyType, previousQuery, attachedIds);
     const resultButton = (label, metadata, action, disabled = false) => {
         const article = document.createElement("article");
@@ -1882,10 +2063,8 @@ function renderSchemaPropertyRulePicker() {
     const create = document.createElement("section");
     create.setAttribute("aria-label", "Create a rule");
     create.append(Object.assign(document.createElement("h5"), { textContent: "Create a rule" }), ...builtIns.map((rule) => resultButton(rule.name, `${rule.operator} · no parameters · type ${propertyType}`, () => {
-        const configuration = document.createElement("section");
-        configuration.id = "schema-local-rule-configuration";
-        configuration.append(Object.assign(document.createElement("h5"), { textContent: `Configure ${rule.name} for ${path}` }), Object.assign(document.createElement("p"), { textContent: `Local ${rule.operator} rule · type ${propertyType}` }));
-        results.replaceChildren(configuration);
+        schemaRuleConfiguration = createRuleConfiguration(rule.name, propertyType);
+        renderSchemaPropertyRulePicker();
     })));
     const library = document.createElement("section");
     library.setAttribute("aria-label", "Attach from Rule Library");
@@ -1918,6 +2097,7 @@ function renderSchemaPropertyRulePicker() {
 function openSchemaPropertyRulePicker(path, trigger) {
     selectedSchemaPropertyPath = schemaRulePickerPath = path;
     schemaRulePickerTrigger = trigger;
+    schemaRuleConfiguration = undefined;
     renderSchemaPropertyRulePicker();
     schemaPropertyRulePicker.showModal();
     schemaPropertyRulePicker.querySelector("#schema-property-rule-search")?.focus({ preventScroll: true });
@@ -1962,7 +2142,7 @@ schemaSpecificIndexDialog.addEventListener("cancel", (event) => { event.preventD
 function attachReusableRule(path, rule) {
     if (!schemaDraft)
         return;
-    const propertyPath = persistedSchemaRulePath(path);
+    const propertyPath = canonicalRulePropertyPath(path);
     const attachment = {
         id: rule.id,
         name: rule.name,
@@ -1984,7 +2164,7 @@ function updateAttachedRule(path, id, update) {
     if (!schemaDraft)
         return;
     const attachedRules = (schemaDraft.attachedRules ?? []).flatMap((rule) => {
-        if (rule.id !== id || rule.propertyPath !== path)
+        if (rule.id !== id || canonicalRulePropertyPath(rule.propertyPath ?? "") !== canonicalRulePropertyPath(path))
             return [rule];
         const next = update(rule);
         return next ? [next] : [];
