@@ -347,10 +347,18 @@ function issueFromAttachedRule(
   };
 }
 
+function observedValueText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === undefined) return "undefined";
+  try { return JSON.stringify(value) ?? String(value); }
+  catch { return String(value); }
+}
+
 function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): Pick<ValidationIssue, "message" | "expected" | "actual"> | undefined {
   const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
-  const actual = match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing";
+  const actual = match.exists ? observedValueText(match.value) : "missing";
   if (operator === "required") return match.exists ? undefined : { message:"Required value", expected:"value", actual };
+  if (!match.exists) return undefined;
   if (operator === "exact-value") return match.exists && String(match.value) === (rule.parameters ?? "") ? undefined : { message:"Value is not exact", expected:rule.parameters ?? "value", actual };
   if (operator === "value-type") {
     const valueType = Array.isArray(match.value) ? "array" : typeof match.value;
@@ -452,12 +460,25 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
     if (rule.propertyPath?.startsWith("/")) {
       return resolveNestedValues(value, rule.propertyPath).map((match): ValidationEvaluation => {
         const failure = nestedRuleFailure(rule, match);
+        const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
+        if (!match.exists && operator !== "required") return {
+          propertyPath:match.concretePath,
+          status:"not-applicable",
+          message:rule.message ?? `${rule.name ?? rule.id} is not applicable because the optional target is absent`,
+          expected:rule.parameters ?? "optional value rule",
+          actual:"missing",
+          rule:rule.name ?? rule.id,
+          ruleVersion:rule.version,
+          severity:rule.severity ?? "error",
+          schemaName:schema.name,
+          schemaVersion:schema.version,
+        };
         if (!failure) return {
           propertyPath:match.concretePath,
           status:"pass",
           message:rule.message ?? `${rule.name ?? rule.id} passed`,
           expected:rule.parameters ?? "rule satisfied",
-          actual:match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing",
+          actual:match.exists ? observedValueText(match.value) : "missing",
           rule:rule.name ?? rule.id,
           ruleVersion:rule.version,
           severity:rule.severity ?? "error",
@@ -487,7 +508,10 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
     attachedRuleIssues(value, schema, issues, [rule]);
     const propertyPath = rule.propertyPath ?? rule.parameters?.split(":", 1)[0]?.split(",", 1)[0]?.trim() ?? "";
     const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
-    const actual = propertyPath && record && propertyPath in record ? String(record[propertyPath]) : "missing";
+    const present = Boolean(propertyPath && record && propertyPath in record);
+    const actual = present ? String(record?.[propertyPath]) : "missing";
+    const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
+    if (!present && operator !== "required") return [{ propertyPath, status:"not-applicable" as const, message:rule.message ?? `${rule.name ?? rule.id} is not applicable because the optional target is absent`, expected:rule.parameters?.split(":", 2)[1] ?? "optional value rule", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
     if (!issues.length) return [{ propertyPath, status:"pass" as const, message:rule.message ?? `${rule.name ?? rule.id} passed`, expected:rule.parameters?.split(":", 2)[1] ?? "rule satisfied", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
     return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }));
   });

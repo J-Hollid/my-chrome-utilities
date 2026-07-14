@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=14eaf42427f9f9711f4c80c22150d1115dd0deda7bc633f62821b91842b60b7d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T15:36:34.855620285Z","feature_name":"Data layer conditional validation rules","feature_path":"features/data-layer-conditional-validation-rules.feature","background_hash":"4b7c7e25293a42e1befc1ca98c9c07fe75ca9fabdd36b4597baa4a30bcea2aaf","implementation_hash":"sha256:cf568b7933adaa747518c612b62c2088509f9c1511d587c96cae0992a79f5799","scenarios":[{"index":1,"name":"Data layer conditional validation rules 002","scenario_hash":"c17d1c9cd3e5dc5d2cc9981173965d7d82395d5114a470d72e8f9448a0440990","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:36:34.855620285Z"},{"index":2,"name":"Data layer conditional validation rules 003","scenario_hash":"e8de0687fc46b5c3fa871878e8638d01827b58bbb5fc58de51ad4e877e43e805","mutation_count":48,"result":{"Total":48,"Killed":48,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:36:34.855620285Z"},{"index":3,"name":"Data layer conditional validation rules 004","scenario_hash":"de58ba75eb06a61b6bf80a3aec38ba45cca22d029ffa5e66088f565b6302848d","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:36:34.855620285Z"},{"index":4,"name":"Data layer conditional validation rules 005","scenario_hash":"f3f5c39e9d1bd3ceb8a026f41d935c5ad19a882a8b77c3390b95e572f782a0cf","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:36:34.855620285Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer conditional validation rules
 
   Background:

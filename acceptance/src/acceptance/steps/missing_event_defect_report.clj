@@ -1,6 +1,5 @@
 (ns acceptance.steps.missing-event-defect-report
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
             [clojure.string :as str]))
 
 (def feature-files
@@ -15,13 +14,10 @@
 (defonce browser-observation (atom nil))
 
 (defn verify-model! []
-  (when-not @model-verified?
-    (let [result (process/shell support/build-shell-options
-                                "node" "test/data-layer-missing-event-defect-report-test.mjs")]
-      (support/assert! (zero? (:exit result))
-                       (str "Missing-event defect-report model verification failed. " (:err result))
-                       {:out (:out result) :err (:err result)})
-      (reset! model-verified? true))))
+  (support/cached-command-verification!
+   model-verified?
+   "Missing-event defect-report model verification failed. "
+   "node" "test/data-layer-missing-event-defect-report-test.mjs"))
 
 (defn browser-observation! []
   (support/cached-browser-observation!
@@ -106,12 +102,9 @@
    "Missing-event defect-report example value was outside the specified contract."))
 
 (defn transition [world example _captures {:keys [text]}]
-  (let [mode (or (entry-modes text) (:missing-event-defect-report-mode world))]
-    (support/assert! mode "Missing-event defect-report scenario did not establish its mode." {:step text})
-    (verify-model!)
-    (validate-example! mode example)
-    (when (= mode :runtime) (assert-runtime-boundary! (browser-observation!)))
-    (assoc world :missing-event-defect-report-mode mode)))
+  (support/mode-transition
+   world example text entry-modes :missing-event-defect-report-mode
+   verify-model! validate-example! #(assert-runtime-boundary! (browser-observation!))))
 
 (def handlers
   (support/stateful-semantic-handlers
@@ -121,5 +114,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T16:29:57.565288867+02:00", :module-hash "317866169", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1298890434"} {:id "def/feature-files", :kind "def", :line 6, :end-line 8, :hash "-1892854164"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-427372276"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 17, :end-line 24, :hash "670621551"} {:id "defn/browser-observation!", :kind "defn", :line 26, :end-line 32, :hash "-631967216"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 34, :end-line 84, :hash "-623924689"} {:id "def/runtime-example-values", :kind "def", :line 86, :end-line 93, :hash "712444672"} {:id "def/model-example-values", :kind "def", :line 95, :end-line 99, :hash "689559748"} {:id "defn/validate-example!", :kind "defn", :line 101, :end-line 106, :hash "1431160330"} {:id "defn/transition", :kind "defn", :line 108, :end-line 114, :hash "1634536681"} {:id "def/handlers", :kind "def", :line 116, :end-line 121, :hash "486454608"}]}
+;; {:version 1, :tested-at "2026-07-14T17:34:11.403562798+02:00", :module-hash "2107318493", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1176431238"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1892854164"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-427372276"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 16, :end-line 20, :hash "10021055"} {:id "defn/browser-observation!", :kind "defn", :line 22, :end-line 28, :hash "-631967216"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 30, :end-line 80, :hash "-623924689"} {:id "def/runtime-example-values", :kind "def", :line 82, :end-line 89, :hash "712444672"} {:id "def/model-example-values", :kind "def", :line 91, :end-line 95, :hash "689559748"} {:id "defn/validate-example!", :kind "defn", :line 97, :end-line 102, :hash "1431160330"} {:id "defn/transition", :kind "defn", :line 104, :end-line 107, :hash "-47828682"} {:id "def/handlers", :kind "def", :line 109, :end-line 114, :hash "486454608"}]}
 ;; clj-mutate-manifest-end
