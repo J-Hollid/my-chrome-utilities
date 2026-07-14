@@ -235,6 +235,7 @@ export function createMissingEventReport(draft, timelineEventIds = [], manualSte
         expected,
         expectedPayload,
         expectedResponseSources: clone(composition.expectedResponseSources ?? {}),
+        expectedResponseProvenance: clone(composition.expectedResponseProvenance ?? {}),
         summary: composition.summary ?? `Missing event: ${expectation.eventName}`,
         description: composition.description ?? `${expectation.eventName} was expected during ${draft.scope.pathname}, but no matching event was captured.`,
         expectedExplanation: composition.expectedExplanation ?? expectation.explanation,
@@ -269,7 +270,10 @@ export function generateMissingEventRepresentations(report) {
         : `Selected page visit ${report.scope.pathname} (${report.scope.id}); 0 matching events`;
     const expectedPayload = clone(report.expectedPayload ?? {});
     const payloadSentence = expectedPayloadPresentation(report.expectation.eventName, expectedPayload);
-    const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => `${pointer} response source: ${source}`).join("\n");
+    const expectedSources = Object.entries(report.expectedResponseSources ?? {}).map(([pointer, source]) => {
+        const provenance = report.expectedResponseProvenance?.[pointer];
+        return `${pointer} response source: ${source}${provenance ? ` (${provenance.name ?? provenance.id} revision ${provenance.version})` : ""}`;
+    }).join("\n");
     const expectedResult = [report.expected, report.expectedExplanation, payloadSentence, expectedSources, JSON.stringify(expectedPayload, null, 2)].filter(Boolean).join("\n");
     const sections = [
         ["Summary", report.summary ?? `Missing event: ${report.expectation.eventName}`],

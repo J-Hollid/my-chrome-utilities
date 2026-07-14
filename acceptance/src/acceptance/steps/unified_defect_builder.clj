@@ -62,7 +62,8 @@
                           (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
                           (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
                           (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
-                          (str/includes? (:preview nested) "pageview is fired with {\"page_name\":\"test\",\"products\":[{\"id\":1,\"name\":\"robot\"}]}")
+                          (str/includes? (:preview nested) "pageview is fired with\n")
+                          (not (str/includes? (:preview nested) "{\"page_name\":\"test\""))
                           (str/includes? (:html nested) "&quot;products&quot;: ["))
                      "Recursive typed expected-payload editing or shared representation diverged."
                      nested)

@@ -101,8 +101,9 @@ for (const representation of [rendered.previewText, rendered.jiraText, rendered.
   assert.doesNotMatch(representation, /Actual JSON|validation differences|transaction_id.*:/i);
 }
 for (const representation of [rendered.previewText, rendered.jiraText]) {
-  assert.match(representation, /purchase is fired with \{"page_name":"test","products":\[\{"id":1,"name":"robot"\}\]\}/i);
+  assert.equal(representation.match(/purchase is fired with/gi)?.length,1);
   assert.match(representation, /"products": \[/);
+  assert.doesNotMatch(representation,/\{"page_name":"test","products":/);
 }
 assert.match(rendered.previewHtml, /&quot;products&quot;: \[/);
 assert.deepEqual(rendered.expectedPayload, expectedPayload);

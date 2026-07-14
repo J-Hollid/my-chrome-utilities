@@ -4,8 +4,10 @@ import {
   createExpectedPayloadDraft,
   duplicateExpectedArrayItem,
   expectedPayloadComplete,
+  expectedPayloadEvaluation,
   expectedPayloadFields,
   expectedPayloadPresentation,
+  normalizedExpectedPayloadSchema,
   expectedPropertyChoices,
   expectedPropertyPresentation,
   missingEventActualPresentation,
@@ -62,7 +64,7 @@ payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/products/0/n
 assert.deepEqual(payloadDraft.payload,{page_name:"test",products:[{id:1,name:"robot"}]});
 assert.deepEqual(payloadDraft.responseSources,{"/page_name":"schema-provided value","/products/0/id":"operator custom response","/products/0/name":"operator custom response"});
 assert.equal(expectedPayloadComplete(recursiveSchema,payloadDraft),true);
-assert.equal(expectedPayloadPresentation("pageview",payloadDraft.payload),'pageview is fired with {"page_name":"test","products":[{"id":1,"name":"robot"}]}');
+assert.equal(expectedPayloadPresentation("pageview",payloadDraft.payload),"pageview is fired with");
 payloadDraft=addExpectedArrayItem(recursiveSchema,payloadDraft,"/products");
 payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/products/1/id",{method:"custom",value:"2"});
 payloadDraft=setExpectedPayloadValue(recursiveSchema,payloadDraft,"/products/1/name",{method:"schema-value",value:"vehicle"});
@@ -88,6 +90,58 @@ assert.deepEqual(optionalArrayDraft.payload,{});
 optionalArrayDraft=addExpectedArrayItem(optionalArraySchema,optionalArrayDraft,"/tags");
 optionalArrayDraft=setExpectedPayloadValue(optionalArraySchema,optionalArrayDraft,"/tags/0",{method:"custom",value:"reviewed"});
 assert.deepEqual(optionalArrayDraft.payload,{tags:["reviewed"]});
+
+const flatSchema={
+  id:"schema:flat-pageview",name:"Generic pageview",version:4,
+  document:{type:"object",required:["/page_levels","/page_type","/page_section","/login_status","/b_id"],properties:{
+    "/page_levels":{type:"array"},
+    "/page_levels/0":{type:"string"},
+    "/page_type":{type:"string"},
+    "/page_section":{type:"string"},
+    "/login_status":{type:"string"},
+    "/b_id":{type:"string"},
+    "/products/*/name":{type:"string"},
+    "/untyped_list":{type:"array"},
+  }},
+  assignments:[],
+  attachedRules:[
+    {id:"page-levels",name:"Page level values",version:2,propertyPath:"/page_levels/*",operator:"allowed-values",allowedValues:["d","c"]},
+    {id:"page-type",name:"Page type values",version:3,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product_detail","content"]},
+    {id:"login-state",name:"Login values",version:1,propertyPath:"/login_status",operator:"allowed-values",allowedValues:["not logged in","logged in"]},
+    {id:"page-section-required",name:"Page section required",version:1,propertyPath:"/page_section",operator:"required"},
+  ],
+};
+const storedFlatSchema=JSON.stringify(flatSchema);
+const normalizedFlatSchema=normalizedExpectedPayloadSchema(flatSchema);
+assert.deepEqual(normalizedFlatSchema.document.required,["page_levels","page_type","page_section","login_status","b_id"]);
+assert.deepEqual(normalizedFlatSchema.document.properties.page_levels,{type:"array",items:{type:"string"}});
+assert.deepEqual(normalizedFlatSchema.document.properties.products,{type:"array",items:{type:"object",properties:{name:{type:"string"}}}});
+assert.equal(JSON.stringify(flatSchema),storedFlatSchema,"normalization must not mutate the persisted schema revision");
+assert.deepEqual(expectedPayloadFields(flatSchema).map(({path,pointer,type})=>({path,pointer,type})),[
+  {path:"page_levels",pointer:"/page_levels",type:"array"},
+  {path:"page_levels.0",pointer:"/page_levels/0",type:"string"},
+  {path:"page_type",pointer:"/page_type",type:"string"},
+  {path:"page_section",pointer:"/page_section",type:"string"},
+  {path:"login_status",pointer:"/login_status",type:"string"},
+  {path:"b_id",pointer:"/b_id",type:"string"},
+  {path:"products",pointer:"/products",type:"array"},
+  {path:"products.0",pointer:"/products/0",type:"object"},
+  {path:"products.0.name",pointer:"/products/0/name",type:"string"},
+  {path:"untyped_list",pointer:"/untyped_list",type:"array"},
+]);
+let flatDraft=createExpectedPayloadDraft(flatSchema);
+assert.deepEqual(flatDraft.payload,{page_levels:[]});
+flatDraft=addExpectedArrayItem(flatSchema,flatDraft,"/page_levels");
+assert.deepEqual(flatDraft.payload,{page_levels:[null]});
+flatDraft=setExpectedPayloadValue(flatSchema,flatDraft,"/page_levels/0",{method:"schema-value",value:"d"});
+flatDraft=setExpectedPayloadValue(flatSchema,flatDraft,"/page_type",{method:"schema-value",value:"product_detail"});
+flatDraft=setExpectedPayloadValue(flatSchema,flatDraft,"/page_section",{method:"custom",value:"product"});
+flatDraft=setExpectedPayloadValue(flatSchema,flatDraft,"/login_status",{method:"schema-value",value:"logged in"});
+flatDraft=setExpectedPayloadValue(flatSchema,flatDraft,"/b_id",{method:"custom",value:123});
+assert.deepEqual(flatDraft.payload,{page_levels:["d"],page_type:"product_detail",page_section:"product",login_status:"logged in",b_id:"123"});
+assert.deepEqual(flatDraft.responseProvenance["/page_levels/0"],{id:"page-levels",name:"Page level values",version:2,propertyPath:"/page_levels/*"});
+assert.equal(expectedPayloadEvaluation(flatSchema,flatDraft).state,"Valid");
+assert.throws(()=>addExpectedArrayItem(flatSchema,flatDraft,"/untyped_list"),/item type must be defined/i);
 
 const visits=[{id:"products",pathname:"/products"},{id:"checkout",pathname:"/checkout"},{id:"confirmation",pathname:"/confirmation"}];
 const initial=reconcileMissingEventJourney(visits,"products","checkout",[],{eventName:"purchase",sourceId:"event-history"});

@@ -25,6 +25,7 @@
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
+            [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
@@ -54,6 +55,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
                local-rule-promotion/handlers
                allowed-value-expansion/handlers

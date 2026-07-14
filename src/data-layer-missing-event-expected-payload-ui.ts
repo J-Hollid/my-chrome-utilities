@@ -3,6 +3,7 @@ import {
   addExpectedArrayItem,
   duplicateExpectedArrayItem,
   expectedPayloadFields,
+  normalizedExpectedPayloadSchema,
   removeExpectedArrayItem,
   removeExpectedPayloadValue,
   setExpectedPayloadValue,
@@ -14,6 +15,7 @@ export interface ExpectedPayloadEditorState {
   draft(): ExpectedPayloadDraft;
   update(draft: ExpectedPayloadDraft): void;
   refresh(): void;
+  issues?(): readonly { instancePath:string; message:string }[];
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -41,13 +43,19 @@ export function renderExpectedPayloadEditor(
   schema: SchemaDefinition,
   state: ExpectedPayloadEditorState,
 ): void {
+  const normalizedSchema = normalizedExpectedPayloadSchema(schema);
   const fieldTemplates = expectedPayloadFields(schema);
   const fieldAt = (pointer: string): ExpectedPayloadField | undefined => fieldTemplates.find((field) => field.pointer === templatePointer(pointer));
 
-  const update = (draft: ExpectedPayloadDraft) => {
+  const issueText = (pointer: string) => state.issues?.().filter((issue) => issue.instancePath === pointer).map(({ message }) => message).join("; ") ?? "";
+
+  const update = (draft: ExpectedPayloadDraft, focusAfterRender?: () => HTMLElement | null) => {
+    const scrollTop = root.scrollTop;
     state.update(draft);
     render();
     state.refresh();
+    root.scrollTop = scrollTop;
+    focusAfterRender?.()?.focus({ preventScroll:true });
   };
 
   const renderLeaf = (definition: JsonSchema, path: string, pointer: string, required: boolean): HTMLElement => {
@@ -82,11 +90,24 @@ export function renderExpectedPayloadEditor(
     custom.value = current === undefined ? "" : String(current);
     custom.addEventListener("input", () => {
       if (definition.type === "number" && custom.value === "") return;
-      update(setExpectedPayloadValue(schema, state.draft(), pointer, { method:"custom", value:custom.value }));
+      state.update(setExpectedPayloadValue(schema, state.draft(), pointer, { method:"custom", value:custom.value }));
+      const message = issueText(pointer);
+      issue.textContent = message;
+      issue.hidden = !message;
+      custom.setAttribute("aria-invalid", String(Boolean(message)));
+      source.textContent = state.draft().responseSources[pointer] ?? "Choose a schema value or enter a custom response.";
+      provenance.textContent = "";
+      state.refresh();
     });
     customLabel.append(custom); wrapper.append(customLabel);
     const source = element("output", state.draft().responseSources[pointer] ?? "Choose a schema value or enter a custom response.");
     source.dataset.expectedResponseSource = pointer; wrapper.append(source);
+    const provenanceValue = state.draft().responseProvenance?.[pointer];
+    const provenance = element("output", provenanceValue ? `${provenanceValue.name ?? provenanceValue.id} revision ${provenanceValue.version}` : "");
+    provenance.dataset.expectedResponseProvenance = pointer; wrapper.append(provenance);
+    const message = issueText(pointer);
+    const issue = element("p", message); issue.dataset.expectedPayloadIssue = pointer; issue.hidden = !message; wrapper.append(issue);
+    custom.setAttribute("aria-invalid", String(Boolean(message)));
     return wrapper;
   };
 
@@ -109,11 +130,19 @@ export function renderExpectedPayloadEditor(
     const values = pointerValue(state.draft().payload, pointer);
     const items = Array.isArray(values) ? values : [];
     const add = element("button", `Add ${path} item`); add.type = "button";
-    add.addEventListener("click", () => update(addExpectedArrayItem(schema, state.draft(), pointer)));
+    if (!definition.items) {
+      add.disabled = true;
+      add.setAttribute("aria-disabled", "true");
+    } else add.addEventListener("click", () => update(addExpectedArrayItem(schema, state.draft(), pointer), () => {
+      const created = Array.from(root.querySelectorAll<HTMLElement>("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${items.length}`);
+      return created?.querySelector<HTMLElement>("input, button") ?? add;
+    }));
     container.append(add);
+    if (!definition.items) container.append(element("p", `The array item type must be defined before ${path} items can be added.`));
     if (!items.length && definition.items) {
       const template = element("p", `Array item template: ${path}.0 · ${definition.items.type ?? "value"}`);
       template.dataset.expectedArrayItemTemplate = `${path}.0`;
+      template.dataset.jsonPointer = `${pointer}/0`;
       for (const field of fieldTemplates.filter(({ path:fieldPath }) => fieldPath.startsWith(`${path}.0.`))) template.append(element("span", ` ${field.path} · ${field.type}${field.required ? " · required" : ""}`));
       container.append(template);
     }
@@ -121,9 +150,16 @@ export function renderExpectedPayloadEditor(
       const item = element("details"); item.open = true; item.dataset.expectedArrayItem = `${pointer}/${index}`;
       item.append(element("summary", `${path}.${index} · ${definition.items?.type ?? "value"}`));
       const duplicate = element("button", `Duplicate ${path} item ${index + 1}`); duplicate.type = "button";
-      duplicate.addEventListener("click", () => update(duplicateExpectedArrayItem(schema, state.draft(), pointer, index)));
+      duplicate.addEventListener("click", () => update(duplicateExpectedArrayItem(schema, state.draft(), pointer, index), () => {
+        const created = Array.from(root.querySelectorAll<HTMLElement>("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${index + 1}`);
+        return created?.querySelector<HTMLElement>("input, button") ?? null;
+      }));
       const remove = element("button", `Remove ${path} item ${index + 1}`); remove.type = "button";
-      remove.addEventListener("click", () => update(removeExpectedArrayItem(schema, state.draft(), pointer, index)));
+      remove.addEventListener("click", () => update(removeExpectedArrayItem(schema, state.draft(), pointer, index), () => {
+        const retainedIndex = Math.min(index, items.length - 2);
+        const retained = Array.from(root.querySelectorAll<HTMLElement>("[data-expected-array-item]")).find((candidate) => candidate.dataset.expectedArrayItem === `${pointer}/${retainedIndex}`);
+        return retained?.querySelector<HTMLElement>("input, button") ?? Array.from(root.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === `Add ${path} item`) ?? null;
+      }));
       item.append(duplicate, remove);
       if (definition.items) item.append(renderNode(definition.items, `${path}.${index}`, `${pointer}/${index}`, true));
       container.append(item);
@@ -134,9 +170,9 @@ export function renderExpectedPayloadEditor(
   const render = () => {
     const heading = element("h6", "Expected payload from schema");
     const tree = element("section"); tree.setAttribute("aria-label", "Recursive expected payload editor");
-    if (schema.document.type === "object") {
-      const requiredProperties = new Set(schema.document.required ?? []);
-      for (const [property, child] of Object.entries(schema.document.properties ?? {})) tree.append(renderNode(child, property, `/${property.replaceAll("~", "~0").replaceAll("/", "~1")}`, requiredProperties.has(property)));
+    if (normalizedSchema.document.type === "object") {
+      const requiredProperties = new Set(normalizedSchema.document.required ?? []);
+      for (const [property, child] of Object.entries(normalizedSchema.document.properties ?? {})) tree.append(renderNode(child, property, `/${property.replaceAll("~", "~0").replaceAll("/", "~1")}`, requiredProperties.has(property)));
     }
     root.replaceChildren(heading, tree);
   };

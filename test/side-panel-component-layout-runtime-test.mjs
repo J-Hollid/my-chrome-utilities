@@ -2955,6 +2955,7 @@ const missingEventDefectReportRuntime = `(async () => {
   const schema = { id:"schema-checkout-purchase", name:"Checkout purchase", version:4, published:true, document:{ type:"object", required:["order_id","currency"], properties:{ order_id:{ type:"string" }, currency:{ type:"string" }, coupon:{ type:"string" } } }, assignments:[assignment], attachedRules:[{ id:"order-required", name:"Order required", version:2, propertyPath:"/order_id", operator:"required" },{ id:"currency-values", name:"Currencies", version:1, propertyPath:"/currency", operator:"allowed-values", allowedValues:["EUR","USD"] }], documentation:{ description:"Purchase expected after checkout confirmation" } };
   const pageviewAssignment = { id:"assignment:generic-pageview", name:"Generic pageview", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathnameCondition:"/checkout", enabled:true };
   const nestedSchema = { id:"schema-generic-pageview", name:"Generic pageview", version:4, published:true, document:{type:"object",required:["page_name","products"],properties:{page_name:{type:"string"},products:{type:"array",items:{type:"object",required:["id","name"],properties:{id:{type:"number"},name:{type:"string"}}}},logged_in:{type:"boolean"}}},assignments:[pageviewAssignment],attachedRules:[{id:"page-name-values",version:1,propertyPath:"/page_name",operator:"allowed-values",allowedValues:["home","test"]},{id:"product-name-values",version:1,propertyPath:"/products/*/name",operator:"allowed-values",allowedValues:["robot","vehicle"]}] };
+  const flatSchema = { id:"schema-flat-pageview", name:"Generic pageview flat", version:4, published:true, document:{type:"object",required:["/page_levels","/page_type","/page_section","/login_status","/b_id"],properties:{"/page_levels":{type:"array"},"/page_levels/0":{type:"string"},"/page_type":{type:"string"},"/page_section":{type:"string"},"/login_status":{type:"string"},"/b_id":{type:"string"},"/untyped_list":{type:"array"}}},assignments:[pageviewAssignment],attachedRules:[{id:"page-levels",name:"Page level values",version:2,propertyPath:"/page_levels/*",operator:"allowed-values",allowedValues:["d","c"]},{id:"page-type",name:"Page type values",version:3,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product_detail","content"]},{id:"login-state",name:"Login values",version:1,propertyPath:"/login_status",operator:"allowed-values",allowedValues:["not logged in","logged in"]}] };
   const pageview = { id:"pageview", name:"pageview", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:01Z", validation:"Valid", payload:{ page_type:"checkout" } };
   const purchase = (id, seconds) => ({ id, name:"purchase", sourceId:"event-history", sourceName:"Event history", pageUrl:"https://shop.example/checkout", captureTime:"2026-07-14T12:00:" + seconds + "Z", validation:"Valid", payload:{ transaction_id:id } });
   const visit = (id, events, immutable=false) => ({ id, pageUrl:"https://shop.example/checkout", pathname:"/checkout", startedAt:"2026-07-14T12:00:00Z", endedAt:"2026-07-14T12:01:00Z", events, immutable });
@@ -3033,6 +3034,27 @@ const missingEventDefectReportRuntime = `(async () => {
   button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
   const nestedObservation={tree:nestedTreeText,payload:nestedReport.expectedPayload,sources:nestedReport.expectedResponseSources,duplicatedItems,itemCount:nestedReport.expectedPayload.products.length,preview:nestedRepresentation.previewText,html:nestedRepresentation.previewHtml,noCreate:!Array.from(host.querySelectorAll("button")).some(({textContent})=>textContent?.includes("Create missing-event report")),noInterval:!host.textContent.includes("Observation interval"),actions:nestedActions,combined:{saves:nestedSaves,copiedSame:nestedCopied===nestedRepresentation.jiraText,feedback:host.querySelector('output[aria-live="polite"]')?.textContent}};
 
+  host.replaceChildren(); host.style.width="320px";
+  const storedFlatSchema=JSON.stringify(flatSchema); let flatCopied=""; let flatSaved;
+  const runtimeErrors=[]; const onRuntimeError=(event)=>runtimeErrors.push(String(event.reason ?? event.error ?? event.message));
+  window.addEventListener("error",onRuntimeError); window.addEventListener("unhandledrejection",onRuntimeError);
+  const flat=ui.renderMissingEventDefectReportBuilder(host,[productVisit,emptyNestedVisit],[flatSchema],{entryPoint:"Live session actions",initialSchemaId:flatSchema.id,writeClipboard:async(text)=>{flatCopied=text;},saveReportedDefect:async(report)=>{flatSaved=structuredClone(report);}});
+  const flatPointers=Array.from(host.querySelectorAll("[data-json-pointer]")).map(({dataset})=>dataset.jsonPointer);
+  button(host,"Add page_levels item").click();
+  const pageLevelChoice=Array.from(host.querySelectorAll("label")).find(({textContent})=>textContent.trim()==="Use schema value d")?.querySelector("input"); if(!pageLevelChoice) throw new Error("Missing page-level choice"); pageLevelChoice.click();
+  button(host,"Confirm at least one matching event was expected").click();
+  enter(host,"/page_type","invalid");
+  const invalidState={validation:q(host,'[data-expected-payload-validation="state"]').textContent,issue:q(host,'[data-expected-payload-issue="/page_type"]').textContent,actions:[button(host,"Copy for Jira Cloud").disabled,button(host,"Save as reported defect").disabled,button(host,"Save as reported defect and copy").disabled]};
+  const loginInput=q(host,'[data-expected-payload-input="/login_status"]'); loginInput.focus(); const typed=[];
+  for(const character of "logged in"){loginInput.value+=character; loginInput.setSelectionRange(loginInput.value.length,loginInput.value.length); loginInput.dispatchEvent(new InputEvent("input",{bubbles:true,data:character,inputType:"insertText"})); typed.push({value:loginInput.value,same:q(host,'[data-expected-payload-input="/login_status"]')===loginInput,focused:document.activeElement===loginInput,caret:loginInput.selectionStart});}
+  choose(host,"Use schema value product_detail"); enter(host,"/page_section","product"); choose(host,"Use schema value logged in"); enter(host,"/b_id","123");
+  const flatReport=flat.report(); const flatRepresentation=model.generateMissingEventRepresentations(flatReport);
+  const flatActions=[button(host,"Copy for Jira Cloud").disabled,button(host,"Save as reported defect").disabled,button(host,"Save as reported defect and copy").disabled];
+  button(host,"Save as reported defect and copy").click(); await new Promise((resolve)=>setTimeout(resolve,0));
+  const untypedButton=button(host,"Add untyped_list item");
+  window.removeEventListener("error",onRuntimeError); window.removeEventListener("unhandledrejection",onRuntimeError);
+  const flatObservation={pointers:flatPointers,escapedAbsent:!flatPointers.some((pointer)=>pointer.includes("~1")),schemaUnchanged:JSON.stringify(flatSchema)===storedFlatSchema,runtimeErrors,payload:flatReport.expectedPayload,provenance:flatReport.expectedResponseProvenance,typed,invalid:invalidState,validation:q(host,'[data-expected-payload-validation="state"]').textContent,actions:flatActions,untyped:{disabled:untypedButton.disabled,assistance:host.textContent.includes("array item type must be defined")},fits:host.scrollWidth<=320,narrativeCount:(flatRepresentation.previewText.match(/pageview is fired with/g)??[]).length,preCount:q(host,'[aria-label="Final report preview"]').querySelectorAll("pre").length,compactAbsent:!flatRepresentation.previewText.includes('{"page_levels"'),copiedSame:flatCopied===flatRepresentation.jiraText,savedPayload:flatSaved.expectedPayload};
+
   host.replaceChildren();
   let rejectedSaveCalls=0;
   const failures=ui.renderMissingEventDefectReportBuilder(host,[zeroVisit],[schema],{entryPoint:"Live session actions",initialSchemaId:schema.id,writeClipboard:async()=>{throw new Error("clipboard rejected");},saveReportedDefect:async()=>{rejectedSaveCalls+=1;throw new Error("persistence rejected");}});
@@ -3058,7 +3080,7 @@ const missingEventDefectReportRuntime = `(async () => {
   const schemaRowEntries = Array.from(document.querySelectorAll("#schema-list button")).filter(({ textContent }) => textContent === "Report missing event").length;
   host.remove();
   return {
-    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, unified:{initial:unifiedInitial,complete:unifiedComplete,nested:nestedObservation,failures:failureObservation},
+    entries:{ sideEntry, schemaRowEntries }, navigation:{ labels:navigation, noCapturedNavigation, focused }, unified:{initial:unifiedInitial,complete:unifiedComplete,nested:nestedObservation,flat:flatObservation,failures:failureObservation},
     zero:{ replacement:{ review:replacementReview, acceptedEventName, intervalControls }, verification:zeroVerification, report:{ type:zeroReport.type, capturedEventId:zeroReport.capturedEventId ?? null, actual:zeroReport.actual, absenceEvidence:zeroReport.absenceEvidence, expected:zeroReport.expected, expectedPayload:zeroReport.expectedPayload, schema:zeroReport.schema.name + " revision " + zeroReport.schema.version, payload:zeroReport.payload ?? null, capture:zeroReport.capture ?? null, issues:zeroReport.validationIssues.length, timeline:zeroReport.timeline.map(({ id }) => id) }, preview:zeroRepresentations.previewText, jira:zeroRepresentations.jiraText, copied, savedCount },
     warning:{ before:warningBefore, openedEvent, restored, override:{ count:overrideReport.override.matchingCount, evidence:overrideReport.matchingEventEvidence.map(({ id }) => id), eventPayload:overrideReport.matchingEventEvidence[0].payload, preview:overrideRepresentations.previewText, jira:overrideRepresentations.jiraText } },
     scope:{ zero:scopeZero, match:scopeMatch }, expectationCases, matchCounts,
@@ -3606,6 +3628,18 @@ try {
       assert.deepEqual(missingEventDefectReportObservation.unified.nested.payload, { page_name:"test", products:[{ id:1, name:"robot" }] });
       assert.deepEqual(missingEventDefectReportObservation.unified.nested.actions, [false,false,false]);
       assert.equal(missingEventDefectReportObservation.unified.nested.duplicatedItems, 2);
+      const flat=missingEventDefectReportObservation.unified.flat;
+      assert.deepEqual(flat.payload, { page_levels:["d"], page_type:"product_detail", page_section:"product", login_status:"logged in", b_id:"123" });
+      assert.equal(flat.pointers.includes("/page_levels/0") && flat.pointers.includes("/page_type") && flat.escapedAbsent, true);
+      assert.equal(flat.schemaUnchanged, true); assert.deepEqual(flat.runtimeErrors, []);
+      assert.equal(flat.typed.every(({value,same,focused,caret})=>same&&focused&&caret===value.length), true);
+      assert.equal(flat.typed.at(-1).value, "logged in");
+      assert.deepEqual(flat.invalid.actions, [true,true,true]); assert.match(flat.invalid.issue, /allowed/i);
+      assert.equal(flat.validation, "Valid"); assert.deepEqual(flat.actions, [false,false,false]);
+      assert.deepEqual(flat.provenance["/page_levels/0"], { id:"page-levels", name:"Page level values", version:2, propertyPath:"/page_levels/*" });
+      assert.deepEqual(flat.untyped, { disabled:true, assistance:true }); assert.equal(flat.fits, true);
+      assert.deepEqual([flat.narrativeCount,flat.preCount,flat.compactAbsent,flat.copiedSame], [1,1,true,true]);
+      assert.deepEqual(flat.savedPayload, flat.payload);
       assert.deepEqual(missingEventDefectReportObservation.unified.failures, { copyFailure:"Copy failed", saveFailure:"Save failed", rejectedSaveCalls:1, unchanged:true, reportPayload:{ order_id:"A-123", currency:"EUR" } });
       socket.close(); continue;
     }

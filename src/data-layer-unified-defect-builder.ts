@@ -1,5 +1,5 @@
 import type { ReproductionManualStep, ReproductionPathnameStep } from "./data-layer-defect-report.js";
-import type { JsonSchema, SchemaDefinition } from "./data-layer-schema-verification.js";
+import { validateWithSchema, type AttachedSchemaRule, type JsonSchema, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
 
 export interface ExpectedPropertyChoice {
   property: string;
@@ -35,6 +35,7 @@ export interface ExpectedPayloadField {
 export interface ExpectedPayloadDraft {
   payload:Record<string, unknown>;
   responseSources:Record<string, "schema-provided value" | "operator custom response">;
+  responseProvenance?:Record<string, Pick<AttachedSchemaRule, "id" | "name" | "version" | "propertyPath">>;
 }
 
 function normalizedOperator(value: string | undefined): string {
@@ -45,17 +46,93 @@ function templatePointer(pointer: string): string {
   return pointer.replace(/\/\d+(?=\/|$)/g, "/*");
 }
 
-function allowedValues(schema: SchemaDefinition, pointer: string): readonly (string | number | boolean | null)[] {
+function allowedValueRule(schema: SchemaDefinition, pointer: string): AttachedSchemaRule | undefined {
   const template = templatePointer(pointer);
-  const rule = schema.attachedRules?.find((candidate) =>
+  return schema.attachedRules?.filter((candidate) =>
     templatePointer(candidate.propertyPath ?? "") === template && normalizedOperator(candidate.operator) === "allowed-values"
-  );
+  ).sort((left, right) => Number(right.propertyPath === pointer) - Number(left.propertyPath === pointer))[0];
+}
+
+function allowedValues(schema: SchemaDefinition, pointer: string): readonly (string | number | boolean | null)[] {
+  const rule = allowedValueRule(schema, pointer);
   if (rule?.allowedValues) return structuredClone(rule.allowedValues);
   return rule?.parameters?.split(",").map((value) => value.trim()).filter(Boolean) ?? [];
 }
 
 function pointerSegment(value: string): string {
   return value.replaceAll("~", "~0").replaceAll("/", "~1");
+}
+
+function pointerSegments(pointer: string): string[] {
+  return pointer.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
+}
+
+function arraySegment(segment: string | undefined): boolean {
+  return segment === "*" || /^\d+$/.test(segment ?? "");
+}
+
+function mergeSchema(left: JsonSchema | undefined, right: JsonSchema): JsonSchema {
+  if (!left) return structuredClone(right);
+  const merged: JsonSchema = { ...structuredClone(left), ...structuredClone(right) };
+  if (left.properties || right.properties) merged.properties = { ...structuredClone(left.properties ?? {}), ...structuredClone(right.properties ?? {}) };
+  const items = left.items && right.items ? mergeSchema(left.items, right.items) : right.items ?? left.items;
+  if (items) merged.items = structuredClone(items);
+  if (left.required || right.required) merged.required = [...new Set([...(left.required ?? []), ...(right.required ?? [])])];
+  return merged;
+}
+
+function insertSchemaPath(root: JsonSchema, segments: readonly string[], definition: JsonSchema): void {
+  let current = root;
+  segments.forEach((segment, index) => {
+    const last = index === segments.length - 1;
+    if (arraySegment(segment)) {
+      current.type ??= "array";
+      if (last) current.items = mergeSchema(current.items, definition);
+      else {
+        current.items ??= { type:arraySegment(segments[index + 1]) ? "array" : "object" };
+        current = current.items;
+      }
+      return;
+    }
+    current.type ??= "object";
+    current.properties ??= {};
+    if (last) current.properties[segment] = mergeSchema(current.properties[segment], definition);
+    else {
+      current.properties[segment] ??= { type:arraySegment(segments[index + 1]) ? "array" : "object" };
+      current = current.properties[segment];
+    }
+  });
+}
+
+function markRequiredPath(root: JsonSchema, segments: readonly string[]): void {
+  let current = root;
+  segments.forEach((segment, index) => {
+    if (arraySegment(segment)) {
+      if (current.items) current = current.items;
+      return;
+    }
+    current.required = [...new Set([...(current.required ?? []), segment])];
+    if (index < segments.length - 1 && current.properties?.[segment]) current = current.properties[segment];
+  });
+}
+
+function normalizeExpectedPayloadDocument(document: JsonSchema): JsonSchema {
+  const { properties, required, ...rest } = structuredClone(document);
+  const normalized: JsonSchema = { ...rest, ...(document.type === "object" ? { properties:{} } : {}) };
+  for (const [storedPath, storedDefinition] of Object.entries(properties ?? {})) {
+    const definition = normalizeExpectedPayloadDocument(storedDefinition);
+    const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
+    insertSchemaPath(normalized, segments, definition);
+  }
+  for (const storedPath of required ?? []) {
+    const segments = storedPath.startsWith("/") ? pointerSegments(storedPath) : [storedPath];
+    markRequiredPath(normalized, segments);
+  }
+  return normalized;
+}
+
+export function normalizedExpectedPayloadSchema(schema: SchemaDefinition): SchemaDefinition {
+  return { ...structuredClone(schema), document:normalizeExpectedPayloadDocument(schema.document) };
 }
 
 function schemaAtPointer(schema: JsonSchema, pointer: string): JsonSchema | undefined {
@@ -80,9 +157,10 @@ function initialContainer(schema: JsonSchema): unknown {
 }
 
 export function expectedPayloadFields(schema: SchemaDefinition): ExpectedPayloadField[] {
+  const normalized = normalizedExpectedPayloadSchema(schema);
   const result: ExpectedPayloadField[] = [];
   const visit = (definition: JsonSchema, path: string, pointer: string, required: boolean) => {
-    if (path) result.push({ path, pointer, type:definition.type ?? "value", required, schemaValues:allowedValues(schema, pointer) });
+    if (path) result.push({ path, pointer, type:definition.type ?? "value", required, schemaValues:allowedValues(normalized, pointer) });
     if (definition.type === "object") {
       const requiredProperties = new Set(definition.required ?? []);
       for (const [property, child] of Object.entries(definition.properties ?? {})) {
@@ -91,13 +169,13 @@ export function expectedPayloadFields(schema: SchemaDefinition): ExpectedPayload
     }
     if (definition.type === "array" && definition.items) visit(definition.items, `${path}.0`, `${pointer}/0`, true);
   };
-  if (schema.document.type === "object") visit(schema.document, "", "", true);
-  else visit(schema.document, "value", "/value", true);
+  if (normalized.document.type === "object") visit(normalized.document, "", "", true);
+  else visit(normalized.document, "value", "/value", true);
   return result;
 }
 
 export function createExpectedPayloadDraft(schema: SchemaDefinition): ExpectedPayloadDraft {
-  const initial = initialContainer(schema.document);
+  const initial = initialContainer(normalizedExpectedPayloadSchema(schema).document);
   return {
     payload:(initial && typeof initial === "object" && !Array.isArray(initial) ? initial : {}) as Record<string, unknown>,
     responseSources:{},
@@ -185,44 +263,59 @@ export function setExpectedPayloadValue(
   pointer: string,
   response: Exclude<ExpectedPropertyResponse, { method:"generic" }>,
 ): ExpectedPayloadDraft {
-  const definition = schemaAtPointer(schema.document, pointer);
+  const normalized = normalizedExpectedPayloadSchema(schema);
+  const definition = schemaAtPointer(normalized.document, pointer);
   if (!definition || definition.type === "object" || definition.type === "array") throw new Error(`Unknown expected payload leaf: ${pointer}`);
   const value = typedValue(definition.type, response.value);
-  const choices = allowedValues(schema, pointer);
+  const choices = allowedValues(normalized, pointer);
   if (response.method === "schema-value" && !choices.some((choice) => Object.is(choice, value))) throw new Error(`${String(value)} is not a schema-provided value for ${pointer}.`);
   const next = structuredClone(draft);
   assignAtPointer(next.payload, pointer, value);
   next.responseSources[pointer] = response.method === "schema-value" ? "schema-provided value" : "operator custom response";
-  return orderPayload(schema, next);
+  if (response.method === "schema-value") {
+    const rule = allowedValueRule(normalized, pointer);
+    if (rule) {
+      next.responseProvenance ??= {};
+      next.responseProvenance[pointer] = { id:rule.id, ...(rule.name ? { name:rule.name } : {}), version:rule.version, ...(rule.propertyPath ? { propertyPath:rule.propertyPath } : {}) };
+    }
+  } else if (next.responseProvenance) delete next.responseProvenance[pointer];
+  return orderPayload(normalized, next);
 }
 
 export function removeExpectedPayloadValue(draft: ExpectedPayloadDraft, pointer: string): ExpectedPayloadDraft {
   const next = structuredClone(draft);
   removeAtPointer(next.payload, pointer);
   for (const key of Object.keys(next.responseSources)) if (key === pointer || key.startsWith(`${pointer}/`)) delete next.responseSources[key];
+  for (const key of Object.keys(next.responseProvenance ?? {})) if (key === pointer || key.startsWith(`${pointer}/`)) delete next.responseProvenance?.[key];
   return next;
 }
 
 function arrayAt(schema: SchemaDefinition, draft: ExpectedPayloadDraft, pointer: string): { definition:JsonSchema; values:unknown[] } {
-  const definition = schemaAtPointer(schema.document, pointer);
+  const definition = schemaAtPointer(normalizedExpectedPayloadSchema(schema).document, pointer);
   const values = valueAtPointer(draft.payload, pointer);
   if (definition?.type !== "array" || !definition.items || !Array.isArray(values)) throw new Error(`Expected array not found at ${pointer}.`);
   return { definition, values };
 }
 
 export function addExpectedArrayItem(schema: SchemaDefinition, draft: ExpectedPayloadDraft, pointer: string): ExpectedPayloadDraft {
-  const definition = schemaAtPointer(schema.document, pointer);
+  const normalized = normalizedExpectedPayloadSchema(schema);
+  const definition = schemaAtPointer(normalized.document, pointer);
+  if (definition?.type === "array" && !definition.items) throw new Error(`The array item type must be defined at ${pointer}.`);
   if (definition?.type !== "array" || !definition.items) throw new Error(`Expected array not found at ${pointer}.`);
   const next = structuredClone(draft);
   const current = valueAtPointer(next.payload, pointer);
   if (current !== undefined && !Array.isArray(current)) throw new Error(`Expected array not found at ${pointer}.`);
   if (current === undefined) assignAtPointer(next.payload, pointer, []);
   (valueAtPointer(next.payload, pointer) as unknown[]).push(initialContainer(definition.items) ?? null);
-  return orderPayload(schema, next);
+  return orderPayload(normalized, next);
 }
 
 function copyResponseSources(sourceMap: ExpectedPayloadDraft["responseSources"], destinationMap: ExpectedPayloadDraft["responseSources"], from: string, to: string): void {
   for (const [pointer, source] of Object.entries(sourceMap)) if (pointer === from || pointer.startsWith(`${from}/`)) destinationMap[`${to}${pointer.slice(from.length)}`] = source;
+}
+
+function copyResponseProvenance(sourceMap: NonNullable<ExpectedPayloadDraft["responseProvenance"]>, destinationMap: NonNullable<ExpectedPayloadDraft["responseProvenance"]>, from: string, to: string): void {
+  for (const [pointer, source] of Object.entries(sourceMap)) if (pointer === from || pointer.startsWith(`${from}/`)) destinationMap[`${to}${pointer.slice(from.length)}`] = structuredClone(source);
 }
 
 export function duplicateExpectedArrayItem(schema: SchemaDefinition, draft: ExpectedPayloadDraft, pointer: string, index: number): ExpectedPayloadDraft {
@@ -232,11 +325,14 @@ export function duplicateExpectedArrayItem(schema: SchemaDefinition, draft: Expe
   (valueAtPointer(next.payload, pointer) as unknown[]).splice(index + 1, 0, structuredClone(values[index]));
   const prefix = `${pointer}/`;
   next.responseSources = Object.fromEntries(Object.entries(draft.responseSources).filter(([key]) => !key.startsWith(prefix)));
+  const nextProvenance = Object.fromEntries(Object.entries(draft.responseProvenance ?? {}).filter(([key]) => !key.startsWith(prefix)));
+  next.responseProvenance = nextProvenance;
   (valueAtPointer(next.payload, pointer) as unknown[]).forEach((_item, nextIndex) => {
     const originalIndex = nextIndex <= index ? nextIndex : nextIndex - 1;
     copyResponseSources(draft.responseSources, next.responseSources, `${pointer}/${originalIndex}`, `${pointer}/${nextIndex}`);
+    copyResponseProvenance(draft.responseProvenance ?? {}, nextProvenance, `${pointer}/${originalIndex}`, `${pointer}/${nextIndex}`);
   });
-  return orderPayload(schema, next);
+  return orderPayload(normalizedExpectedPayloadSchema(schema), next);
 }
 
 export function removeExpectedArrayItem(schema: SchemaDefinition, draft: ExpectedPayloadDraft, pointer: string, index: number): ExpectedPayloadDraft {
@@ -247,12 +343,15 @@ export function removeExpectedArrayItem(schema: SchemaDefinition, draft: Expecte
   const prefix = `${pointer}/`;
   const retained = Object.entries(next.responseSources).filter(([key]) => !key.startsWith(prefix));
   next.responseSources = Object.fromEntries(retained);
+  const nextProvenance = Object.fromEntries(Object.entries(next.responseProvenance ?? {}).filter(([key]) => !key.startsWith(prefix)));
+  next.responseProvenance = nextProvenance;
   const remaining = valueAtPointer(next.payload, pointer) as unknown[];
   remaining.forEach((_item, nextIndex) => {
     const originalIndex = nextIndex >= index ? nextIndex + 1 : nextIndex;
     copyResponseSources(draft.responseSources, next.responseSources, `${pointer}/${originalIndex}`, `${pointer}/${nextIndex}`);
+    copyResponseProvenance(draft.responseProvenance ?? {}, nextProvenance, `${pointer}/${originalIndex}`, `${pointer}/${nextIndex}`);
   });
-  return orderPayload(schema, next);
+  return orderPayload(normalizedExpectedPayloadSchema(schema), next);
 }
 
 function schemaValueComplete(definition: JsonSchema, value: unknown, required: boolean): boolean {
@@ -272,11 +371,16 @@ function schemaValueComplete(definition: JsonSchema, value: unknown, required: b
 }
 
 export function expectedPayloadComplete(schema: SchemaDefinition, draft: ExpectedPayloadDraft): boolean {
-  return schemaValueComplete(schema.document, draft.payload, true);
+  return schemaValueComplete(normalizedExpectedPayloadSchema(schema).document, draft.payload, true);
 }
 
-export function expectedPayloadPresentation(eventName: string, payload: unknown): string {
-  return `${eventName} is fired with ${JSON.stringify(payload)}`;
+export function expectedPayloadEvaluation(schema: SchemaDefinition, draft: ExpectedPayloadDraft): ValidationResult {
+  const normalized = normalizedExpectedPayloadSchema(schema);
+  return validateWithSchema({ sourceId:"expected-payload", eventName:"expected-payload", payload:draft.payload, rawInput:draft.payload }, normalized, [normalized], "payload");
+}
+
+export function expectedPayloadPresentation(eventName: string, _payload: unknown): string {
+  return `${eventName} is fired with`;
 }
 
 export function expectedPropertyChoices(schema: SchemaDefinition): ExpectedPropertyChoice[] {
