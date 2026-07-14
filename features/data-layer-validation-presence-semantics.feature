@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7cc0f81df12924b391c28d1af3ab429dc11bcb3dbfb06e46fa9f87775cb3ac86
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T15:39:47.781518515Z","feature_name":"Data layer validation presence semantics","feature_path":"features/data-layer-validation-presence-semantics.feature","background_hash":"08f32a38a69e0de7d56c7dca63f766d7e72a3b36e22afdad350f3952549c0178","implementation_hash":"validation-presence-relational-v2","scenarios":[{"index":4,"name":"Data layer validation presence semantics 005","scenario_hash":"d73f9746e3edceb2dcccd9696c4672cebc76abb32b5a03e70291e41518bde987","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:39:47.781518515Z"},{"index":0,"name":"Data layer validation presence semantics 001","scenario_hash":"3fa3641707df8e05d853026449a8cd926169ae81ff5d248ac23172a273a8c6f7","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:37:48.908435786Z"},{"index":1,"name":"Data layer validation presence semantics 002","scenario_hash":"fa3b74d24aa9af0c824500d85f235abd71a973dcffc5a03667572ebd8bb3b52a","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:37:48.908435786Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer validation presence semantics
 
   Background:

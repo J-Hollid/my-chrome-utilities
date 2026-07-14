@@ -322,9 +322,21 @@ function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
         } : {}),
     };
 }
+function observedValueText(value) {
+    if (typeof value === "string")
+        return value;
+    if (value === undefined)
+        return "undefined";
+    try {
+        return JSON.stringify(value) ?? String(value);
+    }
+    catch {
+        return String(value);
+    }
+}
 function nestedRuleFailure(rule, match) {
     const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
-    const actual = match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing";
+    const actual = match.exists ? observedValueText(match.value) : "missing";
     if (operator === "required")
         return match.exists ? undefined : { message: "Required value", expected: "value", actual };
     if (!match.exists)
@@ -472,7 +484,7 @@ function attachedRuleEvaluations(value, schema, rules) {
                         status: "pass",
                         message: rule.message ?? `${rule.name ?? rule.id} passed`,
                         expected: rule.parameters ?? "rule satisfied",
-                        actual: match.exists ? typeof match.value === "string" ? match.value : JSON.stringify(match.value) : "missing",
+                        actual: match.exists ? observedValueText(match.value) : "missing",
                         rule: rule.name ?? rule.id,
                         ruleVersion: rule.version,
                         severity: rule.severity ?? "error",
