@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=0431932db8b6ccd3b52d8eea7fd24c1c1ee37c38e3aa2146c756e6d799dae141
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T09:26:45.107888064Z","feature_name":"Data layer event property validation entry","feature_path":"features/data-layer-event-property-validation-entry.feature","background_hash":"7311907506ce4116fc1ad34d82e40f219aa072dc5bb82f9307aa51135fadf156","implementation_hash":"sha256:70d08e935535ca59c7bce36da811d8fb5b6ef5345c3dd17d0d124456d3960403","scenarios":[{"index":0,"name":"Data layer event property validation entry 001","scenario_hash":"53e5a73f221cb0dce8aa40677caecdf9d62f4f06d69a726a025ee50ddf8d87d7","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:50.508020854Z"},{"index":3,"name":"Data layer event property validation entry 004","scenario_hash":"c538424a3ccc2fa74c06d057a227099153de4142a3f5b15302dc9ced2eaf6e38","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:50.508020854Z"},{"index":4,"name":"Data layer event property validation entry 005","scenario_hash":"1906351fcc1b0f3ae54e339034fa23a6810954596be26d98ee85033a25fce78f","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:50.508020854Z"},{"index":5,"name":"Data layer event property validation entry 006","scenario_hash":"59061ad2ecc3490d54d4cfd3642e802dab0fff8e909498db839991a934454ebc","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-14T09:24:50.508020854Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer event property validation entry
 
   Background:

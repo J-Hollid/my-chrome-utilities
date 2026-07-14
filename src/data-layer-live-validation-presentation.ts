@@ -24,6 +24,12 @@ export interface ValidationPropertyNode {
   summary: PropertyValidationSummary;
   aggregate: { errors: number; warnings: number };
   children: ValidationPropertyNode[];
+  technicalPath?: string;
+  expression?: string;
+  specificItems?: ValidationPropertyNode[];
+  matchedValueCount?: number;
+  detectedTypes?: readonly string[];
+  examples?: readonly unknown[];
 }
 
 function countText(count: number, singular: string): string {

@@ -187,7 +187,7 @@
      "the review and guided validation flow close"
      "the originating Live event inspector is restored"
      "a visible status confirms <saved_result>"
-     "keyboard focus returns to Create validation from this event"}
+     "keyboard focus returns to Add validation for page_type"}
    successful-save
    #{"a saveable draft is at its final stage"
      "persistence returns an error"

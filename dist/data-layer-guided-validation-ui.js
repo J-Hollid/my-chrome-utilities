@@ -1,5 +1,6 @@
-import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedContinuationDraft, createGuidedValidationDraft, guidedValidationStages, pathConditionResult, pathConditionsResult, publishGuidedValidation, resolveGuidedPrefillReplacement, removeAllowedValue, selectGuidedProperty, selectGuidedContinuationProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedContinuationDraft, createGuidedContinuationForProperty, createGuidedValidationDraft, createGuidedValidationForProperty, guidedValidationStages, pathConditionResult, pathConditionsResult, publishGuidedValidation, retargetGuidedValidation, resolveGuidedPrefillReplacement, resolveGuidedTargetReplacement, removeAllowedValue, selectGuidedProperty, selectGuidedContinuationProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
 import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
+import { inspectValidationTarget, normalizeTargetExpression, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 const stageLabels = {
     property: "Choose properties",
     requirement: "Define requirement",
@@ -45,6 +46,10 @@ export function createGuidedValidationFlow(root, effects) {
     let schemaPickerQuery = "";
     let schemaPickerReturnId = "guided-existing-schema-picker";
     let continuationCandidate;
+    let targetEditorOpen = false;
+    let targetExpression = "";
+    let observedTargetPath = "";
+    let targetExpectedType = "";
     function announce(message) { status = message; render(); }
     function setDraft(next, message) {
         draft = next;
@@ -170,11 +175,6 @@ export function createGuidedValidationFlow(root, effects) {
     function renderPropertyStage(container) {
         if (!draft)
             return;
-        if (draft.continuation) {
-            const context = element("p", `Adding to ${draft.continuation.schemaName} draft`);
-            context.id = "guided-continuation-context";
-            container.append(context);
-        }
         const fieldset = element("fieldset");
         fieldset.id = "guided-property-list";
         fieldset.append(element("legend", "Select a property to validate"));
@@ -493,6 +493,24 @@ export function createGuidedValidationFlow(root, effects) {
             container.append(review);
         }
     }
+    function renderTargetReplacementReview(container) {
+        if (!draft?.targetReplacementReview)
+            return;
+        const { previous, proposed } = draft.targetReplacementReview;
+        const review = element("section");
+        review.id = "guided-target-replacement-review";
+        review.append(element("h5", "Review refreshed target values"));
+        const list = element("ul");
+        list.append(element("li", `target: ${previous.path} was replaced by ${proposed.path}`), element("li", `detected type: ${previous.detectedType} was replaced by ${proposed.detectedType}`), element("li", `observed example: ${String(previous.observedValue)} was replaced by ${String(proposed.observedValue)}`));
+        const keep = element("button", "Keep compatible entered values");
+        keep.type = "button";
+        keep.addEventListener("click", () => setDraft(resolveGuidedTargetReplacement(draft, "keep"), "Compatible entered values kept; correct any incompatible requirement."));
+        const accept = element("button", "Accept refreshed target defaults");
+        accept.type = "button";
+        accept.addEventListener("click", () => setDraft(resolveGuidedTargetReplacement(draft, "accept"), "Refreshed target defaults accepted."));
+        review.append(list, keep, accept);
+        container.append(review);
+    }
     function updateAdvanced(field, value) {
         if (!draft)
             return;
@@ -513,7 +531,128 @@ export function createGuidedValidationFlow(root, effects) {
             details.append(field.wrapper);
         }
         details.append(element("p", `Severity ${draft.advanced.severity}; version policy ${draft.advanced.versionPolicy}.`));
+        if (draft.property) {
+            const editTarget = element("button", "Advanced Edit target path");
+            editTarget.type = "button";
+            editTarget.addEventListener("click", () => { observedTargetPath ||= draft.property.path; targetExpression = normalizeTargetExpression(draft.property.path, draft.event.payload); targetExpectedType = ""; targetEditorOpen = true; render(); root?.querySelector("#guided-target-expression")?.focus(); });
+            details.append(editTarget);
+        }
         container.append(details);
+    }
+    function renderTargetEditor(container) {
+        if (!draft?.property || !targetEditorOpen)
+            return;
+        const dialog = element("dialog");
+        dialog.id = "guided-target-path-editor";
+        dialog.setAttribute("aria-labelledby", "guided-target-path-heading");
+        const heading = element("h5", "Edit validation target path");
+        heading.id = "guided-target-path-heading";
+        const label = element("label", "Expert expression");
+        const input = element("input");
+        input.id = "guided-target-expression";
+        input.value = targetExpression;
+        label.htmlFor = input.id;
+        const segmentsHeading = element("h6", "Typed path segments");
+        const segments = element("ol");
+        segments.id = "guided-target-segments";
+        segments.setAttribute("aria-labelledby", "guided-target-segments-heading");
+        segmentsHeading.id = "guided-target-segments-heading";
+        const preview = element("section");
+        preview.id = "guided-target-preview";
+        const expectedLabel = element("label", "Expected target type");
+        expectedLabel.htmlFor = "guided-target-expected-type";
+        expectedLabel.hidden = true;
+        const expected = element("select");
+        expected.id = "guided-target-expected-type";
+        expected.hidden = true;
+        expected.append(Object.assign(element("option", "Choose expected type"), { value: "" }), ...["String", "Number", "Array", "Object", "Boolean", "Null"].map((value) => Object.assign(element("option", value), { value })));
+        const expressionFor = (values) => `$${values.map((segment) => segment.kind === "property" ? `[${JSON.stringify(segment.value)}]` : segment.kind === "every" ? "[*]" : `[${segment.value}]`).join("")}`;
+        const parsedSegments = () => { try {
+            return parseTargetExpression(normalizeTargetExpression(input.value, draft.event.payload));
+        }
+        catch {
+            return [];
+        } };
+        const setSegments = (values) => { targetExpression = expressionFor(values); input.value = targetExpression; refresh(); };
+        const renderSegments = (values) => {
+            segments.replaceChildren(...values.map((segment, index) => {
+                const row = element("li");
+                row.className = "guided-target-segment";
+                const kindLabel = element("label", `Segment ${index + 1} type`);
+                const kind = element("select");
+                kind.id = `guided-target-segment-kind-${index}`;
+                kindLabel.htmlFor = kind.id;
+                for (const [value, text] of [["property", "Object property"], ["every", "Every array item"], ["index", "Array index"]])
+                    kind.append(Object.assign(element("option", text), { value, selected: segment.kind === value }));
+                const valueLabel = element("label", segment.kind === "property" ? "Property name" : segment.kind === "index" ? "Zero-based index" : "Every observed item");
+                const value = element("input");
+                value.id = `guided-target-segment-value-${index}`;
+                valueLabel.htmlFor = value.id;
+                value.disabled = segment.kind === "every";
+                value.value = segment.kind === "every" ? "*" : String(segment.value);
+                kind.addEventListener("change", () => { const next = [...values]; next[index] = kind.value === "property" ? { kind: "property", value: segment.kind === "property" ? segment.value : "property" } : kind.value === "index" ? { kind: "index", value: segment.kind === "index" ? segment.value : 0 } : { kind: "every", value: null }; setSegments(next); });
+                value.addEventListener("change", () => { const next = [...values]; next[index] = segment.kind === "property" ? { kind: "property", value: value.value } : segment.kind === "index" ? { kind: "index", value: Number(value.value) } : segment; setSegments(next); });
+                const actions = element("div");
+                actions.className = "guided-target-segment-actions";
+                const propertyBefore = element("button", "Insert property before");
+                propertyBefore.type = "button";
+                propertyBefore.addEventListener("click", () => setSegments([...values.slice(0, index), { kind: "property", value: "property" }, ...values.slice(index)]));
+                const indexBefore = element("button", "Insert array index before");
+                indexBefore.type = "button";
+                indexBefore.addEventListener("click", () => setSegments([...values.slice(0, index), { kind: "index", value: 0 }, ...values.slice(index)]));
+                const remove = element("button", "Remove segment");
+                remove.type = "button";
+                remove.addEventListener("click", () => setSegments(values.filter((_, candidate) => candidate !== index)));
+                actions.append(propertyBefore, indexBefore, remove);
+                row.append(kindLabel, kind, valueLabel, value, actions);
+                return row;
+            }));
+        };
+        const refresh = () => {
+            targetExpression = input.value;
+            const inspection = inspectValidationTarget(draft.event.payload, targetExpression);
+            const values = parsedSegments();
+            renderSegments(values);
+            const segmentText = values.length ? values.map((segment) => segment.kind === "property" ? `Property ${segment.value}` : segment.kind === "every" ? "Every array item" : `Array index ${segment.value}`).join(" · ") : "Target segments need correction";
+            preview.textContent = [segmentText, inspection.readablePath, inspection.expression, `${inspection.matchedValueCount ?? 0} matched values`, `Detected types: ${inspection.detectedTypes?.join(", ") || "unobserved"}`, `Examples: ${inspection.examples?.map(String).join(", ") || "none"}`, inspection.missingNodes?.length ? `Will create: ${inspection.missingNodes.join(", ")}` : "", inspection.assistance].filter(Boolean).join(" · ");
+            const needsType = Boolean(inspection.requiresExpectedType);
+            expectedLabel.hidden = expected.hidden = !needsType;
+            expected.value = targetExpectedType;
+            apply.disabled = inspection.result === "blocked" || (needsType && !targetExpectedType);
+        };
+        input.addEventListener("input", refresh);
+        expected.addEventListener("change", () => { targetExpectedType = expected.value; refresh(); });
+        const addProperty = element("button", "Add Property segment");
+        addProperty.type = "button";
+        addProperty.addEventListener("click", () => setSegments([...parsedSegments(), { kind: "property", value: "property" }]));
+        const addIndex = element("button", "Add Array index segment");
+        addIndex.type = "button";
+        addIndex.addEventListener("click", () => setSegments([...parsedSegments(), { kind: "index", value: 0 }]));
+        const addEvery = element("button", "Add Every item segment");
+        addEvery.type = "button";
+        addEvery.addEventListener("click", () => setSegments([...parsedSegments(), { kind: "every", value: null }]));
+        const reset = element("button", "Reset to observed path");
+        reset.type = "button";
+        reset.addEventListener("click", () => { targetExpression = normalizeTargetExpression(observedTargetPath, draft.event.payload); targetExpectedType = ""; input.value = targetExpression; refresh(); });
+        const apply = element("button", "Apply target path");
+        apply.type = "button";
+        apply.addEventListener("click", () => {
+            const inspection = inspectValidationTarget(draft.event.payload, targetExpression);
+            if (inspection.result !== "accepted" && inspection.result !== "unobserved")
+                return;
+            draft = retargetGuidedValidation(draft, String(inspection.expression), targetExpectedType || undefined);
+            targetEditorOpen = false;
+            status = "Target path applied; review refreshed inferred values before saving.";
+            render();
+        });
+        const cancel = element("button", "Cancel");
+        cancel.type = "button";
+        cancel.addEventListener("click", () => { targetEditorOpen = false; render(); });
+        dialog.addEventListener("cancel", (event) => { event.preventDefault(); targetEditorOpen = false; render(); });
+        dialog.append(heading, label, input, segmentsHeading, segments, addProperty, addIndex, addEvery, preview, expectedLabel, expected, reset, apply, cancel);
+        container.append(dialog);
+        dialog.showModal();
+        refresh();
     }
     function renderReviewStage(container) {
         if (!draft)
@@ -577,6 +716,11 @@ export function createGuidedValidationFlow(root, effects) {
         root.replaceChildren(heading);
         renderStages(root);
         renderErrors(root);
+        if (draft.continuation) {
+            const context = element("p", `Adding to ${draft.continuation.schemaName} draft`);
+            context.id = "guided-continuation-context";
+            root.append(context);
+        }
         if (draft.stage === "property")
             renderPropertyStage(root);
         if (draft.stage === "requirement")
@@ -588,8 +732,10 @@ export function createGuidedValidationFlow(root, effects) {
         if (draft.stage === "review")
             renderReviewStage(root);
         renderInlineErrors();
+        renderTargetReplacementReview(root);
         renderAdvanced(root);
         renderNavigation(root);
+        renderTargetEditor(root);
         const statusElement = element("output", status);
         statusElement.id = "guided-validation-status";
         statusElement.setAttribute("role", "status");
@@ -597,8 +743,9 @@ export function createGuidedValidationFlow(root, effects) {
         root.append(statusElement);
     }
     const api = {
-        open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
-        close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; render(); effects.close?.(); },
+        open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
+        openProperty(event, path, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationForProperty(event, continuation, path) : createGuidedValidationForProperty(event, path); errors = []; status = `${path} selected from the event property tree; nothing has been saved.`; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; observedTargetPath = path; render(); root?.querySelector("#guided-validation-heading")?.focus({ preventScroll: true }); },
+        close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; render(); effects.close?.(); },
         currentDraft() { return draft; },
     };
     return api;

@@ -54,7 +54,7 @@
 (defn- assert-initial-analysis! [initial]
   (support/assert! (every? (set (:analysisActions initial))
                            ["Copy payload" "Save to Library" "Create schema"
-                            "Create validation from this event" "Create defect report" "Revalidate"])
+                            "Add validation" "Create defect report" "Revalidate"])
                    "Saved events lost current-feed analysis actions." initial))
 
 (defn- assert-initial-model! [initial]

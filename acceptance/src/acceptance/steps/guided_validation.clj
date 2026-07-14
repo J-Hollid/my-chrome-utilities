@@ -20,6 +20,7 @@
    "a guided validation draft is open for pageview from http://127.0.0.1:4173/" :path
    "a guided validation draft defines an allowed-values rule for property page_type" :destination
    "a guided validation draft has selected payload property page_type" :destination
+   "Add validation started from payload property page_type" :destination
    "the guided validation schema destination stage is displayed at 320 CSS px wide" :picker})
 
 (defonce ^:private browser-observation (atom nil))

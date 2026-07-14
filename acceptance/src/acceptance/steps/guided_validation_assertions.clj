@@ -10,8 +10,8 @@
   (support/require-example example key))
 
 (defn- creation-opened [_example observation]
-  (support/assert! (= [true "Choose properties"] [(get-in observation [:initial :visible]) (get-in observation [:initial :heading])])
-                   "Guided validation did not open at property selection." {:observation observation}))
+  (support/assert! (= [true "Choose schema destination"] [(get-in observation [:initial :visible]) (get-in observation [:initial :heading])])
+                   "Guided validation did not open at schema destination." {:observation observation}))
 
 (defn- creation-retained-event [_example observation]
   (support/assert! (str/includes? (get-in observation [:scope :prefill])
@@ -39,7 +39,7 @@
                    "Guided Back navigation lost the reviewed scope." {:observation observation}))
 
 (defn- creation-saved [_example observation]
-  (support/assert! (= [false ["Add page_type validation"] 1 true]
+  (support/assert! (= [false ["Add /page_type validation"] 1 true]
                       [(get-in observation [:saved :published])
                        (get-in observation [:saved :pendingChanges])
                        (get-in observation [:saved :localRules])
@@ -78,8 +78,9 @@
 
 (def creation-assertions
   (merge
-   (zipmap #{"the operator activates Create validation from this event"
-             "a guided validation draft opens at property selection"}
+   (zipmap #{"the operator activates Add validation for property page_type"
+             "a guided validation draft opens at schema destination with page_type selected"
+             "no separate property-selection stage is displayed"}
            (repeat creation-opened))
    {"the draft retains event pageview, its captured source, payload, domain 127.0.0.1, and pathname /" creation-retained-event
     "no schema, rule, or assignment is persisted" creation-unpersisted}
@@ -216,7 +217,7 @@
 
 (defn- form-navigation [_example observation]
   (support/assert! (= ["current" "complete" "domain-all-paths" "new" true]
-                      [(get-in observation [:reviewStages 4 1])
+                      [(get-in observation [:reviewStages 3 1])
                        (get-in observation [:reviewStages 0 1])
                        (:retainedScope observation)
                        (get-in observation [:retainedDestination :kind])

@@ -638,6 +638,7 @@ if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
   localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
 let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(localStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+let guidedPropertyReturn: { eventId:string; path:string; expanded:string[]; inspectorScroll:number; feedScroll:number } | undefined;
 let schemaDraft: SchemaDefinition | undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
@@ -658,7 +659,7 @@ let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSO
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   schemaCandidates: guidedSchemaCandidates,
   publish: persistPublishedGuidedValidation,
-  close: () => { showDataLayerView("Live"); renderLiveObserver(); },
+  close: () => { showDataLayerView("Live"); renderLiveObserver(); restoreGuidedPropertyReturn(); },
   saved: finishGuidedValidationSave,
 });
 let replaySequences: ReplaySequence[] = [];
@@ -1158,6 +1159,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
     createValidation: (selected) => {
       openGuidedValidationForEvent(selected);
     },
+    addPropertyValidation: (selected, path) => openGuidedValidationForProperty(selected, path),
     draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
     startDefectReport: (selected) => {
       if (liveObserverElements.eventInspector) {
@@ -1375,7 +1377,7 @@ function renderSchemaDraft(): void {
     ...(draft.attachedRules ?? []).flatMap(({ propertyPath }) => propertyPath?.startsWith("/") ? [propertyPath.slice(1).replaceAll("/", ".")] : []),
   ])];
   if (!propertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
-  schemaPropertyTree.replaceChildren(...propertyPaths.map((path) => {
+  const propertyItems = propertyPaths.map((path) => {
     const item = document.createElement("li");
     item.dataset.schemaPropertyPath = path;
     if (path === selectedSchemaPropertyPath) item.setAttribute("aria-current", "true");
@@ -1426,7 +1428,21 @@ function renderSchemaDraft(): void {
       row.append(toggle, remove); view.append(row);
     }
     item.append(label, metadata, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view); return item;
-  }));
+  });
+  const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]!]));
+  const roots: HTMLLIElement[] = [];
+  propertyPaths.forEach((path) => {
+    const item = itemByPath.get(path)!;
+    const parentPath = propertyPaths
+      .filter((candidate) => candidate !== path && path.startsWith(`${candidate}.`))
+      .sort((left, right) => right.length - left.length)[0];
+    const parent = parentPath ? itemByPath.get(parentPath) : undefined;
+    if (!parent) { roots.push(item); return; }
+    let children = Array.from(parent.children).find((child): child is HTMLUListElement => child instanceof HTMLUListElement && child.classList.contains("schema-property-children"));
+    if (!children) { children = document.createElement("ul"); children.className = "schema-property-children"; parent.append(children); }
+    children.append(item);
+  });
+  schemaPropertyTree.replaceChildren(...roots);
   const existing = schemas.find((schema) => schema.name === draft.name);
   const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
   if (schemaEditorParent) {
@@ -1810,6 +1826,23 @@ function openGuidedValidationForEvent(event: LiveEvent, schema?: SchemaDefinitio
   if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.hidden = true;
 }
 
+function openGuidedValidationForProperty(event: LiveEvent, path: string): void {
+  const inspector = liveObserverElements.eventInspector; const feed = liveObserverElements.eventFeed;
+  guidedPropertyReturn = { eventId:event.id, path, expanded:Array.from(inspector?.querySelectorAll<HTMLDetailsElement>("details[open][data-property-path]") ?? []).map(({ dataset }) => dataset.propertyPath!).filter(Boolean), inspectorScroll:inspector?.scrollTop ?? 0, feedScroll:feed?.scrollTop ?? 0 };
+  const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
+  guidedValidationFlow.openProperty(guidedEvent(event), path, schema ? guidedSchemaCandidate(schema, true) : undefined);
+  if (inspector) inspector.hidden = true;
+}
+
+function restoreGuidedPropertyReturn(): void {
+  const snapshot = guidedPropertyReturn; if (!snapshot) return;
+  openLiveInspector(snapshot.eventId, true);
+  const inspector = liveObserverElements.eventInspector; const feed = liveObserverElements.eventFeed;
+  for (const path of snapshot.expanded) inspector?.querySelector<HTMLDetailsElement>(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
+  if (inspector) inspector.scrollTop = snapshot.inspectorScroll; if (feed) feed.scrollTop = snapshot.feedScroll;
+  inspector?.querySelector<HTMLButtonElement>(`button[aria-label="Add validation for ${CSS.escape(snapshot.path)}"]`)?.focus({ preventScroll:true });
+}
+
 function persistGuidedContinuation(event: Pick<LiveEvent, "sourceId" | "name">, schemaId: string): void {
   guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
   localStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
@@ -1876,7 +1909,7 @@ function finishGuidedValidationSave(result: PublishedGuidedValidation): void {
   if (!event) return;
   persistGuidedContinuation(event, result.schema.id);
   openLiveInspector(event.id, true);
-  liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>('[data-action="add-property-validation"]')?.focus({ preventScroll:true });
+  if (guidedPropertyReturn) restoreGuidedPropertyReturn();
 }
 
 function persistPublishedGuidedValidation(result: PublishedGuidedValidation): void {

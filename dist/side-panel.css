@@ -40,13 +40,21 @@
 #live-event-validation-issues { border:1px solid var(--line); padding:.4rem; }
 #live-validation-properties { padding:0; list-style:none; }
 .live-validation-property { position:relative; padding:.25rem 0; }
-.live-validation-property-row { display:grid; grid-template-columns:minmax(5rem,1fr) minmax(4rem,1fr) auto; align-items:center; gap:.35rem; border-inline-start:4px solid var(--validation-color,var(--line)); padding:.25rem; }
+.live-validation-property-row { display:grid; grid-template-columns:minmax(5rem,1fr) minmax(4rem,1fr); align-items:center; gap:.35rem; border-inline-start:4px solid var(--validation-color,var(--line)); padding:.25rem; }
+.live-validation-property-row > :is(.live-property-status,.live-property-add-validation) { grid-row:2; min-width:min(100%,8rem); }
+.live-validation-property-row > .live-property-status { grid-column:1; }
+.live-validation-property-row > .live-property-add-validation { grid-column:2; }
 .live-validation-property-row [data-missing="true"] { font-weight:700; color:var(--danger); }
 .live-property-status { min-height:36px; }
 .live-property-aggregate { grid-column:1/-1; font-weight:700; }
 .live-property-issue-preview { position:relative; z-index:2; margin:.25rem; padding:.45rem; border:1px solid var(--line); background:var(--surface); box-shadow:0 .35rem 1rem color-mix(in srgb,var(--text) 18%,transparent); }
 .live-property-rule-details { padding:.35rem; border-inline-start:3px solid var(--line); }
 .live-validation-property details > ul { list-style:none; padding-inline-start:.75rem; }
+@media (max-width:360px) {
+  .live-validation-property details > ul { padding-inline-start:.35rem; }
+  .live-validation-property-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .live-validation-property-row > :is(.live-property-status,.live-property-add-validation) { width:100%; min-width:0; white-space:normal; }
+}
 @media (min-width:700px) {
   #data-layer-panel-live[data-live-layout="feed-only"] {
     grid-template-columns:minmax(0,1fr);
@@ -85,6 +93,10 @@
 #guided-validation-stages li { font-size:.85rem; border-bottom:3px solid var(--line); }
 #guided-validation-stages li[data-state="complete"],#guided-validation-stages li[data-state="current"] { border-color:var(--accent); }
 #guided-validation-errors { border:2px solid var(--danger); padding:.5rem; }
+#guided-target-path-editor { inline-size:min(94vw,42rem); max-block-size:88vh; overflow:auto; color:inherit; background:var(--surface); border:1px solid var(--line); }
+#guided-target-segments { display:grid; gap:.35rem; padding:0; list-style:none; }
+.guided-target-segment { display:grid; grid-template-columns:minmax(7rem,.75fr) minmax(8rem,1fr); gap:.35rem; align-items:end; }
+.guided-target-segment-actions { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:.35rem; }
 @media (min-width:700px) { #guided-validation-flow { grid-column:1/-1; } }
 @media (min-width:850px) {
   #data-layer-panel-live[data-live-layout="wide-detail"] { grid-template-columns:minmax(17.5rem,20rem) minmax(22.5rem,1fr); }
