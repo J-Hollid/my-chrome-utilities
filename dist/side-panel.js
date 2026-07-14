@@ -54,8 +54,10 @@ import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-l
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
-import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription } from "./data-layer-schema-documentation.js";
 import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./data-layer-conditional-validation-rules.js";
@@ -1452,19 +1454,12 @@ function showSchemaSubview(id) {
         tab.tabIndex = active ? 0 : -1;
     });
 }
-function schemaDocumentPaths(document, prefix = "") {
-    return Object.entries(document.properties ?? {}).flatMap(([name, child]) => {
-        const path = prefix ? `${prefix}.${name}` : name;
-        return child.type === "array" && child.items
-            ? [path, `${path}.*`, ...schemaDocumentPaths(child.items, `${path}.*`)]
-            : [path, ...schemaDocumentPaths(child, path)];
-    });
+function schemaDocumentPaths(document) {
+    return schemaPropertyRows(document).map(({ displayPath }) => displayPath);
 }
-function schemaPropertyAt(document, path) {
-    let property = document;
-    for (const segment of path.split("."))
-        property = segment === "*" || /^\d+$/.test(segment) ? property?.items : property?.properties?.[segment];
-    return property;
+function schemaPropertyAt(document, path, inheritedDocuments = []) {
+    const canonicalPath = canonicalRulePropertyPath(path);
+    return schemaPropertyRows(document, inheritedDocuments).find((row) => row.canonicalPath === canonicalPath)?.schema;
 }
 function promotionReusableRules() {
     return reusableSchemaRules.map((rule) => ({
@@ -1599,32 +1594,33 @@ function renderSchemaDraft() {
     if (schemaOnlyDeclaredProperties)
         schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
     const parentDocuments = schemaParentDocuments();
-    const localPropertyPaths = schemaDocumentPaths(draft.document);
-    const inheritedPropertyPaths = parentDocuments.flatMap((document) => schemaDocumentPaths(document))
-        .filter((path) => draft.inheritedRuleOverrides?.[`/${path.replaceAll(".", "/")}`] !== "disabled");
-    const propertyPaths = [...new Set([
-            ...localPropertyPaths,
-            ...inheritedPropertyPaths,
-            ...(draft.attachedRules ?? []).flatMap(({ propertyPath }) => propertyPath?.startsWith("/") ? [propertyPath.slice(1).replaceAll("/", ".")] : []),
-        ])];
+    const excludedInheritedPaths = new Set(Object.entries(draft.inheritedRuleOverrides ?? {})
+        .filter(([, state]) => state === "disabled")
+        .map(([path]) => canonicalRulePropertyPath(path)));
+    const propertyRows = schemaPropertyRows(draft.document, parentDocuments, excludedInheritedPaths);
+    const propertyPaths = propertyRows.map(({ displayPath }) => displayPath);
     if (!propertyPaths.includes(selectedSchemaPropertyPath))
         selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
-    const propertyItems = propertyPaths.map((path) => {
+    const expandedRulePaths = new Set(Array.from(schemaPropertyTree.querySelectorAll("li[data-schema-property-canonical-path] details[data-attached-rules][open]"))
+        .flatMap((details) => details.closest("li[data-schema-property-canonical-path]")?.dataset.schemaPropertyCanonicalPath ?? []));
+    const propertyTreeScrollTop = schemaPropertyTree.scrollTop;
+    const schemaEditorScrollTop = schemaEditor?.scrollTop ?? 0;
+    const propertyItems = propertyRows.map((propertyRow) => {
+        const path = propertyRow.displayPath;
         const item = document.createElement("li");
         item.dataset.schemaPropertyPath = path;
+        item.dataset.schemaPropertyCanonicalPath = propertyRow.canonicalPath;
         if (path === selectedSchemaPropertyPath)
             item.setAttribute("aria-current", "true");
         item.tabIndex = -1;
         const label = document.createElement("strong");
         label.textContent = path;
-        const localProperty = schemaPropertyAt(draft.document, path);
-        const inheritedProperty = parentDocuments.map((document) => schemaPropertyAt(document, path)).find(Boolean);
-        const inherited = !localProperty && Boolean(inheritedProperty);
-        const property = localProperty ?? inheritedProperty;
+        const inherited = propertyRow.origin === "inherited";
+        const property = propertyRow.schema;
         const metadata = document.createElement("span");
         metadata.className = "schema-property-metadata";
         metadata.textContent = `${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
-        const persistedPath = canonicalRulePropertyPath(path);
+        const persistedPath = propertyRow.canonicalPath;
         const documentationPath = canonicalDocumentationPath(persistedPath);
         const localDocumentation = draft.documentation?.properties?.[documentationPath];
         const propertyDocumentation = effectiveDocumentation.properties[documentationPath];
@@ -1731,6 +1727,7 @@ function renderSchemaDraft() {
         }
         const view = document.createElement("details");
         view.dataset.attachedRules = "true";
+        view.open = expandedRulePaths.has(persistedPath);
         const summary = document.createElement("summary");
         summary.textContent = `View attached rules (${attached.length})`;
         view.append(summary);
@@ -1792,6 +1789,9 @@ function renderSchemaDraft() {
         children.append(item);
     });
     schemaPropertyTree.replaceChildren(...roots);
+    schemaPropertyTree.scrollTop = propertyTreeScrollTop;
+    if (schemaEditor)
+        schemaEditor.scrollTop = schemaEditorScrollTop;
     const existing = schemas.find((schema) => schema.name === draft.name);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     if (schemaEditorParent) {
@@ -2430,10 +2430,8 @@ function defineSchemaProperty(document, path) {
     return { ...document, type: document.type ?? "object", properties: { ...properties, [name]: defineSchemaProperty(properties[name] ?? { type: "object" }, rest) } };
 }
 function schemaPropertyType(path) {
-    let document = schemaDraft?.document;
-    for (const segment of path.split("."))
-        document = segment === "*" || /^\d+$/.test(segment) ? document?.items : document?.properties?.[segment];
-    return document?.type === "number" || document?.type === "array" || document?.type === "object" || document?.type === "boolean" ? document.type : "string";
+    const property = schemaDraft && schemaPropertyAt(schemaDraft.document, path, schemaParentDocuments());
+    return property?.type === "number" || property?.type === "array" || property?.type === "object" || property?.type === "boolean" ? property.type : "string";
 }
 function closeSchemaPropertyRulePicker() {
     if (schemaPropertyRulePicker.open)
@@ -2901,12 +2899,10 @@ schemaSpecificIndexDialog.addEventListener("cancel", (event) => { event.preventD
 function attachReusableRule(path, rule) {
     if (!schemaDraft)
         return;
-    const propertyPath = canonicalRulePropertyPath(path);
     const attachment = {
         id: rule.id,
         name: rule.name,
         version: rule.version ?? 1,
-        propertyPath,
         ...(rule.operator ? { operator: rule.operator } : {}),
         ...(rule.parameters ? { parameters: rule.parameters } : {}),
         ...(rule.severity ? { severity: rule.severity } : {}),
@@ -2914,8 +2910,7 @@ function attachReusableRule(path, rule) {
         ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),
         enabled: true,
     };
-    const nested = ensureNestedSchemaPath(schemaDraft.document, propertyPath.startsWith("/") ? propertyPath : `/${propertyPath}`, schemaPropertyType(path));
-    schemaDraft = { ...schemaDraft, document: nested.document, attachedRules: [...(schemaDraft.attachedRules ?? []).filter((item) => item.id !== rule.id || item.propertyPath !== propertyPath), attachment] };
+    schemaDraft = attachRuleToSchemaProperty(schemaDraft, path, attachment);
     persistSchemaEditorDraft(`Attach ${rule.name} to ${path}`);
     renderSchemaDraft();
     focusSchemaPropertyRow(path);
@@ -2935,9 +2930,9 @@ function updateAttachedRule(path, id, update) {
     focusSchemaPropertyRow(path);
 }
 function focusSchemaPropertyRow(path) {
-    const displayedPath = path.startsWith("/") ? path.slice(1).replaceAll("/", ".") : path;
+    const canonicalPath = canonicalRulePropertyPath(path);
     Array.from(schemaPropertyTree.querySelectorAll("li[data-schema-property-path]"))
-        .find((row) => row.dataset.schemaPropertyPath === displayedPath)
+        .find((row) => row.dataset.schemaPropertyCanonicalPath === canonicalPath)
         ?.focus({ preventScroll: true });
 }
 function renderSchemaWorkflowRows() {

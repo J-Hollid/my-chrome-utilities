@@ -47,6 +47,7 @@
                         [acceptance.schema-property-removal-steps-test]
                         [acceptance.schema-publication-refresh-steps-test]
                         [acceptance.schema-property-rule-picker-steps-test]
+                        [acceptance.schema-rule-property-identity-steps-test]
                         [acceptance.recursive-property-validation-steps-test]
                         [acceptance.information-architecture-steps-test]
                         [acceptance.schema-verification-steps-test]
@@ -91,6 +92,7 @@
                                                 'acceptance.schema-property-removal-steps-test
                                                 'acceptance.schema-publication-refresh-steps-test
                                                 'acceptance.schema-property-rule-picker-steps-test
+                                                'acceptance.schema-rule-property-identity-steps-test
                                                 'acceptance.recursive-property-validation-steps-test
                                                 'acceptance.information-architecture-steps-test
                                                 'acceptance.schema-verification-steps-test

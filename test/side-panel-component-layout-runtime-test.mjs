@@ -20,6 +20,7 @@ let guidedDraftContinuationObservation;
 let guidedDraftContinuationInitialObservation;
 let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
+let schemaRulePropertyIdentityObservation;
 let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
@@ -46,6 +47,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1" ? [320]
   : process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
@@ -2063,6 +2065,54 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   return { closed, opened, availability, searches, groups, metadata, builtInConfiguration, attached, already:{ disabled:already?.disabled, label:already?.textContent }, empty, keyboard, configurationControls, configurationCommon, validations, allowedValues, reusableToggle, localCreation, reusableCreation, navigation };
 })()`;
 
+const schemaRulePropertyIdentityRuntime = `(async () => {
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const q = (selector, root=document) => { const value=root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const click = (root, label) => { const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent === label || button.textContent.startsWith(label)); if (!value) throw new Error("Missing action " + label); value.click(); return value; };
+  const runtimeErrors=[];
+  addEventListener("error",(event)=>runtimeErrors.push(String(event.error ?? event.message)));
+  addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  q("#data-layer-view-schemas").click(); const openPageView=()=>{ const item=Array.from(q("#schema-list").children).find((candidate)=>candidate.textContent.includes("Page view")); if(!item) throw new Error("Missing Page view schema"); click(item,"Edit working draft"); }; openPageView();
+  const editor=q("#schema-editor"); const tree=q("#schema-property-tree");
+  const row=(canonical)=>q('[data-schema-property-canonical-path="'+canonical+'"]',tree);
+  const identities=()=>Array.from(tree.querySelectorAll("[data-schema-property-canonical-path]")).map((item)=>item.dataset.schemaPropertyCanonicalPath);
+  const stored=()=>JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[1];
+  const documentBytes=()=>JSON.stringify(stored().workingDraft.document);
+  const removeRule=(id)=>{ const details=row("/page_type").querySelector("details[data-attached-rules]"); details.open=true; click(q('[data-rule-id="'+id+'"]',details),"Remove"); };
+  const initialDocument=documentBytes(); const initialIdentities=identities();
+  q('button[aria-label="Add rule for page_levels"]',row("/page_levels")).click();
+  const arrayPicker={ heading:q("#schema-property-rule-picker-heading").textContent, itemCount:Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).some(({textContent})=>textContent==="Item count"), regularExpression:Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).some(({textContent})=>textContent==="Regular expression") };
+  q("#schema-property-rule-picker").dispatchEvent(new Event("cancel",{cancelable:true}));
+  const initial={ identities:initialIdentities, pageTypeRows:tree.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length, pageLevelRows:tree.querySelectorAll('[data-schema-property-canonical-path="/page_levels/0"]').length, nestedRows:tree.querySelectorAll('[data-schema-property-canonical-path="/products/*/name"]').length, inheritedRows:tree.querySelectorAll('[data-schema-property-canonical-path="/customer/id"]').length, metadata:row("/page_type").querySelector(".schema-property-metadata").textContent, documentation:row("/page_type").querySelector(".schema-property-documentation").textContent, arrayPicker };
+  const page=row("/page_type"); page.querySelector("details[data-attached-rules]").open=true; page.setAttribute("aria-current","true"); editor.style.height="240px"; editor.style.overflow="auto"; tree.style.height="180px"; tree.style.overflow="auto"; editor.scrollTop=31; tree.scrollTop=19;
+  q('button[aria-label="Add rule for page_type"]',page).click(); click(q("#schema-property-rule-picker"),"Required"); click(q("#schema-property-rule-picker"),"Create rule"); await pause();
+  const afterRequiredStored=stored(); const afterRequiredRow=row("/page_type");
+  const required={ rules:afterRequiredStored.workingDraft.attachedRules.filter(({propertyPath,operator})=>propertyPath==="/page_type" && operator==="required").length, documentUnchanged:documentBytes()===initialDocument, identitiesUnchanged:JSON.stringify(identities())===JSON.stringify(initialIdentities), count:afterRequiredRow.textContent.includes("1 active rules"), rows:tree.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length, selected:afterRequiredRow.getAttribute("aria-current"), expanded:afterRequiredRow.querySelector("details[data-attached-rules]").open, editorScroll:editor.scrollTop, treeScroll:tree.scrollTop, focus:document.activeElement?.getAttribute("aria-label") };
+  removeRule(afterRequiredStored.workingDraft.attachedRules.find(({operator})=>operator==="required").id);
+  q('button[aria-label="Add rule for page_type"]',row("/page_type")).click(); click(q("#schema-property-rule-picker"),"Approved page types version 2"); await pause();
+  const afterReusable=stored();
+  const reusable={ rules:afterReusable.workingDraft.attachedRules.filter(({id,version,propertyPath})=>id==="rule:approved-page-types" && version===2 && propertyPath==="/page_type").length, documentUnchanged:documentBytes()===initialDocument, count:row("/page_type").textContent.includes("1 active rules") };
+  q('button[aria-label="Add rule for page_type"]',row("/page_type")).click();
+  const retryButton=Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find((button)=>button.textContent.includes("Approved page types version 2"));
+  reusable.retry={ disabled:retryButton?.disabled, label:retryButton?.textContent }; q("#schema-property-rule-picker").dispatchEvent(new Event("cancel",{cancelable:true}));
+  removeRule("rule:approved-page-types");
+  q('button[aria-label="Add rule for page_type"]',row("/page_type")).click(); click(q("#schema-property-rule-picker"),"Required"); click(q("#schema-property-rule-picker"),"Create rule"); await pause();
+  q('button[aria-label="Add rule for page_type"]',row("/page_type")).click(); click(q("#schema-property-rule-picker"),"Allowed values");
+  const allowed=q("#schema-local-rule-allowed-value-1"); allowed.value="homepage"; allowed.dispatchEvent(new Event("input",{bubbles:true})); click(q("#schema-property-rule-picker"),"Create rule"); await pause();
+  const distinct={ rules:stored().workingDraft.attachedRules.filter(({propertyPath})=>propertyPath==="/page_type").map(({id,operator})=>({id,operator})), count:row("/page_type").textContent.includes("2 active rules"), documentUnchanged:documentBytes()===initialDocument, oneRow:tree.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length===1 };
+  removeRule(distinct.rules.find(({operator})=>operator==="allowed-values").id);
+  q('button[aria-label="Add rule for page_type"]',row("/page_type")).click(); click(q("#schema-property-rule-picker"),"Approved page types version 2"); await pause();
+  const targets=[];
+  for (const [canonical,display] of [["/page_levels/0","page_levels.0"],["/products/*/name","products.*.name"],["/customer/id","customer.id"]]) {
+    const before=documentBytes(); const beforeIdentities=identities(); const target=row(canonical); const metadata=target.querySelector(".schema-property-metadata").textContent; const index=beforeIdentities.indexOf(canonical);
+    q('button[aria-label="Add rule for '+display+'"]',target).click(); click(q("#schema-property-rule-picker"),"Compatible strings version 1"); await pause();
+    targets.push({ canonical, attached:stored().workingDraft.attachedRules.filter(({id,propertyPath})=>id==="rule:compatible-strings" && propertyPath===canonical).length, documentUnchanged:documentBytes()===before, oneRow:tree.querySelectorAll('[data-schema-property-canonical-path="'+canonical+'"]').length===1, metadata:row(canonical).querySelector(".schema-property-metadata").textContent===metadata, position:identities().indexOf(canonical)===index });
+  }
+  q("#close-schema-editor").click(); openPageView();
+  const reopened={ documentUnchanged:documentBytes()===initialDocument, pageTypeRows:document.querySelectorAll('[data-schema-property-canonical-path="/page_type"]').length, pageTypeRules:stored().workingDraft.attachedRules.filter(({propertyPath})=>propertyPath==="/page_type").length, identities:identities() };
+  return { initial,required,reusable,distinct,targets,reopened,runtimeErrors };
+})()`;
+
 const schemaManualPropertyRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -3482,6 +3532,22 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        const parentDocument={type:"object",properties:{"/customer/id":{type:"string"}}};
+        const parent={id:"schema-customer",name:"Customer",version:2,published:true,document:parentDocument,assignments:[],documentation:{properties:{"/customer/id":{displayName:"Customer id",description:"Inherited customer identifier"}}}};
+        const document={type:"object",properties:{"/page_type":{type:"string",propertyOrigin:"manual"},"/page_levels":{type:"array"},"/page_levels/0":{type:"string"},products:{type:"array",items:{type:"object",properties:{name:{type:"string"}}}}}};
+        const current={id:"schema-page-view",name:"Page view",version:4,published:true,parentSchemaId:parent.id,document,assignments:[],attachedRules:[],documentation:{properties:{"/page_type":{displayName:"Page classification",description:"Business page type"}}},workingDraft:{baseVersion:4,sourceVersion:4,parentSchemaId:parent.id,document,assignments:[],attachedRules:[],documentation:{properties:{"/page_type":{displayName:"Page classification",description:"Business page type"}}},pendingChanges:[]}};
+        const rules=[{id:"rule:approved-page-types",name:"Approved page types",kind:"Allowed values",operator:"allowed-values",parameters:"homepage,checkout",applicableType:"string",version:2,enabled:true},{id:"rule:compatible-strings",name:"Compatible strings",kind:"Allowed values",operator:"allowed-values",parameters:"known",applicableType:"string",version:1,enabled:true}];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([parent,current]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify(rules));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaRulePropertyIdentityObservation = await evaluate(socket, schemaRulePropertyIdentityRuntime);
+      socket.close(); continue;
+    }
     if (process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, localRulePromotionSeedRuntime); await reloadPanel(socket);
       const localOrigin = await evaluate(socket, localRulePromotionOpenRuntime);
@@ -4573,6 +4639,9 @@ try {
   }
   if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPropertyRulePicker:schemaPropertyRulePickerObservation }));
+  }
+  if (process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaRulePropertyIdentity:schemaRulePropertyIdentityObservation }));
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
