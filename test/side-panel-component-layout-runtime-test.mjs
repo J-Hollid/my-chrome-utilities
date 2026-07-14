@@ -24,12 +24,14 @@ let schemaManualPropertyObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
+let workspacePanelContainmentObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const componentWidths = process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
+  : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
@@ -2212,6 +2214,33 @@ const workflowFocusRuntime = `Promise.all([
   return { tabResult, editorResult, pushResult, targetResult };
 })`;
 
+const workspacePanelContainmentRuntime = `(() => {
+  const dataLayerPanel = document.querySelector("#workspace-panel-data-layer");
+  const hotkeysPanel = document.querySelector("#workspace-panel-hotkeys");
+  const hotkeysTab = document.querySelector("#workspace-tab-hotkeys");
+  const peers = dataLayerPanel.parentElement === hotkeysPanel.parentElement;
+  const nested = dataLayerPanel.contains(hotkeysPanel) || hotkeysPanel.contains(dataLayerPanel);
+  hotkeysTab.click();
+  const heading = hotkeysPanel.querySelector("h2");
+  const search = hotkeysPanel.querySelector("#hotkey-editor-filter");
+  const groups = [...hotkeysPanel.querySelectorAll("#hotkey-editor-commands > section")];
+  const observation = {
+    peers,
+    nested,
+    afterActivation:{
+      dataLayerHidden:dataLayerPanel.hidden,
+      hotkeysHidden:hotkeysPanel.hidden,
+      hotkeysVisible:hotkeysPanel.checkVisibility(),
+      headingVisible:heading.checkVisibility(),
+      searchVisible:search.checkVisibility(),
+      registeredGroupCount:groups.length,
+      registeredGroupsVisible:groups.length > 0 && groups.every((group) => group.checkVisibility()),
+    },
+  };
+  document.querySelector("#workspace-tab-data-layer").click();
+  return observation;
+})()`;
+
 const within = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1 && child.y >= parent.y - 1 && child.bottom <= parent.bottom + 1;
 const withinColumn = (child, parent) => child.x >= parent.x - 1 && child.right <= parent.right + 1;
 const overlaps = (left, right) => left.x < right.right && left.right > right.x && left.y < right.bottom && left.bottom > right.y;
@@ -2220,6 +2249,23 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    workspacePanelContainmentObservation = await evaluate(socket, workspacePanelContainmentRuntime);
+    assert.deepEqual(workspacePanelContainmentObservation, {
+      peers:true,
+      nested:false,
+      afterActivation:{
+        dataLayerHidden:true,
+        hotkeysHidden:false,
+        hotkeysVisible:true,
+        headingVisible:true,
+        searchVisible:true,
+        registeredGroupCount:3,
+        registeredGroupsVisible:true,
+      },
+    }, `Workspace panel containment violated its ${width}px browser contract`);
+    if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
+      socket.close(); continue;
+    }
     if (runSchemaViewContainmentRuntime) {
       schemaViewContainmentObservation = await evaluate(socket, schemaViewContainmentRuntime);
       assert.deepEqual(schemaViewContainmentObservation, {
@@ -2936,6 +2982,9 @@ try {
   }
   if (process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ savedSessionLiveFeed:{ initial:savedSessionLiveFeedObservation, reload:savedSessionLiveFeedReloadObservation } }));
+  }
+  if (process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ workspacePanelContainment:workspacePanelContainmentObservation }));
   }
 } finally {
   if (chrome.exitCode === null && !chrome.killed) {

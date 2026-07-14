@@ -73,3 +73,17 @@ Feature: Side panel workspace tabs
       | project_name         | command_id                 | tab_name   |
       | my-chrome-utilities | navigation.show-data-layer | Data Layer |
       | my-chrome-utilities | navigation.show-hotkeys    | Hotkeys    |
+
+  # Side panel workspace tabs 006
+  Scenario Outline: Side panel workspace tabs 006
+    When the side panel is displayed
+    Then panels for workspace tabs <primary_tab> and <settings_tab> are separate peer regions
+    And neither workspace panel contains the other workspace panel
+    When the user activates workspace tab <settings_tab>
+    Then the panel for tab <primary_tab> is hidden
+    And the panel for tab <settings_tab> remains visible
+    And heading <settings_tab>, hotkey search, and registered command groups are visible in that panel
+
+    Examples:
+      | project_name         | primary_tab | settings_tab |
+      | my-chrome-utilities | Data Layer  | Hotkeys      |
