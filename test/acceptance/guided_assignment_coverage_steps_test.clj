@@ -1,15 +1,13 @@
 (ns acceptance.guided-assignment-coverage-steps-test
   (:require [acceptance.runtime :as runtime]
+            [acceptance.feature-support :as feature-support]
             [acceptance.steps.guided-assignment-coverage :as coverage]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest covers-every-guided-assignment-coverage-step
-  (let [feature (gherkin/parse-file coverage/feature-file)
-        texts (map :text (concat (:background feature)
-                                 (mapcat :steps (:scenarios feature))))]
-    (doseq [text texts]
-      (is (some #(re-matches (:pattern %) text) coverage/handlers) text))))
+  (doseq [text (feature-support/step-texts coverage/feature-file)]
+    (is (some #(re-matches (:pattern %) text) coverage/handlers) text)))
 
 (deftest binds-every-guided-assignment-example-to-browser-evidence
   (let [feature (gherkin/parse-file coverage/feature-file)

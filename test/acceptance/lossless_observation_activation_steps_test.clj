@@ -1,16 +1,14 @@
 (ns acceptance.lossless-observation-activation-steps-test
   (:require [acceptance.steps.lossless-observation-activation :as lossless]
+            [acceptance.feature-support :as feature-support]
             [acceptance.runtime :as runtime]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest covers-every-lossless-observation-step-with-regex-handlers
-  (let [feature (gherkin/parse-file lossless/feature-file)
-        texts (map :text (concat (:background feature)
-                                 (mapcat :steps (:scenarios feature))))]
-    (doseq [text texts
-            :when (not (lossless/excluded-steps text))]
-      (is (some #(re-matches (:pattern %) text) lossless/handlers) text))))
+  (doseq [text (feature-support/step-texts lossless/feature-file)
+          :when (not (lossless/excluded-steps text))]
+    (is (some #(re-matches (:pattern %) text) lossless/handlers) text)))
 
 (deftest binds-every-scenario-example-to-browser-observations
   (let [feature (gherkin/parse-file lossless/feature-file)
