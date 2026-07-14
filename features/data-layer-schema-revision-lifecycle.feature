@@ -94,11 +94,11 @@ Feature: Data layer schema revision lifecycle
 
   # Data layer schema revision lifecycle 009
   Scenario: Data layer schema revision lifecycle 009
-    Given the operator adds page_type to a Product listing working draft based on current revision 3
+    Given the operator adds page_type from its event property row to a Product listing working draft based on current revision 3
     When the guided flow completes
-    Then it offers Add property from this event, Review draft, and Publish revision
-    When the operator chooses Add property from this event
-    Then property selection resumes for the same Product listing working draft
+    Then the originating event property tree is restored with Review draft and Publish revision available
+    When the operator activates Add validation for page_name in that tree
+    Then requirement configuration opens for the same Product listing working draft
     And the pending page_type change remains present
 
   # Data layer schema revision lifecycle 010
