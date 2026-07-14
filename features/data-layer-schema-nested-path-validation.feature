@@ -33,7 +33,7 @@ Feature: Data layer schema nested path validation
       | fruits_value             | validation_result | issue_path |
       | apple, banana, pear      | valid             | none       |
       | apple, orange, pear      | issue             | /fruits/1  |
-      | apple                    | issue             | /fruits/1  |
+      | apple                    | valid             | none       |
 
   # Data layer schema nested path validation 003
   Scenario: Data layer schema nested path validation 003
@@ -42,7 +42,8 @@ Feature: Data layer schema nested path validation
     And the second product has no id and an empty name
     When schema validation runs
     Then every existing products item is evaluated against the same item-property rules
-    And issues identify /products/1/id and /products/1/name
+    And a missing optional item property is Not applicable rather than an issue
+    And issues identify /products/1/name without an issue for /products/1/id
     And no separate rule is generated for each observed index
 
   # Data layer schema nested path validation 004

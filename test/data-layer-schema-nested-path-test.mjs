@@ -76,12 +76,13 @@ function validate(rules, value = payload) {
 }
 
 assert.equal(validate([{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }]).state, "Valid");
-for (const fruits of [["apple", "orange", "pear"], ["apple"]]) {
-  const result = validate([{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }], { ...payload, fruits });
-  assert.equal(result.state, "1 issues");
-  assert.equal(result.issues[0].instancePath, "/fruits/1");
-  assert.equal(result.issues[0].templatePath, "/fruits/1");
-}
+const wrongExistingFruit = validate([{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }], { ...payload, fruits:["apple", "orange", "pear"] });
+assert.equal(wrongExistingFruit.state, "1 issues");
+assert.equal(wrongExistingFruit.issues[0].instancePath, "/fruits/1");
+assert.equal(wrongExistingFruit.issues[0].templatePath, "/fruits/1");
+const absentOptionalFruit = validate([{ id:"banana", version:1, propertyPath:"/fruits/1", operator:"exact-value", parameters:"banana" }], { ...payload, fruits:["apple"] });
+assert.equal(absentOptionalFruit.state, "Valid");
+assert.equal(absentOptionalFruit.evaluations[0].status, "not-applicable");
 
 const missingProduct = { ...payload, products:[payload.products[0], { name:"" }] };
 const productRules = [
@@ -90,9 +91,9 @@ const productRules = [
 ];
 const productsResult = validate(productRules, missingProduct);
 assert.deepEqual(productsResult.issues.map(({ instancePath, templatePath }) => [instancePath, templatePath]), [
-  ["/products/1/id", "/products/*/id"],
   ["/products/1/name", "/products/*/name"],
 ]);
+assert.equal(productsResult.evaluations.some(({ propertyPath, status }) => propertyPath === "/products/1/id" && status === "not-applicable"), true);
 assert.equal(validate(productRules, { ...payload, products:[] }).issues.length, 0);
 
 for (const [id, state, expected] of [["12345678", "Valid", undefined], ["1234567", "1 issues", "text length 8"], ["1234567a", "1 issues", "digits only"]]) {

@@ -44,10 +44,12 @@
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
+            [acceptance.steps.validation-presence-semantics :as validation-presence-semantics]
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               validation-presence-semantics/handlers
                missing-event-defect-report/handlers
                schema-documentation/handlers
                conditional-validation-rules/handlers
