@@ -231,4 +231,5 @@ export function appendReproductionControls(
     updateSteps(skeleton); renderComposer();
   });
   controls.append(startLabel, generate);
+  renderSteps();
 }

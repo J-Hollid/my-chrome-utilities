@@ -1,8 +1,8 @@
-export function appendDetailControls(controls, edits, refresh) {
+export function appendDetailControls(controls, edits, refresh, expectedResult = { field: "expectedExplanation", label: "Expected result explanation" }) {
     for (const [field, labelText, multiline] of [
         ["summary", "Summary", false],
         ["description", "Description", true],
-        ["expectedExplanation", "Expected result explanation", true],
+        [expectedResult.field, expectedResult.label, true],
     ]) {
         const label = document.createElement("label");
         label.textContent = `${labelText} `;

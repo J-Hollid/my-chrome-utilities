@@ -3,6 +3,7 @@ import {
   type DefectStatus,
   type ReportedDefect,
 } from "./data-layer-defect-library.js";
+import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
 
 export interface DefectLibraryElements {
   count: HTMLElement | null;
@@ -66,9 +67,15 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   const label = (text: string, control: HTMLInputElement | HTMLTextAreaElement) => { const wrapper=element("label", text); wrapper.append(control); return wrapper; };
   const summary = element("input"); summary.value = reportField(defect.report, "summary"); summary.dataset.defectField = "summary";
   const description = element("textarea"); description.value = reportField(defect.report, "description"); description.dataset.defectField = "description";
-  const expected = element("textarea"); expected.value = reportField(defect.report, "expectedExplanation"); expected.dataset.defectField = "expectedExplanation";
+  const missingEvent = defect.type === "Missing event";
+  const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
+  const expected = element("textarea"); expected.value = reportField(defect.report, expectedField); expected.dataset.defectField = expectedField;
   const notes = element("textarea"); notes.value = defect.notes; notes.dataset.defectField = "notes";
-  const save = button("Save defect edits", () => actions.save(defect.id, { ...defect.report, summary:summary.value, description:description.value, expectedExplanation:expected.value }, notes.value));
+  const save = button("Save defect edits", () => {
+    const edited = { ...defect.report, summary:summary.value, description:description.value, [expectedField]:expected.value };
+    if (missingEvent && !expected.value.trim()) delete edited.expectedResultAdditionalText;
+    actions.save(defect.id, edited, notes.value);
+  });
   const recopy = button("Recopy for Jira Cloud", () => actions.recopy(defect.id));
   const lifecycle = defectLifecycleAction(defect);
   const controls = element("section"); controls.setAttribute("aria-label", "Defect actions"); controls.append(save, recopy);
@@ -81,7 +88,17 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   const issues = element("ul"); issues.setAttribute("aria-label", "Stored issue evidence");
   issues.replaceChildren(...defect.issues.map(({ match, evidence }) => element("li", `${match.canonicalPath} · ${evidence.ruleName ?? match.ruleId} revision ${match.ruleRevision} · actual ${String(evidence.actual)} · expected ${evidence.expected ?? ""}`)));
   const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
-  root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label("Expected result", expected), label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
+  const preview = element("section"); preview.setAttribute("aria-label", "Final report preview");
+  if (missingEvent) preview.innerHTML = generateMissingEventRepresentations(defect.report as MissingEventReport).previewHtml;
+  root.replaceChildren(
+    header,
+    identity,
+    label("Summary", summary),
+    label("Description", description),
+    label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected),
+    ...(missingEvent ? [preview] : []),
+    label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls,
+  );
   root.hidden = false; title.focus({ preventScroll:true });
 }
 
