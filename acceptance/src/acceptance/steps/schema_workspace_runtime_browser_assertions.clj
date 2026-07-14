@@ -2,7 +2,7 @@
   (:require [acceptance.steps.schema-workspace-runtime-support :as runtime]
             [acceptance.steps.support :as support]))
 
-(def source-steps
+(def ^:private source-steps
   #{"<source_kind> <source_name> contains nested payload properties page_type, page_name, and commerce.order.id"
     "the operator activates Create schema from this <source_kind>"
     "the schema editor renders expandable property rows for the observed payload hierarchy"
@@ -10,7 +10,7 @@
     "the operator does not have to type a property path into a free-form field"
     "no observed value becomes an active rule before the operator accepts it"})
 
-(def property-rule-steps
+(def ^:private property-rule-steps
   #{"the schema draft contains string property page_type and nested property commerce.order.id"
     "the operator adds, edits, disables, re-enables, and removes property rules through the rendered rule menus"
     "the affected property rows immediately show their active-rule counts and states"
@@ -18,7 +18,7 @@
     "keyboard focus returns to the originating property row when a rule menu closes"
     "saving and reopening the schema preserves the rendered rule attachments"})
 
-(def inheritance-steps
+(def ^:private inheritance-steps
   #{"Generic page view version 4 is the parent of an Order confirmation schema draft"
     "inherited and general rules are displayed in the editor"
     "every inherited rule offers Inherit, Enabled in this schema, and Disabled in this schema"
@@ -26,7 +26,7 @@
     "the operator can configure Only declared properties through General rules"
     "the effective-rule preview identifies the originating schema and version for every rule"})
 
-(def transfer-steps
+(def ^:private transfer-steps
   #{"the Schema Library contains schemas, reusable rules, assignments, revisions, inheritance exceptions, and examples"
     "the operator activates Export Schema Library"
     "the browser downloads 1 versioned JSON file containing the complete Schema Library"
@@ -35,7 +35,7 @@
     "no import occurs through a text prompt or before the operator confirms a choice"
     "importing and reloading preserves the exported names, versions, rules, assignments, and exceptions"})
 
-(def revision-steps
+(def ^:private revision-steps
   #{"reusable rule Approved page types version 1 is saved"
     "the operator edits it to include confirmation"
     "a rendered Save revision review identifies the changed parameters and examples"
@@ -43,7 +43,7 @@
     "a schema attachment changes to version 2 only through its rendered update action"
     "Rule Library rows provide separate Edit, Duplicate, Export, and Delete actions"})
 
-(def assignment-steps
+(def ^:private assignment-steps
   #{"generic and order-confirmation page_view assignments are saved with priorities 10 and 100"
     "page_view is captured from https://shop.example/order-confirmation"
     "the rendered event validation identifies the selected Order confirmation schema and exact version"
@@ -51,7 +51,7 @@
     "the operator can select a different schema from the Live inspector for an explicit manual validation"
     "the Event Library editor provides the same explicit schema attachment control for its template"})
 
-(def export-preflight-steps
+(def ^:private export-preflight-steps
   #{"shared browser setup observes an export envelope with format version, schema identities, and rule identities"
     "it observes the schema and rule identities stored immediately before export"
     "shared transfer verification runs for a scenario without export-count examples"
@@ -99,7 +99,7 @@
                    "Live validation browser evidence is missing."
                    {:observation observation}))
 
-(def assertion-groups
+(def ^:private assertion-groups
   [[source-steps assert-source-paths!]
    [property-rule-steps assert-property-rules!]
    [inheritance-steps assert-inheritance!]
@@ -108,7 +108,7 @@
    [assignment-steps assert-assignment!]
    [export-preflight-steps runtime/assert-export-preflight!]])
 
-(def assertions-by-step
+(def ^:private assertions-by-step
   (into {}
         (mapcat (fn [[steps assertion]]
                   (map #(vector % assertion) steps))
@@ -117,3 +117,7 @@
 (defn assert-browser-step! [text observation]
   (support/assert! observation "Schema workspace browser adapter was not executed." {})
   ((get assertions-by-step text assert-validation!) observation))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:51:34.322409873+02:00", :module-hash "-1468024404", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-68625530"} {:id "def/source-steps", :kind "def", :line 5, :end-line nil, :hash "2123957104"} {:id "def/property-rule-steps", :kind "def", :line 13, :end-line nil, :hash "-1360251623"} {:id "def/inheritance-steps", :kind "def", :line 21, :end-line nil, :hash "272937645"} {:id "def/transfer-steps", :kind "def", :line 29, :end-line nil, :hash "1248772283"} {:id "def/revision-steps", :kind "def", :line 38, :end-line nil, :hash "-103791604"} {:id "def/assignment-steps", :kind "def", :line 46, :end-line nil, :hash "495611702"} {:id "def/export-preflight-steps", :kind "def", :line 54, :end-line nil, :hash "-540130251"} {:id "defn-/assert-source-paths!", :kind "defn-", :line 64, :end-line nil, :hash "-772700732"} {:id "defn-/assert-property-rules!", :kind "defn-", :line 70, :end-line nil, :hash "870213206"} {:id "defn-/assert-inheritance!", :kind "defn-", :line 76, :end-line nil, :hash "-1070950492"} {:id "defn-/assert-transfer!", :kind "defn-", :line 81, :end-line nil, :hash "-2022666838"} {:id "defn-/assert-revision!", :kind "defn-", :line 86, :end-line nil, :hash "-1630370503"} {:id "defn-/assert-assignment!", :kind "defn-", :line 91, :end-line nil, :hash "499811621"} {:id "defn-/assert-validation!", :kind "defn-", :line 96, :end-line nil, :hash "-1576401767"} {:id "def/assertion-groups", :kind "def", :line 102, :end-line nil, :hash "1534033108"} {:id "def/assertions-by-step", :kind "def", :line 111, :end-line nil, :hash "-1018784279"} {:id "defn/assert-browser-step!", :kind "defn", :line 117, :end-line nil, :hash "1749878511"}]}
+;; clj-mutate-manifest-end

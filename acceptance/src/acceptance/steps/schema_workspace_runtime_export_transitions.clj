@@ -151,3 +151,7 @@
    (fn [world _example]
      (runtime/assert-export-preflight! (:browser-observation world))
      world)})
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:47:47.117940884+02:00", :module-hash "26931575", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "361590986"} {:id "defn-/export-example", :kind "defn-", :line 5, :end-line nil, :hash "-1025606183"} {:id "def/transitions", :kind "def", :line 9, :end-line nil, :hash "-1125592139"}]}
+;; clj-mutate-manifest-end

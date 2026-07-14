@@ -118,3 +118,7 @@
 
    "importing and reloading preserves the exported names, versions, rules, assignments, and exceptions"
    runtime/unchanged})
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:47:34.286264499+02:00", :module-hash "-619459842", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-677041021"} {:id "def/transitions", :kind "def", :line 5, :end-line nil, :hash "-1498763361"}]}
+;; clj-mutate-manifest-end

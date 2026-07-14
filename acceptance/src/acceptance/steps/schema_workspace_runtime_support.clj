@@ -55,3 +55,7 @@
 
 (defn unchanged [world _example]
   world)
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:47:22.031260615+02:00", :module-hash "-23667992", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "644650029"} {:id "def/canonical-source-names", :kind "def", :line 4, :end-line nil, :hash "1084522028"} {:id "defn/canonical-source?", :kind "defn", :line 8, :end-line nil, :hash "408483762"} {:id "defn/export-fixture", :kind "defn", :line 11, :end-line nil, :hash "44424441"} {:id "defn/require-world!", :kind "defn", :line 16, :end-line nil, :hash "1787982356"} {:id "defn/source-value", :kind "defn", :line 20, :end-line nil, :hash "-87210748"} {:id "defn/count-value", :kind "defn", :line 23, :end-line nil, :hash "-1990655214"} {:id "defn/assert-export-preflight!", :kind "defn", :line 26, :end-line nil, :hash "1381746461"} {:id "defn/assert-export-counts!", :kind "defn", :line 41, :end-line nil, :hash "195110211"} {:id "defn/unchanged", :kind "defn", :line 56, :end-line nil, :hash "-2112596417"}]}
+;; clj-mutate-manifest-end

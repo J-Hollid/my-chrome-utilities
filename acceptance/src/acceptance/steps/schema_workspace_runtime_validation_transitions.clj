@@ -87,3 +87,7 @@
 
    "the delivered extension bundle contains the same schema workspace behavior as the production source"
    runtime/unchanged})
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T11:47:41.404753615+02:00", :module-hash "859704100", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-779486343"} {:id "def/transitions", :kind "def", :line 5, :end-line nil, :hash "-1499843830"}]}
+;; clj-mutate-manifest-end
