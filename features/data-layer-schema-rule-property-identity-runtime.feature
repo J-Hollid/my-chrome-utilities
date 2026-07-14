@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c80e2342d9604bfe517d9421a51705f893deb5c5f18f888ac585f2717e999bdc
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T22:58:11.689883131Z","feature_name":"Data layer schema rule property identity runtime","feature_path":"features/data-layer-schema-rule-property-identity-runtime.feature","background_hash":"2762192940b697c2d1f45ecc6770bee1bf27a3c330ef11755a511f5feec81963","implementation_hash":"unknown","scenarios":[{"index":3,"name":"Data layer schema rule property identity runtime 004","scenario_hash":"b0201aea70b347d52a0a2024af7d58a079a118decc872853ccd25d834408dbe1","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:58:11.689883131Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema rule property identity runtime
 
   Background:
