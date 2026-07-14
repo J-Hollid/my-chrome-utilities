@@ -16,15 +16,50 @@
 
 (defn- observation! [] (or @observation (load-observation!)))
 
+(def availability-examples
+  #{["page_type" "string" "Required" "available"]
+    ["page_type" "string" "Exact value" "available"]
+    ["page_type" "string" "Regular expression" "available"]
+    ["page_type" "string" "Text length" "available"]
+    ["page_type" "string" "Digits only" "available"]
+    ["revenue" "number" "Numeric range" "available"]
+    ["items" "array" "Item count" "available"]
+    ["revenue" "number" "Regular expression" "unavailable"]
+    ["product" "object" "Allowed values" "unavailable"]})
+
+(def search-examples
+  {"Approved pages" "rule name"
+   "allowed values" "operator"
+   "checkout" "parameters"
+   "public pages" "description"
+   "string" "applicable type"
+   "version 2" "version"})
+
+(def configuration-control-examples
+  #{["page_type" "string" "Required" "no parameter controls"]
+    ["page_type" "string" "Exact value" "one type-aware Exact value field"]
+    ["page_type" "string" "Allowed values" "repeatable type-aware value fields"]
+    ["page_type" "string" "Regular expression" "Pattern"]
+    ["page_type" "string" "Text length" "non-negative Exact length"]
+    ["page_type" "string" "Digits only" "no parameter controls"]
+    ["revenue" "number" "Numeric range" "optional Minimum and Maximum"]
+    ["items" "array" "Item count" "non-negative Minimum item count"]})
+
 (defn- assert-availability-example! [example observed]
   (when-let [expected (support/example-value example "availability")]
-    (let [property-type (support/require-example example "property_type")
+    (let [property-name (support/require-example example "property_name")
+          property-type (support/require-example example "property_type")
           rule-type (support/require-example example "rule_type")]
+      (support/assert! (contains? availability-examples [property-name property-type rule-type expected])
+                       "Unknown property-rule availability example." {:example example})
       (support/assert! (= expected (get-in observed [:availability (keyword (str property-type ":" rule-type))]))
                        "Property type compatibility changed." {:example example}))))
 
 (defn- assert-search-example! [example observed]
   (when-let [metadata (support/example-value example "matched_metadata")]
+    (let [query (support/require-example example "query")]
+      (support/assert! (= metadata (get search-examples query))
+                       "Unknown reusable-rule search example." {:example example}))
     (support/assert! (= ["Approved pages version 2"] (get-in observed [:searches (keyword metadata)]))
                      "Reusable rule metadata search changed." {:example example})))
 
@@ -32,8 +67,12 @@
   (assert-availability-example! example observed)
   (assert-search-example! example observed)
   (when-let [parameter-controls (support/example-value example "parameter_controls")]
-    (let [property-type (support/require-example example "property_type")
+    (let [property-name (support/require-example example "property_name")
+          property-type (support/require-example example "property_type")
           rule-type (support/require-example example "rule_type")]
+      (support/assert! (contains? configuration-control-examples
+                                  [property-name property-type rule-type parameter-controls])
+                       "Unknown built-in configuration-control example." {:example example})
       (support/assert! (= parameter-controls (get-in observed [:configurationControls (keyword (str property-type ":" rule-type))]))
                        "Built-in rule configuration controls changed." {:example example})))
   (when-let [configuration (support/example-value example "configuration")]
@@ -42,7 +81,26 @@
           expected-assistance (support/require-example example "assistance")
           actual (get-in observed [:validations (keyword (str rule-type ":" configuration))])]
       (support/assert! (= {:creationResult expected-result :assistance expected-assistance} actual)
-                       "Local built-in rule validation changed." {:example example}))))
+                       "Local built-in rule validation changed." {:example example})))
+  (when-let [picker-input (support/example-value example "picker_input")]
+    (let [selection-outcome (support/require-example example "selection_outcome")]
+      (support/assert! (case [picker-input selection-outcome]
+                         ["Arrow key navigation followed by Enter" "the selected rule action runs"]
+                         (and (= "Required" (get-in observed [:keyboard :selected]))
+                              (true? (get-in observed [:keyboard :configured])))
+                         ["Escape" "no rule is created or attached"]
+                         (true? (get-in observed [:keyboard :escapeClosed]))
+                         false)
+                       "Rule-picker keyboard example changed." {:example example})))
+  (when-let [navigation-action (support/example-value example "navigation_action")]
+    (let [selection-outcome (support/require-example example "selection_outcome")]
+      (support/assert! (case [navigation-action selection-outcome]
+                         ["Back to rule choices" "compatible rule choices return for product.sku"]
+                         (= "Add rule for product.sku · type string" (get-in observed [:navigation :back :heading]))
+                         ["Cancel" "the dialog closes and focus returns to Add rule for product.sku"]
+                         (= {:closed true :focusReturned true} (get-in observed [:navigation :cancel]))
+                         false)
+                       "Rule-configuration navigation example changed." {:example example}))))
 
 (defn- assert-picker! [example observed]
   (support/assert! (= {:label "Add rule" :pickerAbsent true :inlineResults true :expandedMenu true} (:closed observed))
@@ -106,5 +164,5 @@
         (support/feature-step-specs [feature-file] #{})))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T01:08:48.722767311+02:00", :module-hash "1417952612", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "110500236"} {:id "def/feature-file", :kind "def", :line 5, :end-line nil, :hash "-1761985661"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line nil, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line nil, :hash "-684177608"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line nil, :hash "1271028503"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-775394783"} {:id "defn-/assert-availability-example!", :kind "defn-", :line 19, :end-line nil, :hash "-1772756707"} {:id "defn-/assert-search-example!", :kind "defn-", :line 26, :end-line nil, :hash "-460434597"} {:id "defn-/assert-example!", :kind "defn-", :line 31, :end-line nil, :hash "1634770139"} {:id "defn-/assert-picker!", :kind "defn-", :line 35, :end-line nil, :hash "-652600351"} {:id "defn-/transition", :kind "defn-", :line 57, :end-line nil, :hash "1019694489"} {:id "def/handlers", :kind "def", :line 64, :end-line nil, :hash "789228454"}]}
+;; {:version 1, :tested-at "2026-07-14T10:08:44.056687393+02:00", :module-hash "2072505914", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "110500236"} {:id "def/feature-file", :kind "def", :line 5, :end-line nil, :hash "-1761985661"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line nil, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line nil, :hash "-684177608"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line nil, :hash "1271028503"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-775394783"} {:id "def/availability-examples", :kind "def", :line 19, :end-line nil, :hash "1125325596"} {:id "def/search-examples", :kind "def", :line 30, :end-line nil, :hash "-481968028"} {:id "def/configuration-control-examples", :kind "def", :line 38, :end-line nil, :hash "-1398554654"} {:id "defn-/assert-availability-example!", :kind "defn-", :line 48, :end-line nil, :hash "-974534531"} {:id "defn-/assert-search-example!", :kind "defn-", :line 58, :end-line nil, :hash "-1774368180"} {:id "defn-/assert-example!", :kind "defn-", :line 66, :end-line nil, :hash "-476443398"} {:id "defn-/assert-picker!", :kind "defn-", :line 105, :end-line nil, :hash "-961932228"} {:id "defn-/transition", :kind "defn-", :line 152, :end-line nil, :hash "1019694489"} {:id "def/handlers", :kind "def", :line 159, :end-line nil, :hash "789228454"}]}
 ;; clj-mutate-manifest-end

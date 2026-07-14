@@ -14,6 +14,10 @@ const builtIns = Object.keys(compatibility).map((name) => ({
     kind: name,
     operator: name.toLowerCase(),
 }));
+export function canonicalRulePropertyPath(path) {
+    const segments = path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
+    return `/${segments.join("/")}`;
+}
 export function ruleTypeAvailability(propertyType, ruleType) {
     return compatibility[ruleType].includes(propertyType) ? "available" : "unavailable";
 }

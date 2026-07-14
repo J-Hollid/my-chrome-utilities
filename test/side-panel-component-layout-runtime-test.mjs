@@ -1268,7 +1268,7 @@ const schemaAssignmentRuntime = `(() => {
   const persistedSchemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
   const persistedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
   const latestRule = persistedRules.at(-1);
-  const storedPropertyRule = persistedSchemas[0].attachedRules?.find((rule) => rule.propertyPath === "example");
+  const storedPropertyRule = persistedSchemas[0].attachedRules?.find((rule) => rule.propertyPath === "/example");
   return {
     fields:["#schema-assignment-source", "#schema-assignment-event", "#schema-assignment-target", "#schema-assignment-domain", "#schema-assignment-pathname", "#schema-assignment-priority", "#schema-assignment-schema", "#schema-assignment-version-policy", "#schema-assignment-enabled"].map((selector) => ({ selector, required:q(selector).required })),
     schemaMasterVisible,
@@ -1477,7 +1477,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   trigger.click();
   click(q("#schema-property-rule-picker"), "Approved pages version 2");
   const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
-  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span:not(.schema-property-metadata)').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
+  const attached = { pickerClosed:!q("#schema-property-rule-picker").open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for page_type", activeCount:q('#schema-property-tree [data-schema-property-path="page_type"] span:not(.schema-property-metadata)').textContent, draftRules:stored.workingDraft.attachedRules.filter(({ id, propertyPath }) => id === "rule:approved" && propertyPath === "/page_type").length, currentRules:(stored.attachedRules ?? []).length, currentVersion:stored.version };
   const triggerAfter = q('#schema-property-tree button[aria-label="Add rule for page_type"]'); triggerAfter.click();
   const already = Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find(({ textContent }) => textContent.includes("Approved pages version 2"));
   const beforeEmpty = localStorage.getItem("my-chrome-utilities.schema-library.v1");
@@ -3121,7 +3121,7 @@ try {
       rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
-      storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"example" },
+      storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"/example" },
       rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", parameters:"product,checkout,confirmation", severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
     let schemaSourceCreation;
@@ -3137,26 +3137,26 @@ try {
         name:"Order complete schema",
         paths:["page_type", "page_name", "commerce", "commerce.order", "commerce.order.id"],
         assignment:"payload",
-        draftRefresh:{ unchanged:true, message:"Library draft validation: Valid · Checkout schema v2." },
+        draftRefresh:{ unchanged:true, message:"Library draft validation: 1 warnings · Checkout schema v2." },
         persistedAttachment:"schema:checkout-schema:1",
       }, "Library Create schema did not invoke the production source callback");
       schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
       assert.deepEqual(schemaInheritance, schemaLibraryExportFixture === "1:3" ? {
         groups:[
-          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · example · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (1)Known page types v1 · /example · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2"],
+        preview:["/example · Known page types v1 · inherited from Checkout schema v2"],
       } : {
         groups:[
-          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
+          { state:"active-inherited", text:"Active inherited (2)Known page types v1 · /example · Checkout schema v2Known channels v1 · root · Checkout schema v2" },
           { state:"disabled-inherited", text:"Disabled inherited (0)No disabled inherited rules." },
           { state:"explicitly-reenabled", text:"Explicitly re-enabled (0)No explicitly re-enabled inherited rules." },
           { state:"local", text:"Local (0)No local rules." },
         ],
-        preview:["example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
+        preview:["/example · Known page types v1 · inherited from Checkout schema v2", "root · Known channels v1 · inherited from Checkout schema v2"],
       }, "Schema inheritance groups and effective-rule preview did not render");
       schemaLibraryTransfer = await evaluate(socket, schemaLibraryTransferRuntime);
       assert.equal(schemaLibraryTransfer.downloadName, "schema-library-v1.json", "Schema Library export did not create the download");
@@ -3177,7 +3177,7 @@ try {
       if (schemaLibraryExportFixture === "1:3") {
         assert.match(schemaLiveValidation.validation, /Not checked|Valid|warnings|issues/, "Live Validate did not render a state for the smaller export fixture");
       } else {
-        assert.equal(schemaLiveValidation.validation, "1 warnings", "Live Validate did not render the inherited warning state");
+        assert.equal(schemaLiveValidation.validation, "2 warnings", "Live Validate did not render the inherited warning state");
         assert.match(schemaLiveValidation.detail, /Choose a known channel.*Known channels v1.*severity warning.*Checkout schema v2/, "Live Validate did not render inherited warning provenance");
         assert.equal(schemaLiveValidation.filtered.length, 1, "Warnings filter did not retain the rendered warning event");
       }

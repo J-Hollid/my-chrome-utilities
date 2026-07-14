@@ -62,6 +62,11 @@ const builtIns: readonly PropertyRuleChoice[] = (Object.keys(compatibility) as S
   operator:name.toLowerCase(),
 }));
 
+export function canonicalRulePropertyPath(path: string): string {
+  const segments = path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
+  return `/${segments.join("/")}`;
+}
+
 export function ruleTypeAvailability(propertyType: SchemaPropertyType, ruleType: SchemaRuleType): "available" | "unavailable" {
   return compatibility[ruleType].includes(propertyType) ? "available" : "unavailable";
 }
