@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=f81995c4ec6703cea37f66f52ae22992cb746be5dd1c7767796df3642a430103
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T15:37:16.772831330Z","feature_name":"Data layer conditional validation rules runtime","feature_path":"features/data-layer-conditional-validation-rules-runtime.feature","background_hash":"55e2399967af9296148d02a5074e22b201e1183ed127171aab9e2a3690a4c518","implementation_hash":"sha256:331cdb2078285141f76573c55f20e098b973fde7bf11584440cbfdcf94999f97","scenarios":[{"index":0,"name":"Data layer conditional validation rules runtime 001","scenario_hash":"4c08e9d99f0abf6c0fc76d554774cea5c801dfaaf7a706a22b362a3390002df2","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:37:16.772831330Z"},{"index":1,"name":"Data layer conditional validation rules runtime 002","scenario_hash":"c15bcaee976cb685180eb464a056a3be62035e2e12141e2c485aefb4dd4a78a9","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-14T15:37:16.772831330Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer conditional validation rules runtime
 
   Background:

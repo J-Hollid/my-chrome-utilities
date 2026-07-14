@@ -3017,6 +3017,8 @@ const validationPresenceSemanticsRuntime = `(async () => {
   const validation = await import("/data-layer-schema-verification.js");
   const conditional = await import("/data-layer-conditional-validation-rules.js");
   const presentation = await import("/data-layer-live-validation-presentation.js");
+  const liveUi = await import("/data-layer-live-observer-ui.js");
+  const actionsCore = await import("/data-layer-live-inspector-actions.js");
   const event = (payload) => ({ sourceId:"history", eventName:"pageview", payload, rawInput:[] });
   const schemaWith = (rules, name="Presence") => ({ ...validation.createSchema(name, 2, { type:"object", properties:{ test:{ type:"string" }, page_type:{ type:"string" }, profile:{ type:"object", properties:{ status:{ type:"string" } } }, products:{ type:"array", items:{ type:"object", properties:{ sku:{ type:"string" } } } }, oOrder:{ type:"object", properties:{ aProducts:{ type:"array", items:{ type:"object" } } } } } }), attachedRules:rules });
   const rule = (id, operator, parameters, propertyPath="/test", extra={}) => ({ id, name:id, version:1, propertyPath, operator, ...(parameters === undefined ? {} : { parameters }), ...extra });
@@ -3025,6 +3027,7 @@ const validationPresenceSemanticsRuntime = `(async () => {
   const requiredRules = [rule("Required","required"),rule("Allowed values","allowed-values","test")];
   const requiredCases = [["missing",{}],["test",{ test:"test" }],["another value",{ test:"another value" }]].map(([observed,payload]) => { const result=evaluate(payload, requiredRules); return { observed, statuses:result.evaluations.map(({ status }) => status), issues:result.issues.map(({ rule }) => rule.replace(/ v\\d+$/, "")) }; });
   const nullResult = evaluate({ test:null }, [rule("Allowed values","allowed-values","test")]);
+  const undefinedResult = evaluate({ test:undefined }, [rule("Allowed values","allowed-values","test"),rule("Required","required")]);
   const nestedRules = [rule("Nested value","allowed-values","active","/profile/status"),rule("Nested required","required",undefined,"/profile/status"),rule("Wildcard value","allowed-values","SKU-1","/products/*/sku"),rule("Wildcard required","required",undefined,"/products/*/sku"),rule("Index value","value-type","object","/products/2"),rule("Index required","required",undefined,"/products/2")];
   const nested = evaluate({ products:[{ sku:"SKU-1" },{}] }, nestedRules);
   const condition = { operator:"All", predicates:[{ propertyPath:"/page_type", operator:"Equals", comparison:conditional.typedComparisonValue("product_detail"), detectedType:"string" }] };
@@ -3033,7 +3036,13 @@ const validationPresenceSemanticsRuntime = `(async () => {
   const parent=schemaWith([rule("Inherited","allowed-values","test")],"Parent"); const child={ ...schemaWith([],"Child"), parentSchemaId:parent.id }; const inherited=validation.validateWithSchema(event({}),child,[parent,child]);
   const summaries=[...operators.map(({ status }, index) => ({ status, rule:"optional-"+index, propertyPath:"test", message:"Not applicable", expected:"value", actual:"missing", ruleVersion:1, severity:"error", schemaName:"Presence", schemaVersion:2 }))];
   const liveSummary=presentation.propertyValidationSummary(summaries);
-  return { operators, requiredCases, nullValue:{ status:nullResult.evaluations[0].status, actual:nullResult.evaluations[0].actual, issueActual:nullResult.issues[0].actual }, nested:{ issues:nested.issues.map(({ rule, instancePath }) => [rule.replace(/ v\\d+$/, ""),instancePath]), notApplicable:nested.evaluations.filter(({ status }) => status === "not-applicable").map(({ propertyPath }) => propertyPath), wildcardPasses:nested.evaluations.filter(({ rule,status }) => rule === "Wildcard value" && status === "pass").length }, conditionalCases, equivalent:{ legacy:legacy.evaluations[0].status, inherited:inherited.evaluations[0].status, issues:legacy.issues.length+inherited.issues.length }, liveSummary };
+  const displayResult=evaluate({}, operators.map(({ operator }) => rule("Displayed "+operator,operator,operator === "exact-value" || operator === "allowed-values" ? "test" : operator === "value-type" ? "string" : operator === "text-length" ? "4" : operator === "regular-expression" ? "^test$" : operator === "numeric-range" ? "1,10" : operator === "item-count" ? "1" : undefined)));
+  const elements=liveUi.findLiveObserverElements();
+  const actions=actionsCore.createLiveInspectorActions({ currentPageUrl:()=>"https://shop.example/presence", writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  liveUi.renderLiveInspector(elements,{ id:"presence-event", name:"pageview", sourceId:"history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/presence", payload:{}, rawInput:[], validation:displayResult.state, validationDetails:{ issues:displayResult.issues, evaluations:displayResult.evaluations } },actions);
+  const inspectorText=elements.eventInspector.textContent;
+  const liveInspector={ notApplicable:inspectorText.includes("9 rules not applicable"), issueRows:elements.eventInspector.querySelectorAll("#live-event-validation-issues li").length, invalidMissing:/(?:actual|received) Missing/i.test(inspectorText) };
+  return { operators, requiredCases, nullValue:{ status:nullResult.evaluations[0].status, actual:nullResult.evaluations[0].actual, issueActual:nullResult.issues[0].actual }, undefinedValue:{ statuses:undefinedResult.evaluations.map(({ status }) => status), actuals:undefinedResult.evaluations.map(({ actual }) => actual), issueActual:undefinedResult.issues.find(({ rule }) => rule?.startsWith("Allowed values"))?.actual }, nested:{ issues:nested.issues.map(({ rule, instancePath }) => [rule.replace(/ v\\d+$/, ""),instancePath]), notApplicable:nested.evaluations.filter(({ status }) => status === "not-applicable").map(({ propertyPath }) => propertyPath), wildcardPasses:nested.evaluations.filter(({ rule,status }) => rule === "Wildcard value" && status === "pass").length }, conditionalCases, equivalent:{ legacy:legacy.evaluations[0].status, inherited:inherited.evaluations[0].status, issues:legacy.issues.length+inherited.issues.length }, liveSummary, liveInspector };
 })()`;
 
 const workflowFocusRuntime = `Promise.all([
@@ -3143,9 +3152,11 @@ try {
         { observed:"another value", statuses:["pass","error"], issues:["Allowed values"] },
       ]);
       assert.deepEqual(validationPresenceSemanticsObservation.nullValue, { status:"error", actual:"null", issueActual:"null" });
+      assert.deepEqual(validationPresenceSemanticsObservation.undefinedValue, { statuses:["error","pass"], actuals:["undefined","undefined"], issueActual:"undefined" });
       assert.deepEqual(validationPresenceSemanticsObservation.conditionalCases.map(({ status, issues }) => [status,issues]), [["not-applicable",0],["not-applicable",0],["error",1],["error",1]]);
       assert.deepEqual(validationPresenceSemanticsObservation.equivalent, { legacy:"not-applicable", inherited:"not-applicable", issues:0 });
       assert.deepEqual(validationPresenceSemanticsObservation.liveSummary, { status:"9 rules not applicable", symbolName:"neutral", treatment:"neutral", errors:0, warnings:0, passed:0 });
+      assert.deepEqual(validationPresenceSemanticsObservation.liveInspector, { notApplicable:true, issueRows:0, invalidMissing:false });
       socket.close(); continue;
     }
     if (process.env.MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER === "1") {

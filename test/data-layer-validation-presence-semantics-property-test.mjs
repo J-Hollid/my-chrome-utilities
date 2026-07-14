@@ -38,7 +38,7 @@ const optionalOperators = [
   ["numeric-range", "1,10"],
   ["item-count", "1"],
 ];
-const explicitValues = [null, false, 0, "", [], {}];
+const explicitValues = [null, undefined, false, 0, "", [], {}];
 
 for (let sample = 0; sample < 200; sample += 1) {
   const property = `optional_${nextToken()}`;
@@ -69,6 +69,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(present.evaluations[0].status, "pass", "Required must use property presence, not truthiness");
   assert.equal(present.evaluations[1].status, "error");
   assert.notEqual(present.evaluations[1].actual, "missing");
+  assert.equal(typeof present.evaluations[1].actual, "string");
   assert.equal(present.issues.length, 1);
 
   const allowed = `allowed-${nextToken()}`;
