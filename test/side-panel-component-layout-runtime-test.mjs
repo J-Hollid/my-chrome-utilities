@@ -2982,10 +2982,8 @@ const missingEventDefectReportRuntime = `(async () => {
   const scoped = ui.renderMissingEventDefectReportBuilder(host, [matchVisit, zeroVisit], [schema], { entryPoint:"Live session actions", initialSchemaId:schema.id });
   button(host, "Confirm at least one matching event was expected").click();
   const scopeSelect = q(host, "#missing-event-visit"); scopeSelect.value = zeroVisit.id; scopeSelect.dispatchEvent(new Event("change", { bubbles:true }));
-  button(host, "Confirm at least one matching event was expected").click();
   const scopeZero = { count:scoped.draft().verification.matchingCount, warning:q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
   q(host, "#missing-event-visit").value = matchVisit.id; q(host, "#missing-event-visit").dispatchEvent(new Event("change", { bubbles:true }));
-  button(host, "Confirm at least one matching event was expected").click();
   const scopeMatch = { count:scoped.draft().verification.matchingCount, visible:!q(host, '[aria-label="Matching event warning"]').hidden, override:scoped.draft().override ?? null };
 
   const second = { ...assignment, id:"assignment:secondary", name:"Secondary checkout" };

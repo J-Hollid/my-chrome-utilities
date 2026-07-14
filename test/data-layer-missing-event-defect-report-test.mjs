@@ -116,12 +116,10 @@ assert.deepEqual(overrideReport.matchingEventEvidence[0].payload, matchingEvent.
 assert.match(generateMissingEventRepresentations(overrideReport).jiraText, /explicit override/i);
 
 let changed = changeMissingEventScope(warningDraft, checkoutVisit.id);
-changed = verifyMissingEventAbsence(changed);
 assert.equal(changed.verification.matchingCount, 0);
 assert.equal(changed.verification.warningVisible, false);
 assert.equal(changed.override, undefined);
 changed = changeMissingEventScope(changed, visitWithMatch.id);
-changed = verifyMissingEventAbsence(changed);
 assert.equal(changed.verification.warningVisible, true);
 assert.equal(changed.override, undefined);
 
