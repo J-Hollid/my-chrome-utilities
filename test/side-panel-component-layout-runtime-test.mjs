@@ -30,6 +30,7 @@ let schemaPropertyRemovalObservation;
 let schemaPropertyRemovalReloadObservation;
 let workspacePanelContainmentObservation;
 let recursivePropertyValidationObservation;
+let guidedAssignmentCoverageObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -37,6 +38,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER === "1" ? [720]
@@ -1002,30 +1004,35 @@ const guidedValidationRuntime = `(async () => {
   q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
   clickButton(flow, "Continue");
   const schemaPrefillScope = {
-    domain:q("#guided-scope-domain").value,
-    domainSource:q("#guided-scope-domain-hint").textContent,
-    eventName:q("#guided-scope-event").value,
-    eventNameSource:q("#guided-scope-event-hint").textContent,
-    source:q("#guided-scope-source").value,
-    sourceSource:q("#guided-scope-source-hint").textContent,
-    pathCondition:q("#guided-path-expression-0").value,
+    configurationAbsent:!flow.querySelector("#guided-routing-prefills"),
+    selectionAbsent:!flow.querySelector("#guided-compatible-assignments"),
   };
+  clickButton(flow, "Back");
+  clickButton(flow, "Back");
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Select Existing pageview version 1");
+  clickButton(flow, "Continue");
+  clickButton(flow, "Continue");
   q("#guided-scope-domain").value = "operator.example";
   q("#guided-scope-domain").dispatchEvent(new Event("change", { bubbles:true }));
   clickButton(flow, "Back");
   clickButton(flow, "Back");
   clickButton(flow, "Change existing schema");
-  clickButton(q("#guided-schema-picker"), "Select Product listing version 4");
+  clickButton(q("#guided-schema-picker"), "Select Generic pageview version 4");
+  const replacement = flow.querySelector("#guided-prefill-replacement-review");
   const replacementReview = {
-    items:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("li")).map((item) => item.textContent),
-    actions:Array.from(q("#guided-prefill-replacement-review").querySelectorAll("button")).map((button) => button.textContent),
+    items:replacement ? Array.from(replacement.querySelectorAll("li")).map((item) => item.textContent) : [],
+    actions:replacement ? Array.from(replacement.querySelectorAll("button")).map((button) => button.textContent) : [],
   };
-  clickButton(q("#guided-prefill-replacement-review"), "Keep current values");
-  const keptStatus = q("#guided-validation-status").textContent;
+  if (replacement) clickButton(replacement, "Keep current values");
+  const keptStatus = replacement ? q("#guided-validation-status").textContent : "No covering assignment values were replaced.";
+  clickButton(flow, "Change existing schema");
+  clickButton(q("#guided-schema-picker"), "Select Existing pageview version 1");
   clickButton(flow, "Change existing schema");
   clickButton(q("#guided-schema-picker"), "Select Generic pageview version 4");
-  clickButton(q("#guided-prefill-replacement-review"), "Accept schema-derived values");
-  const acceptedStatus = q("#guided-validation-status").textContent;
+  const acceptance = flow.querySelector("#guided-prefill-replacement-review");
+  if (acceptance) clickButton(acceptance, "Accept schema-derived values");
+  const acceptedStatus = acceptance ? q("#guided-validation-status").textContent : "The covering assignment remained selected.";
   const core = await import("/data-layer-guided-validation.js");
   const productionDraft = core.selectGuidedProperty(core.createGuidedValidationDraft({ id:"event:pageview", name:"pageview", sourceId:"event-history", pageUrl:"http://127.0.0.1:4173/", payload:{ page_type:"product_list" } }), "page_type");
   const overridden = core.setExpectedType(core.setGuidedRequirement(productionDraft, "Must match a pattern"), "Number");
@@ -1038,7 +1045,7 @@ const guidedValidationRuntime = `(async () => {
     { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, target:"payload", propertyTypes:{ page_type:"Number" } },
     { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, target:"raw input", propertyTypes:{} },
   ]).map(({ name, target, propertyTypes, available, explanation }) => ({ name, target, propertyState:propertyTypes.page_type ?? "absent", available, explanation }));
-  const assignmentTemplate = { id:"assignment:one", name:"Shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true };
+  const assignmentTemplate = { id:"assignment:one", name:"Local pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathConditions:[{ matchType:"Exact path", expression:"/" }], enabled:true };
   const assignmentResolutions = [0, 1, 2].map((count) => {
     const resolved = core.applyGuidedSchemaCandidate({ ...productionDraft, stage:"destination" }, {
       id:"schema:resolution:" + count,
@@ -1046,10 +1053,48 @@ const guidedValidationRuntime = `(async () => {
       version:4,
       target:"payload",
       propertyTypes:{ page_type:"String" },
-      assignments:Array.from({ length:count }, (_, index) => ({ ...assignmentTemplate, id:"assignment:" + index, name:"Shop pages " + (index + 1), domainCondition:index ? "other.example" : "shop.example" })),
+      assignments:Array.from({ length:count }, (_, index) => ({ ...assignmentTemplate, id:"assignment:" + index, name:"Local pages " + (index + 1) })),
     });
     return { count, selection:resolved.assignmentResolution.selection, domain:resolved.scope.domain, pathConditions:resolved.scope.conditions };
   });
+  const coverageCandidate = (state) => ({
+    id:"schema:coverage:" + state,
+    name:"Coverage schema",
+    version:4,
+    target:"payload",
+    propertyTypes:{ page_type:"String" },
+    assignments:state === "none" ? []
+      : state === "two" ? [assignmentTemplate, { ...assignmentTemplate, id:"assignment:two", name:"Alternate local pages" }]
+      : state === "url-mismatch" ? [{ ...assignmentTemplate, domainCondition:"other.example" }]
+      : state === "disabled" ? [{ ...assignmentTemplate, enabled:false }]
+      : [assignmentTemplate],
+  });
+  const coverageVocabulary = {
+    none:"no assignments",
+    one:"one enabled assignment covers source, event, target, and URL",
+    two:"two enabled assignments cover the captured event",
+    "url-mismatch":"source, event, and target match but URL conditions do not",
+    disabled:"only a disabled assignment covers the captured event",
+  };
+  const assignmentCoverage = ["none", "one", "two", "url-mismatch", "disabled"].map((state) => {
+    const resolved = core.applyGuidedSchemaCandidate({ ...productionDraft, stage:"destination" }, coverageCandidate(state));
+    const action = core.assignmentGuidedAction(resolved);
+    const configuration = core.assignmentConfigurationRequired(resolved);
+    return {
+      state:coverageVocabulary[state],
+      configuration:configuration ? "displayed" : "not displayed",
+      action:action === "add the reviewed assignment as a pending change" ? "add a reviewed pending assignment" : action,
+      continuation:configuration ? "allowed after assignment review" : action === "reuse existing schema coverage" ? "allowed without assignment selection" : "allowed without assignment review",
+    };
+  });
+  const pendingDestination = core.applyGuidedSchemaCandidate({ ...configuredDestinationDraft, stage:"destination" }, {
+    ...coverageCandidate("one"),
+    id:"schema:product-listing:3",
+    name:"Product listing",
+    version:3,
+    assignments:[{ ...assignmentTemplate, pending:true }],
+  });
+  const pendingDestinationReview = core.advanceGuidedValidation(core.advanceGuidedValidation(pendingDestination));
   const production = {
     requirements:Object.fromEntries(["String", "Number", "Array", "Object", "Boolean"].map((type) => [type, core.compatibleRequirements(type)])),
     allowedValues:[[], ["homepage", "homepage"], ["product_list", ""], ["product_list", "homepage"]].map((values) => core.validateAllowedValues(values)),
@@ -1067,8 +1112,10 @@ const guidedValidationRuntime = `(async () => {
     override:{ typeSource:overridden.property.typeSource, currentEventPasses:overridden.preview.currentEventPasses, message:overridden.preview.message, correctionRequired:overridden.requirementCorrectionRequired },
     destinationOptions:productionDestinationOptions,
     assignmentResolutions,
+    assignmentCoverage,
     destinations:{
       matching:{ review:matchingDestinationReview.review, assignmentAction:core.publishGuidedValidation(matchingDestinationReview, false).destination.assignmentAction },
+      pending:{ review:pendingDestinationReview.review, assignmentAction:core.publishGuidedValidation(pendingDestinationReview, false).destination.assignmentAction },
       absent:{ review:absentDestinationReview.review, assignmentAction:core.publishGuidedValidation(absentDestinationReview, false).destination.assignmentAction },
     },
   };
@@ -1391,17 +1438,8 @@ const guidedDraftContinuationRuntime = `(async () => {
   q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
   click(flow, "Continue");
   const prefill = {
-    target:q("#guided-scope-target").value,
-    targetSource:q("#guided-scope-target-hint").textContent,
-    source:q("#guided-scope-source").value,
-    sourceSource:q("#guided-scope-source-hint").textContent,
-    domain:q("#guided-scope-domain").value,
-    domainSource:q("#guided-scope-domain-hint").textContent,
-    eventName:q("#guided-scope-event").value,
-    eventSource:q("#guided-scope-event-hint").textContent,
-    path:q("#guided-path-expression-0").value,
-    pathSource:q("#guided-path-expression-0-hint").textContent,
-    editable:["#guided-scope-target", "#guided-scope-source", "#guided-scope-domain", "#guided-scope-event", "#guided-path-expression-0"].every((selector) => !q(selector).disabled),
+    configurationAbsent:!flow.querySelector("#guided-routing-prefills"),
+    selectionAbsent:!flow.querySelector("#guided-compatible-assignments"),
   };
   click(flow, "Cancel");
   const productSection = q("#guided-draft-continuation");
@@ -1452,6 +1490,126 @@ const guidedDraftContinuationReloadRuntime = `(async () => {
     destinationAbsent:!document.querySelector("#guided-schema-destination") && !document.querySelector("#guided-schema-picker"),
     expectedTypeSource:document.querySelector("#guided-expected-type-hint").textContent,
   };
+})()`;
+
+const guidedAssignmentCoverageRuntime = `(async () => {
+  const ui = await import("/data-layer-guided-validation-ui.js");
+  const core = await import("/data-layer-guided-validation.js");
+  const q = (root, selector) => { const value = root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const change = (field, value) => { field.value = value; field.dispatchEvent(new Event("change", { bubbles:true })); };
+  const event = { id:"event:order-complete", name:"order_complete", sourceId:"event-history", pageUrl:"https://shop.example/orders/confirmed", payload:{ order_id:"ORDER-1", currency:"EUR", value:42 } };
+  const host = document.createElement("section"); host.innerHTML = '<section id="guided-assignment-coverage-flow"></section>'; document.body.append(host);
+  const root = q(host, "#guided-assignment-coverage-flow");
+  let schemas = [];
+  let candidates = [];
+  let savedActions = [];
+  const publishedMatch = (schema, assignment) => schema.assignments.some((published) => published.id && assignment.id ? published.id === assignment.id : core.guidedAssignmentsMatch(published, assignment));
+  const candidate = (schema, continuation = false) => {
+    const editable = continuation && schema.workingDraft ? schema.workingDraft : schema;
+    const assignments = editable.assignments.map((assignment) => ({ ...assignment, ...(continuation && !publishedMatch(schema, assignment) ? { pending:true } : {}) }));
+    return { id:schema.id, name:schema.name, version:schema.version, target:assignments[0]?.target ?? "payload", propertyTypes:{}, assignments };
+  };
+  const persist = (result) => {
+    savedActions.push(result.destination.assignmentAction);
+    const existing = schemas.find(({ id }) => id === result.schema.id);
+    const assignments = existing?.workingDraft?.assignments ?? existing?.assignments ?? [];
+    const nextAssignments = core.assignmentDraftAfterGuidedSave(assignments, result.assignment, result.destination.assignmentAction);
+    const rules = existing?.workingDraft?.rules ?? [];
+    const nextRules = [...rules.filter(({ path }) => path !== result.schema.rules[0].path), result.schema.rules[0]];
+    const next = existing
+      ? { ...existing, workingDraft:{ ...(existing.workingDraft ?? { baseVersion:existing.version, sourceVersion:existing.version }), assignments:nextAssignments, rules:nextRules, pendingChanges:[...(existing.workingDraft?.pendingChanges ?? []), "Add " + result.schema.rules[0].path + " validation"] } }
+      : { id:result.schema.id, name:result.schema.name, version:1, published:false, document:{ type:"object" }, assignments:[], workingDraft:{ baseVersion:0, sourceVersion:0, assignments:nextAssignments, rules:nextRules, pendingChanges:["Add " + result.schema.rules[0].path + " validation"] } };
+    schemas = [...schemas.filter(({ id }) => id !== next.id), next];
+    localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+  };
+  const flow = ui.createGuidedValidationFlow(root, { schemaCandidates:()=>candidates, publish:persist });
+  const chooseRequirement = () => { change(q(root, "#guided-requirement"), "Must be present"); click(root, "Continue"); };
+  const openExisting = (schema, path) => {
+    candidates = [candidate(schema)];
+    flow.openProperty(event, path);
+    q(root, 'input[name="guided-schema-destination"][value="existing"]').click();
+    click(root, "Select " + schema.name + " version " + schema.version);
+  };
+  const save = async () => { click(root, "Add validation to draft"); await new Promise((resolve) => setTimeout(resolve, 0)); };
+
+  schemas = [];
+  candidates = [];
+  flow.openProperty(event, "order_id");
+  q(root, 'input[name="guided-schema-destination"][value="new"]').click();
+  const schemaName = q(root, "#guided-new-schema-name"); schemaName.value = "Order completed"; schemaName.dispatchEvent(new Event("input", { bubbles:true }));
+  click(root, "Continue"); chooseRequirement();
+  const firstConfigurationDisplayed = Boolean(root.querySelector("#guided-routing-prefills"));
+  change(q(root, "#guided-assignment-name"), "confirmed orders");
+  q(root, 'input[name="guided-scope"][value="current-path"]').click();
+  click(root, "Continue"); await save();
+  let orderSchema = schemas[0];
+  const firstAssignment = structuredClone(orderSchema.workingDraft.assignments[0]);
+  const laterVisibility = [];
+  for (const property of ["currency", "value"]) {
+    flow.openProperty(event, property, candidate(orderSchema, true));
+    laterVisibility.push({
+      configuration:Boolean(root.querySelector("#guided-routing-prefills")),
+      selection:Boolean(root.querySelector("#guided-compatible-assignments")),
+      stages:Array.from(q(root, "#guided-validation-stages").children).map(({ textContent }) => textContent),
+    });
+    chooseRequirement(); await save(); orderSchema = schemas.find(({ id }) => id === orderSchema.id);
+  }
+  const first = {
+    firstConfigurationDisplayed,
+    laterVisibility,
+    assignmentCount:orderSchema.workingDraft.assignments.length,
+    assignment:orderSchema.workingDraft.assignments[0],
+    assignmentUnchanged:JSON.stringify(firstAssignment) === JSON.stringify(orderSchema.workingDraft.assignments[0]),
+    rulePaths:orderSchema.workingDraft.rules.map(({ path }) => path),
+  };
+
+  const publishedAssignment = { id:"assignment:shop-orders", name:"shop order pages", sourceId:"event-history", eventName:"order_complete", target:"payload", domainCondition:"*.example", pathnameCondition:"/orders/*", priority:240, versionPolicy:"follow latest", enabled:true };
+  const publishedSchema = { id:"schema-order-published", name:"Order completed", version:4, published:true, document:{ type:"object" }, assignments:[publishedAssignment] };
+  schemas = [publishedSchema]; candidates = [];
+  openExisting(publishedSchema, "order_id"); click(root, "Continue");
+  const publishedVisibility = { configuration:Boolean(root.querySelector("#guided-routing-prefills")), selection:Boolean(root.querySelector("#guided-compatible-assignments")) };
+  chooseRequirement(); await save();
+  const savedPublished = schemas[0];
+  const published = {
+    ...publishedVisibility,
+    action:savedActions.at(-1),
+    assignmentCount:savedPublished.workingDraft.assignments.length,
+    assignment:savedPublished.workingDraft.assignments[0],
+    identityUnchanged:JSON.stringify(publishedAssignment) === JSON.stringify(savedPublished.workingDraft.assignments[0]),
+    rulePaths:savedPublished.workingDraft.rules.map(({ path }) => path),
+  };
+
+  const productAssignment = { ...publishedAssignment, id:"assignment:products", name:"product pages", domainCondition:"shop.example", pathnameCondition:"/products/*", priority:90, versionPolicy:"pinned" };
+  const incompatibleSchema = { id:"schema-order-incompatible", name:"Order completed", version:2, published:true, document:{ type:"object" }, assignments:[productAssignment] };
+  schemas = [incompatibleSchema]; candidates = [];
+  openExisting(incompatibleSchema, "order_id"); click(root, "Continue"); chooseRequirement();
+  const incompatibleBefore = {
+    configuration:Boolean(root.querySelector("#guided-routing-prefills")),
+    selection:Boolean(root.querySelector("#guided-compatible-assignments")),
+    assignmentCount:schemas[0].assignments.length,
+    defaults:{ source:q(root, "#guided-scope-source").value, event:q(root, "#guided-scope-event").value, target:q(root, "#guided-scope-target").value, domain:q(root, "#guided-scope-domain").value, pathname:q(root, "#guided-scope-pathname").value },
+  };
+  change(q(root, "#guided-assignment-name"), "confirmed orders");
+  q(root, 'input[name="guided-scope"][value="current-path"]').click();
+  click(root, "Continue"); await save();
+  let incompatibleSaved = schemas[0];
+  const afterConfirm = { count:incompatibleSaved.workingDraft.assignments.length, names:incompatibleSaved.workingDraft.assignments.map(({ name }) => name) };
+  flow.openProperty(event, "currency", candidate(incompatibleSaved, true));
+  const laterIncompatibleVisibility = { configuration:Boolean(root.querySelector("#guided-routing-prefills")), selection:Boolean(root.querySelector("#guided-compatible-assignments")) };
+  chooseRequirement(); await save(); incompatibleSaved = schemas[0];
+  const incompatible = { before:incompatibleBefore, afterConfirm, laterVisibility:laterIncompatibleVisibility, finalCount:incompatibleSaved.workingDraft.assignments.length, laterAction:savedActions.at(-1), assignments:incompatibleSaved.workingDraft.assignments, rulePaths:incompatibleSaved.workingDraft.rules.map(({ path }) => path) };
+
+  const secondCoverage = { ...publishedAssignment, id:"assignment:secondary-orders", name:"secondary order coverage", priority:120 };
+  const multipleSchema = { id:"schema-order-multiple", name:"Order completed", version:5, published:true, document:{ type:"object" }, assignments:[publishedAssignment, secondCoverage] };
+  schemas = [multipleSchema]; candidates = [];
+  openExisting(multipleSchema, "currency"); click(root, "Continue");
+  const multipleVisibility = { configuration:Boolean(root.querySelector("#guided-routing-prefills")), selection:Boolean(root.querySelector("#guided-compatible-assignments")), stages:Array.from(q(root, "#guided-validation-stages").children).map(({ textContent }) => textContent) };
+  chooseRequirement(); await save();
+  const multiple = { ...multipleVisibility, action:savedActions.at(-1), beforeCount:2, afterCount:schemas[0].workingDraft.assignments.length, identities:schemas[0].workingDraft.assignments.map(({ id }) => id), rulePaths:schemas[0].workingDraft.rules.map(({ path }) => path) };
+
+  host.remove();
+  return { event:{ name:event.name, sourceId:event.sourceId, pageUrl:event.pageUrl }, schemaName:"Order completed", first, published, incompatible, multiple };
 })()`;
 
 const schemaPropertyRulePickerRuntime = `(async () => {
@@ -2783,12 +2941,46 @@ try {
       socket.close();
       continue;
     }
+    if (width === 720 && process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1") {
+      guidedAssignmentCoverageObservation = await evaluate(socket, guidedAssignmentCoverageRuntime);
+      assert.deepEqual(guidedAssignmentCoverageObservation, {
+        event:{ name:"order_complete", sourceId:"event-history", pageUrl:"https://shop.example/orders/confirmed" },
+        schemaName:"Order completed",
+        first:{
+          firstConfigurationDisplayed:true,
+          laterVisibility:[
+            { configuration:false, selection:false, stages:["Define requirement", "Review validation"] },
+            { configuration:false, selection:false, stages:["Define requirement", "Review validation"] },
+          ],
+          assignmentCount:1,
+          assignment:{ id:"assignment:schema:order-completed:1:confirmed-orders", name:"confirmed orders", schemaId:"schema:order-completed:1", sourceId:"event-history", eventName:"order_complete", target:"payload", domainCondition:"shop.example", pathnameCondition:"/orders/confirmed", priority:100, versionPolicy:"pinned", enabled:true },
+          assignmentUnchanged:true,
+          rulePaths:["order_id", "currency", "value"],
+        },
+        published:{ configuration:false, selection:false, action:"reuse the covering assignment", assignmentCount:1, assignment:{ id:"assignment:shop-orders", name:"shop order pages", sourceId:"event-history", eventName:"order_complete", target:"payload", domainCondition:"*.example", pathnameCondition:"/orders/*", priority:240, versionPolicy:"follow latest", enabled:true }, identityUnchanged:true, rulePaths:["order_id"] },
+        incompatible:{
+          before:{ configuration:true, selection:false, assignmentCount:1, defaults:{ source:"event-history", event:"order_complete", target:"payload", domain:"shop.example", pathname:"/orders/confirmed" } },
+          afterConfirm:{ count:2, names:["product pages", "confirmed orders"] },
+          laterVisibility:{ configuration:false, selection:false },
+          finalCount:2,
+          laterAction:"reuse the covering pending assignment",
+          assignments:[
+            { id:"assignment:products", name:"product pages", sourceId:"event-history", eventName:"order_complete", target:"payload", domainCondition:"shop.example", pathnameCondition:"/products/*", priority:90, versionPolicy:"pinned", enabled:true },
+            { id:"assignment:schema-order-incompatible:confirmed-orders", name:"confirmed orders", schemaId:"schema-order-incompatible", sourceId:"event-history", eventName:"order_complete", target:"payload", domainCondition:"shop.example", pathnameCondition:"/orders/confirmed", priority:100, versionPolicy:"pinned", enabled:true },
+          ],
+          rulePaths:["order_id", "currency"],
+        },
+        multiple:{ configuration:false, selection:false, stages:["Choose schema destination", "Define requirement", "Review validation"], action:"reuse existing schema coverage", beforeCount:2, afterCount:2, identities:["assignment:shop-orders", "assignment:secondary-orders"], rulePaths:["currency"] },
+      }, "Guided assignment coverage did not preserve or reuse production assignments");
+      socket.close();
+      continue;
+    }
     if (width === 720) {
       const previousGuidedStorage = await evaluate(socket, `(() => {
         const previous = Object.fromEntries(Array.from({ length:localStorage.length }, (_, index) => localStorage.key(index)).filter(Boolean).map((key) => [key, localStorage.getItem(key)]));
         const schemas = [
           { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
-          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"other.example", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
         ];
@@ -2804,8 +2996,8 @@ try {
         const schemas = [
           { id:"schema:existing-pageview:1", name:"Existing pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:generic-pageview:1", name:"Generic pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
-          { id:"schema:generic-pageview:4", name:"Generic pageview", version:4, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:generic-shop", name:"Generic shop pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }], enabled:true }] },
-          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", enabled:true }] },
+          { id:"schema:generic-pageview:4", name:"Generic pageview", version:4, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:generic-local", name:"Generic local pages", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/", enabled:true }] },
+          { id:"schema:product-listing:3", name:"Product listing", version:3, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[{ id:"assignment:product-listing", sourceId:"event-history", eventName:"pageview", target:"payload", domainCondition:"other.example", enabled:true }] },
           { id:"schema:numeric-page-types:1", name:"Numeric page types", version:1, document:{ type:"object", properties:{ page_type:{ type:"number" } } }, assignments:[{ sourceId:"event-history", eventName:"other", target:"payload", enabled:true }] },
           { id:"schema:raw-pageview:1", name:"Raw pageview", version:1, document:{ type:"object" }, assignments:[{ sourceId:"event-history", eventName:"other", target:"raw input", enabled:true }] },
         ];
@@ -2843,7 +3035,7 @@ try {
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
         saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview", name:"Signal Shop pageview automatic", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"] },
+        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview-on-127-0-0-1", name:"pageview on 127.0.0.1", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"] },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0 },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
@@ -2851,14 +3043,11 @@ try {
           { label:"Numeric page types version 1", disabled:true, explanation:"page_type expects Number" },
           { label:"Raw pageview version 1", disabled:true, explanation:"schema validates raw input, not payload" },
         ],
-        existingReview:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.",
-        existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add /page_type validation"], assignments:1, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
+        existingReview:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: add the reviewed assignment as a pending change.",
+        existingSaved:{ versions:[3], currentRules:0, draftRules:1, pendingChanges:["Add /page_type validation"], assignments:2, flowClosed:true, inspectorRestored:true, status:"Validation was added to Product listing draft.", focusReturned:true },
         schemaPrefillRequirement:{ expectedType:"String", expectedTypeSource:"String — Generic pageview version 4", target:"payload" },
-        schemaPrefillScope:{ domain:"shop.example", domainSource:"Generic shop pages assignment", eventName:"pageview", eventNameSource:"Generic shop pages assignment", source:"event-history", sourceSource:"Generic shop pages assignment", pathCondition:"/products/*" },
-        replacementReview:{
-          items:["domain: operator.example would be replaced by 127.0.0.1", "path conditions: [{\"matchType\":\"Path pattern\",\"expression\":\"/products/*\"}] would be replaced by []"],
-          actions:["Keep current values", "Accept schema-derived values"],
-        },
+        schemaPrefillScope:{ configurationAbsent:true, selectionAbsent:true },
+        replacementReview:{ items:["domain: operator.example would be replaced by 127.0.0.1"], actions:["Keep current values", "Accept schema-derived values"] },
         keptStatus:"Current values kept.",
         acceptedStatus:"Schema-derived values accepted.",
       }, "Guided validation browser flow violated its rendered production contract");
@@ -2896,11 +3085,19 @@ try {
         ],
         assignmentResolutions:[
           { count:0, selection:"Create a new assignment", domain:"127.0.0.1", pathConditions:[] },
-          { count:1, selection:"the compatible assignment", domain:"shop.example", pathConditions:[{ matchType:"Path pattern", expression:"/products/*" }] },
+          { count:1, selection:"the compatible assignment", domain:"127.0.0.1", pathConditions:[{ matchType:"Exact path", expression:"/" }] },
           { count:2, selection:"required from readable assignment choices", domain:"127.0.0.1", pathConditions:[] },
         ],
+        assignmentCoverage:[
+          { state:"no assignments", configuration:"displayed", action:"add a reviewed pending assignment", continuation:"allowed after assignment review" },
+          { state:"one enabled assignment covers source, event, target, and URL", configuration:"not displayed", action:"reuse the covering assignment", continuation:"allowed without assignment review" },
+          { state:"two enabled assignments cover the captured event", configuration:"not displayed", action:"reuse existing schema coverage", continuation:"allowed without assignment selection" },
+          { state:"source, event, and target match but URL conditions do not", configuration:"displayed", action:"add a reviewed pending assignment", continuation:"allowed after assignment review" },
+          { state:"only a disabled assignment covers the captured event", configuration:"displayed", action:"add a reviewed pending assignment", continuation:"allowed after assignment review" },
+        ],
         destinations:{
-          matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the matching enabled assignment.", assignmentAction:"reuse the matching enabled assignment" },
+          matching:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the covering assignment.", assignmentAction:"reuse the covering assignment" },
+          pending:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: reuse the covering pending assignment.", assignmentAction:"reuse the covering pending assignment" },
           absent:{ review:"pageview on 127.0.0.1 requires page_type to be product_list or homepage. page_type matches expected String. Rule attachment path: page_type. The rule will be added to the Product listing working draft based on version 3. Product listing version 3 remains current until the working draft is published. Assignment action: add the reviewed assignment as a pending change.", assignmentAction:"add the reviewed assignment as a pending change" },
         },
       }, "Guided validation production matchers violated their browser-loaded contract");
@@ -3223,9 +3420,9 @@ try {
       guidedDraftContinuationObservation = await evaluate(socket, guidedDraftContinuationRuntime);
       assert.deepEqual(guidedDraftContinuationObservation, {
         initial:{ heading:"Product listing working draft", status:"Current revision 3 · 2 pending changes", actions:["Review draft", "Publish revision", "Use a different schema"], sectionCount:1, genericAbsent:true },
-        opened:{ context:"Adding to Product listing draft", stages:["Define requirement", "Choose event scope", "Review validation"] },
+        opened:{ context:"Adding to Product listing draft", stages:["Define requirement", "Review validation"] },
         requirement:{ heading:"Define requirement", destinationAbsent:true, selectedSchema:"schema-product-listing" },
-        prefill:{ target:"payload", targetSource:"Product listing version 3", source:"event-history", sourceSource:"Product pages assignment", domain:"127.0.0.1", domainSource:"Product pages assignment", eventName:"pageview", eventSource:"Product pages assignment", path:"/", pathSource:"Product pages assignment", editable:true },
+        prefill:{ configurationAbsent:true, selectionAbsent:true },
         review:{ name:"Product listing", status:"Working draft based on revision 3 · 2 pending changes", checkoutUnchanged:true },
         publication:{ review:"Product listing working draft will be compared with current revision 3; confirmation publishes revision 4.", productCurrent:3, checkoutUnchanged:true },
         switchOpen:{ heading:"Choose schema destination", choices:["Product listing revision 3 · 2 pending changes", "Checkout revision 2 · 1 pending changes"], productUnchanged:true },
@@ -3290,6 +3487,9 @@ try {
   }
   if (process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ guidedValidation:guidedValidationObservation, guidedSchemaPicker:guidedSchemaPickerObservation }));
+  }
+  if (process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ guidedAssignmentCoverage:guidedAssignmentCoverageObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

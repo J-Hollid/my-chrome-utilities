@@ -1,4 +1,4 @@
-import { addAllowedValue, applyGuidedSchemaCandidate, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedContinuationDraft, createGuidedContinuationForProperty, createGuidedValidationDraft, createGuidedValidationForProperty, guidedValidationStages, pathConditionResult, pathConditionsResult, publishGuidedValidation, retargetGuidedValidation, resolveGuidedPrefillReplacement, resolveGuidedTargetReplacement, removeAllowedValue, selectGuidedProperty, selectGuidedContinuationProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
+import { addAllowedValue, applyGuidedSchemaCandidate, assignmentConfigurationRequired, advanceGuidedValidation, backGuidedValidation, compatibleRequirements, createGuidedContinuationDraft, createGuidedContinuationForProperty, createGuidedValidationDraft, createGuidedValidationForProperty, guidedValidationStages, pathConditionResult, pathConditionsResult, publishGuidedValidation, retargetGuidedValidation, resolveGuidedPrefillReplacement, resolveGuidedTargetReplacement, removeAllowedValue, selectGuidedProperty, selectGuidedContinuationProperty, setAllowedValue, setExpectedType, setGuidedRequirement, setGuidedSchemaDestination, setGuidedScope, validateNewSchemaName, validateAllowedValues, } from "./data-layer-guided-validation.js";
 import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
 import { inspectValidationTarget, normalizeTargetExpression, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 const stageLabels = {
@@ -101,12 +101,6 @@ export function createGuidedValidationFlow(root, effects) {
             }
             if (draft.destination.kind === "existing" && !draft.destination.schemaId)
                 return [{ id: "guided-existing-schemas", message: "Choose an available existing schema" }];
-            if (draft.assignmentResolution?.selection === "required from readable assignment choices") {
-                return [{ id: "guided-compatible-assignments", message: "Choose a compatible assignment" }];
-            }
-        }
-        if (draft.continuation && draft.stage === "requirement" && draft.assignmentResolution?.selection === "required from readable assignment choices") {
-            return [{ id: "guided-compatible-assignments", message: "Choose a compatible assignment" }];
         }
         return [];
     }
@@ -323,8 +317,12 @@ export function createGuidedValidationFlow(root, effects) {
         const prefill = element("fieldset");
         prefill.id = "guided-routing-prefills";
         prefill.append(element("legend", "Event and assignment values"));
+        const assignmentName = labelledInput("guided-assignment-name", "Assignment name", draft.advanced.assignmentName, "Name the reviewed assignment configuration.");
+        assignmentName.input.addEventListener("change", () => setDraft({ ...draft, advanced: { ...draft.advanced, assignmentName: assignmentName.input.value } }, "Assignment name updated."));
         const domain = labelledInput("guided-scope-domain", "Domain", draft.scope.domain, draft.prefillSources.domain);
         domain.input.addEventListener("change", () => setDraft(setGuidedScope(draft, { ...draft.scope, domain: domain.input.value }), "Domain updated."));
+        const pathname = labelledInput("guided-scope-pathname", "Pathname", draft.scope.pathname, draft.prefillSources.pathname);
+        pathname.input.addEventListener("change", () => setDraft(setGuidedScope(draft, { ...draft.scope, pathname: pathname.input.value }), "Pathname updated."));
         const eventName = labelledInput("guided-scope-event", "Event name", draft.event.name, draft.prefillSources.eventName);
         eventName.input.addEventListener("change", () => {
             const { eventName: _source, ...prefillSources } = draft.prefillSources;
@@ -341,7 +339,7 @@ export function createGuidedValidationFlow(root, effects) {
             const value = target.input.value === "raw input" ? "raw input" : "payload";
             setDraft({ ...draft, advanced: { ...draft.advanced, target: value }, prefillSources }, "Validation target updated.");
         });
-        prefill.append(domain.wrapper, eventName.wrapper, source.wrapper, target.wrapper);
+        prefill.append(assignmentName.wrapper, domain.wrapper, pathname.wrapper, eventName.wrapper, source.wrapper, target.wrapper);
         const choices = element("fieldset");
         choices.append(element("legend", "Where should this validation apply?"));
         for (const [kind, labelText] of Object.entries(scopeLabels)) {
@@ -437,7 +435,6 @@ export function createGuidedValidationFlow(root, effects) {
             summary.append(change);
             container.append(summary);
         }
-        renderCompatibleAssignments(container);
         renderPrefillReplacementReview(container);
         if (schemaPickerOpen) {
             renderGuidedSchemaPicker({
@@ -452,7 +449,9 @@ export function createGuidedValidationFlow(root, effects) {
         }
     }
     function renderCompatibleAssignments(container) {
-        if (!draft || draft.assignmentResolution?.selection !== "required from readable assignment choices")
+        if (!draft ||
+            !assignmentConfigurationRequired(draft) ||
+            draft.assignmentResolution?.selection !== "required from readable assignment choices")
             return;
         const candidates = effects.schemaCandidates();
         const assignments = element("fieldset");
