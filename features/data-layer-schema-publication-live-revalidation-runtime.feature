@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=9e985dea2164cdc74a0c678233a71fc2f9b48760735dbb4d866230cabfc1631d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T17:48:13.048360395Z","feature_name":"Data layer schema publication Live revalidation runtime","feature_path":"features/data-layer-schema-publication-live-revalidation-runtime.feature","background_hash":"9a3675664c6d95e0012f4a40651b3b70c9ec28db0190d34e6758b7f6b62ed73a","implementation_hash":"sha256:6f2b73ba1e05a9d7db2eca61cf026f1d45cbff73938ece195888f068f6e52e22","scenarios":[{"index":1,"name":"Data layer schema publication Live revalidation runtime 002","scenario_hash":"892a68bb3141b3d2518569e3d524abb14cc1d33b71268fb49e087261446e5c12","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-14T17:48:13.048360395Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema publication Live revalidation runtime
 
   Background:

@@ -180,6 +180,11 @@ import {
   setEventValidationUpdateStatus,
 } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import {
+  captureLiveInspectorPresentation,
+  restoreLiveInspectorPresentation,
+  type LiveInspectorPresentationSnapshot,
+} from "./data-layer-live-inspector-presentation-ui.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
@@ -671,14 +676,6 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
-interface LiveInspectorPresentationSnapshot {
-  showNonApplicableProperties: boolean;
-  expandedPropertyPaths: readonly string[];
-  expandedRulePaths: readonly string[];
-  focusedId?: string;
-  focusedPropertyPath?: string;
-  scrollTop: number;
-}
 const liveInspectorPresentation = new Map<string, LiveInspectorPresentationSnapshot>();
 let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
 let defectLibrary: DefectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
@@ -1118,7 +1115,7 @@ async function confirmDetachSelectedTarget(): Promise<void> {
 
 function showDataLayerView(view: DataLayerView, focus = false): void {
   if (liveObserverState.view === "Live" && view !== "Live" && liveObserverState.inspectorEventId) {
-    liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation());
+    liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
   }
   liveObserverState = { ...liveObserverState, view };
   if (savedSessionLiveFeed) {
@@ -1127,7 +1124,7 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
   }
   localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
   renderDataLayerView(liveObserverElements, view, focus);
-  if (view === "Live" && liveObserverState.inspectorEventId) restoreLiveInspectorPresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+  if (view === "Live" && liveObserverState.inspectorEventId) restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
   if (view === "Defects") renderDefects();
 }
 
@@ -1351,7 +1348,7 @@ function openMissingEventBuilder(entryPoint: string, initialSchemaId?: string): 
 
 function closeInspectorAndReturnToEvents(): void {
   const selectedId = liveObserverState.inspectorEventId;
-  if (selectedId) liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation());
+  if (selectedId) liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
   const returnSnapshot = inspectorReturnSnapshot;
   liveObserverState = closeLiveInspector(liveObserverState);
   synchronizeSavedSessionFeedView();
@@ -1363,39 +1360,10 @@ function closeInspectorAndReturnToEvents(): void {
   inspectorReturnSnapshot = undefined;
 }
 
-function captureLiveInspectorPresentation(): LiveInspectorPresentationSnapshot {
-  const inspector = liveObserverElements.eventInspector;
-  const focused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
-  const focusedPropertyPath = focused?.closest<HTMLElement>(".live-validation-property")?.dataset.propertyPath;
-  return {
-    showNonApplicableProperties:inspector?.querySelector<HTMLElement>('[aria-label="Properties"]')?.dataset.showNonApplicableProperties === "true",
-    expandedPropertyPaths:Array.from(inspector?.querySelectorAll<HTMLDetailsElement>("details[open][data-property-path]") ?? [])
-      .map(({ dataset }) => dataset.propertyPath).filter((path): path is string => Boolean(path)),
-    expandedRulePaths:Array.from(inspector?.querySelectorAll<HTMLButtonElement>('.live-validation-property[data-property-path] .live-property-status[aria-expanded="true"]') ?? [])
-      .map((button) => button.closest<HTMLElement>(".live-validation-property")?.dataset.propertyPath).filter((path): path is string => Boolean(path)),
-    ...(focused?.id ? { focusedId:focused.id } : {}),
-    ...(focusedPropertyPath ? { focusedPropertyPath } : {}),
-    scrollTop:inspector?.scrollTop ?? 0,
-  };
-}
-
-function restoreLiveInspectorPresentation(snapshot: LiveInspectorPresentationSnapshot | undefined): void {
-  if (!snapshot) return;
-  const inspector = liveObserverElements.eventInspector;
-  for (const path of snapshot.expandedPropertyPaths) inspector?.querySelector<HTMLDetailsElement>(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
-  for (const path of snapshot.expandedRulePaths) {
-    const disclosure = inspector?.querySelector<HTMLButtonElement>(`.live-validation-property[data-property-path="${CSS.escape(path)}"] .live-property-status`);
-    if (disclosure?.getAttribute("aria-expanded") !== "true") disclosure?.click();
-  }
-  if (inspector) inspector.scrollTop = snapshot.scrollTop;
-  const focusTarget = snapshot.focusedId ? document.getElementById(snapshot.focusedId) : undefined;
-  (focusTarget ?? (snapshot.focusedPropertyPath ? inspector?.querySelector<HTMLElement>(`.live-validation-property[data-property-path="${CSS.escape(snapshot.focusedPropertyPath)}"]`) : undefined))?.focus({ preventScroll:true });
-}
-
 function openLiveInspector(eventId: string, preserveReturnSnapshot = false): void {
   const previousEventId = liveObserverState.inspectorEventId;
   if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
-    liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation());
+    liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
   }
   if (!preserveReturnSnapshot) {
     inspectorReturnSnapshot = captureInspectorReturn(
@@ -1503,9 +1471,9 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
     },
   }), presentation ? { showNonApplicableProperties:presentation.showNonApplicableProperties } : {});
-  restoreLiveInspectorPresentation(presentation);
   renderLiveObserver();
-  backToEventsButton?.focus({ preventScroll: true });
+  restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
+  if (!presentation) backToEventsButton?.focus({ preventScroll: true });
 }
 
 function appendOpenInLibraryAction(eventId: string, templateName: string): void {

@@ -31,6 +31,7 @@ import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSes
 import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./data-layer-saved-session-live-feed.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
 import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+import { captureLiveInspectorPresentation, restoreLiveInspectorPresentation, } from "./data-layer-live-inspector-presentation-ui.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
 import { renderJiraReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./data-layer-missing-event-defect-report-ui.js";
@@ -832,7 +833,7 @@ async function confirmDetachSelectedTarget() {
 }
 function showDataLayerView(view, focus = false) {
     if (liveObserverState.view === "Live" && view !== "Live" && liveObserverState.inspectorEventId) {
-        liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation());
+        liveInspectorPresentation.set(liveObserverState.inspectorEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
     }
     liveObserverState = { ...liveObserverState, view };
     if (savedSessionLiveFeed) {
@@ -842,7 +843,7 @@ function showDataLayerView(view, focus = false) {
     localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
     if (view === "Live" && liveObserverState.inspectorEventId)
-        restoreLiveInspectorPresentation(liveInspectorPresentation.get(liveObserverState.inspectorEventId));
+        restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
     if (view === "Defects")
         renderDefects();
 }
@@ -1078,7 +1079,7 @@ function openMissingEventBuilder(entryPoint, initialSchemaId) {
 function closeInspectorAndReturnToEvents() {
     const selectedId = liveObserverState.inspectorEventId;
     if (selectedId)
-        liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation());
+        liveInspectorPresentation.set(selectedId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
     const returnSnapshot = inspectorReturnSnapshot;
     liveObserverState = closeLiveInspector(liveObserverState);
     synchronizeSavedSessionFeedView();
@@ -1089,41 +1090,10 @@ function closeInspectorAndReturnToEvents() {
     }
     inspectorReturnSnapshot = undefined;
 }
-function captureLiveInspectorPresentation() {
-    const inspector = liveObserverElements.eventInspector;
-    const focused = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
-    const focusedPropertyPath = focused?.closest(".live-validation-property")?.dataset.propertyPath;
-    return {
-        showNonApplicableProperties: inspector?.querySelector('[aria-label="Properties"]')?.dataset.showNonApplicableProperties === "true",
-        expandedPropertyPaths: Array.from(inspector?.querySelectorAll("details[open][data-property-path]") ?? [])
-            .map(({ dataset }) => dataset.propertyPath).filter((path) => Boolean(path)),
-        expandedRulePaths: Array.from(inspector?.querySelectorAll('.live-validation-property[data-property-path] .live-property-status[aria-expanded="true"]') ?? [])
-            .map((button) => button.closest(".live-validation-property")?.dataset.propertyPath).filter((path) => Boolean(path)),
-        ...(focused?.id ? { focusedId: focused.id } : {}),
-        ...(focusedPropertyPath ? { focusedPropertyPath } : {}),
-        scrollTop: inspector?.scrollTop ?? 0,
-    };
-}
-function restoreLiveInspectorPresentation(snapshot) {
-    if (!snapshot)
-        return;
-    const inspector = liveObserverElements.eventInspector;
-    for (const path of snapshot.expandedPropertyPaths)
-        inspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
-    for (const path of snapshot.expandedRulePaths) {
-        const disclosure = inspector?.querySelector(`.live-validation-property[data-property-path="${CSS.escape(path)}"] .live-property-status`);
-        if (disclosure?.getAttribute("aria-expanded") !== "true")
-            disclosure?.click();
-    }
-    if (inspector)
-        inspector.scrollTop = snapshot.scrollTop;
-    const focusTarget = snapshot.focusedId ? document.getElementById(snapshot.focusedId) : undefined;
-    (focusTarget ?? (snapshot.focusedPropertyPath ? inspector?.querySelector(`.live-validation-property[data-property-path="${CSS.escape(snapshot.focusedPropertyPath)}"]`) : undefined))?.focus({ preventScroll: true });
-}
 function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     const previousEventId = liveObserverState.inspectorEventId;
     if (liveObserverState.view === "Live" && previousEventId && liveObserverElements.eventInspector && !liveObserverElements.eventInspector.hidden) {
-        liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation());
+        liveInspectorPresentation.set(previousEventId, captureLiveInspectorPresentation(liveObserverElements.eventInspector));
     }
     if (!preserveReturnSnapshot) {
         inspectorReturnSnapshot = captureInspectorReturn(eventId, liveObserverElements.eventList?.scrollTop ?? 0);
@@ -1229,9 +1199,10 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
             },
         }), presentation ? { showNonApplicableProperties: presentation.showNonApplicableProperties } : {});
-    restoreLiveInspectorPresentation(presentation);
     renderLiveObserver();
-    backToEventsButton?.focus({ preventScroll: true });
+    restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
+    if (!presentation)
+        backToEventsButton?.focus({ preventScroll: true });
 }
 function appendOpenInLibraryAction(eventId, templateName) {
     const action = document.createElement("button");
