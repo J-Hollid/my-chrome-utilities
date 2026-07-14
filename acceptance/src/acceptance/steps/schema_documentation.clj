@@ -67,30 +67,40 @@
                    (str "Schema documentation example did not match " key ".")
                    {:key key :example example :actual actual}))
 
+(defn- matching-row [example rows key observed]
+  (first (filter #(= (example-value example key) (observed %)) rows)))
+
+(defn- validate-row-example! [example observation {:keys [rows match assertions]}]
+  (let [[key observed] match
+        row (matching-row example (rows observation) key observed)]
+    (doseq [[assertion-key assertion-value] assertions]
+      (when-let [expected (example-value example assertion-key)]
+        (assert-example! expected (assertion-value row) assertion-key example)))))
+
+(def example-validators
+  [["interaction"
+    {:rows :interactionCases
+     :match ["interaction" :interaction]
+     :assertions [["presentation" :presentation]]}]
+   ["mapping_path"
+    {:rows :mappingCases
+     :match ["mapping_path" :mappingPath]
+     :assertions [["event_property" :eventProperty]
+                  ["rendered_path" :renderedPath]
+                  ["presentation" :presentation]
+                  ["documentation_result" :documentationResult]]}]
+   ["event_context"
+    {:rows :revisionCases
+     :match ["event_context" :eventContext]
+     :assertions [["expected_description" :description]
+                  ["expected_source" :source]]}]])
+
 (defn validate-example! [example observation]
-  (cond
-    (example-value example "interaction")
-    (let [row (first (filter #(= (example-value example "interaction") (:interaction %))
-                             (:interactionCases observation)))]
-      (assert-example! (example-value example "presentation") (:presentation row) "presentation" example))
-
-    (example-value example "mapping_path")
-    (let [row (first (filter #(= (example-value example "mapping_path") (:mappingPath %))
-                             (:mappingCases observation)))]
-      (when-let [event-property (example-value example "event_property")]
-        (assert-example! event-property (:eventProperty row) "event_property" example))
-      (when-let [rendered-path (example-value example "rendered_path")]
-        (assert-example! rendered-path (:renderedPath row) "rendered_path" example))
-      (when-let [presentation (example-value example "presentation")]
-        (assert-example! presentation (:presentation row) "presentation" example))
-      (when-let [result (example-value example "documentation_result")]
-        (assert-example! result (:documentationResult row) "documentation_result" example)))
-
-    (example-value example "event_context")
-    (let [row (first (filter #(= (example-value example "event_context") (:eventContext %))
-                             (:revisionCases observation)))]
-      (assert-example! (example-value example "expected_description") (:description row) "expected_description" example)
-      (assert-example! (example-value example "expected_source") (:source row) "expected_source" example)))
+  (some (fn [[key validation]]
+          (when (example-value example key)
+            (validate-row-example! example observation validation)
+            true))
+        example-validators)
   observation)
 
 (defn- transition [world example _captures _spec]
