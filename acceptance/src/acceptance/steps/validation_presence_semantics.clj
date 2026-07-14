@@ -1,6 +1,5 @@
 (ns acceptance.steps.validation-presence-semantics
-  (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]))
+  (:require [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-validation-presence-semantics.feature"
@@ -14,13 +13,10 @@
 (defonce browser-observation (atom nil))
 
 (defn verify-model! []
-  (when-not @model-verified?
-    (let [result (process/shell support/build-shell-options
-                                "node" "test/data-layer-validation-presence-semantics-test.mjs")]
-      (support/assert! (zero? (:exit result))
-                       (str "Validation presence-semantics model verification failed. " (:err result))
-                       {:out (:out result) :err (:err result)})
-      (reset! model-verified? true))))
+  (support/cached-command-verification!
+   model-verified?
+   "Validation presence-semantics model verification failed. "
+   "node" "test/data-layer-validation-presence-semantics-test.mjs"))
 
 (defn browser-observation! []
   (support/cached-browser-observation!
@@ -43,6 +39,10 @@
                    (:requiredCases observation))
   (support/assert! (= {:status "error" :actual "null" :issueActual "null"} (:nullValue observation))
                    "Explicit null was confused with an absent property." (:nullValue observation))
+  (support/assert! (= {:statuses ["error" "pass"] :actuals ["undefined" "undefined"] :issueActual "undefined"}
+                      (:undefinedValue observation))
+                   "Explicit undefined was present but leaked an unstable observed-value representation."
+                   (:undefinedValue observation))
   (support/assert! (= [["Nested required" "/profile/status"]
                        ["Wildcard required" "/products/1/sku"]
                        ["Index required" "/products/2"]]
@@ -64,6 +64,10 @@
                       (:liveSummary observation))
                    "Live presentation counted not-applicable rules as pass, failure, error, or warning."
                    (:liveSummary observation))
+  (support/assert! (= {:notApplicable true :issueRows 0 :invalidMissing false}
+                      (:liveInspector observation))
+                   "The rendered Live inspector did not preserve neutral optional-absence presentation."
+                   (:liveInspector observation))
   observation)
 
 (def model-example-values
@@ -95,22 +99,43 @@
   (let [values (if (= mode :runtime) runtime-example-values model-example-values)]
     (support/validate-example-domain!
      values example (filter #(support/example-value example %) (keys values))
-     "Validation presence-semantics example value was outside the specified contract.")))
-
-(defn transition [world example _captures {:keys [text]}]
-  (let [mode (or (entry-modes text) (:validation-presence-semantics-mode world))]
-    (support/assert! mode "Validation presence-semantics scenario did not establish its mode." {:step text})
-    (verify-model!)
-    (validate-example! mode example)
-    (when (= mode :runtime) (assert-runtime-boundary! (browser-observation!)))
-    (assoc world :validation-presence-semantics-mode mode)))
+     "Validation presence-semantics example value was outside the specified contract.")
+    (when-let [issue-count (support/example-value example "issue_count")]
+      (let [failure? (some #{"Failed" "error"}
+                           (map #(support/example-value example %)
+                                ["required_result" "allowed_values_result" "rule_result"
+                                 "required_status" "allowed_status" "status"]))]
+        (support/assert! (= (if failure? "1" "0") issue-count)
+                         "Validation presence-semantics issue count contradicted its rule result."
+                         {:mode mode :example example})))
+    (when-let [issue-source (support/example-value example "issue_source")]
+      (let [expected (cond
+                       (= "Failed" (support/example-value example "required_result")) "Required"
+                       (= "Failed" (support/example-value example "allowed_values_result")) "Allowed values"
+                       :else "none")]
+        (support/assert! (= expected issue-source)
+                         "Validation presence-semantics issue attribution contradicted its rule result."
+                         {:mode mode :example example})))
+    (when-let [outcome (support/example-value example "issue_outcome")]
+      (let [expected (cond
+                       (= "error" (support/example-value example "required_status")) "one Required issue"
+                       (= "error" (support/example-value example "allowed_status")) "one Allowed values issue"
+                       :else "no issue")]
+        (support/assert! (= expected outcome)
+                         "Validation presence-semantics runtime issue outcome contradicted its statuses."
+                         {:mode mode :example example})))
+    example))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world]
-                       (or (contains? entry-modes (:text spec))
-                           (:validation-presence-semantics-mode world)))
-           :handler (fn [world example captures]
-                      (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-modes
+   :validation-presence-semantics-mode
+   (fn [world example _captures {:keys [text]}]
+     (support/mode-transition
+      world example text entry-modes :validation-presence-semantics-mode
+      verify-model! validate-example! #(assert-runtime-boundary! (browser-observation!))))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T17:39:30.498737762+02:00", :module-hash "-1906346752", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-135206568"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-1223094497"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-984489401"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 15, :end-line 19, :hash "-808924326"} {:id "defn/browser-observation!", :kind "defn", :line 21, :end-line 27, :hash "1717773233"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 29, :end-line 71, :hash "-755888253"} {:id "def/model-example-values", :kind "def", :line 73, :end-line 83, :hash "-1786934155"} {:id "def/runtime-example-values", :kind "def", :line 85, :end-line 96, :hash "351585306"} {:id "defn/validate-example!", :kind "defn", :line 98, :end-line 127, :hash "-1209457316"} {:id "def/handlers", :kind "def", :line 129, :end-line 137, :hash "-1328409276"}]}
+;; clj-mutate-manifest-end

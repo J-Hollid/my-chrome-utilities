@@ -44,6 +44,14 @@ assert.equal(explicitNull.evaluations[0].status, "error");
 assert.equal(explicitNull.evaluations[0].actual, "null");
 assert.notEqual(explicitNull.evaluations[0].actual, "missing");
 
+const explicitUndefined = validateWithSchema(event({ test:undefined }), schemaWith([
+  rule("Allowed values", "allowed-values", "test"),
+  rule("Required", "required"),
+]), []);
+assert.deepEqual(explicitUndefined.evaluations.map(({ status }) => status), ["error", "pass"]);
+assert.deepEqual(explicitUndefined.evaluations.map(({ actual }) => actual), ["undefined", "undefined"]);
+assert.equal(explicitUndefined.issues.find(({ rule }) => rule?.startsWith("Allowed values"))?.actual, "undefined");
+
 const nestedRules = [
   rule("Nested value", "allowed-values", "active", "/profile/status"),
   rule("Nested required", "required", undefined, "/profile/status"),

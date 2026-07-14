@@ -115,6 +115,8 @@ export function renderLiveObserverState(elements, state, openEvent) {
     }
 }
 function evaluationText(evaluation) {
+    if (evaluation.status === "not-applicable")
+        return `${evaluation.message} · rule ${evaluation.rule} v${evaluation.ruleVersion} · ${evaluation.schemaName} v${evaluation.schemaVersion}`;
     return `${evaluation.message} · expected ${evaluation.expected} · actual ${evaluation.actual} · rule ${evaluation.rule} v${evaluation.ruleVersion} · severity ${evaluation.severity} · ${evaluation.schemaName} v${evaluation.schemaVersion}`;
 }
 function propertyStatusSymbol(symbol) {
