@@ -28,37 +28,46 @@ Feature: Data layer unified defect report builder
     Given the operator confirms that purchase was expected during the checkout visit
     When the missing-event Actual result is displayed
     Then it states that no matching purchase event was pushed or observed in event-history during the selected scope
-    And it identifies the checkout page visit and observation interval
+    And it identifies the checkout page visit without an operator-editable observation interval
+    And capture timestamps are not presented as part of the missing-event result
     And it does not fabricate an event payload, validation issue, capture timestamp, or captured-event identity
 
   # Data layer unified defect report builder 003
   Scenario: Data layer unified defect report builder 003
-    Given Checkout purchase revision 4 and its covering assignment are selected
+    Given Generic pageview revision 4 defines required page_name and required products
+    And products is an array of objects requiring numeric id and string name
+    And its covering assignment expects pageview from event-history
     When the missing-event Expected result is built
-    Then event name, source, target, schema identity, assignment scope, and required payload structure are derived from that exact schema revision
-    And required property constraints are represented without inventing literal values
-    And optional schema properties are available for explicit inclusion rather than added automatically
-    And changing an expected value cannot modify the schema, assignment, or any captured event
+    Then event name, source, target, schema identity, and assignment scope are derived from that exact schema revision
+    And the editor recursively displays page_name, products, products array items, id, and name with complete paths and types
+    And required properties are included while optional properties remain available for explicit inclusion
+    And object and array containers can be expanded and collapsed without flattening their descendants
+    And array items can be added, duplicated, and removed without changing sibling items
+    And changing the expected payload cannot modify the schema, assignment, or any captured event
 
   # Data layer unified defect report builder 004
   Scenario Outline: Data layer unified defect report builder 004
-    Given expected property <property> has schema constraint <constraint>
-    When the operator chooses expected response <response_choice>
-    Then the Expected result presents <expected_presentation>
+    Given expected property <property_path> has type <property_type> and schema choices <schema_choices>
+    When the operator chooses <value_source> value <entered_value>
+    Then the expected payload stores <stored_value> at <json_pointer>
+    And the stored value has JSON type <json_type>
     And the response source is <response_source>
 
     Examples:
-      | property  | constraint        | response_choice          | expected_presentation       | response_source          |
-      | currency  | one of EUR or USD | Use generic constraint   | currency is EUR OR USD      | schema constraint        |
-      | currency  | one of EUR or USD | schema value EUR         | currency is EUR             | schema-provided value    |
-      | order_id  | required string   | custom value A-123       | order_id is A-123           | operator custom response |
+      | property_path    | property_type | schema_choices   | value_source | entered_value | stored_value | json_pointer     | json_type | response_source          |
+      | page_name        | string        | home and test     | schema       | test          | test         | /page_name       | string    | schema-provided value    |
+      | products.0.id    | number        | none              | custom       | 1             | 1            | /products/0/id   | number    | operator custom response |
+      | products.0.name  | string        | robot and vehicle | custom       | robot         | robot        | /products/0/name | string    | operator custom response |
+      | logged_in        | boolean       | true and false    | schema       | false         | false        | /logged_in       | boolean   | schema-provided value    |
 
   # Data layer unified defect report builder 005
   Scenario: Data layer unified defect report builder 005
     Given /products is selected as the reproduction start point
     And the checkout expectation scope is selected as the reproduction endpoint
     When the reproduction journey is generated
-    Then Visit /products and Visit /checkout are pathname anchors in captured order
+    Then From pathname displays /products and To pathname displays /checkout
+    And Visit /products and Visit /checkout are pathname anchors in captured order
+    And an Add step between /products and /checkout action is available between the anchors
     And the final assertion states Expect purchase to be pushed to event-history during /checkout
     And the expected-event assertion is not represented as a captured timeline event
     And a start and endpoint on the same visit still allow manual steps before the final assertion
@@ -80,7 +89,7 @@ Feature: Data layer unified defect report builder
   # Data layer unified defect report builder 007
   Scenario: Data layer unified defect report builder 007
     Given the operator added reproduction steps between /products and /checkout
-    When the expected-event endpoint changes to another page visit or observation interval
+    When From pathname or To pathname changes to another page visit
     Then absence verification reruns against the new endpoint
     And pathname anchors are rebuilt from captured visit chronology
     And manual steps that still belong to the retained journey remain in order
@@ -104,7 +113,8 @@ Feature: Data layer unified defect report builder
     And it contains current Summary, Description, Steps to reproduce, Actual result, Expected result, Schema expectation, Capture evidence, and Supporting timeline content
     And editing expected values, reproduction steps, timeline evidence, Summary, Description, or Expected result explanation refreshes the preview immediately
     And incomplete required stages show preview assistance without retaining stale generated content
-    And copy and save remain unavailable until expectation confirmation and absence verification are complete
+    And no separate Create missing-event report action is required
+    And copy and save become available when required expected values, expectation confirmation, and absence verification are complete
 
   # Data layer unified defect report builder 010
   Scenario: Data layer unified defect report builder 010
@@ -115,9 +125,44 @@ Feature: Data layer unified defect report builder
     And it does not switch to a separate reduced report workflow
 
   # Data layer unified defect report builder 011
-  Scenario: Data layer unified defect report builder 011
+  Scenario Outline: Data layer unified defect report builder 011
     Given a complete missing-event report has been composed in the common builder
-    When the operator copies it, saves it as reported, reopens it from Defects, edits it, and recopies it
+    When the operator activates <report_action>
+    Then successful outcome is <successful_effect>
+    And feedback is displayed only after the effect succeeds
+
+    Examples:
+      | report_action                     | successful_effect                                                        |
+      | Copy for Jira Cloud               | the current preview is written through the Jira clipboard integration     |
+      | Save as reported defect           | one discoverable Missing event defect is persisted in Defects              |
+      | Save as reported defect and copy  | one defect is persisted and the same representation is written to clipboard |
+
+  # Data layer unified defect report builder 012
+  Scenario: Data layer unified defect report builder 012
+    Given pageview expected values are page_name test and products item id 1 with name robot
+    When the Expected result preview is displayed
+    Then it states pageview is fired with {"page_name":"test","products":[{"id":1,"name":"robot"}]}
+    And the payload is formatted as indented JSON using the same object and array presentation as a captured Live event
+    And the preview, Jira representation, and saved defect use the same expected payload
+    And editing a leaf or array item refreshes all three representations without stale content
+
+  # Data layer unified defect report builder 013
+  Scenario Outline: Data layer unified defect report builder 013
+    Given a complete missing-event report remains open
+    When report completion encounters <failed_effect>
+    Then the builder displays <failure_feedback>
+    And it does not display copy or save success
+    And the report draft and preview remain unchanged for retry
+
+    Examples:
+      | failed_effect                       | failure_feedback                    |
+      | clipboard writing rejects           | Copy failed                         |
+      | Defect Library persistence rejects  | Save failed                         |
+
+  # Data layer unified defect report builder 014
+  Scenario: Data layer unified defect report builder 014
+    Given a missing-event report was saved from the common builder
+    When the operator opens it from Defects, edits it, and recopies it
     Then the report uses the same preview representation and persistence lifecycle as a validation-issue report
-    And schema expectation, absence evidence, reproduction endpoint, manual steps, timeline, and report edits are retained
+    And the nested expected payload, schema expectation, absence evidence, reproduction endpoints, manual steps, timeline, and report edits are retained
     And Back to selected page visit and Back to Live feed restore builder, navigation, scroll, and focus state without requiring a captured defect event
