@@ -82,6 +82,8 @@ assert.equal(state.inspectorEventId, undefined);
 assert.equal(state.listVisible, true);
 state = resetLiveObserverForSession(pauseCapture(state));
 assert.deepEqual(state.events, []);
+assert.equal(state.filter, undefined);
+assert.equal(state.query, undefined);
 assert.equal(state.inspectorEventId, undefined);
 assert.equal(state.listVisible, true);
 assert.equal(state.status, "Live");

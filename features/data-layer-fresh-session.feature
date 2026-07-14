@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=56e4d7ebc8986cc23a580c561e7e668550a1e76febf0923d3f6905cf42f5f517
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T07:43:32.793432535Z","feature_name":"Data layer fresh session","feature_path":"features/data-layer-fresh-session.feature","background_hash":"a7031d0a16347204f370875cb325f59827ef75d41f6ef3ea2ba2de2387b749b9","implementation_hash":"sha256:970cc7b2c71733a8b92ce8bca6a0999289f07df23c3651c2a771d93a0cc88007","scenarios":[{"index":0,"name":"Data layer fresh session 001","scenario_hash":"3efa2251faca15b7c236f154159dbcd3212d98ceb9307dbc2cb5e70eac665668","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-14T07:43:32.793432535Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer fresh session
 
   Background:

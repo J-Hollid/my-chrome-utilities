@@ -9,6 +9,7 @@
             [acceptance.steps.defect-report :as defect-report]
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.event-feed-query :as event-feed-query]
+            [acceptance.steps.fresh-live-session :as fresh-live-session]
             [acceptance.steps.guided-validation :as guided-validation]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
@@ -37,7 +38,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat saved-session-live-feed/handlers
+  (vec (concat fresh-live-session/handlers
+               saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
