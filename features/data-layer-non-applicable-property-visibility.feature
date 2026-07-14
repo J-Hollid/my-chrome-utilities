@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=b078d69f0deb74dc6e17ca815d168dc8b6cba9a4f9e1d882a030601a1dd77712
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T17:48:23.493109239Z","feature_name":"Data layer non-applicable property visibility","feature_path":"features/data-layer-non-applicable-property-visibility.feature","background_hash":"b667d5841c49b0c067608e799370f930cc7bc991af19bab9a109a8e571f15624","implementation_hash":"sha256:30cbdd44c741d36868b8b4784e0ebf222629f9acf0f7f0ca2ae560400ae4c775","scenarios":[{"index":2,"name":"Data layer non-applicable property visibility 003","scenario_hash":"5ce2f532a2de97a0c8c28bf8e30a77edaad0a35437eb3aab144b863ea4559026","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-14T17:48:23.493109239Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer non-applicable property visibility
 
   Background:
