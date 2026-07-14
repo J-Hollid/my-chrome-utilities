@@ -114,6 +114,23 @@ export function validateNestedRuleTarget(document, path) {
             : `Targets nested property ${segments.join(" ")}`;
     return { result: "accepted", assistance, canonicalPath, targetType: schema.type };
 }
+export function inspectSpecificIndexRuleTarget(document, arrayPath, enteredIndex) {
+    const indexText = enteredIndex.trim();
+    const canonicalArrayPath = canonicalNestedPath(arrayPath);
+    const enteredPath = `${canonicalArrayPath}/${indexText}`;
+    if (!/^\d+$/.test(indexText) || !Number.isSafeInteger(Number(indexText))) {
+        return {
+            result: "blocked",
+            assistance: "Enter a non-negative array index",
+            canonicalPath: enteredPath,
+        };
+    }
+    const index = Number(indexText);
+    const inspection = validateNestedRuleTarget(document, `${canonicalArrayPath}/${index}`);
+    return inspection.result === "accepted"
+        ? { ...inspection, assistance: `Item ${index + 1} at zero-based index ${index}` }
+        : inspection;
+}
 export function ensureNestedSchemaPath(document, path, targetType) {
     const segments = pathSegments(path);
     const createdNodes = [];
