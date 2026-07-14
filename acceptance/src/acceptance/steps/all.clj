@@ -40,6 +40,7 @@
             [acceptance.steps.schema-nested-path :as schema-nested-path]
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
+            [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
@@ -55,6 +56,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               schema-rule-property-identity/handlers
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
                local-rule-promotion/handlers
