@@ -223,6 +223,7 @@ import { addManualProperty, inspectManualProperty, manualPropertyPreview, type M
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
+import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation } from "./data-layer-schema-documentation.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
 import {
@@ -420,6 +421,9 @@ const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-
 const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
 const schemaDetailEmpty = document.querySelector<HTMLElement>("#schema-detail-empty");
 const schemaEditorName = document.querySelector<HTMLInputElement>("#schema-editor-name");
+const schemaEditorDescription = document.querySelector<HTMLTextAreaElement>("#schema-editor-description");
+const saveSchemaDescriptionButton = document.querySelector<HTMLButtonElement>("#save-schema-description");
+const schemaDescriptionOrigin = document.querySelector<HTMLElement>("#schema-description-origin");
 const schemaEditorTarget = document.querySelector<HTMLSelectElement>("#schema-editor-target");
 const saveSchemaButton = document.querySelector<HTMLButtonElement>("#save-schema");
 const saveSchemaReason = document.querySelector<HTMLElement>("#save-schema-reason");
@@ -455,6 +459,13 @@ schemaPropertyRemovalDialog.append(schemaPropertyRemovalHeading, schemaPropertyR
 let selectedSchemaPropertyPath = "example";
 let pendingSchemaPropertyRemoval: { path:string; trigger:HTMLButtonElement } | undefined;
 let lastSchemaPropertyRemoval: SchemaPropertyRemoval | undefined;
+let pendingSchemaDocumentationRemoval: { path:string; trigger:HTMLElement } | undefined;
+const schemaDocumentationRemovalDialog = document.createElement("dialog"); schemaDocumentationRemovalDialog.id = "schema-documentation-removal-dialog";
+const schemaDocumentationRemovalHeading = document.createElement("h4"); schemaDocumentationRemovalHeading.textContent = "Remove property documentation?"; schemaDocumentationRemovalHeading.tabIndex = -1;
+const schemaDocumentationRemovalSummary = document.createElement("p");
+const confirmSchemaDocumentationRemoval = document.createElement("button"); confirmSchemaDocumentationRemoval.type = "button"; confirmSchemaDocumentationRemoval.textContent = "Remove documentation";
+const cancelSchemaDocumentationRemoval = document.createElement("button"); cancelSchemaDocumentationRemoval.type = "button"; cancelSchemaDocumentationRemoval.textContent = "Cancel";
+schemaDocumentationRemovalDialog.append(schemaDocumentationRemovalHeading, schemaDocumentationRemovalSummary, confirmSchemaDocumentationRemoval, cancelSchemaDocumentationRemoval); document.body.append(schemaDocumentationRemovalDialog);
 let specificIndexArrayPath: string | undefined;
 let specificIndexTrigger: HTMLButtonElement | undefined;
 const schemaSpecificIndexDialog = document.createElement("dialog"); schemaSpecificIndexDialog.id = "schema-specific-index-dialog";
@@ -1232,7 +1243,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       const inspectorScroll = liveObserverElements.eventInspector?.scrollTop ?? 0;
       const focusedId = document.activeElement instanceof HTMLElement ? document.activeElement.id : "";
       liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) =>
-        candidate.id === selectedId ? { ...candidate, validation, ...(result ? { validationDetails:{ issues:result.issues, evaluations:result.evaluations ?? [], ...(result.schema ? { schema:result.schema } : {}), ...(result.assignment ? { assignment:result.assignment } : {}) } } : {}) } : candidate) };
+        candidate.id === selectedId ? { ...candidate, validation, ...(result ? { validationDetails:{ issues:result.issues, evaluations:result.evaluations ?? [], ...(result.schema ? { schema:result.schema } : {}), ...(result.documentation ? { documentation:result.documentation } : {}), ...(result.assignment ? { assignment:result.assignment } : {}) } } : {}) } : candidate) };
       renderLiveObserver();
       if (liveObserverElements.eventInspector) liveObserverElements.eventInspector.scrollTop = inspectorScroll;
       if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll:true });
@@ -1346,7 +1357,7 @@ function renderSchemas(): void {
       schemaDraft = schemaEditorDraft(schema);
       renderSchemaDraft();
     });
-    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version)]; persistSchemaLibrary(); renderSchemas(); });
+    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
       if (children.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return; }
@@ -1399,6 +1410,11 @@ function renderSchemaDraft(): void {
         ? `Current revision ${storedSchema.version} · no working draft`
         : "Unsaved new schema";
   if (schemaEditorName) schemaEditorName.value = draft.name;
+  const effectiveDocumentation = resolveEffectiveSchemaDocumentation(draft, [...schemas.filter(({ id }) => id !== draft.id), draft]);
+  if (schemaEditorDescription) schemaEditorDescription.value = draft.documentation?.description ?? "";
+  if (schemaDescriptionOrigin) schemaDescriptionOrigin.textContent = effectiveDocumentation.descriptionOrigin
+    ? `${effectiveDocumentation.description ?? ""} · ${effectiveDocumentation.descriptionOrigin.name} revision ${effectiveDocumentation.descriptionOrigin.version}${effectiveDocumentation.descriptionOrigin.id === draft.id ? " · local" : " · inherited"}`
+    : "No schema description.";
   if (schemaEditorTarget) schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
   if (schemaOnlyDeclaredProperties) schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
   const parentDocuments = schemaParentDocuments();
@@ -1424,10 +1440,41 @@ function renderSchemaDraft(): void {
     const metadata = document.createElement("span"); metadata.className = "schema-property-metadata";
     metadata.textContent = `${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
     const persistedPath = canonicalRulePropertyPath(path);
+    const documentationPath = canonicalDocumentationPath(persistedPath);
+    const localDocumentation = draft.documentation?.properties?.[documentationPath];
+    const propertyDocumentation = effectiveDocumentation.properties[documentationPath];
+    const documentationParent = draft.parentSchemaId ? schemas.find(({ id }) => id === draft.parentSchemaId) : undefined;
+    const inheritedDocumentation = documentationParent ? resolveEffectiveSchemaDocumentation(documentationParent, schemas).properties[documentationPath] : undefined;
     const attached = (draft.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === persistedPath);
     const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
     const add = document.createElement("button"); add.type = "button"; add.textContent = "Add rule"; add.className = "schema-property-add-rule"; add.setAttribute("aria-label", `Add rule for ${path}`);
     add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
+    const documentationSummary = document.createElement("p"); documentationSummary.className = "schema-property-documentation";
+    documentationSummary.textContent = propertyDocumentation
+      ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
+      : "No documentation";
+    const editDocumentation = document.createElement("a"); editDocumentation.setAttribute("role", "button"); editDocumentation.tabIndex = 0; editDocumentation.className = "schema-property-documentation-control";
+    editDocumentation.textContent = localDocumentation || propertyDocumentation ? "Edit documentation" : "Add documentation";
+    editDocumentation.setAttribute("aria-label", `${editDocumentation.textContent} for ${documentationPath}`);
+    const documentationEditor = document.createElement("fieldset"); documentationEditor.className = "schema-property-documentation-editor"; documentationEditor.hidden = true;
+    const legend = document.createElement("legend"); legend.textContent = `Documentation for ${documentationPath}`;
+    const displayNameLabel = document.createElement("label"); const displayName = document.createElement("input"); displayName.type = "text"; displayName.value = localDocumentation?.displayName ?? propertyDocumentation?.displayName ?? ""; displayName.id = `schema-documentation-name-${path.replace(/[^a-z0-9]+/gi, "-")}`; displayNameLabel.htmlFor = displayName.id; displayNameLabel.textContent = "Display name";
+    const descriptionLabel = document.createElement("label"); const description = document.createElement("textarea"); description.value = localDocumentation?.description ?? propertyDocumentation?.description ?? ""; description.id = `schema-documentation-description-${path.replace(/[^a-z0-9]+/gi, "-")}`; descriptionLabel.htmlFor = description.id; descriptionLabel.textContent = "Description";
+    const saveDocumentation = document.createElement("input"); saveDocumentation.type = "button"; saveDocumentation.value = "Save documentation";
+    saveDocumentation.addEventListener("click", () => {
+      if (!schemaDraft) return;
+      const entry: SchemaPropertyDocumentation = { displayName:displayName.value, description:description.value };
+      if (!entry.displayName.trim() && !entry.description.trim() && localDocumentation) { requestSchemaDocumentationRemoval(documentationPath, saveDocumentation); return; }
+      schemaDraft = { ...schemaDraft, documentation:setPropertyDocumentation(schemaDraft.documentation ?? {}, documentationPath, entry) };
+      persistSchemaEditorDraft(`Document property ${documentationPath}`); renderSchemaDraft();
+    });
+    const removeDocumentation = document.createElement("input"); removeDocumentation.type = "button"; removeDocumentation.value = inheritedDocumentation ? "Restore inherited documentation" : "Remove documentation";
+    removeDocumentation.hidden = !localDocumentation;
+    removeDocumentation.addEventListener("click", () => requestSchemaDocumentationRemoval(documentationPath, removeDocumentation));
+    editDocumentation.addEventListener("click", () => { documentationEditor.hidden = false; editDocumentation.setAttribute("aria-expanded", "true"); displayName.focus({ preventScroll:true }); });
+    editDocumentation.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { editDocumentation.click(); event.preventDefault(); } });
+    documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, saveDocumentation, removeDocumentation);
+    const documentationSection = document.createElement("section"); documentationSection.className = "schema-property-documentation-section"; documentationSection.setAttribute("aria-label", `Documentation for ${documentationPath}`); documentationSection.append(documentationSummary, editDocumentation, documentationEditor);
     const removeProperty = document.createElement("button"); removeProperty.type = "button";
     removeProperty.textContent = inherited ? "Exclude inherited property" : "Remove property";
     removeProperty.setAttribute("aria-label", `${removeProperty.textContent} ${path.startsWith("/") ? path : `/${path.replaceAll(".", "/")}`}`);
@@ -1464,7 +1511,7 @@ function renderSchemaDraft(): void {
       remove.addEventListener("click", () => updateAttachedRule(persistedPath, rule.id, () => undefined));
       row.append(toggle, remove); view.append(row);
     }
-    item.append(label, metadata, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view); return item;
+    item.append(label, metadata, documentationSection, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view); return item;
   });
   const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]!]));
   const roots: HTMLLIElement[] = [];
@@ -1613,7 +1660,7 @@ function persistSchemaLibrary(): void {
 function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
   const draft = schema.workingDraft;
   if (!draft) return structuredClone(schema);
-  const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, ...current } = structuredClone(schema);
+  const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = structuredClone(schema);
   return {
     ...current,
     document:structuredClone(draft.document),
@@ -1621,6 +1668,7 @@ function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
     ...(draft.attachedRules !== undefined ? { attachedRules:structuredClone(draft.attachedRules) } : {}),
     ...(draft.parentSchemaId !== undefined ? { parentSchemaId:draft.parentSchemaId } : {}),
     ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides:structuredClone(draft.inheritedRuleOverrides) } : {}),
+    ...(draft.documentation !== undefined ? { documentation:structuredClone(draft.documentation) } : {}),
   };
 }
 
@@ -1628,17 +1676,41 @@ function persistSchemaEditorDraft(change?: string): void {
   if (!schemaDraft) return;
   const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
   if (!stored) return;
-  const changes: Partial<Pick<SchemaWorkingDraft, "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides">> = {
+  const changes: Partial<Pick<SchemaWorkingDraft, "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation">> = {
     document:schemaDraft.document,
     assignments:schemaDraft.assignments,
     attachedRules:schemaDraft.attachedRules,
     parentSchemaId:schemaDraft.parentSchemaId,
     inheritedRuleOverrides:schemaDraft.inheritedRuleOverrides,
+    documentation:schemaDraft.documentation,
   };
   const updated = updateSchemaWorkingDraft(stored, changes, change);
   schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
   persistSchemaLibrary(); renderSchemas();
 }
+
+function requestSchemaDocumentationRemoval(path: string, trigger: HTMLElement): void {
+  pendingSchemaDocumentationRemoval = { path, trigger };
+  schemaDocumentationRemovalSummary.textContent = `${path} documentation will be removed from the working draft. The schema property and validation rules remain unchanged.`;
+  schemaDocumentationRemovalDialog.showModal(); schemaDocumentationRemovalHeading.focus({ preventScroll:true });
+}
+
+function closeSchemaDocumentationRemoval(restoreFocus = true): void {
+  const trigger = pendingSchemaDocumentationRemoval?.trigger;
+  pendingSchemaDocumentationRemoval = undefined;
+  if (schemaDocumentationRemovalDialog.open) schemaDocumentationRemovalDialog.close();
+  if (restoreFocus) trigger?.focus({ preventScroll:true });
+}
+
+confirmSchemaDocumentationRemoval.addEventListener("click", () => {
+  if (!schemaDraft || !pendingSchemaDocumentationRemoval) return;
+  const path = pendingSchemaDocumentationRemoval.path;
+  closeSchemaDocumentationRemoval(false);
+  schemaDraft = { ...schemaDraft, documentation:setPropertyDocumentation(schemaDraft.documentation ?? {}, path, { displayName:"", description:"" }) };
+  persistSchemaEditorDraft(`Remove property documentation ${path}`); renderSchemaDraft();
+});
+cancelSchemaDocumentationRemoval.addEventListener("click", () => closeSchemaDocumentationRemoval());
+schemaDocumentationRemovalDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSchemaDocumentationRemoval(); });
 
 function focusAfterSchemaPropertyRemoval(path: string, previousPaths: readonly string[]): void {
   const dotted = path.slice(1).replaceAll("/", ".");
@@ -1653,9 +1725,9 @@ function focusAfterSchemaPropertyRemoval(path: string, previousPaths: readonly s
 function applySchemaPropertyRemoval(path: string): void {
   if (!schemaDraft) return;
   const previousPaths = schemaDocumentPaths(schemaDraft.document);
-  const removal = removeSchemaProperty(schemaDraft.document, schemaDraft.attachedRules ?? [], path);
+  const removal = removeSchemaProperty(schemaDraft.document, schemaDraft.attachedRules ?? [], path, schemaDraft.documentation);
   lastSchemaPropertyRemoval = removal;
-  schemaDraft = { ...schemaDraft, document:removal.document, attachedRules:removal.attachedRules };
+  schemaDraft = { ...schemaDraft, document:removal.document, attachedRules:removal.attachedRules, ...(removal.documentation !== undefined ? { documentation:removal.documentation } : {}) };
   selectedSchemaPropertyPath = previousPaths.find((candidate) => candidate !== path.slice(1).replaceAll("/", ".")) ?? "example";
   persistSchemaEditorDraft(`Remove property ${removal.propertyPath} and property-specific constraints`);
   renderSchemaDraft();
@@ -1666,14 +1738,15 @@ function applySchemaPropertyRemoval(path: string): void {
 
 function requestSchemaPropertyRemoval(path: string, trigger: HTMLButtonElement): void {
   if (!schemaDraft) return;
-  const inspection = inspectSchemaPropertyRemoval(schemaDraft.document, schemaDraft.attachedRules ?? [], path);
+  const inspection = inspectSchemaPropertyRemoval(schemaDraft.document, schemaDraft.attachedRules ?? [], path, schemaDraft.documentation);
   if (!inspection.requiresConfirmation) { applySchemaPropertyRemoval(path); return; }
   pendingSchemaPropertyRemoval = { path, trigger };
   const descendants = inspection.descendants.length ? inspection.descendants.join(", ") : "none";
   const rules = inspection.affectedRuleAttachments.length
     ? inspection.affectedRuleAttachments.map((rule) => rule.name ?? rule.id).join(", ")
     : "none";
-  schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${descendants}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${rules}. No changes occur until confirmation.`;
+  const documentation = inspection.affectedDocumentationPaths?.length ? inspection.affectedDocumentationPaths.join(", ") : "none";
+  schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${descendants}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${rules}. Documentation entries: ${documentation}. No changes occur until confirmation.`;
   schemaPropertyRemovalDialog.showModal(); schemaPropertyRemovalHeading.focus({ preventScroll:true });
 }
 
@@ -1695,7 +1768,7 @@ undoSchemaPropertyRemovalButton.addEventListener("click", () => {
   if (!schemaDraft || !lastSchemaPropertyRemoval) return;
   const restored = undoSchemaPropertyRemoval(lastSchemaPropertyRemoval);
   const path = lastSchemaPropertyRemoval.propertyPath;
-  schemaDraft = { ...schemaDraft, document:restored.document, attachedRules:restored.attachedRules };
+  schemaDraft = { ...schemaDraft, document:restored.document, attachedRules:restored.attachedRules, ...(restored.documentation !== undefined ? { documentation:restored.documentation } : {}) };
   selectedSchemaPropertyPath = path.slice(1).replaceAll("/", ".");
   persistSchemaEditorDraft(`Undo property removal ${path}`); renderSchemaDraft();
   schemaPropertyRemovalFeedback.textContent = `Restored ${path} with its prior definition and tree position.`;
@@ -3007,7 +3080,7 @@ function syncCapturedEventsToLive(): void {
     const presented: LiveEvent = {
       ...event,
       validation:validation.state,
-      validationDetails:{ issues:validation.issues, evaluations:validation.evaluations ?? [], ...(validation.schema ? { schema:validation.schema } : {}), ...(validation.assignment ? { assignment:validation.assignment } : {}) },
+      validationDetails:{ issues:validation.issues, evaluations:validation.evaluations ?? [], ...(validation.schema ? { schema:validation.schema } : {}), ...(validation.documentation ? { documentation:validation.documentation } : {}), ...(validation.assignment ? { assignment:validation.assignment } : {}) },
       sourceName: source?.name ?? event.sourceId,
       ...(dataLayerObserverState.observer
         ? { destination: dataLayerObserverState.observer.historyPath }
@@ -3727,6 +3800,11 @@ templateEmptyRecovery?.addEventListener("click", () => {
 schemaSearch?.addEventListener("input", renderSchemas);
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls") as "schema-master" | "schema-rule-library" | "schema-assignments")));
 schemaEditorName?.addEventListener("input", () => { if (schemaDraft) { schemaDraft = { ...schemaDraft, name: schemaEditorName.value }; renderSchemaDraft(); } });
+saveSchemaDescriptionButton?.addEventListener("click", () => {
+  if (!schemaDraft || !schemaEditorDescription) return;
+  schemaDraft = { ...schemaDraft, documentation:setSchemaDescription(schemaDraft.documentation ?? {}, schemaEditorDescription.value) };
+  persistSchemaEditorDraft("Update schema description"); renderSchemaDraft();
+});
 schemaEditorTarget?.addEventListener("input", () => {
   if (!schemaDraft) return;
   const target = schemaEditorTarget.value === "raw input" ? "raw input" : "payload";
@@ -3787,6 +3865,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
       attachedRules:draft.attachedRules,
       parentSchemaId:draft.parentSchemaId,
       inheritedRuleOverrides:draft.inheritedRuleOverrides,
+      documentation:draft.documentation,
     }))
     : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, published:true, assignments:draft.assignments.length ? draft.assignments : [{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
   schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved];
@@ -3810,7 +3889,7 @@ duplicateSchemaRevisionButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
   const current = schemas.find((schema) => schema.id === schemaDraft?.id); const version = Number(schemaRevisionSelector?.value);
   if (!current || !version) return;
-  const duplicate = duplicateSchemaRevision(current, version); schemas = [...schemas, duplicate]; schemaDraft = schemaEditorDraft(duplicate);
+  const duplicate = duplicateSchemaRevision(current, version, schemas); schemas = [...schemas, duplicate]; schemaDraft = schemaEditorDraft(duplicate);
   persistSchemaLibrary(); renderSchemas(); renderSchemaDraft(); schemaEditorName?.focus({ preventScroll:true });
 });
 restoreSchemaRevisionButton?.addEventListener("click", () => {

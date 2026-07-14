@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, migrateSchemaLibrary, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, migrateSchemaLibrary, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validateWithSchema, validationSummary } from "../dist/data-layer-schema-verification.js";
 import { typedComparisonValue } from "../dist/data-layer-conditional-validation-rules.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
@@ -169,3 +169,27 @@ assert.deepEqual(migrated[0].assignments.map(({ schemaId, schemaVersion, version
   ["schema-product-listing", undefined, "follow latest"],
 ]);
 assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary(legacySchemas)), migrated);
+
+const documentedV3 = {
+  ...assignSchema(createSchema("Documented product", 3, { type:"object", properties:{ page_type:{ type:"string" } } }), { sourceId:"history", eventName:"documented", target:"payload", versionPolicy:"pinned", schemaVersion:3 }),
+  documentation:{ description:"Revision 3 schema", properties:{ "/page_type":{ displayName:"Page classification", description:"Revision 3 description" } } },
+};
+const documentedDraft = updateSchemaWorkingDraft(documentedV3, {
+  documentation:{ description:"Revision 4 schema", properties:{ "/page_type":{ displayName:"Page classification", description:"Revision 4 description" } } },
+}, "Update documentation");
+assert.equal(documentedDraft.documentation.properties["/page_type"].description, "Revision 3 description");
+assert.equal(documentedDraft.workingDraft.documentation.properties["/page_type"].description, "Revision 4 description");
+const documentedV4 = publishSchemaWorkingDraft(documentedDraft);
+assert.equal(documentedV4.documentation.properties["/page_type"].description, "Revision 4 description");
+assert.equal(schemaRevision(documentedV4, 3).documentation.properties["/page_type"].description, "Revision 3 description");
+const documentedValidation = validateEvent({ sourceId:"history", eventName:"documented", payload:{ page_type:"product_detail" }, rawInput:[] }, [documentedV4], "https://shop.example/product");
+assert.equal(documentedValidation.documentation.properties["/page_type"].description, "Revision 3 description");
+assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([documentedV4])), [documentedV4]);
+assert.equal(validateWithSchema({ sourceId:"history", eventName:"legacy", payload:{}, rawInput:[] }, createSchema("Legacy", 1, { type:"object" }), []).documentation, undefined);
+
+const documentedParent = { ...createSchema("Documented parent", 2, { type:"object" }), documentation:{ properties:{ "/currency":{ displayName:"Currency", description:"Inherited currency" } } } };
+const documentedChild = { ...createSchema("Documented child", 3, { type:"object" }), parentSchemaId:documentedParent.id, documentation:{ properties:{ "/page_type":{ displayName:"Page type", description:"Local page type" } } } };
+const documentedCopy = duplicateSchema(documentedChild, "Documented copy", [documentedParent, documentedChild]);
+assert.deepEqual(Object.keys(documentedCopy.documentation.properties).sort(), ["/currency", "/page_type"]);
+documentedCopy.documentation.properties["/currency"].description = "Copy only";
+assert.equal(documentedParent.documentation.properties["/currency"].description, "Inherited currency");
