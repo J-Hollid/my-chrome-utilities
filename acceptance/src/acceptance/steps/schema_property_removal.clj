@@ -71,16 +71,56 @@
                       (:empty reload))
                    "The empty working draft did not retain recovery or block publication." (:empty reload)))
 
-(defn- assert-observation! [observed]
-  (assert-actions! (:initial observed))
-  (assert-immediate-and-undo! (:initial observed))
-  (assert-confirmed-and-empty! (:reload observed)))
+(def ancestor-examples
+  {{:removed_property "/commerce/order/id"
+    :ancestor "/commerce/order"
+    :ancestor_origin "manual"
+    :ancestor_outcome "removed from the working draft"} :manualRemoved
+   {:removed_property "/commerce/order/id"
+    :ancestor "/commerce"
+    :ancestor_origin "observed"
+    :ancestor_outcome "retained in the working draft"} :observedRetained})
 
-(defn- transition [world _example _captures {:keys [text]}]
+(def focus-examples
+  {{:removed_property "/debug" :tree_order "before /items" :focus_destination "/items"}
+   {:path [:initial :immediate :focus] :expected "items"}
+   {:removed_property "/items" :tree_order "after /debug" :focus_destination "/debug"}
+   {:path [:initial :itemsFocus] :expected "debug"}
+   {:removed_property "/page_type" :tree_order "only property" :focus_destination "Add property"}
+   {:path [:reload :empty :focus] :expected true}})
+
+(defn- assert-outline-example! [example observed]
+  (when-let [ancestor-origin (support/example-value example "ancestor_origin")]
+    (let [values {:removed_property (support/require-example example "removed_property")
+                  :ancestor (support/require-example example "ancestor")
+                  :ancestor_origin ancestor-origin
+                  :ancestor_outcome (support/require-example example "ancestor_outcome")}
+          outcome (get ancestor-examples values)]
+      (support/assert! (and outcome (true? (get-in observed [:reload :ancestorOutcomes outcome])))
+                       "The empty-ancestor example changed."
+                       {:example values :outcome outcome})))
+  (when-let [tree-order (support/example-value example "tree_order")]
+    (let [values {:removed_property (support/require-example example "removed_property")
+                  :tree_order tree-order
+                  :focus_destination (support/require-example example "focus_destination")}
+          expectation (get focus-examples values)]
+      (support/assert! (and expectation (= (:expected expectation) (get-in observed (:path expectation))))
+                       "The post-removal focus example changed."
+                       {:example values :expectation expectation}))))
+
+(defn- assert-observation!
+  ([observed] (assert-observation! {} observed))
+  ([example observed]
+   (assert-actions! (:initial observed))
+   (assert-immediate-and-undo! (:initial observed))
+   (assert-confirmed-and-empty! (:reload observed))
+   (assert-outline-example! example observed)))
+
+(defn- transition [world example _captures {:keys [text]}]
   (let [world (if (entry-steps text) (assoc world :schema-property-removal (observation!)) world)
         observed (:schema-property-removal world)]
     (support/assert! observed "Schema property removal browser adapter was not executed." {:step text})
-    (assert-observation! observed)
+    (assert-observation! example observed)
     world))
 
 (def handlers
@@ -89,3 +129,7 @@
            :applies? (fn [world] (or (entry-steps (:text spec)) (:schema-property-removal world)))
            :handler (fn [world example captures] (transition world example captures spec))})
         (support/feature-step-specs feature-files #{})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T09:56:41.142259117+02:00", :module-hash "514425521", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2138934778"} {:id "def/feature-files", :kind "def", :line 5, :end-line nil, :hash "475595923"} {:id "def/entry-steps", :kind "def", :line 6, :end-line nil, :hash "-1637132162"} {:id "form/3/defonce", :kind "defonce", :line 15, :end-line nil, :hash "-1819867165"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line nil, :hash "-1536960871"} {:id "defn-/assert-actions!", :kind "defn-", :line 26, :end-line nil, :hash "-805290842"} {:id "defn-/assert-immediate-and-undo!", :kind "defn-", :line 37, :end-line nil, :hash "-444773895"} {:id "defn-/assert-confirmed-and-empty!", :kind "defn-", :line 51, :end-line nil, :hash "2057431505"} {:id "def/ancestor-examples", :kind "def", :line 74, :end-line nil, :hash "-313111910"} {:id "def/focus-examples", :kind "def", :line 84, :end-line nil, :hash "1232594176"} {:id "defn-/assert-outline-example!", :kind "defn-", :line 92, :end-line nil, :hash "860942701"} {:id "defn-/assert-observation!", :kind "defn-", :line 111, :end-line nil, :hash "2017158343"} {:id "defn-/transition", :kind "defn-", :line 119, :end-line nil, :hash "1195764001"} {:id "def/handlers", :kind "def", :line 126, :end-line nil, :hash "-649291279"}]}
+;; clj-mutate-manifest-end
