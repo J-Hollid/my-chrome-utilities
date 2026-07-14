@@ -29,7 +29,7 @@
 
 (defn- observation! [] (or @observation (load-observation!)))
 
-(defn- assert-initial! [initial]
+(defn- assert-initial-actions! [initial]
   (support/assert! (= ["Open in Live feed" "Start linked capture" "Rename" "Export" "Create sequence" "Delete"]
                       (:actions initial))
                    "Saved session action hierarchy changed." initial)
@@ -40,36 +40,55 @@
                         :captureDisabled [true true true]
                         :storedCount 18}
                        (select-keys (:open initial) [:liveSelected :mode :eventCount :observer :captureDisabled :storedCount]))
-                   "Opening the archive did not create a read-only Live feed." initial)
-  (support/assert! (and (str/includes? (get-in initial [:open :banner]) "Checkout journey")
-                        (str/includes? (get-in initial [:open :banner]) "Read-only archive")
-                        (str/includes? (get-in initial [:open :banner]) "18 events")
-                        (str/includes? (get-in initial [:open :banner]) "No observer was started"))
-                   "Saved-session banner content changed." initial)
+                   "Opening the archive did not create a read-only Live feed." initial))
+
+(defn- assert-initial-banner! [initial]
+  (let [banner (get-in initial [:open :banner])]
+    (support/assert! (= [true true true true]
+                        [(str/includes? banner "Checkout journey")
+                         (str/includes? banner "Read-only archive")
+                         (str/includes? banner "18 events")
+                         (str/includes? banner "No observer was started")])
+                     "Saved-session banner content changed." initial)))
+
+(defn- assert-initial-analysis! [initial]
   (support/assert! (every? (set (:analysisActions initial))
                            ["Copy payload" "Save to Library" "Create schema"
                             "Create validation from this event" "Create defect report" "Revalidate"])
-                   "Saved events lost current-feed analysis actions." initial)
+                   "Saved events lost current-feed analysis actions." initial))
+
+(defn- assert-initial-model! [initial]
   (let [model (:model initial)]
-    (support/assert! (and (= (mapv #(str "saved-" %) (range 1 19)) (:savedOrder model))
-                          (= 18 (:currentCount model))
-                          (= 18 (:savedCount model))
-                          (= 4 (:background model))
-                          (= "purchase" (:currentSelected model))
-                          (= "purchase" (:currentFilter model))
-                          (= 480 (:currentScroll model))
-                          (= "saved-18" (:savedSelected model))
-                          (= 275 (:savedScroll model))
-                          (false? (:observerStarts model)))
-                     "Saved/current feed isolation or persisted analysis state changed." model))
+    (support/assert! (= {:savedOrder (mapv #(str "saved-" %) (range 1 19))
+                         :currentCount 18
+                         :savedCount 18
+                         :background 4
+                         :currentSelected "purchase"
+                         :currentFilter "purchase"
+                         :currentScroll 480
+                         :savedSelected "saved-18"
+                         :savedScroll 275
+                         :observerStarts false}
+                        model)
+                     "Saved/current feed isolation or persisted analysis state changed." model)))
+
+(defn- assert-initial-linked-and-imported! [initial]
   (support/assert! (= {:parent "saved:checkout" :events 0 :savedEvents 18} (:linked initial))
                    "Linked capture did not start empty and preserve its parent archive." initial)
-  (support/assert! (and (= (mapv #(str "saved-" %) (range 1 19)) (get-in initial [:imported :ids]))
-                        (= {:index 18} (get-in initial [:imported :payload]))
-                        (= ["purchase" 18] (get-in initial [:imported :rawInput]))
-                        (= "https://example.test/checkout" (get-in initial [:imported :pageUrl]))
-                        (= {:adapter "history" :imported true} (get-in initial [:imported :provenance])))
+  (support/assert! (= {:ids (mapv #(str "saved-" %) (range 1 19))
+                       :payload {:index 18}
+                       :rawInput ["purchase" 18]
+                       :pageUrl "https://example.test/checkout"
+                       :provenance {:adapter "history" :imported true}}
+                      (select-keys (:imported initial) [:ids :payload :rawInput :pageUrl :provenance]))
                    "Imported saved event identity or evidence changed." initial))
+
+(defn- assert-initial! [initial]
+  (assert-initial-actions! initial)
+  (assert-initial-banner! initial)
+  (assert-initial-analysis! initial)
+  (assert-initial-model! initial)
+  (assert-initial-linked-and-imported! initial))
 
 (defn- assert-reload! [reload]
   (support/assert! (= {:mode "saved-session"
