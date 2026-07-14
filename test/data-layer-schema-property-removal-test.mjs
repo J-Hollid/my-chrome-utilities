@@ -60,6 +60,8 @@ assert.deepEqual(undoSchemaPropertyRemoval(commerceRemoval).attachedRules, attac
 
 const manualAncestor = removeSchemaProperty(document, attachments, "/commerce/order/id");
 assert.equal(manualAncestor.document.properties.commerce.properties.order.properties.id, undefined);
+assert.deepEqual(manualAncestor.document.required, document.required);
+assert.deepEqual(manualAncestor.document.properties.commerce.required, ["order"]);
 assert.deepEqual(manualAncestor.document.properties.commerce.properties.order.required, ["value"]);
 const lastManualLeaf = removeSchemaProperty(manualAncestor.document, manualAncestor.attachedRules, "/commerce/order/value");
 assert.equal(lastManualLeaf.document.properties.commerce.properties.order, undefined);

@@ -1,5 +1,5 @@
 function segments(path) {
-    return path.trim().replaceAll(".", "/").split("/").filter(Boolean);
+    return path.replaceAll(".", "/").split("/").map((segment) => segment.trim()).filter(Boolean);
 }
 function canonical(path) {
     return `/${segments(path).join("/")}`;
@@ -41,18 +41,22 @@ function removeAtPath(document, path) {
     if (!name)
         return structuredClone(document);
     const properties = structuredClone(document.properties ?? {});
+    let removedChild = false;
     if (rest.length === 0) {
+        removedChild = name in properties;
         delete properties[name];
     }
     else if (properties[name]) {
         const child = removeAtPath(properties[name], rest);
-        if (child.propertyOrigin === "manual" && Object.keys(child.properties ?? {}).length === 0)
+        if (child.propertyOrigin === "manual" && Object.keys(child.properties ?? {}).length === 0) {
             delete properties[name];
+            removedChild = true;
+        }
         else
             properties[name] = child;
     }
-    const required = withoutReference(document.required, name);
-    const forbidden = withoutReference(document.forbidden, name);
+    const required = removedChild ? withoutReference(document.required, name) : document.required;
+    const forbidden = removedChild ? withoutReference(document.forbidden, name) : document.forbidden;
     return {
         ...structuredClone(document),
         properties,
