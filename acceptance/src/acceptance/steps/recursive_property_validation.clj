@@ -130,13 +130,19 @@
        (get-in observed [:target :slashEscaped])])
    "Slash-path normalization changed." observed))
 
-(defn- transition [world example _captures {:keys [text]}]
+(defn- assert-canonical-example! [example text]
   (support/assert! (or (empty? example) (canonical-example? example))
                    "Scenario outline values do not match a supported behavior row."
-                   {:step text :example example})
-  (let [world (if (entry-steps text)
-                (assoc world :recursive-property-validation (observation!))
-                world)
+                   {:step text :example example}))
+
+(defn- begin-observation [world text]
+  (if (entry-steps text)
+    (assoc world :recursive-property-validation (observation!))
+    world))
+
+(defn- transition [world example _captures {:keys [text]}]
+  (assert-canonical-example! example text)
+  (let [world (begin-observation world text)
         observed (:recursive-property-validation world)]
     (support/assert! observed "Recursive property-validation adapter was not executed." {:step text})
     (assert-observation! observed)
