@@ -283,12 +283,13 @@ export function changeMissingEventScope(draft: MissingEventDraft, visitId: strin
   const expectation = draft.expectation
     ? { ...draft.expectation, pageUrl:scope.pageUrl, confirmed:draft.expectation.confirmed }
     : undefined;
-  return {
+  const changed = {
     ...withoutOverride(draft),
     scope:clone(scope),
     ...(expectation ? { expectation } : {}),
     verification:emptyVerification(),
   };
+  return expectation?.confirmed ? verifyMissingEventAbsence(changed) : changed;
 }
 
 export function changeMissingEventInterval(draft: MissingEventDraft, startedAt: string, endedAt: string): MissingEventDraft {

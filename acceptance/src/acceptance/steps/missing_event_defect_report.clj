@@ -114,11 +114,12 @@
     (assoc world :missing-event-defect-report-mode mode)))
 
 (def handlers
-  (mapv (fn [spec]
-          {:pattern (support/template-pattern (:text spec))
-           :applies? (fn [world]
-                       (or (contains? entry-modes (:text spec))
-                           (:missing-event-defect-report-mode world)))
-           :handler (fn [world example captures]
-                      (transition world example captures spec))})
-        (support/feature-step-specs feature-files #{})))
+  (support/stateful-semantic-handlers
+   (support/feature-step-specs feature-files #{})
+   entry-modes
+   :missing-event-defect-report-mode
+   transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-14T16:29:57.565288867+02:00", :module-hash "317866169", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1298890434"} {:id "def/feature-files", :kind "def", :line 6, :end-line 8, :hash "-1892854164"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-427372276"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 17, :end-line 24, :hash "670621551"} {:id "defn/browser-observation!", :kind "defn", :line 26, :end-line 32, :hash "-631967216"} {:id "defn/assert-runtime-boundary!", :kind "defn", :line 34, :end-line 84, :hash "-623924689"} {:id "def/runtime-example-values", :kind "def", :line 86, :end-line 93, :hash "712444672"} {:id "def/model-example-values", :kind "def", :line 95, :end-line 99, :hash "689559748"} {:id "defn/validate-example!", :kind "defn", :line 101, :end-line 106, :hash "1431160330"} {:id "defn/transition", :kind "defn", :line 108, :end-line 114, :hash "1634536681"} {:id "def/handlers", :kind "def", :line 116, :end-line 121, :hash "486454608"}]}
+;; clj-mutate-manifest-end

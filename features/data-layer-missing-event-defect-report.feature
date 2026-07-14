@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=be2d99d62b527292f4b601d4e50dbfffecb320fc33b068f47088a2a5db9a0141
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T14:31:01.044719434Z","feature_name":"Data layer missing event defect report","feature_path":"features/data-layer-missing-event-defect-report.feature","background_hash":"6a3fb6acd45f05f08c5a6b5ce8c81a32a18a2a115834dd8a4060b165f77d2863","implementation_hash":"sha256:72a263825e531f2492c6904f9c8ee32bcc01ab0f6d631014be91e399718d4489","scenarios":[{"index":0,"name":"Data layer missing event defect report 001","scenario_hash":"82d893f46815399a23b685063559cf6018a43c9dfd80e76efe4c048251f07670","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:31:01.044719434Z"},{"index":2,"name":"Data layer missing event defect report 003","scenario_hash":"1f59c57f8b39ecb95d5dd514bea8aa16810068475db6b59ec0d701c135ff6b11","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:31:01.044719434Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer missing event defect report
 
   Background:

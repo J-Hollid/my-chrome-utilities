@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4b4b9c0bee9c7d3b46713961acd11369c9a73ebd417b8ee00daa8a1cb3a622ae
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T14:31:24.067556777Z","feature_name":"Data layer missing event defect report runtime","feature_path":"features/data-layer-missing-event-defect-report-runtime.feature","background_hash":"a2ee366e207f7f841e58a822122c844309cc409dd9c871d22e148e9f03715989","implementation_hash":"sha256:9b0b3e66294199d1f9b93189e7037cc580ade73abf9098559afcf3c18f31ea35","scenarios":[{"index":0,"name":"Data layer missing event defect report runtime 001","scenario_hash":"58dc15232c1f428155166ebd6cc0532bd4527627024e8e17da9c0ac9dae6d922","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:31:24.067556777Z"},{"index":1,"name":"Data layer missing event defect report runtime 002","scenario_hash":"1d5d07d722c061cddb344520219ec966df4200f7f133202a9223c2129581a863","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:31:24.067556777Z"},{"index":4,"name":"Data layer missing event defect report runtime 005","scenario_hash":"3130e28eccb51b54aeed2b966ba0dca0d68faa35745833753e578212537a5407","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-14T14:31:24.067556777Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer missing event defect report runtime
 
   Background:
