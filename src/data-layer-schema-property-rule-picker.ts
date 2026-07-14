@@ -1,3 +1,8 @@
+import {
+  validateConditionalRule,
+  type ConditionalRulePredicate,
+} from "./data-layer-conditional-validation-rules.js";
+
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
 export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count";
 
@@ -32,6 +37,9 @@ export interface RuleConfiguration {
   saveReusable: boolean;
   reusableName: string;
   description: string;
+  applyOnlyWhen: boolean;
+  conditionGroupOperator: "All" | "Any";
+  conditions: ConditionalRulePredicate[];
 }
 
 export interface RuleConfigurationControl {
@@ -137,6 +145,9 @@ export function createRuleConfiguration(ruleType: SchemaRuleType, propertyType: 
     saveReusable:false,
     reusableName:"",
     description:"",
+    applyOnlyWhen:false,
+    conditionGroupOperator:"All",
+    conditions:[],
   };
 }
 
@@ -160,6 +171,14 @@ export function validateRuleConfiguration(configuration: RuleConfiguration): { r
   }
   if (configuration.ruleType === "Item count" && !nonNegativeWholeNumber(configuration.minimumItemCount)) return { ready:false, assistance:"Enter a non-negative whole number" };
   if (configuration.saveReusable && !configuration.reusableName.trim()) return { ready:false, assistance:"Enter a rule name" };
+  if (configuration.applyOnlyWhen) {
+    const details = configuredRuleDetails(configuration);
+    const conditional = validateConditionalRule({
+      conditionGroup:{ operator:configuration.conditionGroupOperator, predicates:configuration.conditions },
+      consequence:{ propertyPath:"/consequence", operator:details.operator, ...(details.parameters !== undefined ? { parameters:details.parameters } : {}) },
+    });
+    if (!conditional.ready) return conditional;
+  }
   return { ready:true, assistance:"Ready to create rule" };
 }
 

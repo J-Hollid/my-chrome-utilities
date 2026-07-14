@@ -1,3 +1,4 @@
+import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
     "Exact value": ["string", "number", "boolean"],
@@ -89,6 +90,9 @@ export function createRuleConfiguration(ruleType, propertyType) {
         saveReusable: false,
         reusableName: "",
         description: "",
+        applyOnlyWhen: false,
+        conditionGroupOperator: "All",
+        conditions: [],
     };
 }
 function nonNegativeWholeNumber(value) {
@@ -125,6 +129,15 @@ export function validateRuleConfiguration(configuration) {
         return { ready: false, assistance: "Enter a non-negative whole number" };
     if (configuration.saveReusable && !configuration.reusableName.trim())
         return { ready: false, assistance: "Enter a rule name" };
+    if (configuration.applyOnlyWhen) {
+        const details = configuredRuleDetails(configuration);
+        const conditional = validateConditionalRule({
+            conditionGroup: { operator: configuration.conditionGroupOperator, predicates: configuration.conditions },
+            consequence: { propertyPath: "/consequence", operator: details.operator, ...(details.parameters !== undefined ? { parameters: details.parameters } : {}) },
+        });
+        if (!conditional.ready)
+            return conditional;
+    }
     return { ready: true, assistance: "Ready to create rule" };
 }
 export function configuredRuleDetails(configuration) {

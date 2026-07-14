@@ -1,5 +1,6 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
+            [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
@@ -44,6 +45,7 @@
 
 (def handlers
   (vec (concat cross-tab-reattachment/handlers
+               conditional-validation-rules/handlers
                guided-assignment-coverage/handlers
                fresh-live-session/handlers
                lossless-observation-activation/handlers
@@ -89,5 +91,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T14:37:31.993371479+02:00", :module-hash "702608476", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 43, :hash "1514245241"} {:id "def/handlers", :kind "def", :line 45, :end-line 89, :hash "167926958"}]}
+;; {:version 1, :tested-at "2026-07-14T15:04:23.033780373+02:00", :module-hash "2048880538", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 44, :hash "1148273214"} {:id "def/handlers", :kind "def", :line 46, :end-line 91, :hash "-1433982629"}]}
 ;; clj-mutate-manifest-end

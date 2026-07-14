@@ -432,7 +432,7 @@ export function setEventValidationUpdateStatus(elements: LiveObserverElements, m
 export function updateLiveInspectorValidation(
   elements: LiveObserverElements,
   validation: string,
-  issues: readonly { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string }[] = [],
+  issues: readonly { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; conditionSummary?: string }[] = [],
   assignment?: { id?: string; name?: string; sourceId?: string; eventName?: string; target?: string; priority?: number; domainCondition?: string; pathnameCondition?: string; versionPolicy?: string; enabled?: boolean },
 ): void {
   const term = elements.eventInspector?.querySelector<HTMLElement>(
@@ -446,6 +446,6 @@ export function updateLiveInspectorValidation(
   const heading = document.createElement("h5"); heading.textContent = "Validation details";
   const list = document.createElement("ul");
   const assignmentDetails = assignment ? ` · assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId ?? "any"} · event ${assignment.eventName ?? "any"} · target ${assignment.target ?? "automatic"} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : "";
-  list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation}${assignmentDetails}` })));
+  list.replaceChildren(...issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message} · expected ${issue.expected}, received ${issue.actual}${issue.conditionSummary ? ` · condition ${issue.conditionSummary}` : ""} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation}${assignmentDetails}` })));
   details.append(heading, list); existing?.replaceWith(details) ?? elements.eventInspector?.append(details);
 }

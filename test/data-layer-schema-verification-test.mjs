@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, migrateSchemaLibrary, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { typedComparisonValue } from "../dist/data-layer-conditional-validation-rules.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
 const valid = validateEvent({ sourceId: "history", eventName: "purchase", payload: { transaction_id: "test-123", revenue: 49.95 }, rawInput: [] }, [schema]);
@@ -33,6 +34,37 @@ assert.deepEqual(validateEvent({ sourceId:"history", eventName:"configured", pay
 const rangedRule = assignSchema({ ...createSchema("Ranged rule", 1, { type:"object", properties:{ revenue:{ type:"number" } } }), attachedRules:[{ id:"rule:revenue", name:"Expected revenue", version:1, propertyPath:"/revenue", operator:"numeric-range", parameters:"10,20" }] }, { sourceId:"history", eventName:"ranged", target:"payload" });
 assert.equal(validateEvent({ sourceId:"history", eventName:"ranged", payload:{ revenue:15 }, rawInput:[] }, [rangedRule]).state, "Valid");
 assert.equal(validateEvent({ sourceId:"history", eventName:"ranged", payload:{ revenue:25 }, rawInput:[] }, [rangedRule]).issues[0].message, "Value is outside range");
+const productCondition = { propertyPath:"/page_type", operator:"Equals", comparison:typedComparisonValue("product_detail"), detectedType:"string" };
+const conditionalProduct = assignSchema({
+  ...createSchema("Product event", 1, { type:"object", properties:{ page_type:{ type:"string" }, oOrder:{ type:"object", properties:{ aProducts:{ type:"array" } } } } }),
+  attachedRules:[{
+    id:"rule:products-required", name:"Product detail products", version:1,
+    propertyPath:"/oOrder/aProducts", operator:"item-count", parameters:"1", severity:"error",
+    conditionGroup:{ operator:"All", predicates:[productCondition] },
+  }],
+}, { sourceId:"history", eventName:"product_detail", target:"payload" });
+const conditionalResult = (payload) => validateEvent({ sourceId:"history", eventName:"product_detail", payload, rawInput:[] }, [conditionalProduct]);
+for (const payload of [
+  { page_type:"product_detail", oOrder:{} },
+  { page_type:"product_detail", oOrder:{ aProducts:[] } },
+]) {
+  const result = conditionalResult(payload);
+  assert.equal(result.state, "1 issues");
+  assert.equal(result.issues.length, 1);
+  assert.equal(result.issues[0].instancePath, "/oOrder/aProducts");
+  assert.equal(result.issues[0].conditionSummary, "When page_type equals product_detail, oOrder.aProducts must contain at least 1 item");
+  assert.equal(result.evaluations[0].status, "error");
+}
+const passingConditional = conditionalResult({ page_type:"product_detail", oOrder:{ aProducts:[{ sku:"ABC" }] } });
+assert.equal(passingConditional.state, "Valid");
+assert.equal(passingConditional.evaluations[0].status, "pass");
+const inapplicableConditional = conditionalResult({ page_type:"category", oOrder:{} });
+assert.equal(inapplicableConditional.state, "Valid");
+assert.equal(inapplicableConditional.issues.length, 0);
+assert.equal(inapplicableConditional.evaluations[0].status, "not-applicable");
+assert.match(inapplicableConditional.evaluations[0].message, /page_type equals product_detail/);
+assert.equal(inapplicableConditional.evaluations[0].propertyPath, "/oOrder/aProducts");
+assert.equal(inapplicableConditional.evaluations.some(({ propertyPath }) => propertyPath === "/page_type"), false);
 const generic = assignSchema(createSchema("Generic page view", 4, { type:"object" }), { id:"generic", name:"generic-page-view", sourceId:"history", eventName:"page_view", target:"payload", priority:10, enabled:true });
 const order = assignSchema(createSchema("Order confirmation", 2, { type:"object" }), { id:"order", name:"order-confirmation", sourceId:"history", eventName:"page_view", target:"payload", priority:100, domainCondition:"shop.example", pathnameCondition:"/order-confirmation", enabled:true });
 assert.equal(resolveSchemaAssignment({ sourceId:"history", eventName:"page_view" }, "https://shop.example/order-confirmation?order=42#done", [generic, order]).schema.name, "Order confirmation");

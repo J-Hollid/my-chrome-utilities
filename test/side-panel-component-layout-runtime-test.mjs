@@ -31,6 +31,7 @@ let schemaPropertyRemovalReloadObservation;
 let workspacePanelContainmentObservation;
 let recursivePropertyValidationObservation;
 let guidedAssignmentCoverageObservation;
+let conditionalValidationRulesObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -38,6 +39,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.GUIDED_VALIDATION_BROWSER_ADAPTER === "1" ? [320, 720]
   : process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" ? [720]
@@ -1612,6 +1614,139 @@ const guidedAssignmentCoverageRuntime = `(async () => {
   return { event:{ name:event.name, sourceId:event.sourceId, pageUrl:event.pageUrl }, schemaName:"Order completed", first, published, incompatible, multiple };
 })()`;
 
+const conditionalValidationRulesRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const input = (selector, value, eventName = "input") => { const element = q(selector); element.value = value; element.dispatchEvent(new Event(eventName, { bubbles:true })); return element; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:31, windowId:5, url:"https://shop.example/products/field-notebook", title:"Product detail", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"product_detail", page_type:"product_detail", currency:"EUR", oOrder:{ aProducts:[] } }] } } }] },
+  };
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  if (!document.querySelector("#live-event-feed button")) {
+    const start = q("#start-data-layer-testing");
+    if (start.disabled) {
+      q("#choose-observation-target").click();
+      for (let attempt = 0; attempt < 30 && !document.querySelector("#observation-target-list [data-target-id]"); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+      q("#observation-target-list [data-target-id]").click();
+    }
+    start.click();
+  }
+  for (let attempt = 0; attempt < 30 && !document.querySelector("#live-event-feed button"); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  q("#live-event-feed button").click();
+  q("#data-layer-view-schemas").click();
+  click(q("#schema-list"), "Edit working draft");
+  q('#schema-property-tree button[aria-label="Add rule for oOrder.aProducts"]').click();
+  click(q("#schema-property-rule-picker"), "Item count");
+  input("#schema-local-rule-minimumItemCount", "1");
+  const conditional = q("#schema-local-rule-conditional"); conditional.checked = true; conditional.dispatchEvent(new Event("change", { bubbles:true }));
+  const editor = {
+    applyOnlyWhen:q("#schema-local-rule-conditions").querySelector("legend").textContent,
+    property:q("#schema-local-rule-condition-property-0").value,
+    operators:Array.from(q("#schema-local-rule-condition-operator-0").options).map(({ textContent }) => textContent),
+    operator:q("#schema-local-rule-condition-operator-0").value,
+    initializedValue:q("#schema-local-rule-condition-value-0").value,
+    schemaProperties:Array.from(q("#schema-local-rule-condition-property-0").options).map(({ value }) => value).filter(Boolean),
+    preview:q("#schema-local-rule-current-preview").textContent,
+    oneConsequence:q("#schema-local-rule-configuration").querySelectorAll("#schema-local-rule-parameters").length,
+  };
+  click(q("#schema-property-rule-picker"), "Create rule");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  const storedRule = stored.workingDraft.attachedRules[0];
+  const core = await import("/data-layer-schema-verification.js");
+  const conditionalCore = await import("/data-layer-conditional-validation-rules.js");
+  const activeSchema = { ...stored, attachedRules:stored.workingDraft.attachedRules, assignments:stored.workingDraft.assignments };
+  const validate = (page_type, products) => {
+    const payload = { page_type, currency:"EUR", oOrder:{} };
+    if (products !== "missing") payload.oOrder.aProducts = products === "empty array" ? [] : [{ sku:"ABC" }];
+    const result = core.validateEvent({ sourceId:"event-history", eventName:"product_detail", payload, rawInput:[] }, [activeSchema]);
+    const evaluation = result.evaluations.find(({ rule }) => rule === storedRule.name);
+    return { page_type, products, result:evaluation.status === "not-applicable" ? "Not applicable" : evaluation.status === "pass" ? "Passed" : "Failed", issues:result.issues.filter(({ instancePath }) => instancePath === "/oOrder/aProducts").length };
+  };
+  const evaluations = [
+    validate("product_detail", "missing"),
+    validate("product_detail", "empty array"),
+    validate("product_detail", "1 item"),
+    validate("category", "empty array"),
+    validate("category", "missing"),
+  ];
+  const product = storedRule.conditionGroup.predicates[0];
+  const currency = { propertyPath:"/currency", operator:"Equals", comparison:conditionalCore.typedComparisonValue("EUR"), detectedType:"string" };
+  const consequence = { propertyPath:"/oOrder/aProducts", operator:"item-count", parameters:"1" };
+  const groups = [["All", "product_detail", "EUR"], ["All", "product_detail", "USD"], ["Any", "product_detail", "USD"], ["Any", "category", "USD"]].map(([operator, page_type, currencyValue]) => ({
+    operator, page_type, currency:currencyValue,
+    ...conditionalCore.evaluateConditionalRule({ page_type, currency:currencyValue }, { conditionGroup:{ operator, predicates:[product, currency] }, consequence }, () => true),
+  }));
+  const truthGroups = [["All", true, true], ["All", true, false], ["Any", true, false], ["Any", false, false]].map(([operator, first, second]) => {
+    let index = 0;
+    const applies = conditionalCore.conditionGroupApplies({ operator, predicates:[product, currency] }, () => [first, second][index++]);
+    return { operator, first, second, behavior:applies ? "evaluated" : "Not applicable" };
+  });
+  const predicateCases = [
+    ["present with null", "Exists", "none", { value:null, exists:true }, { propertyPath:"/trigger", operator:"Exists" }],
+    ["absent", "Does not exist", "none", { value:undefined, exists:false }, { propertyPath:"/trigger", operator:"Does not exist" }],
+    ["string product_detail", "Equals", "string product_detail", { value:"product_detail", exists:true }, { propertyPath:"/trigger", operator:"Equals", comparison:conditionalCore.typedComparisonValue("product_detail") }],
+    ["number 1", "Equals", "string 1", { value:1, exists:true }, { propertyPath:"/trigger", operator:"Equals", comparison:conditionalCore.typedComparisonValue("1") }],
+    ["absent", "Does not equal", "string internal", { value:undefined, exists:false }, { propertyPath:"/trigger", operator:"Does not equal", comparison:conditionalCore.typedComparisonValue("internal") }],
+    ["string checkout", "Is one of", "page, checkout", { value:"checkout", exists:true }, { propertyPath:"/trigger", operator:"Is one of", comparisons:[conditionalCore.typedComparisonValue("page"), conditionalCore.typedComparisonValue("checkout")] }],
+    ["string product_detail", "Matches pattern", "^product_", { value:"product_detail", exists:true }, { propertyPath:"/trigger", operator:"Matches pattern", comparison:conditionalCore.typedComparisonValue("^product_") }],
+    ["number 6", "Is greater than", "number 5", { value:6, exists:true }, { propertyPath:"/trigger", operator:"Is greater than", comparison:conditionalCore.typedComparisonValue(5) }],
+    ["number 5", "Is at least", "number 5", { value:5, exists:true }, { propertyPath:"/trigger", operator:"Is at least", comparison:conditionalCore.typedComparisonValue(5) }],
+    ["number 4", "Is less than", "number 5", { value:4, exists:true }, { propertyPath:"/trigger", operator:"Is less than", comparison:conditionalCore.typedComparisonValue(5) }],
+    ["number 5", "Is at most", "number 5", { value:5, exists:true }, { propertyPath:"/trigger", operator:"Is at most", comparison:conditionalCore.typedComparisonValue(5) }],
+    ["string 5", "Is greater than", "number 4", { value:"5", exists:true }, { propertyPath:"/trigger", operator:"Is greater than", comparison:conditionalCore.typedComparisonValue(4) }],
+  ].map(([observedState, predicate, configuredValue, observed, definition]) => ({ observedState, predicate, configuredValue, result:conditionalCore.evaluateConditionPredicate(observed, definition) }));
+  const invalidBase = { conditionGroup:{ operator:"All", predicates:[product] }, consequence };
+  const invalidConfigurations = [
+    ["no trigger predicate", { ...invalidBase, conditionGroup:{ operator:"All", predicates:[] } }],
+    ["trigger without a property path", { ...invalidBase, conditionGroup:{ operator:"All", predicates:[{ ...product, propertyPath:"" }] } }],
+    ["Equals without a comparison value", { ...invalidBase, conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/page_type", operator:"Equals", detectedType:"string" }] } }],
+    ["malformed Matches pattern value", { ...invalidBase, conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/page_type", operator:"Matches pattern", comparison:conditionalCore.typedComparisonValue("["), detectedType:"string" }] } }],
+    ["Is greater than on a string trigger", { ...invalidBase, conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/page_type", operator:"Is greater than", comparison:conditionalCore.typedComparisonValue(5), detectedType:"string" }] } }],
+    ["consequence rule with invalid parameters", { ...invalidBase, consequence:{ ...consequence, parameters:"1.5" } }],
+  ].map(([configuration, definition]) => ({ configuration, ...conditionalCore.validateConditionalRule(definition) }));
+  const failed = core.validateEvent({ sourceId:"event-history", eventName:"product_detail", payload:{ page_type:"product_detail", currency:"EUR", oOrder:{} }, rawInput:[] }, [activeSchema]);
+  const notApplicable = core.validateEvent({ sourceId:"event-history", eventName:"product_detail", payload:{ page_type:"category", currency:"EUR", oOrder:{} }, rawInput:[] }, [activeSchema]);
+  const ui = await import("/data-layer-live-observer-ui.js");
+  const actionsCore = await import("/data-layer-live-inspector-actions.js");
+  const elements = ui.findLiveObserverElements();
+  const actions = actionsCore.createLiveInspectorActions({ currentPageUrl:()=>"https://shop.example/products/field-notebook", writeClipboard:async()=>{}, storeTemplate:()=>{}, addPropertyValidation:()=>{}, validationState:()=>"Valid", updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  const renderResult = (result, payload) => {
+    ui.renderLiveInspector(elements, { id:"conditional-event", name:"product_detail", sourceId:"event-history", captureTime:"2026-07-14T12:00:00Z", pageUrl:"https://shop.example/products/field-notebook", payload, rawInput:[], validation:result.state, validationDetails:{ issues:result.issues, evaluations:result.evaluations } }, actions);
+    return elements.eventInspector.textContent;
+  };
+  const failedText = renderResult(failed, { page_type:"product_detail", currency:"EUR", oOrder:{} });
+  const notApplicableText = renderResult(notApplicable, { page_type:"category", currency:"EUR", oOrder:{} });
+  const presentation = {
+    issueCount:failed.issues.length,
+    expectedPath:failed.issues[0].instancePath,
+    conditionShown:failedText.includes("page_type equals product_detail"),
+    consequenceShown:failedText.includes("minimum 1 items"),
+    triggerNotFailing:!failed.evaluations.some(({ propertyPath, status }) => propertyPath === "/page_type" && (status === "error" || status === "warning")),
+    notApplicableShown:notApplicableText.includes("not applicable"),
+    notApplicableIssues:notApplicable.issues.length,
+  };
+  const reusable = { ...structuredClone(storedRule), id:"rule:reusable-products", name:"Reusable product detail products", version:1 };
+  const lifecycleSchema = { ...activeSchema, attachedRules:[storedRule, reusable] };
+  const exported = core.serializeSchemaLibraryExport([lifecycleSchema], [reusable]);
+  const imported = JSON.parse(exported);
+  localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(imported.schemas));
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify(imported.rules));
+  const reloadedSchemas = core.restoreSchemaLibrary(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const reloadedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"));
+  const revisedReusable = { ...structuredClone(reloadedRules[0]), version:2, message:"Revised message", revisionHistory:[structuredClone(reloadedRules[0])] };
+  const lifecycle = {
+    attachmentIds:reloadedSchemas[0].attachedRules.map(({ id }) => id),
+    ruleIds:reloadedRules.map(({ id }) => id),
+    atomic:reloadedSchemas[0].attachedRules.every(({ conditionGroup, propertyPath, operator }) => Boolean(conditionGroup && propertyPath && operator)),
+    typedValue:reloadedSchemas[0].attachedRules[0].conditionGroup.predicates[0].comparison,
+    pinnedVersion:reloadedSchemas[0].attachedRules.find(({ id }) => id === reusable.id).version,
+    revisedVersion:revisedReusable.version,
+    revisedPreserved:JSON.stringify(revisedReusable.conditionGroup) === JSON.stringify(reusable.conditionGroup),
+  };
+  return { editor, stored:{ count:stored.workingDraft.attachedRules.length, rule:storedRule, summary:conditionalCore.conditionalRuleSummary({ conditionGroup:storedRule.conditionGroup, consequence:{ propertyPath:storedRule.propertyPath, operator:storedRule.operator, parameters:storedRule.parameters } }) }, evaluations, groups, truthGroups, predicateCases, invalidConfigurations, presentation, lifecycle };
+})()`;
+
 const schemaPropertyRulePickerRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -2941,6 +3076,51 @@ try {
       socket.close();
       continue;
     }
+    if (width === 720 && process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const document = { type:"object", properties:{ page_type:{ type:"string" }, currency:{ type:"string" }, oOrder:{ type:"object", properties:{ aProducts:{ type:"array", items:{ type:"object" } } } } } };
+        const schema = { id:"schema-product-event", name:"Product event", version:1, published:true, document, assignments:[{ id:"assignment:product-event", name:"Product detail events", sourceId:"event-history", eventName:"product_detail", target:"payload", enabled:true }] };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([schema]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      conditionalValidationRulesObservation = await evaluate(socket, conditionalValidationRulesRuntime);
+      assert.deepEqual(conditionalValidationRulesObservation.evaluations, [
+        { page_type:"product_detail", products:"missing", result:"Failed", issues:1 },
+        { page_type:"product_detail", products:"empty array", result:"Failed", issues:1 },
+        { page_type:"product_detail", products:"1 item", result:"Passed", issues:0 },
+        { page_type:"category", products:"empty array", result:"Not applicable", issues:0 },
+        { page_type:"category", products:"missing", result:"Not applicable", issues:0 },
+      ], "Conditional rule production evaluation did not match its built browser examples");
+      assert.deepEqual(conditionalValidationRulesObservation.groups.map(({ result, invocationCount }) => ({ result, invocationCount })), [
+        { result:"Passed", invocationCount:1 },
+        { result:"Not applicable", invocationCount:0 },
+        { result:"Passed", invocationCount:1 },
+        { result:"Not applicable", invocationCount:0 },
+      ], "Conditional All/Any gating invoked the consequence incorrectly");
+      assert.deepEqual(conditionalValidationRulesObservation.editor, {
+        applyOnlyWhen:"Apply only when",
+        property:"/page_type",
+        operators:["Exists", "Does not exist", "Equals", "Does not equal", "Is one of", "Matches pattern"],
+        operator:"Equals",
+        initializedValue:"product_detail",
+        schemaProperties:["/page_type", "/currency", "/oOrder", "/oOrder/aProducts/*"],
+        preview:"Current event preview: Failed",
+        oneConsequence:1,
+      }, "Conditional rule editor lost type-aware trigger configuration");
+      assert.deepEqual(conditionalValidationRulesObservation.presentation, {
+        issueCount:1, expectedPath:"/oOrder/aProducts", conditionShown:true, consequenceShown:true,
+        triggerNotFailing:true, notApplicableShown:true, notApplicableIssues:0,
+      }, "Conditional Live inspector presentation lost failure or not-applicable evidence");
+      assert.deepEqual(conditionalValidationRulesObservation.lifecycle, {
+        attachmentIds:[conditionalValidationRulesObservation.stored.rule.id, "rule:reusable-products"],
+        ruleIds:["rule:reusable-products"], atomic:true,
+        typedValue:{ type:"string", value:"product_detail" }, pinnedVersion:1, revisedVersion:2, revisedPreserved:true,
+      }, "Conditional rule persistence did not preserve atomic definitions and pinned versions");
+      socket.close(); continue;
+    }
     if (width === 720 && process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1") {
       guidedAssignmentCoverageObservation = await evaluate(socket, guidedAssignmentCoverageRuntime);
       assert.deepEqual(guidedAssignmentCoverageObservation, {
@@ -3490,6 +3670,9 @@ try {
   }
   if (process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ guidedAssignmentCoverage:guidedAssignmentCoverageObservation }));
+  }
+  if (process.env.CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ conditionalValidationRules:conditionalValidationRulesObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

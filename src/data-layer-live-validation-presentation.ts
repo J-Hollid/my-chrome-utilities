@@ -60,9 +60,11 @@ export function propertyValidationSummary(evaluations: readonly ValidationEvalua
   const errors = evaluations.filter(({ status }) => status === "error").length;
   const warnings = evaluations.filter(({ status }) => status === "warning").length;
   const passed = evaluations.filter(({ status }) => status === "pass").length;
+  const notApplicable = evaluations.filter(({ status }) => status === "not-applicable").length;
   if (errors) return { status:warnings ? `${countText(errors, "error")} and ${countText(warnings, "warning")}` : countText(errors, "error"), symbolName:"error", treatment:"error", errors, warnings, passed };
   if (warnings) return { status:countText(warnings, "warning"), symbolName:"warning", treatment:"warning", errors, warnings, passed };
   if (passed) return { status:`${countText(passed, "rule")} passed`, symbolName:"check", treatment:"pass", errors, warnings, passed };
+  if (notApplicable) return { status:`${countText(notApplicable, "rule")} not applicable`, symbolName:"neutral", treatment:"neutral", errors, warnings, passed };
   return { status:"No rules", symbolName:"neutral", treatment:"neutral", errors, warnings, passed };
 }
 
@@ -81,7 +83,7 @@ function issueEvaluation(issue: ValidationIssue): ValidationEvaluation {
   return {
     propertyPath:normalizedPath(issue.instancePath),
     status:issue.severity === "warning" ? "warning" : "error",
-    message:issue.message,
+    message:issue.conditionSummary ? `${issue.message} · condition ${issue.conditionSummary}` : issue.message,
     expected:issue.expected,
     actual:issue.actual,
     rule:ruleMatch?.[1] ?? "Schema rule",

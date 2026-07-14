@@ -1,4 +1,4 @@
-export type EvaluationStatus = "pass" | "warning" | "error";
+export type EvaluationStatus = "pass" | "warning" | "error" | "not-applicable";
 
 export interface ValidationEvaluation {
   propertyPath: string;
