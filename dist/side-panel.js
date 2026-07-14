@@ -45,7 +45,7 @@ import { addManualProperty, inspectManualProperty, manualPropertyPreview } from 
 import { ensureNestedSchemaPath, inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, canonicalRulePropertyPath, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
-import { conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./data-layer-conditional-validation-rules.js";
+import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./data-layer-conditional-validation-rules.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
@@ -1990,15 +1990,6 @@ function valueAtSchemaPath(value, path) {
     }
     return { exists: true, value: current };
 }
-function typedConditionInput(value, type) {
-    if (type === "number")
-        return typedComparisonValue(Number(value));
-    if (type === "boolean")
-        return typedComparisonValue(value === "true");
-    if (type === "null")
-        return typedComparisonValue(null);
-    return typedComparisonValue(value);
-}
 function initialConditionPredicate(consequencePath) {
     const choices = schemaDraft ? schemaDocumentPaths(schemaDraft.document).filter((path) => path !== consequencePath) : [];
     const path = choices.find((candidate) => candidate === "page_type") ?? choices[0] ?? "";
@@ -2078,11 +2069,19 @@ function renderConditionalRuleConfiguration(path, configuration, refreshValidati
         });
         comparison.addEventListener("input", () => {
             if (predicate.operator === "Is one of") {
-                predicate.comparisons = comparison.value.split(",").map((value) => value.trim()).filter(Boolean).map((value) => typedConditionInput(value, predicate.detectedType ?? "string"));
+                const values = comparison.value.split(",").map((value) => value.trim()).filter(Boolean);
+                const comparisons = values.map((value) => comparisonValueFromInput(value, predicate.detectedType ?? "string"));
+                predicate.comparisons = comparisons.every((value) => value !== undefined)
+                    ? comparisons
+                    : [];
                 delete predicate.comparison;
             }
             else {
-                predicate.comparison = typedConditionInput(comparison.value, predicate.detectedType ?? "string");
+                const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string");
+                if (value)
+                    predicate.comparison = value;
+                else
+                    delete predicate.comparison;
                 delete predicate.comparisons;
             }
             refreshValidation();

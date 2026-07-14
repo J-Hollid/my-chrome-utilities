@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  comparisonValueFromInput,
   conditionGroupApplies,
   conditionalRuleSummary,
   evaluateConditionalRule,
@@ -9,6 +10,14 @@ import {
   typedComparisonValue,
   validateConditionalRule,
 } from "../dist/data-layer-conditional-validation-rules.js";
+
+assert.deepEqual(comparisonValueFromInput(" 42 ", "number"), typedComparisonValue(42));
+assert.deepEqual(comparisonValueFromInput("false", "boolean"), typedComparisonValue(false));
+assert.deepEqual(comparisonValueFromInput("null", "null"), typedComparisonValue(null));
+assert.deepEqual(comparisonValueFromInput(" product detail ", "string"), typedComparisonValue(" product detail "));
+for (const [input, type] of [["", "number"], ["not-a-number", "number"], ["yes", "boolean"], ["nil", "null"], ["value", "array"]]) {
+  assert.equal(comparisonValueFromInput(input, type), undefined);
+}
 
 const consequence = { propertyPath:"/oOrder/aProducts", operator:"item-count", parameters:"1" };
 const productDetail = {

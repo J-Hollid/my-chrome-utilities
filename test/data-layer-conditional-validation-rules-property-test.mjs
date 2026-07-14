@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  comparisonValueFromInput,
   conditionGroupApplies,
   conditionGroupAppliesToValue,
   conditionValueAtPath,
@@ -30,6 +31,10 @@ for (let sample = 0; sample < 200; sample += 1) {
   const number = nextInteger(2_001) - 1_000;
   const greater = number + 1 + nextInteger(20);
   const flag = nextInteger(2) === 0;
+
+  assert.deepEqual(comparisonValueFromInput(String(number), "number"), typedComparisonValue(number));
+  assert.deepEqual(comparisonValueFromInput(String(flag), "boolean"), typedComparisonValue(flag));
+  assert.equal(comparisonValueFromInput(`${number}x`, "number"), undefined);
 
   for (const value of [token, number, flag, null]) {
     const comparison = typedComparisonValue(value);

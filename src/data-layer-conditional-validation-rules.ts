@@ -54,6 +54,25 @@ export function typedComparisonValue(value: string | number | boolean | null): T
   return { type:value === null ? "null" : typeof value, value } as TypedComparisonValue;
 }
 
+export function comparisonValueFromInput(
+  input: string,
+  type: ConditionPropertyType,
+): TypedComparisonValue | undefined {
+  const value = input.trim();
+  if (!value) return undefined;
+  if (type === "number") {
+    const number = Number(value);
+    return Number.isFinite(number) ? typedComparisonValue(number) : undefined;
+  }
+  if (type === "boolean") {
+    return value === "true" ? typedComparisonValue(true)
+      : value === "false" ? typedComparisonValue(false)
+        : undefined;
+  }
+  if (type === "null") return value === "null" ? typedComparisonValue(null) : undefined;
+  return type === "string" ? typedComparisonValue(input) : undefined;
+}
+
 export function operatorsForConditionType(type: ConditionPropertyType): readonly ConditionOperator[] {
   if (type === "string") return [...existenceOperators, ...equalityOperators, "Matches pattern"];
   if (type === "number") return [...existenceOperators, ...equalityOperators, ...numericOperators];

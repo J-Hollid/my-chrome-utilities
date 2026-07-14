@@ -1,3 +1,4 @@
+import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
     "Exact value": ["string", "number", "boolean"],
@@ -156,5 +157,4 @@ export function configuredRuleDetails(configuration) {
         return { operator: "numeric-range", parameters: `${configuration.minimum.trim()},${configuration.maximum.trim()}` };
     return { operator: "item-count", parameters: configuration.minimumItemCount };
 }
-import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
 //# sourceMappingURL=data-layer-schema-property-rule-picker.js.map
