@@ -34,6 +34,18 @@
 
 (defn- command-id [example key] (support/require-example example key))
 (defn- sequence [world id] (get-in world [:keymap :bindings id] ""))
+(defonce ^:private workspace-panel-containment (atom nil))
+
+(defn- load-workspace-panel-containment! []
+  (reset! workspace-panel-containment
+          (support/load-browser-observation!
+           {:adapter-env "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+            :observation-key :workspacePanelContainment
+            :runtime-error "Workspace panel containment browser runtime failed."
+            :missing-error "Workspace panel containment browser observation is missing."})))
+
+(defn- workspace-panel-containment! []
+  (or @workspace-panel-containment (load-workspace-panel-containment!)))
 
 (def handlers
   [{:pattern #"^workspace tab <([A-Za-z0-9_]+)> is active$"
@@ -60,8 +72,56 @@
     :handler (fn [world _ _] (support/assert! (str/includes? (:html world) "workspace-panel-data-layer") "Data layer panel is missing." {}) world)}
    {:pattern #"^hotkey configuration controls appear only in tab <([A-Za-z0-9_]+)>$"
     :handler (fn [world _ _] (support/assert! (str/includes? (:html world) "workspace-panel-hotkeys") "Hotkeys panel is missing." {}) world)}
+   {:pattern #"^panels for workspace tabs <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> are separate peer regions$"
+    :handler (fn [world example [primary-key settings-key]]
+               (let [observed (workspace-panel-containment!)]
+                 (support/assert! (= ["Data Layer" "Hotkeys"]
+                                     [(command-id example primary-key) (command-id example settings-key)])
+                                  "Workspace panel containment example changed." {:example example})
+                 (support/assert! (:peers observed)
+                                  "Workspace panels are not peer regions." observed)
+                 (assoc world :workspace-panel-containment observed)))}
+   {:pattern #"^neither workspace panel contains the other workspace panel$"
+    :handler (fn [world _ _]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (false? (:nested observed))
+                                  "One workspace panel contains the other." observed)
+                 world))}
    {:pattern #"^the user activates workspace tab <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [tab-key]] (assoc world :active-tab (command-id example tab-key)))}
+   {:pattern #"^the panel for tab <([A-Za-z0-9_]+)> is hidden$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (and (= "Data Layer" (command-id example tab-key))
+                                       (get-in observed [:afterActivation :dataLayerHidden]))
+                                  "The inactive Data Layer workspace panel remained visible."
+                                  {:example example :observation observed})
+                 world))}
+   {:pattern #"^the panel for tab <([A-Za-z0-9_]+)> remains visible$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))]
+                 (support/assert! (and (= "Hotkeys" (command-id example tab-key))
+                                       (false? (get-in observed [:afterActivation :hotkeysHidden]))
+                                       (get-in observed [:afterActivation :hotkeysVisible]))
+                                  "The active Hotkeys workspace panel is not rendered."
+                                  {:example example :observation observed})
+                 world))}
+   {:pattern #"^heading <([A-Za-z0-9_]+)>, hotkey search, and registered command groups are visible in that panel$"
+    :handler (fn [world example [tab-key]]
+               (let [observed (or (:workspace-panel-containment world)
+                                  (workspace-panel-containment!))
+                     active (:afterActivation observed)]
+                 (support/assert! (and (= "Hotkeys" (command-id example tab-key))
+                                       (:headingVisible active)
+                                       (:searchVisible active)
+                                       (pos? (:registeredGroupCount active))
+                                       (:registeredGroupsVisible active))
+                                  "Visible Hotkeys panel content is incomplete."
+                                  {:example example :observation observed})
+                 world))}
    {:pattern #"^only the panel for tab <([A-Za-z0-9_]+)> is visible$"
     :handler (fn [world example [tab-key]] (support/assert! (= (command-id example tab-key) (:active-tab world)) "Unexpected workspace panel is active." {}) world)}
    {:pattern #"^workspace tab <([A-Za-z0-9_]+)> is exposed as selected$"
