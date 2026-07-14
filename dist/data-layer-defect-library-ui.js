@@ -1,4 +1,5 @@
 import { defectLifecycleAction, } from "./data-layer-defect-library.js";
+import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
 export function findDefectLibraryElements(root = document) {
     return {
         count: root.querySelector("#defect-library-count"),
@@ -53,13 +54,20 @@ function renderDetail(root, defect, actions) {
     const description = element("textarea");
     description.value = reportField(defect.report, "description");
     description.dataset.defectField = "description";
+    const missingEvent = defect.type === "Missing event";
+    const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
     const expected = element("textarea");
-    expected.value = reportField(defect.report, "expectedExplanation");
-    expected.dataset.defectField = "expectedExplanation";
+    expected.value = reportField(defect.report, expectedField);
+    expected.dataset.defectField = expectedField;
     const notes = element("textarea");
     notes.value = defect.notes;
     notes.dataset.defectField = "notes";
-    const save = button("Save defect edits", () => actions.save(defect.id, { ...defect.report, summary: summary.value, description: description.value, expectedExplanation: expected.value }, notes.value));
+    const save = button("Save defect edits", () => {
+        const edited = { ...defect.report, summary: summary.value, description: description.value, [expectedField]: expected.value };
+        if (missingEvent && !expected.value.trim())
+            delete edited.expectedResultAdditionalText;
+        actions.save(defect.id, edited, notes.value);
+    });
     const recopy = button("Recopy for Jira Cloud", () => actions.recopy(defect.id));
     const lifecycle = defectLifecycleAction(defect);
     const controls = element("section");
@@ -80,7 +88,11 @@ function renderDetail(root, defect, actions) {
     issues.setAttribute("aria-label", "Stored issue evidence");
     issues.replaceChildren(...defect.issues.map(({ match, evidence }) => element("li", `${match.canonicalPath} · ${evidence.ruleName ?? match.ruleId} revision ${match.ruleRevision} · actual ${String(evidence.actual)} · expected ${evidence.expected ?? ""}`)));
     const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
-    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label("Expected result", expected), label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
+    const preview = element("section");
+    preview.setAttribute("aria-label", "Final report preview");
+    if (missingEvent)
+        preview.innerHTML = generateMissingEventRepresentations(defect.report).previewHtml;
+    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), ...(missingEvent ? [preview] : []), label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
     root.hidden = false;
     title.focus({ preventScroll: true });
 }

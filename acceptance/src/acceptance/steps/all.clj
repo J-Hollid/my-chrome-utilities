@@ -27,6 +27,7 @@
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
+            [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
@@ -59,6 +60,7 @@
   (vec (concat canonical-declared-property-validation/handlers
                cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
+               missing-event-report-fidelity/handlers
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
                local-rule-promotion/handlers
