@@ -23,17 +23,21 @@ Feature: Data layer unified defect report builder runtime
 
   # Data layer unified defect report builder runtime 002
   Scenario: Data layer unified defect report builder runtime 002
-    Given production Checkout purchase revision 4 has required order_id and allowed currency values EUR and USD
+    Given production Generic pageview revision 4 has required page_name and products array items requiring numeric id and string name
     When the rendered missing-event builder selects that schema and confirms its expectation
-    Then production Expected result renders the schema-derived event identity and required property constraints
-    And schema values, generic constraints, and custom responses use the production expected-response controls
+    Then the production editor renders the complete recursive schema tree with canonical paths and types
+    When the operator enters page_name test, adds one products item with id 1 and name robot, duplicates it, and removes the duplicate
+    Then production Expected result renders pageview is fired with {"page_name":"test","products":[{"id":1,"name":"robot"}]}
+    And the rendered preview uses the same indented JSON object and array presentation as a captured Live event
     And production Actual result renders no matching event pushed or observed without an invented payload or event id
+    And no Observation interval controls or timestamp range appear
 
   # Data layer unified defect report builder runtime 003
   Scenario: Data layer unified defect report builder runtime 003
     Given rendered reproduction start /products and endpoint /checkout are selected
-    When the operator uses production controls to add Click component, Log in as user, Scroll, and Custom step entries
-    Then the rendered numbered journey retains captured pathname anchors and a final expected-purchase assertion
+    When the operator generates the journey and uses its between-path controls to add Click component, Log in as user, Scroll, and Custom step entries
+    Then production From pathname and To pathname controls remain visible with /products and /checkout
+    And the rendered numbered journey retains captured pathname anchors and a final expected-purchase assertion
     And production Adjust, Remove, local reorder, cancel, and focus restoration behaviors match the validation-issue composer
     And changing the endpoint reruns production absence verification without silently losing retained manual steps
 
@@ -51,12 +55,39 @@ Feature: Data layer unified defect report builder runtime
     When production expected values, steps, timeline, and report detail fields are edited
     Then the rendered report preview updates after each edit with current Actual and Expected results
     And the preview is present before final report creation rather than appearing only after completion
-    And production copy and save actions are disabled until expectation confirmation and absence verification succeed
+    And no Create missing-event report control exists
+    And production copy and save actions are disabled only until required expected values, expectation confirmation, and absence verification succeed
 
   # Data layer unified defect report builder runtime 006
   Scenario: Data layer unified defect report builder runtime 006
-    Given production absence verification finds a matching purchase event
-    When the rendered warning is overridden and the missing-event report is saved, reopened, edited, and recopied
-    Then the production preview and Jira representation retain the matching-event override, schema expectation, reproduction journey, timeline, and edits
+    Given the rendered missing-event report is complete with a nested expected payload
+    When Copy for Jira Cloud runs through the side-panel clipboard boundary
+    Then the current preview is written once and success appears only after the write resolves
+    When Save as reported defect runs through production persistence
+    Then the Defect Library count increases by 1 and the saved defect can be opened
+    When that defect is edited and recopied
+    Then the production preview and Jira representation retain the nested expected payload, schema expectation, reproduction journey, timeline, and edits
     And navigation restores the selected page visit, common builder state, scroll, and focus
     And runtime coverage exercises production composers and rendered controls rather than source-string checks or acceptance-only state
+
+  # Data layer unified defect report builder runtime 007
+  Scenario Outline: Data layer unified defect report builder runtime 007
+    Given the rendered missing-event report is complete
+    And the production <boundary> rejects its operation
+    When the operator activates <report_action>
+    Then rendered feedback is <failure_feedback>
+    And no success feedback or persisted partial defect exists
+    And the expected payload and report preview remain available for retry
+
+    Examples:
+      | boundary                   | report_action            | failure_feedback |
+      | Jira clipboard adapter     | Copy for Jira Cloud      | Copy failed      |
+      | Defect Library persistence | Save as reported defect  | Save failed      |
+
+  # Data layer unified defect report builder runtime 008
+  Scenario: Data layer unified defect report builder runtime 008
+    Given production absence verification finds a matching purchase event in the selected page visit
+    When the rendered warning is overridden without an observation interval
+    Then the matching-event evidence and operator override remain in preview, Jira copy, and saved defect
+    And changing To pathname reruns verification against that distinct page visit
+    And same-URL visits remain distinct by page-visit identity rather than an editable timestamp range
