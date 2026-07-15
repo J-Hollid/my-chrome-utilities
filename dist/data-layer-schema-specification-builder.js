@@ -1,4 +1,6 @@
 import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
+import { schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
+import { conditionalRuleSummary } from "./data-layer-conditional-validation-rules.js";
 function typeLabel(schema) {
     if (!schema?.type)
         return "Unspecified";
@@ -9,10 +11,13 @@ function typeLabel(schema) {
     }
     return type.charAt(0).toUpperCase() + type.slice(1);
 }
-function requiredFor(path, document) {
+function requiredFor(path, document, rules) {
+    const conditional = rulesFor(path, rules).filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "required" && rule.conditionGroup);
+    if (conditional.length)
+        return conditional.map((rule) => `Yes when ${conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: path, operator: "required" } }).replace(/^(When |For each [^,]+, when )/u, "").replace(/, [^,]+$/u, "")}`).join("; ");
     const segments = path.split("/").filter(Boolean);
     let current = document;
-    const conditions = [];
+    let required = false;
     for (const segment of segments) {
         if (!current)
             break;
@@ -20,33 +25,71 @@ function requiredFor(path, document) {
             current = current.items;
             continue;
         }
-        if (current.required?.includes(segment))
-            conditions.push("Yes");
+        required = current.required?.includes(segment) ?? false;
         current = current.properties?.[segment] ?? current.items;
     }
-    return conditions.length ? "Yes" : "No";
+    return required ? "Yes" : "No";
+}
+function parentChain(schema, allSchemas) {
+    const result = [];
+    const visited = new Set();
+    let parentId = schema.parentSchemaId;
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = allSchemas.find(({ id }) => id === parentId);
+        if (!parent)
+            break;
+        result.push(parent);
+        parentId = parent.parentSchemaId;
+    }
+    return result;
+}
+function effectiveRules(schema, allSchemas) {
+    const inherited = parentChain(schema, allSchemas).reverse().flatMap((parent) => parent.attachedRules ?? []).filter((rule) => schema.inheritedRuleOverrides?.[rule.propertyPath ?? ""] !== "disabled");
+    const local = schema.attachedRules ?? [];
+    const localKeys = new Set(local.map((rule) => `${rule.id}:${rule.propertyPath ?? ""}`));
+    return [...inherited.filter((rule) => !localKeys.has(`${rule.id}:${rule.propertyPath ?? ""}`)), ...local].filter((rule) => rule.enabled !== false);
+}
+export function specificationProperties(schema, allSchemas = [schema]) {
+    const parents = parentChain(schema, allSchemas);
+    return schemaPropertyRows(schema.document, parents.map(({ document }) => document)).filter(({ canonicalPath }) => !canonicalPath.endsWith("/*")).map((row) => {
+        const container = row.schema.type === "object" || row.schema.type === "array";
+        return { canonicalPath: row.canonicalPath, propertyName: row.canonicalPath.slice(1).replaceAll("/*", "[]").replaceAll("/", "."), origin: row.origin, container, selectedByDefault: !container };
+    });
 }
 function rulesFor(path, rules) {
     return rules.filter((rule) => rule.enabled !== false && rule.propertyPath === path);
 }
-function valuesFor(path, rules) {
-    return rulesFor(path, rules).filter((rule) => rule.operator === "allowed-values").flatMap((rule) => [...(rule.allowedValues ?? [])]);
+function allowedFor(path, rules) {
+    const relevant = rulesFor(path, rules).filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values" && rule.allowedValues);
+    const unconditional = relevant.filter(({ conditionGroup }) => !conditionGroup);
+    const conditional = relevant.filter(({ conditionGroup }) => conditionGroup);
+    let values = unconditional.length ? [...unconditional[0].allowedValues] : [];
+    for (const rule of unconditional.slice(1))
+        values = values.filter((value) => rule.allowedValues.some((candidate) => Object.is(candidate, value)));
+    const conflict = unconditional.length > 1 && !values.length;
+    const groups = [conflict ? "Conflict: no values satisfy all effective rules" : values.join(" | ")];
+    conditional.forEach((rule) => groups.push(`${rule.allowedValues.join(" | ")} when ${conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: path, operator: "allowed-values" } }).replace(/^(When |For each [^,]+, when )/u, "").replace(/, [^,]+$/u, "")}`));
+    return { values, text: groups.filter(Boolean).join("; ") };
 }
 function schemaAt(document, path) {
     return path.split("/").filter(Boolean).reduce((current, segment) => segment === "*" ? current?.items : current?.properties?.[segment] ?? current?.items, document);
 }
 export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [schema]) {
     const documentation = resolveEffectiveSchemaDocumentation(schema, allSchemas);
-    const rules = schema.attachedRules ?? [];
+    const rules = effectiveRules(schema, allSchemas);
     return selectedPaths.map((canonicalPath) => {
-        const property = schemaAt(schema.document, canonicalPath);
+        const documents = [schema.document, ...parentChain(schema, allSchemas).map(({ document }) => document)];
+        const owningDocument = documents.find((document) => schemaAt(document, canonicalPath)) ?? schema.document;
+        const property = schemaAt(owningDocument, canonicalPath);
         const doc = resolvePropertyDocumentation(documentation, canonicalPath);
         const example = doc?.example?.value;
-        return { canonicalPath, propertyName: canonicalPath.slice(1).replaceAll("/*", "[]").replaceAll("/", "."), description: doc?.description ?? "", mandatory: requiredFor(canonicalPath, schema.document), type: typeLabel(property), ...(example !== undefined ? { example: String(example) } : {}), allowedValues: valuesFor(canonicalPath, rules) };
+        const allowed = allowedFor(canonicalPath, rules);
+        return { canonicalPath, propertyName: canonicalPath.slice(1).replaceAll("/*", "[]").replaceAll("/", "."), description: doc?.description ?? "", mandatory: requiredFor(canonicalPath, owningDocument, rules), type: typeLabel(property), ...(example !== undefined ? { example: String(example) } : {}), allowedValues: allowed.values, ...(allowed.text ? { allowedValuesText: allowed.text } : {}) };
     });
 }
 function escape(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
-function cell(row, key) { const value = key === "allowedValues" ? row.allowedValues.join(" | ") : row[key] ?? ""; return String(value); }
+function cell(row, key) { const value = key === "allowedValues" ? row.allowedValuesText ?? row.allowedValues.join(" | ") : row[key] ?? ""; return String(value); }
 export function renderSpecificationClipboard(rows) {
     const columns = ["propertyName", "description", "mandatory", "type", "example", "allowedValues"];
     const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values"];

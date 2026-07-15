@@ -2053,7 +2053,7 @@ function renderSchemaDraft(): void {
   if (!draft) return;
   buildSpecificationButton.onclick = () => {
     schemaSpecificationBuilder.hidden = false;
-    renderSchemaSpecificationBuilder(schemaSpecificationBuilder, draft, () => { schemaSpecificationBuilder.hidden = true; buildSpecificationButton.focus({ preventScroll:true }); }, async (items) => {
+    renderSchemaSpecificationBuilder(schemaSpecificationBuilder, draft, schemas, () => { schemaSpecificationBuilder.hidden = true; buildSpecificationButton.focus({ preventScroll:true }); }, async (items) => {
       if (!navigator.clipboard?.write) throw new Error("Rich clipboard unavailable");
       await navigator.clipboard.write(items);
     });
