@@ -56,10 +56,10 @@ import { createLocalRulePromotionDialog } from "./data-layer-local-rule-promotio
 import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
+import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
@@ -2494,32 +2494,6 @@ goToExistingSchemaPropertyButton.addEventListener("click", () => {
     renderSchemaDraft();
     focusSchemaPropertyRule(path);
 });
-function guidedType(type) {
-    return type === "String" ? "string"
-        : type === "Number" ? "number"
-            : type === "Boolean" ? "boolean"
-                : type === "Array" ? "array"
-                    : type === "Object" ? "object"
-                        : undefined;
-}
-function guidedPropertyDocument(path, type) {
-    const segments = path.startsWith("$")
-        ? parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value) : segment.kind === "every" ? "*" : String(segment.value))
-        : path.startsWith("/")
-            ? path.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
-            : path.replace(/^\$\.?/, "").split(".").filter(Boolean);
-    const leafType = guidedType(type);
-    const build = (remaining) => {
-        const [segment, ...rest] = remaining;
-        if (segment === undefined)
-            return leafType ? { type: leafType } : {};
-        const child = build(rest);
-        return segment === "*" || /^\d+$/.test(segment)
-            ? { type: "array", items: child }
-            : { type: "object", properties: { [segment]: child } };
-    };
-    return build(segments);
-}
 function guidedDocumentTypes(document, prefix = "") {
     return Object.entries(document.properties ?? {}).reduce((types, [name, child]) => {
         const path = prefix ? `${prefix}.${name}` : name;
@@ -2670,15 +2644,6 @@ function guidedDraftContinuationForEvent(event) {
         publish: () => { openGuidedDraft(schema); saveSchemaButton?.click(); },
         useDifferent: () => openGuidedContinuationPicker(event),
     };
-}
-function mergeGuidedDocument(current, addition) {
-    const propertyNames = new Set([...Object.keys(current.properties ?? {}), ...Object.keys(addition.properties ?? {})]);
-    const properties = Object.fromEntries([...propertyNames].map((name) => {
-        const currentChild = current.properties?.[name];
-        const additionChild = addition.properties?.[name];
-        return [name, currentChild && additionChild ? mergeGuidedDocument(currentChild, additionChild) : additionChild ?? currentChild ?? {}];
-    }));
-    return { ...current, ...addition, ...(propertyNames.size ? { properties } : {}) };
 }
 function finishGuidedValidationSave(result) {
     const message = result.destination.kind === "new"

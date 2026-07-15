@@ -52,6 +52,7 @@ let eventOccurrenceDefectReportObservation;
 let schemaPropertyCopyObservation;
 let schemaAssignmentDataConditionsObservation;
 let schemaPropertyExampleValuesObservation;
+let guidedNestedPropertyMergeObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -70,6 +71,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -816,6 +818,90 @@ const guidedDestinationOptionsRuntime = `(async () => {
     disabled:row.querySelector("button").disabled,
     explanation:row.querySelectorAll("p")[1].textContent.replace("Property compatibility: ", ""),
   }));
+})()`;
+
+const guidedNestedPropertyMergeRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const clickButton = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"product_view", products:[{ product_name:"Notebook", product_id:101 }] }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  const flow = q("#guided-validation-flow");
+  const save = async (path, requirement, value) => {
+    q('#live-event-inspector button[aria-label="Add validation for ' + path + '"]').click();
+    const requirementControl = q("#guided-requirement");
+    requirementControl.value = requirement;
+    requirementControl.dispatchEvent(new Event("change", { bubbles:true }));
+    if (value !== undefined) {
+      const configured = q("#guided-allowed-value-1");
+      configured.value = value;
+      configured.dispatchEvent(new Event("input", { bubbles:true }));
+    }
+    clickButton(flow, "Continue");
+    clickButton(flow, "Add validation to draft");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+  await save("/products/*/product_name", "Must be one of these values", "Notebook");
+  await save("/products/*/product_id", "Must be one of these values", "101");
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const product = stored.find(({ id }) => id === "schema-product-detail");
+  const item = product.workingDraft.document.properties.products.items;
+  const sibling = {
+    types:{ name:item.properties.product_name.type, id:item.properties.product_id.type },
+    rulePaths:product.workingDraft.attachedRules.map(({ propertyPath }) => propertyPath).sort(),
+    sameItem:item.type === "object",
+  };
+  clickButton(q("#guided-draft-continuation"), "Review draft");
+  sibling.treePaths = Array.from(document.querySelectorAll("#schema-property-tree [data-schema-property-path]"), ({ dataset }) => dataset.schemaPropertyPath);
+
+  const verification = await import("/data-layer-schema-verification.js");
+  const restored = verification.restoreSchemaLibrary(JSON.stringify(stored)).find(({ id }) => id === "schema-product-detail");
+  const active = { ...restored, document:restored.workingDraft.document, assignments:restored.workingDraft.assignments, attachedRules:restored.workingDraft.attachedRules };
+  const invalid = verification.validateWithSchema({ sourceId:"event-history", eventName:"product_view", payload:{ products:[{ product_name:"Wrong", product_id:999 }] }, rawInput:[] }, active, [active]);
+  const persistence = {
+    properties:Object.keys(active.document.properties.products.items.properties).sort(),
+    rulePaths:active.attachedRules.map(({ propertyPath }) => propertyPath).sort(),
+    failures:invalid.issues.filter(({ templatePath }) => templatePath?.startsWith("/products/*/")).map(({ templatePath, instancePath }) => [templatePath, instancePath]).sort(),
+  };
+
+  return { sibling, persistence };
+})()`;
+
+const guidedNestedConstraintRuntime = `(async () => {
+  const q = (selector) => { const value = document.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const clickButton = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find((candidate) => candidate.textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
+    scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"product_view", products:[{ product_name:"Notebook", product_id:101 }] }] } } }] },
+  };
+  q("#choose-observation-target").click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  q("#observation-target-list [data-target-id]").click();
+  q("#start-data-layer-testing").click();
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  q("#live-event-feed button").click();
+  q('#live-event-inspector button[aria-label="Add validation for /products/*/product_id"]').click();
+  const flow = q("#guided-validation-flow");
+  q("#guided-requirement").value = "Must be present";
+  q("#guided-requirement").dispatchEvent(new Event("change", { bubbles:true }));
+  clickButton(flow, "Continue");
+  clickButton(flow, "Add validation to draft");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const draft = stored.find(({ id }) => id === "schema-product-detail").workingDraft;
+  return {
+    products:draft.document.properties.products,
+    documentation:draft.documentation,
+    rules:draft.attachedRules.map(({ id, propertyPath, operator, parameters }) => ({ id, propertyPath, operator, parameters })),
+    pending:draft.pendingChanges,
+  };
 })()`;
 
 const guidedValidationRuntime = `(async () => {
@@ -4025,6 +4111,45 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        const assignment = { id:"assignment:product-detail", name:"Product detail", schemaId:"schema-product-detail", sourceId:"event-history", eventName:"product_view", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/", enabled:true };
+        const schema = { id:"schema-product-detail", name:"Product detail", version:2, published:true, document:{ type:"object" }, assignments:[assignment], workingDraft:{ baseVersion:2, sourceVersion:2, document:{ type:"object" }, assignments:[assignment], attachedRules:[], pendingChanges:[] } };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([schema]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+        localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1", JSON.stringify({ ["event-history" + String.fromCharCode(0) + "product_view"]:"schema-product-detail" }));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      guidedNestedPropertyMergeObservation = await evaluate(socket, guidedNestedPropertyMergeRuntime);
+      await evaluate(socket, `(() => {
+        const schemas = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+        const draft = schemas.find(({ id }) => id === "schema-product-detail").workingDraft;
+        draft.document = { type:"object", properties:{ products:{ type:"array", minItems:1, maxItems:20, items:{ type:"object", required:["product_name"], additionalProperties:false, minProperties:1, properties:{ product_name:{ type:"string", minimum:2 } } } } } };
+        draft.documentation = { description:"Product schema", properties:{ "/products/*/product_name":{ displayName:"Product name", description:"Human-readable name" } } };
+        draft.attachedRules = [{ id:"local:product-name", name:"Product name pattern", version:4, propertyPath:"/products/*/product_name", operator:"regular-expression", parameters:"^Notebook$", severity:"warning", message:"Use the stored product name" }, { id:"local:unrelated", name:"Unrelated", version:2, propertyPath:"/other", operator:"required" }];
+        draft.pendingChanges = ["Existing constrained product name"];
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify(schemas));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      guidedNestedPropertyMergeObservation.constraints = await evaluate(socket, guidedNestedConstraintRuntime);
+      assert.deepEqual(guidedNestedPropertyMergeObservation.sibling.types, { name:"string", id:"number" });
+      assert.deepEqual(guidedNestedPropertyMergeObservation.sibling.rulePaths, ["/products/*/product_id", "/products/*/product_name"]);
+      assert.equal(guidedNestedPropertyMergeObservation.sibling.sameItem, true);
+      assert.equal(guidedNestedPropertyMergeObservation.sibling.treePaths.includes("products.*.product_name"), true);
+      assert.equal(guidedNestedPropertyMergeObservation.sibling.treePaths.includes("products.*.product_id"), true);
+      assert.deepEqual(guidedNestedPropertyMergeObservation.persistence.properties, ["product_id", "product_name"]);
+      assert.deepEqual(guidedNestedPropertyMergeObservation.persistence.rulePaths, ["/products/*/product_id", "/products/*/product_name"]);
+      assert.deepEqual(guidedNestedPropertyMergeObservation.persistence.failures, [["/products/*/product_id", "/products/0/product_id"], ["/products/*/product_name", "/products/0/product_name"]]);
+      assert.deepEqual(guidedNestedPropertyMergeObservation.constraints.products, { type:"array", minItems:1, maxItems:20, items:{ type:"object", required:["product_name"], additionalProperties:false, minProperties:1, properties:{ product_name:{ type:"string", minimum:2 }, product_id:{ type:"number" } } } });
+      assert.deepEqual(guidedNestedPropertyMergeObservation.constraints.documentation, { description:"Product schema", properties:{ "/products/*/product_name":{ displayName:"Product name", description:"Human-readable name" } } });
+      assert.deepEqual(guidedNestedPropertyMergeObservation.constraints.rules.slice(0, 2), [{ id:"local:product-name", propertyPath:"/products/*/product_name", operator:"regular-expression", parameters:"^Notebook$" }, { id:"local:unrelated", propertyPath:"/other", operator:"required" }]);
+      assert.equal(guidedNestedPropertyMergeObservation.constraints.rules.filter(({ propertyPath }) => propertyPath === "/products/*/product_id").length, 1);
+      socket.close();
+      continue;
+    }
     if (process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1") {
       await evaluate(socket,savedEventFeedFiltersSeedRuntime);await reloadPanel(socket);
       savedEventFeedFiltersObservation=await evaluate(socket,savedEventFeedFiltersRuntime);
@@ -5363,6 +5488,9 @@ try {
   }
   if (process.env.SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPropertyExampleValues:schemaPropertyExampleValuesObservation }));
+  }
+  if (process.env.GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ guidedNestedPropertyMerge:guidedNestedPropertyMergeObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));
