@@ -97,7 +97,7 @@
    "step_kind" #{"Click component" "Log in as user" "Scroll" "Custom step"}
    "step_input" #{"Checkout, sticky footer button" "returning customer" "bottom of the page" "Apply the free delivery filter"}
    "step_text" #{"Click Checkout — sticky footer button" "Log in as returning customer" "Scroll to the bottom of the page" "Apply the free delivery filter"}
-   "report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+   "report_action" #{"Copy for Jira Cloud" "Save defect" "Save defect and copy"}
    "successful_effect" #{"the current preview is written through the Jira clipboard integration" "one discoverable Missing event defect is persisted in Defects" "one defect is persisted and the same representation is written to clipboard"}
    "failed_effect" #{"clipboard writing rejects" "Defect Library persistence rejects"}
    "boundary" #{"Jira clipboard adapter" "Defect Library persistence"}

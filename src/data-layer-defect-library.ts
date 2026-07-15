@@ -13,10 +13,10 @@ import {
 
 export const DEFECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.defect-library.v1";
 
-export type DefectStatus = "Reported" | "Resolved" | "Archived";
+export type DefectStatus = "Saved" | "Reported" | "Resolved" | "Archived";
 export type DefectType = "Validation issue" | "Missing event" | "Unexpected event" | "Wrong event name";
 export type IssueTriageState = "Reported" | "New" | "Review required" | "Possible regression treated New";
-export type DefectReportAction = "Copy for Jira Cloud" | "Save as reported defect" | "Save as reported defect and copy";
+export type DefectReportAction = "Copy for Jira Cloud" | "Save defect" | "Save defect and copy";
 
 export interface IssueMatchIdentity {
   sourceId: string;
@@ -221,7 +221,7 @@ function createDefect(options: {
   return clone({
     id:options.id,
     type:options.type,
-    status:"Reported" as const,
+    status:"Saved" as const,
     createdAt:options.now,
     updatedAt:options.now,
     report:options.report,
@@ -414,7 +414,7 @@ function isDefect(value: unknown): value is ReportedDefect {
   const defect = value as Partial<ReportedDefect>;
   return typeof defect.id === "string"
     && (defect.type === "Validation issue" || defect.type === "Missing event" || defect.type === "Unexpected event" || defect.type === "Wrong event name")
-    && (defect.status === "Reported" || defect.status === "Resolved" || defect.status === "Archived")
+    && (defect.status === "Saved" || defect.status === "Reported" || defect.status === "Resolved" || defect.status === "Archived")
     && typeof defect.createdAt === "string"
     && typeof defect.updatedAt === "string"
     && typeof defect.notes === "string"
@@ -534,12 +534,12 @@ export async function completeDefectReportAction(
   let added = false;
   let existing: ReportedDefect[] = [];
   if (action !== "Copy for Jira Cloud") {
-    const result = addDefect(next, defect);
+    const result = addDefect(next, { ...defect, status:"Saved" });
     next = result.library;
     added = result.added;
     existing = result.existing;
   }
-  const shouldCopy = action !== "Save as reported defect";
+  const shouldCopy = action !== "Save defect";
   if (shouldCopy) {
     if (!clipboard.writeText) throw new Error("Clipboard access is unavailable.");
     await clipboard.writeText(representation());
