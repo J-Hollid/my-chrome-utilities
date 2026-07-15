@@ -82,19 +82,19 @@
                    "Legacy neutrality, immutability, or constrained layout regressed." observed)
   observed)
 
-(def model-example-values
+(def shared-example-values
   {"pointer" #{"/action" "/error_action" "/page_type" "/transaction_id" "/reference"
                 "/commerce/currency" "/products/0/name" "/a~1b" "/tilde~0name" "/coupon"}
    "violation" #{"Undeclared property" "Required value" "Value is not allowed" "Type mismatch" "Value is not exact"}
-   "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is displayed"]))
    "operation" #{"add" "replace" "remove" "none"}})
 
+(def model-example-values
+  (assoc shared-example-values
+         "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is displayed"]))))
+
 (def runtime-example-values
-  {"pointer" #{"/action" "/error_action" "/page_type" "/transaction_id" "/reference"
-                "/commerce/currency" "/products/0/name" "/a~1b" "/tilde~0name" "/coupon"}
-   "violation" #{"Undeclared property" "Required value" "Value is not allowed" "Type mismatch" "Value is not exact"}
-   "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is rendered"]))
-   "operation" #{"add" "replace" "remove" "none"}})
+  (assoc shared-example-values
+         "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is rendered"]))))
 
 (def actual-relations
   #{["/action" "Undeclared property" "undeclared property is present in the actual payload"]
@@ -134,3 +134,7 @@
   (support/verified-feature-mode-handlers
    feature-files entry-modes :defect-report-semantic-differences-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T09:57:18.538709063+02:00", :module-hash "-1786587718", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1186672438"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "575296350"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-36976987"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "841979124"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-510276829"} {:id "def/actual-descriptions", :kind "def", :line 29, :end-line 36, :hash "1778764651"} {:id "def/expected-descriptions", :kind "def", :line 38, :end-line 42, :hash "791080257"} {:id "defn-/assert-runtime!", :kind "defn-", :line 44, :end-line 83, :hash "1981590324"} {:id "def/shared-example-values", :kind "def", :line 85, :end-line 89, :hash "-1171569704"} {:id "def/model-example-values", :kind "def", :line 91, :end-line 93, :hash "-401963778"} {:id "def/runtime-example-values", :kind "def", :line 95, :end-line 97, :hash "1386472355"} {:id "def/actual-relations", :kind "def", :line 99, :end-line 104, :hash "1246596353"} {:id "def/expected-model-relations", :kind "def", :line 106, :end-line 110, :hash "-583477128"} {:id "def/expected-runtime-relations", :kind "def", :line 112, :end-line 116, :hash "-589756554"} {:id "defn-/validate-relation!", :kind "defn-", :line 118, :end-line 123, :hash "1867011884"} {:id "defn-/validate-example!", :kind "defn-", :line 125, :end-line 131, :hash "-1086338369"} {:id "def/handlers", :kind "def", :line 133, :end-line 136, :hash "-2067247089"}]}
+;; clj-mutate-manifest-end

@@ -3,7 +3,8 @@ import {
   type DefectStatus,
   type ReportedDefect,
 } from "./data-layer-defect-library.js";
-import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
+import { renderJiraReport } from "./data-layer-defect-report-export.js";
+import type { GeneratedDefectReport } from "./data-layer-defect-report-model.js";
 import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
 
 export interface DefectLibraryElements {

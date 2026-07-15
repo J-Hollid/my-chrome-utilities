@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=a153ab3392cbfc71f0d2f3417498696958fd2477b1de2ae3fe9f7db156b038cd
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T07:58:01.455794998Z","feature_name":"Data layer defect report semantic differences runtime","feature_path":"features/data-layer-defect-report-semantic-differences-runtime.feature","background_hash":"8335e67e20743727bed22c7de256bf1679962b5cc06d6c7c0933b9d13245de17","implementation_hash":"sha256:ea08c96a6d40b4f43ab73df098ffb2bc506aaec8eda08b65665c2bbe914c3421","scenarios":[{"index":2,"name":"Data layer defect report semantic differences runtime 003","scenario_hash":"8e2a22e94b34617482677e8311848353ca7fba5febfd2c39991cc4a7e597089e","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T07:58:01.455794998Z"},{"index":3,"name":"Data layer defect report semantic differences runtime 004","scenario_hash":"f22266aaec55ac596bfb7ba656bf946b52bb174790aa133097d5f58c6ca785db","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-15T07:58:01.455794998Z"},{"index":4,"name":"Data layer defect report semantic differences runtime 005","scenario_hash":"9d60bc46826d1cf70cb36189ad9cfa6d32f295457c51f91a2ebb1e52389fd350","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-15T07:58:01.455794998Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer defect report semantic differences runtime
 
   Background:
