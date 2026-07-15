@@ -1,5 +1,6 @@
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
-import type { AttachedSchemaRule, JsonSchema } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./data-layer-schema-document.js";
+import type { AttachedSchemaRule } from "./data-layer-schema-verification.js";
 
 export interface SchemaPropertyRow {
   canonicalPath: string;

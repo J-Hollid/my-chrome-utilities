@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8844e7cabd035f5b11be76050eb0b88eb9be2b0d3d44db4756ac932e903691f2
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T23:23:43.159265321Z","feature_name":"Data layer canonical declared property validation","feature_path":"features/data-layer-canonical-declared-property-validation.feature","background_hash":"02b9739204097fcce9d5a5d39f11d4e1eb4f91cafeb8c30d4c70525ec031ad21","implementation_hash":"unknown","scenarios":[{"index":2,"name":"Data layer canonical declared property validation 003","scenario_hash":"7529f4e874d76a6c806f381a009caa4864766a2a9551301ab0e4dec36189cad1","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-14T23:23:43.159265321Z"},{"index":3,"name":"Data layer canonical declared property validation 004","scenario_hash":"213cbeebd290fdae4d5c410f64ec570f4544f3dc7a7c3fca49a9cdee2f1b79bb","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-14T23:23:43.159265321Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer canonical declared property validation
 
   Background:

@@ -50,7 +50,8 @@ const explicitUndefined = validateWithSchema(event({ test:undefined }), schemaWi
 ]), []);
 assert.deepEqual(explicitUndefined.evaluations.map(({ status }) => status), ["error", "pass"]);
 assert.deepEqual(explicitUndefined.evaluations.map(({ actual }) => actual), ["undefined", "undefined"]);
-assert.equal(explicitUndefined.issues.find(({ rule }) => rule?.startsWith("Allowed values"))?.actual, "undefined");
+assert.equal(explicitUndefined.issues.some(({ rule }) => rule?.startsWith("Allowed values")), false);
+assert.equal(explicitUndefined.issues.find(({ message }) => message === "Type mismatch")?.actual, "undefined");
 
 const nestedRules = [
   rule("Nested value", "allowed-values", "active", "/profile/status"),
