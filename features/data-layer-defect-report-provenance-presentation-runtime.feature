@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=bec3dce7b5a82a3d596f096b382b7c157a94b126094f8d23b8d2e888ec66133a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T08:26:15.153013961Z","feature_name":"Data layer defect report provenance presentation runtime","feature_path":"features/data-layer-defect-report-provenance-presentation-runtime.feature","background_hash":"d6ee9e6c70d5a25b935c418406b5c2deb55a75daa2b2b6c3fb2c2a9e4168efd9","implementation_hash":"sha256:9b3a87f2a0099d7f2a08b1f8012d2368549c2222b42ddd8620101f16cc397d75","scenarios":[{"index":1,"name":"Data layer defect report provenance presentation runtime 002","scenario_hash":"10f7dd00ee7b824af103d031ea8afbeb7c8ac4390a7eb677325e916ca7ea098f","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T08:26:15.153013961Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer defect report provenance presentation runtime
 
   Background:

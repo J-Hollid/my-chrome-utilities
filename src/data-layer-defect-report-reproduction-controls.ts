@@ -9,7 +9,7 @@ import {
   type ReproductionStepTemplate,
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
-import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
+import type { ComposableDefectReport, DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
 
 type ComposerStage = "idle" | "templates" | "configure";
 
@@ -36,11 +36,11 @@ function appendStepPresentation(
   item.append(...[text, actions, guidance].filter((element): element is HTMLElement => Boolean(element)));
 }
 
-export function appendReproductionControls(
+export function appendReproductionControls<Report extends ComposableDefectReport>(
   controls: HTMLElement,
   steps: HTMLElement,
   context: DefectReportContext,
-  state: DefectReportBuilderState,
+  state: DefectReportBuilderState<Report>,
   options: ReproductionControlOptions = {},
 ): void {
   let selectedVisitId: string | undefined;
