@@ -238,6 +238,19 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   padding: 0.25rem 0.5rem;
 }
 
+#schema-property-view-controls {
+  display: grid;
+  gap: 0.35rem;
+  min-inline-size: 0;
+}
+
+#schema-property-view-controls input,
+#schema-property-view-controls select {
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: 100%;
+}
+
 #schema-manual-property-dialog {
   inline-size: min(32rem, calc(100vw - 1rem));
   max-block-size: calc(100vh - 1rem);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   attachRuleToSchemaProperty,
+  filterAndSortSchemaPropertyRows,
   schemaPropertyRows,
 } from "../dist/data-layer-schema-rule-property-identity.js";
 
@@ -69,5 +70,46 @@ for (const canonicalPath of ["/page_levels/0", "/products/*/name", "/customer/id
   assert.equal(next.attachedRules.at(-1).propertyPath, canonicalPath);
   assert.equal(JSON.stringify(next.document), before, `${canonicalPath} attachment must not migrate its property definition`);
 }
+
+const filterDocument = {
+  type:"object",
+  properties:{
+    page_type:{ type:"string" },
+    commerce:{ type:"object", properties:{ order:{ type:"object", properties:{ id:{ type:"string" } } } } },
+    products:{ type:"array", items:{ type:"object", properties:{ product_name:{ type:"string" }, product_id:{ type:"string" }, price_monthly:{ type:"number" } } } },
+  },
+};
+const filterRows = schemaPropertyRows(filterDocument);
+const filterDocumentBytes = JSON.stringify(filterDocument);
+assert.equal(filterRows.length, 9);
+const productIdView = filterAndSortSchemaPropertyRows(filterRows, "product_id", "schema");
+assert.deepEqual(productIdView.rows.map(({ canonicalPath, filterContext }) => [canonicalPath, filterContext]), [
+  ["/products", true],
+  ["/products/*", true],
+  ["/products/*/product_id", false],
+]);
+assert.deepEqual({ matches:productIdView.matchCount, context:productIdView.contextCount, total:productIdView.totalCount }, { matches:1, context:2, total:9 });
+
+const productBranch = filterAndSortSchemaPropertyRows(filterRows, "products", "name-asc");
+assert.deepEqual(productBranch.rows.map(({ canonicalPath }) => canonicalPath), [
+  "/products", "/products/*", "/products/*/price_monthly", "/products/*/product_id", "/products/*/product_name",
+]);
+assert.equal(productBranch.contextCount, 0, "matching ancestors and descendants are direct matches");
+
+const commerceView = filterAndSortSchemaPropertyRows(filterRows, "/commerce/order", "schema");
+assert.deepEqual(commerceView.rows.map(({ canonicalPath, filterContext }) => [canonicalPath, filterContext]), [
+  ["/commerce", true], ["/commerce/order", false], ["/commerce/order/id", false],
+]);
+
+assert.deepEqual(
+  filterAndSortSchemaPropertyRows(filterRows, "", "name-asc").rows.map(({ canonicalPath }) => canonicalPath),
+  ["/commerce", "/commerce/order", "/commerce/order/id", "/page_type", "/products", "/products/*", "/products/*/price_monthly", "/products/*/product_id", "/products/*/product_name"],
+);
+assert.deepEqual(
+  filterAndSortSchemaPropertyRows(filterRows, "", "name-desc").rows.map(({ canonicalPath }) => canonicalPath),
+  ["/products", "/products/*", "/products/*/product_name", "/products/*/product_id", "/products/*/price_monthly", "/page_type", "/commerce", "/commerce/order", "/commerce/order/id"],
+);
+assert.deepEqual(filterAndSortSchemaPropertyRows(filterRows, "missing_property", "schema").rows, []);
+assert.equal(JSON.stringify(filterDocument), filterDocumentBytes, "filtering and sorting must not mutate the document");
 
 console.log("schema rule property identity: canonical rows and lossless attachments passed");
