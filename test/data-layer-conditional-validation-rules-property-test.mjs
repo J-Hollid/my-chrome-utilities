@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   comparisonValueFromInput,
   conditionGroupApplies,
+  conditionGroupAppliesToConsequence,
   conditionGroupAppliesToValue,
   conditionValueAtPath,
   conditionalRuleSummary,
@@ -184,4 +185,55 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(operatorsForConditionType("string").includes("Matches pattern"), true);
   assert.equal(operatorsForConditionType("string").includes("Is greater than"), false);
   assert.equal(operatorsForConditionType("number").includes("Is greater than"), true);
+
+  const groupCount = 1 + nextInteger(3);
+  const itemCount = 2 + nextInteger(5);
+  const correlatedPayload = {
+    groups:Array.from({ length:groupCount }, (_, groupIndex) => ({
+      products:Array.from({ length:itemCount }, (_, itemIndex) => ({
+        duration:itemIndex + groupIndex,
+        ...((itemIndex + groupIndex + sample) % 2 === 0 ? { price_monthly:number } : {}),
+      })),
+    })),
+    global_trigger:flag,
+  };
+  const correlatedSnapshot = structuredClone(correlatedPayload);
+  const correlatedGroup = {
+    operator:"All",
+    predicates:[{ propertyPath:"/groups/*/products/*/price_monthly", operator:"Exists" }],
+  };
+  for (let groupIndex = 0; groupIndex < groupCount; groupIndex += 1) {
+    for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
+      assert.equal(
+        conditionGroupAppliesToConsequence(
+          correlatedPayload,
+          correlatedGroup,
+          "/groups/*/products/*/duration",
+          `/groups/${groupIndex}/products/${itemIndex}/duration`,
+        ),
+        "price_monthly" in correlatedPayload.groups[groupIndex].products[itemIndex],
+        "each wildcard predicate must bind every array context from its consequence item",
+      );
+    }
+  }
+  assert.equal(
+    conditionGroupAppliesToConsequence(
+      correlatedPayload,
+      { operator:"All", predicates:[{ propertyPath:"/global_trigger", operator:"Equals", comparison:typedComparisonValue(flag) }] },
+      "/groups/*/products/*/duration",
+      "/groups/0/products/0/duration",
+    ),
+    true,
+    "non-wildcard predicates must retain their document-level semantics",
+  );
+  assert.match(
+    conditionalRuleSummary({
+      conditionGroup:correlatedGroup,
+      consequence:{ propertyPath:"/groups/*/products/*/duration", operator:"required" },
+    }),
+    /^For each groups item,/,
+    "correlated summaries must describe the outermost shared item context",
+  );
+  assert.deepEqual(correlatedPayload, correlatedSnapshot,
+    "correlated evaluation must not mutate the payload");
 }
