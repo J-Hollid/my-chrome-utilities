@@ -72,3 +72,7 @@
   (support/verified-feature-mode-handlers
    feature-files entry-modes :library-direct-template-push-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T20:03:10.087261523+02:00", :module-hash "-2058324604", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-532637742"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "435406357"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-994066123"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "-1308621383"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-1953680931"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 54, :hash "574403304"} {:id "def/model-example-values", :kind "def", :line 56, :end-line 60, :hash "-976702252"} {:id "def/runtime-example-values", :kind "def", :line 62, :end-line 64, :hash "1849038551"} {:id "defn-/validate-example!", :kind "defn-", :line 66, :end-line 69, :hash "-1808099946"} {:id "def/handlers", :kind "def", :line 71, :end-line 74, :hash "-1736765218"}]}
+;; clj-mutate-manifest-end

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c302ed6decbcf22ce017a048041e8d13bb7ca823281c96d6e7d97215f785636a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T18:04:25.005082812Z","feature_name":"Data layer Library direct template push runtime","feature_path":"features/data-layer-library-direct-template-push-runtime.feature","background_hash":"1cd826d2b273414904491d248976bee25e8b64cd1290770ed7dcc3700665ff45","implementation_hash":"sha256:ca5b10daa4b520221e7e36ffcc842e47a24f247999c67f0289ba8f931c227303","scenarios":[{"index":3,"name":"Data layer Library direct template push runtime 004","scenario_hash":"6308611557b01fe084664764a4d141248011e06d1167258c88e4845acd35599d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T18:04:25.005082812Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Library direct template push runtime
 
   Background:
