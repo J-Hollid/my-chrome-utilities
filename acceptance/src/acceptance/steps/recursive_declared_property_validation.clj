@@ -92,9 +92,16 @@
    mode runtime-example-values model-example-values example
    "Recursive declared-property example value was outside the specified contract."))
 
+(defn- preserve-world [world _example _captures]
+  world)
+
 (def handlers
   (into [{:pattern #"^the built extension side panel is running with production schema editing, validation, persistence, and Live event presentation$"
-          :handler (fn [world _example _captures] world)}]
+          :handler preserve-world}]
         (support/verified-feature-mode-handlers
          feature-files entry-modes :recursive-declared-property-validation-mode
          verify-model! validate-example! runtime-observation! assert-runtime!)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T19:30:14.443264948+02:00", :module-hash "-1281151030", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1344757995"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "397782958"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1701385040"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1337834842"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "217014499"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 70, :hash "-622812099"} {:id "def/model-example-values", :kind "def", :line 72, :end-line 82, :hash "-1882581064"} {:id "def/runtime-example-values", :kind "def", :line 84, :end-line 88, :hash "-1075256112"} {:id "defn-/validate-example!", :kind "defn-", :line 90, :end-line 93, :hash "-794393922"} {:id "defn-/preserve-world", :kind "defn-", :line 95, :end-line 96, :hash "1701793430"} {:id "def/handlers", :kind "def", :line 98, :end-line 103, :hash "-588957617"}]}
+;; clj-mutate-manifest-end

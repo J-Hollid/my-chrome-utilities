@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=cb1aad00818fdcf13dc7f3680b5176f7caacc95d7a45c58c983a609af98d4544
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T17:31:03.407304163Z","feature_name":"Data layer recursive declared property validation runtime","feature_path":"features/data-layer-recursive-declared-property-validation-runtime.feature","background_hash":"e2bed9b28d695bbae2840010e728e2f7e6b7444cc5cf541116745d68af5fc4e8","implementation_hash":"sha256:327cb9efbfefe70796726ee4dfbbcc033f76ccb42f8d569447bc4c2e351201be","scenarios":[{"index":1,"name":"Data layer recursive declared property validation runtime 002","scenario_hash":"0735247d50b782a46d938a3178ee436d79fa43eb36c6c1d72983f070841faab3","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-15T17:31:03.407304163Z"},{"index":3,"name":"Data layer recursive declared property validation runtime 004","scenario_hash":"2dfe5c1db9e3351a22f7f64e10e2f348aca4abeda331fa909639de3bbcb7b720","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-15T17:31:03.407304163Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer recursive declared property validation runtime
 
   Background:
