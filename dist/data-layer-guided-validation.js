@@ -1,5 +1,7 @@
 import { pathConditionResult, pathConditionsResult, urlConditionsMatch, } from "./data-layer-path-conditions.js";
 import { parseTargetExpression, resolveTargetValues } from "./data-layer-recursive-property-tree.js";
+import { conditionalRuleSummary } from "./data-layer-conditional-validation-rules.js";
+import { guidedConditionGroup, validateGuidedConditionalDraft } from "./data-layer-live-guided-conditional-rule-authoring.js";
 export { pathConditionResult, pathConditionsResult };
 const requirements = {
     String: ["Must be present", "Must be one of these values", "Must match a pattern", "Must have this length"],
@@ -472,7 +474,20 @@ function reviewText(draft) {
     const destination = draft.destination.kind === "new"
         ? `New schema draft ${draft.destination.schemaName} will be created and remain unavailable until publication.`
         : `The rule will be added to the ${draft.destination.schemaName} working draft based on version ${draft.destination.schemaVersion}. ${draft.destination.schemaName} version ${draft.destination.schemaVersion} remains current until the working draft is published. Assignment action: ${assignmentGuidedAction(draft)}.`;
-    return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
+    const conditionGroup = guidedConditionGroup(draft.conditional);
+    const condition = conditionGroup
+        ? `${conditionalRuleSummary({ conditionGroup, consequence: guidedConsequence(draft.property.path, draft.requirement, draft.allowedValues) })}. `
+        : "";
+    return `${condition}${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
+}
+function guidedConsequence(propertyPath, requirement, values) {
+    const operator = requirement === "Must be one of these values" ? "allowed-values"
+        : requirement === "Must match a pattern" ? "regular-expression"
+            : "required";
+    const parameters = operator === "allowed-values" ? values.join(",")
+        : operator === "regular-expression" ? values[0]
+            : undefined;
+    return { propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}) };
 }
 export function advanceGuidedValidation(draft) {
     const stages = guidedValidationStages(draft);
@@ -488,6 +503,12 @@ export function backGuidedValidation(draft) {
 export function publishGuidedValidation(draft, reusable) {
     if (!draft.property || !draft.requirement || !draft.destination || draft.requirementCorrectionRequired)
         throw new Error("Guided validation draft is incomplete.");
+    const conditionGroup = guidedConditionGroup(draft.conditional);
+    if (conditionGroup && draft.conditional) {
+        const validation = validateGuidedConditionalDraft(draft.conditional, guidedConsequence(draft.property.path, draft.requirement, draft.allowedValues));
+        if (!validation.ready)
+            throw new Error(validation.assistance);
+    }
     const schemaName = draft.destination.schemaName;
     const schemaVersion = draft.destination.kind === "existing" ? draft.destination.schemaVersion : 1;
     const schemaId = draft.destination.kind === "existing" ? draft.destination.schemaId : `schema:${slug(schemaName)}:1`;
@@ -498,6 +519,12 @@ export function publishGuidedValidation(draft, reusable) {
         requirement: draft.requirement,
         values: [...draft.allowedValues],
         ...(reusableRuleId ? { reusableRuleId } : {}),
+        ...(conditionGroup ? {
+            conditionGroup,
+            severity: draft.advanced.severity.toLowerCase(),
+            message: draft.advanced.message,
+            enabled: true,
+        } : {}),
     };
     const scope = draft.scope;
     const pathnameCondition = scope.kind === "current-path" ? scope.pathname : undefined;
@@ -518,7 +545,19 @@ export function publishGuidedValidation(draft, reusable) {
     };
     return {
         schema: { id: schemaId, name: schemaName, version: schemaVersion, pending: true, rules: [rule] },
-        reusableRules: reusable && reusableRuleId ? [{ id: reusableRuleId, name: draft.advanced.ruleName, requirement: draft.requirement, values: [...draft.allowedValues] }] : [],
+        reusableRules: reusable && reusableRuleId ? [{
+                id: reusableRuleId,
+                name: draft.advanced.ruleName,
+                version: 1,
+                requirement: draft.requirement,
+                values: [...draft.allowedValues],
+                ...(conditionGroup ? {
+                    conditionGroup,
+                    severity: draft.advanced.severity.toLowerCase(),
+                    message: draft.advanced.message,
+                    enabled: true,
+                } : {}),
+            }] : [],
         assignment,
         destination: {
             kind: draft.destination.kind,

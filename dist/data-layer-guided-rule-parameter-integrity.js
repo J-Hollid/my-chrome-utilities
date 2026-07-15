@@ -1,4 +1,5 @@
 import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
+import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 function guidedOperator(requirement) {
     if (requirement === "Must be one of these values")
         return "allowed-values";
@@ -15,7 +16,9 @@ function guidedParameters(rule) {
     return rule.values.join(",");
 }
 export function guidedAttachedRule(rule, name, localRuleId) {
-    const propertyPath = canonicalNestedPath(rule.path);
+    const propertyPath = rule.path.startsWith("$")
+        ? `/${parseTargetExpression(rule.path).map((segment) => segment.kind === "property" ? String(segment.value).replaceAll("~", "~0").replaceAll("/", "~1") : segment.kind === "every" ? "*" : String(segment.value)).join("/")}`
+        : canonicalNestedPath(rule.path);
     const parameters = guidedParameters(rule);
     return {
         id: rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,
@@ -24,8 +27,10 @@ export function guidedAttachedRule(rule, name, localRuleId) {
         propertyPath,
         operator: guidedOperator(rule.requirement),
         ...(parameters !== undefined ? { parameters } : {}),
-        severity: "error",
-        enabled: true,
+        severity: rule.severity ?? "error",
+        ...(rule.message !== undefined ? { message: rule.message } : {}),
+        ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),
+        enabled: rule.enabled ?? true,
     };
 }
 //# sourceMappingURL=data-layer-guided-rule-parameter-integrity.js.map

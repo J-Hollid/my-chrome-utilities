@@ -1,3 +1,4 @@
+import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 const existenceOperators = ["Exists", "Does not exist"];
 const equalityOperators = ["Equals", "Does not equal", "Is one of"];
 const numericOperators = ["Is greater than", "Is at least", "Is less than", "Is at most"];
@@ -95,6 +96,9 @@ export function evaluateConditionalRule(value, rule, evaluateConsequence) {
     return { result: evaluateConsequence(rule.consequence) ? "Passed" : "Failed", invocationCount: 1 };
 }
 function pathLabel(path) {
+    if (path.startsWith("$")) {
+        return parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value) : segment.kind === "every" ? "*" : String(segment.value)).join(".");
+    }
     return pointerSegments(path).join(".");
 }
 function configuredLabel(predicate) {

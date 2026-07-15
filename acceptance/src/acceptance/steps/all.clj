@@ -23,6 +23,7 @@
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
+            [acceptance.steps.live-guided-conditional-rules :as live-guided-conditional-rules]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.local-rule-promotion-availability :as local-rule-promotion-availability]
@@ -66,6 +67,7 @@
                unified-defect-builder/handlers
                local-rule-promotion/handlers
                local-rule-promotion-availability/handlers
+               live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
