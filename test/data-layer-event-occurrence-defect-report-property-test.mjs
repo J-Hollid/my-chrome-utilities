@@ -16,6 +16,7 @@ import {
   matchingOccurrenceDefects,
   restoreDefectLibrary,
   serializeDefectLibrary,
+  updateDefectStatus,
 } from "../dist/data-layer-defect-library.js";
 
 let state = 0x0cc0ffee;
@@ -150,7 +151,10 @@ for (let sample = 0; sample < 200; sample += 1) {
     id:`defect-${sample}`, now:actual.captureTime, report:wrongReport,
   });
   const added = addDefect(createDefectLibrary(), defect);
-  const restored = restoreDefectLibrary(serializeDefectLibrary(added.library));
+  assert.equal(defect.status, "Saved");
+  assert.deepEqual(matchingOccurrenceDefects(identity, added.library), []);
+  const reported = updateDefectStatus(added.library, defect.id, "Reported", actual.captureTime);
+  const restored = restoreDefectLibrary(serializeDefectLibrary(reported));
   assert.deepEqual(restored.defects[0].occurrenceMatch, defect.occurrenceMatch);
   assert.deepEqual(matchingOccurrenceDefects(identity, restored).map(({ id }) => id), [defect.id]);
   assert.deepEqual(actual, actualSnapshot, "occurrence report operations must conserve captured events");

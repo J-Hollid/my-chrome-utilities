@@ -1,8 +1,5 @@
 import { type DefectStatus, type ReportedDefect } from "./data-layer-defect-library.js";
-import { renderJiraReport } from "./data-layer-defect-report-export.js";
-import type { GeneratedDefectReport } from "./data-layer-defect-report-model.js";
-import { renderOccurrenceReport, type OccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
-import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
+import { storedDefectRepresentations } from "./data-layer-defect-library-copy.js";
 
 export interface DefectLibraryElements {
   count: HTMLElement | null;
@@ -67,7 +64,6 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   const summary = element("input"); summary.value = reportField(defect.report, "summary"); summary.dataset.defectField = "summary";
   const description = element("textarea"); description.value = reportField(defect.report, "description"); description.dataset.defectField = "description";
   const missingEvent = defect.type === "Missing event";
-  const occurrence = defect.type === "Unexpected event" || defect.type === "Wrong event name";
   const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
   const expected = element("textarea"); expected.value = reportField(defect.report, expectedField); expected.dataset.defectField = expectedField;
   const notes = element("textarea"); notes.value = defect.notes; notes.dataset.defectField = "notes";
@@ -97,11 +93,7 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   issues.replaceChildren(...defect.issues.map(({ match, evidence }) => element("li", `${match.canonicalPath} · ${evidence.ruleName ?? match.ruleId} revision ${match.ruleRevision} · actual ${String(evidence.actual)} · expected ${evidence.expected ?? ""}`)));
   const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
   const preview = element("section"); preview.setAttribute("aria-label", "Final report preview");
-  preview.innerHTML = missingEvent
-    ? generateMissingEventRepresentations(defect.report as MissingEventReport).previewHtml
-    : occurrence
-      ? renderOccurrenceReport(defect.report as OccurrenceReport).html
-      : renderJiraReport(defect.report as GeneratedDefectReport).html;
+  preview.innerHTML = storedDefectRepresentations(defect).html;
   root.replaceChildren(
     header,
     identity,
