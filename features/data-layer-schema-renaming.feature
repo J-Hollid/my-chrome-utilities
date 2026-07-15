@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=88035642bdc102bca8bdf7749cdac0a73f8231e0595674c653469bd066093cff
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T15:43:07.523352636Z","feature_name":"Data layer schema renaming","feature_path":"features/data-layer-schema-renaming.feature","background_hash":"036a352d6b8c52ff56da484f0189a7191909f7833558372326608618ac3ccf82","implementation_hash":"sha256:2ed3e5e314dc9777d883d078906c84a682b4e39e1808070dbdd585820569cdfa","scenarios":[{"index":3,"name":"Data layer schema renaming 004","scenario_hash":"fc71d0a294c8d63fd30d0add9736b1d93fd0f67023eb5b463c92e6f36764ea20","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T15:43:07.523352636Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema renaming
 
   Background:
