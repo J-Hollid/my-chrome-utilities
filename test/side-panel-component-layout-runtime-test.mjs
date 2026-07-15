@@ -59,6 +59,7 @@ let schemaAssignmentDataConditionsObservation;
 let schemaPropertyExampleValuesObservation;
 let guidedNestedPropertyMergeObservation;
 let libraryDirectTemplatePushObservation;
+let liveSchemaPropertyDeclarationObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -66,6 +67,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
@@ -3447,6 +3449,33 @@ const libraryDirectTemplatePushRuntime = `(async () => {
   return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]) };
 })()`;
 
+const liveSchemaPropertyDeclarationSeedRuntime = `(() => {
+  localStorage.clear();
+  const assignment={id:"product-view",schemaId:"product-detail",sourceId:"history",eventName:"product_view",target:"payload",versionPolicy:"follow latest",enabled:true};
+  const document={type:"object",additionalProperties:false,properties:{products:{type:"array",minItems:1,items:{type:"object",properties:{metadata:{type:"object"}}}}}};
+  const schema={id:"product-detail",name:"Product detail",version:3,published:true,document:{type:"object",properties:{}},assignments:[assignment],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],workingDraft:{baseVersion:3,sourceVersion:3,document,assignments:[assignment],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],pendingChanges:[]}};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
+  localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1",JSON.stringify({["history\\u0000product_view"]:"product-detail"}));
+  const payload={page_type:"product_detail",commerce:{currency:"EUR"},products:[{product_name:"Phone",product_id:42}]};
+  const event={type:"observed",url:"https://shop.example/product",timestamp:"2026-07-15T18:00:00Z",observerPath:"dataLayer",id:"event:product-view",name:"product_view",sessionId:"session:declaration",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"https://shop.example/product",payload,rawInput:["product_view",payload],rawValue:["product_view",payload],validation:"Not checked"};
+  localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:declaration",status:"active",freshBoundary:true,tabId:42,historyPath:"dataLayer",startUrl:event.pageUrl,currentUrl:event.pageUrl,timeline:[event]}}));return true;
+})()`;
+
+const liveSchemaPropertyDeclarationRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  q("#data-layer-view-live").click();q("#live-event-feed button").click();
+  const inspector=q("#live-event-inspector");
+  const productName=Array.from(inspector.querySelectorAll('button[data-action="add-property-to-schema"]')).find(({ariaLabel})=>ariaLabel.includes("product_name"));
+  const validation=Array.from(inspector.querySelectorAll('button[data-action="add-property-validation"]')).find(({ariaLabel})=>ariaLabel.includes("product_name"));
+  const before=localStorage.getItem("my-chrome-utilities.schema-library.v1");productName.click();await pause();
+  const dialog=q(".live-schema-property-declaration-review");const review={text:dialog.textContent,noValidationControls:!["requirement","scope","assignment","severity","message","Rule Library"].some((term)=>dialog.textContent.includes(term)),storageUnchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),guidedHidden:q("#guided-validation-flow").hidden};
+  Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent.startsWith("Add property to" )).click();await new Promise((resolve)=>setTimeout(resolve,50));
+  const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];const item=stored.workingDraft.document.properties.products.items;
+  const saved={type:item.properties.product_name.type,keys:Object.keys(item.properties.product_name),metadata:item.properties.metadata,assignments:stored.workingDraft.assignments,rules:stored.workingDraft.attachedRules,focused:document.activeElement?.getAttribute("data-action"),version:stored.version};
+  validation.click();await pause();const separate={guidedVisible:!q("#guided-validation-flow").hidden,declarationDialogs:document.querySelectorAll(".live-schema-property-declaration-review").length};
+  return {actions:{addToSchema:Boolean(productName),addValidation:Boolean(validation),destination:productName.ariaLabel},review,saved,separate};
+})()`;
+
 const libraryActionsRecoveryRuntime = `(async () => {
   const q = (selector) => {
     const element = document.querySelector(selector);
@@ -4730,6 +4759,14 @@ try {
       assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
       socket.close();continue;
     }
+    if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,liveSchemaPropertyDeclarationSeedRuntime);await reloadPanel(socket);
+      liveSchemaPropertyDeclarationObservation=await evaluate(socket,liveSchemaPropertyDeclarationRuntime);const observed=liveSchemaPropertyDeclarationObservation;
+      assert.equal(observed.actions.addToSchema&&observed.actions.addValidation,true);assert.match(observed.actions.destination,/Product detail/);
+      assert.match(observed.review.text,/\/products\/\*\/product_name/);assert.match(observed.review.text,/String/);assert.match(observed.review.text,/Product detail revision 3/);assert.equal(observed.review.noValidationControls&&observed.review.storageUnchanged,true);
+      assert.deepEqual(observed.saved.keys,["type"]);assert.equal(observed.saved.type,"string");assert.deepEqual(observed.saved.metadata,{type:"object"});assert.equal(observed.saved.rules.length,1);assert.equal(observed.saved.assignments.length,1);assert.equal(observed.saved.version,3);
+      assert.equal(observed.separate.guidedVisible,true);assert.equal(observed.separate.declarationDialogs,0);socket.close();continue;
+    }
     if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
       libraryDirectTemplatePushObservation=await evaluate(socket,libraryDirectTemplatePushRuntime);const observed=libraryDirectTemplatePushObservation;
@@ -5927,6 +5964,9 @@ try {
   }
   if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ libraryDirectTemplatePush:libraryDirectTemplatePushObservation }));
+  }
+  if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }
   if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));

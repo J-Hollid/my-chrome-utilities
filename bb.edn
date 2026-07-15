@@ -11,6 +11,7 @@
                         [acceptance.canonical-declared-property-validation-steps-test]
                         [acceptance.recursive-declared-property-validation-steps-test]
                         [acceptance.library-direct-template-push-steps-test]
+                        [acceptance.live-schema-property-declaration-steps-test]
                         [babashka.process :as process]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
@@ -79,6 +80,7 @@
                                                 'acceptance.canonical-declared-property-validation-steps-test
                                                 'acceptance.recursive-declared-property-validation-steps-test
                                                 'acceptance.library-direct-template-push-steps-test
+                                                'acceptance.live-schema-property-declaration-steps-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
