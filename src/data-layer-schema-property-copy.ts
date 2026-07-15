@@ -13,6 +13,7 @@ export interface SchemaPropertyCopySource {
 
 export interface SchemaPropertyCopyDependency { path:string; requiredBy:string }
 export interface SchemaPropertyCopyConflict {
+  decisionKey:string;
   path:string;
   kind:"property conflict" | "blocked structural conflict" | "rule conflict" | "documentation conflict";
   source?:unknown;
@@ -120,6 +121,8 @@ function pathCovered(path:string, roots:ReadonlySet<string>):boolean {
   return [...roots].some((root) => path === root || path.startsWith(`${root}/`));
 }
 
+function documentationDecisionKey(path:string):string { return `documentation:${path}`; }
+
 function sameDefinition(left:JsonSchema, right:JsonSchema):boolean { return JSON.stringify(left) === JSON.stringify(right); }
 function container(definition:JsonSchema | undefined):boolean { return definition?.type === "object" || definition?.type === "array"; }
 function ruleConfiguration(rule:AttachedSchemaRule):string {
@@ -157,15 +160,15 @@ export function planSchemaPropertyCopy(options:{
     for(const ancestor of ancestorPaths(root)) pathSet.add(ancestor);
     if(root===selectedPath) for(const descendant of descendants(propertyAt(options.source.schema.document,root),root)) pathSet.add(descendant);
   }
+  const structuralAncestors=new Set([...roots].flatMap(ancestorPaths).filter((path)=>!roots.has(path)));
   const decisions=options.decisions??{}; const excludedPaths=Object.entries(decisions).filter(([path,decision])=>!path.startsWith("rule:")&&(decision==="keep destination"||decision==="exclude dependency")).map(([path])=>canonical(path));
   const propertyPaths=[...pathSet].filter((path)=>propertyAt(options.source.schema.document,path)).sort();
   const conflicts:SchemaPropertyCopyConflict[]=[];
   for(const path of propertyPaths){
     const sourceDefinition=propertyAt(options.source.schema.document,path)!; const destinationDefinition=propertyAt(options.destination.workingDraft?.document??options.destination.document,path);
     if(!destinationDefinition) continue;
-    const ancestor=path!==selectedPath && [...roots].every((root)=>path!==root);
-    if(ancestor && !container(destinationDefinition)) conflicts.push({path,kind:"blocked structural conflict",source:clone(sourceDefinition),destination:clone(destinationDefinition)});
-    else if(sourceDefinition.type!==destinationDefinition.type) conflicts.push({path,kind:"property conflict",source:clone(sourceDefinition),destination:clone(destinationDefinition),...(decisions[path]?{decision:decisions[path]}:{})});
+    if(structuralAncestors.has(path) && !container(destinationDefinition)) conflicts.push({decisionKey:path,path,kind:"blocked structural conflict",source:clone(sourceDefinition),destination:clone(destinationDefinition)});
+    else if(sourceDefinition.type!==destinationDefinition.type) conflicts.push({decisionKey:path,path,kind:"property conflict",source:clone(sourceDefinition),destination:clone(destinationDefinition),...(decisions[path]?{decision:decisions[path]}:{})});
   }
   const reusable=new Set(options.reusableRuleIds);
   const destinationChain=schemaChain(options.destination,options.schemas);const effectiveDestinationRules=destinationChain.flatMap((schema)=>schema.workingDraft?.attachedRules??schema.attachedRules??[]);
@@ -179,7 +182,7 @@ export function planSchemaPropertyCopy(options:{
   for(const planned of rules){
     const sameId=effectiveDestinationRules.find(({id})=>id===planned.rule.id);
     if(sameId&&ruleConfiguration(sameId)!==ruleConfiguration(planned.rule)){
-      const key=`rule:${planned.rule.id}`;conflicts.push({path:key,kind:"rule conflict",source:clone(planned.rule),destination:clone(sameId),...(decisions[key]?{decision:decisions[key]}:{})});
+      const key=`rule:${planned.rule.id}`;conflicts.push({decisionKey:key,path:key,kind:"rule conflict",source:clone(planned.rule),destination:clone(sameId),...(decisions[key]?{decision:decisions[key]}:{})});
     }
   }
   const effectiveDocumentation=resolveEffectiveSchemaDocumentation(options.source.schema,options.schemas);
@@ -188,7 +191,8 @@ export function planSchemaPropertyCopy(options:{
   });
   for(const item of documentation){
     const destinationEntry=(options.destination.workingDraft?.documentation??options.destination.documentation)?.properties?.[item.path];
-    if(destinationEntry&&!sameDefinition(destinationEntry as unknown as JsonSchema,item.entry as unknown as JsonSchema)) conflicts.push({path:item.path,kind:"documentation conflict",source:item.entry,destination:clone(destinationEntry),...(decisions[item.path]?{decision:decisions[item.path]}:{})});
+    const key=documentationDecisionKey(item.path);
+    if(destinationEntry&&!sameDefinition(destinationEntry as unknown as JsonSchema,item.entry as unknown as JsonSchema)) conflicts.push({decisionKey:key,path:item.path,kind:"documentation conflict",source:item.entry,destination:clone(destinationEntry),...(decisions[key]?{decision:decisions[key]}:{})});
   }
   const replacementRoots=Object.entries(decisions).filter(([path,decision])=>!path.startsWith("rule:")&&decision==="replace from source").map(([path])=>canonical(path));
   const destinationDocument=options.destination.workingDraft?.document??options.destination.document;
@@ -259,7 +263,7 @@ export function applySchemaPropertyCopy(plan:SchemaPropertyCopyPlan):AppliedSche
   }
   const baseDocumentation=clone(existing?.documentation??plan.destination.documentation??{});const properties=Object.fromEntries(Object.entries(clone(baseDocumentation.properties??{})).filter(([path])=>!replacementRoots.some((root)=>path===root||path.startsWith(`${root}/`))));
   for(const item of plan.documentation){
-    const decision=plan.decisions[item.path];if(decision==="keep destination"||decision==="use destination text")continue;properties[item.path]=clone(item.entry);
+    const decision=plan.decisions[documentationDecisionKey(item.path)]??plan.decisions[item.path];if(decision==="keep destination"||decision==="use destination text")continue;properties[item.path]=clone(item.entry);
   }
   const documentation={...(baseDocumentation.description?{description:baseDocumentation.description}:{}),...(Object.keys(properties).length?{properties}:{})};
   const pendingChange=`Copy ${plan.source.label} property ${plan.selectedPath}`;

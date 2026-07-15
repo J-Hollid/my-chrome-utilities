@@ -68,6 +68,7 @@ function schemaChain(schema, schemas) {
 function pathCovered(path, roots) {
     return [...roots].some((root) => path === root || path.startsWith(`${root}/`));
 }
+function documentationDecisionKey(path) { return `documentation:${path}`; }
 function sameDefinition(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
 function container(definition) { return definition?.type === "object" || definition?.type === "array"; }
 function ruleConfiguration(rule) {
@@ -108,6 +109,7 @@ export function planSchemaPropertyCopy(options) {
             for (const descendant of descendants(propertyAt(options.source.schema.document, root), root))
                 pathSet.add(descendant);
     }
+    const structuralAncestors = new Set([...roots].flatMap(ancestorPaths).filter((path) => !roots.has(path)));
     const decisions = options.decisions ?? {};
     const excludedPaths = Object.entries(decisions).filter(([path, decision]) => !path.startsWith("rule:") && (decision === "keep destination" || decision === "exclude dependency")).map(([path]) => canonical(path));
     const propertyPaths = [...pathSet].filter((path) => propertyAt(options.source.schema.document, path)).sort();
@@ -117,11 +119,10 @@ export function planSchemaPropertyCopy(options) {
         const destinationDefinition = propertyAt(options.destination.workingDraft?.document ?? options.destination.document, path);
         if (!destinationDefinition)
             continue;
-        const ancestor = path !== selectedPath && [...roots].every((root) => path !== root);
-        if (ancestor && !container(destinationDefinition))
-            conflicts.push({ path, kind: "blocked structural conflict", source: clone(sourceDefinition), destination: clone(destinationDefinition) });
+        if (structuralAncestors.has(path) && !container(destinationDefinition))
+            conflicts.push({ decisionKey: path, path, kind: "blocked structural conflict", source: clone(sourceDefinition), destination: clone(destinationDefinition) });
         else if (sourceDefinition.type !== destinationDefinition.type)
-            conflicts.push({ path, kind: "property conflict", source: clone(sourceDefinition), destination: clone(destinationDefinition), ...(decisions[path] ? { decision: decisions[path] } : {}) });
+            conflicts.push({ decisionKey: path, path, kind: "property conflict", source: clone(sourceDefinition), destination: clone(destinationDefinition), ...(decisions[path] ? { decision: decisions[path] } : {}) });
     }
     const reusable = new Set(options.reusableRuleIds);
     const destinationChain = schemaChain(options.destination, options.schemas);
@@ -137,7 +138,7 @@ export function planSchemaPropertyCopy(options) {
         const sameId = effectiveDestinationRules.find(({ id }) => id === planned.rule.id);
         if (sameId && ruleConfiguration(sameId) !== ruleConfiguration(planned.rule)) {
             const key = `rule:${planned.rule.id}`;
-            conflicts.push({ path: key, kind: "rule conflict", source: clone(planned.rule), destination: clone(sameId), ...(decisions[key] ? { decision: decisions[key] } : {}) });
+            conflicts.push({ decisionKey: key, path: key, kind: "rule conflict", source: clone(planned.rule), destination: clone(sameId), ...(decisions[key] ? { decision: decisions[key] } : {}) });
         }
     }
     const effectiveDocumentation = resolveEffectiveSchemaDocumentation(options.source.schema, options.schemas);
@@ -147,8 +148,9 @@ export function planSchemaPropertyCopy(options) {
     });
     for (const item of documentation) {
         const destinationEntry = (options.destination.workingDraft?.documentation ?? options.destination.documentation)?.properties?.[item.path];
+        const key = documentationDecisionKey(item.path);
         if (destinationEntry && !sameDefinition(destinationEntry, item.entry))
-            conflicts.push({ path: item.path, kind: "documentation conflict", source: item.entry, destination: clone(destinationEntry), ...(decisions[item.path] ? { decision: decisions[item.path] } : {}) });
+            conflicts.push({ decisionKey: key, path: item.path, kind: "documentation conflict", source: item.entry, destination: clone(destinationEntry), ...(decisions[key] ? { decision: decisions[key] } : {}) });
     }
     const replacementRoots = Object.entries(decisions).filter(([path, decision]) => !path.startsWith("rule:") && decision === "replace from source").map(([path]) => canonical(path));
     const destinationDocument = options.destination.workingDraft?.document ?? options.destination.document;
@@ -253,7 +255,7 @@ export function applySchemaPropertyCopy(plan) {
     const baseDocumentation = clone(existing?.documentation ?? plan.destination.documentation ?? {});
     const properties = Object.fromEntries(Object.entries(clone(baseDocumentation.properties ?? {})).filter(([path]) => !replacementRoots.some((root) => path === root || path.startsWith(`${root}/`))));
     for (const item of plan.documentation) {
-        const decision = plan.decisions[item.path];
+        const decision = plan.decisions[documentationDecisionKey(item.path)] ?? plan.decisions[item.path];
         if (decision === "keep destination" || decision === "use destination text")
             continue;
         properties[item.path] = clone(item.entry);
