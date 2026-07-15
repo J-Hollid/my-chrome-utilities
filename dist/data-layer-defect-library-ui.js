@@ -1,5 +1,6 @@
 import { defectLifecycleAction, } from "./data-layer-defect-library.js";
 import { renderJiraReport } from "./data-layer-defect-report.js";
+import { renderOccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
 import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
 export function findDefectLibraryElements(root = document) {
     return {
@@ -56,6 +57,7 @@ function renderDetail(root, defect, actions) {
     description.value = reportField(defect.report, "description");
     description.dataset.defectField = "description";
     const missingEvent = defect.type === "Missing event";
+    const occurrence = defect.type === "Unexpected event" || defect.type === "Wrong event name";
     const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
     const expected = element("textarea");
     expected.value = reportField(defect.report, expectedField);
@@ -80,7 +82,7 @@ function renderDetail(root, defect, actions) {
         controls.append(button("Reopen", () => actions.updateStatus(defect.id, "Reported")));
     if (defect.status !== "Archived")
         controls.append(button("Archive", () => actions.updateStatus(defect.id, "Archived")));
-    if (defect.type === "Validation issue" && !defect.savedSession)
+    if (defect.type !== "Missing event" && !defect.savedSession)
         controls.append(button("Attach current session", () => actions.attachCurrentSession(defect.id)));
     if (defect.savedSession)
         controls.append(button("Open linked session", () => actions.openLinkedSession(defect.id)));
@@ -93,7 +95,9 @@ function renderDetail(root, defect, actions) {
     preview.setAttribute("aria-label", "Final report preview");
     preview.innerHTML = missingEvent
         ? generateMissingEventRepresentations(defect.report).previewHtml
-        : renderJiraReport(defect.report).html;
+        : occurrence
+            ? renderOccurrenceReport(defect.report).html
+            : renderJiraReport(defect.report).html;
     root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), preview, label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
     root.hidden = false;
     title.focus({ preventScroll: true });

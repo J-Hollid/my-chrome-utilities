@@ -5,6 +5,7 @@ import {
 import type { LiveEvent } from "./data-layer-live-observer.js";
 import type { ValidationState } from "./data-layer-source.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+import type { OccurrenceExpectationMode } from "./data-layer-event-occurrence-defect-report.js";
 
 export interface LiveInspectorActions {
   copyPayload(event: LiveEvent): Promise<void>;
@@ -15,6 +16,7 @@ export interface LiveInspectorActions {
   expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
+  startOccurrenceDefectReport?(event: LiveEvent, mode: OccurrenceExpectationMode): void;
   openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
   validationAvailability(event: LiveEvent): { enabled: boolean; reason?: string };
   validate(event: LiveEvent): void;
@@ -43,6 +45,7 @@ export interface LiveInspectorActionEffects {
   expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
   startDefectReport?(event: LiveEvent): void;
+  startOccurrenceDefectReport?(event: LiveEvent, mode: OccurrenceExpectationMode): void;
   openReportedDefect?(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement): void;
   onTemplateSaved?(template: EditableEventTemplate): void;
   validationAvailable?(event: LiveEvent): boolean;
@@ -88,6 +91,7 @@ export function createLiveInspectorActions(
     ...(effects.expandAllowedValue ? { expandAllowedValue(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement) { effects.expandAllowedValue?.(event, evaluation, trigger); } } : {}),
     ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),
     ...(effects.startDefectReport ? { startDefectReport(event: LiveEvent) { effects.startDefectReport?.(event); } } : {}),
+    ...(effects.startOccurrenceDefectReport ? { startOccurrenceDefectReport(event: LiveEvent, mode: OccurrenceExpectationMode) { effects.startOccurrenceDefectReport?.(event, mode); } } : {}),
     ...(effects.openReportedDefect ? { openReportedDefect(defectId: string, event: LiveEvent, issueIndex: number, trigger: HTMLButtonElement) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),
     validationAvailability(event) {
       return effects.validationAvailable?.(event) === false

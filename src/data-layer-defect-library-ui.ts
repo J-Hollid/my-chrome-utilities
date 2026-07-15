@@ -4,6 +4,7 @@ import {
   type ReportedDefect,
 } from "./data-layer-defect-library.js";
 import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
+import { renderOccurrenceReport, type OccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
 import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
 
 export interface DefectLibraryElements {
@@ -69,6 +70,7 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   const summary = element("input"); summary.value = reportField(defect.report, "summary"); summary.dataset.defectField = "summary";
   const description = element("textarea"); description.value = reportField(defect.report, "description"); description.dataset.defectField = "description";
   const missingEvent = defect.type === "Missing event";
+  const occurrence = defect.type === "Unexpected event" || defect.type === "Wrong event name";
   const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
   const expected = element("textarea"); expected.value = reportField(defect.report, expectedField); expected.dataset.defectField = expectedField;
   const notes = element("textarea"); notes.value = defect.notes; notes.dataset.defectField = "notes";
@@ -83,7 +85,7 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   if (lifecycle === "Resolve") controls.append(button("Resolve", () => actions.updateStatus(defect.id, "Resolved")));
   if (lifecycle === "Reopen") controls.append(button("Reopen", () => actions.updateStatus(defect.id, "Reported")));
   if (defect.status !== "Archived") controls.append(button("Archive", () => actions.updateStatus(defect.id, "Archived")));
-  if (defect.type === "Validation issue" && !defect.savedSession) controls.append(button("Attach current session", () => actions.attachCurrentSession(defect.id)));
+  if (defect.type !== "Missing event" && !defect.savedSession) controls.append(button("Attach current session", () => actions.attachCurrentSession(defect.id)));
   if (defect.savedSession) controls.append(button("Open linked session", () => actions.openLinkedSession(defect.id)));
   controls.append(button("Delete", () => actions.requestDelete(defect.id)));
   const issues = element("ul"); issues.setAttribute("aria-label", "Stored issue evidence");
@@ -92,7 +94,9 @@ function renderDetail(root: HTMLElement, defect: ReportedDefect, actions: Defect
   const preview = element("section"); preview.setAttribute("aria-label", "Final report preview");
   preview.innerHTML = missingEvent
     ? generateMissingEventRepresentations(defect.report as MissingEventReport).previewHtml
-    : renderJiraReport(defect.report as GeneratedDefectReport).html;
+    : occurrence
+      ? renderOccurrenceReport(defect.report as OccurrenceReport).html
+      : renderJiraReport(defect.report as GeneratedDefectReport).html;
   root.replaceChildren(
     header,
     identity,

@@ -202,6 +202,8 @@ import {
   type LiveInspectorPresentationSnapshot,
 } from "./data-layer-live-inspector-presentation-ui.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
+import { renderOccurrenceDefectReportBuilder } from "./data-layer-event-occurrence-defect-report-ui.js";
+import { renderOccurrenceReport, type OccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
 import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
 import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
@@ -211,11 +213,13 @@ import {
   cancelDefectDeletion,
   confirmDefectDeletion,
   createMissingEventDefect,
+  createOccurrenceDefect,
   createValidationDefect,
   currentDefectIssues,
   DEFECT_LIBRARY_STORAGE_KEY,
   editDefect,
   eventContainsDefectIssue,
+  eventMatchesOccurrenceDefect,
   presentedEventTriage,
   requestDefectDeletion,
   restoreDefectLibrary,
@@ -1198,6 +1202,8 @@ function filteredDefectLibrary(): ReportedDefect[] {
 function defectReportText(defect: ReportedDefect): string {
   return defect.type === "Missing event"
     ? generateMissingEventRepresentations(defect.report as MissingEventReport).jiraText
+    : defect.type === "Unexpected event" || defect.type === "Wrong event name"
+      ? renderOccurrenceReport(defect.report as OccurrenceReport).text
     : renderJiraReport(defect.report as GeneratedDefectReport).text;
 }
 
@@ -1232,6 +1238,11 @@ function closeDefect(): void {
 }
 
 function matchingEventForDefect(defect: ReportedDefect): LiveEvent | undefined {
+  if (defect.occurrenceMatch) {
+    const capturedId = String(defect.report?.actual?.id ?? "");
+    return liveObserverState.events.find((event) => event.id === capturedId && eventMatchesOccurrenceDefect(event, defect))
+      ?? liveObserverState.events.find((event) => eventMatchesOccurrenceDefect(event, defect));
+  }
   return liveObserverState.events.find((event) => eventContainsDefectIssue(event, defect));
 }
 
@@ -1689,6 +1700,36 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
           },
         );
       }
+    },
+    startOccurrenceDefectReport: (selected, mode) => {
+      if (!liveObserverElements.eventInspector) return;
+      renderOccurrenceDefectReportBuilder(
+        liveObserverElements.eventInspector,
+        selected,
+        mode,
+        schemas,
+        liveObserverState.events,
+        undefined,
+        createLiveDefectReportNavigation(selected.id, {
+          reopenCapturedEvent: openLiveInspector,
+          createDefectReportAction: () => liveObserverElements.eventInspector
+            ?.querySelector<HTMLButtonElement>(`#live-inspector-action-report-${mode === "Unexpected event" ? "unexpected-event" : "wrong-event-name"}`) ?? null,
+          closeToLiveFeed: closeInspectorAndReturnToEvents,
+        }),
+        {
+          save:async (report, options) => {
+            const defect = createOccurrenceDefect({ id:`defect:${crypto.randomUUID()}`, now:new Date().toISOString(), report });
+            const result = addDefect(defectLibrary, defect, options.saveSeparately);
+            if (result.added) { defectLibrary = result.library; persistDefectLibrary(); renderDefects(); renderLiveObserver(); }
+            if (options.copy && navigator.clipboard?.writeText) await navigator.clipboard.writeText(renderOccurrenceReport(report).text);
+            return result.added
+              ? { feedback:options.copy ? "Occurrence defect saved and copied for Jira Cloud." : "Occurrence defect saved." }
+              : { feedback:"A reported occurrence defect already matches this event.", existing:result.existing.map((existing) => ({ id:existing.id, label:String(existing.report?.summary ?? existing.id) })) };
+          },
+          openExisting:openDefect,
+          updateExisting:(id, report) => { defectLibrary = editDefect(defectLibrary, id, { report }, new Date().toISOString()); persistDefectLibrary(); openDefect(id); },
+        },
+      );
     },
     openReportedDefect:(defectId, selected, issueIndex) => {
       defectReturn = { eventId:selected.id, issueIndex, listScrollTop:liveObserverElements.eventList?.scrollTop ?? 0 };
