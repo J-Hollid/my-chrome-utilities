@@ -47,7 +47,9 @@ assert.deepEqual(report.issues.map(({ id, selected }) => [id, selected]), [
 assert.notEqual(report.actual.payload, capturedPayload);
 assert.deepEqual(report.actual.payload, capturedPayload);
 assert.deepEqual(report.actual.differences[0], {
+  issueId: "currency",
   pointer: "/commerce/currency", marker: "−", treatment: "red", value: "GBP",
+  actualPresence: "present",
 });
 const warningSelected = toggleReportIssue(report, "coupon");
 assert.equal(warningSelected.issues.find(({ id }) => id === "coupon").selected, true);
@@ -77,9 +79,8 @@ assert.deepEqual(corrected.expected.payload, {
 assert.deepEqual(corrected.expected.corrections.map(({ operation, pointer, marker }) => [operation, pointer, marker]), [
   ["replace", "/commerce/currency", "+"],
   ["add", "/commerce/order_id", "+"],
-  ["none", "/commerce/coupon", undefined],
 ]);
-assert.equal(corrected.expected.explanations.at(-1), "coupon satisfies its validation rule");
+assert.equal(corrected.expected.explanations.at(-1), "order_id is A-123");
 assert.equal(corrected.expected.corrections[0].responseSource, "Checkout schema");
 assert.equal(corrected.expected.corrections[1].responseSource, "Custom value or response");
 assert.deepEqual(capturedPayload, { commerce: { currency: "GBP", total: -1, debug: true } });

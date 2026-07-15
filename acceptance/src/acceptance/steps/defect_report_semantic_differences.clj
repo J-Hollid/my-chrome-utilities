@@ -1,0 +1,136 @@
+(ns acceptance.steps.defect-report-semantic-differences
+  (:require [acceptance.steps.support :as support]
+            [clojure.string :as str]))
+
+(def feature-files
+  ["features/data-layer-defect-report-semantic-differences.feature"
+   "features/data-layer-defect-report-semantic-differences-runtime.feature"])
+
+(def entry-modes
+  {"captured error event contains undeclared /action and /code properties" :model
+   "the built extension side panel is running with production validation, defect reporting, Jira export, and Defect Library persistence" :runtime})
+
+(defonce model-verified? (atom false))
+(defonce browser-observation (atom nil))
+
+(defn- verify-model! []
+  (support/cached-command-verification!
+   model-verified? "Defect-report semantic-difference model verification failed. "
+   "node" "test/data-layer-defect-report-semantic-differences-test.mjs"))
+
+(defn- runtime-observation! []
+  (support/cached-browser-observation!
+   browser-observation
+   {:adapter-env "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER"
+    :observation-key :defectReportSemanticDifferences
+    :runtime-error "Defect-report semantic-difference browser runtime failed."
+    :missing-error "Defect-report semantic-difference browser evidence is missing."}))
+
+(def actual-descriptions
+  ["undeclared property is present in the actual payload"
+   "required property is missing from the actual payload"
+   "actual value is not allowed"
+   "actual value has the wrong type"
+   "actual value does not equal the required value"
+   "validation failed: Value violates partner contract"
+   "validation failed"])
+
+(def expected-descriptions
+  ["was added to the expected payload"
+   "was replaced in the expected payload"
+   "was removed from the expected payload"
+   nil])
+
+(defn- assert-runtime! [{:keys [initial deselected reselected semantic mappings pointerCases duplicate legacy immutable layout runtimeErrors] :as observed}]
+  (let [actual-lines (filter #(= "actual" (:group %)) (:lines initial))
+        expected-lines (filter #(= "expected" (:group %)) (:lines initial))]
+    (support/assert! (and (= 4 (count actual-lines) (count expected-lines))
+                          (= #{["/action" "Undeclared property"]
+                               ["/code" "Undeclared property"]
+                               ["/error_action" "Required value"]
+                               ["/error_code" "Required value"]}
+                             (set (:issues initial)))
+                          (= ["add" "add" "remove" "remove"]
+                             (sort (map :operation expected-lines)))
+                          (not-any? #(or (str/includes? (:text %) "invalid actual value")
+                                         (str/includes? (:text %) "corrected expected value"))
+                                    (:lines initial)))
+                     "The production difference model lost semantic identity or operation data." initial))
+  (support/assert! (and (not-any? #(= "error_action" (:issueId %)) (:lines deselected))
+                        (= 2 (count (filter #(= "error_action" (:issueId %)) (:lines reselected))))
+                        (:focus deselected) (:focus reselected)
+                        (= 47 (:scroll deselected) (:scroll reselected)))
+                   "Difference refresh did not follow selection while retaining focus and scroll."
+                   {:deselected deselected :reselected reselected})
+  (support/assert! (and (= actual-descriptions (:actual mappings))
+                        (= expected-descriptions (:expected mappings))
+                        (apply = (vals semantic))
+                        (every? (fn [{:keys [pointer text html]}]
+                                  (and (str/includes? text pointer) (str/includes? html pointer)))
+                                pointerCases)
+                        (str/includes? duplicate "same-a")
+                        (str/includes? duplicate "same-b"))
+                   "Rich, plain, persisted, mapped, or canonical-pointer semantics diverged." observed)
+  (support/assert! (and (str/includes? (:line legacy) "validation failed")
+                        (not-any? #(str/includes? (:line legacy) %)
+                                  ["undeclared" "missing" "not allowed" "wrong type" "does not equal"])
+                        (:unchanged legacy)
+                        immutable
+                        (<= (:body layout) (:width layout))
+                        (:lines layout)
+                        (empty? runtimeErrors))
+                   "Legacy neutrality, immutability, or constrained layout regressed." observed)
+  observed)
+
+(def model-example-values
+  {"pointer" #{"/action" "/error_action" "/page_type" "/transaction_id" "/reference"
+                "/commerce/currency" "/products/0/name" "/a~1b" "/tilde~0name" "/coupon"}
+   "violation" #{"Undeclared property" "Required value" "Value is not allowed" "Type mismatch" "Value is not exact"}
+   "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is displayed"]))
+   "operation" #{"add" "replace" "remove" "none"}})
+
+(def runtime-example-values
+  {"pointer" #{"/action" "/error_action" "/page_type" "/transaction_id" "/reference"
+                "/commerce/currency" "/products/0/name" "/a~1b" "/tilde~0name" "/coupon"}
+   "violation" #{"Undeclared property" "Required value" "Value is not allowed" "Type mismatch" "Value is not exact"}
+   "description" (set (concat (take 5 actual-descriptions) (take 3 expected-descriptions) ["no Expected difference line is rendered"]))
+   "operation" #{"add" "replace" "remove" "none"}})
+
+(def actual-relations
+  #{["/action" "Undeclared property" "undeclared property is present in the actual payload"]
+    ["/error_action" "Required value" "required property is missing from the actual payload"]
+    ["/page_type" "Value is not allowed" "actual value is not allowed"]
+    ["/transaction_id" "Type mismatch" "actual value has the wrong type"]
+    ["/reference" "Value is not exact" "actual value does not equal the required value"]})
+
+(def expected-model-relations
+  #{["/action" "remove" "was removed from the expected payload"]
+    ["/error_action" "add" "was added to the expected payload"]
+    ["/page_type" "replace" "was replaced in the expected payload"]
+    ["/coupon" "none" "no Expected difference line is displayed"]})
+
+(def expected-runtime-relations
+  #{["/action" "remove" "was removed from the expected payload"]
+    ["/error_action" "add" "was added to the expected payload"]
+    ["/page_type" "replace" "was replaced in the expected payload"]
+    ["/coupon" "none" "no Expected difference line is rendered"]})
+
+(defn- validate-relation! [example keys rows]
+  (when (every? #(support/example-value example %) keys)
+    (let [row (mapv #(support/example-value example %) keys)]
+      (support/assert! (contains? rows row)
+                       "Semantic-difference example row was outside the specified relationship."
+                       {:keys keys :row row :allowed rows}))))
+
+(defn- validate-example! [mode example]
+  (support/validate-mode-example-domain!
+   mode runtime-example-values model-example-values example
+   "Semantic-difference example value was outside the specified contract.")
+  (validate-relation! example ["pointer" "violation" "description"] actual-relations)
+  (validate-relation! example ["pointer" "operation" "description"]
+                      (if (= mode :runtime) expected-runtime-relations expected-model-relations)))
+
+(def handlers
+  (support/verified-feature-mode-handlers
+   feature-files entry-modes :defect-report-semantic-differences-mode
+   verify-model! validate-example! runtime-observation! assert-runtime!))

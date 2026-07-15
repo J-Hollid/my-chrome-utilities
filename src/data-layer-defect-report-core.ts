@@ -91,9 +91,22 @@ function responsePresentation(
   };
 }
 
+function pointerPresent(payload: unknown, pointer: string): boolean {
+  let current = payload;
+  for (const segment of pointerSegments(pointer)) {
+    if (current === null || typeof current !== "object"
+      || !Object.prototype.hasOwnProperty.call(current, segment)) return false;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return true;
+}
+
 function actualDifferences(payload: unknown, issues: readonly ReportIssue[]): ReportDifference[] {
   return issues.filter(({ selected }) => selected).map((issue) => ({
+    issueId: issue.id,
     pointer: issue.pointer,
+    ...(issue.violation ? { violation:issue.violation } : {}),
+    actualPresence: pointerPresent(payload, issue.pointer) ? "present" : "missing",
     marker: "−",
     treatment: "red",
     value: cloneValue(pointerValue(payload, issue.pointer)),
@@ -138,7 +151,7 @@ export function applyExpectedResult(
   const explanations: string[] = [];
   const applicableChoices = choices.filter(({ issueId }) => {
     const issue = report.issues.find(({ id }) => id === issueId);
-    return !issue || !isRequiredPropertyIssue(issue) || issue.selected;
+    return !issue || issue.selected;
   });
   const explicitlyChosen = new Set(applicableChoices.map(({ issueId }) => issueId));
   const effectiveChoices = [
