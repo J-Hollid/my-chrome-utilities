@@ -6,9 +6,12 @@ import {
   type PathMatchType,
 } from "./data-layer-path-conditions.js";
 import { parseTargetExpression, resolveTargetValues } from "./data-layer-recursive-property-tree.js";
+import { conditionalRuleSummary, type ConditionalRuleConditionGroup, type ConditionalRuleConsequence } from "./data-layer-conditional-validation-rules.js";
+import { guidedConditionGroup, validateGuidedConditionalDraft, type GuidedConditionalDraft } from "./data-layer-live-guided-conditional-rule-authoring.js";
+import type { GuidedValueType } from "./data-layer-guided-validation-types.js";
 
 export type GuidedValidationStage = "property" | "requirement" | "scope" | "destination" | "review";
-export type GuidedValueType = "String" | "Number" | "Array" | "Object" | "Boolean" | "Null";
+export type { GuidedValueType } from "./data-layer-guided-validation-types.js";
 export type GuidedRequirement =
   | "Must be present"
   | "Must be one of these values"
@@ -137,6 +140,7 @@ export interface GuidedValidationDraft {
   persisted: false;
   propertyEntry?: true;
   targetReplacementReview?: { previous: GuidedProperty; proposed: GuidedProperty };
+  conditional?: GuidedConditionalDraft;
 }
 
 export interface PublishedGuidedRule {
@@ -145,6 +149,10 @@ export interface PublishedGuidedRule {
   requirement: GuidedRequirement;
   values: readonly string[];
   reusableRuleId?: string;
+  conditionGroup?: ConditionalRuleConditionGroup;
+  severity?: string;
+  message?: string;
+  enabled?: boolean;
 }
 
 export interface PublishedGuidedValidation {
@@ -155,7 +163,7 @@ export interface PublishedGuidedValidation {
     pending: true;
     rules: readonly PublishedGuidedRule[];
   };
-  reusableRules: readonly { id: string; name: string; requirement: GuidedRequirement; values: readonly string[] }[];
+  reusableRules: readonly { id: string; name: string; version: number; requirement: GuidedRequirement; values: readonly string[]; conditionGroup?: ConditionalRuleConditionGroup; severity?: string; message?: string; enabled?: boolean }[];
   assignment: {
     id: string;
     name: string;
@@ -735,7 +743,25 @@ function reviewText(draft: GuidedValidationDraft): string {
   const destination = draft.destination.kind === "new"
     ? `New schema draft ${draft.destination.schemaName} will be created and remain unavailable until publication.`
     : `The rule will be added to the ${draft.destination.schemaName} working draft based on version ${draft.destination.schemaVersion}. ${draft.destination.schemaName} version ${draft.destination.schemaVersion} remains current until the working draft is published. Assignment action: ${assignmentGuidedAction(draft)}.`;
-  return `${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
+  const conditionGroup = guidedConditionGroup(draft.conditional);
+  const condition = conditionGroup
+    ? `${conditionalRuleSummary({ conditionGroup, consequence:guidedConsequence(draft.property.path, draft.requirement, draft.allowedValues) })}. `
+    : "";
+  return `${condition}${draft.event.name} on ${draft.scope.domain} requires ${draft.property.path} ${requirement}. ${draft.preview.message} Rule attachment path: ${draft.property.path}. ${destination}`;
+}
+
+function guidedConsequence(
+  propertyPath: string,
+  requirement: GuidedRequirement,
+  values: readonly string[],
+): ConditionalRuleConsequence {
+  const operator = requirement === "Must be one of these values" ? "allowed-values"
+    : requirement === "Must match a pattern" ? "regular-expression"
+      : "required";
+  const parameters = operator === "allowed-values" ? values.join(",")
+    : operator === "regular-expression" ? values[0]
+      : undefined;
+  return { propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}) };
 }
 
 export function advanceGuidedValidation(draft: GuidedValidationDraft): GuidedValidationDraft {
@@ -753,6 +779,11 @@ export function backGuidedValidation(draft: GuidedValidationDraft): GuidedValida
 
 export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: boolean): PublishedGuidedValidation {
   if (!draft.property || !draft.requirement || !draft.destination || draft.requirementCorrectionRequired) throw new Error("Guided validation draft is incomplete.");
+  const conditionGroup = guidedConditionGroup(draft.conditional);
+  if (conditionGroup && draft.conditional) {
+    const validation = validateGuidedConditionalDraft(draft.conditional, guidedConsequence(draft.property.path, draft.requirement, draft.allowedValues));
+    if (!validation.ready) throw new Error(validation.assistance);
+  }
   const schemaName = draft.destination.schemaName;
   const schemaVersion = draft.destination.kind === "existing" ? draft.destination.schemaVersion : 1;
   const schemaId = draft.destination.kind === "existing" ? draft.destination.schemaId : `schema:${slug(schemaName)}:1`;
@@ -763,6 +794,12 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
     requirement:draft.requirement,
     values:[...draft.allowedValues],
     ...(reusableRuleId ? { reusableRuleId } : {}),
+    ...(conditionGroup ? {
+      conditionGroup,
+      severity:draft.advanced.severity.toLowerCase(),
+      message:draft.advanced.message,
+      enabled:true,
+    } : {}),
   };
   const scope = draft.scope;
   const pathnameCondition = scope.kind === "current-path" ? scope.pathname : undefined;
@@ -783,7 +820,19 @@ export function publishGuidedValidation(draft: GuidedValidationDraft, reusable: 
   };
   return {
     schema:{ id:schemaId, name:schemaName, version:schemaVersion, pending:true, rules:[rule] },
-    reusableRules:reusable && reusableRuleId ? [{ id:reusableRuleId, name:draft.advanced.ruleName, requirement:draft.requirement, values:[...draft.allowedValues] }] : [],
+    reusableRules:reusable && reusableRuleId ? [{
+      id:reusableRuleId,
+      name:draft.advanced.ruleName,
+      version:1,
+      requirement:draft.requirement,
+      values:[...draft.allowedValues],
+      ...(conditionGroup ? {
+        conditionGroup,
+        severity:draft.advanced.severity.toLowerCase(),
+        message:draft.advanced.message,
+        enabled:true,
+      } : {}),
+    }] : [],
     assignment,
     destination:{
       kind:draft.destination.kind,

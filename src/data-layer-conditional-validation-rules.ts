@@ -1,3 +1,5 @@
+import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
+
 export type ConditionValueType = "string" | "number" | "boolean" | "null";
 export type ConditionPropertyType = ConditionValueType | "array" | "object";
 export type ConditionOperator =
@@ -146,6 +148,9 @@ export function evaluateConditionalRule(
 }
 
 function pathLabel(path: string): string {
+  if (path.startsWith("$")) {
+    return parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value) : segment.kind === "every" ? "*" : String(segment.value)).join(".");
+  }
   return pointerSegments(path).join(".");
 }
 

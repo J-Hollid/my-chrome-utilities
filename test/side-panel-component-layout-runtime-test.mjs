@@ -42,6 +42,7 @@ let schemaPublicationRefreshObservation;
 let allowedValueExpansionObservation;
 let localRulePromotionObservation;
 let localRulePromotionAvailabilityObservation;
+let liveGuidedConditionalRuleObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -50,6 +51,7 @@ const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROW
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -1653,6 +1655,73 @@ const guidedAssignmentCoverageRuntime = `(async () => {
 
   host.remove();
   return { event:{ name:event.name, sourceId:event.sourceId, pageUrl:event.pageUrl }, schemaName:"Order completed", first, published, incompatible, multiple };
+})()`;
+
+const liveGuidedConditionalRuleSeedRuntime = `(() => {
+  localStorage.clear();
+  const document={type:"object",properties:{page_type:{type:"string"},currency:{type:"string"},customer:{type:"object",properties:{type:{type:"string"}}},oOrder:{type:"object",properties:{aProducts:{type:"array",items:{type:"string"}}}}}};
+  const assignment={id:"assignment:product",name:"Product events",schemaId:"schema:product",sourceId:"history",eventName:"product_detail",target:"payload",domainCondition:"127.0.0.1",versionPolicy:"follow latest",enabled:true};
+  const schema={id:"schema:product",name:"Product event",version:3,published:true,document,assignments:[assignment],attachedRules:[],revisionHistory:[]};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
+  localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+  const payload={page_type:"product_detail",currency:"EUR",basket_total:125,consented:true,products:[],oOrder:{aProducts:[]}};
+  const event={type:"observed",url:"http://127.0.0.1:4173/",timestamp:"2026-07-14T23:30:00Z",observerPath:"dataLayer",id:"event:product-detail",name:"product_detail",sessionId:"session:guided-condition",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"http://127.0.0.1:4173/",payload,rawInput:["product_detail",payload],rawValue:["product_detail",payload],validation:"Not checked"};
+  localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:guided-condition",status:"active",freshBoundary:true,tabId:1,windowId:1,historyPath:"dataLayer",startUrl:"http://127.0.0.1:4173/",currentUrl:"http://127.0.0.1:4173/",timeline:[event]}}));
+  return true;
+})()`;
+
+const liveGuidedConditionalRuleRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label||textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const change=(selector,value,event="change")=>{const input=q(selector);input.value=value;input.dispatchEvent(new Event(event,{bubbles:true}));return input;};
+  const schemaKey="my-chrome-utilities.schema-library.v1",ruleKey="my-chrome-utilities.schema-rule-library.v1";
+  const stored=()=>JSON.parse(localStorage.getItem(schemaKey)); const product=()=>stored().find(({id})=>id==="schema:product");
+  q("#live-event-feed button").click();
+  const inspector=q("#live-event-inspector");inspector.scrollTop=37;
+  const trigger=()=>q('button[aria-label="Add validation for /oOrder/aProducts"]',inspector);
+  const revealTrigger=()=>{const button=trigger();let details=button.closest("details");while(details){details.open=true;details=details.parentElement?.closest("details");}return button;};
+  const openInitial=()=>{revealTrigger().click();q('input[name="guided-schema-destination"][value="existing"]').click();click(q("#guided-schema-picker"),"Select Product event version 3");click(q("#guided-validation-flow"),"Continue");};
+  const targetIndex=()=>{click(q("#guided-advanced-settings"),"Advanced Edit target path");change("#guided-target-expression","/oOrder/aProducts/0","input");change("#guided-target-expected-type","String");click(q("#guided-target-path-editor"),"Apply target path");change("#guided-requirement","Must be present");};
+  const enablePageType=()=>{q("#guided-apply-condition").click();change("#guided-condition-property-0","/page_type");};
+  openInitial();targetIndex();
+  const beforeStorage=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];
+  const requirement={heading:q("#guided-validation-heading").textContent,applyOnlyWhen:Boolean(q("#guided-apply-condition")),schemaEditorHidden:q("#schema-editor").hidden,pickerClosed:!q("#schema-property-rule-picker").open};
+  q("#guided-apply-condition").click();click(q("#guided-condition-group"),"Remove condition");click(q("#guided-validation-flow"),"Continue");const invalidNoPredicates={assistance:q("#guided-condition-group-error").textContent,storageUnchanged:beforeStorage[0]===localStorage.getItem(schemaKey)&&beforeStorage[1]===localStorage.getItem(ruleKey)};click(q("#guided-condition-group"),"Add another condition");change("#guided-condition-property-0","/page_type");
+  const pageOptions=Array.from(q("#guided-condition-property-0").options).map(({value,textContent})=>[value,textContent]);
+  const operators=Array.from(q("#guided-condition-operator-0").options).map(({value})=>value);
+  const initial={type:q("#guided-condition-type-0").textContent,comparison:q("#guided-condition-comparison-0").value,operators,summary:q("#guided-condition-summary").textContent,customerCount:pageOptions.filter(([value])=>value==="/customer/type").length,currentPageCount:pageOptions.filter(([value])=>value==="/page_type").length,noConsequenceOption:!pageOptions.some(([value])=>value==="/oOrder/aProducts/0"),withinWidth:q("#guided-validation-flow").scrollWidth<=q("#guided-validation-flow").clientWidth};
+  change("#guided-condition-property-0","/customer/type");
+  const absent={type:q("#guided-condition-type-0").textContent,operators:Array.from(q("#guided-condition-operator-0").options).map(({value})=>value),comparison:q("#guided-condition-comparison-0").value};
+  change("#guided-condition-property-0","/page_type");
+  change("#guided-condition-comparison-0","","input");click(q("#guided-validation-flow"),"Continue");
+  const invalidEmpty={storageUnchanged:beforeStorage[0]===localStorage.getItem(schemaKey)&&beforeStorage[1]===localStorage.getItem(ruleKey),assistance:q("#guided-condition-comparison-0-error").textContent,described:q("#guided-condition-comparison-0").getAttribute("aria-describedby")};
+  change("#guided-condition-operator-0","Matches pattern");change("#guided-condition-comparison-0","[","input");click(q("#guided-validation-flow"),"Continue");
+  const invalidPattern={assistance:q("#guided-condition-comparison-0-error").textContent,storageUnchanged:beforeStorage[0]===localStorage.getItem(schemaKey)&&beforeStorage[1]===localStorage.getItem(ruleKey)};
+  change("#guided-condition-operator-0","Equals");change("#guided-condition-comparison-0","product_detail","input");click(q("#guided-condition-group"),"Add another condition");change("#guided-condition-property-1","/currency");
+  const allResult=q("#guided-condition-preview").textContent;
+  change("#guided-condition-comparison-1","GBP","input");const allFalse=q("#guided-condition-preview").textContent;
+  change("#guided-condition-group-operator","Any");const anyResult=q("#guided-condition-preview").textContent;
+  change("#guided-condition-group-operator","All");change("#guided-condition-comparison-1","EUR","input");
+  q("#guided-apply-condition").click();const confirmation={open:q("#guided-condition-discard-confirmation").open,text:q("#guided-condition-discard-confirmation").textContent};click(q("#guided-condition-discard-confirmation"),"Keep conditions");confirmation.retained=Boolean(q("#guided-condition-property-1"));q("#guided-apply-condition").click();click(q("#guided-condition-discard-confirmation"),"Discard conditions");confirmation.discarded=!document.querySelector("#guided-condition-group");
+  enablePageType();
+  click(q("#guided-validation-flow"),"Continue");
+  const review={text:q("#guided-validation-review").textContent,storageUnchanged:beforeStorage[0]===localStorage.getItem(schemaKey)&&beforeStorage[1]===localStorage.getItem(ruleKey)};
+  click(q("#guided-validation-flow"),"Add validation to draft");await pause();await new Promise((resolve)=>requestAnimationFrame(resolve));
+  const localStored=product();const localRule=localStored.workingDraft.attachedRules.find(({id})=>id.startsWith("local-rule:"));
+  const active={...localStored,document:localStored.workingDraft.document,assignments:localStored.workingDraft.assignments,attachedRules:localStored.workingDraft.attachedRules,workingDraft:undefined};
+  const core=await import("/data-layer-schema-verification.js");
+  const failed=core.validateEvent({sourceId:"history",eventName:"product_detail",payload:{page_type:"product_detail",currency:"EUR",oOrder:{aProducts:[]}},rawInput:[]},[active]);
+  const notApplicable=core.validateEvent({sourceId:"history",eventName:"product_detail",payload:{page_type:"category",currency:"EUR",oOrder:{aProducts:[]}},rawInput:[]},[active]);
+  const local={path:localRule.propertyPath,condition:localRule.conditionGroup,severity:localRule.severity,message:localRule.message,enabled:localRule.enabled,failed:failed.state,failedIssues:failed.issues.length,notApplicable:notApplicable.evaluations.find(({propertyPath,status})=>propertyPath===localRule.propertyPath&&status==="not-applicable")?.status,notApplicableIssues:notApplicable.issues.length,restoredFocus:document.activeElement?.getAttribute("aria-label"),restoredScroll:inspector.scrollTop};
+  trigger().click();targetIndex();enablePageType();click(q("#guided-validation-flow"),"Continue");q("#guided-publish-rule").click();click(q("#guided-validation-flow"),"Add validation to draft");await pause();
+  const afterReusable=product();const rules=JSON.parse(localStorage.getItem(ruleKey));const reusableRule=rules[0];const reusableAttachment=afterReusable.workingDraft.attachedRules.find(({id})=>id===reusableRule.id);
+  const reusable={libraryCount:rules.length,attachmentCount:afterReusable.workingDraft.attachedRules.filter(({id})=>id===reusableRule.id).length,sameIdentity:reusableAttachment.id===reusableRule.id,sameRevision:reusableAttachment.version===reusableRule.version,conditionEqual:JSON.stringify(reusableAttachment.conditionGroup)===JSON.stringify(reusableRule.conditionGroup),attachmentTotal:afterReusable.workingDraft.attachedRules.length};
+  trigger().click();targetIndex();enablePageType();const cancelBefore=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];click(q("#guided-validation-flow"),"Cancel");await new Promise((resolve)=>requestAnimationFrame(resolve));const cancelled={storageUnchanged:cancelBefore[0]===localStorage.getItem(schemaKey)&&cancelBefore[1]===localStorage.getItem(ruleKey),focus:document.activeElement?.getAttribute("aria-label"),inspectorVisible:!inspector.hidden,scroll:inspector.scrollTop};
+  q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Product event"));click(row,"Edit working draft");q("#save-schema").click();q("#confirm-schema-revision").click();await pause();
+  const published=product();const exported=core.serializeSchemaLibraryExport([published],JSON.parse(localStorage.getItem(ruleKey)));const imported=JSON.parse(exported);localStorage.setItem(schemaKey,JSON.stringify(imported.schemas));localStorage.setItem(ruleKey,JSON.stringify(imported.rules));const reloaded=core.restoreSchemaLibrary(localStorage.getItem(schemaKey))[0];const importedRule=JSON.parse(localStorage.getItem(ruleKey))[0];const revisedRule={...structuredClone(importedRule),version:2,revisionHistory:[structuredClone(importedRule)]};localStorage.setItem(ruleKey,JSON.stringify([revisedRule]));
+  const reusablePinned=reloaded.attachedRules.find(({id})=>id===revisedRule.id);const lifecycle={version:reloaded.version,workingDraftAbsent:reloaded.workingDraft===undefined,attachmentIds:reloaded.attachedRules.map(({id})=>id),typedComparison:reloaded.attachedRules[0].conditionGroup.predicates[0].comparison,libraryIds:JSON.parse(localStorage.getItem(ruleKey)).map(({id})=>id),conditionRetained:reloaded.attachedRules.every(({conditionGroup})=>Boolean(conditionGroup)),pinnedVersion:reusablePinned.version,revisedVersion:revisedRule.version,revisedConditionRetained:JSON.stringify(revisedRule.conditionGroup)===JSON.stringify(reusablePinned.conditionGroup)};
+  return {requirement,initial,absent,invalidEmpty,invalidPattern,invalidNoPredicates,preview:{allResult,allFalse,anyResult},confirmation,review,local,reusable,cancelled,lifecycle};
 })()`;
 
 const conditionalValidationRulesRuntime = `(async () => {
@@ -3638,6 +3707,38 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,liveGuidedConditionalRuleSeedRuntime);await reloadPanel(socket);
+      liveGuidedConditionalRuleObservation=await evaluate(socket,liveGuidedConditionalRuleRuntime);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.requirement,{heading:"Define requirement",applyOnlyWhen:true,schemaEditorHidden:true,pickerClosed:true});
+      assert.equal(liveGuidedConditionalRuleObservation.initial.type,"Detected type: string");
+      assert.equal(liveGuidedConditionalRuleObservation.initial.comparison,"product_detail");
+      assert.deepEqual(liveGuidedConditionalRuleObservation.initial.operators,["Exists","Does not exist","Equals","Does not equal","Is one of","Matches pattern"]);
+      assert.equal(liveGuidedConditionalRuleObservation.initial.customerCount===1&&liveGuidedConditionalRuleObservation.initial.currentPageCount===1&&liveGuidedConditionalRuleObservation.initial.noConsequenceOption&&liveGuidedConditionalRuleObservation.initial.withinWidth,true);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.absent,{type:"Detected type: string",operators:["Exists","Does not exist","Equals","Does not equal","Is one of","Matches pattern"],comparison:""});
+      assert.equal(liveGuidedConditionalRuleObservation.invalidEmpty.storageUnchanged&&liveGuidedConditionalRuleObservation.invalidPattern.storageUnchanged,true);
+      assert.equal(liveGuidedConditionalRuleObservation.invalidNoPredicates.storageUnchanged,true);
+      assert.match(liveGuidedConditionalRuleObservation.invalidNoPredicates.assistance,/Add at least one condition/);
+      assert.match(liveGuidedConditionalRuleObservation.invalidEmpty.assistance,/Enter a comparison value/);
+      assert.match(liveGuidedConditionalRuleObservation.invalidPattern.assistance,/Correct the regular expression/);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.preview,{allResult:"Failed for the current event",allFalse:"Not applicable for the current event",anyResult:"Failed for the current event"});
+      assert.equal(liveGuidedConditionalRuleObservation.confirmation.open&&liveGuidedConditionalRuleObservation.confirmation.retained&&liveGuidedConditionalRuleObservation.confirmation.discarded,true);
+      assert.match(liveGuidedConditionalRuleObservation.review.text,/When page_type equals product_detail, oOrder\.aProducts\.0 must be present/);
+      assert.equal(liveGuidedConditionalRuleObservation.review.storageUnchanged,true);
+      assert.equal(liveGuidedConditionalRuleObservation.local.path,"/oOrder/aProducts/0");
+      assert.equal(liveGuidedConditionalRuleObservation.local.failedIssues,1);
+      assert.equal(liveGuidedConditionalRuleObservation.local.notApplicable,"not-applicable");
+      assert.equal(liveGuidedConditionalRuleObservation.local.notApplicableIssues,0);
+      assert.equal(liveGuidedConditionalRuleObservation.local.severity==="error"&&liveGuidedConditionalRuleObservation.local.message==="Validate product_detail from history"&&liveGuidedConditionalRuleObservation.local.enabled,true);
+      assert.equal(liveGuidedConditionalRuleObservation.local.restoredFocus,"Add validation for /oOrder/aProducts");
+      assert.deepEqual(liveGuidedConditionalRuleObservation.reusable,{libraryCount:1,attachmentCount:1,sameIdentity:true,sameRevision:true,conditionEqual:true,attachmentTotal:2});
+      assert.equal(liveGuidedConditionalRuleObservation.cancelled.storageUnchanged&&liveGuidedConditionalRuleObservation.cancelled.inspectorVisible,true);
+      assert.equal(liveGuidedConditionalRuleObservation.cancelled.focus,"Add validation for /oOrder/aProducts");
+      assert.equal(liveGuidedConditionalRuleObservation.lifecycle.version,4);
+      assert.equal(liveGuidedConditionalRuleObservation.lifecycle.workingDraftAbsent&&liveGuidedConditionalRuleObservation.lifecycle.conditionRetained,true);
+      assert.equal(liveGuidedConditionalRuleObservation.lifecycle.pinnedVersion===1&&liveGuidedConditionalRuleObservation.lifecycle.revisedVersion===2&&liveGuidedConditionalRuleObservation.lifecycle.revisedConditionRetained,true);
+      socket.close();continue;
+    }
     if (process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -4291,7 +4392,7 @@ try {
         retainedScope:"domain-all-paths",
         advanced:{ rule:"pageview requirement", source:"event-history", target:"payload", defaults:"Severity Error; version policy Pinned." },
         saveFailure:{ flowVisible:true, review:"pageview on 127.0.0.1 requires /page_type to be product_list or homepage. /page_type matches expected String. Rule attachment path: /page_type. New schema draft Signal Shop pageview will be created and remain unavailable until publication.", error:"Saving failed. Check storage access and try again.", unchanged:true },
-        saved:{ schemas:1, reusableRules:0, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview-on-127-0-0-1", name:"pageview on 127.0.0.1", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"], attachedRule:{ id:"rule:pageview-requirement", name:"pageview requirement", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product_list,homepage", severity:"error", enabled:true }, validation:{ state:"Valid", issues:0, evaluations:[{ propertyPath:"/page_type", status:"pass", expected:"product_list,homepage", actual:"product_list" }] }, legacy:{ parameters:"product_list,homepage", state:"Valid", issues:0, evaluations:[{ propertyPath:"/page_type", status:"pass", expected:"product_list,homepage", actual:"product_list" }], exportedParameters:"product_list,homepage" } },
+        saved:{ schemas:1, reusableRules:1, published:false, pendingChanges:["Add /page_type validation"], localRules:1, assignment:{ id:"assignment:schema:signal-shop-pageview:1:pageview-on-127-0-0-1", name:"pageview on 127.0.0.1", sourceId:"event-history", eventName:"pageview", target:"payload", priority:100, versionPolicy:"pinned", enabled:true, domainCondition:"127.0.0.1" }, flowClosed:true, inspectorRestored:true, status:"Draft Signal Shop pageview was created.", focusReturned:true, nextActions:["Review draft", "Publish revision", "Use a different schema"], attachedRule:{ id:"rule:pageview-requirement", name:"pageview requirement", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product_list,homepage", severity:"error", enabled:true }, validation:{ state:"Valid", issues:0, evaluations:[{ propertyPath:"/page_type", status:"pass", expected:"product_list,homepage", actual:"product_list" }] }, legacy:{ parameters:"product_list,homepage", state:"Valid", issues:0, evaluations:[{ propertyPath:"/page_type", status:"pass", expected:"product_list,homepage", actual:"product_list" }], exportedParameters:"product_list,homepage" } },
         published:{ label:"Publish this rule for Rule Library reuse", reusableRules:1, attachedRuleId:"rule:pageview-requirement", reusableRuleId:"rule:pageview-requirement", unpublishedChoiceAbsent:true, assignableAfterPublication:true, currentRevision:1, historicalRevisions:0, attachedRule:{ id:"rule:pageview-requirement", name:"pageview requirement", version:1, propertyPath:"/page_type", operator:"allowed-values", parameters:"product_list,homepage", severity:"error", enabled:true }, reusableRule:{ id:"rule:pageview-requirement", name:"pageview requirement", kind:"allowed-values", version:1, enabled:true, operator:"allowed-values", parameters:"product_list,homepage", severity:"error", attachments:["schema:signal-shop-pageview:1"] } },
         existingOptions:[
           { label:"Existing pageview version 1", disabled:false, explanation:"page_type will be added" },
@@ -4779,6 +4880,9 @@ try {
   }
   if (process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ localRulePromotionAvailability:localRulePromotionAvailabilityObservation }));
+  }
+  if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ liveGuidedConditionalRule:liveGuidedConditionalRuleObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

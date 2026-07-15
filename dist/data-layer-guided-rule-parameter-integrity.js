@@ -1,4 +1,4 @@
-import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 function guidedOperator(requirement) {
     if (requirement === "Must be one of these values")
         return "allowed-values";
@@ -15,7 +15,7 @@ function guidedParameters(rule) {
     return rule.values.join(",");
 }
 export function guidedAttachedRule(rule, name, localRuleId) {
-    const propertyPath = canonicalNestedPath(rule.path);
+    const propertyPath = canonicalRulePropertyPath(rule.path);
     const parameters = guidedParameters(rule);
     return {
         id: rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,
@@ -24,8 +24,10 @@ export function guidedAttachedRule(rule, name, localRuleId) {
         propertyPath,
         operator: guidedOperator(rule.requirement),
         ...(parameters !== undefined ? { parameters } : {}),
-        severity: "error",
-        enabled: true,
+        severity: rule.severity ?? "error",
+        ...(rule.message !== undefined ? { message: rule.message } : {}),
+        ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),
+        enabled: rule.enabled ?? true,
     };
 }
 //# sourceMappingURL=data-layer-guided-rule-parameter-integrity.js.map

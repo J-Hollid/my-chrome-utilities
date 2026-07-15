@@ -55,6 +55,7 @@ import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, inspectManualProperty, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
+import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
@@ -2178,14 +2179,22 @@ function guidedType(type) {
                         : undefined;
 }
 function guidedPropertyDocument(path, type) {
-    const [name, ...rest] = path.split(".");
-    if (!name)
-        return { type: "object" };
+    const segments = path.startsWith("$")
+        ? parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value) : segment.kind === "every" ? "*" : String(segment.value))
+        : path.startsWith("/")
+            ? path.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
+            : path.replace(/^\$\.?/, "").split(".").filter(Boolean);
     const leafType = guidedType(type);
-    const child = rest.length
-        ? guidedPropertyDocument(rest.join("."), type)
-        : leafType ? { type: leafType } : {};
-    return { type: "object", properties: { [name]: child } };
+    const build = (remaining) => {
+        const [segment, ...rest] = remaining;
+        if (segment === undefined)
+            return leafType ? { type: leafType } : {};
+        const child = build(rest);
+        return segment === "*" || /^\d+$/.test(segment)
+            ? { type: "array", items: child }
+            : { type: "object", properties: { [segment]: child } };
+    };
+    return build(segments);
 }
 function guidedDocumentTypes(document, prefix = "") {
     return Object.entries(document.properties ?? {}).reduce((types, [name, child]) => {
@@ -2264,13 +2273,18 @@ function restoreGuidedPropertyReturn() {
     openLiveInspector(snapshot.eventId, true);
     const inspector = liveObserverElements.eventInspector;
     const feed = liveObserverElements.eventFeed;
+    const details = Array.from(inspector?.querySelectorAll("details[data-property-path]") ?? []);
     for (const path of snapshot.expanded)
-        inspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
+        details.find(({ dataset }) => dataset.propertyPath === path)?.setAttribute("open", "");
     if (inspector)
         inspector.scrollTop = snapshot.inspectorScroll;
     if (feed)
         feed.scrollTop = snapshot.feedScroll;
-    inspector?.querySelector(`button[aria-label="Add validation for ${CSS.escape(snapshot.path)}"]`)?.focus({ preventScroll: true });
+    const focusTarget = Array.from(inspector?.querySelectorAll('button[data-action="add-property-validation"]') ?? [])
+        .find((button) => button.getAttribute("aria-label") === `Add validation for ${snapshot.path}`);
+    focusTarget?.focus({ preventScroll: true });
+    if (focusTarget)
+        requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
 }
 function persistGuidedContinuation(event, schemaId) {
     guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
@@ -2395,7 +2409,28 @@ function persistPublishedGuidedValidation(result) {
             workingDraft: { baseVersion: 0, sourceVersion: 0, document: pendingDocument, assignments: pendingAssignments, attachedRules: pendingRules, pendingChanges: [`Add ${rule.path} validation`] },
         };
     const nextSchemas = [...schemas.filter(({ id }) => id !== schema.id), schema];
-    const nextRules = reusableSchemaRules;
+    const publishedReusable = result.reusableRules[0];
+    const reusableAttachmentRule = publishedReusable
+        ? guidedAttachedRule({ ...rule, reusableRuleId: publishedReusable.id }, publishedReusable.name)
+        : undefined;
+    const nextRules = publishedReusable
+        ? [
+            ...reusableSchemaRules.filter(({ id }) => id !== publishedReusable.id),
+            {
+                id: publishedReusable.id,
+                name: publishedReusable.name,
+                kind: publishedReusable.conditionGroup ? "Conditional validation" : reusableAttachmentRule?.operator ?? "Guided validation",
+                version: publishedReusable.version,
+                ...(reusableAttachmentRule?.operator ? { operator: reusableAttachmentRule.operator } : {}),
+                ...(reusableAttachmentRule?.parameters !== undefined ? { parameters: reusableAttachmentRule.parameters } : {}),
+                ...(reusableAttachmentRule?.severity ? { severity: reusableAttachmentRule.severity } : {}),
+                ...(reusableAttachmentRule?.message !== undefined ? { message: reusableAttachmentRule.message } : {}),
+                ...(reusableAttachmentRule?.enabled !== undefined ? { enabled: reusableAttachmentRule.enabled } : {}),
+                ...(reusableAttachmentRule?.conditionGroup ? { conditionGroup: reusableAttachmentRule.conditionGroup } : {}),
+                attachments: [schema.id],
+            },
+        ]
+        : reusableSchemaRules;
     const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
