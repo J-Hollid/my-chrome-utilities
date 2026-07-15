@@ -44,6 +44,7 @@ let localRulePromotionObservation;
 let localRulePromotionAvailabilityObservation;
 let liveGuidedConditionalRuleObservation;
 let savedEventFeedFiltersObservation;
+let defectReportUndeclaredRemovalObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -54,6 +55,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER === "1" ? [320]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -2282,6 +2284,39 @@ const canonicalDeclaredPropertyValidationRuntime = `(async () => {
   return{policy,representationCases,pageCases,inheritance,disabled,publication,live,reopened,runtimeErrors};
 })()`;
 
+const defectReportUndeclaredRemovalRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(label,root=document)=>{const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent===label||button.textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const runtimeErrors=[];addEventListener("error",(event)=>runtimeErrors.push(String(event.error??event.message)));addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  const richWrites=[],plainWrites=[];let failRich=false;
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{
+    write:async(items)=>{if(failRich)throw new Error("rich unavailable");const item=items[0];richWrites.push({html:await (await item.getType("text/html")).text(),text:await (await item.getType("text/plain")).text()});},
+    writeText:async(text)=>plainWrites.push(text),
+  }});
+  const verification=await import("/data-layer-schema-verification.js");const observer=await import("/data-layer-live-observer.js");const observerUi=await import("/data-layer-live-observer-ui.js");const inspectorActions=await import("/data-layer-live-inspector-actions.js");const reportUi=await import("/data-layer-defect-report-ui.js");const defects=await import("/data-layer-defect-library.js");
+  const schema=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];const payload={page_type:"product_detail",debug:true};const result=verification.validateWithSchema({sourceId:"history",eventName:"pageview",payload,rawInput:["pageview",payload]},schema,[schema]);
+  const event={id:"event:undeclared",name:"pageview",sourceId:"history",sourceName:"Event history",captureTime:"2026-07-15T10:00:00Z",pageUrl:"https://shop.example/product",payload,rawInput:["pageview",payload],validation:result.state,validationDetails:{issues:result.issues,evaluations:result.evaluations,schema:result.schema}};
+  const host=document.createElement("section");host.style.width="320px";host.innerHTML='<section id="data-layer-panel-live"><section id="live-event-list"><ul id="live-event-feed"></ul></section><aside id="live-event-inspector"></aside><button id="back-to-events"></button><div id="live-source-statuses"></div></section>';document.body.append(host);const elements=observerUi.findLiveObserverElements(host);observerUi.renderLiveObserverState(elements,{...observer.createLiveObserverState({pageUrl:event.pageUrl,sources:[]}),events:[event],inspectorEventId:event.id,listVisible:false},()=>{});
+  let savedId="";const actions=inspectorActions.createLiveInspectorActions({currentPageUrl:()=>event.pageUrl,writeClipboard:async()=>{},storeTemplate:()=>{},startDefectReport:(selected)=>reportUi.renderDefectReportBuilder(elements.eventInspector,selected,undefined,[selected],undefined,{save:async(report)=>{const defect=defects.createValidationDefect({id:"defect:undeclared",now:"2026-07-15T10:01:00Z",report,issues:defects.currentDefectIssues(selected)});savedId=defect.id;localStorage.setItem(defects.DEFECT_LIBRARY_STORAGE_KEY,defects.serializeDefectLibrary({defects:[defect]}));return{feedback:"Reported defect saved."};},openExisting:()=>{},updateExisting:()=>{}}),validationState:()=>result.state,updateValidation:()=>{},manualSchemaChoices:()=>[],selectManualSchema:()=>{}});observerUi.renderLiveInspector(elements,event,actions);
+  const inspector=q("#live-event-inspector",host);const validationText=inspector.textContent;
+  const sessionBefore=JSON.parse(localStorage.getItem("dataLayerTestingSession"));
+  const recordedEvent=sessionBefore.session.timeline.find(({id})=>id==="event:undeclared");
+  const payloadBytes=JSON.stringify(recordedEvent.payload);
+  const validationBytes=JSON.stringify(result);
+  const createAction=Array.from(inspector.querySelectorAll("button")).find(({textContent})=>textContent==="Create defect report");if(!createAction)throw new Error("Missing production Create defect report action");createAction.click();await pause();
+  const builder=q("#live-event-inspector",host);const preview=q('[aria-label="Final report preview"]',builder);const group=q('[aria-label="debug expected-result assistance"]',builder);const checkbox=q("#defect-issue-debug",builder);const removal=group.querySelector("input");
+  const expectedSection=()=>{const heading=Array.from(preview.querySelectorAll("h2")).find(({textContent})=>textContent==="Expected result");return heading?.nextElementSibling?.nextElementSibling?.textContent??"";};
+  const initial={validationText,issueLabel:checkbox.nextElementSibling?.textContent,removalLabel:group.textContent,selected:removal?.checked,inputCount:group.querySelectorAll("input").length,expected:expectedSection(),preview:preview.textContent};
+  builder.style.height="600px";builder.style.overflow="auto";builder.scrollTop=41;checkbox.focus();checkbox.click();await pause();const deselected={expected:expectedSection(),scroll:builder.scrollTop,focus:document.activeElement===checkbox};checkbox.click();await pause();const reselected={expected:expectedSection(),removals:(preview.textContent.match(/was removed from the expected payload/g)||[]).length,scroll:builder.scrollTop,focus:document.activeElement===checkbox};
+  click("Copy for Jira Cloud",builder);await pause();await pause();failRich=true;click("Copy for Jira Cloud",builder);await pause();await pause();
+  const previewBeforeSave=preview.textContent;click("Save as reported defect",builder);await pause();await pause();
+  const stored=defects.restoreDefectLibrary(localStorage.getItem(defects.DEFECT_LIBRARY_STORAGE_KEY));const saved=stored.defects.find(({id})=>id===savedId);const exportModule=await import("/data-layer-defect-report-export.js");const reopened=exportModule.renderJiraReport(saved.report).text;plainWrites.push(reopened);
+  const reportBrowser=await import("/data-layer-defect-report-browser.js");const reportCore=await import("/data-layer-defect-report-core.js");const declared={...schema,version:5,document:{...schema.document,properties:{...schema.document.properties,debug:{type:"boolean"}}}};const refreshedInput={sourceId:"history",eventName:"pageview",payload:{page_type:"product_detail",debug:true},rawInput:[]};const refreshed=verification.validateWithSchema(refreshedInput,declared,[declared]);const refreshedLive={id:"event:refreshed",name:"pageview",sourceId:"history",sourceName:"Event history",captureTime:"2026-07-15T10:02:00Z",pageUrl:"https://shop.example/product",payload:refreshedInput.payload,validation:refreshed.state,validationDetails:{issues:refreshed.issues,evaluations:refreshed.evaluations,schema:refreshed.schema}};const refreshedReport=reportCore.createDefectReport(reportBrowser.defectCapturedEvent(refreshedLive));
+  const afterSession=JSON.parse(localStorage.getItem("dataLayerTestingSession"));const afterEvent=afterSession.session.timeline.find(({id})=>id==="event:undeclared");
+  return {initial,deselected,reselected,clipboard:{rich:richWrites[0],plain:plainWrites[0]},previewBeforeSave,saved:{expected:saved.report.expected.payload,corrections:saved.report.expected.corrections,evidence:saved.report.evidence},reopened,recopied:plainWrites.at(-1),refreshed:{issues:refreshed.issues,corrections:refreshedReport.expected.corrections},historicalExpected:saved.report.expected.payload,immutable:{payload:JSON.stringify(afterEvent.payload)===payloadBytes,validation:JSON.stringify(result)===validationBytes},layout:{body:document.documentElement.scrollWidth,width:innerWidth,group:group.getBoundingClientRect().width,builder:builder.getBoundingClientRect().width},runtimeErrors};
+})()`;
+
 const schemaManualPropertyRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -3834,6 +3869,21 @@ try {
       assert.equal(liveGuidedConditionalRuleObservation.lifecycle.pinnedVersion===1&&liveGuidedConditionalRuleObservation.lifecycle.revisedVersion===2&&liveGuidedConditionalRuleObservation.lifecycle.revisedConditionRetained,true);
       socket.close();continue;
     }
+    if (process.env.DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(async () => {
+        localStorage.clear();
+        const schema={id:"schema-generic-pageview",name:"Generic pageview",version:4,published:true,document:{type:"object",additionalProperties:false,properties:{page_type:{type:"string"}}},assignments:[{id:"assignment:pageview",name:"Generic pageviews",schemaId:"schema-generic-pageview",sourceId:"history",eventName:"pageview",target:"payload",versionPolicy:"follow latest",enabled:true}],attachedRules:[]};
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+        const payload={page_type:"product_detail",debug:true};const verification=await import("/data-layer-schema-verification.js");const result=verification.validateWithSchema({sourceId:"history",eventName:"pageview",payload,rawInput:["pageview",payload]},schema,[schema]);if(result.issues[0]?.message!=="Undeclared property")throw new Error("Production validation fixture failed");const observed={type:"observed",url:"https://shop.example/product",timestamp:"2026-07-15T10:00:00Z",observerPath:"dataLayer",id:"event:undeclared",name:"pageview",sessionId:"session:undeclared",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"https://shop.example/product",payload,rawInput:["pageview",payload],rawValue:["pageview",payload],validation:"Not checked"};
+        localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:undeclared",status:"active",freshBoundary:true,tabId:1,historyPath:"dataLayer",startUrl:"https://shop.example/product",currentUrl:"https://shop.example/product",timeline:[observed]}}));return true;
+      })()`);
+      await reloadPanel(socket);defectReportUndeclaredRemovalObservation=await evaluate(socket,defectReportUndeclaredRemovalRuntime);
+      assert.match(defectReportUndeclaredRemovalObservation.initial.validationText,/Undeclared property/);assert.equal(defectReportUndeclaredRemovalObservation.initial.selected,true);assert.equal(defectReportUndeclaredRemovalObservation.initial.inputCount,1);assert.doesNotMatch(defectReportUndeclaredRemovalObservation.initial.expected,/debug|null/);assert.match(defectReportUndeclaredRemovalObservation.initial.preview,/\/debug was removed from the expected payload/);
+      assert.match(defectReportUndeclaredRemovalObservation.deselected.expected,/debug/);assert.doesNotMatch(defectReportUndeclaredRemovalObservation.reselected.expected,/debug|null/);assert.equal(defectReportUndeclaredRemovalObservation.reselected.removals,1);
+      assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.expected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.corrections.map(({pointer,operation})=>[pointer,operation]),[["/debug","remove"]]);assert.match(defectReportUndeclaredRemovalObservation.clipboard.rich.text,/\/debug was removed/);assert.match(defectReportUndeclaredRemovalObservation.clipboard.plain,/\/debug was removed/);assert.match(defectReportUndeclaredRemovalObservation.reopened,/page_type/);assert.match(defectReportUndeclaredRemovalObservation.recopied,/\/debug was removed/);
+      assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
+      socket.close();continue;
+    }
     if (process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -4981,6 +5031,9 @@ try {
   }
   if (process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ savedEventFeedFilters:savedEventFeedFiltersObservation }));
+  }
+  if (process.env.DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ defectReportUndeclaredRemoval:defectReportUndeclaredRemovalObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

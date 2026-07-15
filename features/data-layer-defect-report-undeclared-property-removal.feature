@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=12f1bdfb4b257671395c6805424c9c9fafc18d4de592a5db16534d20afa2e26d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T01:31:57.572838669Z","feature_name":"Data layer defect report undeclared property removal","feature_path":"features/data-layer-defect-report-undeclared-property-removal.feature","background_hash":"78f17dc0c4974e4a15b5f94443d878a916a8a8681e6c4f388e85f9517de1c493","implementation_hash":"sha256:71d34b28559c8942f57144f10832310dc51302cf71bde17c8696cc7d1fcdb612","scenarios":[{"index":2,"name":"Data layer defect report undeclared property removal 003","scenario_hash":"4d15e4502d92eec1a81971f1febce50290b389b1cb4eb1f75e2ce201413a3d3e","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:31:57.572838669Z"},{"index":5,"name":"Data layer defect report undeclared property removal 006","scenario_hash":"5a9e4e19617f439850f8f987ad5bdd1f65c8e84f7d518be8cd8dd7b3f47e5e69","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:31:57.572838669Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer defect report undeclared property removal
 
   Background:

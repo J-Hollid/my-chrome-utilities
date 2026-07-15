@@ -64,6 +64,64 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(toggleReportIssue(toggleReportIssue(report, issueId), issueId), report);
   assert.deepEqual(event.payload, payload);
 
+  const undeclaredKey = `extra~${iteration}/value`;
+  const undeclaredPointer = `/nested/${undeclaredKey.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+  const undeclaredPayload = {
+    declared:`declared-${iteration}`,
+    nested:{ retained:`retained-${iteration}`, [undeclaredKey]:{ value:iteration } },
+  };
+  const undeclaredSnapshot = structuredClone(undeclaredPayload);
+  const undeclaredEvent = {
+    ...event,
+    payload:undeclaredPayload,
+    issues:[{
+      id:`undeclared-${iteration}`,
+      severity:"error",
+      pointer:undeclaredPointer,
+      violation:"Undeclared property",
+      constraint:"declared property",
+      actual:structuredClone(undeclaredPayload.nested[undeclaredKey]),
+      rule:"declared-property policy",
+      ruleVersion:iteration + 1,
+    }],
+  };
+  const undeclaredReport = createDefectReport(undeclaredEvent);
+  assert.deepEqual(undeclaredReport.expected.payload, {
+    declared:`declared-${iteration}`,
+    nested:{ retained:`retained-${iteration}` },
+  }, "automatic removal must conserve every declared sibling");
+  assert.deepEqual(undeclaredReport.expected.corrections.map(({ issueId, pointer, operation, responseSource }) => ({
+    issueId, pointer, operation, responseSource,
+  })), [{
+    issueId:`undeclared-${iteration}`,
+    pointer:undeclaredPointer,
+    operation:"remove",
+    responseSource:"schema declared-property policy",
+  }]);
+  assert.deepEqual(applyExpectedResult(undeclaredReport, []).expected, undeclaredReport.expected,
+    "automatic undeclared-property correction must be idempotent");
+  const undeclaredDeselected = applyExpectedResult(toggleReportIssue(undeclaredReport, `undeclared-${iteration}`), []);
+  assert.deepEqual(undeclaredDeselected.expected.payload, undeclaredSnapshot,
+    "deselecting the issue must restore the exact captured expected payload");
+  const undeclaredReselected = applyExpectedResult(toggleReportIssue(undeclaredDeselected, `undeclared-${iteration}`), []);
+  assert.deepEqual(undeclaredReselected.expected, undeclaredReport.expected,
+    "reselecting the issue must reproduce one identical removal");
+  const undeclaredOverride = applyExpectedResult(undeclaredReport, [{
+    issueId:`undeclared-${iteration}`,
+    method:"enter a valid response",
+    response:`override-${iteration}`,
+    responseSource:"operator custom override",
+  }]);
+  assert.equal(undeclaredOverride.expected.payload.nested[undeclaredKey], `override-${iteration}`,
+    "an explicit response must replace the automatic removal for the same issue");
+  assert.equal(undeclaredOverride.expected.corrections.length, 1);
+  const undeclaredRendered = renderJiraReport(generateReportDetails(undeclaredReport));
+  assert.deepEqual(JSON.parse(undeclaredRendered.actualJson), undeclaredSnapshot);
+  assert.deepEqual(JSON.parse(undeclaredRendered.expectedJson), undeclaredReport.expected.payload);
+  assert.match(undeclaredRendered.text, new RegExp(`${undeclaredPointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} was removed`));
+  assert.deepEqual(undeclaredPayload, undeclaredSnapshot,
+    "report creation, toggles, overrides, and rendering must not mutate captured payloads");
+
   const allowed = Array.from({ length: 2 + integer(8) }, (_, index) => `value-${iteration}-${index}`);
   const actualAllowed = allowed[integer(allowed.length)];
   const assistedIssue = { ...issues[0], actual: actualAllowed, constraint: `one of ${allowed.join(" or ")}` };

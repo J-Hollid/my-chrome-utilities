@@ -1,4 +1,4 @@
-import { expectedResultAssistance, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
+import { expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     for (const reportIssue of state.report().issues) {
         let hideCustomResponse = () => { };
@@ -7,15 +7,33 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         selected.type = "checkbox";
         selected.checked = reportIssue.selected;
         selected.id = `defect-issue-${reportIssue.id}`;
-        selected.addEventListener("change", () => { state.update(toggleReportIssue(state.report(), reportIssue.id)); state.refresh(); });
         const label = document.createElement("label");
         label.htmlFor = selected.id;
-        label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}`;
+        label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}${reportIssue.violation ? ` (${reportIssue.violation})` : ""}`;
         row.append(selected, label);
         issues.append(row);
-        const assistance = expectedResultAssistance(reportIssue);
         const group = document.createElement("fieldset");
         group.setAttribute("aria-label", `${reportIssue.id} expected-result assistance`);
+        if (isUndeclaredPropertyIssue(reportIssue)) {
+            const removalLabel = document.createElement("label");
+            const removal = document.createElement("input");
+            removal.type = "radio";
+            removal.name = `defect-response-${reportIssue.id}`;
+            removal.checked = reportIssue.selected;
+            removal.dataset.responseSource = "schema declared-property policy";
+            removalLabel.textContent = "Remove undeclared property — schema declared-property policy";
+            removalLabel.prepend(removal);
+            group.append(removalLabel);
+            selected.addEventListener("change", () => {
+                state.update(toggleReportIssue(state.report(), reportIssue.id));
+                removal.checked = selected.checked;
+                state.refresh();
+            });
+            expectedControls.append(group);
+            continue;
+        }
+        selected.addEventListener("change", () => { state.update(toggleReportIssue(state.report(), reportIssue.id)); state.refresh(); });
+        const assistance = expectedResultAssistance(reportIssue);
         const includeComment = document.createElement("input");
         includeComment.type = "checkbox";
         includeComment.dataset.allowedValuesComment = reportIssue.id;

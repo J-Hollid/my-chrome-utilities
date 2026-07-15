@@ -23,8 +23,11 @@ export function updatePointer(payload, pointer, operation, value) {
     let parent = payload;
     for (const segment of segments) {
         const child = parent[segment];
-        if (child === null || typeof child !== "object")
+        if (child === null || typeof child !== "object") {
+            if (operation === "remove")
+                return;
             parent[segment] = {};
+        }
         parent = parent[segment];
     }
     if (operation === "remove")

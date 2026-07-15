@@ -11,6 +11,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
+            [acceptance.steps.defect-report-undeclared-property-removal :as defect-report-undeclared-property-removal]
             [acceptance.steps.defect-library :as defect-library]
             [acceptance.steps.event-library-editor :as event-library-editor]
             [acceptance.steps.event-feed-query :as event-feed-query]
@@ -60,7 +61,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat canonical-declared-property-validation/handlers
+  (vec (concat defect-report-undeclared-property-removal/handlers
+               canonical-declared-property-validation/handlers
                cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
                missing-event-report-fidelity/handlers
@@ -123,5 +125,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T03:10:02.029865414+02:00", :module-hash "1726532827", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 60, :hash "-238566809"} {:id "def/handlers", :kind "def", :line 62, :end-line 123, :hash "-231188384"}]}
+;; {:version 1, :tested-at "2026-07-15T03:31:18.996186394+02:00", :module-hash "227594916", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 61, :hash "-98181619"} {:id "def/handlers", :kind "def", :line 63, :end-line 125, :hash "-1798849371"}]}
 ;; clj-mutate-manifest-end
