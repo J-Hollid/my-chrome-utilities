@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 import { resolveRequiredPropertySchemaChoices } from "../dist/data-layer-defect-schema-choices.js";
-import { applyExpectedResult, createDefectReport } from "../dist/data-layer-defect-report.js";
+import { applyExpectedResult, createDefectReport, toggleReportIssue } from "../dist/data-layer-defect-report.js";
 import { defectCapturedEvent } from "../dist/data-layer-defect-report-ui.js";
 import { validateWithSchema } from "../dist/data-layer-schema-verification.js";
 
@@ -95,6 +95,14 @@ const corrected = applyExpectedResult(report, [{ issueId:"page_type", method:"ch
 assert.deepEqual(corrected.expected.payload, { page_type:"product_detail" });
 assert.equal(corrected.expected.corrections[0].operation, "add");
 assert.equal(corrected.expected.corrections[0].responseProvenance.schema.version, 7);
+const deselected = toggleReportIssue(report, "page_type");
+assert.deepEqual(applyExpectedResult(deselected, [{
+  issueId:"page_type", method:"choose an allowed value", response:"product_detail",
+}]).expected.payload, {});
+const reselected = toggleReportIssue(deselected, "page_type");
+assert.deepEqual(applyExpectedResult(reselected, [{
+  issueId:"page_type", method:"choose an allowed value", response:"product_detail",
+}]).expected.payload, { page_type:"product_detail" });
 assert.deepEqual(payload, {});
 
 console.log("required-property defect schema choice tests passed");

@@ -89,13 +89,7 @@ export function renderDefectReportBuilder(
   let lastGenerated = generateReportDetails(report);
   const refresh = () => {
     let corrected: DefectReport = report;
-    try {
-      corrected = applyExpectedResult(report, [...selectedChoices.values()].filter(({ issueId }) => {
-        const issue = report.issues.find(({ id }) => id === issueId);
-        return issue?.violation !== "Required value" || issue.selected;
-      }));
-      feedback.textContent = "";
-    }
+    try { corrected = applyExpectedResult(report, [...selectedChoices.values()]); feedback.textContent = ""; }
     catch (error) { feedback.textContent = error instanceof Error ? error.message : "Expected result is incomplete."; }
     lastGenerated = editReportDetails(generateReportDetails(corrected), detailEdits);
     for (const input of Array.from(detailControls.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-report-field]"))) {

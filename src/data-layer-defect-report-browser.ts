@@ -7,6 +7,7 @@ import type {
 } from "./data-layer-defect-report.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
 import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
+import { isRequiredPropertyViolation } from "./data-layer-defect-report.js";
 
 export interface DefectReportNavigationEffects {
   showCapturedEvent(): void;
@@ -100,7 +101,7 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
     payload: event.payload,
     schema: { name: schema?.name ?? "Assigned schema", version: schema?.version ?? 0 },
     issues: (event.validationDetails?.issues ?? []).map((issue, index) => {
-      const schemaChoices = issue.message === "Required value" && schema
+      const schemaChoices = isRequiredPropertyViolation(issue.message) && schema
         ? resolveRequiredPropertySchemaChoices({ issuePointer:issue.instancePath, evaluations:event.validationDetails?.evaluations ?? [], assignedSchema:schema })
         : undefined;
       return {
