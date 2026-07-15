@@ -21,6 +21,7 @@
                         [acceptance.saved-event-feed-filters-steps-test]
                         [acceptance.defect-report-undeclared-property-removal-steps-test]
                         [acceptance.defect-report-semantic-differences-steps-test]
+                        [acceptance.defect-report-provenance-presentation-steps-test]
                         [acceptance.required-property-defect-schema-choices-steps-test]
                         [acceptance.unified-defect-builder-steps-test]
                         [acceptance.command-registry-steps-test]
@@ -74,6 +75,7 @@
                                                 'acceptance.saved-event-feed-filters-steps-test
                                                 'acceptance.defect-report-undeclared-property-removal-steps-test
                                                 'acceptance.defect-report-semantic-differences-steps-test
+                                                'acceptance.defect-report-provenance-presentation-steps-test
                                                 'acceptance.required-property-defect-schema-choices-steps-test
                                                 'acceptance.unified-defect-builder-steps-test
                                                 'acceptance.command-registry-steps-test

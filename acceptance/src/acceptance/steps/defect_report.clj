@@ -121,7 +121,7 @@
       (support/assert! (str/includes? representation "page_type: homepage OR product listing OR product detail OR checkout") "Generic inline response is absent from preview or clipboard." {}))
     (doseq [representation [(get-in commented-inline [:preview :text]) (:text commented-copy)]]
       (support/assert! (str/includes? representation "page_type: \"homepage\", // must be of type homepage, product listing, product detail, or checkout") "Commented inline response is absent from preview or clipboard." {}))
-    (support/assert! (str/includes? (:html generic-copy) "page_type response source: schema constraint") "Generic rich clipboard omitted response provenance." generic-copy)
+    (support/assert! (not (str/includes? (:html generic-copy) "page_type response source: schema constraint")) "Generic rich clipboard exposed generated response provenance." generic-copy)
     (support/assert! (str/includes? (:html commented-copy) "background-color:#d9f7d9") "Commented rich clipboard omitted green highlighting." commented-copy)))
 
 (defn- assert-custom-override! [observation]

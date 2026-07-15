@@ -160,16 +160,7 @@ function expectedDifferenceLine(correction: ExpectedCorrection): string | undefi
 }
 
 function reportSections(report: GeneratedDefectReport): Array<[string, string]> {
-  const responseSources = report.expected.corrections.flatMap((correction) => {
-    const source = correction.responseSource
-      ? [`${correction.issueId} response source: ${correction.responseSource}${correction.operatorProvided ? " (operator-provided)" : ""}`]
-      : [];
-    const provenance = correction.responseProvenance
-      ? [`${correction.issueId} value-rule provenance: ${correction.responseProvenance.rules.map(({ name, version }) => `${name} v${version}`).join(", ")} · ${correction.responseProvenance.schema.name} revision ${correction.responseProvenance.schema.version}`]
-      : [];
-    return [...source, ...provenance];
-  });
-  const expectedNarrative = [report.expectedExplanation, ...responseSources].filter(Boolean).join("\n");
+  const expectedNarrative = report.expectedExplanation.trim() ? report.expectedExplanation : "";
   return [
     ["Summary", report.summary],
     ["Description", report.description],

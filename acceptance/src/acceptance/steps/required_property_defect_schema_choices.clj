@@ -46,11 +46,12 @@
   (support/assert! (and (= {:page_type "product_detail"} (:expected saved))
                         (= [["/page_type" "add"]] (mapv (juxt :pointer :operation) (:corrections saved)))
                         (= 7 (get-in saved [:corrections 0 :responseProvenance :schema :version]))
-                        (str/includes? (get-in clipboard [:rich :text]) "Allowed page types v3")
+                        (not (str/includes? (get-in clipboard [:rich :text]) "value-rule provenance:"))
+                        (not (str/includes? (:plain clipboard) "response source:"))
                         (str/includes? (:plain clipboard) "product_detail")
                         (str/includes? reopened "Required value")
-                        (str/includes? recopied "Generic pageview revision 7"))
-                   "Clipboard or persisted representations lost the typed add correction or provenance." observed)
+                        (str/includes? recopied "product_detail"))
+                   "Clipboard or persisted representations lost the typed add correction or exposed provenance prose." observed)
   (support/assert! (and (= [["string" "add"] ["number" "add"] ["boolean" "add"]]
                            (mapv (juxt :type :operation) typed))
                         (= [{:page_type "content"} {:market_id 2} {:logged_in false}]
