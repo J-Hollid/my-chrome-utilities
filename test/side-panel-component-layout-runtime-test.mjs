@@ -46,6 +46,7 @@ let liveGuidedConditionalRuleObservation;
 let savedEventFeedFiltersObservation;
 let defectReportUndeclaredRemovalObservation;
 let requiredPropertyDefectSchemaChoicesObservation;
+let defectReportSemanticDifferencesObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -58,6 +59,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1" ? [320]
   : process.env.DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER === "1" ? [320]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -2352,6 +2354,39 @@ const requiredPropertyDefectSchemaChoicesRuntime = `(async () => {
   return {initial,selectedPreview,deselected,reselected,changed,clipboard:{rich:richWrites[0],plain:plainWrites[0]},saved:{expected:savedReport.expected.payload,corrections:savedReport.expected.corrections,evidence:savedReport.evidence},reopened,recopied:plainWrites.at(-1),typed,pointers,effective,conflict,conditional,noRule:resolve([]),rendered,immutable:immutableBytes===JSON.stringify({payload,validation,assigned}),layout:{body:document.documentElement.scrollWidth,width:innerWidth,group:group.getBoundingClientRect().width,builder:builder.getBoundingClientRect().width},runtimeErrors};
 })()`;
 
+const defectReportSemanticDifferencesRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(label,root=document)=>{const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent===label||button.textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const differences=(text)=>text.match(/Differences\\n([\\s\\S]*?)\\n\\nValidation evidence/)?.[1]??"";
+  const runtimeErrors=[];addEventListener("error",(event)=>runtimeErrors.push(String(event.error??event.message)));addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  const richWrites=[],plainWrites=[];let failRich=false;
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{if(failRich)throw new Error("rich unavailable");const item=items[0];richWrites.push({html:await (await item.getType("text/html")).text(),text:await (await item.getType("text/plain")).text()});},writeText:async(text)=>plainWrites.push(text)}});
+  localStorage.clear();
+  const verification=await import("/data-layer-schema-verification.js");const observer=await import("/data-layer-live-observer.js");const observerUi=await import("/data-layer-live-observer-ui.js");const inspectorActions=await import("/data-layer-live-inspector-actions.js");const reportUi=await import("/data-layer-defect-report-ui.js");const reportCore=await import("/data-layer-defect-report-core.js");const reportBrowser=await import("/data-layer-defect-report-browser.js");const exportModule=await import("/data-layer-defect-report-export.js");const defects=await import("/data-layer-defect-library.js");const defectLibraryUi=await import("/data-layer-defect-library-ui.js");
+  const schema={id:"schema:error",name:"Error event",version:3,published:true,document:{type:"object",additionalProperties:false,required:["error_action","error_code"],properties:{error_action:{type:"string"},error_code:{type:"string"}}},assignments:[],attachedRules:[]};
+  const payload={action:"checkout",code:500};const validation=verification.validateWithSchema({sourceId:"history",eventName:"error",payload,rawInput:["error",payload]},schema,[schema]);
+  const event={id:"event:semantic",name:"error",sourceId:"history",sourceName:"Event history",captureTime:"2026-07-15T07:00:00Z",pageUrl:"https://shop.example/error",payload,rawInput:["error",payload],validation:validation.state,validationDetails:{issues:validation.issues,evaluations:validation.evaluations,schema:validation.schema}};
+  const immutableBytes=JSON.stringify({payload,validation,schema});
+  const host=document.createElement("section");host.style.width="320px";host.innerHTML='<section><section id="live-event-list"><ul id="live-event-feed"></ul></section><aside id="live-event-inspector"></aside><button id="back-to-events"></button><div id="live-source-statuses"></div></section>';document.body.append(host);const elements=observerUi.findLiveObserverElements(host);observerUi.renderLiveObserverState(elements,{...observer.createLiveObserverState({pageUrl:event.pageUrl,sources:[]}),events:[event],inspectorEventId:event.id,listVisible:false},()=>{});
+  let savedDefect;const persistence={save:async(report)=>{savedDefect=defects.createValidationDefect({id:"defect:semantic",now:"2026-07-15T07:01:00Z",report,issues:defects.currentDefectIssues(event)});localStorage.setItem(defects.DEFECT_LIBRARY_STORAGE_KEY,defects.serializeDefectLibrary({defects:[savedDefect]}));return{feedback:"Reported defect saved."};},openExisting:()=>{},updateExisting:()=>{}};
+  const actions=inspectorActions.createLiveInspectorActions({currentPageUrl:()=>event.pageUrl,writeClipboard:async()=>{},storeTemplate:()=>{},startDefectReport:(selected)=>reportUi.renderDefectReportBuilder(elements.eventInspector,selected,undefined,[selected],undefined,persistence),validationState:()=>validation.state,updateValidation:()=>{},manualSchemaChoices:()=>[],selectManualSchema:()=>{}});observerUi.renderLiveInspector(elements,event,actions);
+  const inspector=q("#live-event-inspector",host);click("Create defect report",inspector);await pause();const builder=q("#live-event-inspector",host);const preview=q('[aria-label="Final report preview"]',builder);
+  const chooseCustom=(issueId,value)=>{const group=q('[aria-label="'+issueId+' expected-result assistance"]',builder);q('input[data-response-source="Custom value or response"]',group).click();const response=q('input[placeholder="Custom value or response"]',group);response.value=value;response.dispatchEvent(new InputEvent("input",{bubbles:true,data:value,inputType:"insertText"}));};
+  chooseCustom("error_action","checkout");chooseCustom("error_code","500");await pause();
+  const lines=()=>Array.from(preview.querySelectorAll('[data-difference-group]')).map((line)=>({group:line.dataset.differenceGroup,issueId:line.dataset.issueId,pointer:line.dataset.jsonPointer,operation:line.dataset.operation??null,violation:line.dataset.violation??null,presence:line.dataset.actualPresence??null,text:line.textContent}));
+  const initial={issues:validation.issues.map(({instancePath,message})=>[instancePath,message]),lines:lines()};
+  builder.style.height="600px";builder.style.overflow="auto";builder.scrollTop=47;const required=q("#defect-issue-error_action",builder);required.focus({preventScroll:true});required.click();await pause();const deselected={lines:lines(),focus:document.activeElement===required,scroll:builder.scrollTop};required.click();await pause();const reselected={lines:lines(),focus:document.activeElement===required,scroll:builder.scrollTop};
+  click("Copy for Jira Cloud",builder);await pause();await pause();failRich=true;click("Copy for Jira Cloud",builder);await pause();await pause();click("Save as reported defect",builder);await pause();await pause();
+  const stored=defects.restoreDefectLibrary(localStorage.getItem(defects.DEFECT_LIBRARY_STORAGE_KEY)).defects[0];const savedRendered=exportModule.renderJiraReport(stored.report);let recopied="";const detail=document.createElement("section");document.body.append(detail);defectLibraryUi.renderDefectLibrary({count:null,list:null,empty:null,detail,confirmation:null},[stored],stored.id,undefined,{open:()=>{},close:()=>{},save:()=>{},recopy:()=>{recopied=exportModule.renderJiraReport(stored.report).text;},updateStatus:()=>{},attachCurrentSession:()=>{},openLinkedSession:()=>{},requestDelete:()=>{},cancelDelete:()=>{},confirmDelete:()=>{}});click("Recopy for Jira Cloud",detail);const reopened=q('[aria-label="Final report preview"]',detail);
+  const semantic={rich:differences(richWrites[0].text),plain:differences(plainWrites[0]),saved:differences(savedRendered.text),reopened:Array.from(reopened.querySelectorAll('[data-difference-group]')).map(({textContent})=>textContent).join("\\n"),recopied:differences(recopied)};
+  const mappings={actual:["Undeclared property","Required value","Value is not allowed","Type mismatch","Value is not exact","Value violates partner contract",undefined].map((violation)=>exportModule.actualDifferenceDescription({violation,actualPresence:violation==="Required value"?"missing":"present"})),expected:["add","replace","remove","none"].map((operation)=>exportModule.expectedDifferenceDescription({operation}))};
+  const pointerCases=["/commerce/currency","/products/0/name","/a~1b","/tilde~0name"].map((pointer)=>{const generated=structuredClone(stored.report);generated.actual.differences=[{issueId:"pointer-case",pointer,violation:"Value is not allowed",actualPresence:"present",marker:"−",treatment:"red",value:"bad"}];generated.expected.corrections=[{issueId:"pointer-case",pointer,operation:"replace",marker:"+"}];const rendered=exportModule.renderJiraReport(generated);return{pointer,text:differences(rendered.text),html:(()=>{const root=document.createElement("section");root.innerHTML=rendered.html;return Array.from(root.querySelectorAll('[data-difference-group]')).map(({textContent})=>textContent).join("\\n");})()};});
+  const duplicateEvent={...reportBrowser.defectCapturedEvent(event),issues:[{id:"same-a",severity:"error",pointer:"/action",violation:"Value is not allowed",constraint:"known",actual:"checkout",rule:"one",ruleVersion:1},{id:"same-b",severity:"error",pointer:"/action",violation:"Value is not exact",constraint:"exact",actual:"checkout",rule:"two",ruleVersion:1}]};const duplicate=reportCore.createDefectReport(duplicateEvent);const duplicateRendered=exportModule.renderJiraReport(exportModule.generateReportDetails(duplicate));
+  const legacy=structuredClone(stored);delete legacy.report.actual.differences[0].violation;const legacyBytes=JSON.stringify(legacy);const legacyDetail=document.createElement("section");document.body.append(legacyDetail);defectLibraryUi.renderDefectLibrary({count:null,list:null,empty:null,detail:legacyDetail,confirmation:null},[legacy],legacy.id,undefined,{open:()=>{},close:()=>{},save:()=>{},recopy:()=>{},updateStatus:()=>{},attachCurrentSession:()=>{},openLinkedSession:()=>{},requestDelete:()=>{},cancelDelete:()=>{},confirmDelete:()=>{}});const legacyLine=q('[data-difference-group="actual"]',legacyDetail).textContent;
+  return{initial,deselected,reselected,semantic,mappings,pointerCases,duplicate:differences(duplicateRendered.text),legacy:{line:legacyLine,unchanged:legacyBytes===JSON.stringify(legacy)},immutable:immutableBytes===JSON.stringify({payload,validation,schema}),layout:{body:document.documentElement.scrollWidth,width:innerWidth,builder:builder.getBoundingClientRect().width,lines:Array.from(preview.querySelectorAll('[data-difference-group]')).every((line)=>line.scrollWidth<=builder.scrollWidth)},runtimeErrors};
+})()`;
+
 const schemaManualPropertyRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -3918,6 +3953,19 @@ try {
       assert.equal(observed.immutable,true);assert.equal(observed.layout.body<=observed.layout.width,true);assert.equal(observed.layout.group<=observed.layout.builder,true);assert.deepEqual(observed.runtimeErrors,[]);
       socket.close();continue;
     }
+    if (process.env.DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER === "1") {
+      defectReportSemanticDifferencesObservation=await evaluate(socket,defectReportSemanticDifferencesRuntime);
+      const observed=defectReportSemanticDifferencesObservation;
+      assert.equal(observed.initial.issues.length,4);assert.equal(observed.initial.lines.filter(({group})=>group==="actual").length,4);assert.equal(observed.initial.lines.filter(({group})=>group==="expected").length,4);
+      assert.deepEqual(observed.initial.lines.filter(({group})=>group==="expected").map(({operation})=>operation).sort(),["add","add","remove","remove"]);
+      assert.equal(observed.initial.lines.some(({text})=>text.includes("invalid actual value")||text.includes("corrected expected value")),false);
+      assert.equal(observed.deselected.lines.some(({issueId})=>issueId==="error_action"),false);assert.equal(observed.reselected.lines.filter(({issueId})=>issueId==="error_action").length,2);assert.equal(observed.deselected.focus&&observed.reselected.focus&&observed.deselected.scroll===47&&observed.reselected.scroll===47,true);
+      assert.equal(observed.semantic.rich===observed.semantic.plain&&observed.semantic.plain===observed.semantic.saved&&observed.semantic.saved===observed.semantic.reopened&&observed.semantic.reopened===observed.semantic.recopied,true);
+      assert.deepEqual(observed.mappings.actual,["undeclared property is present in the actual payload","required property is missing from the actual payload","actual value is not allowed","actual value has the wrong type","actual value does not equal the required value","validation failed: Value violates partner contract","validation failed"]);assert.deepEqual(observed.mappings.expected,["was added to the expected payload","was replaced in the expected payload","was removed from the expected payload",null]);
+      assert.equal(observed.pointerCases.every(({pointer,text,html})=>text.includes(pointer)&&html.includes(pointer)),true);assert.match(observed.duplicate,/same-a[\s\S]*same-b/);assert.match(observed.legacy.line,/validation failed/);assert.doesNotMatch(observed.legacy.line,/undeclared|missing|not allowed|wrong type|does not equal/);
+      assert.equal(observed.legacy.unchanged&&observed.immutable&&observed.layout.body<=observed.layout.width&&observed.layout.lines,true);assert.deepEqual(observed.runtimeErrors,[]);
+      socket.close();continue;
+    }
     if (process.env.DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(async () => {
         localStorage.clear();
@@ -3927,9 +3975,9 @@ try {
         localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:undeclared",status:"active",freshBoundary:true,tabId:1,historyPath:"dataLayer",startUrl:"https://shop.example/product",currentUrl:"https://shop.example/product",timeline:[observed]}}));return true;
       })()`);
       await reloadPanel(socket);defectReportUndeclaredRemovalObservation=await evaluate(socket,defectReportUndeclaredRemovalRuntime);
-      assert.match(defectReportUndeclaredRemovalObservation.initial.validationText,/Undeclared property/);assert.equal(defectReportUndeclaredRemovalObservation.initial.selected,true);assert.equal(defectReportUndeclaredRemovalObservation.initial.inputCount,1);assert.doesNotMatch(defectReportUndeclaredRemovalObservation.initial.expected,/debug|null/);assert.match(defectReportUndeclaredRemovalObservation.initial.preview,/\/debug was removed from the expected payload/);
+      assert.match(defectReportUndeclaredRemovalObservation.initial.validationText,/Undeclared property/);assert.equal(defectReportUndeclaredRemovalObservation.initial.selected,true);assert.equal(defectReportUndeclaredRemovalObservation.initial.inputCount,1);assert.doesNotMatch(defectReportUndeclaredRemovalObservation.initial.expected,/debug|null/);assert.match(defectReportUndeclaredRemovalObservation.initial.preview,/\/debug[\s\S]*was removed from the expected payload/);
       assert.match(defectReportUndeclaredRemovalObservation.deselected.expected,/debug/);assert.doesNotMatch(defectReportUndeclaredRemovalObservation.reselected.expected,/debug|null/);assert.equal(defectReportUndeclaredRemovalObservation.reselected.removals,1);
-      assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.expected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.corrections.map(({pointer,operation})=>[pointer,operation]),[["/debug","remove"]]);assert.match(defectReportUndeclaredRemovalObservation.clipboard.rich.text,/\/debug was removed/);assert.match(defectReportUndeclaredRemovalObservation.clipboard.plain,/\/debug was removed/);assert.match(defectReportUndeclaredRemovalObservation.reopened,/page_type/);assert.match(defectReportUndeclaredRemovalObservation.recopied,/\/debug was removed/);
+      assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.expected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.saved.corrections.map(({pointer,operation})=>[pointer,operation]),[["/debug","remove"]]);assert.match(defectReportUndeclaredRemovalObservation.clipboard.rich.text,/\/debug[\s\S]*was removed/);assert.match(defectReportUndeclaredRemovalObservation.clipboard.plain,/\/debug[\s\S]*was removed/);assert.match(defectReportUndeclaredRemovalObservation.reopened,/page_type/);assert.match(defectReportUndeclaredRemovalObservation.recopied,/\/debug[\s\S]*was removed/);
       assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
       socket.close();continue;
     }
@@ -5086,6 +5134,9 @@ try {
   }
   if (process.env.REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ requiredPropertyDefectSchemaChoices:requiredPropertyDefectSchemaChoicesObservation }));
+  }
+  if (process.env.DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ defectReportSemanticDifferences:defectReportSemanticDifferencesObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

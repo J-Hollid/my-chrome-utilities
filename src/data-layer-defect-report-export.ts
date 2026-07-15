@@ -4,6 +4,7 @@ import type {
   DefectReportClipboard,
   ExpectedCorrection,
   GeneratedDefectReport,
+  ReportDifference,
 } from "./data-layer-defect-report-model.js";
 
 export function generateReportDetails(report: DefectReport): GeneratedDefectReport {
@@ -122,6 +123,42 @@ function expectedPresentation(report: GeneratedDefectReport): string {
   return expectedLines(report).map(({ text }) => text).join("\n");
 }
 
+export function actualDifferenceDescription(
+  difference: Pick<ReportDifference, "violation" | "actualPresence">,
+): string {
+  switch (difference.violation) {
+    case "Undeclared property": return "undeclared property is present in the actual payload";
+    case "Required value": return "required property is missing from the actual payload";
+    case "Value is not allowed": return "actual value is not allowed";
+    case "Type mismatch": return "actual value has the wrong type";
+    case "Value is not exact": return "actual value does not equal the required value";
+    case undefined: return "validation failed";
+    default: return `validation failed: ${difference.violation}`;
+  }
+}
+
+export function expectedDifferenceDescription(
+  correction: Pick<ExpectedCorrection, "operation">,
+): string | undefined {
+  switch (correction.operation) {
+    case "add": return "was added to the expected payload";
+    case "replace": return "was replaced in the expected payload";
+    case "remove": return "was removed from the expected payload";
+    case "none": return undefined;
+  }
+}
+
+function actualDifferenceLine(difference: ReportDifference): string {
+  return `Actual · ${difference.issueId ?? "legacy"} · ${difference.marker} ${difference.pointer} · ${actualDifferenceDescription(difference)}`;
+}
+
+function expectedDifferenceLine(correction: ExpectedCorrection): string | undefined {
+  const description = expectedDifferenceDescription(correction);
+  return description
+    ? `Expected · ${correction.issueId} · ${correction.operation} · + ${correction.pointer} · ${description}`
+    : undefined;
+}
+
 function reportSections(report: GeneratedDefectReport): Array<[string, string]> {
   const responseSources = report.expected.corrections.flatMap((correction) => {
     const source = correction.responseSource
@@ -140,10 +177,11 @@ function reportSections(report: GeneratedDefectReport): Array<[string, string]> 
     ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
     ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
     ["Differences", [
-      ...report.actual.differences.map(({ pointer }) => `− ${pointer} invalid actual value`),
-      ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer, operation }) => operation === "remove"
-        ? `+ ${pointer} was removed from the expected payload`
-        : `+ ${pointer} corrected expected value`),
+      ...report.actual.differences.map(actualDifferenceLine),
+      ...report.expected.corrections.flatMap((correction) => {
+        const line = expectedDifferenceLine(correction);
+        return line ? [line] : [];
+      }),
     ].join("\n")],
     ["Validation evidence", JSON.stringify(report.evidence, null, 2)],
     ...(report.timeline.length ? [["Supporting timeline", report.timeline.map((entry) => JSON.stringify(entry)).join("\n")] as [string, string]] : []),
@@ -186,8 +224,13 @@ export function renderJiraReport(report: GeneratedDefectReport): {
   const expectedJson = JSON.stringify(report.expected.payload, null, 2);
   const sections = reportSections(report);
   const differenceHtml = [
-    ...report.actual.differences.map(({ pointer }) => `<li style="background-color:#ffd7d7;color:#1f1f1f">− <code>${escapeHtml(pointer)}</code> invalid actual value</li>`),
-    ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer, operation }) => `<li style="background-color:#d9f7d9;color:#1f1f1f">+ <code>${escapeHtml(pointer)}</code> ${operation === "remove" ? "was removed from the expected payload" : "corrected expected value"}</li>`),
+    ...report.actual.differences.map((difference) => `<li style="background-color:#ffd7d7;color:#1f1f1f" data-difference-group="actual" data-issue-id="${escapeHtml(difference.issueId ?? "legacy")}" data-json-pointer="${escapeHtml(difference.pointer)}"${difference.violation ? ` data-violation="${escapeHtml(difference.violation)}"` : ""}${difference.actualPresence ? ` data-actual-presence="${difference.actualPresence}"` : ""}>${escapeHtml(actualDifferenceLine(difference))}</li>`),
+    ...report.expected.corrections.flatMap((correction) => {
+      const line = expectedDifferenceLine(correction);
+      return line
+        ? [`<li style="background-color:#d9f7d9;color:#1f1f1f" data-difference-group="expected" data-issue-id="${escapeHtml(correction.issueId)}" data-operation="${correction.operation}" data-json-pointer="${escapeHtml(correction.pointer)}">${escapeHtml(line)}</li>`]
+        : [];
+    }),
   ].join("");
   const html = sections.map(([heading, content]) => {
     if (heading === "Differences") return `<h2>${heading}</h2><ul>${differenceHtml}</ul>`;

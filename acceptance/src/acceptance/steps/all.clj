@@ -11,6 +11,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
+            [acceptance.steps.defect-report-semantic-differences :as defect-report-semantic-differences]
             [acceptance.steps.defect-report-undeclared-property-removal :as defect-report-undeclared-property-removal]
             [acceptance.steps.required-property-defect-schema-choices :as required-property-defect-schema-choices]
             [acceptance.steps.defect-library :as defect-library]
@@ -62,7 +63,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat required-property-defect-schema-choices/handlers
+  (vec (concat defect-report-semantic-differences/handlers
+               required-property-defect-schema-choices/handlers
                defect-report-undeclared-property-removal/handlers
                canonical-declared-property-validation/handlers
                cross-tab-reattachment/handlers
