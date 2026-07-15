@@ -1,5 +1,5 @@
 import { defectLifecycleAction, } from "./data-layer-defect-library.js";
-import { renderJiraReport } from "./data-layer-defect-report.js";
+import { renderJiraReport } from "./data-layer-defect-report-export.js";
 import { renderOccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
 import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
 export function findDefectLibraryElements(root = document) {
