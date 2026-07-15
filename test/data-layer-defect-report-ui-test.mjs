@@ -735,7 +735,7 @@ undeclaredCheckbox.checked = false; undeclaredCheckbox.dispatch("change");
 assert.match(undeclaredPreview.innerHTML.match(/<h2>Expected result<\/h2>[\s\S]*?<h2>Differences<\/h2>/)?.[0] ?? "", /&quot;debug&quot;: true/);
 undeclaredCheckbox.checked = true; undeclaredCheckbox.dispatch("change");
 assert.equal((undeclaredPreview.innerHTML.match(/was removed from the expected payload/g) ?? []).length, 1);
-element(undeclaredRoot, ({ textContent }) => textContent === "Save as reported defect").onclick();
+element(undeclaredRoot, ({ textContent }) => textContent === "Save defect").onclick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.deepEqual(savedUndeclaredReports[0].expected.payload, { page_type:"product_detail" });
 assert.deepEqual(savedUndeclaredReports[0].expected.corrections.map(({ pointer, operation }) => ({ pointer, operation })), [{ pointer:"/debug", operation:"remove" }]);

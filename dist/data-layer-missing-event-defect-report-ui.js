@@ -334,9 +334,9 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
         preview.setAttribute("aria-label", "Final report preview");
         const copy = element("button", "Copy for Jira Cloud");
         copy.type = "button";
-        const save = element("button", "Save as reported defect");
+        const save = element("button", "Save defect");
         save.type = "button";
-        const saveAndCopy = element("button", "Save as reported defect and copy");
+        const saveAndCopy = element("button", "Save defect and copy");
         saveAndCopy.type = "button";
         const status = element("output", feedback);
         status.setAttribute("aria-live", "polite");

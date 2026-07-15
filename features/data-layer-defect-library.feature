@@ -14,21 +14,22 @@ Feature: Data layer defect library
     Given a completed defect report contains selected validation issues for purchase
     And no defect has been saved from that report
     When the operator activates <report_action>
-    Then the Defect Library contains <saved_defect_count> reported defects for that report
+    Then the Defect Library contains <saved_defect_count> saved defects for that report
+    And every stored defect for that report has Saved status
     And the clipboard outcome is <clipboard_outcome>
     And the captured purchase event remains unchanged
 
     Examples:
       | report_action                     | saved_defect_count | clipboard_outcome       |
       | Copy for Jira Cloud               | 0                  | report copied           |
-      | Save as reported defect           | 1                  | clipboard unchanged     |
-      | Save as reported defect and copy  | 1                  | report copied           |
+      | Save defect                       | 1                  | clipboard unchanged     |
+      | Save defect and copy              | 1                  | report copied           |
 
   # Data layer defect library 002
   Scenario: Data layer defect library 002
-    Given a reported defect contains selected validation issue /commerce/currency
+    Given a saved defect contains selected validation issue /commerce/currency
     When the defect is stored
-    Then it has a stable defect identity, Reported status, and created and updated times
+    Then it has a stable defect identity, Saved status, and created and updated times
     And it retains the editable report, selected issue evidence, notes, and optional saved-session link
     And its issue match identity retains source id, event name, schema id, validation target, canonical affected path, rule id, and rule revision
     And display labels, actual value, expected text, capture time, page URL, and generated prose are retained as evidence but excluded from issue matching
@@ -90,25 +91,35 @@ Feature: Data layer defect library
   # Data layer defect library 007
   Scenario: Data layer defect library 007
     Given a selected report issue already matches an active reported defect
-    When the operator attempts to save it as another reported defect
+    When the operator attempts to save it as another defect
     Then the existing defect is identified before saving
     And Open existing defect and Update existing defect are available
     And no duplicate issue mapping is created without explicit confirmation to Save separately
+    And a separately saved defect has Saved status
     And multiple confirmed defects for one issue are exposed as separate links rather than selected arbitrarily
 
   # Data layer defect library 008
-  Scenario: Data layer defect library 008
-    Given a reported defect is open from the Defects view
+  Scenario Outline: Data layer defect library 008
+    Given a saved <defect_type> defect is open from the Defects view
+    And rich and plain-text clipboard writing are available
     When the operator edits its report details and notes
     Then report edits and notes persist independently
     And web links in notes are navigable without rendering note text as executable markup
     When the operator activates Recopy for Jira Cloud
-    Then the clipboard uses the current stored report details
+    Then the clipboard contains rich HTML and plain-text representations of the current stored report details
+    And rich HTML retains the Jira Cloud formatting shown by the saved report preview
     And internal notes are not added to the Jira report without an explicit report edit
+
+    Examples:
+      | defect_type      |
+      | validation issue |
+      | Missing event    |
+      | Unexpected event |
+      | Wrong event name |
 
   # Data layer defect library 009
   Scenario: Data layer defect library 009
-    Given a reported defect has no linked saved session
+    Given a saved defect has no linked saved session
     When the operator attaches the current testing session
     Then an immutable saved session is created and linked to the defect
     And the defect identifies whether the saved session contains a matching validation issue
@@ -119,32 +130,73 @@ Feature: Data layer defect library
 
   # Data layer defect library 010
   Scenario Outline: Data layer defect library 010
-    Given a current issue matches a stored defect with status <defect_status>
-    When defect matching is applied
-    Then the issue triage result is <triage_result>
-    And the available lifecycle action is <lifecycle_action>
+    Given a current issue matches a stored defect with status <current_status>
+    When the operator opens the stored defect
+    Then one state selector offers Saved, Reported, Resolved, and Archived
+    And <current_status> is selected
+    And one Update state button is available instead of individual state-transition buttons
+    When the operator selects <selected_status> and activates Update state
+    Then the stored defect has status <selected_status> without an intermediate state
+    And the issue triage result is <triage_result>
 
     Examples:
-      | defect_status | triage_result                    | lifecycle_action |
-      | Reported      | Reported                         | Resolve          |
-      | Resolved      | Possible regression treated New | Reopen           |
-      | Archived      | New                              | none             |
+      | current_status | selected_status | triage_result                    |
+      | Reported       | Saved           | New                              |
+      | Saved          | Reported        | Reported                         |
+      | Saved          | Resolved        | Possible regression treated New |
+      | Resolved       | Archived        | New                              |
+      | Archived       | Reported        | Reported                         |
 
   # Data layer defect library 011
   Scenario: Data layer defect library 011
-    Given validation-issue and missing-event defects have been saved
+    Given validation-issue and missing-event defects have been saved with Saved status
     When the Defects view is displayed
     Then it follows Sessions and precedes Schemas in Data Layer secondary navigation
     And the list distinguishes validation issue and Missing event defect types
     And defects can be searched and filtered by status, type, event, schema, path, and note text
-    And each defect offers Open, Edit, Recopy, lifecycle, linked-session, and deletion actions when applicable
+    And each defect offers Open, Edit, Recopy, state selection, Update state, linked-session, and deletion actions when applicable
     And deleting a defect requires confirmation and removes its active issue matches
     And a Missing event defect does not automatically match a captured event validation issue
 
   # Data layer defect library 012
   Scenario: Data layer defect library 012
-    Given the Defect Library contains reported defects and linked saved-session identities
+    Given the Defect Library contains saved defects in different lifecycle states and linked saved-session identities
     When the side panel is closed and reopened
     Then the defect records, statuses, report edits, notes, match identities, and session links are restored
     And current and saved-session event feeds recompute defect-triage state from the restored records
     And captured events and immutable saved sessions are not mutated by that recomputation
+
+  # Data layer defect library 013
+  Scenario Outline: Data layer defect library 013
+    Given a saved defect with Saved status matches a current validation issue
+    When the operator adds Jira ticket <jira_ticket> to Internal notes
+    And the operator selects <selected_status> and activates Update state
+    Then Jira ticket <jira_ticket> is retained in Internal notes
+    And the defect has <selected_status> status and an updated time
+    And the matching validation issue is triaged as Reported
+    And saving, copying, or editing a defect without Update state does not change its status
+
+    Examples:
+      | jira_ticket                        | selected_status |
+      | https://jira.example/browse/DL-42  | Reported        |
+
+  # Data layer defect library 014
+  Scenario Outline: Data layer defect library 014
+    Given a saved defect is open from the Defects view
+    And clipboard availability is <clipboard_availability>
+    When the operator activates Recopy for Jira Cloud
+    Then the recopy outcome is <recopy_outcome>
+    And recopy feedback is <feedback>
+    And the saved defect remains available
+
+    Examples:
+      | clipboard_availability | recopy_outcome                           | feedback                         |
+      | plain text only        | plain-text report copied                 | rich formatting was not copied  |
+      | unavailable            | no clipboard representation was copied  | copy failure                     |
+
+  # Data layer defect library 015
+  Scenario: Data layer defect library 015
+    Given a persisted defect from before Saved status was introduced has Reported status
+    When the Defect Library is restored after the upgrade
+    Then the defect retains Reported status
+    And newly saved defects receive Saved status

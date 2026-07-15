@@ -136,10 +136,10 @@ export function renderOccurrenceDefectReportBuilder(root, event, mode, schemas, 
     copy.textContent = "Copy for Jira Cloud";
     copy.dataset.actionVariant = "primary";
     const persistenceControls = document.createElement("section");
-    persistenceControls.setAttribute("aria-label", "Reported defect actions");
+    persistenceControls.setAttribute("aria-label", "Defect actions");
     const duplicateReview = document.createElement("section");
     duplicateReview.hidden = true;
-    duplicateReview.setAttribute("aria-label", "Existing reported defects");
+    duplicateReview.setAttribute("aria-label", "Existing defects");
     let report;
     const applyDetails = (generated) => ({
         ...generated,
@@ -281,11 +281,11 @@ export function renderOccurrenceDefectReportBuilder(root, event, mode, schemas, 
     if (persistence) {
         const save = document.createElement("button");
         save.type = "button";
-        save.textContent = "Save as reported defect";
+        save.textContent = "Save defect";
         save.onclick = () => { void persist(false); };
         const saveCopy = document.createElement("button");
         saveCopy.type = "button";
-        saveCopy.textContent = "Save as reported defect and copy";
+        saveCopy.textContent = "Save defect and copy";
         saveCopy.onclick = () => { void persist(true); };
         persistenceControls.append(save, saveCopy);
     }

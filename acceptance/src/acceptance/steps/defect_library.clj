@@ -11,6 +11,7 @@
    "the built extension side panel is running with production validation, defect reporting, saved sessions, and local persistence" :runtime})
 
 (defonce model-verified? (atom false))
+(defonce copy-verified? (atom false))
 (defonce browser-observation (atom nil))
 
 (defn- verify-model! []
@@ -18,6 +19,12 @@
    model-verified?
    "Defect Library model verification failed. "
    "node" "test/data-layer-defect-library-test.mjs"))
+
+(defn- verify-copy! []
+  (support/cached-command-verification!
+   copy-verified?
+   "Defect Library clipboard verification failed. "
+   "node" "test/data-layer-defect-library-copy-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!
@@ -31,10 +38,12 @@
   (support/assert! (= ["Live" "Library" "Sessions" "Defects" "Schemas"] (:nav observed))
                    "Defects did not follow Sessions and precede Schemas." observed)
   (support/assert! (= [["Copy for Jira Cloud" 0 true]
-                       ["Save as reported defect" 1 false]
-                       ["Save as reported defect and copy" 1 true]]
+                       ["Save defect" 1 false]
+                       ["Save defect and copy" 1 true]]
                       (:actionResults observed))
                    "Report save/copy actions changed persistence or clipboard independently." observed)
+  (support/assert! (= [[] ["Saved"] ["Saved"]] (:actionStatuses observed))
+                   "Newly stored defects did not receive Saved status." observed)
   (support/assert! (= ["Reported" "Reported" "New" "New" "New" "New" "New" "New" "Review required"]
                       (:differences observed))
                    "Issue match identity included evidence fields or omitted an identity field." observed)
@@ -57,10 +66,16 @@
   (support/assert! (= {:href "https://jira.example/browse/DL-42" :target "_blank" :rel "noopener noreferrer"}
                       (get-in observed [:edited :safeLink]))
                    "A note link was not rendered as a safe navigable link." observed)
-  (support/assert! (and (str/includes? (:recopy observed) "Edited details")
-                        (= {:count 1 :status "Archived" :description "Edited details" :notes "Jira https://jira.example/browse/DL-42"}
+  (support/assert! (and (= ["Saved" "Reported" "Resolved" "Archived"]
+                           (get-in observed [:stateControl :options]))
+                        (= 1 (get-in observed [:stateControl :updateButtons]))
+                        (zero? (get-in observed [:stateControl :legacyButtons]))
+                        (= #{"text/html" "text/plain"} (set (get-in observed [:recopy :types])))
+                        (str/includes? (get-in observed [:recopy :html]) "Edited details")
+                        (str/includes? (get-in observed [:recopy :text]) "Edited details")
+                        (= {:count 1 :status "Reported" :description "Edited details" :notes "Jira https://jira.example/browse/DL-42"}
                            (:stored observed)))
-                   "Edited report details, notes, lifecycle, or reload persistence were lost." observed)
+                   "Stored report recopy, direct state selection, or reload persistence diverged." observed)
   (support/assert! (= {:sessions 1 :id "saved:session:one" :contains true :immutable true}
                       (:linked observed))
                    "The linked saved session was not immutable or did not report its matching issue." observed)
@@ -75,7 +90,7 @@
   observed)
 
 (def model-example-values
-  {"report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+  {"report_action" #{"Copy for Jira Cloud" "Save defect" "Save defect and copy"}
    "saved_defect_count" #{"0" "1"}
    "clipboard_outcome" #{"report copied" "clipboard unchanged"}
    "difference" #{"nothing" "actual invalid value" "page URL" "source display name" "source id" "event name" "schema id" "validation target" "canonical affected path" "rule id" "rule revision"}
@@ -83,12 +98,17 @@
    "issue_count" #{"2"}
    "reported_count" #{"0" "1" "2"}
    "triage_state" #{"2 new issues" "1 new and 1 reported" "all 2 issues reported"}
-   "defect_status" #{"Reported" "Resolved" "Archived"}
-   "triage_result" #{"Reported" "Possible regression treated New" "New"}
-   "lifecycle_action" #{"Resolve" "Reopen" "none"}})
+   "current_status" #{"Saved" "Reported" "Resolved" "Archived"}
+   "selected_status" #{"Saved" "Reported" "Resolved" "Archived"}
+   "defect_type" #{"validation issue" "Missing event" "Unexpected event" "Wrong event name"}
+   "jira_ticket" #{"https://jira.example/browse/DL-42"}
+   "clipboard_availability" #{"plain text only" "unavailable"}
+   "recopy_outcome" #{"plain-text report copied" "no clipboard representation was copied"}
+   "feedback" #{"rich formatting was not copied" "copy failure"}
+   "triage_result" #{"Reported" "Possible regression treated New" "New"}})
 
 (def runtime-example-values
-  {"report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+  {"report_action" #{"Copy for Jira Cloud" "Save defect" "Save defect and copy"}
    "stored_count" #{"0" "1"}
    "copy_count" #{"0" "1"}
    "difference" #{"actual value" "page URL" "source id" "event name" "schema id" "validation target" "canonical path" "rule id" "rule revision"}
@@ -96,7 +116,14 @@
    "reported_count" #{"0" "1" "2"}
    "new_count" #{"0" "1" "2"}
    "triage_state" #{"2 new issues" "1 new and 1 reported" "all 2 issues reported"}
-   "defect_status" #{"Reported" "Resolved" "Archived"}
+   "defect_status" #{"Saved" "Reported" "Resolved" "Archived"}
+   "current_status" #{"Saved" "Reported" "Resolved" "Archived"}
+   "selected_status" #{"Saved" "Reported" "Resolved" "Archived"}
+   "defect_type" #{"validation issue" "Missing event" "Unexpected event" "Wrong event name"}
+   "jira_ticket" #{"https://jira.example/browse/DL-42"}
+   "clipboard_support" #{"plain text only" "unavailable"}
+   "clipboard_behavior" #{"plain-text report copied" "no clipboard representation was copied"}
+   "feedback" #{"rich formatting was not copied" "copy failure"}
    "active_match_count" #{"0" "1"}})
 
 (defn- validate-example! [mode example]
@@ -109,6 +136,7 @@
   (let [mode (or (entry-modes text) (:defect-library-mode world))]
     (support/assert! mode "Defect Library scenario did not establish its execution mode." {:step text})
     (verify-model!)
+    (verify-copy!)
     (validate-example! mode example)
     (when (= mode :runtime) (assert-runtime! (runtime-observation!)))
     (assoc world :defect-library-mode mode)))

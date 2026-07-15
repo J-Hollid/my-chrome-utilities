@@ -19,6 +19,7 @@ import {
   matchingOccurrenceDefects,
   restoreDefectLibrary,
   serializeDefectLibrary,
+  updateDefectStatus,
 } from "../dist/data-layer-defect-library.js";
 
 const actual = {
@@ -130,10 +131,13 @@ const defect = createOccurrenceDefect({ id:"defect:occurrence", now:"2026-07-15T
 const added = addDefect(createDefectLibrary(), defect);
 assert.equal(added.added, true);
 assert.equal(added.defect.type, "Wrong event name");
-assert.deepEqual(matchingOccurrenceDefects(identity, added.library).map(({ id }) => id), ["defect:occurrence"]);
-assert.equal(addDefect(added.library, createOccurrenceDefect({ id:"defect:duplicate", now:"2026-07-15T07:41:00Z", report:{ ...wrongReport, actual:{ ...wrongReport.actual, payload:{ changed:true }, captureTime:"later" } } })).added, false);
+assert.equal(added.defect.status, "Saved");
+assert.deepEqual(matchingOccurrenceDefects(identity, added.library), []);
+const reportedLibrary = updateDefectStatus(added.library, defect.id, "Reported", "2026-07-15T07:40:30Z");
+assert.deepEqual(matchingOccurrenceDefects(identity, reportedLibrary).map(({ id }) => id), ["defect:occurrence"]);
+assert.equal(addDefect(reportedLibrary, createOccurrenceDefect({ id:"defect:duplicate", now:"2026-07-15T07:41:00Z", report:{ ...wrongReport, actual:{ ...wrongReport.actual, payload:{ changed:true }, captureTime:"later" } } })).added, false);
 assert.equal(eventMatchesOccurrenceDefect({ sourceId:"event-history", name:"page_view", pageUrl:"https://shop.example/products?reload=1", validationDetails:{ assignment:{ target:"payload" } } }, defect), true);
-const restored = restoreDefectLibrary(serializeDefectLibrary(added.library));
+const restored = restoreDefectLibrary(serializeDefectLibrary(reportedLibrary));
 assert.deepEqual(restored.defects[0].occurrenceMatch, defect.occurrenceMatch);
 
 assert.deepEqual(actual.payload, { page_type:"product_detail", product_id:"robot-1" });

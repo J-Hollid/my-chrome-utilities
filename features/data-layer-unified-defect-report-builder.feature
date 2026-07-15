@@ -134,8 +134,8 @@ Feature: Data layer unified defect report builder
     Examples:
       | report_action                     | successful_effect                                                        |
       | Copy for Jira Cloud               | the current preview is written through the Jira clipboard integration     |
-      | Save as reported defect           | one discoverable Missing event defect is persisted in Defects              |
-      | Save as reported defect and copy  | one defect is persisted and the same representation is written to clipboard |
+      | Save defect                       | one discoverable Missing event defect is persisted in Defects              |
+      | Save defect and copy              | one defect is persisted and the same representation is written to clipboard |
 
   # Data layer unified defect report builder 012
   Scenario: Data layer unified defect report builder 012
