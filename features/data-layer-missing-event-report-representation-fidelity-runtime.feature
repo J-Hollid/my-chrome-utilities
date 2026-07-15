@@ -57,7 +57,7 @@ Feature: Data layer missing-event report representation fidelity runtime
   # Data layer missing-event report representation fidelity runtime 006
   Scenario: Data layer missing-event report representation fidelity runtime 006
     Given the production missing-event report has optional additional text and four reproduction steps
-    When Copy for Jira Cloud, Save as reported defect, reopen, and recopy are performed through actual controls
+    When Copy for Jira Cloud, Save defect, reopen, and recopy are performed through actual controls
     Then the Expected result and Steps to reproduce section content from every operation is equivalent to the current Final report preview
     And the saved and reopened nested payload retains its object, array, number, and string types
     And reopening does not synthesize additional text or expose stored provenance

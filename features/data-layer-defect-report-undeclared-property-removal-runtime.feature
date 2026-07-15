@@ -63,7 +63,7 @@ Feature: Data layer defect report undeclared property removal runtime
   # Data layer defect report undeclared property removal runtime 006
   Scenario: Data layer defect report undeclared property removal runtime 006
     Given the production corrected report omits /debug
-    When Copy for Jira Cloud, Save as reported defect, reopen, and recopy are performed through actual controls
+    When Copy for Jira Cloud, Save defect, reopen, and recopy are performed through actual controls
     Then rich preview, rich clipboard, plain clipboard, saved record, reopened preview, and recopied output all omit debug from Expected result
     And each retains Actual result debug true, the removal difference, schema revision, rule, severity, and pointer evidence
     And saved internal correction operation is remove rather than replace with null or missing text

@@ -54,7 +54,7 @@ Feature: Data layer missing-event expected payload hardening runtime
     Given production expected fields contain missing, empty, and disallowed values
     When the draft is validated through the selected schema revision
     Then rendered issues identify the exact invalid fields
-    And Copy for Jira Cloud, Save as reported defect, and Save as reported defect and copy are disabled
+    And Copy for Jira Cloud, Save defect, and Save defect and copy are disabled
     When page_levels is d, page_type is product_detail, page_section is product, login_status is logged in, and b_id is 123
     Then production validation reports Valid
     And all report completion actions are enabled without a Create missing-event report action
