@@ -51,6 +51,7 @@
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
+            [acceptance.steps.schema-property-copy :as schema-property-copy]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
@@ -65,7 +66,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat event-occurrence-defect-report/handlers
+  (vec (concat schema-property-copy/handlers
+               event-occurrence-defect-report/handlers
                defect-report-provenance-presentation/handlers
                defect-report-semantic-differences/handlers
                required-property-defect-schema-choices/handlers
@@ -133,5 +135,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T11:05:47.863873049+02:00", :module-hash "1185727332", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 65, :hash "-1796872161"} {:id "def/handlers", :kind "def", :line 67, :end-line 133, :hash "-1911125225"}]}
+;; {:version 1, :tested-at "2026-07-15T11:53:02.460425089+02:00", :module-hash "1477061652", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 66, :hash "613018252"} {:id "def/handlers", :kind "def", :line 68, :end-line 135, :hash "607652789"}]}
 ;; clj-mutate-manifest-end
