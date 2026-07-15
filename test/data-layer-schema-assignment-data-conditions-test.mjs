@@ -30,6 +30,10 @@ assert.equal(validateAssignmentDataConditions(any(predicate("not/a/pointer", "Ex
 assert.equal(validateAssignmentDataConditions(any(predicate("/name", "Is at least", { detectedType:"string", comparison:number(1) }))).assistance, "Choose an operator compatible with string");
 assert.equal(validateAssignmentDataConditions(any(predicate("/name", "Equals"))).assistance, "Enter a comparison value");
 assert.equal(validateAssignmentDataConditions(any(predicate("/name", "Matches pattern", { comparison:text("[") }))).assistance, "Correct the regular expression");
+assert.equal(validateAssignmentDataConditions({ operator:"Neither", predicates:[predicate("/name", "Exists")] }).assistance, "Choose All or Any");
+assert.equal(validateAssignmentDataConditions(any(predicate("/count", "Equals", { detectedType:"number", comparison:text("1") }))).assistance, "Enter a number comparison value");
+const invalidImported = evaluateAssignmentDataConditions({ count:0 }, { operator:"Any", predicates:[predicate("/count", "Unknown operator", { detectedType:"number", comparison:number(1) })] });
+assert.equal(invalidImported.configurationReady, false);assert.equal(invalidImported.matched, false);assert.equal(invalidImported.predicates[0].matched, false);
 
 const captured = {
   errorType:"legacy",
@@ -50,6 +54,7 @@ const evaluated = evaluateAssignmentDataConditions(captured, all(
   predicate("/count", "Is at least", { detectedType:"number", comparison:number(10) }),
 ));
 assert.equal(evaluated.matched, true);
+assert.equal(evaluated.configurationReady, true);
 assert.deepEqual(evaluated.predicates[2].observed.map(({ concretePath, value }) => [concretePath, value]), [["/products/0/type", "current"], ["/products/1/type", "legacy"]]);
 assert.deepEqual(captured, snapshot, "assignment evaluation must not mutate captured data");
 assert.equal(evaluateAssignmentDataConditions({ products:[] }, any(predicate("/products/*/type", "Does not exist"))).matched, true);

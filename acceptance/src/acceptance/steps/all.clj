@@ -137,5 +137,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T11:53:02.460425089+02:00", :module-hash "1477061652", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 66, :hash "613018252"} {:id "def/handlers", :kind "def", :line 68, :end-line 135, :hash "607652789"}]}
+;; {:version 1, :tested-at "2026-07-15T12:51:38.214575159+02:00", :module-hash "1661082596", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 67, :hash "-1558170867"} {:id "def/handlers", :kind "def", :line 69, :end-line 137, :hash "-738999054"}]}
 ;; clj-mutate-manifest-end
