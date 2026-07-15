@@ -205,6 +205,7 @@ import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./d
 import { renderOccurrenceDefectReportBuilder } from "./data-layer-event-occurrence-defect-report-ui.js";
 import { renderOccurrenceReport, type OccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
 import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
+import { browserDefectReportClipboard } from "./data-layer-defect-report-browser.js";
 import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
 import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
 import {
@@ -231,6 +232,7 @@ import {
   type ReportedDefect,
 } from "./data-layer-defect-library.js";
 import { findDefectLibraryElements, renderDefectLibrary } from "./data-layer-defect-library-ui.js";
+import { copyStoredDefectForJira } from "./data-layer-defect-library-copy.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
@@ -1214,18 +1216,10 @@ function filteredDefectLibrary(): ReportedDefect[] {
   });
 }
 
-function defectReportText(defect: ReportedDefect): string {
-  return defect.type === "Missing event"
-    ? generateMissingEventRepresentations(defect.report as MissingEventReport).jiraText
-    : defect.type === "Unexpected event" || defect.type === "Wrong event name"
-      ? renderOccurrenceReport(defect.report as OccurrenceReport).text
-    : renderJiraReport(defect.report as GeneratedDefectReport).text;
-}
-
-async function recopyDefect(defectId: string): Promise<void> {
+async function recopyDefect(defectId: string): Promise<string> {
   const defect = defectLibrary.defects.find(({ id }) => id === defectId);
-  if (!defect || !navigator.clipboard?.writeText) return;
-  await navigator.clipboard.writeText(defectReportText(defect));
+  if (!defect) return "Copy failed. The saved defect is unchanged.";
+  return (await copyStoredDefectForJira(defect, browserDefectReportClipboard())).feedback;
 }
 
 function openDefect(defectId: string, trigger?: HTMLButtonElement): void {
@@ -1272,7 +1266,7 @@ function renderDefects(): void {
       defectLibrary = editDefect(defectLibrary, id, { report, notes }, new Date().toISOString());
       persistDefectLibrary(); renderDefects();
     },
-    recopy:(id) => { void recopyDefect(id); },
+    recopy:recopyDefect,
     updateStatus:(id, status) => {
       defectLibrary = updateDefectStatus(defectLibrary, id, status, new Date().toISOString());
       persistDefectLibrary(); renderDefects(); renderLiveObserver();
@@ -1707,7 +1701,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
               if (result.added) { defectLibrary = result.library; persistDefectLibrary(); renderDefects(); renderLiveObserver(); }
               if (options.copy && navigator.clipboard?.writeText) await navigator.clipboard.writeText(renderJiraReport(report).text);
               return result.added
-                ? { feedback:options.copy ? "Reported defect saved and copied for Jira Cloud." : "Reported defect saved." }
+                ? { feedback:options.copy ? "Defect saved and copied for Jira Cloud." : "Defect saved." }
                 : { feedback:"A reported defect already matches the selected issue.", existing:result.existing.map((existing) => ({ id:existing.id, label:String(existing.report?.summary ?? existing.id) })) };
             },
             openExisting:(id) => openDefect(id),

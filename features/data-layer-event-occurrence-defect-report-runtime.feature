@@ -81,7 +81,7 @@ Feature: Data layer event occurrence defect report runtime
   # Data layer event occurrence defect report runtime 007
   Scenario: Data layer event occurrence defect report runtime 007
     Given the production occurrence report contains reproduction steps, selected timeline evidence, and report edits
-    When Copy for Jira Cloud, plain-text fallback, Save as reported defect, reopen, and recopy are exercised through actual controls
+    When Copy for Jira Cloud, plain-text fallback, Save defect, reopen, and recopy are exercised through actual controls
     Then every representation retains equivalent Actual, Expected, Differences, occurrence evidence, steps, timeline, and edits
     And the persisted record retains expectation mode, actual identity, expected identity, page-visit scope, and optional saved-session link
     And reopening restores report navigation, scroll, and focus

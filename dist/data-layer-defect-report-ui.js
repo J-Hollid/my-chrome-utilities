@@ -31,7 +31,7 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     const feedback = document.createElement("output");
     feedback.setAttribute("aria-live", "polite");
     const duplicateReview = document.createElement("section");
-    duplicateReview.setAttribute("aria-label", "Existing reported defects");
+    duplicateReview.setAttribute("aria-label", "Existing defects");
     duplicateReview.hidden = true;
     const copy = document.createElement("button");
     copy.type = "button";
@@ -105,15 +105,15 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     appendTimelineControls(timelineFilters, timelineList, context, state);
     appendDetailControls(detailControls, detailEdits, refresh);
     const persistenceActions = document.createElement("section");
-    persistenceActions.setAttribute("aria-label", "Reported defect actions");
+    persistenceActions.setAttribute("aria-label", "Defect actions");
     if (persistence) {
         const save = document.createElement("button");
         save.type = "button";
-        save.textContent = "Save as reported defect";
+        save.textContent = "Save defect";
         save.onclick = () => { void persist(false); };
         const saveAndCopy = document.createElement("button");
         saveAndCopy.type = "button";
-        saveAndCopy.textContent = "Save as reported defect and copy";
+        saveAndCopy.textContent = "Save defect and copy";
         saveAndCopy.onclick = () => { void persist(true); };
         persistenceActions.append(save, saveAndCopy);
     }

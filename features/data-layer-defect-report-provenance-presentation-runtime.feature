@@ -61,7 +61,7 @@ Feature: Data layer defect report provenance presentation runtime
   # Data layer defect report provenance presentation runtime 006
   Scenario: Data layer defect report provenance presentation runtime 006
     Given the production report contains all supported correction source kinds
-    When Copy for Jira Cloud, plain-text fallback, Save as reported defect, reopen, and recopy are exercised through actual controls
+    When Copy for Jira Cloud, plain-text fallback, Save defect, reopen, and recopy are exercised through actual controls
     Then preview, rich clipboard, plain clipboard, saved presentation, reopened preview, and recopied output all suppress generated provenance prose
     And every operation retains the same expected payload and operator explanation
     And the persisted and reopened correction model retains all response sources and rule provenance

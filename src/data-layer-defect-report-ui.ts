@@ -61,7 +61,7 @@ export function renderDefectReportBuilder(
   const detailControls = document.createElement("div");
   const preview = document.createElement("section"); preview.setAttribute("aria-label", "Final report preview");
   const feedback = document.createElement("output"); feedback.setAttribute("aria-live", "polite");
-  const duplicateReview = document.createElement("section"); duplicateReview.setAttribute("aria-label", "Existing reported defects"); duplicateReview.hidden = true;
+  const duplicateReview = document.createElement("section"); duplicateReview.setAttribute("aria-label", "Existing defects"); duplicateReview.hidden = true;
   const copy = document.createElement("button"); copy.type = "button"; copy.textContent = "Copy for Jira Cloud"; copy.dataset.actionVariant = "primary";
   const title = heading("h4", `Defect report: ${event.name}`); title.tabIndex = -1;
   const builderHeader = document.createElement("header"); builderHeader.className = "detail-view-header";
@@ -109,10 +109,10 @@ export function renderDefectReportBuilder(
   appendReproductionControls(reproductionControls, reproductionSteps, context, state);
   appendTimelineControls(timelineFilters, timelineList, context, state);
   appendDetailControls(detailControls, detailEdits, refresh);
-  const persistenceActions = document.createElement("section"); persistenceActions.setAttribute("aria-label", "Reported defect actions");
+  const persistenceActions = document.createElement("section"); persistenceActions.setAttribute("aria-label", "Defect actions");
   if (persistence) {
-    const save = document.createElement("button"); save.type = "button"; save.textContent = "Save as reported defect"; save.onclick = () => { void persist(false); };
-    const saveAndCopy = document.createElement("button"); saveAndCopy.type = "button"; saveAndCopy.textContent = "Save as reported defect and copy"; saveAndCopy.onclick = () => { void persist(true); };
+    const save = document.createElement("button"); save.type = "button"; save.textContent = "Save defect"; save.onclick = () => { void persist(false); };
+    const saveAndCopy = document.createElement("button"); saveAndCopy.type = "button"; saveAndCopy.textContent = "Save defect and copy"; saveAndCopy.onclick = () => { void persist(true); };
     persistenceActions.append(save, saveAndCopy);
   }
   root.replaceChildren(

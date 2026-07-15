@@ -25,6 +25,21 @@
      :runtime-error "Unified defect builder browser runtime failed."
      :missing-error "Unified defect builder browser evidence is missing."}))
 
+(defn- assert-nested-payload! [nested]
+  (support/assert! (and (= {:page_name "test" :products [{:id 1 :name "robot"}]} (:payload nested))
+                        (= 2 (:duplicatedItems nested))
+                        (= 1 (:itemCount nested))
+                        (= [false false false] (:actions nested))
+                        (= 3 (count (:sources nested)))
+                        (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
+                        (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
+                        (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
+                        (str/includes? (:preview nested) "pageview is fired with\n")
+                        (not (str/includes? (:preview nested) "{\"page_name\":\"test\""))
+                        (str/includes? (:html nested) "&quot;products&quot;: ["))
+                   "Recursive typed expected-payload editing or shared representation diverged."
+                   nested))
+
 (defn- assert-runtime! [observed]
   (let [initial (get-in observed [:unified :initial])
         complete (get-in observed [:unified :complete])
@@ -54,19 +69,7 @@
                           (str/includes? (:preview complete) "Expect purchase to be pushed"))
                      "Completion did not retain absence evidence, schema identity, journey assertion, copy, and save."
                      observed)
-    (support/assert! (and (= {:page_name "test" :products [{:id 1 :name "robot"}]} (:payload nested))
-                          (= 2 (:duplicatedItems nested))
-                          (= 1 (:itemCount nested))
-                          (= [false false false] (:actions nested))
-                          (= 3 (count (:sources nested)))
-                          (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
-                          (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
-                          (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
-                          (str/includes? (:preview nested) "pageview is fired with\n")
-                          (not (str/includes? (:preview nested) "{\"page_name\":\"test\""))
-                          (str/includes? (:html nested) "&quot;products&quot;: ["))
-                     "Recursive typed expected-payload editing or shared representation diverged."
-                     nested)
+    (assert-nested-payload! nested)
     (support/assert! (and (= "Copy failed" (:copyFailure failures))
                           (= "Save failed" (:saveFailure failures))
                           (= 1 (:rejectedSaveCalls failures))
@@ -97,7 +100,7 @@
    "step_kind" #{"Click component" "Log in as user" "Scroll" "Custom step"}
    "step_input" #{"Checkout, sticky footer button" "returning customer" "bottom of the page" "Apply the free delivery filter"}
    "step_text" #{"Click Checkout — sticky footer button" "Log in as returning customer" "Scroll to the bottom of the page" "Apply the free delivery filter"}
-   "report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+   "report_action" #{"Copy for Jira Cloud" "Save defect" "Save defect and copy"}
    "successful_effect" #{"the current preview is written through the Jira clipboard integration" "one discoverable Missing event defect is persisted in Defects" "one defect is persisted and the same representation is written to clipboard"}
    "failed_effect" #{"clipboard writing rejects" "Defect Library persistence rejects"}
    "boundary" #{"Jira clipboard adapter" "Defect Library persistence"}
