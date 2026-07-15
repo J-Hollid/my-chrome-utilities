@@ -29,3 +29,19 @@
               :runtime runtime-values model-values {"value" "model"} "invalid runtime value")
              :accepted
              (catch Exception _ :rejected))))))
+
+(deftest validates-example-relations-when-all-keys-are-present
+  (let [relations [{:keys ["left" "right"]
+                    :rows #{["a" "b"]}}]]
+    (is (= {"left" "a" "right" "b"}
+           (support/validate-example-relations!
+            relations {"left" "a" "right" "b"} "invalid relation")))
+    (is (= {"left" "a"}
+           (support/validate-example-relations!
+            relations {"left" "a"} "invalid relation")))
+    (is (= :rejected
+           (try
+             (support/validate-example-relations!
+              relations {"left" "a" "right" "c"} "invalid relation")
+             :accepted
+             (catch Exception _ :rejected))))))

@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=a190a44ea467595ab659aeb4afa6e498ef7c184e71b18d7f30d10d1580cbf94d
+# mutation-stamp: sha256=8724837229032021071f083153cb01ef730d9d403daa0a6749320746dd33ab67
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-15T00:36:01.707411208Z","feature_name":"Data layer Live guided conditional rule authoring runtime","feature_path":"features/data-layer-live-guided-conditional-rule-authoring-runtime.feature","background_hash":"9fa5ca42d11c8b768531e987cfebc90be45528120c39832c74e6c3f326e3af3f","implementation_hash":"sha256:0135b9dc42e87856572a54aa7489ac6ae7e859d1b6544bde594f94b549afe625","scenarios":[{"index":6,"name":"Data layer Live guided conditional rule authoring runtime 007","scenario_hash":"67360a07c6b730d50190c2db23759af95c58e7b44331dc92a6765651e7d3c4ce","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T00:36:01.707411208Z"}]}
+# {"version":1,"tested_at":"2026-07-15T14:35:39.708589913Z","feature_name":"Data layer Live guided conditional rule authoring runtime","feature_path":"features/data-layer-live-guided-conditional-rule-authoring-runtime.feature","background_hash":"9fa5ca42d11c8b768531e987cfebc90be45528120c39832c74e6c3f326e3af3f","implementation_hash":"sha256:57b2fb2cdc4e52788cee9e93b621c1de46201bb755d5061fd6626109cba09d30","scenarios":[{"index":6,"name":"Data layer Live guided conditional rule authoring runtime 007","scenario_hash":"67360a07c6b730d50190c2db23759af95c58e7b44331dc92a6765651e7d3c4ce","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T00:36:01.707411208Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer Live guided conditional rule authoring runtime
