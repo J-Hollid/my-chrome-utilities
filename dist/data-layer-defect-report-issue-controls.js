@@ -1,4 +1,4 @@
-import { expectedResultAssistance, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
+import { expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     for (const reportIssue of state.report().issues) {
         let hideCustomResponse = () => { };
@@ -14,7 +14,7 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         issues.append(row);
         const group = document.createElement("fieldset");
         group.setAttribute("aria-label", `${reportIssue.id} expected-result assistance`);
-        if (reportIssue.violation === "Undeclared property") {
+        if (isUndeclaredPropertyIssue(reportIssue)) {
             const removalLabel = document.createElement("label");
             const removal = document.createElement("input");
             removal.type = "radio";
