@@ -14,13 +14,14 @@ Feature: Data layer defect library runtime
     Given the rendered defect builder has a completed report for purchase
     When the operator activates production action <report_action>
     Then production persistence contains <stored_count> defect records
+    And every stored defect has Saved status
     And the production clipboard receives <copy_count> report representations
 
     Examples:
       | report_action                    | stored_count | copy_count |
       | Copy for Jira Cloud              | 0            | 1          |
-      | Save as reported defect          | 1            | 0          |
-      | Save as reported defect and copy | 1            | 1          |
+      | Save defect                      | 1            | 0          |
+      | Save defect and copy             | 1            | 1          |
 
   # Data layer defect library runtime 002
   Scenario Outline: Data layer defect library runtime 002
@@ -64,13 +65,15 @@ Feature: Data layer defect library runtime
 
   # Data layer defect library runtime 005
   Scenario: Data layer defect library runtime 005
-    Given production validation issue currency links to a stored reported defect
+    Given production validation issue currency links to a stored defect
+    And production rich and plain-text clipboard writing are available
     When the rendered issue link opens that defect
     And the operator edits report details, adds note Jira https://jira.example/browse/DL-42, and saves
     Then production persistence restores the edits and note after a side-panel reload
     And the note link is safe and navigable
-    When Recopy for Jira Cloud is activated
-    Then the production clipboard representation contains the edited report details
+    When the rendered Recopy for Jira Cloud control is activated
+    Then production clipboard contains rich HTML and plain text for the same current stored report
+    And rich HTML retains the Jira Cloud formatting shown by the saved report preview
     And returning restores the originating event, issue, feed filters, scroll, and focus
 
   # Data layer defect library runtime 006
@@ -92,6 +95,7 @@ Feature: Data layer defect library runtime
 
     Examples:
       | defect_status | triage_result                    | active_match_count |
+      | Saved         | New                              | 0                  |
       | Reported      | Reported                         | 1                  |
       | Resolved      | Possible regression treated New | 0                  |
       | Archived      | New                              | 0                  |
@@ -99,7 +103,76 @@ Feature: Data layer defect library runtime
   # Data layer defect library runtime 008
   Scenario: Data layer defect library runtime 008
     Given production validation-issue and Missing event reports are completed
-    When each rendered report builder saves its report as a reported defect
+    When each rendered report builder saves its report
     Then both records are restored in the rendered Defects view after reload
-    And only the validation-issue defect participates in production event-issue matching
-    And opening, editing, recopying, resolving, reopening, archiving, and confirmed deletion update production persistence without mutating captured evidence
+    And both records have Saved status
+    And neither record participates in production event-issue matching before it is marked as reported
+    And opening, editing, recopying, updating state, and confirmed deletion update production persistence without mutating captured evidence
+
+  # Data layer defect library runtime 009
+  Scenario Outline: Data layer defect library runtime 009
+    Given a production defect with Saved status matches a current validation issue
+    When the rendered defect editor saves Jira <jira_ticket> in Internal notes
+    And the operator selects <selected_status> and activates Update state
+    Then production persistence stores Jira <jira_ticket> in Internal notes with <selected_status> status
+    And the rendered defect list displays <selected_status> for that defect
+    And production validation triages the matching issue as Reported
+    And a side-panel reload restores the note link, status, and active issue match
+
+    Examples:
+      | jira_ticket                        | selected_status |
+      | https://jira.example/browse/DL-42  | Reported        |
+
+  # Data layer defect library runtime 010
+  Scenario Outline: Data layer defect library runtime 010
+    Given a production saved defect is open with clipboard support <clipboard_support>
+    When the rendered Recopy for Jira Cloud control is activated
+    Then production clipboard behavior is <clipboard_behavior>
+    And rendered feedback is <feedback>
+    And the defect remains stored
+
+    Examples:
+      | clipboard_support | clipboard_behavior                       | feedback                         |
+      | plain text only   | plain-text report copied                 | rich formatting was not copied  |
+      | unavailable       | no clipboard representation was copied  | copy failure                     |
+
+  # Data layer defect library runtime 011
+  Scenario Outline: Data layer defect library runtime 011
+    Given a production saved <defect_type> defect is open
+    And production rich and plain-text clipboard writing are available
+    When the rendered Recopy for Jira Cloud control is activated
+    Then production clipboard contains rich HTML and plain text for the same current stored report
+    And rich HTML retains the Jira Cloud formatting shown by the saved report preview
+
+    Examples:
+      | defect_type      |
+      | validation issue |
+      | Missing event    |
+      | Unexpected event |
+      | Wrong event name |
+
+  # Data layer defect library runtime 012
+  Scenario: Data layer defect library runtime 012
+    Given production persistence contains a pre-upgrade defect with Reported status
+    When the side panel restores the Defect Library after the upgrade
+    Then the pre-upgrade defect retains Reported status
+    And a newly saved defect receives Saved status
+
+  # Data layer defect library runtime 013
+  Scenario Outline: Data layer defect library runtime 013
+    Given production persistence contains a defect with status <current_status>
+    When the rendered defect editor opens that defect
+    Then one rendered state selector offers Saved, Reported, Resolved, and Archived
+    And the selector has <current_status> selected
+    And one Update state button is rendered without individual state-transition buttons
+    When the operator selects <selected_status> and activates Update state
+    Then production persistence and the rendered defect list show <selected_status>
+    And no intermediate state is persisted
+
+    Examples:
+      | current_status | selected_status |
+      | Reported       | Saved           |
+      | Saved          | Reported        |
+      | Saved          | Resolved        |
+      | Resolved       | Archived        |
+      | Archived       | Reported        |

@@ -63,7 +63,7 @@ Feature: Data layer unified defect report builder runtime
     Given the rendered missing-event report is complete with a nested expected payload
     When Copy for Jira Cloud runs through the side-panel clipboard boundary
     Then the current preview is written once and success appears only after the write resolves
-    When Save as reported defect runs through production persistence
+    When Save defect runs through production persistence
     Then the Defect Library count increases by 1 and the saved defect can be opened
     When that defect is edited and recopied
     Then the production preview and Jira representation retain the nested expected payload, schema expectation, reproduction journey, timeline, and edits
@@ -82,7 +82,7 @@ Feature: Data layer unified defect report builder runtime
     Examples:
       | boundary                   | report_action            | failure_feedback |
       | Jira clipboard adapter     | Copy for Jira Cloud      | Copy failed      |
-      | Defect Library persistence | Save as reported defect  | Save failed      |
+      | Defect Library persistence | Save defect              | Save failed      |
 
   # Data layer unified defect report builder runtime 008
   Scenario: Data layer unified defect report builder runtime 008

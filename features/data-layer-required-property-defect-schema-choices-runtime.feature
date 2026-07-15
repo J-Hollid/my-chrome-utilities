@@ -105,7 +105,7 @@ Feature: Data layer required-property defect schema choices runtime
   # Data layer required-property defect schema choices runtime 010
   Scenario: Data layer required-property defect schema choices runtime 010
     Given the production report adds schema-provided /page_type product_detail
-    When preview, Copy for Jira Cloud, Save as reported defect, reopen, and recopy are exercised through actual controls
+    When preview, Copy for Jira Cloud, Save defect, reopen, and recopy are exercised through actual controls
     Then every representation contains the same typed Expected result and missing Actual result
     And each retains Required value evidence, effective value-rule provenance, add operation, and assigned revision
     And the stored event, validation result, schema library, assignment, and rules are unchanged
