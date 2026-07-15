@@ -23,6 +23,24 @@
 
 (defn- selected? [value] (= value "selected"))
 
+(defn- matching-combination [observed rules? capture?]
+  (first (filter #(and (= rules? (:rulesState %))
+                       (= capture? (:captureState %)))
+                 (:combinations observed))))
+
+(defn- optional-headings [rules? capture?]
+  (cond-> []
+    (or rules? capture?) (conj "Validation evidence")
+    rules? (conj "Validation rules covered")
+    capture? (conj "Capture metadata")))
+
+(defn- consistent-renderings? [result optional]
+  (and result
+       (= (:preview result) (:rich result))
+       (= optional (:plain result))
+       (= optional (filterv #{"Validation evidence" "Validation rules covered" "Capture metadata"}
+                            (:preview result)))))
+
 (defn- assert-example! [example observed]
   (when-let [rules-state (support/example-value example "rules_state")]
     (support/validate-example-domain!
@@ -31,19 +49,10 @@
     (let [capture-state (support/require-example example "capture_state")
           rules? (selected? rules-state)
           capture? (selected? capture-state)
-          result (first (filter #(and (= rules? (:rulesState %))
-                                      (= capture? (:captureState %)))
-                                (:combinations observed)))
-          optional (cond-> []
-                     (or rules? capture?) (conj "Validation evidence")
-                     rules? (conj "Validation rules covered")
-                     capture? (conj "Capture metadata"))]
+          result (matching-combination observed rules? capture?)
+          optional (optional-headings rules? capture?)]
       (support/assert!
-       (and result
-            (= (:preview result) (:rich result))
-            (= optional (:plain result))
-            (= optional (filterv #{"Validation evidence" "Validation rules covered" "Capture metadata"}
-                                 (:preview result))))
+       (consistent-renderings? result optional)
        "Optional evidence rendering disagreed across preview, rich, or plain output."
        {:example example :result result}))))
 
@@ -106,5 +115,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T18:46:11.536042426+02:00", :module-hash "360663725", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "980283895"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "360754286"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 10, :hash "991335764"} {:id "form/3/defonce", :kind "defonce", :line 11, :end-line 11, :hash "-1819867165"} {:id "def/example-values", :kind "def", :line 12, :end-line 14, :hash "421858561"} {:id "defn-/browser-observation!", :kind "defn-", :line 16, :end-line 22, :hash "-1698678917"} {:id "defn-/selected?", :kind "defn-", :line 24, :end-line 24, :hash "-194408770"} {:id "defn-/assert-example!", :kind "defn-", :line 26, :end-line 48, :hash "543701680"} {:id "defn-/assert-observation!", :kind "defn-", :line 50, :end-line 93, :hash "725967798"} {:id "defn-/transition", :kind "defn-", :line 95, :end-line 99, :hash "12532909"} {:id "def/handlers", :kind "def", :line 101, :end-line 106, :hash "-1961762933"}]}
+;; {:version 1, :tested-at "2026-07-15T19:13:09.869030389+02:00", :module-hash "471699054", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "980283895"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "360754286"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 10, :hash "991335764"} {:id "form/3/defonce", :kind "defonce", :line 11, :end-line 11, :hash "-1819867165"} {:id "def/example-values", :kind "def", :line 12, :end-line 14, :hash "421858561"} {:id "defn-/browser-observation!", :kind "defn-", :line 16, :end-line 22, :hash "-1698678917"} {:id "defn-/selected?", :kind "defn-", :line 24, :end-line 24, :hash "-194408770"} {:id "defn-/matching-combination", :kind "defn-", :line 26, :end-line 29, :hash "547928693"} {:id "defn-/optional-headings", :kind "defn-", :line 31, :end-line 35, :hash "-1768401348"} {:id "defn-/consistent-renderings?", :kind "defn-", :line 37, :end-line 42, :hash "1123517147"} {:id "defn-/assert-example!", :kind "defn-", :line 44, :end-line 57, :hash "-1142440208"} {:id "defn-/assert-observation!", :kind "defn-", :line 59, :end-line 102, :hash "725967798"} {:id "defn-/transition", :kind "defn-", :line 104, :end-line 108, :hash "12532909"} {:id "def/handlers", :kind "def", :line 110, :end-line 115, :hash "-1961762933"}]}
 ;; clj-mutate-manifest-end

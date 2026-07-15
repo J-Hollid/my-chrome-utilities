@@ -1,6 +1,7 @@
 (ns acceptance.steps.all
   (:require [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.canonical-declared-property-validation :as canonical-declared-property-validation]
+            [acceptance.steps.recursive-declared-property-validation :as recursive-declared-property-validation]
             [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
@@ -83,6 +84,7 @@
                required-property-defect-schema-choices/handlers
                defect-report-undeclared-property-removal/handlers
                canonical-declared-property-validation/handlers
+               recursive-declared-property-validation/handlers
                cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
                schema-property-filter-sort/handlers
@@ -149,5 +151,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T18:43:26.029633416+02:00", :module-hash "-2005268745", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 73, :hash "1015202847"} {:id "def/handlers", :kind "def", :line 75, :end-line 149, :hash "-1315867297"}]}
+;; {:version 1, :tested-at "2026-07-15T19:29:46.881515241+02:00", :module-hash "-1813109310", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 74, :hash "1012234252"} {:id "def/handlers", :kind "def", :line 76, :end-line 151, :hash "-739959519"}]}
 ;; clj-mutate-manifest-end

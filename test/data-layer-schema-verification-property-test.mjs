@@ -19,6 +19,7 @@ import {
   serializeSchemaLibrary,
   updateSchemaWorkingDraft,
   validateEvent,
+  validateWithSchema,
 } from "../dist/data-layer-schema-verification.js";
 
 for (let sample = 0; sample < 100; sample += 1) {
@@ -114,6 +115,46 @@ for (let sample = 0; sample < 100; sample += 1) {
   });
   const result = validateEvent({ sourceId: "source", eventName: "event", payload: { id: sample }, rawInput: null }, [validationSchema]);
   assert.equal(result.state, "Valid");
+
+  const recursiveDepth = 1 + (sample % 6);
+  let recursiveDocument = { type:"object", properties:{ leaf:{ type:"number" } } };
+  let recursivePayload = { leaf:sample };
+  const deepestPayload = recursivePayload;
+  let deepestPath = "";
+  for (let level = 0; level < recursiveDepth; level += 1) {
+    if (level % 2 === 0) {
+      const property = `level_${level}`;
+      recursiveDocument = { type:"object", properties:{ [property]:recursiveDocument } };
+      recursivePayload = { [property]:recursivePayload };
+      deepestPath = `/${property}${deepestPath}`;
+    } else {
+      const property = `items_${level}`;
+      recursiveDocument = { type:"object", properties:{ [property]:{ type:"array", items:recursiveDocument } } };
+      recursivePayload = { [property]:[recursivePayload] };
+      deepestPath = `/${property}/0${deepestPath}`;
+    }
+  }
+  recursiveDocument = { ...recursiveDocument, additionalProperties:false };
+  const extraProperty = `extra_${sample}`;
+  deepestPayload[extraProperty] = true;
+  const recursiveSchema = createSchema(`Recursive ${sample}`, 1, recursiveDocument);
+  const recursiveEvent = { sourceId:"source", eventName:"recursive", payload:recursivePayload, rawInput:null };
+  const recursiveDocumentSnapshot = structuredClone(recursiveDocument);
+  const recursivePayloadSnapshot = structuredClone(recursivePayload);
+  const recursiveIssues = validateWithSchema(recursiveEvent, recursiveSchema, [recursiveSchema]).issues;
+  assert.deepEqual(recursiveIssues.map(({ instancePath, message, actual }) => ({ instancePath, message, actual })), [{
+    instancePath:`${deepestPath}/${extraProperty}`, message:"Undeclared property", actual:"boolean",
+  }], "closed-object validation must find one concrete extra property through generated object and array depths");
+  assert.deepEqual(validateWithSchema(recursiveEvent, recursiveSchema, [recursiveSchema]).issues, recursiveIssues,
+    "recursive validation must be deterministic and idempotent");
+  const openRecursiveSchema = { ...recursiveSchema, document:{ ...recursiveDocument, additionalProperties:true } };
+  assert.equal(validateWithSchema(recursiveEvent, openRecursiveSchema, [openRecursiveSchema]).issues
+    .some(({ message }) => message === "Undeclared property"), false,
+  "opening the generated root policy must suppress recursive undeclared-property issues");
+  assert.deepEqual(recursiveDocument, recursiveDocumentSnapshot,
+    "recursive validation must conserve generated schema documents");
+  assert.deepEqual(recursivePayload, recursivePayloadSnapshot,
+    "recursive validation must conserve generated payloads");
 
   const legacy = [version, version + 1, version + 2].map((legacyVersion, index) => assignSchema(
     createSchema(`Legacy ${sample}`, legacyVersion, { type: "object", properties: { [`revision_${legacyVersion}`]: { type: "string" } } }),

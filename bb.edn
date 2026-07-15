@@ -9,6 +9,7 @@
   test:unit {:doc "Run focused unit tests."
              :requires ([clojure.test :as test]
                         [acceptance.canonical-declared-property-validation-steps-test]
+                        [acceptance.recursive-declared-property-validation-steps-test]
                         [babashka.process :as process]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
@@ -66,6 +67,7 @@
                         [acceptance.schema-renaming-steps-test]
                         [acceptance.schema-property-filter-sort-steps-test]
                         [acceptance.defect-report-component-options-steps-test]
+                        [acceptance.defect-report-steps-test]
                         [acceptance.recursive-property-validation-steps-test]
                         [acceptance.information-architecture-steps-test]
                         [acceptance.schema-verification-steps-test]
@@ -74,6 +76,7 @@
                         [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.canonical-declared-property-validation-steps-test
+                                                'acceptance.recursive-declared-property-validation-steps-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
@@ -129,6 +132,7 @@
                                                 'acceptance.schema-renaming-steps-test
                                                 'acceptance.schema-property-filter-sort-steps-test
                                                 'acceptance.defect-report-component-options-steps-test
+                                                'acceptance.defect-report-steps-test
                                                 'acceptance.recursive-property-validation-steps-test
                                                 'acceptance.information-architecture-steps-test
                                                 'acceptance.schema-verification-steps-test
