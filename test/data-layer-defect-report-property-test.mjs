@@ -15,11 +15,13 @@ import {
   moveManualReproductionStep,
   removeManualReproductionStep,
   removeTimelineSelection,
+  reportComponents,
   renderJiraReport,
   saveTimelineSelection,
   supportingTimeline,
   timelineEventChoices,
   toggleReportIssue,
+  updateReportComponents,
   validateAssistedResponse,
 } from "../dist/data-layer-defect-report.js";
 import { defectReportContext } from "../dist/data-layer-defect-report-ui.js";
@@ -132,6 +134,46 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.doesNotMatch(semanticRendered.text, /invalid actual value|corrected expected value/);
   assert.deepEqual(semanticPayload, semanticSnapshot,
     "semantic difference creation and rendering must not mutate captured payloads");
+
+  const componentSelection = {
+    differences:Boolean(iteration & 1),
+    validationRules:Boolean(iteration & 2),
+    captureMetadata:Boolean(iteration & 4),
+  };
+  const componentSourceSnapshot = structuredClone(semanticReport);
+  const componentReport = updateReportComponents(semanticReport, componentSelection);
+  assert.deepEqual(semanticReport, componentSourceSnapshot,
+    "component selection must not mutate structured report data");
+  assert.deepEqual(componentReport.components, componentSelection);
+  assert.deepEqual(updateReportComponents(componentReport, { differences:componentSelection.differences }), componentReport,
+    "reapplying one generated component choice must be idempotent and conserve the others");
+  const componentRendered = renderJiraReport(generateReportDetails(componentReport));
+  const textHeadings = componentRendered.text.split("\n");
+  for (const requiredHeading of ["Summary", "Description", "Steps to reproduce", "Actual result", "Expected result"]) {
+    assert.equal(textHeadings.includes(requiredHeading), true,
+      "component selection must conserve every mandatory report section");
+  }
+  assert.equal(textHeadings.includes("Differences"), componentSelection.differences);
+  assert.equal(textHeadings.includes("Validation evidence"), componentSelection.validationRules || componentSelection.captureMetadata);
+  assert.equal(textHeadings.includes("Validation rules covered"), componentSelection.validationRules);
+  assert.equal(textHeadings.includes("Capture metadata"), componentSelection.captureMetadata);
+  assert.deepEqual(componentReport.actual.differences, semanticReport.actual.differences,
+    "omitted differences must remain available as structured data");
+  assert.deepEqual(componentReport.event, semanticReport.event,
+    "component selection must conserve captured event and evidence inputs");
+
+  const legacyComponentReport = structuredClone(semanticReport);
+  delete legacyComponentReport.components;
+  const legacySnapshot = structuredClone(legacyComponentReport);
+  assert.deepEqual(reportComponents(legacyComponentReport), {
+    differences:true, validationRules:true, captureMetadata:true,
+  });
+  const legacyComponentHeadings = renderJiraReport(generateReportDetails(legacyComponentReport)).text.split("\n");
+  assert.equal(["Differences", "Validation evidence", "Validation rules covered", "Capture metadata"]
+    .every((heading) => legacyComponentHeadings.includes(heading)), true,
+  "legacy reports must retain their historical full presentation");
+  assert.deepEqual(legacyComponentReport, legacySnapshot,
+    "deriving legacy component defaults must not mutate the stored report");
 
   const undeclaredKey = `extra~${iteration}/value`;
   const undeclaredPointer = `/nested/${undeclaredKey.replaceAll("~", "~0").replaceAll("/", "~1")}`;
