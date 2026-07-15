@@ -216,6 +216,40 @@ for (let sample = 0; sample < 200; sample += 1) {
       );
     }
   }
+
+  const escapedCollectionKey = `groups/${sample}~collection`;
+  const escapedPredicateKey = `price/${token}~monthly`;
+  const escapedConsequenceKey = `duration/${sample}~value`;
+  const escapedPayload = {
+    [escapedCollectionKey]:Array.from({ length:itemCount }, (_, itemIndex) => ({
+      [escapedConsequenceKey]:itemIndex,
+      ...((itemIndex + sample) % 2 === 0 ? { [escapedPredicateKey]:number } : {}),
+    })),
+  };
+  const escapedSnapshot = structuredClone(escapedPayload);
+  const escapedCollectionPath = pointerSegment(escapedCollectionKey);
+  const escapedPredicatePath = pointerSegment(escapedPredicateKey);
+  const escapedConsequencePath = pointerSegment(escapedConsequenceKey);
+  for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
+    assert.equal(
+      conditionGroupAppliesToConsequence(
+        escapedPayload,
+        {
+          operator:"All",
+          predicates:[{
+            propertyPath:`/${escapedCollectionPath}/*/${escapedPredicatePath}`,
+            operator:"Exists",
+          }],
+        },
+        `/${escapedCollectionPath}/*/${escapedConsequencePath}`,
+        `/${escapedCollectionPath}/${itemIndex}/${escapedConsequencePath}`,
+      ),
+      escapedPredicateKey in escapedPayload[escapedCollectionKey][itemIndex],
+      "correlated wildcard substitution must conserve escaped JSON Pointer identities",
+    );
+  }
+  assert.deepEqual(escapedPayload, escapedSnapshot,
+    "escaped correlated evaluation must not mutate the payload");
   assert.equal(
     conditionGroupAppliesToConsequence(
       correlatedPayload,
