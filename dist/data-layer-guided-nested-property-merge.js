@@ -1,29 +1,33 @@
 import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
+const schemaTypeByGuidedType = {
+    String: "string",
+    Number: "number",
+    Boolean: "boolean",
+    Array: "array",
+    Object: "object",
+};
 function guidedType(type) {
-    return type === "String" ? "string"
-        : type === "Number" ? "number"
-            : type === "Boolean" ? "boolean"
-                : type === "Array" ? "array"
-                    : type === "Object" ? "object"
-                        : undefined;
+    return schemaTypeByGuidedType[type];
 }
-export function guidedPropertyDocument(path, type) {
-    const segments = path.startsWith("$")
+function guidedPathSegments(path) {
+    return path.startsWith("$")
         ? parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value) : segment.kind === "every" ? "*" : String(segment.value))
         : path.startsWith("/")
             ? path.slice(1).split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
             : path.replace(/^\$\.?/, "").split(".").filter(Boolean);
+}
+function propertyDocument(segments, leafType) {
+    const [segment, ...rest] = segments;
+    if (segment === undefined)
+        return leafType ? { type: leafType } : {};
+    const child = propertyDocument(rest, leafType);
+    return segment === "*" || /^\d+$/.test(segment)
+        ? { type: "array", items: child }
+        : { type: "object", properties: { [segment]: child } };
+}
+export function guidedPropertyDocument(path, type) {
     const leafType = guidedType(type);
-    const build = (remaining) => {
-        const [segment, ...rest] = remaining;
-        if (segment === undefined)
-            return leafType ? { type: leafType } : {};
-        const child = build(rest);
-        return segment === "*" || /^\d+$/.test(segment)
-            ? { type: "array", items: child }
-            : { type: "object", properties: { [segment]: child } };
-    };
-    return build(segments);
+    return propertyDocument(guidedPathSegments(path), leafType);
 }
 export function mergeGuidedDocument(current, addition) {
     const propertyNames = new Set([...Object.keys(current.properties ?? {}), ...Object.keys(addition.properties ?? {})]);

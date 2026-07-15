@@ -7,6 +7,7 @@
 
 (def entry-modes
   {"a captured product_view event contains products with product_name and product_id" :model
+   "the built extension side panel is running with production guided validation, Schema Library persistence, and schema validation" :runtime
    "captured product_view contains products with product_name and product_id" :runtime})
 
 (defonce model-verified? (atom false))
