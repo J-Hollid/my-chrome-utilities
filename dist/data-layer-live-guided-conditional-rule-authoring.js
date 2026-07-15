@@ -1,15 +1,5 @@
 import { comparisonValueFromInput, conditionValueAtPath, evaluateConditionalRule, operatorsForConditionType, typedComparisonValue, validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
-import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
-function canonicalPath(path) {
-    if (path.startsWith("$")) {
-        return `/${parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value).replaceAll("~", "~0").replaceAll("/", "~1") : segment.kind === "every" ? "*" : String(segment.value)).join("/")}`;
-    }
-    if (path.startsWith("/")) {
-        const segments = path.split("/").filter(Boolean);
-        return `/${segments.join("/")}`;
-    }
-    return `/${path.replace(/^\$\.?/, "").split(".").filter(Boolean).join("/")}`;
-}
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 function conditionType(value) {
     if (value === null)
         return "null";
@@ -37,7 +27,7 @@ function eventOptions(value, path = "") {
     return Object.entries(value).flatMap(([name, child]) => {
         const childPath = `${path}/${name.replaceAll("~", "~0").replaceAll("/", "~1")}`;
         const own = {
-            path: canonicalPath(childPath),
+            path: canonicalRulePropertyPath(childPath),
             type: conditionType(child),
             source: "current event",
             observedValue: child,
@@ -48,12 +38,12 @@ function eventOptions(value, path = "") {
     });
 }
 export function guidedConditionPropertyOptions(payload, destinationPropertyTypes, consequencePath) {
-    const excluded = canonicalPath(consequencePath);
+    const excluded = canonicalRulePropertyPath(consequencePath);
     const byPath = new Map();
     for (const option of eventOptions(payload))
         byPath.set(option.path, option);
     for (const [path, type] of Object.entries(destinationPropertyTypes)) {
-        const canonical = canonicalPath(path);
+        const canonical = canonicalRulePropertyPath(path);
         if (!byPath.has(canonical))
             byPath.set(canonical, { path: canonical, type: guidedType(type), source: "destination schema" });
     }
@@ -161,11 +151,11 @@ export function validateGuidedConditionalDraft(draft, consequence) {
         return { ready: false, assistance: `Review condition property ${review.propertyPath}` };
     return validateConditionalRule({
         conditionGroup: draft.conditionGroup,
-        consequence: { ...consequence, propertyPath: canonicalPath(consequence.propertyPath) },
+        consequence: { ...consequence, propertyPath: canonicalRulePropertyPath(consequence.propertyPath) },
     });
 }
 function consequencePasses(payload, consequence) {
-    const observed = conditionValueAtPath(payload, canonicalPath(consequence.propertyPath));
+    const observed = conditionValueAtPath(payload, canonicalRulePropertyPath(consequence.propertyPath));
     const operator = consequence.operator.replaceAll("_", "-").toLowerCase();
     if (operator === "required")
         return observed.exists;

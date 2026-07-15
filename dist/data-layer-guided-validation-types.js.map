@@ -1,0 +1,1 @@
+{"version":3,"file":"data-layer-guided-validation-types.js","sourceRoot":"","sources":["../src/data-layer-guided-validation-types.ts"],"names":[],"mappings":"","sourcesContent":["export type GuidedValueType = \"String\" | \"Number\" | \"Array\" | \"Object\" | \"Boolean\" | \"Null\";\n"]}

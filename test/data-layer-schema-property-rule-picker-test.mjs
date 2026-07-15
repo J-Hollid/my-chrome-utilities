@@ -14,6 +14,7 @@ import {
 
 assert.equal(canonicalRulePropertyPath("page_type"), "/page_type");
 assert.equal(canonicalRulePropertyPath(" /product . sku/ "), "/product/sku");
+assert.equal(canonicalRulePropertyPath('$["a/b"]["~name"][*][0]'), "/a~1b/~0name/*/0");
 
 assert.deepEqual(applicablePropertyTypesForRule({ id:"explicit", name:"Explicit", kind:"Numeric range · number", applicableType:"string" }), ["string"]);
 

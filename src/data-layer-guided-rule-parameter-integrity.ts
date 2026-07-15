@@ -1,6 +1,5 @@
 import type { GuidedRequirement, PublishedGuidedRule } from "./data-layer-guided-validation.js";
-import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
-import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import type { AttachedSchemaRule } from "./data-layer-schema-verification.js";
 
 function guidedOperator(requirement: GuidedRequirement): string {
@@ -17,9 +16,7 @@ function guidedParameters(rule: PublishedGuidedRule): string | undefined {
 }
 
 export function guidedAttachedRule(rule: PublishedGuidedRule, name: string, localRuleId?: string): AttachedSchemaRule {
-  const propertyPath = rule.path.startsWith("$")
-    ? `/${parseTargetExpression(rule.path).map((segment) => segment.kind === "property" ? String(segment.value).replaceAll("~", "~0").replaceAll("/", "~1") : segment.kind === "every" ? "*" : String(segment.value)).join("/")}`
-    : canonicalNestedPath(rule.path);
+  const propertyPath = canonicalRulePropertyPath(rule.path);
   const parameters = guidedParameters(rule);
   return {
     id:rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,

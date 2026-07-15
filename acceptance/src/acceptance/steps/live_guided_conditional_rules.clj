@@ -135,14 +135,60 @@
                               "number-only operator on string path"}
    "invalid_control" #{"condition group" "comparison value" "trigger operator"}})
 
+(def model-example-relations
+  [{:keys ["condition_path" "condition_type" "compatible_operator" "incompatible_operator"]
+    :rows #{["/page_type" "string" "Matches pattern" "Is greater than"]
+            ["/basket_total" "number" "Is at least" "Matches pattern"]
+            ["/consented" "boolean" "Equals" "Is less than"]
+            ["/products" "array" "Exists" "Is greater than"]}}
+   {:keys ["group_operator" "first_result" "second_result" "consequence_behavior"]
+    :rows #{["All" "true" "true" "evaluated"]
+            ["All" "true" "false" "Not applicable"]
+            ["Any" "true" "false" "evaluated"]
+            ["Any" "false" "false" "Not applicable"]}}
+   {:keys ["page_type_value" "product_state" "preview_result" "issue_count"]
+    :rows #{["product_detail" "present" "Passed" "0"]
+            ["product_detail" "missing" "Failed" "1"]
+            ["category" "missing" "Not applicable" "0"]}}
+   {:keys ["rule_scope" "persistence_outcome"]
+    :rows #{["local rule" "one local conditional attachment is created"]
+            ["reusable rule" "one reusable conditional rule and one pinned attachment are created"]}}
+   {:keys ["invalid_configuration" "recovery_message"]
+    :rows #{["no condition" "Add at least one condition"]
+            ["condition without a property" "Choose a condition property"]
+            ["Equals without a comparison value" "Enter a comparison value"]
+            ["malformed Matches pattern value" "Correct the regular expression"]
+            ["Is greater than on a string property" "Choose an operator compatible with string"]}}])
+
+(def runtime-example-relations
+  [{:keys ["invalid_configuration" "invalid_control"]
+    :rows #{["no predicates" "condition group"]
+            ["Equals with no comparison value" "comparison value"]
+            ["malformed Matches pattern value" "comparison value"]
+            ["number-only operator on string path" "trigger operator"]}}])
+
+(defn- validate-relations! [relations example]
+  (doseq [{:keys [keys rows]} relations
+          :when (every? #(support/example-value example %) keys)]
+    (let [row (mapv #(support/example-value example %) keys)]
+      (support/assert! (contains? rows row)
+                       "Live guided conditional rule example row was outside the specified relationship."
+                       {:keys keys :row row :allowed rows}))))
+
 (defn- validate-example! [mode example]
-  (let [domains (if (= mode :runtime) runtime-example-values model-example-values)]
+  (let [runtime? (= mode :runtime)
+        domains (if runtime? runtime-example-values model-example-values)]
     (support/validate-example-domain!
      domains example
      (filter #(support/example-value example %) (keys domains))
-     "Live guided conditional rule example value was outside the specified contract.")))
+     "Live guided conditional rule example value was outside the specified contract.")
+    (validate-relations! (if runtime? runtime-example-relations model-example-relations) example)))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :live-guided-conditional-rules-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T02:35:40.657234291+02:00", :module-hash "249527622", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1584591195"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1422450692"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "137167923"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1533447095"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "1703522612"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 102, :hash "292480255"} {:id "def/model-example-values", :kind "def", :line 104, :end-line 129, :hash "1594903235"} {:id "def/runtime-example-values", :kind "def", :line 131, :end-line 136, :hash "763919804"} {:id "def/model-example-relations", :kind "def", :line 138, :end-line 161, :hash "537908538"} {:id "def/runtime-example-relations", :kind "def", :line 163, :end-line 168, :hash "1195470991"} {:id "defn-/validate-relations!", :kind "defn-", :line 170, :end-line 176, :hash "1110395721"} {:id "defn-/validate-example!", :kind "defn-", :line 178, :end-line 185, :hash "737925067"} {:id "def/handlers", :kind "def", :line 187, :end-line 190, :hash "-2002731801"}]}
+;; clj-mutate-manifest-end
