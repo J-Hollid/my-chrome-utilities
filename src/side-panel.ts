@@ -285,6 +285,7 @@ import { addManualProperty, contextualManualPropertyDefinition, inspectManualPro
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
@@ -732,6 +733,8 @@ const confirmSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#co
 const cancelSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaOnlyDeclaredProperties = document.querySelector<HTMLInputElement>("#schema-only-declared-properties");
+const schemaSpecificationBuilder = document.createElement("section"); schemaSpecificationBuilder.id = "schema-specification-builder"; schemaSpecificationBuilder.hidden = true; schemaEditor?.append(schemaSpecificationBuilder);
+const buildSpecificationButton = document.createElement("button"); buildSpecificationButton.type = "button"; buildSpecificationButton.textContent = "Build specification"; buildSpecificationButton.id = "build-specification"; schemaEditor?.prepend(buildSpecificationButton);
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
@@ -1909,19 +1912,20 @@ function renderSchemas(): void {
   if (schemaEmptyState) schemaEmptyState.hidden = visible.length > 0;
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
-    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const build = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
     const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
     const pending = schema.workingDraft?.pendingChanges.length ?? 0;
     const history = schemaRevisionChoices(schema).length;
     item.textContent = schema.published === false
       ? `${schema.name} · unpublished draft · ${pending} pending changes. `
       : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-    revise.type = duplicate.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
+    revise.type = duplicate.type = build.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; build.textContent = "Build specification"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
     revise.addEventListener("click", () => {
       schemaDraft = schemaEditorDraft(schema);
       renderSchemaDraft();
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+    build.addEventListener("click", () => openSchemaSpecification(schema, build));
     reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -1929,7 +1933,7 @@ function renderSchemas(): void {
       pendingSchemaDeletion = schema;
       if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
       if (schemaDeleteReview) { schemaDeleteReview.hidden = false; schemaDeleteReview.showModal(); }
-    }); item.append(revise, duplicate, reportMissing, remove); return item;
+    }); item.append(revise, duplicate, build, reportMissing, remove); return item;
   }));
 }
 
@@ -2047,6 +2051,7 @@ function renderSchemaDraft(): void {
   if (discardWorkingSchemaDraftButton) discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
   if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(draft);
   if (!draft) return;
+  buildSpecificationButton.onclick = () => openSchemaSpecification(draft, buildSpecificationButton);
   const storedSchema = schemas.find((schema) => schema.id === draft.id);
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
@@ -2282,6 +2287,14 @@ function renderSchemaDraft(): void {
   if (duplicateSchemaRevisionButton) duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
   if (restoreSchemaRevisionButton) restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
   if (schemaRevisionComparison) schemaRevisionComparison.textContent = historyVersions.length ? `Select one historical revision to compare with current revision ${storedSchema?.version}.` : "No historical revisions.";
+}
+
+function openSchemaSpecification(source: SchemaDefinition, trigger: HTMLButtonElement): void {
+  schemaSpecificationBuilder.hidden = false;
+  renderSchemaSpecificationBuilder(schemaSpecificationBuilder, source, schemas, () => { schemaSpecificationBuilder.hidden = true; trigger.focus({ preventScroll:true }); }, async (items) => {
+    if (!navigator.clipboard?.write) throw new Error("Rich clipboard unavailable");
+    await navigator.clipboard.write(items);
+  });
 }
 
 type DisplayedSchemaRule = { path: string; rule: NonNullable<SchemaDefinition["attachedRules"]>[number]; origin: SchemaDefinition; state: "active-inherited" | "disabled-inherited" | "explicitly-reenabled" | "local" };
