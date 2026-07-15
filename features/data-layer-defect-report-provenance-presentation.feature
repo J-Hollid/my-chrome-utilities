@@ -10,6 +10,7 @@ Feature: Data layer defect report provenance presentation
     And it adds required /error_action from an exact-value schema rule
     And it adds required /error_message from an operator custom override
     And every correction retains its response source and rule provenance internally
+    And Include validation rules covered is selected
 
   # Data layer defect report provenance presentation 001
   Scenario: Data layer defect report provenance presentation 001
@@ -102,4 +103,3 @@ Feature: Data layer defect report provenance presentation
     When the report is previewed, copied, saved, reopened, or recopied
     Then provenance suppression changes only derived report presentation
     And no source event, validation evidence, schema, assignment, expected payload, response choice, or correction metadata is mutated
-

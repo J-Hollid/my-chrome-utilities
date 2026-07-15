@@ -57,6 +57,7 @@ Feature: Data layer defect report semantic differences
   # Data layer defect report semantic differences 005
   Scenario: Data layer defect report semantic differences 005
     Given a selected issue has an unfamiliar violation Value violates partner contract
+    And Include validation rules covered is selected
     When its Actual difference is rendered
     Then the description includes validation failed: Value violates partner contract
     And the fallback does not claim the property is missing, undeclared, or has an invalid value
@@ -97,6 +98,7 @@ Feature: Data layer defect report semantic differences
 
   # Data layer defect report semantic differences 009
   Scenario: Data layer defect report semantic differences 009
+    Given Include validation rules covered is selected
     When live preview, Jira rich text, Jira plain text, saved defect, reopened preview, and recopied output are compared
     Then each representation uses the same violation-specific Actual descriptions
     And each representation uses the same add, replace, and remove Expected descriptions

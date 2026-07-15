@@ -69,6 +69,13 @@ export interface DefectReport {
   expected: { payload: unknown; corrections: ExpectedCorrection[]; explanations: string[] };
   reproductionSteps: ReproductionStep[];
   timeline: SupportingTimelineEntry[];
+  components?: DefectReportComponents;
+}
+
+export interface DefectReportComponents {
+  differences: boolean;
+  validationRules: boolean;
+  captureMetadata: boolean;
 }
 
 export interface ExpectedResultChoice {

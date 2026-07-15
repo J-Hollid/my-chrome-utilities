@@ -5,11 +5,13 @@ import {
   editReportDetails,
   generateReportDetails,
   renderJiraReport,
+  reportComponents,
   type DefectReport,
   type DefectReportBuilderNavigation,
   type DefectReportClipboard,
   type ExpectedResultChoice,
   type GeneratedDefectReport,
+  updateReportComponents,
 } from "./data-layer-defect-report.js";
 import {
   browserDefectReportClipboard,
@@ -59,6 +61,7 @@ export function renderDefectReportBuilder(
   const timelineFilters = document.createElement("div"); timelineFilters.className = "defect-timeline-composer"; timelineFilters.setAttribute("aria-label", "Timeline composer");
   const timelineList = document.createElement("ul"); timelineList.className = "defect-timeline-entries"; timelineList.setAttribute("aria-label", "Supporting timeline entries");
   const detailControls = document.createElement("div");
+  const reportSections = document.createElement("fieldset"); reportSections.setAttribute("aria-label", "Report sections"); reportSections.append(heading("h5", "Report sections"));
   const preview = document.createElement("section"); preview.setAttribute("aria-label", "Final report preview");
   const feedback = document.createElement("output"); feedback.setAttribute("aria-live", "polite");
   const duplicateReview = document.createElement("section"); duplicateReview.setAttribute("aria-label", "Existing defects"); duplicateReview.hidden = true;
@@ -105,6 +108,18 @@ export function renderDefectReportBuilder(
     refresh,
   };
 
+  const componentControl = (label: string, key: keyof ReturnType<typeof reportComponents>) => {
+    const wrapper = document.createElement("label");
+    const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = reportComponents(report)[key];
+    checkbox.addEventListener("change", () => { report = updateReportComponents(report, { [key]:checkbox.checked }); refresh(); });
+    wrapper.append(checkbox, ` ${label}`); return wrapper;
+  };
+  reportSections.append(
+    componentControl("Include differences list", "differences"),
+    componentControl("Include validation rules covered", "validationRules"),
+    componentControl("Include capture metadata", "captureMetadata"),
+  );
+
   appendIssueControls(issues, expectedControls, state, selectedChoices);
   appendReproductionControls(reproductionControls, reproductionSteps, context, state);
   appendTimelineControls(timelineFilters, timelineList, context, state);
@@ -122,6 +137,7 @@ export function renderDefectReportBuilder(
     heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps,
     heading("h5", "Supporting timeline"), timelineFilters, timelineList,
     heading("h5", "Report details"), detailControls,
+    reportSections,
     preview, copy, persistenceActions, duplicateReview, feedback,
   );
   refresh(); title.focus({ preventScroll: true });

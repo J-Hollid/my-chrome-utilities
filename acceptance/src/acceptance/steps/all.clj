@@ -11,6 +11,7 @@
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
+            [acceptance.steps.defect-report-component-options :as defect-report-component-options]
             [acceptance.steps.defect-report-provenance-presentation :as defect-report-provenance-presentation]
             [acceptance.steps.event-occurrence-defect-report :as event-occurrence-defect-report]
             [acceptance.steps.defect-report-semantic-differences :as defect-report-semantic-differences]
@@ -77,6 +78,7 @@
                schema-property-copy/handlers
                event-occurrence-defect-report/handlers
                defect-report-provenance-presentation/handlers
+               defect-report-component-options/handlers
                defect-report-semantic-differences/handlers
                required-property-defect-schema-choices/handlers
                defect-report-undeclared-property-removal/handlers
