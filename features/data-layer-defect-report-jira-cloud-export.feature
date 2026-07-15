@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=825465fe7da5c4a2580c36ab4618589e32b041df3b7daaaeff34704a6625a4f0
+# mutation-stamp: sha256=2c430827c483dc15d7a408ac1c04fb35667981b83abbaf86e8a1888be6b73d3f
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-13T08:41:40.223525534Z","feature_name":"Data layer defect report Jira Cloud export","feature_path":"features/data-layer-defect-report-jira-cloud-export.feature","background_hash":"a66b61374833c911fe9b7f642b89848c0cf92074e7ef9e7ef4dc5e81f548a3b5","implementation_hash":"sha256:ee0fd8df1cf4bf69f5a30cb921217e333c233ce36961904852e5c8f658f5d108","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-15T16:46:59.093963870Z","feature_name":"Data layer defect report Jira Cloud export","feature_path":"features/data-layer-defect-report-jira-cloud-export.feature","background_hash":"0e81d348740b657bc7427c5994d847eb9296a3a1b4329bdbd559a73daaa27bee","implementation_hash":"sha256:fc47fcbe4ed835ad100f97279a5ef529f19a25fbc8fd3ac6b094814ad7ff3f31","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer defect report Jira Cloud export

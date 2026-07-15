@@ -13,6 +13,7 @@ import {
   supportingTimeline,
   timelineEventChoices,
   toggleReportIssue,
+  updateReportComponents,
   removeTimelineSelection,
   saveTimelineSelection,
   validateAssistedResponse,
@@ -40,6 +41,7 @@ const event = {
 };
 
 const report = createDefectReport(event);
+assert.deepEqual(report.components, { differences:true, validationRules:false, captureMetadata:false });
 assert.equal(report.event.id, "event-purchase");
 assert.deepEqual(report.issues.map(({ id, selected }) => [id, selected]), [
   ["currency", true], ["order_id", true], ["coupon", false],
@@ -307,10 +309,27 @@ assert.deepEqual(browserContext.timeline.map(({ id, pathname }) => [id, pathname
 ]);
 
 const rendered = renderJiraReport(detailed);
-for (const heading of ["Summary", "Description", "Steps to reproduce", "Actual result", "Expected result", "Differences", "Validation evidence", "Supporting timeline"]) {
+for (const heading of ["Summary", "Description", "Steps to reproduce", "Actual result", "Expected result", "Differences", "Supporting timeline"]) {
   assert.match(rendered.text, new RegExp(heading));
   assert.match(rendered.html, new RegExp(heading));
 }
+assert.doesNotMatch(rendered.text, /Validation evidence|Validation rules covered|Capture metadata/);
+const structuredBeforeComponents = JSON.stringify({ actual:detailed.actual, expected:detailed.expected, evidence:detailed.evidence, event:detailed.event });
+const rulesOnly = renderJiraReport(generateReportDetails(updateReportComponents(detailed, { validationRules:true })));
+assert.match(rulesOnly.text, /Validation evidence[\s\S]*Validation rules covered/);
+assert.doesNotMatch(rulesOnly.text, /Capture metadata/);
+assert.equal((rulesOnly.text.match(/allowed-currency/g) ?? []).length, 1);
+const captureOnly = renderJiraReport(generateReportDetails(updateReportComponents(detailed, { captureMetadata:true, validationRules:false })));
+assert.match(captureOnly.text, /Validation evidence[\s\S]*Capture metadata/);
+assert.doesNotMatch(captureOnly.text, /Validation rules covered/);
+const noDifferences = renderJiraReport(generateReportDetails(updateReportComponents(detailed, { differences:false })));
+assert.doesNotMatch(noDifferences.text, /Differences/);
+assert.match(noDifferences.html, /background-color:#ffd7d7/);
+assert.match(noDifferences.html, /background-color:#d9f7d9/);
+assert.equal(JSON.stringify({ actual:detailed.actual, expected:detailed.expected, evidence:detailed.evidence, event:detailed.event }), structuredBeforeComponents);
+const { components: _components, ...legacyDetailed } = detailed;
+const legacyRendered = renderJiraReport(legacyDetailed);
+assert.match(legacyRendered.text, /Differences[\s\S]*Validation rules covered[\s\S]*Capture metadata/);
 assert.match(rendered.text, /− \/commerce\/currency/);
 assert.match(rendered.text, /\+ \/commerce\/currency/);
 assert.doesNotMatch(rendered.text, /currency response source: Checkout schema/);

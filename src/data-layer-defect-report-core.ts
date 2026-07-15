@@ -128,8 +128,20 @@ export function createDefectReport(event: DefectCapturedEvent): DefectReport {
     expected: { payload: cloneValue(captured.payload), corrections: [], explanations: [] },
     reproductionSteps: [],
     timeline: [],
+    components: { differences:true, validationRules:false, captureMetadata:false },
   };
   return applyExpectedResult(report, []);
+}
+
+export function reportComponents(report: DefectReport): NonNullable<DefectReport["components"]> {
+  return report.components ?? { differences:true, validationRules:true, captureMetadata:true };
+}
+
+export function updateReportComponents<T extends DefectReport>(
+  report: T,
+  changes: Partial<NonNullable<DefectReport["components"]>>,
+): T {
+  return { ...report, components:{ ...reportComponents(report), ...changes } };
 }
 
 export function toggleReportIssue(report: DefectReport, issueId: string): DefectReport {

@@ -1,4 +1,5 @@
 import { cloneValue, pointerSegments } from "./data-layer-defect-report-json.js";
+import { reportComponents } from "./data-layer-defect-report-core.js";
 import type {
   DefectReport,
   DefectReportClipboard,
@@ -161,20 +162,23 @@ function expectedDifferenceLine(correction: ExpectedCorrection): string | undefi
 
 function reportSections(report: GeneratedDefectReport): Array<[string, string]> {
   const expectedNarrative = report.expectedExplanation.trim() ? report.expectedExplanation : "";
+  const components = reportComponents(report);
   return [
     ["Summary", report.summary],
     ["Description", report.description],
     ["Steps to reproduce", report.reproductionSteps.map(({ text }) => text).join("\n")],
     ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
     ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
-    ["Differences", [
+    ...(components.differences ? [["Differences", [
       ...report.actual.differences.map(actualDifferenceLine),
       ...report.expected.corrections.flatMap((correction) => {
         const line = expectedDifferenceLine(correction);
         return line ? [line] : [];
       }),
-    ].join("\n")],
-    ["Validation evidence", JSON.stringify(report.evidence, null, 2)],
+    ].join("\n")] as [string, string]] : []),
+    ...(components.validationRules || components.captureMetadata ? [["Validation evidence", ""] as [string, string]] : []),
+    ...(components.validationRules ? [["Validation rules covered", JSON.stringify({ schema:report.evidence.schema, validation:report.evidence.validation }, null, 2)] as [string, string]] : []),
+    ...(components.captureMetadata ? [["Capture metadata", JSON.stringify(report.evidence.capture, null, 2)] as [string, string]] : []),
     ...(report.timeline.length ? [["Supporting timeline", report.timeline.map((entry) => JSON.stringify(entry)).join("\n")] as [string, string]] : []),
   ];
 }
@@ -225,6 +229,7 @@ export function renderJiraReport(report: GeneratedDefectReport): {
   ].join("");
   const html = sections.map(([heading, content]) => {
     if (heading === "Differences") return `<h2>${heading}</h2><ul>${differenceHtml}</ul>`;
+    if (heading === "Validation evidence") return `<h2>${heading}</h2>`;
     if (heading === "Steps to reproduce") {
       return `<h2>${heading}</h2><ol>${report.reproductionSteps.map(({ text }) => `<li>${escapeHtml(text.replace(/^\d+\.\s*/, ""))}</li>`).join("")}</ol>`;
     }
@@ -236,7 +241,7 @@ export function renderJiraReport(report: GeneratedDefectReport): {
       const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + presentation)));
       return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedExpected(report)}</pre>`;
     }
-    const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation evidence" || heading === "Supporting timeline";
+    const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation rules covered" || heading === "Capture metadata" || heading === "Supporting timeline";
     return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;
   }).join("");
   const text = sections.map(([heading, content]) => `${heading}\n${content}`).join("\n\n");

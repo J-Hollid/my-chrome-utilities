@@ -103,8 +103,15 @@ export function createDefectReport(event) {
         expected: { payload: cloneValue(captured.payload), corrections: [], explanations: [] },
         reproductionSteps: [],
         timeline: [],
+        components: { differences: true, validationRules: false, captureMetadata: false },
     };
     return applyExpectedResult(report, []);
+}
+export function reportComponents(report) {
+    return report.components ?? { differences: true, validationRules: true, captureMetadata: true };
+}
+export function updateReportComponents(report, changes) {
+    return { ...report, components: { ...reportComponents(report), ...changes } };
 }
 export function toggleReportIssue(report, issueId) {
     if (!report.issues.some(({ id }) => id === issueId))
