@@ -1,26 +1,14 @@
 import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
+import { detectedValueType } from "./data-layer-guided-validation.js";
+import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 function segments(path) {
     return path.split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
-function valueAt(payload, path) {
-    return segments(path).reduce((value, segment) => {
-        if (Array.isArray(value) && /^\d+$/.test(segment))
-            return value[Number(segment)];
-        if (value && typeof value === "object")
-            return value[segment];
-        return undefined;
-    }, payload);
-}
-function detectedType(value) {
-    if (Array.isArray(value))
-        return "Array";
-    if (value !== null && typeof value === "object")
-        return "Object";
-    if (typeof value === "number")
-        return "Number";
-    if (typeof value === "boolean")
-        return "Boolean";
-    return "String";
+function observedValue(payload, path) {
+    const match = resolveNestedValues(payload, path).find(({ exists }) => exists);
+    if (!match)
+        throw new Error(`Observed property ${path} is unavailable`);
+    return match.value;
 }
 export function canonicalLivePropertyPath(path) {
     return `/${segments(path).map((segment) => /^\d+$/.test(segment) ? "*" : segment).join("/")}`;
@@ -31,7 +19,7 @@ export function createLiveSchemaPropertyDeclaration(payload, concretePath, schem
     return {
         concretePath,
         canonicalPath: canonicalLivePropertyPath(concretePath),
-        detectedType: detectedType(valueAt(payload, concretePath)),
+        detectedType: detectedValueType(observedValue(payload, concretePath)),
         schemaId: schema.id,
         schemaName: schema.name,
         schemaVersion: schema.version,
