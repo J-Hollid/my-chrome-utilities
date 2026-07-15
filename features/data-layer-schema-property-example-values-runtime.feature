@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=0c0b38b54e1dadaf8bbaa98b4160569c573cf97ddfb648c987b7e7d155cce921
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T11:24:37.534434398Z","feature_name":"Data layer schema property example values runtime","feature_path":"features/data-layer-schema-property-example-values-runtime.feature","background_hash":"f835fa1415b787381de2725d564d7739b2b895c9197d9f1eeb5a014b0e43fa2e","implementation_hash":"860b6639581bc5b1d4339c6e3547eb326af1359b0bc9cfe4e1007d4eff0d17e9","scenarios":[{"index":1,"name":"Data layer schema property example values runtime 002","scenario_hash":"5ed5302c9a19c2e277c2e70fec6e0b714219500897c7de8da4b0fd10ac473330","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-15T11:24:37.534434398Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property example values runtime
 
   Background:

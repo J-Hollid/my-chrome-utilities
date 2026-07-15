@@ -1,4 +1,5 @@
 import type { SchemaChoiceProvenance, SchemaChoiceValue } from "./data-layer-defect-schema-choices.js";
+import type { SchemaPropertyExample } from "./data-layer-schema-documentation.js";
 
 export type DefectSeverity = "error" | "warning" | "pass";
 
@@ -14,6 +15,7 @@ export interface DefectIssue {
   allowedValues?: readonly SchemaChoiceValue[];
   schemaChoiceProvenance?: SchemaChoiceProvenance;
   schemaChoiceConflict?: string;
+  example?: SchemaPropertyExample;
 }
 
 export interface DefectCapturedEvent {

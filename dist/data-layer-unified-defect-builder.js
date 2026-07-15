@@ -1,5 +1,6 @@
 import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { validateWithSchema } from "./data-layer-schema-verification.js";
+import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
 function normalizedOperator(value) {
     return value?.replaceAll("_", "-").replaceAll(" ", "-").toLocaleLowerCase() ?? "";
 }
@@ -44,12 +45,18 @@ function initialContainer(schema) {
     }
     return value;
 }
-export function expectedPayloadFields(schema) {
+export function expectedPayloadFields(schema, schemas = [schema]) {
     const normalized = normalizedExpectedPayloadSchema(schema);
+    const documentation = resolveEffectiveSchemaDocumentation(normalized, [
+        ...schemas.filter(({ id }) => id !== normalized.id),
+        normalized,
+    ]);
     const result = [];
     const visit = (definition, path, pointer, required) => {
-        if (path)
-            result.push({ path, pointer, type: definition.type ?? "value", required, schemaValues: allowedValues(normalized, pointer) });
+        if (path) {
+            const example = resolvePropertyDocumentation(documentation, pointer)?.example;
+            result.push({ path, pointer, type: definition.type ?? "value", required, schemaValues: allowedValues(normalized, pointer), ...(example ? { example: structuredClone(example) } : {}) });
+        }
         if (definition.type === "object") {
             const requiredProperties = new Set(definition.required ?? []);
             for (const [property, child] of Object.entries(definition.properties ?? {})) {

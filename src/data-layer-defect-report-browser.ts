@@ -8,6 +8,7 @@ import type {
 import type { LiveEvent } from "./data-layer-live-observer.js";
 import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
 import { isRequiredPropertyViolation } from "./data-layer-defect-report.js";
+import { resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
 
 export interface DefectReportNavigationEffects {
   showCapturedEvent(): void;
@@ -104,6 +105,9 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
       const schemaChoices = isRequiredPropertyViolation(issue.message) && schema
         ? resolveRequiredPropertySchemaChoices({ issuePointer:issue.instancePath, evaluations:event.validationDetails?.evaluations ?? [], assignedSchema:schema })
         : undefined;
+      const example = event.validationDetails?.documentation
+        ? resolvePropertyDocumentation(event.validationDetails.documentation, issue.instancePath)?.example
+        : undefined;
       return {
         id: issueId(issue.instancePath, index),
         severity: issue.severity === "warning" ? "warning" : "error",
@@ -115,6 +119,7 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
         ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),
         ...(schemaChoices?.values.length ? { allowedValues:[...schemaChoices.values], schemaChoiceProvenance:schemaChoices.provenance } : issue.allowedValues?.length ? { allowedValues:[...issue.allowedValues] } : {}),
         ...(schemaChoices?.conflict ? { schemaChoiceConflict:schemaChoices.conflict, schemaChoiceProvenance:schemaChoices.provenance } : {}),
+        ...(example ? { example:structuredClone(example) } : {}),
       };
     }),
   };

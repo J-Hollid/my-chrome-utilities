@@ -2,6 +2,7 @@ import type { ReproductionManualStep, ReproductionPathnameStep } from "./data-la
 import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import type { JsonSchema } from "./data-layer-schema-document.js";
 import { validateWithSchema, type AttachedSchemaRule, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
+import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation, type SchemaPropertyExample } from "./data-layer-schema-documentation.js";
 
 export interface ExpectedPropertyChoice {
   property: string;
@@ -32,6 +33,7 @@ export interface ExpectedPayloadField {
   type:string;
   required:boolean;
   schemaValues:readonly (string | number | boolean | null)[];
+  example?:SchemaPropertyExample;
 }
 
 export interface ExpectedPayloadDraft {
@@ -93,11 +95,18 @@ function initialContainer(schema: JsonSchema): unknown {
   return value;
 }
 
-export function expectedPayloadFields(schema: SchemaDefinition): ExpectedPayloadField[] {
+export function expectedPayloadFields(schema: SchemaDefinition, schemas: readonly SchemaDefinition[] = [schema]): ExpectedPayloadField[] {
   const normalized = normalizedExpectedPayloadSchema(schema);
+  const documentation = resolveEffectiveSchemaDocumentation(normalized, [
+    ...schemas.filter(({ id }) => id !== normalized.id),
+    normalized,
+  ]);
   const result: ExpectedPayloadField[] = [];
   const visit = (definition: JsonSchema, path: string, pointer: string, required: boolean) => {
-    if (path) result.push({ path, pointer, type:definition.type ?? "value", required, schemaValues:allowedValues(normalized, pointer) });
+    if (path) {
+      const example = resolvePropertyDocumentation(documentation, pointer)?.example;
+      result.push({ path, pointer, type:definition.type ?? "value", required, schemaValues:allowedValues(normalized, pointer), ...(example ? { example:structuredClone(example) } : {}) });
+    }
     if (definition.type === "object") {
       const requiredProperties = new Set(definition.required ?? []);
       for (const [property, child] of Object.entries(definition.properties ?? {})) {
