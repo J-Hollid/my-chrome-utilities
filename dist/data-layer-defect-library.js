@@ -191,9 +191,6 @@ export function updateDefectStatus(library, defectId, status, now) {
             : defect),
     };
 }
-export function defectLifecycleAction(defect) {
-    return defect.status === "Reported" ? "Resolve" : defect.status === "Resolved" ? "Reopen" : "none";
-}
 export function serializeDefectLibrary(library) {
     return JSON.stringify({ defects: library.defects });
 }
