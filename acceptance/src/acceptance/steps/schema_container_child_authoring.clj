@@ -6,6 +6,10 @@
   ["features/data-layer-schema-container-child-authoring.feature"
    "features/data-layer-schema-container-child-authoring-runtime.feature"])
 
+(def background-steps
+  #{"schema Page view has current revision 3"
+    "its working draft is open in the schema editor"})
+
 (def entry-steps
   #{"the working draft contains object /commerce"
     "the built extension side panel is running with the production Schema Library, schema editor, working drafts, and persistence"})
@@ -89,8 +93,14 @@
     world))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{"schema Page view has current revision 3"})
-   entry-steps
-   :schema-container-child
-   transition))
+  (vec
+   (concat
+    (support/semantic-handlers
+     (filterv #(background-steps (:text %))
+              (support/feature-step-specs feature-files #{}))
+     (fn [world _example _captures _spec] world))
+    (support/stateful-semantic-handlers
+     (support/feature-step-specs feature-files background-steps)
+     entry-steps
+     :schema-container-child
+     transition))))
