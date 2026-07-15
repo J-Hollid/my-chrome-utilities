@@ -1,4 +1,5 @@
 import type {
+  EditableEventTemplate,
   JsonValue,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
@@ -36,6 +37,39 @@ export function pushDestinationPathError(path: string): string | undefined {
 
 function summary(target: ObservationTarget, destination: string, result: string): string {
   return `${target.title}; ${target.pageUrl}; ${destination}; ${result}.`;
+}
+
+export async function pushSavedTemplateToSelectedTarget(
+  template: EditableEventTemplate,
+  target: ObservationTarget | undefined,
+  pushToPage: PushToPage,
+): Promise<SelectedTargetPushRecord> {
+  if (!target) {
+    const result = "Select a target before pushing";
+    return { success: false, result, summary: result };
+  }
+  if (target.accessState !== "Ready") {
+    const result = `Request access for ${target.title}`;
+    return { success: false, result, summary: result };
+  }
+  const pathError = pushDestinationPathError(template.destination);
+  if (pathError) {
+    const result = `Invalid push destination path ${template.destination}`;
+    return { success: false, result, summary: result };
+  }
+  try {
+    await pushToPage({
+      tabId: target.tabId,
+      destination: template.destination,
+      eventName: template.eventName,
+      payload: structuredClone(template.payload),
+    });
+    const result = `Pushed ${template.name} to ${target.title}`;
+    return { success: true, result, summary: summary(target, template.destination, result) };
+  } catch {
+    const result = `Push to ${target.title} failed`;
+    return { success: false, result, summary: summary(target, template.destination, result) };
+  }
 }
 
 export async function pushTemplateToSelectedTarget(
