@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d4f0852c2232163fb72d17a637497bbc1ce5e786cd040551c017e6c4e46af81c
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T09:54:07.473916303Z","feature_name":"Data layer schema property copy runtime","feature_path":"features/data-layer-schema-property-copy-runtime.feature","background_hash":"3cba67d5c50ed11f44332381ac1126c096a77675de114e88a99e08cb40f66fd7","implementation_hash":"sha256:1446528cd95c26733b0afd9710f3fc0cd3df3ad652b60b6640b2546035b8bf0a","scenarios":[{"index":1,"name":"Data layer schema property copy runtime 002","scenario_hash":"6f73e8de64ca6b5e0d56e77ae83b1c1ba7d5f143017dcbd3cea621a62d8a9e9d","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-15T09:54:07.473916303Z"},{"index":3,"name":"Data layer schema property copy runtime 004","scenario_hash":"2edd889e003ea64239d72705cb4e2281854dad7a6d80290828d1f26bdcabd308","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T09:54:07.473916303Z"},{"index":4,"name":"Data layer schema property copy runtime 005","scenario_hash":"9ab95cc0cfbbb6245de98a4c5dae1a0abc30919b739858173186a8ef1d692273","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-15T09:54:07.473916303Z"},{"index":6,"name":"Data layer schema property copy runtime 007","scenario_hash":"a2c0fd25bc7fb01d78971f2354931583eac3501c5991cbd53e93092e37653604","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T09:54:07.473916303Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property copy runtime
 
   Background:

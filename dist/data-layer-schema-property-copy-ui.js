@@ -91,8 +91,8 @@ export function renderSchemaPropertyCopyReview(dialog, options) {
                 ? [["Choose resolution", "cancel"], ["Use destination text", "use destination text"], ["Use source text", "use source text"]]
                 : [["Choose resolution", "cancel"], ["Keep destination", "keep destination"], ["Replace from source", "replace from source"]];
             choice.append(...choices.map(([text, value]) => Object.assign(element("option"), { value, textContent: text })));
-            choice.value = decisions[conflict.path] ?? "cancel";
-            choice.addEventListener("change", () => { decisions[conflict.path] = choice.value; destructiveConfirmed = false; renderPlan(); });
+            choice.value = decisions[conflict.decisionKey] ?? "cancel";
+            choice.addEventListener("change", () => { decisions[conflict.decisionKey] = choice.value; destructiveConfirmed = false; renderPlan(); });
             label.append(choice);
             row.append(label);
             conflicts.append(row);
