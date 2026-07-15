@@ -20,13 +20,15 @@ function assistanceConstraint(issue) {
 export function expectedResultAssistance(issue) {
     return {
         genericConstraint: `${issue.pointer} ${assistanceConstraint(issue)}`,
-        schemaValues: allowedValues(issue).filter((value) => value !== String(issue.actual)),
+        schemaValues: allowedValues(issue).filter((value) => !Object.is(value, issue.actual)),
         customAvailable: true,
+        ...(issue.schemaChoiceProvenance ? { provenance: structuredClone(issue.schemaChoiceProvenance) } : {}),
+        ...(issue.schemaChoiceConflict ? { conflict: issue.schemaChoiceConflict } : {}),
     };
 }
 export function validateAssistedResponse(issue, response) {
     const values = allowedValues(issue);
-    if (!values.length || values.includes(String(response)))
+    if (!values.length || values.some((value) => Object.is(value, response)))
         return { valid: true };
     return { valid: false, warning: `${String(response)} does not satisfy the current schema constraint.` };
 }
@@ -145,6 +147,7 @@ export function applyExpectedResult(report, choices) {
             ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
             ...(choice.operatorProvided ? { operatorProvided: true } : {}),
             ...(presentation ? { responsePresentation: presentation } : {}),
+            ...(choice.responseProvenance ? { responseProvenance: structuredClone(choice.responseProvenance) } : {}),
         });
         explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
     }

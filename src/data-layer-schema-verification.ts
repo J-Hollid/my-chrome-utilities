@@ -45,7 +45,7 @@ export interface SchemaAssignment {
   schemaId?: string;
   schemaVersion?: number;
 }
-export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly string[]; conditionSummary?: string; }
+export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly (string | number | boolean | null)[]; conditionSummary?: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; documentation?: ResolvedSchemaDocumentation; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled">; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentResolution { schema?: SchemaDefinition; assignment?: SchemaAssignment; error?: string; }
@@ -336,7 +336,7 @@ function issueFromAttachedRule(
   rule: AttachedSchemaRule,
   schema: SchemaDefinition,
   issue: Pick<ValidationIssue, "instancePath" | "message" | "expected" | "actual"> & Pick<ValidationIssue, "templatePath">,
-  allowedValues: readonly string[] = [],
+  allowedValues: readonly (string | number | boolean | null)[] = [],
 ): ValidationIssue {
   return {
     ...issue,
@@ -464,11 +464,17 @@ function inheritedAttachedRuleIssues(value: unknown, schema: SchemaDefinition, s
   }
 }
 
-function allowedValueEvaluationEvidence(rule: AttachedSchemaRule, schema: SchemaDefinition, actualValue: unknown): Partial<ValidationEvaluation> {
+function typedConfiguredValue(rule: AttachedSchemaRule, value: string): string | number | boolean {
+  if (rule.applicableType === "number") return Number(value);
+  if (rule.applicableType === "boolean") return value === "true";
+  return value;
+}
+
+function valueChoiceEvaluationEvidence(rule: AttachedSchemaRule, schema: SchemaDefinition, actualValue: unknown): Partial<ValidationEvaluation> {
   const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase();
-  return operator === "allowed-values"
-    ? { ruleId:rule.id, operator:"allowed-values", schemaId:schema.id, actualValue, allowedValues:configuredAllowedValues(rule) }
-    : {};
+  if (operator === "allowed-values") return { ruleId:rule.id, operator, schemaId:schema.id, actualValue, allowedValues:configuredAllowedValues(rule) };
+  if (operator === "exact-value" && rule.parameters !== undefined) return { ruleId:rule.id, operator, schemaId:schema.id, actualValue, allowedValues:[typedConfiguredValue(rule, rule.parameters)] };
+  return {};
 }
 
 function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
@@ -489,6 +495,8 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
         severity:rule.severity ?? "error",
         schemaName:schema.name,
         schemaVersion:schema.version,
+        notApplicableReason:"condition-not-satisfied",
+        ...valueChoiceEvaluationEvidence(rule, schema, undefined),
       }];
     }
     if (rule.propertyPath?.startsWith("/")) {
@@ -506,6 +514,8 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
           severity:rule.severity ?? "error",
           schemaName:schema.name,
           schemaVersion:schema.version,
+          notApplicableReason:"target-absent",
+          ...valueChoiceEvaluationEvidence(rule, schema, undefined),
         };
         if (!failure) return {
           propertyPath:match.concretePath,
@@ -535,7 +545,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
           severity:issue.severity ?? "error",
           schemaName:schema.name,
           schemaVersion:schema.version,
-          ...allowedValueEvaluationEvidence(rule, schema, match.value),
+          ...valueChoiceEvaluationEvidence(rule, schema, match.value),
         };
       });
     }
@@ -546,9 +556,9 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
     const present = Boolean(propertyPath && record && propertyPath in record);
     const actual = present ? String(record?.[propertyPath]) : "missing";
     const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
-    if (!present && operator !== "required") return [{ propertyPath, status:"not-applicable" as const, message:rule.message ?? `${rule.name ?? rule.id} is not applicable because the optional target is absent`, expected:rule.parameters?.split(":", 2)[1] ?? "optional value rule", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
+    if (!present && operator !== "required") return [{ propertyPath, status:"not-applicable" as const, message:rule.message ?? `${rule.name ?? rule.id} is not applicable because the optional target is absent`, expected:rule.parameters?.split(":", 2)[1] ?? "optional value rule", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version, notApplicableReason:"target-absent", ...valueChoiceEvaluationEvidence(rule, schema, undefined) }];
     if (!issues.length) return [{ propertyPath, status:"pass" as const, message:rule.message ?? `${rule.name ?? rule.id} passed`, expected:rule.parameters?.split(":", 2)[1] ?? "rule satisfied", actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:rule.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version }];
-    return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version, ...allowedValueEvaluationEvidence(rule, schema, record?.[propertyPath]) }));
+    return issues.map((issue) => ({ propertyPath:issue.instancePath, status:issue.severity === "warning" ? "warning" as const : "error" as const, message:issue.message, expected:issue.expected, actual:issue.actual, rule:rule.name ?? rule.id, ruleVersion:rule.version, severity:issue.severity ?? "error", schemaName:schema.name, schemaVersion:schema.version, ...valueChoiceEvaluationEvidence(rule, schema, record?.[propertyPath]) }));
   });
 }
 

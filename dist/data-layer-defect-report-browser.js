@@ -1,3 +1,4 @@
+import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
 export function createDefectReportNavigation(effects) {
     return {
         backToCapturedEvent() {
@@ -64,17 +65,23 @@ export function defectCapturedEvent(event) {
         captureTime: event.captureTime,
         payload: event.payload,
         schema: { name: schema?.name ?? "Assigned schema", version: schema?.version ?? 0 },
-        issues: (event.validationDetails?.issues ?? []).map((issue, index) => ({
-            id: issueId(issue.instancePath, index),
-            severity: issue.severity === "warning" ? "warning" : "error",
-            pointer: issue.instancePath || "/",
-            violation: issue.message,
-            constraint: issue.expected,
-            actual: issue.actual,
-            rule: issue.rule ?? issue.schemaLocation,
-            ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),
-            ...(issue.allowedValues?.length ? { allowedValues: [...issue.allowedValues] } : {}),
-        })),
+        issues: (event.validationDetails?.issues ?? []).map((issue, index) => {
+            const schemaChoices = issue.message === "Required value" && schema
+                ? resolveRequiredPropertySchemaChoices({ issuePointer: issue.instancePath, evaluations: event.validationDetails?.evaluations ?? [], assignedSchema: schema })
+                : undefined;
+            return {
+                id: issueId(issue.instancePath, index),
+                severity: issue.severity === "warning" ? "warning" : "error",
+                pointer: issue.instancePath || "/",
+                violation: issue.message,
+                constraint: issue.expected,
+                actual: issue.actual,
+                rule: issue.rule ?? issue.schemaLocation,
+                ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),
+                ...(schemaChoices?.values.length ? { allowedValues: [...schemaChoices.values], schemaChoiceProvenance: schemaChoices.provenance } : issue.allowedValues?.length ? { allowedValues: [...issue.allowedValues] } : {}),
+                ...(schemaChoices?.conflict ? { schemaChoiceConflict: schemaChoices.conflict, schemaChoiceProvenance: schemaChoices.provenance } : {}),
+            };
+        }),
     };
 }
 export function browserDefectReportClipboard() {

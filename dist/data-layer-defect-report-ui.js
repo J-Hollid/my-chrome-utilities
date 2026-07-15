@@ -80,7 +80,10 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     const refresh = () => {
         let corrected = report;
         try {
-            corrected = applyExpectedResult(report, [...selectedChoices.values()]);
+            corrected = applyExpectedResult(report, [...selectedChoices.values()].filter(({ issueId }) => {
+                const issue = report.issues.find(({ id }) => id === issueId);
+                return issue?.violation !== "Required value" || issue.selected;
+            }));
             feedback.textContent = "";
         }
         catch (error) {
