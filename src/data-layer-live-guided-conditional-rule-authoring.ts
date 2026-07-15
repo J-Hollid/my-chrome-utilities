@@ -11,8 +11,8 @@ import {
   type ConditionalRuleConsequence,
   type ConditionalRulePredicate,
 } from "./data-layer-conditional-validation-rules.js";
-import type { GuidedValueType } from "./data-layer-guided-validation.js";
-import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
+import type { GuidedValueType } from "./data-layer-guided-validation-types.js";
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 
 export interface GuidedConditionPropertyOption {
   path: string;
@@ -32,17 +32,6 @@ export interface GuidedConditionalDraft {
     operator: "All" | "Any";
     predicates: readonly GuidedConditionalPredicate[];
   };
-}
-
-function canonicalPath(path: string): string {
-  if (path.startsWith("$")) {
-    return `/${parseTargetExpression(path).map((segment) => segment.kind === "property" ? String(segment.value).replaceAll("~", "~0").replaceAll("/", "~1") : segment.kind === "every" ? "*" : String(segment.value)).join("/")}`;
-  }
-  if (path.startsWith("/")) {
-    const segments = path.split("/").filter(Boolean);
-    return `/${segments.join("/")}`;
-  }
-  return `/${path.replace(/^\$\.?/, "").split(".").filter(Boolean).join("/")}`;
 }
 
 function conditionType(value: unknown): ConditionPropertyType {
@@ -68,7 +57,7 @@ function eventOptions(value: unknown, path = ""): GuidedConditionPropertyOption[
   return Object.entries(value as Record<string, unknown>).flatMap(([name, child]) => {
     const childPath = `${path}/${name.replaceAll("~", "~0").replaceAll("/", "~1")}`;
     const own: GuidedConditionPropertyOption = {
-      path:canonicalPath(childPath),
+      path:canonicalRulePropertyPath(childPath),
       type:conditionType(child),
       source:"current event",
       observedValue:child,
@@ -84,11 +73,11 @@ export function guidedConditionPropertyOptions(
   destinationPropertyTypes: Readonly<Record<string, GuidedValueType>>,
   consequencePath: string,
 ): GuidedConditionPropertyOption[] {
-  const excluded = canonicalPath(consequencePath);
+  const excluded = canonicalRulePropertyPath(consequencePath);
   const byPath = new Map<string, GuidedConditionPropertyOption>();
   for (const option of eventOptions(payload)) byPath.set(option.path, option);
   for (const [path, type] of Object.entries(destinationPropertyTypes)) {
-    const canonical = canonicalPath(path);
+    const canonical = canonicalRulePropertyPath(path);
     if (!byPath.has(canonical)) byPath.set(canonical, { path:canonical, type:guidedType(type), source:"destination schema" });
   }
   byPath.delete(excluded);
@@ -227,12 +216,12 @@ export function validateGuidedConditionalDraft(
   if (review) return { ready:false, assistance:`Review condition property ${review.propertyPath}` };
   return validateConditionalRule({
     conditionGroup:draft.conditionGroup,
-    consequence:{ ...consequence, propertyPath:canonicalPath(consequence.propertyPath) },
+    consequence:{ ...consequence, propertyPath:canonicalRulePropertyPath(consequence.propertyPath) },
   });
 }
 
 function consequencePasses(payload: unknown, consequence: ConditionalRuleConsequence): boolean {
-  const observed = conditionValueAtPath(payload, canonicalPath(consequence.propertyPath));
+  const observed = conditionValueAtPath(payload, canonicalRulePropertyPath(consequence.propertyPath));
   const operator = consequence.operator.replaceAll("_", "-").toLowerCase();
   if (operator === "required") return observed.exists;
   if (!observed.exists) return false;
@@ -264,6 +253,6 @@ export function guidedConditionGroup(draft: GuidedConditionalDraft | undefined):
   if (!draft?.enabled) return undefined;
   return {
     operator:draft.conditionGroup.operator,
-    predicates:draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => ({ ...predicate })),
+    predicates:draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => structuredClone(predicate)),
   };
 }
