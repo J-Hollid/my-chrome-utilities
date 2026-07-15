@@ -41,7 +41,8 @@
      "Pending rename did not survive editor close and reload." observed)
     (support/assert!
      (and (get-in published [:review :unchanged])
-          (str/includes? (get-in published [:review :text]) "Rename schema from Page view to Generic page view")
+          (= 1 (count (re-seq #"Rename schema from Page view to Generic page view"
+                              (get-in published [:review :text]))))
           (str/includes? (get-in published [:review :text]) "Change additional-property policy"))
      "Publish review changed storage or omitted pending changes." observed)
     (support/assert!
@@ -71,11 +72,10 @@
     (assert-example! example observed)))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (entry-steps text) (assoc world :schema-renaming (browser-observation!)) world)
-        observed (:schema-renaming world)]
-    (support/assert! observed "Schema renaming browser adapter was not executed." {:step text})
-    (assert-observation! example observed)
-    world))
+  (support/stateful-transition
+   world example text entry-steps :schema-renaming browser-observation!
+   "Schema renaming browser adapter was not executed."
+   assert-observation!))
 
 (def handlers
   (support/stateful-semantic-handlers
@@ -83,3 +83,7 @@
    entry-steps
    :schema-renaming
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T17:42:08.783003817+02:00", :module-hash "-997397041", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1997548993"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-1617945967"} {:id "def/entry-steps", :kind "def", :line 8, :end-line 10, :hash "-133233111"} {:id "form/3/defonce", :kind "defonce", :line 11, :end-line 11, :hash "-1819867165"} {:id "defn-/browser-observation!", :kind "defn-", :line 13, :end-line 19, :hash "974220279"} {:id "defn-/assert-example!", :kind "defn-", :line 21, :end-line 28, :hash "-254938457"} {:id "defn-/assert-observation!", :kind "defn-", :line 30, :end-line 72, :hash "-1175196536"} {:id "defn-/transition", :kind "defn-", :line 74, :end-line 78, :hash "1468419091"} {:id "def/handlers", :kind "def", :line 80, :end-line 85, :hash "-352418415"}]}
+;; clj-mutate-manifest-end
