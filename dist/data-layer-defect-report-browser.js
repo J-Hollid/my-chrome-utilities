@@ -1,4 +1,5 @@
 import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
+import { isRequiredPropertyViolation } from "./data-layer-defect-report.js";
 export function createDefectReportNavigation(effects) {
     return {
         backToCapturedEvent() {
@@ -66,7 +67,7 @@ export function defectCapturedEvent(event) {
         payload: event.payload,
         schema: { name: schema?.name ?? "Assigned schema", version: schema?.version ?? 0 },
         issues: (event.validationDetails?.issues ?? []).map((issue, index) => {
-            const schemaChoices = issue.message === "Required value" && schema
+            const schemaChoices = isRequiredPropertyViolation(issue.message) && schema
                 ? resolveRequiredPropertySchemaChoices({ issuePointer: issue.instancePath, evaluations: event.validationDetails?.evaluations ?? [], assignedSchema: schema })
                 : undefined;
             return {
