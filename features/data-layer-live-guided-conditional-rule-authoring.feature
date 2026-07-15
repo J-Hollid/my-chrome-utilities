@@ -138,3 +138,15 @@ Feature: Data layer Live guided conditional rule authoring
     And canceling leaves the schema and Rule Library unchanged
     And returning to the Live event restores the selected event, property, scroll position, and keyboard focus
 
+  # Data layer Live guided conditional rule authoring 013
+  Scenario: Data layer Live guided conditional rule authoring 013
+    Given consequence Required targets /products/*/duration
+    And the captured event and destination schema contain /products/*/price_monthly as Number
+    When the operator enables Apply only when
+    And condition properties are displayed
+    Then /products/*/price_monthly is available as a same-item condition property
+    And separate concrete price_monthly paths are not offered for each captured product
+    When the operator selects /products/*/price_monthly with Exists
+    Then the review states For each products item, when price_monthly exists, duration must be present
+    And the atomic rule stores trigger /products/*/price_monthly and consequence /products/*/duration
+    And current-event preview evaluates each products item with the same wildcard binding

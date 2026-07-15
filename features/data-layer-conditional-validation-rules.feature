@@ -112,3 +112,29 @@ Feature: Data layer conditional validation rules
     Then each lifecycle operation preserves the conditional rule as one atomic definition
     And trigger paths, typed comparison values, group operator, consequence parameters, severity, and issue message are retained
     And changing a reusable conditional rule creates a new version without mutating schemas pinned to an earlier version
+
+  # Data layer conditional validation rules 009
+  Scenario Outline: Data layer conditional validation rules 009
+    Given conditional rule When /products/*/price_monthly Exists, /products/*/duration is Required
+    And one products item has price_monthly <price_monthly_state> and duration <duration_state>
+    When the event is validated
+    Then that products item has conditional result <item_result>
+    And validation creates <issue_count> issues for /products/0/duration
+
+    Examples:
+      | price_monthly_state | duration_state | item_result    | issue_count |
+      | number 29           | number 12      | Passed         | 0           |
+      | null                | missing        | Failed         | 1           |
+      | missing             | missing        | Not applicable | 0           |
+      | missing             | number 12      | Not applicable | 0           |
+
+  # Data layer conditional validation rules 010
+  Scenario: Data layer conditional validation rules 010
+    Given conditional rule When /products/*/price_monthly Exists, /products/*/duration is Required
+    And four products respectively contain price_monthly 29 only, neither property, duration 12 only, and both price_monthly 49 and duration 12
+    When the event is validated
+    Then item 1 is Failed with one issue at /products/0/duration
+    And items 2 and 3 are Not applicable without issues
+    And item 4 is Passed without issues
+    And a condition match in one products item never activates the consequence for another item
+    And each issue retains trigger template /products/*/price_monthly and consequence template /products/*/duration
