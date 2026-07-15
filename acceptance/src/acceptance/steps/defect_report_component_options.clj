@@ -23,6 +23,24 @@
 
 (defn- selected? [value] (= value "selected"))
 
+(defn- matching-combination [observed rules? capture?]
+  (first (filter #(and (= rules? (:rulesState %))
+                       (= capture? (:captureState %)))
+                 (:combinations observed))))
+
+(defn- optional-headings [rules? capture?]
+  (cond-> []
+    (or rules? capture?) (conj "Validation evidence")
+    rules? (conj "Validation rules covered")
+    capture? (conj "Capture metadata")))
+
+(defn- consistent-renderings? [result optional]
+  (and result
+       (= (:preview result) (:rich result))
+       (= optional (:plain result))
+       (= optional (filterv #{"Validation evidence" "Validation rules covered" "Capture metadata"}
+                            (:preview result)))))
+
 (defn- assert-example! [example observed]
   (when-let [rules-state (support/example-value example "rules_state")]
     (support/validate-example-domain!
@@ -31,19 +49,10 @@
     (let [capture-state (support/require-example example "capture_state")
           rules? (selected? rules-state)
           capture? (selected? capture-state)
-          result (first (filter #(and (= rules? (:rulesState %))
-                                      (= capture? (:captureState %)))
-                                (:combinations observed)))
-          optional (cond-> []
-                     (or rules? capture?) (conj "Validation evidence")
-                     rules? (conj "Validation rules covered")
-                     capture? (conj "Capture metadata"))]
+          result (matching-combination observed rules? capture?)
+          optional (optional-headings rules? capture?)]
       (support/assert!
-       (and result
-            (= (:preview result) (:rich result))
-            (= optional (:plain result))
-            (= optional (filterv #{"Validation evidence" "Validation rules covered" "Capture metadata"}
-                                 (:preview result))))
+       (consistent-renderings? result optional)
        "Optional evidence rendering disagreed across preview, rich, or plain output."
        {:example example :result result}))))
 
