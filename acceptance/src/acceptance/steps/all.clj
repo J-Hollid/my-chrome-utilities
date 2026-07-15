@@ -30,6 +30,7 @@
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
+            [acceptance.steps.live-schema-property-declaration :as live-schema-property-declaration]
             [acceptance.steps.library-direct-template-push :as library-direct-template-push]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.live-guided-conditional-rules :as live-guided-conditional-rules]
@@ -123,6 +124,7 @@
                data-layer-recovery/handlers
                data-layer-session/handlers
                live-observer/handlers
+               live-schema-property-declaration/handlers
                live-event-presentation/handlers
                live-validation-visuals/handlers
                event-feed-query/handlers
