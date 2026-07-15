@@ -5962,7 +5962,7 @@ try {
         history:{
           options:["Revision 3", "Revision 2", "Revision 1"],
           comparison:"Revision 2 compared with current revision 4. 1 historical properties; 1 current properties.",
-          actions:["Duplicate from revision", "Restore this revision"],
+          actions:["Duplicate from revision", "Restore this revision", "Build specification"],
           separateRows:0,
           assignmentChoices:["Product listing version 4"],
           openedWithoutMutation:true,
