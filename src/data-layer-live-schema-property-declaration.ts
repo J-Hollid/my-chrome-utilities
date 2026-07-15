@@ -1,4 +1,6 @@
 import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
+import { detectedValueType } from "./data-layer-guided-validation.js";
+import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import type { GuidedValueType } from "./data-layer-guided-validation-types.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
 
@@ -15,20 +17,10 @@ function segments(path: string): string[] {
   return path.split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
 
-function valueAt(payload: unknown, path: string): unknown {
-  return segments(path).reduce<unknown>((value, segment) => {
-    if (Array.isArray(value) && /^\d+$/.test(segment)) return value[Number(segment)];
-    if (value && typeof value === "object") return (value as Record<string, unknown>)[segment];
-    return undefined;
-  }, payload);
-}
-
-function detectedType(value: unknown): GuidedValueType {
-  if (Array.isArray(value)) return "Array";
-  if (value !== null && typeof value === "object") return "Object";
-  if (typeof value === "number") return "Number";
-  if (typeof value === "boolean") return "Boolean";
-  return "String";
+function observedValue(payload: unknown, path: string): unknown {
+  const match = resolveNestedValues(payload, path).find(({ exists }) => exists);
+  if (!match) throw new Error(`Observed property ${path} is unavailable`);
+  return match.value;
 }
 
 export function canonicalLivePropertyPath(path: string): string {
@@ -44,7 +36,7 @@ export function createLiveSchemaPropertyDeclaration(
   return {
     concretePath,
     canonicalPath:canonicalLivePropertyPath(concretePath),
-    detectedType:detectedType(valueAt(payload, concretePath)),
+    detectedType:detectedValueType(observedValue(payload, concretePath)),
     schemaId:schema.id,
     schemaName:schema.name,
     schemaVersion:schema.version,

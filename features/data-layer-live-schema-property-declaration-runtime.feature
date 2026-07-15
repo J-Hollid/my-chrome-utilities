@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=94795b011ed65029eefac1084e99e152b78be75657835d87e003815f2a8681ce
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T18:52:09.254513667Z","feature_name":"Data layer Live schema property declaration runtime","feature_path":"features/data-layer-live-schema-property-declaration-runtime.feature","background_hash":"8808312238d4a31a35362ff44d91bd0e26260585ddefbe38b5a43bb76926ff3c","implementation_hash":"unknown","scenarios":[{"index":1,"name":"Data layer Live schema property declaration runtime 002","scenario_hash":"da65321c7112d803e63dc5d17eeef7e32aab1ac71f4ec5415b4703d3415bd2e5","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T18:52:09.254513667Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live schema property declaration runtime
 
   Background:

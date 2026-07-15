@@ -272,19 +272,22 @@ function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllo
         add.textContent = "Add validation";
         add.className = "live-property-add-validation";
         add.dataset.action = "add-property-validation";
+        add.dataset.propertyPath = node.technicalPath ?? node.path;
         add.setAttribute("aria-label", `Add validation for ${node.technicalPath ?? node.path}`);
         add.addEventListener("click", () => addValidation(node.technicalPath ?? node.path, add));
         row.append(add);
     }
     const declarationState = declaration?.(node.technicalPath ?? node.path);
     if (declarationState?.alreadyDeclared) {
+        const destination = declarationState.destination ?? "schema";
         const declared = document.createElement("button");
         declared.type = "button";
         declared.className = "live-property-declared";
-        declared.textContent = `Already declared in ${declarationState.destination ?? "schema"}`;
+        declared.textContent = `Already declared in ${destination}`;
         declared.dataset.action = "add-property-to-schema";
+        declared.dataset.propertyPath = node.technicalPath ?? node.path;
         declared.setAttribute("aria-disabled", "true");
-        declared.setAttribute("aria-label", `Add ${node.technicalPath ?? node.path} to ${declarationState.destination}`);
+        declared.setAttribute("aria-label", `${node.technicalPath ?? node.path} is already declared in ${destination}`);
         row.append(declared);
     }
     else if (addToSchema) {
@@ -294,6 +297,7 @@ function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllo
         add.textContent = "Add to schema";
         add.className = "live-property-add-to-schema";
         add.dataset.action = "add-property-to-schema";
+        add.dataset.propertyPath = node.technicalPath ?? node.path;
         add.setAttribute("aria-label", `Add ${node.technicalPath ?? node.path} to ${destination}`);
         add.addEventListener("click", () => addToSchema(node.technicalPath ?? node.path, add));
         row.append(add);

@@ -278,7 +278,8 @@ import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
 import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
-import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath, createLiveSchemaPropertyDeclaration } from "./data-layer-live-schema-property-declaration.js";
+import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./data-layer-live-schema-property-declaration.js";
+import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schema-property-declaration-ui.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
@@ -2715,41 +2716,28 @@ function openGuidedValidationForProperty(event: LiveEvent, path: string): void {
 
 function openLivePropertyDeclaration(event: LiveEvent, path: string, trigger: HTMLButtonElement): void {
   const selected = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
-  const dialog = document.createElement("dialog"); dialog.className = "live-schema-property-declaration-review";
-  const close = () => { dialog.remove(); trigger.focus({ preventScroll:true }); };
-  const showReview = (schema: SchemaDefinition) => {
-    const declaration = createLiveSchemaPropertyDeclaration(event.payload, path, schema);
-    dialog.replaceChildren();
-    const heading = document.createElement("h5"); heading.tabIndex = -1; heading.textContent = "Review schema property declaration";
-    const review = document.createElement("p"); review.textContent = `${declaration.canonicalPath} · ${declaration.detectedType} · ${schema.name} revision ${schema.version}. No validation rule will be added.`;
-    const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; cancel.addEventListener("click", close);
-    const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = `Add property to ${schema.name} draft`;
-    confirm.addEventListener("click", () => {
+  if (!liveObserverElements.eventInspector) return;
+  openLiveSchemaPropertyDeclarationDialog({
+    inspector:liveObserverElements.eventInspector,
+    trigger,
+    payload:event.payload,
+    concretePath:path,
+    ...(selected ? { selected } : {}),
+    destinations:assignableSchemas(schemas).filter(({ workingDraft }) => Boolean(workingDraft)),
+    confirm:(schema, declaration) => {
       schemas = schemas.map((candidate) => candidate.id === schema.id ? addLiveSchemaPropertyDeclaration(candidate, declaration) : candidate);
-      persistSchemaLibrary(); close(); openLiveInspector(event.id, true);
-      const restored = Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-action="add-property-to-schema"]'))
-        .find((button) => button.getAttribute("aria-label") === `Add ${declaration.canonicalPath} to ${schema.name}`);
-      restored?.focus({ preventScroll:true });
-      if (restored) {
-        requestAnimationFrame(() => restored.focus({ preventScroll:true }));
-        globalThis.setTimeout(() => restored.focus({ preventScroll:true }), 0);
-      }
-      globalThis.setTimeout(() => {
-        Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-action="add-property-to-schema"]'))
-          .find((button) => button.getAttribute("aria-label") === `Add ${declaration.canonicalPath} to ${schema.name}`)
+      persistSchemaLibrary();
+      renderSchemas();
+      renderSchemaWorkflowRows();
+      return () => {
+        openLiveInspector(event.id, true);
+        const actions = Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-action="add-property-to-schema"]'));
+        (actions.find((button) => button.dataset.propertyPath === declaration.concretePath)
+          ?? actions.find((button) => canonicalLivePropertyPath(button.dataset.propertyPath ?? "") === declaration.canonicalPath))
           ?.focus({ preventScroll:true });
-      }, 25);
-    });
-    dialog.append(heading, review, cancel, confirm); heading.focus({ preventScroll:true });
-  };
-  document.body.append(dialog); dialog.setAttribute("open", "");
-  if (selected) { showReview(selected); return; }
-  const heading = document.createElement("h5"); heading.textContent = "Choose schema destination";
-  const choices = assignableSchemas(schemas).filter(({ workingDraft }) => Boolean(workingDraft));
-  dialog.append(heading, ...choices.map((schema) => {
-    const choose = document.createElement("button"); choose.type = "button"; choose.textContent = schema.name; choose.addEventListener("click", () => showReview(schema)); return choose;
-  }));
-  const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; cancel.addEventListener("click", close); dialog.append(cancel);
+      };
+    },
+  });
 }
 
 function restoreGuidedPropertyReturn(): void {
