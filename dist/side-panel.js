@@ -57,6 +57,8 @@ import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
 import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
 import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
+import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./data-layer-live-schema-property-declaration.js";
+import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schema-property-declaration-ui.js";
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
@@ -1460,6 +1462,14 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 openGuidedValidationForEvent(selected);
             },
             addPropertyValidation: (selected, path) => openGuidedValidationForProperty(selected, path),
+            addPropertyToSchema: (selected, path, trigger) => openLivePropertyDeclaration(selected, path, trigger),
+            propertyDeclaration: (selected, path) => {
+                const schema = selectedGuidedContinuation(guidedContinuationSelections, selected, schemas);
+                if (!schema?.workingDraft)
+                    return {};
+                const canonical = canonicalLivePropertyPath(path);
+                return { destination: schema.name, alreadyDeclared: Boolean(schemaPropertyAt(schema.workingDraft.document, canonical)) };
+            },
             expandAllowedValue: (selected, evaluation, trigger) => openAllowedValueExpansionReview(selected, evaluation, trigger),
             draftContinuation: (selected) => guidedDraftContinuationForEvent(selected),
             startDefectReport: (selected) => {
@@ -2674,6 +2684,32 @@ function openGuidedValidationForProperty(event, path) {
     guidedValidationFlow.openProperty(guidedEvent(event), path, schema ? guidedSchemaCandidate(schema, true) : undefined);
     if (inspector)
         inspector.hidden = true;
+}
+function openLivePropertyDeclaration(event, path, trigger) {
+    const selected = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
+    if (!liveObserverElements.eventInspector)
+        return;
+    openLiveSchemaPropertyDeclarationDialog({
+        inspector: liveObserverElements.eventInspector,
+        trigger,
+        payload: event.payload,
+        concretePath: path,
+        ...(selected ? { selected } : {}),
+        destinations: assignableSchemas(schemas).filter(({ workingDraft }) => Boolean(workingDraft)),
+        confirm: (schema, declaration) => {
+            schemas = schemas.map((candidate) => candidate.id === schema.id ? addLiveSchemaPropertyDeclaration(candidate, declaration) : candidate);
+            persistSchemaLibrary();
+            renderSchemas();
+            renderSchemaWorkflowRows();
+            return () => {
+                openLiveInspector(event.id, true);
+                const actions = Array.from(document.querySelectorAll('button[data-action="add-property-to-schema"]'));
+                (actions.find((button) => button.dataset.propertyPath === declaration.concretePath)
+                    ?? actions.find((button) => canonicalLivePropertyPath(button.dataset.propertyPath ?? "") === declaration.canonicalPath))
+                    ?.focus({ preventScroll: true });
+            };
+        },
+    });
 }
 function restoreGuidedPropertyReturn() {
     const snapshot = guidedPropertyReturn;

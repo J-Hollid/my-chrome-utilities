@@ -185,6 +185,8 @@ function renderPropertyNode(
   addValidation?: (path: string, trigger: HTMLButtonElement) => void,
   schemaDocumentation?: ResolvedSchemaDocumentation,
   expandAllowedValue?: (evaluation: ValidationEvaluation, trigger: HTMLButtonElement) => void,
+  addToSchema?: (path: string, trigger: HTMLButtonElement) => void,
+  declaration?: (path: string) => { destination?: string; alreadyDeclared?: boolean },
 ): HTMLLIElement {
   const item = document.createElement("li"); item.className = "live-validation-property"; item.id = `live-property-${node.path.replace(/[^a-z0-9]+/gi, "-")}`; item.tabIndex = -1; item.dataset.validationTreatment = node.summary.treatment;
   item.dataset.propertyPath = node.technicalPath ?? node.path;
@@ -250,7 +252,15 @@ function renderPropertyNode(
     persistent.addEventListener("keydown", (event) => { if (event.key === "Escape") { closePersistent(); event.preventDefault(); } });
     row.append(information); item.append(documentationPreview, persistent);
   }
-  if (addValidation) { const add = document.createElement("button"); add.type = "button"; add.textContent = "Add validation"; add.className = "live-property-add-validation"; add.dataset.action = "add-property-validation"; add.setAttribute("aria-label", `Add validation for ${node.technicalPath ?? node.path}`); add.addEventListener("click", () => addValidation(node.technicalPath ?? node.path, add)); row.append(add); }
+  if (addValidation) { const add = document.createElement("button"); add.type = "button"; add.textContent = "Add validation"; add.className = "live-property-add-validation"; add.dataset.action = "add-property-validation"; add.dataset.propertyPath = node.technicalPath ?? node.path; add.setAttribute("aria-label", `Add validation for ${node.technicalPath ?? node.path}`); add.addEventListener("click", () => addValidation(node.technicalPath ?? node.path, add)); row.append(add); }
+  const declarationState = declaration?.(node.technicalPath ?? node.path);
+  if (declarationState?.alreadyDeclared) {
+    const destination = declarationState.destination ?? "schema";
+    const declared = document.createElement("button"); declared.type = "button"; declared.className = "live-property-declared"; declared.textContent = `Already declared in ${destination}`; declared.dataset.action = "add-property-to-schema"; declared.dataset.propertyPath = node.technicalPath ?? node.path; declared.setAttribute("aria-disabled", "true"); declared.setAttribute("aria-label", `${node.technicalPath ?? node.path} is already declared in ${destination}`); row.append(declared);
+  } else if (addToSchema) {
+    const destination = declarationState?.destination ?? "schema";
+    const add = document.createElement("button"); add.type = "button"; add.textContent = "Add to schema"; add.className = "live-property-add-to-schema"; add.dataset.action = "add-property-to-schema"; add.dataset.propertyPath = node.technicalPath ?? node.path; add.setAttribute("aria-label", `Add ${node.technicalPath ?? node.path} to ${destination}`); add.addEventListener("click", () => addToSchema(node.technicalPath ?? node.path, add)); row.append(add);
+  }
   if (node.aggregate.errors || node.aggregate.warnings) {
     const aggregate = document.createElement("span"); aggregate.className = "live-property-aggregate"; aggregate.textContent = [node.aggregate.errors ? `${node.aggregate.errors} error${node.aggregate.errors === 1 ? "" : "s"}` : "", node.aggregate.warnings ? `${node.aggregate.warnings} warning${node.aggregate.warnings === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and "); row.append(aggregate);
   }
@@ -258,9 +268,9 @@ function renderPropertyNode(
   if (node.children.length) {
     const nested = document.createElement("details"); const nestedSummary = document.createElement("summary"); nestedSummary.textContent = `Expand ${node.name}`;
     nested.dataset.propertyPath = node.technicalPath ?? node.path;
-    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue))); nested.append(nestedSummary, list); item.append(nested);
+    const list = document.createElement("ul"); list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue, addToSchema, declaration))); nested.append(nestedSummary, list); item.append(nested);
   }
-  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue))); specific.append(summary, list); item.append(specific); }
+  if (node.specificItems?.length) { const specific = document.createElement("details"); specific.className = "live-property-specific-items"; specific.dataset.propertyPath = `${node.technicalPath ?? node.path}#specific`; const summary = document.createElement("summary"); summary.textContent = "Specific items"; const list = document.createElement("ul"); list.replaceChildren(...node.specificItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue, addToSchema, declaration))); specific.append(summary, list); item.append(specific); }
   return item;
 }
 
@@ -358,6 +368,8 @@ export function renderLiveInspector(
   const searchLabel = document.createElement("label"); searchLabel.htmlFor = "live-property-search"; searchLabel.textContent = "Search properties"; const propertySearch = document.createElement("input"); propertySearch.id = "live-property-search"; propertySearch.type = "search";
   const propertyTree = recursiveValidationTree(event.payload, event.validationDetails?.evaluations ?? [], event.validationDetails?.issues ?? []);
   const addValidation = actionHandlers.addPropertyValidation ? (path: string, trigger: HTMLButtonElement) => actionHandlers.addPropertyValidation?.(event, path, trigger) : undefined;
+  const addToSchema = actionHandlers.addPropertyToSchema ? (path: string, trigger: HTMLButtonElement) => actionHandlers.addPropertyToSchema?.(event, path, trigger) : undefined;
+  const declaration = actionHandlers.propertyDeclaration ? (path: string) => actionHandlers.propertyDeclaration?.(event, path) ?? {} : undefined;
   const expandAllowedValue = actionHandlers.expandAllowedValue ? (evaluation: ValidationEvaluation, trigger: HTMLButtonElement) => actionHandlers.expandAllowedValue?.(event, evaluation, trigger) : undefined;
   let showNonApplicable = presentation.showNonApplicableProperties === true;
   const previousOpen = new Set<string>(); let searchActive = false;
@@ -391,7 +403,7 @@ export function renderLiveInspector(
     nonApplicableVisibility.textContent = showNonApplicable ? "Hide non-applicable properties" : "Show non-applicable properties";
     nonApplicableVisibility.setAttribute("aria-pressed", String(showNonApplicable));
     propertyList.replaceChildren(...presentValidationPropertyTree(propertyTree, showNonApplicable)
-      .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation, expandAllowedValue)));
+      .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation, expandAllowedValue, addToSchema, declaration)));
     for (const disclosure of Array.from(propertyList.querySelectorAll<HTMLDetailsElement>("details[data-property-path]"))) disclosure.toggleAttribute("open", openPaths.has(disclosure.dataset.propertyPath ?? ""));
     applyPropertySearch();
   };

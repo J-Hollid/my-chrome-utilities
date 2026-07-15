@@ -30,6 +30,7 @@
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
+            [acceptance.steps.live-schema-property-declaration :as live-schema-property-declaration]
             [acceptance.steps.library-direct-template-push :as library-direct-template-push]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.live-guided-conditional-rules :as live-guided-conditional-rules]
@@ -123,6 +124,7 @@
                data-layer-recovery/handlers
                data-layer-session/handlers
                live-observer/handlers
+               live-schema-property-declaration/handlers
                live-event-presentation/handlers
                live-validation-visuals/handlers
                event-feed-query/handlers
@@ -153,5 +155,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T20:02:48.547729533+02:00", :module-hash "696553751", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 75, :hash "-2062785091"} {:id "def/handlers", :kind "def", :line 77, :end-line 153, :hash "553071411"}]}
+;; {:version 1, :tested-at "2026-07-15T20:49:50.623228829+02:00", :module-hash "847839791", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 76, :hash "792146853"} {:id "def/handlers", :kind "def", :line 78, :end-line 155, :hash "-2027712147"}]}
 ;; clj-mutate-manifest-end

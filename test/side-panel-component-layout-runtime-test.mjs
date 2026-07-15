@@ -59,6 +59,7 @@ let schemaAssignmentDataConditionsObservation;
 let schemaPropertyExampleValuesObservation;
 let guidedNestedPropertyMergeObservation;
 let libraryDirectTemplatePushObservation;
+let liveSchemaPropertyDeclarationObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -66,6 +67,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
@@ -3447,6 +3449,48 @@ const libraryDirectTemplatePushRuntime = `(async () => {
   return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]) };
 })()`;
 
+const liveSchemaPropertyDeclarationSeedRuntime = `(() => {
+  localStorage.clear();
+  const assignment={id:"product-view",schemaId:"product-detail",sourceId:"history",eventName:"product_view",target:"payload",versionPolicy:"follow latest",enabled:true};
+  const document={type:"object",additionalProperties:false,properties:{products:{type:"array",minItems:1,items:{type:"object",properties:{metadata:{type:"object"}}}}}};
+  const schema={id:"product-detail",name:"Product detail",version:3,published:true,document:{type:"object",properties:{}},assignments:[assignment],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],workingDraft:{baseVersion:3,sourceVersion:3,document,assignments:[assignment],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],pendingChanges:[]}};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
+  localStorage.setItem("my-chrome-utilities.guided-validation-continuations.v1",JSON.stringify({["history\\u0000product_view"]:"product-detail"}));
+  const payload={page_type:"product_detail",commerce:{currency:"EUR"},products:[{product_name:"Phone",product_id:42}]};
+  const event={type:"observed",url:"https://shop.example/product",timestamp:"2026-07-15T18:00:00Z",observerPath:"dataLayer",id:"event:product-view",name:"product_view",sessionId:"session:declaration",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"https://shop.example/product",payload,rawInput:["product_view",payload],rawValue:["product_view",payload],validation:"Not checked"};
+  localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:declaration",status:"active",freshBoundary:true,tabId:42,historyPath:"dataLayer",startUrl:event.pageUrl,currentUrl:event.pageUrl,timeline:[event]}}));return true;
+})()`;
+
+const liveSchemaPropertyDeclarationRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));const frame=()=>new Promise((resolve)=>requestAnimationFrame(resolve));const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const button=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label||textContent.startsWith(label));if(!button)throw new Error("Missing "+label);button.click();return button;};
+  const inspector=()=>q("#live-event-inspector");const reveal=()=>inspector().querySelectorAll("details").forEach((details)=>{details.open=true;});
+  const action=(kind,path)=>{reveal();const button=Array.from(inspector().querySelectorAll('button[data-action="'+kind+'"]')).find(({dataset})=>dataset.propertyPath===path);if(!button)throw new Error("Missing "+kind+" for "+path);return button;};
+  const schema=()=>JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+  q("#data-layer-view-live").click();q("#live-event-feed button").click();reveal();
+  const productNamePath="/products/0/product_name",productIdPath="/products/0/product_id";
+  const productName=action("add-property-to-schema",productNamePath);const validation=action("add-property-validation",productNamePath);
+  const actions={addToSchema:Boolean(productName),addValidation:Boolean(validation),destination:productName.ariaLabel,reachable:productName.getClientRects().length>0&&validation.getClientRects().length>0};
+  const reviewCases={};
+  for(const [name,path] of [["productName",productNamePath],["productId",productIdPath]]){
+    const before=localStorage.getItem("my-chrome-utilities.schema-library.v1");action("add-property-to-schema",path).click();await pause();
+    const dialog=q(".live-schema-property-declaration-review");reviewCases[name]={text:dialog.textContent,noValidationControls:!["requirement","scope","assignment","severity","message","Rule Library"].some((term)=>dialog.textContent.includes(term)),storageUnchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),guidedHidden:q("#guided-validation-flow").hidden};
+    click(dialog,"Cancel");await pause();
+  }
+  action("add-property-to-schema",productNamePath).click();await pause();click(q(".live-schema-property-declaration-review"),"Add property to");await frame();await pause();
+  const afterName=schema();const nameItem=afterName.workingDraft.document.properties.products.items;const afterNameBytes={property:JSON.stringify(nameItem.properties.product_name),metadata:JSON.stringify(nameItem.properties.metadata),array:JSON.stringify({minItems:afterName.workingDraft.document.properties.products.minItems}),itemType:nameItem.type,assignments:JSON.stringify(afterName.workingDraft.assignments),rules:JSON.stringify(afterName.workingDraft.attachedRules)};
+  const nameFocus={action:document.activeElement?.dataset.action,path:document.activeElement?.dataset.propertyPath,label:document.activeElement?.getAttribute("aria-label")};
+  action("add-property-to-schema",productIdPath).click();await pause();click(q(".live-schema-property-declaration-review"),"Add property to");await frame();await pause();
+  const stored=schema();const item=stored.workingDraft.document.properties.products.items;
+  const idFocus={action:document.activeElement?.dataset.action,path:document.activeElement?.dataset.propertyPath,label:document.activeElement?.getAttribute("aria-label")};
+  const saved={productName:item.properties.product_name,productId:item.properties.product_id,metadata:item.properties.metadata,parents:{arrayType:stored.workingDraft.document.properties.products.type,minItems:stored.workingDraft.document.properties.products.minItems,itemType:item.type},assignments:stored.workingDraft.assignments,rules:stored.workingDraft.attachedRules,version:stored.version,nameFocus,idFocus,siblingPreserved:afterNameBytes.property===JSON.stringify(item.properties.product_name)&&afterNameBytes.metadata===JSON.stringify(item.properties.metadata)&&afterNameBytes.array===JSON.stringify({minItems:stored.workingDraft.document.properties.products.minItems})&&afterNameBytes.itemType===item.type,collectionsPreserved:afterNameBytes.assignments===JSON.stringify(stored.workingDraft.assignments)&&afterNameBytes.rules===JSON.stringify(stored.workingDraft.attachedRules),declarations:Array.from(document.querySelectorAll('button[data-action="add-property-to-schema"]'),({dataset,ariaLabel})=>({path:dataset.propertyPath,label:ariaLabel}))};
+  const verification=await import("/data-layer-schema-verification.js");const active={...stored,document:stored.workingDraft.document,assignments:stored.workingDraft.assignments,attachedRules:stored.workingDraft.attachedRules};const validate=(payload)=>verification.validateWithSchema({sourceId:"history",eventName:"product_view",payload,rawInput:["product_view",payload]},active,[active]);const present=validate({page_type:"product_detail",products:[{product_name:"Phone",product_id:42}]});const absent=validate({page_type:"product_detail",products:[{product_id:42}]});
+  const relevant=(result)=>({issues:result.issues.filter(({instancePath,message})=>instancePath.includes("product_name")&&(message==="Undeclared property"||message.includes("Required"))),evaluations:(result.evaluations??[]).filter(({propertyPath})=>propertyPath.includes("product_name"))});const validationEvidence={present:relevant(present),absent:relevant(absent)};
+  action("add-property-validation",productNamePath).click();await pause();const separate={guidedVisible:!q("#guided-validation-flow").hidden,declarationDialogs:document.querySelectorAll(".live-schema-property-declaration-review").length};click(q("#guided-validation-flow"),"Cancel");await frame();
+  q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Product detail"));click(row,"Edit working draft");q("#save-schema").click();q("#confirm-schema-revision").click();await pause();await pause();const published=schema();
+  return {actions,reviewCases,saved,validation:validationEvidence,separate,published:{version:published.version,workingDraftAbsent:!published.workingDraft,productName:published.document.properties.products.items.properties.product_name,productId:published.document.properties.products.items.properties.product_id,rules:published.attachedRules}};
+})()`;
+
 const libraryActionsRecoveryRuntime = `(async () => {
   const q = (selector) => {
     const element = document.querySelector(selector);
@@ -4730,6 +4774,16 @@ try {
       assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
       socket.close();continue;
     }
+    if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,liveSchemaPropertyDeclarationSeedRuntime);await reloadPanel(socket);
+      liveSchemaPropertyDeclarationObservation=await evaluate(socket,liveSchemaPropertyDeclarationRuntime);const observed=liveSchemaPropertyDeclarationObservation;
+      assert.equal(observed.actions.addToSchema&&observed.actions.addValidation&&observed.actions.reachable,true);assert.match(observed.actions.destination,/Product detail/);
+      for(const [key,path,type] of [["productName","/products/*/product_name","String"],["productId","/products/*/product_id","Number"]]){const review=observed.reviewCases[key];assert.match(review.text,new RegExp(path.replaceAll("*","\\*")));assert.match(review.text,new RegExp(type));assert.match(review.text,/Product detail revision 3/);assert.equal(review.noValidationControls&&review.storageUnchanged&&review.guidedHidden,true);}
+      assert.deepEqual(observed.saved.productName,{type:"string"});assert.deepEqual(observed.saved.productId,{type:"number"});assert.deepEqual(observed.saved.metadata,{type:"object"});assert.deepEqual(observed.saved.parents,{arrayType:"array",minItems:1,itemType:"object"});assert.equal(observed.saved.rules.length,1);assert.equal(observed.saved.assignments.length,1);assert.equal(observed.saved.version,3);assert.equal(observed.saved.siblingPreserved&&observed.saved.collectionsPreserved,true);
+      assert.deepEqual(observed.saved.nameFocus,{action:"add-property-to-schema",path:"/products/0/product_name",label:"/products/0/product_name is already declared in Product detail"});assert.deepEqual(observed.saved.idFocus,{action:"add-property-to-schema",path:"/products/0/product_id",label:"/products/0/product_id is already declared in Product detail"});
+      assert.deepEqual(observed.validation,{present:{issues:[],evaluations:[]},absent:{issues:[],evaluations:[]}});assert.equal(observed.separate.guidedVisible,true);assert.equal(observed.separate.declarationDialogs,0);assert.equal(observed.published.version,4);assert.equal(observed.published.workingDraftAbsent,true);assert.deepEqual(observed.published.productName,{type:"string"});assert.deepEqual(observed.published.productId,{type:"number"});assert.equal(observed.published.rules.length,1);
+      await reloadPanel(socket);const reloaded=await evaluate(socket,`(()=>{const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};const click=(root,label)=>{const button=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!button)throw new Error("Missing "+label);button.click();};const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Product detail"));click(row,"Edit working draft");const property=q('[data-schema-property-canonical-path="/products/*/product_name"]');return{version:stored.version,type:stored.document.properties.products.items.properties.product_name.type,activeRules:property.textContent,treeRows:q("#schema-property-tree").querySelectorAll('[data-schema-property-canonical-path="/products/*/product_name"]').length};})()`);assert.deepEqual(reloaded,{version:4,type:"string",activeRules:reloaded.activeRules,treeRows:1});assert.match(reloaded.activeRules,/0 active rules/);liveSchemaPropertyDeclarationObservation.reloaded=reloaded;socket.close();continue;
+    }
     if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
       libraryDirectTemplatePushObservation=await evaluate(socket,libraryDirectTemplatePushRuntime);const observed=libraryDirectTemplatePushObservation;
@@ -5927,6 +5981,9 @@ try {
   }
   if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ libraryDirectTemplatePush:libraryDirectTemplatePushObservation }));
+  }
+  if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }
   if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));
