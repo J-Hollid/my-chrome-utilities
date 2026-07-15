@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3890dacbc8aa9f89482fbcf5f2be929532834715c6ee4154ce75f22d47724a05
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T13:45:41.774537804Z","feature_name":"Data layer guided nested property merge","feature_path":"features/data-layer-guided-nested-property-merge.feature","background_hash":"deb553aa974e99bfb89513c414d9b2d73f818a5389f54b2960791cb8b0c7a14c","implementation_hash":"sha256:b36daecfb0425d35077d69fa979a3df03be7941d93cd0ebc67d2562852117e07","scenarios":[{"index":0,"name":"Data layer guided nested property merge 001","scenario_hash":"cb45b15a9b157e387e4f6492bed2103d7f9f1c5be5e66182cc8d7a51b3f15be8","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T13:45:41.774537804Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer guided nested property merge
 
   Background:

@@ -24,6 +24,7 @@
             [acceptance.steps.guided-assignment-coverage :as guided-assignment-coverage]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
             [acceptance.steps.guided-rule-parameter-integrity :as guided-rule-parameter-integrity]
+            [acceptance.steps.guided-nested-property-merge :as guided-nested-property-merge]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -100,6 +101,7 @@
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                guided-rule-parameter-integrity/handlers
+               guided-nested-property-merge/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers
@@ -139,5 +141,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T13:23:30.667817632+02:00", :module-hash "670161948", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 68, :hash "-1255442115"} {:id "def/handlers", :kind "def", :line 70, :end-line 139, :hash "264329760"}]}
+;; {:version 1, :tested-at "2026-07-15T15:45:01.193465353+02:00", :module-hash "414442578", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 69, :hash "-799445909"} {:id "def/handlers", :kind "def", :line 71, :end-line 141, :hash "-40862828"}]}
 ;; clj-mutate-manifest-end
