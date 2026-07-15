@@ -8,9 +8,11 @@ import {
   inspectSavedEventFeedFilter,
   renameSavedEventFeedFilter,
   restoreSavedEventFeedFilterLibrary,
+  restoreSavedEventFeedWorkingView,
   savedEventFeedFilterNameResult,
   savedEventFeedFilterQueryEqual,
   serializeSavedEventFeedFilterLibrary,
+  serializeSavedEventFeedWorkingView,
   setDefaultSavedEventFeedFilter,
   updateSavedEventFeedFilter,
 } from "../dist/data-layer-saved-event-feed-filters.js";
@@ -39,11 +41,29 @@ assert.deepEqual(eventFeedFilterDisplayState({conditions:[]},undefined,library),
 assert.deepEqual(eventFeedFilterDisplayState(productQuery,undefined,library),{label:"Custom · Unsaved",save:"create",modified:false});
 assert.deepEqual(eventFeedFilterDisplayState(checkoutQuery,checkout.filter.id,library),{label:"Checkout issues",save:"none",modified:false});
 assert.deepEqual(eventFeedFilterDisplayState(productQuery,checkout.filter.id,library),{label:"Checkout issues · Modified",save:"update-or-copy",modified:true});
+assert.deepEqual(
+  inspectSavedEventFeedFilter(checkout.filter,[{name:"purchase",sourceId:"history",validation:"1 issues"}]).conditions.map(({status})=>status),
+  ["observed","observed"],
+  "canonical validation-state values must share the query evaluator's observed vocabulary",
+);
 
 const product=createSavedEventFeedFilter(library,"Product events",productQuery,"filter:product"); library=product.library;
 assert.deepEqual(applySavedEventFeedFilter({conditions:[{id:"unrelated",field:"Source",operator:"is",values:["Adobe"]}]},checkout.filter),{
   conditions:checkout.filter.conditions,
 },"switching must replace rather than merge the working query");
+
+const workingSerialized=serializeSavedEventFeedWorkingView("session:current",checkoutQuery,checkout.filter.id);
+const working=restoreSavedEventFeedWorkingView(workingSerialized,"session:current",library);
+assert.deepEqual(working,{version:1,sessionId:"session:current",query:checkoutQuery,activeFilterId:checkout.filter.id});
+working.query.conditions[0].values[0]="mutated";
+assert.equal(checkoutQuery.conditions[0].values[0],"purchase","restored working queries must not alias their caller");
+assert.equal(restoreSavedEventFeedWorkingView(workingSerialized,"session:other",library),undefined,"working queries belong only to their testing session");
+assert.deepEqual(
+  restoreSavedEventFeedWorkingView(serializeSavedEventFeedWorkingView("session:current",checkoutQuery,"filter:missing"),"session:current",library),
+  {version:1,sessionId:"session:current",query:checkoutQuery},
+  "stale saved identities must not be restored as active",
+);
+assert.equal(restoreSavedEventFeedWorkingView('{"version":1,"sessionId":"session:current","query":{"conditions":{}}}',"session:current",library),undefined);
 
 assert.deepEqual(savedEventFeedFilterNameResult(library,"  "),{accepted:false,assistance:"Enter a saved filter name"});
 assert.deepEqual(savedEventFeedFilterNameResult(library," checkout ISSUES "),{accepted:false,assistance:"A saved filter with this name exists"});

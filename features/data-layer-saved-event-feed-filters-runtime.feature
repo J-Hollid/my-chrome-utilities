@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=a3f882657997a38d06a47bac39de6e8cffa463c8123a8f03e28c5c3ac10764cc
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T01:10:39.362540472Z","feature_name":"Data layer saved event feed filters runtime","feature_path":"features/data-layer-saved-event-feed-filters-runtime.feature","background_hash":"ad860210a33f0660f667d5b44784f15cf4ad6372d60f4484e3be6ec6b033d1bc","implementation_hash":"sha256:ed577e18442ad2cf9f903b4d2a51f28d1db3aa582cc5382c0f8b3f460c22fa38","scenarios":[{"index":2,"name":"Data layer saved event feed filters runtime 003","scenario_hash":"5290f883635dff390ff6ac0341905aa4b97c85082775345892c43cbdb79debb8","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:39.362540472Z"},{"index":8,"name":"Data layer saved event feed filters runtime 009","scenario_hash":"a2c623946211d232e95e4ec675e9f297a645fb1d5b897bac7c406e0838f71525","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:39.362540472Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer saved event feed filters runtime
 
   Background:
