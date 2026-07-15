@@ -27,6 +27,7 @@ export type ValidationTarget = "payload" | "raw input";
 export type { JsonSchema } from "./data-layer-schema-document.js";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
+  name?: string;
   baseVersion: number;
   sourceVersion: number;
   document: JsonSchema;
@@ -38,6 +39,7 @@ export interface SchemaWorkingDraft {
   pendingChanges: readonly string[];
 }
 export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; attachedRules?: readonly AttachedSchemaRule[]; parentSchemaId?: string; inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">>; documentation?: SchemaDocumentation; revisionHistory?: readonly SchemaDefinition[]; workingDraft?: SchemaWorkingDraft; published?: boolean; }
+export interface SchemaRenameInspection { ready: boolean; proposedName: string; assistance: string; }
 export interface SchemaAssignment {
   sourceId: string;
   eventName: string;
@@ -169,6 +171,7 @@ export function createSchemaWorkingDraft(schema: SchemaDefinition, sourceVersion
   return {
     ...clone(schema),
     workingDraft:{
+      name:source.name,
       baseVersion:schema.version,
       sourceVersion,
       document:clone(source.document),
@@ -183,12 +186,37 @@ export function createSchemaWorkingDraft(schema: SchemaDefinition, sourceVersion
 }
 export function updateSchemaWorkingDraft(
   schema: SchemaDefinition,
-  changes: Partial<Pick<SchemaWorkingDraft, "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation">>,
+  changes: Partial<Pick<SchemaWorkingDraft, "name" | "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation">>,
   change?: string,
 ): SchemaDefinition {
   const withDraft = schema.workingDraft ? clone(schema) : createSchemaWorkingDraft(schema);
   const draft = withDraft.workingDraft as SchemaWorkingDraft;
   return { ...withDraft, workingDraft:{ ...draft, ...clone(changes), pendingChanges:change ? [...draft.pendingChanges, change] : draft.pendingChanges } };
+}
+export function inspectSchemaRename(
+  schema: SchemaDefinition,
+  schemas: readonly SchemaDefinition[],
+  proposedName: string,
+): SchemaRenameInspection {
+  const proposed = proposedName.trim();
+  if (!proposed) return { ready:false, proposedName:"", assistance:"Enter a schema name" };
+  const duplicate = schemas.find((candidate) => candidate.id !== schema.id && candidate.name.trim().toLocaleLowerCase() === proposed.toLocaleLowerCase());
+  if (duplicate) return { ready:false, proposedName:proposed, assistance:`A schema named ${duplicate.name} already exists` };
+  return { ready:true, proposedName:proposed, assistance:proposed === schema.name ? "Name is unchanged" : "Ready to rename" };
+}
+export function proposeSchemaWorkingDraftName(schema: SchemaDefinition, proposedName: string): SchemaDefinition {
+  const withDraft = schema.workingDraft ? clone(schema) : createSchemaWorkingDraft(schema);
+  const draft = withDraft.workingDraft as SchemaWorkingDraft;
+  const proposed = proposedName.trim();
+  const previousRenameIndex = draft.pendingChanges.findIndex((change) => change.startsWith("Rename schema from "));
+  const pendingChanges = draft.pendingChanges.filter((change) => !change.startsWith("Rename schema from "));
+  if (proposed && proposed !== schema.name) {
+    const rename = `Rename schema from ${schema.name} to ${proposed}`;
+    pendingChanges.splice(previousRenameIndex < 0 ? pendingChanges.length : previousRenameIndex, 0, rename);
+  }
+  const nextDraft = { ...draft, pendingChanges };
+  if (proposed !== schema.name || draft.name !== undefined) nextDraft.name = proposed;
+  return { ...withDraft, workingDraft:nextDraft };
 }
 export function discardSchemaWorkingDraft(schema: SchemaDefinition): SchemaDefinition {
   const { workingDraft: _draft, ...current } = clone(schema);
@@ -201,6 +229,7 @@ export function publishSchemaWorkingDraft(schema: SchemaDefinition): SchemaDefin
   const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = snapshot;
   return {
     ...current,
+    name:draft.name ?? schema.name,
     version:schema.published === false ? 1 : schema.version + 1,
     published:true,
     document:clone(draft.document),

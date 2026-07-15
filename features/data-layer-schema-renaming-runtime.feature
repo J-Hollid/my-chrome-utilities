@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=5fbb848760b5f1c56d44dfdf7379d09e036f277e08b884565cf197e6149de53d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T15:43:22.831268881Z","feature_name":"Data layer schema renaming runtime","feature_path":"features/data-layer-schema-renaming-runtime.feature","background_hash":"05fb432bd93461e32da0e39e8f9974ddde15b7ee478a3ecc95f9a70ac56b9865","implementation_hash":"sha256:8ab65dc416e547b42f2fd5728dcca3c48921a0e0211a65db8d606ff78c81118d","scenarios":[{"index":3,"name":"Data layer schema renaming runtime 004","scenario_hash":"2fbe7c961aee319e4e088e37d3a380c2df3920fdb19012d57d9af6daad0ba1ba","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T15:43:22.831268881Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema renaming runtime
 
   Background:

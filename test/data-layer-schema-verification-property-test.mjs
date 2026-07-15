@@ -7,7 +7,9 @@ import {
   createSchemaWorkingDraft,
   discardSchemaWorkingDraft,
   duplicateSchemaRevision,
+  inspectSchemaRename,
   migrateSchemaLibrary,
+  proposeSchemaWorkingDraftName,
   publishSchemaWorkingDraft,
   resolveSchemaAssignment,
   restoreSchemaLibrary,
@@ -39,6 +41,31 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.deepEqual(emptyDraft.workingDraft.pendingChanges, [], "a new working draft must begin without pending changes");
   assert.equal(emptyDraft.workingDraft.baseVersion, version, "a draft must record its current base revision");
   assert.equal(emptyDraft.workingDraft.sourceVersion, version, "a draft must record its source revision");
+
+  const duplicateName = createSchema(`Existing ${sample}`, 1, { type:"object" });
+  assert.equal(inspectSchemaRename(current, [current, duplicateName], "  ").ready, false,
+    "blank generated rename inputs must be rejected");
+  assert.equal(inspectSchemaRename(current, [current, duplicateName], ` existing ${sample} `).ready, false,
+    "case-insensitive generated collisions must be rejected");
+  const proposedName = `Renamed ${sample}`;
+  assert.deepEqual(inspectSchemaRename(current, [current, duplicateName], ` ${proposedName} `), {
+    ready:true, proposedName, assistance:"Ready to rename",
+  });
+  const renamedDraft = proposeSchemaWorkingDraftName(emptyDraft, ` ${proposedName} `);
+  assert.equal(renamedDraft.name, name, "a rename proposal must not change the current schema name");
+  assert.equal(renamedDraft.workingDraft.name, proposedName, "a rename proposal must be trimmed in the draft");
+  assert.deepEqual(renamedDraft.workingDraft.pendingChanges, [`Rename schema from ${name} to ${proposedName}`]);
+  assert.deepEqual(proposeSchemaWorkingDraftName(renamedDraft, proposedName), renamedDraft,
+    "repeated rename input must be idempotent");
+  assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([renamedDraft])), [renamedDraft],
+    "rename drafts must round-trip through storage");
+  assert.deepEqual(discardSchemaWorkingDraft(renamedDraft), current,
+    "discarding a rename must restore the unchanged current name");
+  const publishedRename = publishSchemaWorkingDraft(renamedDraft);
+  assert.equal(publishedRename.id, current.id, "publishing a rename must conserve stable identity");
+  assert.equal(publishedRename.name, proposedName, "publishing a rename must promote the proposed name");
+  assert.equal(schemaRevision(publishedRename, version).name, name,
+    "publishing a rename must conserve the historical revision name");
 
   const nextDocument = {
     ...document,
