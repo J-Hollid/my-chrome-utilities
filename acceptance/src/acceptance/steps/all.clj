@@ -30,6 +30,7 @@
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
+            [acceptance.steps.library-direct-template-push :as library-direct-template-push]
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.live-guided-conditional-rules :as live-guided-conditional-rules]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
@@ -128,6 +129,7 @@
                defect-report/handlers
                data-layer-timeline/handlers
                timeline-presentations/handlers
+               library-direct-template-push/handlers
                event-library-editor/handlers
                guided-validation/handlers
                hotkey-keymap/handlers

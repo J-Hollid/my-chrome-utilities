@@ -320,6 +320,7 @@ import {
   openPushReview,
 } from "./data-layer-workflow-focus-ui.js";
 import {
+  pushSavedTemplateToSelectedTarget,
   pushTemplateToSelectedTarget,
   type SelectedTargetPushRequest,
 } from "./data-layer-selected-target-push.js";
@@ -1856,8 +1857,7 @@ function renderEventTemplateLibrary(): void {
         renderEventTemplateLibrary();
       },
       push: (template) => {
-        openTemplateEditor(template);
-        void pushCurrentTemplateDraft();
+        void pushLibraryTemplate(template);
       },
       delete: requestEventTemplateDeletion,
       createSchema: (template) => openSchemaFromSource({
@@ -3612,6 +3612,18 @@ async function pushCurrentTemplateDraft(
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
   if (record.fieldError) setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
+  setEventLibraryResult(eventLibraryEditorElements, record.summary);
+}
+
+async function pushLibraryTemplate(
+  template: EditableEventTemplate,
+  target = selectedObservationTarget(observationTargetState),
+): Promise<void> {
+  const record = await pushSavedTemplateToSelectedTarget(
+    template,
+    target,
+    pushPayloadToSelectedTargetPage,
+  );
   setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }
 
