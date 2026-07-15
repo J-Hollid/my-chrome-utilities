@@ -18,9 +18,11 @@ function pointerValue(payload, pointer) {
 function templatePointer(pointer) {
     return pointer.replace(/\/\d+(?=\/|$)/g, "/0");
 }
-export function renderExpectedPayloadEditor(root, schema, state) {
+export function renderExpectedPayloadEditor(root, schema, state, schemas = [schema]) {
     const normalizedSchema = normalizedExpectedPayloadSchema(schema);
-    const fieldTemplates = expectedPayloadFields(schema);
+    const fieldTemplates = expectedPayloadFields(schema, schemas);
+    const customValues = new Map();
+    const initializedCustomValues = new Set();
     const fieldAt = (pointer) => fieldTemplates.find((field) => field.pointer === templatePointer(pointer));
     const issueText = (pointer) => state.issues?.().filter((issue) => issue.instancePath === pointer).map(({ message }) => message).join("; ") ?? "";
     const update = (draft, focusAfterRender) => {
@@ -70,15 +72,40 @@ export function renderExpectedPayloadEditor(root, schema, state) {
             label.prepend(radio);
             wrapper.append(label);
         }
+        const customSelected = state.draft().responseSources[pointer] === "operator custom response";
+        if (customSelected && !initializedCustomValues.has(pointer)) {
+            customValues.set(pointer, current == null ? "" : String(current));
+            initializedCustomValues.add(pointer);
+        }
         const customLabel = element("label", `Custom value for ${path} `);
+        const customChoice = field.example ? element("input") : undefined;
+        if (customChoice) {
+            customChoice.type = "radio";
+            customChoice.name = `expected-${pointer}`;
+            customChoice.checked = customSelected;
+            customChoice.dataset.expectedPayloadCustomChoice = pointer;
+            customChoice.addEventListener("change", () => {
+                if (!customChoice.checked)
+                    return;
+                const first = !initializedCustomValues.has(pointer);
+                const raw = first ? field.example.value : customValues.get(pointer) ?? "";
+                initializedCustomValues.add(pointer);
+                customValues.set(pointer, String(raw));
+                update(setExpectedPayloadValue(schema, state.draft(), pointer, { method: "custom", value: raw }), () => root.querySelector(`[data-expected-payload-input="${CSS.escape(pointer)}"]`));
+            });
+            customLabel.prepend(customChoice);
+        }
         const custom = definition.type === "string" ? element("textarea") : element("input");
         custom.dataset.expectedPayloadInput = pointer;
         if (custom instanceof HTMLInputElement)
             custom.type = definition.type === "number" ? "number" : "text";
-        custom.value = current == null ? "" : String(current);
+        custom.value = initializedCustomValues.has(pointer) ? customValues.get(pointer) ?? "" : current == null ? "" : String(current);
+        custom.hidden = Boolean(field.example && !customSelected);
         custom.addEventListener("input", () => {
             if (definition.type === "number" && custom.value === "")
                 return;
+            initializedCustomValues.add(pointer);
+            customValues.set(pointer, custom.value);
             state.update(setExpectedPayloadValue(schema, state.draft(), pointer, { method: "custom", value: custom.value }));
             const message = issueText(pointer);
             issue.textContent = message;

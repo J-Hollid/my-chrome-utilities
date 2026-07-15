@@ -1,6 +1,15 @@
+export type SchemaPropertyExampleScalar = string | number | boolean | null;
+export type SchemaPropertyExampleSelectionMethod = "allowed value" | "custom";
+
+export interface SchemaPropertyExample {
+  value: SchemaPropertyExampleScalar;
+  selectionMethod: SchemaPropertyExampleSelectionMethod;
+}
+
 export interface SchemaPropertyDocumentation {
   displayName: string;
   description: string;
+  example?: SchemaPropertyExample;
 }
 
 export interface SchemaDocumentation {
@@ -59,8 +68,9 @@ export function setPropertyDocumentation(
   const canonicalPath = canonicalDocumentationPath(path);
   const displayName = cleanText(entry.displayName);
   const description = cleanText(entry.description);
+  const example = entry.example ? structuredClone(entry.example) : undefined;
   const properties: Record<string, SchemaPropertyDocumentation> = structuredClone(documentation.properties ?? {});
-  if (displayName || description) properties[canonicalPath] = { displayName, description };
+  if (displayName || description || example) properties[canonicalPath] = { displayName, description, ...(example ? { example } : {}) };
   else delete properties[canonicalPath];
   return {
     ...(documentation.description ? { description:documentation.description } : {}),

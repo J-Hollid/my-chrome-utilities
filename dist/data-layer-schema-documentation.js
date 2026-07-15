@@ -21,9 +21,10 @@ export function setPropertyDocumentation(documentation, path, entry) {
     const canonicalPath = canonicalDocumentationPath(path);
     const displayName = cleanText(entry.displayName);
     const description = cleanText(entry.description);
+    const example = entry.example ? structuredClone(entry.example) : undefined;
     const properties = structuredClone(documentation.properties ?? {});
-    if (displayName || description)
-        properties[canonicalPath] = { displayName, description };
+    if (displayName || description || example)
+        properties[canonicalPath] = { displayName, description, ...(example ? { example } : {}) };
     else
         delete properties[canonicalPath];
     return {

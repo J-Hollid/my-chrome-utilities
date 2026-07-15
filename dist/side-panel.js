@@ -68,6 +68,7 @@ import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-cop
 import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions } from "./data-layer-schema-assignment-data-conditions.js";
 import { renderAssignmentDataConditionEditor } from "./data-layer-schema-assignment-data-conditions-ui.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription } from "./data-layer-schema-documentation.js";
+import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "./data-layer-schema-property-example-values.js";
 import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./data-layer-conditional-validation-rules.js";
 import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
 import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
@@ -1841,7 +1842,7 @@ function renderSchemaDraft() {
         const documentationSummary = document.createElement("p");
         documentationSummary.className = "schema-property-documentation";
         documentationSummary.textContent = propertyDocumentation
-            ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
+            ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.example ? ` · Example: ${String(propertyDocumentation.example.value)}` : ""}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
             : "No documentation";
         const editDocumentation = document.createElement("a");
         editDocumentation.setAttribute("role", "button");
@@ -1867,14 +1868,99 @@ function renderSchemaDraft() {
         description.id = `schema-documentation-description-${path.replace(/[^a-z0-9]+/gi, "-")}`;
         descriptionLabel.htmlFor = description.id;
         descriptionLabel.textContent = "Description";
+        const exampleGroup = document.createElement("fieldset");
+        exampleGroup.className = "schema-property-example-editor";
+        const exampleLegend = document.createElement("legend");
+        exampleLegend.textContent = "Example value";
+        exampleGroup.append(exampleLegend);
+        const exampleName = `schema-documentation-example-${path.replace(/[^a-z0-9]+/gi, "-")}`;
+        const draftSchema = { ...draft, document: draft.document, ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}) };
+        const allowedExamples = schemaPropertyExampleChoices(draftSchema, persistedPath, [
+            ...schemas.filter(({ id }) => id !== draft.id),
+            draftSchema,
+        ]);
+        const exampleType = schemaPropertyExampleInputType({ document: draft.document }, persistedPath, localDocumentation?.example?.value ?? propertyDocumentation?.example?.value ?? allowedExamples[0]);
+        let exampleDraft = structuredClone(localDocumentation?.example ?? propertyDocumentation?.example);
+        let customInitialized = exampleDraft?.selectionMethod === "custom";
+        const exampleAssistance = document.createElement("output");
+        exampleAssistance.className = "schema-property-example-assistance";
+        exampleAssistance.setAttribute("aria-live", "polite");
+        const noExampleLabel = document.createElement("label");
+        const noExample = document.createElement("input");
+        noExample.type = "radio";
+        noExample.name = exampleName;
+        noExample.checked = !exampleDraft;
+        noExampleLabel.append(noExample, " No example value");
+        exampleGroup.append(noExampleLabel);
+        noExample.addEventListener("change", () => { if (noExample.checked) {
+            exampleDraft = undefined;
+            exampleAssistance.textContent = "";
+            exampleGroup.querySelector("[data-schema-property-example-input]")?.setAttribute("hidden", "");
+        } });
+        for (const allowed of allowedExamples) {
+            const label = document.createElement("label");
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = exampleName;
+            radio.value = String(allowed);
+            radio.dataset.exampleSelectionMethod = "allowed value";
+            radio.checked = exampleDraft?.selectionMethod === "allowed value" && Object.is(exampleDraft.value, allowed);
+            radio.addEventListener("change", () => { if (radio.checked) {
+                exampleDraft = { value: structuredClone(allowed), selectionMethod: "allowed value" };
+                exampleAssistance.textContent = "";
+                exampleGroup.querySelector("[data-schema-property-example-input]")?.setAttribute("hidden", "");
+            } });
+            label.append(radio, ` ${String(allowed)}`);
+            exampleGroup.append(label);
+        }
+        const customLabel = document.createElement("label");
+        const customExample = document.createElement("input");
+        customExample.type = "radio";
+        customExample.name = exampleName;
+        customExample.dataset.exampleSelectionMethod = "custom";
+        customExample.checked = exampleDraft?.selectionMethod === "custom";
+        customLabel.append(customExample, " Custom value");
+        const customInput = document.createElement("input");
+        customInput.dataset.schemaPropertyExampleInput = documentationPath;
+        customInput.type = exampleType === "number" ? "number" : "text";
+        customInput.value = exampleDraft?.selectionMethod === "custom" ? String(exampleDraft.value) : exampleType === "null" ? "null" : "";
+        customInput.hidden = !customExample.checked;
+        customInput.readOnly = exampleType === "null";
+        const refreshCustomExample = () => {
+            const parsed = exampleValueFromInput(customInput.value, exampleType);
+            if (!parsed) {
+                exampleDraft = undefined;
+                exampleAssistance.textContent = `Enter a valid ${exampleType} example value`;
+                return;
+            }
+            exampleDraft = parsed;
+            exampleAssistance.textContent = schemaPropertyExampleConflicts(exampleDraft, allowedExamples) ? "Example value does not satisfy the effective Allowed values rule" : "";
+        };
+        customExample.addEventListener("change", () => { if (!customExample.checked)
+            return; customInput.hidden = false; if (!customInitialized) {
+            customInitialized = true;
+            if (exampleType === "boolean" && !customInput.value)
+                customInput.value = "false";
+            if (exampleType === "null")
+                customInput.value = "null";
+        } refreshCustomExample(); customInput.focus({ preventScroll: true }); });
+        customInput.addEventListener("input", refreshCustomExample);
+        exampleGroup.append(customLabel, customInput, exampleAssistance);
+        if (customExample.checked)
+            refreshCustomExample();
         const saveDocumentation = document.createElement("input");
         saveDocumentation.type = "button";
         saveDocumentation.value = "Save documentation";
         saveDocumentation.addEventListener("click", () => {
             if (!schemaDraft)
                 return;
-            const entry = { displayName: displayName.value, description: description.value };
-            if (!entry.displayName.trim() && !entry.description.trim() && localDocumentation) {
+            if (customExample.checked && !exampleDraft) {
+                exampleAssistance.textContent = `Enter a valid ${exampleType} example value`;
+                customInput.focus({ preventScroll: true });
+                return;
+            }
+            const entry = { displayName: displayName.value, description: description.value, ...(exampleDraft ? { example: structuredClone(exampleDraft) } : {}) };
+            if (!entry.displayName.trim() && !entry.description.trim() && !entry.example && localDocumentation) {
                 requestSchemaDocumentationRemoval(documentationPath, saveDocumentation);
                 return;
             }
@@ -1892,7 +1978,7 @@ function renderSchemaDraft() {
             editDocumentation.click();
             event.preventDefault();
         } });
-        documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, saveDocumentation, removeDocumentation);
+        documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, exampleGroup, saveDocumentation, removeDocumentation);
         const documentationSection = document.createElement("section");
         documentationSection.className = "schema-property-documentation-section";
         documentationSection.setAttribute("aria-label", `Documentation for ${documentationPath}`);

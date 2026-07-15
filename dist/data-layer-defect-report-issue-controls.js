@@ -1,4 +1,5 @@
 import { expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
+import { exampleValueFromInput } from "./data-layer-schema-property-example-values.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     for (const reportIssue of state.report().issues) {
         let hideCustomResponse = () => { };
@@ -143,24 +144,42 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
             keep.hidden = true;
             replace.hidden = true;
         };
-        custom.addEventListener("change", () => { response.hidden = false; response.focus({ preventScroll: true }); });
-        response.addEventListener("input", () => {
-            const result = validateAssistedResponse(reportIssue, response.value);
+        let customInitialized = false;
+        const exampleType = reportIssue.example
+            ? reportIssue.example.value === null ? "null" : typeof reportIssue.example.value
+            : undefined;
+        const responseValue = () => exampleType ? exampleValueFromInput(response.value, exampleType)?.value : response.value;
+        const updateCustomChoice = () => {
+            const value = responseValue();
+            const result = validateAssistedResponse(reportIssue, value);
             warning.textContent = result.valid ? "Custom value or response." : result.warning;
             keep.hidden = result.valid;
             replace.hidden = result.valid;
-            if (result.valid && response.value) {
-                selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: "enter a valid response", response: response.value, responseSource: "operator custom override" });
+            if (result.valid && value !== undefined && value !== "") {
+                selectedChoices.set(reportIssue.id, { issueId: reportIssue.id, method: "enter a valid response", response: value, responseSource: "operator custom override" });
             }
             else
                 selectedChoices.delete(reportIssue.id);
             state.refresh();
+        };
+        custom.addEventListener("change", () => {
+            response.hidden = false;
+            if (!customInitialized && reportIssue.example) {
+                response.value = String(reportIssue.example.value);
+                customInitialized = true;
+                updateCustomChoice();
+            }
+            response.focus({ preventScroll: true });
+        });
+        response.addEventListener("input", () => {
+            customInitialized = true;
+            updateCustomChoice();
         });
         keep.addEventListener("click", () => {
             selectedChoices.set(reportIssue.id, {
                 issueId: reportIssue.id,
                 method: "enter a valid response",
-                response: response.value,
+                response: responseValue(),
                 responseSource: "operator custom override",
                 operatorProvided: true,
             });
