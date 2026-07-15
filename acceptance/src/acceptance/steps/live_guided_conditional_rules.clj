@@ -27,7 +27,31 @@
     :runtime-error "Live guided conditional rule browser runtime failed."
     :missing-error "Live guided conditional rule browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation review local reusable wildcard cancelled lifecycle] :as observed}]
+(defn- assert-wildcard! [wildcard]
+  (support/assert!
+   (= {:options ["/products/*/price_monthly"]
+       :concreteOptions []
+       :preview "Failed for the current event"
+       :predicate "/products/*/price_monthly"
+       :consequence "/products/*/duration"
+       :evaluations [["/products/0/duration" "error"]
+                     ["/products/1/duration" "not-applicable"]
+                     ["/products/2/duration" "not-applicable"]
+                     ["/products/3/duration" "pass"]]
+       :issues ["/products/0/duration"]
+       :reloaded true}
+      (select-keys wildcard
+                   [:options :concreteOptions :preview :predicate :consequence
+                    :evaluations :issues :reloaded]))
+   "Rendered guided authoring did not preserve one correlated wildcard condition."
+   wildcard)
+  (support/assert!
+   (str/includes? (:review wildcard)
+                  "For each products item, when price_monthly exists, duration must be present")
+   "Rendered guided authoring did not describe the correlated wildcard condition."
+   wildcard))
+
+(defn- assert-authoring! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation]}]
   (support/assert! (and (= "Define requirement" (:heading requirement))
                         (:applyOnlyWhen requirement)
                         (:schemaEditorHidden requirement)
@@ -64,7 +88,9 @@
                    preview)
   (support/assert! (and (:open confirmation) (:retained confirmation) (:discarded confirmation))
                    "Conditional predicate discard confirmation did not preserve both choices."
-                   confirmation)
+                   confirmation))
+
+(defn- assert-persistence! [{:keys [review local reusable cancelled lifecycle]}]
   (support/assert! (and (:storageUnchanged review)
                         (str/includes? (:text review) "When page_type equals product_detail, oOrder.aProducts.0 must be present"))
                    "The joint guided review was incomplete or mutated storage."
@@ -84,20 +110,6 @@
                       reusable)
                    "Reusable guided save did not create one pinned identity with the complete condition group."
                    reusable)
-  (support/assert! (and (= ["/products/*/price_monthly"] (:options wildcard))
-                        (empty? (:concreteOptions wildcard))
-                        (= "Failed for the current event" (:preview wildcard))
-                        (str/includes? (:review wildcard) "For each products item, when price_monthly exists, duration must be present")
-                        (= ["/products/*/price_monthly" "/products/*/duration"] [(:predicate wildcard) (:consequence wildcard)])
-                        (= [["/products/0/duration" "error"]
-                            ["/products/1/duration" "not-applicable"]
-                            ["/products/2/duration" "not-applicable"]
-                            ["/products/3/duration" "pass"]]
-                           (:evaluations wildcard))
-                        (= ["/products/0/duration"] (:issues wildcard))
-                        (:reloaded wildcard))
-                   "Rendered guided authoring did not preserve one correlated wildcard condition."
-                   wildcard)
   (support/assert! (and (:storageUnchanged cancelled)
                         (:inspectorVisible cancelled)
                         (= "Add validation for /oOrder/aProducts" (:focus cancelled)))
@@ -112,7 +124,12 @@
                         (= 2 (:revisedVersion lifecycle))
                         (:revisedConditionRetained lifecycle))
                    "Publication and export/import/reload lost conditional identities or typed predicates."
-                   lifecycle)
+                   lifecycle))
+
+(defn- assert-runtime! [{:keys [wildcard] :as observed}]
+  (assert-authoring! observed)
+  (assert-persistence! observed)
+  (assert-wildcard! wildcard)
   observed)
 
 (def model-example-values
@@ -181,14 +198,6 @@
             ["malformed Matches pattern value" "comparison value"]
             ["number-only operator on string path" "trigger operator"]}}])
 
-(defn- validate-relations! [relations example]
-  (doseq [{:keys [keys rows]} relations
-          :when (every? #(support/example-value example %) keys)]
-    (let [row (mapv #(support/example-value example %) keys)]
-      (support/assert! (contains? rows row)
-                       "Live guided conditional rule example row was outside the specified relationship."
-                       {:keys keys :row row :allowed rows}))))
-
 (defn- validate-example! [mode example]
   (let [runtime? (= mode :runtime)
         domains (if runtime? runtime-example-values model-example-values)]
@@ -196,7 +205,10 @@
      domains example
      (filter #(support/example-value example %) (keys domains))
      "Live guided conditional rule example value was outside the specified contract.")
-    (validate-relations! (if runtime? runtime-example-relations model-example-relations) example)))
+    (support/validate-example-relations!
+     (if runtime? runtime-example-relations model-example-relations)
+     example
+     "Live guided conditional rule example row was outside the specified relationship.")))
 
 (def handlers
   (support/verified-feature-mode-handlers
@@ -204,5 +216,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T02:35:40.657234291+02:00", :module-hash "249527622", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1584591195"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1422450692"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "137167923"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1533447095"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "1703522612"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 102, :hash "292480255"} {:id "def/model-example-values", :kind "def", :line 104, :end-line 129, :hash "1594903235"} {:id "def/runtime-example-values", :kind "def", :line 131, :end-line 136, :hash "763919804"} {:id "def/model-example-relations", :kind "def", :line 138, :end-line 161, :hash "537908538"} {:id "def/runtime-example-relations", :kind "def", :line 163, :end-line 168, :hash "1195470991"} {:id "defn-/validate-relations!", :kind "defn-", :line 170, :end-line 176, :hash "1110395721"} {:id "defn-/validate-example!", :kind "defn-", :line 178, :end-line 185, :hash "737925067"} {:id "def/handlers", :kind "def", :line 187, :end-line 190, :hash "-2002731801"}]}
+;; {:version 1, :tested-at "2026-07-15T16:32:16.129554542+02:00", :module-hash "-81666301", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1584591195"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1422450692"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "137167923"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1533447095"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "1703522612"} {:id "defn-/assert-wildcard!", :kind "defn-", :line 30, :end-line 52, :hash "-1120157503"} {:id "defn-/assert-authoring!", :kind "defn-", :line 54, :end-line 91, :hash "-329033217"} {:id "defn-/assert-persistence!", :kind "defn-", :line 93, :end-line 127, :hash "1153063122"} {:id "defn-/assert-runtime!", :kind "defn-", :line 129, :end-line 133, :hash "69658855"} {:id "def/model-example-values", :kind "def", :line 135, :end-line 160, :hash "1594903235"} {:id "def/runtime-example-values", :kind "def", :line 162, :end-line 167, :hash "763919804"} {:id "def/model-example-relations", :kind "def", :line 169, :end-line 192, :hash "537908538"} {:id "def/runtime-example-relations", :kind "def", :line 194, :end-line 199, :hash "1195470991"} {:id "defn-/validate-example!", :kind "defn-", :line 201, :end-line 211, :hash "20667994"} {:id "def/handlers", :kind "def", :line 213, :end-line 216, :hash "-2002731801"}]}
 ;; clj-mutate-manifest-end

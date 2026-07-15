@@ -78,6 +78,9 @@ export function conditionGroupApplies(group, evaluate) {
 function pointerSegments(path) {
     return path.replace(/^\//, "").split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
+function pointerPath(segments) {
+    return `/${segments.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
 export function conditionValueAtPath(value, path) {
     let current = value;
     for (const segment of pointerSegments(path)) {
@@ -90,23 +93,26 @@ export function conditionValueAtPath(value, path) {
 export function conditionGroupAppliesToValue(value, group) {
     return conditionGroupApplies(group, (predicate) => evaluateConditionPredicate(conditionValueAtPath(value, predicate.propertyPath), predicate));
 }
+function wildcardIndexes(segments) {
+    return segments.flatMap((segment, index) => segment === "*" ? [index] : []);
+}
+function sharesWildcardContext(candidate, template, wildcardIndex) {
+    return candidate[wildcardIndex] === "*"
+        && candidate.slice(0, wildcardIndex).every((segment, index) => segment === template[index]);
+}
 function correlatedPredicatePath(predicatePath, consequenceTemplatePath, consequenceConcretePath) {
     const predicate = pointerSegments(predicatePath);
     const template = pointerSegments(consequenceTemplatePath);
     const concrete = pointerSegments(consequenceConcretePath);
-    const templateWildcards = template.flatMap((segment, index) => segment === "*" ? [index] : []);
-    const predicateWildcards = predicate.flatMap((segment, index) => segment === "*" ? [index] : []);
+    const templateWildcards = wildcardIndexes(template);
+    const predicateWildcards = wildcardIndexes(predicate);
     if (!predicateWildcards.length || predicateWildcards.length > templateWildcards.length)
         return predicatePath;
-    const sharesContexts = predicateWildcards.every((index, ordinal) => {
-        const templateIndex = templateWildcards[ordinal];
-        return templateIndex === index
-            && predicate.slice(0, index).every((segment, candidate) => segment === template[candidate]);
-    });
+    const sharesContexts = predicateWildcards.every((index, ordinal) => templateWildcards[ordinal] === index && sharesWildcardContext(predicate, template, index));
     if (!sharesContexts)
         return predicatePath;
     let wildcard = 0;
-    return `/${predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++]] : segment).join("/")}`;
+    return pointerPath(predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++]] ?? segment : segment));
 }
 export function conditionGroupAppliesToConsequence(value, group, consequenceTemplatePath, consequenceConcretePath) {
     return conditionGroupApplies(group, (predicate) => {
@@ -149,11 +155,7 @@ export function conditionalRuleSummary(rule) {
     const conjunction = rule.conditionGroup.operator === "All" ? " and " : " or ";
     const consequenceSegments = pointerSegments(rule.consequence.propertyPath);
     const wildcardIndex = consequenceSegments.indexOf("*");
-    const correlated = wildcardIndex > 0 && rule.conditionGroup.predicates.every((predicate) => {
-        const segments = pointerSegments(predicate.propertyPath);
-        return segments[wildcardIndex] === "*"
-            && segments.slice(0, wildcardIndex).every((segment, index) => segment === consequenceSegments[index]);
-    });
+    const correlated = wildcardIndex > 0 && rule.conditionGroup.predicates.every((predicate) => sharesWildcardContext(pointerSegments(predicate.propertyPath), consequenceSegments, wildcardIndex));
     if (correlated) {
         const localPredicate = (predicate) => ({
             ...predicate,
