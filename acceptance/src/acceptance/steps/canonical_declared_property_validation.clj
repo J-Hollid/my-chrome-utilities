@@ -8,7 +8,7 @@
 
 (def entry-modes
   {"Generic pageview revision 3 is assigned to history event pageview and target payload" :model
-   "the built extension side panel is running with production schema editing, validation, persistence, and Live event presentation" :runtime})
+   "persisted Generic pageview working draft declares path-keyed properties /page_type, /login_status, and /page_levels" :runtime})
 
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
@@ -27,7 +27,7 @@
     :runtime-error "Canonical declared property validation browser runtime failed."
     :missing-error "Canonical declared property validation browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [policy representationCases pageCases inheritance disabled publication live reopened runtimeErrors] :as observed}]
+(defn- assert-policy! [policy]
   (support/assert! (and (:checked policy)
                         (:stored policy)
                         (:propertiesUnchanged policy)
@@ -35,24 +35,30 @@
                         (= [{:instancePath "/debug" :expected "declared property" :actual "boolean"}]
                            (:extraIssues policy)))
                    "The production checkbox or canonical closed-object policy changed property definitions or misclassified payload keys."
-                   policy)
-  (support/assert! (and (= #{"nested" "path-keyed" "flat-array"} (set (map :name representationCases)))
-                        (every? #(and (zero? (:undeclared %)) (:documentUnchanged %)) representationCases))
+                   policy))
+
+(defn- assert-representations! [representation-cases]
+  (support/assert! (and (= #{"nested" "path-keyed" "flat-array"} (set (map :name representation-cases)))
+                        (every? #(and (zero? (:undeclared %)) (:documentUnchanged %)) representation-cases))
                    "A nested, path-keyed, or flat-array declaration was not resolved canonically."
-                   representationCases)
-  (support/assert! (and (= ["Required value"] (get-in pageCases [:missing :issues]))
-                        (= ["Type mismatch"] (get-in pageCases [:numeric :issues]))
-                        (= ["Value is not allowed"] (get-in pageCases [:disallowed :issues]))
-                        (empty? (get-in pageCases [:allowed :issues]))
-                        (every? false? (map :undeclared (vals pageCases)))
+                   representation-cases))
+
+(defn- assert-page-cases! [page-cases]
+  (support/assert! (and (= ["Required value"] (get-in page-cases [:missing :issues]))
+                        (= ["Type mismatch"] (get-in page-cases [:numeric :issues]))
+                        (= ["Value is not allowed"] (get-in page-cases [:disallowed :issues]))
+                        (empty? (get-in page-cases [:allowed :issues]))
+                        (every? false? (map :undeclared (vals page-cases)))
                         (every? (fn [result]
                                   (every? #(and (= "/page_type" (:propertyPath %))
                                                 (= "Approved page types" (:rule %))
                                                 (= 2 (:ruleVersion %)))
                                           (:evaluations result)))
-                                (vals pageCases)))
+                                (vals page-cases)))
                    "Type, required, allowed-value, or provenance behavior diverged for canonical page_type."
-                   pageCases)
+                   page-cases))
+
+(defn- assert-persistence! [inheritance disabled publication]
   (support/assert! (and (= ["/debug"] (:undeclared inheritance))
                         (:parentUnchanged inheritance)
                         (:childUnchanged inheritance))
@@ -69,7 +75,9 @@
                         (:propertiesUnchanged publication)
                         (str/includes? (:result publication) "Revalidated 2 current Live events"))
                    "Publication did not persist and apply the canonical declared-property policy."
-                   publication)
+                   publication))
+
+(defn- assert-live! [live reopened runtime-errors]
   (support/assert! (and (= #{["event:extra" true] ["event:declared" true]}
                            (set (map (fn [{:keys [eventId textContent]}]
                                        [eventId (if (= eventId "event:extra")
@@ -81,9 +89,16 @@
                         (= 1 (:debugRows live))
                         (:checked reopened)
                         (:propertiesUnchanged reopened)
-                        (empty? runtimeErrors))
+                        (empty? runtime-errors))
                    "Live results, reopen state, or runtime error evidence did not preserve the published policy."
-                   {:live live :reopened reopened :runtimeErrors runtimeErrors})
+                   {:live live :reopened reopened :runtimeErrors runtime-errors}))
+
+(defn- assert-runtime! [{:keys [policy representationCases pageCases inheritance disabled publication live reopened runtimeErrors] :as observed}]
+  (assert-policy! policy)
+  (assert-representations! representationCases)
+  (assert-page-cases! pageCases)
+  (assert-persistence! inheritance disabled publication)
+  (assert-live! live reopened runtimeErrors)
   observed)
 
 (def model-example-values
@@ -116,9 +131,11 @@
    "Canonical declared property validation example value was outside the specified contract."))
 
 (def handlers
-  (support/verified-feature-mode-handlers
-   feature-files entry-modes :canonical-declared-property-validation-mode
-   verify-model! validate-example! runtime-observation! assert-runtime!))
+  (into [{:pattern #"^the built extension side panel is running with production schema editing, validation, persistence, and Live event presentation$"
+          :handler (fn [world _example _captures] world)}]
+        (support/verified-feature-mode-handlers
+         feature-files entry-modes :canonical-declared-property-validation-mode
+         verify-model! validate-example! runtime-observation! assert-runtime!)))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-15T01:22:48.093004772+02:00", :module-hash "-1131484107", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-477298114"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "322791414"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-810162738"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "1257283293"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-1985355050"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 87, :hash "-1915493728"} {:id "def/model-example-values", :kind "def", :line 89, :end-line 99, :hash "1597422739"} {:id "def/runtime-example-values", :kind "def", :line 101, :end-line 111, :hash "-1288170676"} {:id "defn-/validate-example!", :kind "defn-", :line 113, :end-line 116, :hash "-1324760956"} {:id "def/handlers", :kind "def", :line 118, :end-line 121, :hash "281126603"}]}
