@@ -138,6 +138,16 @@ for (let sample = 0; sample < 200; sample += 1) {
     ...(type === "array" ? { arrayItemType } : {}),
   }, "contextual definitions must derive one canonical child path from fixed parent context");
   assert.equal(inspectManualProperty(container, [], contextual).result, "ready");
+  for (const separator of ["/", "."]) {
+    const escaping = contextualManualPropertyDefinition(
+      "/products/*",
+      `${itemChild}${separator}escaped`,
+      type,
+      arrayItemType,
+    );
+    assert.equal(inspectManualProperty(container, [], escaping).result, "blocked",
+      "contextual names must remain one segment beneath their fixed parent");
+  }
   const contextAdded = addManualProperty(container, [], contextual);
   const contextLeaf = propertyAt(contextAdded, ["products", "*", itemChild]);
   assert.equal(contextLeaf.type, type);
