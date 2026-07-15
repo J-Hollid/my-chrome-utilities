@@ -91,12 +91,54 @@
    "failure_point" #{"create write" "update write" "rename write" "delete write" "default write"}
    "failure_feedback" #{"Saving saved filter failed" "Updating saved filter failed" "Renaming saved filter failed" "Deleting saved filter failed" "Setting default failed"}})
 
+(def model-example-relations
+  [{:keys ["filter_state" "displayed_state" "save_behavior"]
+    :rows #{["no conditions" "All events" "Save current filter is unavailable"]
+            ["unsaved conditions" "Custom · Unsaved" "Save current filter is available"]
+            ["exact saved definition Checkout issues" "Checkout issues" "no changes need saving"]
+            ["changed working copy of Checkout issues" "Checkout issues · Modified" "Update and Save as new are available"]}}
+   {:keys ["switch_action" "saved_outcome" "active_outcome"]
+    :rows #{["Save changes" "updated with working conditions" "Product events is applied"]
+            ["Discard and switch" "unchanged" "Product events is applied"]
+            ["Cancel" "unchanged" "modified Checkout issues remains"]}}
+   {:keys ["candidate_name" "name_result" "assistance"]
+    :rows #{["blank" "blocked" "Enter a saved filter name"]
+            ["spaces" "blocked" "Enter a saved filter name"]
+            ["checkout issues" "blocked" "A saved filter with this name exists"]
+            ["Checkout warnings" "accepted" "Ready to save Checkout warnings"]}}])
+
+(def runtime-example-relations
+  [{:keys ["switch_action" "persisted_outcome" "rendered_outcome"]
+    :rows #{["Save changes" "updated" "selected replacement filter"]
+            ["Discard and switch" "unchanged" "selected replacement filter"]
+            ["Cancel" "unchanged" "Checkout issues · Modified"]}}
+   {:keys ["failure_point" "failure_feedback"]
+    :rows #{["create write" "Saving saved filter failed"]
+            ["update write" "Updating saved filter failed"]
+            ["rename write" "Renaming saved filter failed"]
+            ["delete write" "Deleting saved filter failed"]
+            ["default write" "Setting default failed"]}}])
+
+(defn- validate-relations! [relations example]
+  (doseq [{:keys [keys rows]} relations
+          :when (every? #(support/example-value example %) keys)]
+    (let [row (mapv #(support/example-value example %) keys)]
+      (support/assert! (contains? rows row)
+                       "Saved event feed filter example row was outside the specified relationship."
+                       {:keys keys :row row :allowed rows}))))
+
 (defn- validate-example! [mode example]
-  (support/validate-mode-example-domain!
-   mode runtime-example-values model-example-values example
-   "Saved event feed filter example value was outside the specified contract."))
+  (let [runtime? (= mode :runtime)]
+    (support/validate-mode-example-domain!
+     mode runtime-example-values model-example-values example
+     "Saved event feed filter example value was outside the specified contract.")
+    (validate-relations! (if runtime? runtime-example-relations model-example-relations) example)))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :saved-event-feed-filters-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T03:09:54.994040231+02:00", :module-hash "1511428131", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1481223718"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "877782956"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-406137454"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1215399982"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-1463587559"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 73, :hash "1811374143"} {:id "def/model-example-values", :kind "def", :line 75, :end-line 85, :hash "783901510"} {:id "def/runtime-example-values", :kind "def", :line 87, :end-line 92, :hash "-21183591"} {:id "def/model-example-relations", :kind "def", :line 94, :end-line 108, :hash "68015362"} {:id "def/runtime-example-relations", :kind "def", :line 110, :end-line 120, :hash "1930260696"} {:id "defn-/validate-relations!", :kind "defn-", :line 122, :end-line 128, :hash "1769494263"} {:id "defn-/validate-example!", :kind "defn-", :line 130, :end-line 135, :hash "-1838979305"} {:id "def/handlers", :kind "def", :line 137, :end-line 140, :hash "-1683576948"}]}
+;; clj-mutate-manifest-end

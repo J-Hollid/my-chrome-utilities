@@ -40,6 +40,7 @@ assert.deepEqual(eventFeedQueryOperators("Event name"), ["is", "is not", "contai
 assert.deepEqual(eventFeedQueryOperators("Validation rule"), ["failed", "warned", "passed", "was evaluated", "was not evaluated"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Event name"), ["checkout", "purchase"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Payload · currency"), ["EUR", "GBP"]);
+assert.deepEqual(eventFeedQuerySuggestions(events, "Validation state"), ["1 warnings", "Issues", "Valid", "Warnings"]);
 assert.deepEqual(eventFeedQuerySuggestions(events, "Validation rule"), ["Page type allowed values"]);
 assert.equal(queryConditionComplete({ id:"invalid", field:"Event name", operator:"failed", values:["purchase"] }), false);
 assert.equal(queryConditionComplete({ id:"blank-payload-path", field:"Payload · ", operator:"is", values:["anything"] }), false);

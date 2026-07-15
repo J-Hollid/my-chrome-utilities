@@ -23,14 +23,21 @@ function replaceFilter(library, filter) {
 function semanticConditions(value) {
     return value.conditions.map(({ field, operator, values }) => [field, operator, [...values]]);
 }
+function validCondition(value) {
+    if (!value || typeof value !== "object")
+        return false;
+    const candidate = value;
+    return typeof candidate.id === "string" && typeof candidate.field === "string"
+        && typeof candidate.operator === "string" && Array.isArray(candidate.values)
+        && candidate.values.every((item) => typeof item === "string");
+}
 function validFilter(value) {
     if (!value || typeof value !== "object")
         return false;
     const candidate = value;
     return typeof candidate.id === "string" && typeof candidate.name === "string" && candidate.version === 1
         && candidate.match === "all" && candidate.valueMatch === "any" && Array.isArray(candidate.conditions)
-        && candidate.conditions.every((entry) => entry && typeof entry.id === "string" && typeof entry.field === "string"
-            && typeof entry.operator === "string" && Array.isArray(entry.values) && entry.values.every((item) => typeof item === "string"));
+        && candidate.conditions.every(validCondition);
 }
 export function restoreSavedEventFeedFilterLibrary(serialized) {
     if (!serialized)
@@ -49,6 +56,29 @@ export function restoreSavedEventFeedFilterLibrary(serialized) {
 }
 export function serializeSavedEventFeedFilterLibrary(library) {
     return JSON.stringify(library);
+}
+export function restoreSavedEventFeedWorkingView(serialized, sessionId, library) {
+    if (!serialized || !sessionId)
+        return undefined;
+    try {
+        const parsed = JSON.parse(serialized);
+        if (parsed.version !== 1 || parsed.sessionId !== sessionId || !parsed.query || !Array.isArray(parsed.query.conditions)
+            || !parsed.query.conditions.every(validCondition))
+            return undefined;
+        const activeFilterId = library.filters.some(({ id }) => id === parsed.activeFilterId) ? parsed.activeFilterId : undefined;
+        return {
+            version: 1,
+            sessionId,
+            query: clone(parsed.query),
+            ...(activeFilterId ? { activeFilterId } : {}),
+        };
+    }
+    catch {
+        return undefined;
+    }
+}
+export function serializeSavedEventFeedWorkingView(sessionId, query, activeFilterId) {
+    return JSON.stringify({ version: 1, sessionId, query, ...(activeFilterId ? { activeFilterId } : {}) });
 }
 export function savedEventFeedFilterNameResult(library, candidate, exceptId) {
     const name = candidate.trim();

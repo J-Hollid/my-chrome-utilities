@@ -9,9 +9,11 @@ import {
   inspectSavedEventFeedFilter,
   renameSavedEventFeedFilter,
   restoreSavedEventFeedFilterLibrary,
+  restoreSavedEventFeedWorkingView,
   savedEventFeedFilterNameResult,
   savedEventFeedFilterQueryEqual,
   serializeSavedEventFeedFilterLibrary,
+  serializeSavedEventFeedWorkingView,
   setDefaultSavedEventFeedFilter,
   updateSavedEventFeedFilter,
 } from "../dist/data-layer-saved-event-feed-filters.js";
@@ -70,6 +72,13 @@ for (let sample = 0; sample < 200; sample += 1) {
   restored.filters.find(({ id }) => id === firstId).conditions[0].values[0] = `restored-mutation-${sample}`;
   assert.equal(library.filters.find(({ id }) => id === firstId).conditions[0].values[0], eventValue,
     "restoration must not expose aliases into the serialized library");
+
+  const sessionId = `session:${sample}:${token()}`;
+  const workingSerialized = serializeSavedEventFeedWorkingView(sessionId, firstQuery, firstId);
+  const working = restoreSavedEventFeedWorkingView(workingSerialized, sessionId, library);
+  assert.deepEqual(working, { version:1, sessionId, query:firstQuery, activeFilterId:firstId });
+  assert.equal(restoreSavedEventFeedWorkingView(workingSerialized, `${sessionId}:other`, library), undefined,
+    "working views must not cross testing-session boundaries");
 
   const applied = applySavedEventFeedFilter(secondQuery, first);
   assert.equal(savedEventFeedFilterQueryEqual(first, applied), true);
