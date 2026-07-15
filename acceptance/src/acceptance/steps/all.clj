@@ -25,6 +25,7 @@
             [acceptance.steps.live-event-presentation :as live-event-presentation]
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
+            [acceptance.steps.local-rule-promotion-availability :as local-rule-promotion-availability]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
@@ -64,6 +65,7 @@
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
                local-rule-promotion/handlers
+               local-rule-promotion-availability/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
@@ -117,5 +119,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T01:51:51.911104868+02:00", :module-hash "-983707183", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 57, :hash "-1121898827"} {:id "def/handlers", :kind "def", :line 59, :end-line 117, :hash "361865019"}]}
+;; {:version 1, :tested-at "2026-07-15T01:58:27.234281201+02:00", :module-hash "-1473512168", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 58, :hash "-1709853564"} {:id "def/handlers", :kind "def", :line 60, :end-line 119, :hash "-722530720"}]}
 ;; clj-mutate-manifest-end

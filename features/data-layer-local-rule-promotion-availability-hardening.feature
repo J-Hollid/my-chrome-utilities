@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8d9443c97a0a9892d0d1ab723e707ca59513ebf4ff3f45e65cd40adc8941eb05
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-14T23:58:52.161634484Z","feature_name":"Data layer local rule promotion availability hardening","feature_path":"features/data-layer-local-rule-promotion-availability-hardening.feature","background_hash":"932de434b47b1dc981094d142ba4b9edad977f8f2d585516333e246ae1eb2eb9","implementation_hash":"unknown","scenarios":[{"index":1,"name":"Data layer local rule promotion availability hardening 002","scenario_hash":"b79996335d47823e44c39bc5eda02286a9b5ea4bd357c45f7e3b958570a898d9","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-14T23:58:52.161634484Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer local rule promotion availability hardening
 
   Background:
