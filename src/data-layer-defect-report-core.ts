@@ -56,6 +56,14 @@ export function isUndeclaredPropertyIssue(issue: DefectIssue): boolean {
   return issue.violation === "Undeclared property";
 }
 
+export function isRequiredPropertyViolation(violation: string | undefined): boolean {
+  return violation === "Required value";
+}
+
+export function isRequiredPropertyIssue(issue: DefectIssue): boolean {
+  return isRequiredPropertyViolation(issue.violation);
+}
+
 function undeclaredPropertyChoice(issue: ReportIssue): ExpectedResultChoice {
   return {
     issueId: issue.id,
@@ -128,10 +136,14 @@ export function applyExpectedResult(
   const payload = cloneValue(report.event.payload);
   const corrections: ExpectedCorrection[] = [];
   const explanations: string[] = [];
-  const explicitlyChosen = new Set(choices.map(({ issueId }) => issueId));
+  const applicableChoices = choices.filter(({ issueId }) => {
+    const issue = report.issues.find(({ id }) => id === issueId);
+    return !issue || !isRequiredPropertyIssue(issue) || issue.selected;
+  });
+  const explicitlyChosen = new Set(applicableChoices.map(({ issueId }) => issueId));
   const effectiveChoices = [
     ...report.issues.filter((issue) => issue.selected && isUndeclaredPropertyIssue(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
-    ...choices,
+    ...applicableChoices,
   ];
   for (const choice of effectiveChoices) {
     const issue = report.issues.find(({ id }) => id === choice.issueId);

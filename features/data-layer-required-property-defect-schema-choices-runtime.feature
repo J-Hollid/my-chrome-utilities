@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=80ecdacd172c28638afb687cb7d0b96ed943f96ee73c55ce748c1eb382f03af2
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T02:01:13.297413041Z","feature_name":"Data layer required-property defect schema choices runtime","feature_path":"features/data-layer-required-property-defect-schema-choices-runtime.feature","background_hash":"8fb444f03c1ec3461cbade15bfaac0f5aa405eff2d9b65802a31dbac7e344925","implementation_hash":"sha256:05dcb6b031d3430fbeb75b8ea757de0b054789af8c3112106919de30b93fe2fc","scenarios":[{"index":2,"name":"Data layer required-property defect schema choices runtime 003","scenario_hash":"f185abe9198c5814b9d6dc800216223d726b710b594c59b6a0d5d06b605feb8f","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T02:01:13.297413041Z"},{"index":3,"name":"Data layer required-property defect schema choices runtime 004","scenario_hash":"8bd35ee5b2accab9ea7d9bfd484097852588109821dc89f762c9867203a8f4ca","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-15T02:01:13.297413041Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer required-property defect schema choices runtime
 
   Background:
