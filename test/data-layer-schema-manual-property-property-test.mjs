@@ -138,10 +138,10 @@ for (let sample = 0; sample < 200; sample += 1) {
     ...(type === "array" ? { arrayItemType } : {}),
   }, "contextual definitions must derive one canonical child path from fixed parent context");
   assert.equal(inspectManualProperty(container, [], contextual).result, "ready");
-  for (const separator of ["/", "."]) {
+  for (const escapingName of [`${itemChild}/escaped`, `${itemChild}.escaped`, "*"]) {
     const escaping = contextualManualPropertyDefinition(
       "/products/*",
-      `${itemChild}${separator}escaped`,
+      escapingName,
       type,
       arrayItemType,
     );
