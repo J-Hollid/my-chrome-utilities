@@ -1925,7 +1925,7 @@ function renderSchemas(): void {
       renderSchemaDraft();
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
-    build.addEventListener("click", () => { schemaDraft = schemaEditorDraft(schema); renderSchemaDraft(); buildSpecificationButton.click(); });
+    build.addEventListener("click", () => openSchemaSpecification(schema, build));
     reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -2051,13 +2051,7 @@ function renderSchemaDraft(): void {
   if (discardWorkingSchemaDraftButton) discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
   if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(draft);
   if (!draft) return;
-  buildSpecificationButton.onclick = () => {
-    schemaSpecificationBuilder.hidden = false;
-    renderSchemaSpecificationBuilder(schemaSpecificationBuilder, draft, schemas, () => { schemaSpecificationBuilder.hidden = true; buildSpecificationButton.focus({ preventScroll:true }); }, async (items) => {
-      if (!navigator.clipboard?.write) throw new Error("Rich clipboard unavailable");
-      await navigator.clipboard.write(items);
-    });
-  };
+  buildSpecificationButton.onclick = () => openSchemaSpecification(draft, buildSpecificationButton);
   const storedSchema = schemas.find((schema) => schema.id === draft.id);
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
@@ -2293,6 +2287,14 @@ function renderSchemaDraft(): void {
   if (duplicateSchemaRevisionButton) duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
   if (restoreSchemaRevisionButton) restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
   if (schemaRevisionComparison) schemaRevisionComparison.textContent = historyVersions.length ? `Select one historical revision to compare with current revision ${storedSchema?.version}.` : "No historical revisions.";
+}
+
+function openSchemaSpecification(source: SchemaDefinition, trigger: HTMLButtonElement): void {
+  schemaSpecificationBuilder.hidden = false;
+  renderSchemaSpecificationBuilder(schemaSpecificationBuilder, source, schemas, () => { schemaSpecificationBuilder.hidden = true; trigger.focus({ preventScroll:true }); }, async (items) => {
+    if (!navigator.clipboard?.write) throw new Error("Rich clipboard unavailable");
+    await navigator.clipboard.write(items);
+  });
 }
 
 type DisplayedSchemaRule = { path: string; rule: NonNullable<SchemaDefinition["attachedRules"]>[number]; origin: SchemaDefinition; state: "active-inherited" | "disabled-inherited" | "explicitly-reenabled" | "local" };
