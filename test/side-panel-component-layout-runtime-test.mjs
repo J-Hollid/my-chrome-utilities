@@ -58,6 +58,7 @@ let schemaPropertyCopyObservation;
 let schemaAssignmentDataConditionsObservation;
 let schemaPropertyExampleValuesObservation;
 let guidedNestedPropertyMergeObservation;
+let libraryDirectTemplatePushObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -65,6 +66,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1" ? [320]
@@ -3391,6 +3393,60 @@ const openLibraryRuntime = `(() => {
   };
 })()`;
 
+const libraryDirectTemplatePushSeedRuntime = `(() => {
+  localStorage.clear();
+  const base = { sourceId:"history", sourceName:"Event history", tags:[], validation:"Valid", provenance:"template:captured", revisionHistory:[] };
+  const templates = [
+    { ...base, id:"template:purchase", name:"Purchase confirmation v3", eventName:"purchase", destination:"dataLayer", payload:{ transaction_id:"test-123" }, version:3 },
+    { ...base, id:"template:product", name:"Product detail", eventName:"product_detail", destination:"dataLayer", payload:{ product_id:"sku-123" }, version:1 },
+  ];
+  localStorage.setItem("my-chrome-utilities.event-template-library.v1", JSON.stringify(templates));
+  return localStorage.getItem("my-chrome-utilities.event-template-library.v1");
+})()`;
+
+const libraryDirectTemplatePushRuntime = `(async () => {
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const q = (selector, root=document) => { const value=root.querySelector(selector); if (!value) throw new Error("Missing " + selector); return value; };
+  const row = (name) => Array.from(document.querySelectorAll(".event-template-row")).find((item) => item.textContent.includes(name));
+  const clickIn = (root, label) => { const button=Array.from(root.querySelectorAll("button")).find(({textContent}) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const setInput = (selector, value) => { const input=q(selector); input.value=value; input.dispatchEvent(new Event("input", { bubbles:true })); };
+  const executions=[];
+  globalThis.chrome = {
+    tabs:{ query:async () => [{ id:42, windowId:1, url:"https://signal-shop.example/checkout", title:"Signal Shop", active:true }] },
+    scripting:{ executeScript:async (details) => { executions.push(structuredClone(details.args)); return [{ result:{ success:true } }]; } },
+  };
+  q("#data-layer-view-library").click();
+  q("#choose-observation-target").click(); await pause();
+  q("#observation-target-list [data-target-id]").click(); await pause();
+  setInput("#event-template-search", "Purchase");
+  const before={ search:q("#event-template-search").value, rows:q("#event-template-list").textContent, target:q("#observation-target-result").textContent };
+  clickIn(row("Purchase confirmation v3"), "Push"); await pause();
+  const closed={ execution:executions.at(-1), editorHidden:q("#event-property-editor").hidden, search:q("#event-template-search").value, rows:q("#event-template-list").textContent, target:q("#observation-target-result").textContent, feedback:q("#event-template-result").textContent };
+
+  setInput("#event-template-search", "");
+  clickIn(row("Product detail"), "Edit");
+  q("#event-template-json-section summary").click();
+  setInput("#event-template-json", JSON.stringify({ product_id:"unsaved-sku" }));
+  clickIn(row("Purchase confirmation v3"), "Push"); await pause();
+  const productDraft={ execution:executions.at(-1), title:q("#event-property-editor h4").textContent, json:q("#event-template-json").value };
+
+  q("#close-template-editor").click(); clickIn(row("Purchase confirmation v3"), "Edit");
+  q("#event-template-json-section summary").click();
+  setInput("#event-template-json", JSON.stringify({ transaction_id:"test-456" }));
+  clickIn(row("Purchase confirmation v3"), "Push"); await pause();
+  const purchaseDraft={ execution:executions.at(-1), json:q("#event-template-json").value };
+  q("#push-template-draft").click();
+  purchaseDraft.review={ open:!q("#push-draft-review").hidden, text:q("#push-draft-review").textContent };
+
+  const core=await import("/data-layer-selected-target-push.js");
+  const saved=JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0];
+  const target={ id:"tab:42:window:1",tabId:42,windowId:1,pageUrl:"https://signal-shop.example/checkout",title:"Signal Shop",origin:"https://signal-shop.example",accessState:"Ready" };
+  const noTarget=await core.pushSavedTemplateToSelectedTarget(saved,undefined,async()=>{throw new Error("unexpected");});
+  const unavailable=await core.pushSavedTemplateToSelectedTarget(saved,{...target,accessState:"Permission required"},async()=>{throw new Error("unexpected");});
+  const failed=await core.pushSavedTemplateToSelectedTarget(saved,target,async()=>{throw new Error("injection failed");});
+  return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]) };
+})()`;
+
 const libraryActionsRecoveryRuntime = `(async () => {
   const q = (selector) => {
     const element = document.querySelector(selector);
@@ -4674,6 +4730,16 @@ try {
       assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
       socket.close();continue;
     }
+    if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
+      libraryDirectTemplatePushObservation=await evaluate(socket,libraryDirectTemplatePushRuntime);const observed=libraryDirectTemplatePushObservation;
+      assert.deepEqual(observed.closed.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);
+      assert.equal(observed.closed.editorHidden,true);assert.equal(observed.closed.search,observed.before.search);assert.equal(observed.closed.rows,observed.before.rows);assert.equal(observed.closed.target,observed.before.target);assert.match(observed.closed.feedback,/Purchase confirmation v3.*Signal Shop/);assert.match(observed.closed.feedback,/dataLayer/);
+      assert.deepEqual(observed.productDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.productDraft.title,/Product detail/);assert.match(observed.productDraft.json,/unsaved-sku/);
+      assert.deepEqual(observed.purchaseDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.purchaseDraft.json,/test-456/);assert.equal(observed.purchaseDraft.review.open,true);assert.match(observed.purchaseDraft.review.text,/test-456/);
+      assert.deepEqual(observed.failures,["Select a target before pushing","Request access for Signal Shop","Push to Signal Shop failed"]);assert.equal(observed.persistedUnchanged,true);
+      socket.close();continue;
+    }
     if (process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -5858,6 +5924,9 @@ try {
   }
   if (process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ recursiveDeclaredPropertyValidation:recursiveDeclaredPropertyValidationObservation }));
+  }
+  if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ libraryDirectTemplatePush:libraryDirectTemplatePushObservation }));
   }
   if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));

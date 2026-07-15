@@ -11,6 +11,35 @@ export function pushDestinationPathError(path) {
 function summary(target, destination, result) {
     return `${target.title}; ${target.pageUrl}; ${destination}; ${result}.`;
 }
+export async function pushSavedTemplateToSelectedTarget(template, target, pushToPage) {
+    if (!target) {
+        const result = "Select a target before pushing";
+        return { success: false, result, summary: result };
+    }
+    if (target.accessState !== "Ready") {
+        const result = `Request access for ${target.title}`;
+        return { success: false, result, summary: result };
+    }
+    const pathError = pushDestinationPathError(template.destination);
+    if (pathError) {
+        const result = `Invalid push destination path ${template.destination}`;
+        return { success: false, result, summary: result };
+    }
+    try {
+        await pushToPage({
+            tabId: target.tabId,
+            destination: template.destination,
+            eventName: template.eventName,
+            payload: structuredClone(template.payload),
+        });
+        const result = `Pushed ${template.name} to ${target.title}`;
+        return { success: true, result, summary: summary(target, template.destination, result) };
+    }
+    catch {
+        const result = `Push to ${target.title} failed`;
+        return { success: false, result, summary: summary(target, template.destination, result) };
+    }
+}
 export async function pushTemplateToSelectedTarget(editor, target, pushToPage) {
     const destination = editor.template.destination;
     if (!target || target.accessState !== "Ready") {
