@@ -1,9 +1,9 @@
-import type {
-  AttachedSchemaRule,
-  SchemaDefinition,
-  SchemaWorkingDraft,
+import {
+  createSchemaWorkingDraft,
+  type AttachedSchemaRule,
+  type SchemaDefinition,
+  type SchemaWorkingDraft,
 } from "./data-layer-schema-verification.js";
-import { createSchemaWorkingDraft } from "./data-layer-schema-verification.js";
 
 export interface PromotableReusableRule extends AttachedSchemaRule {
   name: string;
@@ -116,13 +116,14 @@ interface ResolvedPromotionSource {
   origin: "working-draft" | "current-revision" | "new-schema";
 }
 
-function sourceRule(input: LocalRulePromotionInput): ResolvedPromotionSource | undefined {
+function resolvePromotionSource(input: LocalRulePromotionInput): ResolvedPromotionSource | undefined {
   if (input.editorContext === "read-only") return undefined;
   const path = normalizePath(input.propertyPath);
   const matchingRule = (rules: readonly AttachedSchemaRule[] | undefined) => rules?.find((rule) =>
     rule.id === input.sourceRuleId && normalizePath(rule.propertyPath ?? "") === path);
   const draftRule = matchingRule(input.schema.workingDraft?.attachedRules);
   if (draftRule) return { rule:draftRule, origin:"working-draft" };
+  if (input.schema.workingDraft) return undefined;
   const currentRule = matchingRule(input.schema.attachedRules);
   if (!currentRule) return undefined;
   return {
@@ -134,7 +135,7 @@ function sourceRule(input: LocalRulePromotionInput): ResolvedPromotionSource | u
 export function localRulePromotionAvailability(
   input: LocalRulePromotionInput,
 ): { available: boolean; reason?: string } {
-  const source = sourceRule(input);
+  const source = resolvePromotionSource(input);
   if (!source) return { available:false, reason:"The local rule is no longer attached at this property path" };
   if (input.reusableRules.some(({ id }) => id === source.rule.id)) return { available:false, reason:"The attachment already refers to a reusable rule" };
   return { available:true };
@@ -143,7 +144,7 @@ export function localRulePromotionAvailability(
 export function reviewLocalRulePromotion(input: LocalRulePromotionInput): LocalRulePromotionReview {
   const availability = localRulePromotionAvailability(input);
   if (!availability.available) throw new Error(availability.reason);
-  const source = sourceRule(input) as ResolvedPromotionSource;
+  const source = resolvePromotionSource(input) as ResolvedPromotionSource;
   const rule = source.rule;
   return {
     source:{
@@ -230,7 +231,7 @@ export function promoteLocalRule(
     };
     reusableRules.push(destination);
   }
-  const resolved = sourceRule(input) as ResolvedPromotionSource;
+  const resolved = resolvePromotionSource(input) as ResolvedPromotionSource;
   const editableSchema = resolved.origin === "current-revision"
     ? createSchemaWorkingDraft(input.schema)
     : clone(input.schema);
