@@ -50,6 +50,7 @@ let defectReportSemanticDifferencesObservation;
 let defectReportProvenancePresentationObservation;
 let eventOccurrenceDefectReportObservation;
 let schemaPropertyCopyObservation;
+let schemaAssignmentDataConditionsObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -66,6 +67,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER === "1" ? [320]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -2405,6 +2407,56 @@ const schemaPropertyCopyRuntime = `(async () => {
   return{review:reviewState,applied,undo,persisted:{pending:copied.workingDraft.pendingChanges.length,path:copied.workingDraft.document.properties.error_message.type},layout:{body:document.documentElement.scrollWidth,width:innerWidth},runtimeErrors};
 })()`;
 
+const schemaAssignmentDataConditionsRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent===label||button.textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const change=(control,value)=>{control.value=value;control.dispatchEvent(new Event("change",{bubbles:true}));};
+  const runtimeErrors=[];addEventListener("error",(event)=>runtimeErrors.push(String(event.error??event.message)));addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  const conditions=await import("/data-layer-schema-assignment-data-conditions.js");
+  const verification=await import("/data-layer-schema-verification.js");
+  q("#data-layer-view-schemas").click();q("#schema-subview-assignments").click();
+  const assignmentList=q("#schema-assignment-list");const legacyRow=()=>Array.from(assignmentList.children).find((item)=>item.textContent.includes("Legacy assignment"));
+  click(legacyRow(),"Edit");await pause();const editor=q("#schema-assignment-editor");editor.style.height="480px";editor.style.overflow="auto";
+  const absent={summary:q("#schema-assignment-condition-summary").textContent,saveDisabled:q("#save-schema-assignment").disabled};
+  click(editor,"Add Data layer conditions");await pause();const empty={assistance:q("#schema-assignment-condition-assistance").textContent,saveDisabled:q("#save-schema-assignment").disabled};
+  change(q("#schema-assignment-condition-group-operator"),"Any");
+  const addPath=async(path)=>{click(editor,"Add condition");await pause();const rows=q("#schema-assignment-condition-predicates").children;const row=rows[rows.length-1];change(q('input[data-assignment-condition-control="path"]',row),path);await pause();};
+  await addPath("/errorType");await addPath("/siteStructure");await addPath("/siteArea");
+  const conditionRoot=q("#schema-assignment-data-conditions");conditionRoot.style.height="260px";conditionRoot.style.overflow="auto";conditionRoot.scrollTop=41;const secondPath=q('[data-assignment-condition-predicate="1"] input[data-assignment-condition-control="path"]',conditionRoot);secondPath.focus({preventScroll:true});change(secondPath,"/siteStructure");await pause();
+  const editorState={target:q("#schema-assignment-condition-target").value,operator:q("#schema-assignment-condition-group-operator").value,paths:Array.from(conditionRoot.querySelectorAll('input[data-assignment-condition-control="path"]')).map(({value})=>value),summary:q("#schema-assignment-condition-summary").textContent,saveDisabled:q("#save-schema-assignment").disabled,focus:document.activeElement?.value,scroll:conditionRoot.scrollTop};
+  click(editor,"Save assignment");await pause();
+  let stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));let legacy=stored.find(({id})=>id==="schema:legacy");let current=stored.find(({id})=>id==="schema:current");const saved=legacy.assignments[0];
+  q("#schema-subview-assignments").click();await pause();const savedRow=()=>Array.from(q("#schema-assignment-list").children).find((item)=>item.textContent.includes("Legacy assignment"));
+  const persisted={target:saved.conditionTarget,operator:saved.dataConditionGroup.operator,paths:saved.dataConditionGroup.predicates.map(({propertyPath})=>propertyPath),priority:saved.priority,summary:savedRow().textContent};
+  click(savedRow(),"Duplicate");await pause();stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));legacy=stored.find(({id})=>id==="schema:legacy");const duplicated=legacy.assignments.find(({id})=>id.endsWith(":copy"));const duplicate={count:legacy.assignments.length,equivalent:JSON.stringify(duplicated.dataConditionGroup)===JSON.stringify(saved.dataConditionGroup),independent:duplicated.dataConditionGroup!==saved.dataConditionGroup};
+  const legacyForResolution={...legacy,assignments:[saved]};const event=(payload,rawInput=payload)=>({sourceId:"event-history",eventName:"generic_event",payload,rawInput});const url="https://shop.example/generic";
+  const resolve=(payload,schemas=[legacyForResolution,current])=>verification.resolveSchemaAssignment(event(payload),url,schemas);
+  const families=[{payload:{errorType:"business"},expected:"Legacy generic event"},{payload:{siteStructure:"shop",siteArea:"checkout"},expected:"Legacy generic event"},{payload:{error_type:"business"},expected:"Current generic event"},{payload:{page_levels:["one"],site_section:"checkout"},expected:"Current generic event"},{payload:{unrelated:true},expected:undefined}].map(({payload,expected})=>{const result=resolve(payload);return{expected,selected:result.schema?.name,evidence:result.evidence.summary};});
+  const mixed={errorType:"legacy",error_type:"current"};const legacyWins=resolve(mixed);const currentHigh={...current,assignments:current.assignments.map((assignment)=>({...assignment,priority:30}))};const currentWins=resolve(mixed,[legacyForResolution,currentHigh]);const tied={...current,assignments:current.assignments.map((assignment)=>({...assignment,priority:20}))};const tie=resolve(mixed,[legacyForResolution,tied]);
+  const priority={legacy:legacyWins.schema?.name,current:currentWins.schema?.name,tie:tie.error,legacyDiagnostic:legacyWins.evidence.summary,tieDiagnostic:tie.evidence.summary};
+  const pred=(propertyPath,operator,extra={})=>({propertyPath,operator,detectedType:extra.detectedType??"string",...(extra.comparison?{comparison:extra.comparison}:{}),...(extra.comparisons?{comparisons:extra.comparisons}:{})});const any=(...predicates)=>({operator:"Any",predicates});const text=(value)=>({type:"string",value});const number=(value)=>({type:"number",value});
+  const cases=[
+    conditions.evaluateAssignmentDataConditions({},any(pred("/missing","Exists"))).matched,
+    conditions.evaluateAssignmentDataConditions({nullable:null},any(pred("/nullable","Does not exist"))).matched,
+    conditions.evaluateAssignmentDataConditions({value:"1"},any(pred("/value","Equals",{detectedType:"number",comparison:number(1)}))).matched,
+    conditions.evaluateAssignmentDataConditions({value:"current"},any(pred("/value","Is one of",{comparisons:[text("legacy"),text("current")]}))).matched,
+    conditions.evaluateAssignmentDataConditions({value:"legacy-page"},any(pred("/value","Matches pattern",{comparison:text("^legacy-")}))).matched,
+    conditions.evaluateAssignmentDataConditions({value:12},any(pred("/value","Is at least",{detectedType:"number",comparison:number(10)}))).matched,
+  ];
+  const paths=[
+    conditions.evaluateAssignmentDataConditions({context:{siteArea:"legacy"}},any(pred("/context/siteArea","Exists"))).predicates[0],
+    conditions.evaluateAssignmentDataConditions({products:[{type:"current"},{type:"legacy"}]},any(pred("/products/*/type","Equals",{comparison:text("legacy")}))).predicates[0],
+    conditions.evaluateAssignmentDataConditions({products:[]},any(pred("/products/*/type","Does not exist"))).predicates[0],
+    conditions.evaluateAssignmentDataConditions({"a/b":"slash"},any(pred("/a~1b","Exists"))).predicates[0],
+    conditions.evaluateAssignmentDataConditions({"tilde~name":"tilde"},any(pred("/tilde~0name","Exists"))).predicates[0],
+  ].map(({propertyPath,matched,observed})=>({propertyPath,matched,observed:observed.map(({concretePath,value,exists})=>({concretePath,value,exists}))}));
+  const payloadAssignment={...saved,id:"payload",name:"Payload target",priority:10,conditionTarget:"payload",dataConditionGroup:any(pred("/variant","Equals",{comparison:text("legacy")}))};const rawAssignment={...saved,id:"raw",name:"Raw target",priority:20,conditionTarget:"raw input",dataConditionGroup:any(pred("/variant","Equals",{comparison:text("legacy")}))};const payloadSchema={...legacy,assignments:[payloadAssignment]};const rawSchema={...current,assignments:[rawAssignment]};const targetResolution=verification.resolveSchemaAssignment(event({variant:"current"},{variant:"legacy"}),url,[payloadSchema,rawSchema]);
+  const archivedEvent=event({errorType:"archived"},{errorType:"archived"});const archivedSnapshot=JSON.stringify(archivedEvent);const archived=verification.validateEvent(archivedEvent,[legacyForResolution,current],"https://archive.example/legacy");const active={error_type:"active"};
+  const exportText=verification.exportSchema(legacy);const restored=verification.importSchema(exportText);const persistence={restored:restored.assignments[0].dataConditionGroup.predicates.map(({propertyPath})=>propertyPath),archived:archived.schema?.name,archivedEvidence:archived.assignmentEvidence?.selectedAssignmentId,immutable:archivedSnapshot===JSON.stringify(archivedEvent),activeUnchanged:active.error_type==="active"};
+  return{absent,empty,editor:editorState,persisted,duplicate,families,priority,cases,paths,target:{selected:targetResolution.assignment?.id,validationTarget:targetResolution.assignment?.target,conditionTarget:targetResolution.assignment?.conditionTarget},persistence,layout:{body:document.documentElement.scrollWidth,width:innerWidth,editor:editor.scrollWidth,conditions:conditionRoot.scrollWidth},runtimeErrors};
+})()`;
+
 const eventOccurrenceDefectReportRuntime = `(async () => {
   const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
   const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
@@ -4059,6 +4111,19 @@ try {
       assert.equal(observed.clipboard.rich,1);assert.equal(observed.immutable,true);assert.equal(observed.layout.body<=observed.layout.width&&observed.layout.builder<=observed.layout.width,true);assert.deepEqual(observed.runtimeErrors,[]);
       socket.close();continue;
     }
+    if (process.env.SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,`(()=>{localStorage.clear();const legacyAssignment={id:"legacy",name:"Legacy assignment",schemaId:"schema:legacy",sourceId:"event-history",eventName:"generic_event",target:"payload",priority:20,versionPolicy:"follow latest",enabled:true};const currentAssignment={id:"current",name:"Current assignment",schemaId:"schema:current",sourceId:"event-history",eventName:"generic_event",target:"payload",priority:10,conditionTarget:"payload",dataConditionGroup:{operator:"Any",predicates:[{propertyPath:"/error_type",operator:"Exists",detectedType:"string"},{propertyPath:"/page_levels",operator:"Exists",detectedType:"array"},{propertyPath:"/site_section",operator:"Exists",detectedType:"string"}]},versionPolicy:"follow latest",enabled:true};const schemas=[{id:"schema:legacy",name:"Legacy generic event",version:4,published:true,document:{type:"object",properties:{errorType:{type:"string"},siteStructure:{type:"string"},siteArea:{type:"string"}}},assignments:[legacyAssignment]},{id:"schema:current",name:"Current generic event",version:7,published:true,document:{type:"object",properties:{error_type:{type:"string"},page_levels:{type:"array"},site_section:{type:"string"}}},assignments:[currentAssignment]}];localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify(schemas));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");return true;})()`);
+      await reloadPanel(socket);schemaAssignmentDataConditionsObservation=await evaluate(socket,schemaAssignmentDataConditionsRuntime);const observed=schemaAssignmentDataConditionsObservation;
+      assert.match(observed.absent.summary,/unrestricted/);assert.equal(observed.absent.saveDisabled,false);assert.deepEqual(observed.empty,{assistance:"Add at least one condition",saveDisabled:true});
+      assert.equal(observed.editor.target,"payload");assert.equal(observed.editor.operator,"Any");assert.deepEqual(observed.editor.paths,["/errorType","/siteStructure","/siteArea"]);assert.equal(observed.editor.saveDisabled,false);assert.equal(observed.editor.focus,"/siteStructure");assert.equal(observed.editor.scroll,41);
+      assert.deepEqual(observed.persisted.paths,["/errorType","/siteStructure","/siteArea"]);assert.equal(observed.persisted.target,"payload");assert.equal(observed.persisted.operator,"Any");assert.equal(observed.persisted.priority,20);assert.match(observed.persisted.summary,/Payload · Any/);
+      assert.equal(observed.duplicate.count,2);assert.equal(observed.duplicate.equivalent&&observed.duplicate.independent,true);
+      assert.equal(observed.families.every(({expected,selected})=>expected===selected),true,JSON.stringify(observed.families));assert.deepEqual([observed.priority.legacy,observed.priority.current],["Legacy generic event","Current generic event"]);assert.match(observed.priority.tie,/Legacy assignment.*Current assignment/);assert.match(observed.priority.legacyDiagnostic,/priority 20 wins/);assert.match(observed.priority.tieDiagnostic,/equal highest priority/);
+      assert.deepEqual(observed.cases,[false,false,false,true,true,true]);assert.equal(observed.paths.every(({matched})=>matched),true);assert.deepEqual(observed.paths[1].observed.map(({concretePath})=>concretePath),["/products/0/type","/products/1/type"]);assert.deepEqual(observed.paths[2].observed,[{concretePath:"/products/*/type",exists:false}]);assert.equal(observed.paths[3].observed[0].concretePath,"/a~1b");assert.equal(observed.paths[4].observed[0].concretePath,"/tilde~0name");
+      assert.deepEqual(observed.target,{selected:"raw",validationTarget:"payload",conditionTarget:"raw input"});assert.deepEqual(observed.persistence.restored,["/errorType","/siteStructure","/siteArea"]);assert.equal(observed.persistence.archived,"Legacy generic event");assert.equal(observed.persistence.archivedEvidence,"legacy");assert.equal(observed.persistence.immutable&&observed.persistence.activeUnchanged,true);assert.equal(observed.layout.body<=observed.layout.width&&observed.layout.editor<=observed.layout.width&&observed.layout.conditions<=observed.layout.width,true,JSON.stringify(observed.layout));assert.deepEqual(observed.runtimeErrors,[]);
+      await reloadPanel(socket);const reloaded=await evaluate(socket,`(()=>{document.querySelector("#data-layer-view-schemas").click();document.querySelector("#schema-subview-assignments").click();const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));const legacy=stored.find(({id})=>id==="schema:legacy");return{count:legacy.assignments.length,paths:legacy.assignments[0].dataConditionGroup.predicates.map(({propertyPath})=>propertyPath),summary:Array.from(document.querySelector("#schema-assignment-list").children).find((row)=>row.textContent.includes("Legacy assignment"))?.textContent};})()`);schemaAssignmentDataConditionsObservation.reloaded=reloaded;assert.equal(reloaded.count,2);assert.deepEqual(reloaded.paths,["/errorType","/siteStructure","/siteArea"]);assert.match(reloaded.summary,/Payload · Any/);
+      socket.close();continue;
+    }
     if (process.env.SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER === "1") {
       await evaluate(socket,`(()=>{localStorage.clear();const message={id:"local:message",name:"Message required",version:2,propertyPath:"/error_message",operator:"required",severity:"error",message:"Message required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/error_action",operator:"Exists",detectedType:"string"}]}};const action={id:"local:action",name:"Known action",version:1,propertyPath:"/error_action",operator:"allowed-values",parameters:"show,hide",allowedValues:["show","hide"],severity:"warning",conditionGroup:{operator:"All",predicates:[{propertyPath:"/error_type",operator:"Equals",comparison:{type:"string",value:"business"},detectedType:"string"}]}};const reusable={id:"reusable:error-type",name:"Error types",version:4,propertyPath:"/error_type",operator:"allowed-values",parameters:"business,technical",allowedValues:["business","technical"],severity:"error"};const source={id:"schema:pageview",name:"Generic pageview",version:7,published:true,document:{type:"object",required:["error_message"],properties:{error_message:{type:"string"},error_action:{type:"string"},error_type:{type:"string"},unrelated:{type:"boolean"}}},assignments:[],attachedRules:[message,action,reusable],documentation:{properties:{"/error_message":{displayName:"Error message",description:"Displayed error"},"/error_action":{displayName:"Error action",description:"Behavior"},"/error_type":{displayName:"Error type",description:"Category"}}}};const destination={id:"schema:in-page",name:"Generic in-page event",version:3,published:true,document:{type:"object",properties:{destination_only:{type:"boolean"}}},assignments:[{sourceId:"history",eventName:"in_page",target:"payload"}],documentation:{description:"Destination schema"}};localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([source,destination]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{id:reusable.id,name:reusable.name,kind:"Allowed values",version:4,attachments:[source.id]}]));return true;})()`);await reloadPanel(socket);
       schemaPropertyCopyObservation=await evaluate(socket,schemaPropertyCopyRuntime);const observed=schemaPropertyCopyObservation;
@@ -5019,7 +5084,7 @@ try {
       duplicateCount:3,
       revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2.", status:"Current revision 2 · no working draft" },
       closeReview:{ open:false, summary:"", result:"Working draft retained without publishing." },
-      rows:["Checkout schema automatic · event-history/page_view · payload · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
+      rows:["Checkout schema automatic · event-history/page_view · payload · No data conditions · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · No data conditions · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
       propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"/example" },
@@ -5248,6 +5313,9 @@ try {
   }
   if (process.env.SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPropertyCopy:schemaPropertyCopyObservation }));
+  }
+  if (process.env.SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaAssignmentDataConditions:schemaAssignmentDataConditionsObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

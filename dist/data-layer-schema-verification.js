@@ -3,6 +3,7 @@ import { urlConditionsMatch } from "./data-layer-path-conditions.js";
 import { canonicalNestedPath, resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
 import { resolveEffectiveSchemaDocumentation, } from "./data-layer-schema-documentation.js";
+import { assignmentDataConditionSummary, evaluateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -221,21 +222,73 @@ export function schemaInheritanceConflict(schema, schemas) {
 }
 export function searchSchemas(schemas, query) { const q = query.toLowerCase(); return schemas.filter((schema) => [schema.name, schema.version, ...schema.assignments.flatMap((a) => [a.sourceId, a.eventName, a.target])].join(" ").toLowerCase().includes(q)); }
 export function resolveSchemaAssignment(event, pageUrl, schemas) {
-    const matches = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })))
-        .filter(({ assignment }) => assignment.enabled !== false && assignment.sourceId === event.sourceId && assignment.eventName === event.eventName)
-        .filter(({ assignment }) => urlConditionsMatch(pageUrl, assignment));
+    const candidates = schemas.flatMap((schema) => schema.assignments.map((assignment) => {
+        const enabled = assignment.enabled !== false;
+        const sourceMatch = assignment.sourceId === event.sourceId;
+        const eventNameMatch = assignment.eventName === event.eventName;
+        const domainMatch = pageUrl === undefined
+            ? true
+            : urlConditionsMatch(pageUrl, { ...(assignment.domainCondition ? { domainCondition: assignment.domainCondition } : {}) });
+        const pathnameMatch = pageUrl === undefined
+            ? true
+            : urlConditionsMatch(pageUrl, {
+                ...(assignment.pathnameCondition ? { pathnameCondition: assignment.pathnameCondition } : {}),
+                ...(assignment.pathConditions ? { pathConditions: assignment.pathConditions } : {}),
+            });
+        const urlMatch = domainMatch && pathnameMatch;
+        const conditionValue = (assignment.conditionTarget ?? assignment.target) === "raw input" ? event.rawInput : event.payload;
+        const dataCondition = assignment.dataConditionGroup
+            ? evaluateAssignmentDataConditions(conditionValue, assignment.dataConditionGroup)
+            : undefined;
+        const evidence = {
+            schemaId: schema.id,
+            schemaName: schema.name,
+            ...(assignment.id ? { assignmentId: assignment.id } : {}),
+            ...(assignment.name ? { assignmentName: assignment.name } : {}),
+            priority: assignment.priority ?? 0,
+            enabled,
+            sourceMatch,
+            eventNameMatch,
+            domainMatch,
+            pathnameMatch,
+            urlMatch,
+            ...(dataCondition ? { dataCondition } : {}),
+            conditionSummary: assignmentDataConditionSummary(assignment),
+            matched: enabled && sourceMatch && eventNameMatch && urlMatch && (dataCondition?.matched ?? true),
+        };
+        return { schema, assignment, evidence };
+    }));
+    const matches = candidates.filter(({ evidence }) => evidence.matched);
+    const baseEvidence = candidates.map(({ evidence }) => evidence);
     if (matches.length === 0)
-        return {};
+        return { evidence: { candidates: baseEvidence, summary: "No assignment matched source, event name, URL, and data conditions" } };
     const highest = Math.max(...matches.map(({ assignment }) => assignment.priority ?? 0));
     const selected = matches.filter(({ assignment }) => (assignment.priority ?? 0) === highest);
-    if (selected.length !== 1)
-        return { error: `Assignment error: ${selected.map(({ assignment }) => assignment.name ?? assignment.id ?? "unnamed assignment").join(", ")}` };
+    const matchingNames = matches.map(({ assignment }) => assignment.name ?? assignment.id ?? "unnamed assignment");
+    if (selected.length !== 1) {
+        const names = selected.map(({ assignment }) => assignment.name ?? assignment.id ?? "unnamed assignment");
+        return {
+            error: `Assignment error: ${names.join(", ")}`,
+            evidence: { candidates: baseEvidence, summary: `${names.join(" and ")} match at equal highest priority ${highest}` },
+        };
+    }
     const resolved = selected[0];
     if (!resolved)
-        return {};
+        return { evidence: { candidates: baseEvidence, summary: "No assignment selected" } };
     const pinnedVersion = resolved.assignment.versionPolicy === "pinned" ? resolved.assignment.schemaVersion : undefined;
     const selectedSchema = pinnedVersion ? schemaRevision(resolved.schema, pinnedVersion) : resolved.schema;
-    return selectedSchema ? { schema: selectedSchema, assignment: resolved.assignment } : { error: `Assignment error: schema revision ${pinnedVersion} is unavailable` };
+    const winner = resolved.assignment.name ?? resolved.assignment.id ?? "unnamed assignment";
+    const summary = matches.length > 1
+        ? `${matchingNames.join(" and ")} both match and priority ${highest} wins for ${winner}`
+        : `${winner} matched at priority ${highest}`;
+    const evidence = {
+        candidates: baseEvidence,
+        ...(resolved.assignment.id ? { selectedAssignmentId: resolved.assignment.id } : {}),
+        summary,
+    };
+    return selectedSchema
+        ? { schema: selectedSchema, assignment: resolved.assignment, evidence }
+        : { error: `Assignment error: schema revision ${pinnedVersion} is unavailable`, evidence };
 }
 export const SCHEMA_LIBRARY_STORAGE_KEY = "my-chrome-utilities.schema-library.v1";
 export function serializeSchemaLibrary(schemas) { return JSON.stringify(schemas.map(canonicalSchemaRules)); }
@@ -635,28 +688,17 @@ function effectiveDocumentation(schema, schemas) {
     return documentation.description || Object.keys(documentation.properties).length ? documentation : undefined;
 }
 export function validateEvent(event, schemas, pageUrl) {
-    if (pageUrl) {
-        const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
-        if (resolution.error)
-            return { state: "Assignment error", issues: [] };
-        if (resolution.schema && resolution.assignment) {
-            const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
-            const issues = [];
-            collectSchemaIssues(value, resolution.schema, schemas, issues);
-            const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
-            const documentation = effectiveDocumentation(resolution.schema, schemas);
-            return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, resolution.schema, schemas), schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, ...(documentation ? { documentation } : {}), target: resolution.assignment.target, assignment: resolution.assignment, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
-        }
-    }
-    const match = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment }))).find(({ assignment }) => assignment.sourceId === event.sourceId && assignment.eventName === event.eventName);
-    if (!match)
-        return { state: "Not checked", issues: [] };
-    const value = match.assignment.target === "payload" ? event.payload : event.rawInput;
+    const resolution = resolveSchemaAssignment(event, pageUrl, schemas);
+    if (resolution.error)
+        return { state: "Assignment error", issues: [], assignmentEvidence: resolution.evidence };
+    if (!resolution.schema || !resolution.assignment)
+        return { state: "Not checked", issues: [], assignmentEvidence: resolution.evidence };
+    const value = resolution.assignment.target === "payload" ? event.payload : event.rawInput;
     const issues = [];
-    collectSchemaIssues(value, match.schema, schemas, issues);
-    const inheritedFrom = inheritedSchemaProvenance(match.schema, schemas);
-    const documentation = effectiveDocumentation(match.schema, schemas);
-    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, match.schema, schemas), schema: { id: match.schema.id, name: match.schema.name, version: match.schema.version }, ...(documentation ? { documentation } : {}), target: match.assignment.target, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
+    collectSchemaIssues(value, resolution.schema, schemas, issues);
+    const inheritedFrom = inheritedSchemaProvenance(resolution.schema, schemas);
+    const documentation = effectiveDocumentation(resolution.schema, schemas);
+    return { state: validationStateForIssues(issues), issues, evaluations: validationEvaluations(value, resolution.schema, schemas), schema: { id: resolution.schema.id, name: resolution.schema.name, version: resolution.schema.version }, ...(documentation ? { documentation } : {}), target: resolution.assignment.target, assignment: resolution.assignment, assignmentEvidence: resolution.evidence, ...(inheritedFrom.length ? { inheritedFrom } : {}) };
 }
 export function validateWithSchema(event, schema, schemas, target = schema.assignments[0]?.target ?? "payload") {
     const value = target === "payload" ? event.payload : event.rawInput;
@@ -669,7 +711,8 @@ export function validateWithSchema(event, schema, schemas, target = schema.assig
 export function validationSummary(results) { return { "Not checked": results.filter((result) => result.state === "Not checked").length, Valid: results.filter((result) => result.state === "Valid").length, Warnings: results.filter((result) => result.state.endsWith("warnings") && !result.state.includes("error")).length, Issues: results.filter((result) => result.state.endsWith("issues") || result.state.includes("error") && result.state !== "Assignment error").length, "Assignment error": results.filter((result) => result.state === "Assignment error").length }; }
 export function filterByValidation(events, state) { return events.filter((event) => event.validation === state); }
 export function revalidateExplicitly(event, schemas, version) {
-    const revisions = schemas.flatMap((schema) => schemaRevision(schema, version) ?? []);
+    const revisions = [...new Map(schemas.flatMap((schema) => schemaRevision(schema, version) ?? [])
+            .map((schema) => [`${schema.id}|${schema.version}`, schema])).values()];
     return validateEvent(event, revisions);
 }
 //# sourceMappingURL=data-layer-schema-verification.js.map

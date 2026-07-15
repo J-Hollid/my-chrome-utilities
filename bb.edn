@@ -24,6 +24,7 @@
                         [acceptance.defect-report-provenance-presentation-steps-test]
                         [acceptance.event-occurrence-defect-report-steps-test]
                         [acceptance.schema-property-copy-steps-test]
+                        [acceptance.schema-assignment-data-conditions-steps-test]
                         [acceptance.required-property-defect-schema-choices-steps-test]
                         [acceptance.unified-defect-builder-steps-test]
                         [acceptance.command-registry-steps-test]
@@ -80,6 +81,7 @@
                                                 'acceptance.defect-report-provenance-presentation-steps-test
                                                 'acceptance.event-occurrence-defect-report-steps-test
                                                 'acceptance.schema-property-copy-steps-test
+                                                'acceptance.schema-assignment-data-conditions-steps-test
                                                 'acceptance.required-property-defect-schema-choices-steps-test
                                                 'acceptance.unified-defect-builder-steps-test
                                                 'acceptance.command-registry-steps-test
