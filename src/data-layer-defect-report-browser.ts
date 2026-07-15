@@ -102,6 +102,7 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
       id: issueId(issue.instancePath, index),
       severity: issue.severity === "warning" ? "warning" : "error",
       pointer: issue.instancePath || "/",
+      violation: issue.message,
       constraint: issue.expected,
       actual: issue.actual,
       rule: issue.rule ?? issue.schemaLocation,

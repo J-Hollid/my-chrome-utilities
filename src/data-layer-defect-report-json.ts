@@ -29,7 +29,10 @@ export function updatePointer(
   let parent = payload as Record<string, unknown>;
   for (const segment of segments) {
     const child = parent[segment];
-    if (child === null || typeof child !== "object") parent[segment] = {};
+    if (child === null || typeof child !== "object") {
+      if (operation === "remove") return;
+      parent[segment] = {};
+    }
     parent = parent[segment] as Record<string, unknown>;
   }
   if (operation === "remove") delete parent[leaf];

@@ -700,6 +700,45 @@ element(warningRoot, ({ textContent }) => textContent === "Override matching-eve
 assert.equal(warningController.report().override.matchingCount, 1);
 assert.equal(warningController.report().matchingEventEvidence[0].id, "purchase-match");
 
+const undeclaredPayload = { page_type:"product_detail", debug:true };
+const undeclaredSchema = {
+  id:"schema:generic-pageview", name:"Generic pageview", version:4,
+  document:{ type:"object", additionalProperties:false, properties:{ page_type:{ type:"string" } } },
+  assignments:[{ id:"assignment:pageview", sourceId:"dataLayer", eventName:"pageview", target:"payload", enabled:true }],
+};
+const undeclaredValidation = validateEvent({ sourceId:"dataLayer", eventName:"pageview", payload:undeclaredPayload, rawInput:[] }, [undeclaredSchema]);
+const undeclaredEvent = {
+  id:"undeclared-pageview", name:"pageview", sourceId:"dataLayer", sourceName:"Data layer",
+  captureTime:"2026-07-15T10:00:00Z", pageUrl:"https://shop.test/product", payload:undeclaredPayload,
+  validation:undeclaredValidation.state,
+  validationDetails:{ issues:undeclaredValidation.issues, evaluations:undeclaredValidation.evaluations, schema:undeclaredValidation.schema },
+};
+const undeclaredRoot = new FakeElement("section");
+const savedUndeclaredReports = [];
+renderDefectReportBuilder(undeclaredRoot, undeclaredEvent, { writeText:async () => {} }, [undeclaredEvent], undefined, {
+  save:async (saved) => { savedUndeclaredReports.push(structuredClone(saved)); return { feedback:"Reported defect saved." }; },
+  openExisting:() => {}, updateExisting:() => {},
+});
+const undeclaredGroup = element(undeclaredRoot, ({ attributes }) => attributes.get("aria-label") === "debug expected-result assistance");
+const removalControl = element(undeclaredGroup, ({ textContent }) => textContent === "Remove undeclared property — schema declared-property policy");
+const undeclaredInputs = descendants(undeclaredGroup).filter(({ tagName }) => tagName === "INPUT");
+const undeclaredPreview = element(undeclaredRoot, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
+assert.equal(undeclaredInputs.length, 1);
+assert.equal(undeclaredInputs[0].checked, true);
+assert.match(undeclaredPreview.innerHTML, /Undeclared property/);
+assert.match(undeclaredPreview.innerHTML, /\/debug[\s\S]*was removed from the expected payload/);
+assert.doesNotMatch(undeclaredPreview.innerHTML.match(/<h2>Expected result<\/h2>[\s\S]*?<h2>Differences<\/h2>/)?.[0] ?? "", /&quot;debug&quot;|null|placeholder/);
+const undeclaredCheckbox = element(undeclaredRoot, ({ id }) => id === "defect-issue-debug");
+undeclaredCheckbox.checked = false; undeclaredCheckbox.dispatch("change");
+assert.match(undeclaredPreview.innerHTML.match(/<h2>Expected result<\/h2>[\s\S]*?<h2>Differences<\/h2>/)?.[0] ?? "", /&quot;debug&quot;: true/);
+undeclaredCheckbox.checked = true; undeclaredCheckbox.dispatch("change");
+assert.equal((undeclaredPreview.innerHTML.match(/was removed from the expected payload/g) ?? []).length, 1);
+element(undeclaredRoot, ({ textContent }) => textContent === "Save as reported defect").onclick();
+await new Promise((resolve) => setImmediate(resolve));
+assert.deepEqual(savedUndeclaredReports[0].expected.payload, { page_type:"product_detail" });
+assert.deepEqual(savedUndeclaredReports[0].expected.corrections.map(({ pointer, operation }) => ({ pointer, operation })), [{ pointer:"/debug", operation:"remove" }]);
+assert.deepEqual(undeclaredPayload, { page_type:"product_detail", debug:true });
+
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
     headings,
@@ -809,5 +848,11 @@ process.stdout.write(`${JSON.stringify({
     customInitiallyHidden,
     customVisibleAfterSelection,
     customOverrideVisible: preview.innerHTML.includes("operator-provided"),
+    undeclaredRemoval: {
+      control: removalControl.textContent,
+      inputCount: undeclaredInputs.length,
+      savedPayload: savedUndeclaredReports[0].expected.payload,
+      originalPayload: undeclaredPayload,
+    },
   },
 })}\n`);

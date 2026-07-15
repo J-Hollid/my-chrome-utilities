@@ -33,6 +33,16 @@ export function validateAssistedResponse(issue, response) {
 function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
+function isUndeclaredProperty(issue) {
+    return issue.violation === "Undeclared property";
+}
+function undeclaredPropertyChoice(issue) {
+    return {
+        issueId: issue.id,
+        method: "apply the rule",
+        responseSource: "schema declared-property policy",
+    };
+}
 function responsePresentation(issue, choice) {
     const property = issueName(issue);
     const values = allowedValues(issue);
@@ -62,7 +72,7 @@ export function createDefectReport(event) {
     const issues = captured.issues
         .filter(({ severity }) => severity !== "pass")
         .map((issue) => ({ ...issue, selected: issue.severity === "error" }));
-    return {
+    const report = {
         event: captured,
         issues,
         actual: {
@@ -73,6 +83,7 @@ export function createDefectReport(event) {
         reproductionSteps: [],
         timeline: [],
     };
+    return applyExpectedResult(report, []);
 }
 export function toggleReportIssue(report, issueId) {
     if (!report.issues.some(({ id }) => id === issueId))
@@ -88,7 +99,12 @@ export function applyExpectedResult(report, choices) {
     const payload = cloneValue(report.event.payload);
     const corrections = [];
     const explanations = [];
-    for (const choice of choices) {
+    const explicitlyChosen = new Set(choices.map(({ issueId }) => issueId));
+    const effectiveChoices = [
+        ...report.issues.filter((issue) => issue.selected && isUndeclaredProperty(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
+        ...choices,
+    ];
+    for (const choice of effectiveChoices) {
         const issue = report.issues.find(({ id }) => id === choice.issueId);
         if (!issue)
             throw new Error(`Unknown report issue: ${choice.issueId}`);
@@ -108,11 +124,11 @@ export function applyExpectedResult(report, choices) {
             continue;
         }
         if (choice.method === "apply the rule") {
-            if (!/forbidden/i.test(issue.constraint))
+            if (!isUndeclaredProperty(issue) && !/forbidden/i.test(issue.constraint))
                 throw new Error(`The ${issue.id} rule cannot be applied without a response.`);
             updatePointer(payload, issue.pointer, "remove");
             corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "remove", marker: "+", ...(choice.responseSource ? { responseSource: choice.responseSource } : {}) });
-            explanations.push(`${name} is absent`);
+            explanations.push(isUndeclaredProperty(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
             continue;
         }
         if (choice.response === undefined || choice.response === null || choice.response === "") {
