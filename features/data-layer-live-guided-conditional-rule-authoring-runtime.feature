@@ -103,3 +103,14 @@ Feature: Data layer Live guided conditional rule authoring runtime
     Then every conditional control remains reachable without horizontal page scrolling
     And completion and cancellation restore the selected Live event, property expansion, inspector scroll, and originating focus
     And runtime coverage enters through the actual Live Add validation action and exercises production guided state, shared condition controls, preview, conversion, persistence, and validation rather than the advanced schema editor or source-string inspection
+
+  # Data layer Live guided conditional rule authoring runtime 012
+  Scenario: Data layer Live guided conditional rule authoring runtime 012
+    Given rendered Add validation defines Required for /products/*/duration
+    And the production event and destination schema contain /products/*/price_monthly as Number
+    When the operator enables Apply only when
+    Then the rendered condition picker offers one canonical /products/*/price_monthly option
+    When the operator selects that option with Exists and saves
+    Then production persistence stores one atomic rule with the correlated wildcard trigger and consequence paths
+    And the rendered review explains that the condition applies within each products item
+    And production preview, validation, and reload preserve same-item evaluation

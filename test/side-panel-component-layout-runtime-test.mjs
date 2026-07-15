@@ -1763,12 +1763,12 @@ const guidedAssignmentCoverageRuntime = `(async () => {
 
 const liveGuidedConditionalRuleSeedRuntime = `(() => {
   localStorage.clear();
-  const document={type:"object",properties:{page_type:{type:"string"},currency:{type:"string"},customer:{type:"object",properties:{type:{type:"string"}}},oOrder:{type:"object",properties:{aProducts:{type:"array",items:{type:"string"}}}}}};
+  const document={type:"object",properties:{page_type:{type:"string"},currency:{type:"string"},customer:{type:"object",properties:{type:{type:"string"}}},products:{type:"array",items:{type:"object",properties:{price_monthly:{type:"number"},duration:{type:"number"}}}},oOrder:{type:"object",properties:{aProducts:{type:"array",items:{type:"string"}}}}}};
   const assignment={id:"assignment:product",name:"Product events",schemaId:"schema:product",sourceId:"history",eventName:"product_detail",target:"payload",domainCondition:"127.0.0.1",versionPolicy:"follow latest",enabled:true};
   const schema={id:"schema:product",name:"Product event",version:3,published:true,document,assignments:[assignment],attachedRules:[],revisionHistory:[]};
   localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
   localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
-  const payload={page_type:"product_detail",currency:"EUR",basket_total:125,consented:true,products:[],oOrder:{aProducts:[]}};
+  const payload={page_type:"product_detail",currency:"EUR",basket_total:125,consented:true,products:[{price_monthly:29,duration:12},{price_monthly:49}],oOrder:{aProducts:[]}};
   const event={type:"observed",url:"http://127.0.0.1:4173/",timestamp:"2026-07-14T23:30:00Z",observerPath:"dataLayer",id:"event:product-detail",name:"product_detail",sessionId:"session:guided-condition",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"http://127.0.0.1:4173/",payload,rawInput:["product_detail",payload],rawValue:["product_detail",payload],validation:"Not checked"};
   localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:guided-condition",status:"active",freshBoundary:true,tabId:1,windowId:1,historyPath:"dataLayer",startUrl:"http://127.0.0.1:4173/",currentUrl:"http://127.0.0.1:4173/",timeline:[event]}}));
   return true;
@@ -1821,11 +1821,23 @@ const liveGuidedConditionalRuleRuntime = `(async () => {
   trigger().click();targetIndex();enablePageType();click(q("#guided-validation-flow"),"Continue");q("#guided-publish-rule").click();click(q("#guided-validation-flow"),"Add validation to draft");await pause();
   const afterReusable=product();const rules=JSON.parse(localStorage.getItem(ruleKey));const reusableRule=rules[0];const reusableAttachment=afterReusable.workingDraft.attachedRules.find(({id})=>id===reusableRule.id);
   const reusable={libraryCount:rules.length,attachmentCount:afterReusable.workingDraft.attachedRules.filter(({id})=>id===reusableRule.id).length,sameIdentity:reusableAttachment.id===reusableRule.id,sameRevision:reusableAttachment.version===reusableRule.version,conditionEqual:JSON.stringify(reusableAttachment.conditionGroup)===JSON.stringify(reusableRule.conditionGroup),attachmentTotal:afterReusable.workingDraft.attachedRules.length};
+  const wildcardTrigger=()=>q('button[aria-label="Add validation for /products/*/duration"]',inspector);
+  let wildcardDetails=wildcardTrigger().closest("details");while(wildcardDetails){wildcardDetails.open=true;wildcardDetails=wildcardDetails.parentElement?.closest("details");}wildcardTrigger().click();
+  const wildcardDestination=document.querySelector('input[name="guided-schema-destination"][value="existing"]');if(wildcardDestination){wildcardDestination.click();click(q("#guided-schema-picker"),"Select Product event version 3");click(q("#guided-validation-flow"),"Continue");}change("#guided-requirement","Must be present");q("#guided-apply-condition").click();
+  const wildcardOptions=Array.from(q("#guided-condition-property-0").options).map(({value})=>value).filter(Boolean);
+  change("#guided-condition-property-0","/products/*/price_monthly");change("#guided-condition-operator-0","Exists");
+  const wildcardPreview=q("#guided-condition-preview").textContent;click(q("#guided-validation-flow"),"Continue");
+  const wildcardReview=q("#guided-validation-review").textContent;click(q("#guided-validation-flow"),"Add validation to draft");await pause();
+  const wildcardStored=product();const wildcardRule=wildcardStored.workingDraft.attachedRules.find(({propertyPath})=>propertyPath==="/products/*/duration");
+  const wildcardActive={...wildcardStored,document:wildcardStored.workingDraft.document,assignments:wildcardStored.workingDraft.assignments,attachedRules:wildcardStored.workingDraft.attachedRules,workingDraft:undefined};
+  const wildcardValidation=core.validateEvent({sourceId:"history",eventName:"product_detail",payload:{page_type:"product_detail",products:[{price_monthly:29},{},{duration:12},{price_monthly:49,duration:12}],oOrder:{aProducts:[]}},rawInput:[]},[wildcardActive]);
+  const wildcardReloaded=core.restoreSchemaLibrary(core.serializeSchemaLibrary([wildcardStored]))[0];
+  const wildcard={options:wildcardOptions.filter((path)=>path==="/products/*/price_monthly"),concreteOptions:wildcardOptions.filter((path)=>path.startsWith("/products/")&&Number.isInteger(Number(path.split("/")[2]))),preview:wildcardPreview,review:wildcardReview,predicate:wildcardRule.conditionGroup.predicates[0].propertyPath,consequence:wildcardRule.propertyPath,evaluations:wildcardValidation.evaluations.filter(({rule})=>rule===wildcardRule.name).map(({propertyPath,status})=>[propertyPath,status]),issues:wildcardValidation.issues.filter(({rule})=>rule?.startsWith(wildcardRule.name)).map(({instancePath})=>instancePath),reloaded:wildcardReloaded.workingDraft.attachedRules.some(({propertyPath,conditionGroup})=>propertyPath==="/products/*/duration"&&conditionGroup?.predicates[0]?.propertyPath==="/products/*/price_monthly")};
   trigger().click();targetIndex();enablePageType();const cancelBefore=[localStorage.getItem(schemaKey),localStorage.getItem(ruleKey)];click(q("#guided-validation-flow"),"Cancel");await new Promise((resolve)=>requestAnimationFrame(resolve));const cancelled={storageUnchanged:cancelBefore[0]===localStorage.getItem(schemaKey)&&cancelBefore[1]===localStorage.getItem(ruleKey),focus:document.activeElement?.getAttribute("aria-label"),inspectorVisible:!inspector.hidden,scroll:inspector.scrollTop};
   q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Product event"));click(row,"Edit working draft");q("#save-schema").click();q("#confirm-schema-revision").click();await pause();
   const published=product();const exported=core.serializeSchemaLibraryExport([published],JSON.parse(localStorage.getItem(ruleKey)));const imported=JSON.parse(exported);localStorage.setItem(schemaKey,JSON.stringify(imported.schemas));localStorage.setItem(ruleKey,JSON.stringify(imported.rules));const reloaded=core.restoreSchemaLibrary(localStorage.getItem(schemaKey))[0];const importedRule=JSON.parse(localStorage.getItem(ruleKey))[0];const revisedRule={...structuredClone(importedRule),version:2,revisionHistory:[structuredClone(importedRule)]};localStorage.setItem(ruleKey,JSON.stringify([revisedRule]));
   const reusablePinned=reloaded.attachedRules.find(({id})=>id===revisedRule.id);const lifecycle={version:reloaded.version,workingDraftAbsent:reloaded.workingDraft===undefined,attachmentIds:reloaded.attachedRules.map(({id})=>id),typedComparison:reloaded.attachedRules[0].conditionGroup.predicates[0].comparison,libraryIds:JSON.parse(localStorage.getItem(ruleKey)).map(({id})=>id),conditionRetained:reloaded.attachedRules.every(({conditionGroup})=>Boolean(conditionGroup)),pinnedVersion:reusablePinned.version,revisedVersion:revisedRule.version,revisedConditionRetained:JSON.stringify(revisedRule.conditionGroup)===JSON.stringify(reusablePinned.conditionGroup)};
-  return {requirement,initial,absent,invalidEmpty,invalidPattern,invalidNoPredicates,preview:{allResult,allFalse,anyResult},confirmation,review,local,reusable,cancelled,lifecycle};
+  return {requirement,initial,absent,invalidEmpty,invalidPattern,invalidNoPredicates,preview:{allResult,allFalse,anyResult},confirmation,review,local,reusable,wildcard,cancelled,lifecycle};
 })()`;
 
 const savedEventFeedFiltersSeedRuntime = `(async () => {
@@ -2019,7 +2031,31 @@ const conditionalValidationRulesRuntime = `(async () => {
     revisedVersion:revisedReusable.version,
     revisedPreserved:JSON.stringify(revisedReusable.conditionGroup) === JSON.stringify(reusable.conditionGroup),
   };
-  return { editor, stored:{ count:stored.workingDraft.attachedRules.length, rule:storedRule, summary:conditionalCore.conditionalRuleSummary({ conditionGroup:storedRule.conditionGroup, consequence:{ propertyPath:storedRule.propertyPath, operator:storedRule.operator, parameters:storedRule.parameters } }) }, evaluations, groups, truthGroups, predicateCases, invalidConfigurations, presentation, lifecycle };
+  const correlatedRule = { id:"local:product-duration", name:"Duration when monthly price exists", version:1, propertyPath:"/products/*/duration", operator:"required", conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/products/*/price_monthly", operator:"Exists", detectedType:"number" }] } };
+  const correlatedSchema = { id:"schema:correlated-products", name:"Correlated products", version:1, document:{ type:"object", properties:{ products:{ type:"array", items:{ type:"object", properties:{ price_monthly:{}, duration:{ type:"number" } } } } } }, assignments:[], attachedRules:[correlatedRule] };
+  const correlatedResult = (products) => core.validateWithSchema({ sourceId:"history", eventName:"product_view", payload:{ products }, rawInput:[] }, correlatedSchema, []);
+  const correlatedCases = [
+    ["number 29", "number 12", { price_monthly:29, duration:12 }],
+    ["null", "missing", { price_monthly:null }],
+    ["missing", "missing", {}],
+    ["missing", "number 12", { duration:12 }],
+  ].map(([priceMonthlyState, durationState, product]) => {
+    const result = correlatedResult([product]); const evaluation = result.evaluations[0];
+    return { priceMonthlyState, durationState, result:evaluation.status === "pass" ? "Passed" : evaluation.status === "not-applicable" ? "Not applicable" : "Failed", issues:result.issues.filter(({ instancePath }) => instancePath === "/products/0/duration").length };
+  });
+  const mixedResult = correlatedResult([{ price_monthly:29 }, {}, { duration:12 }, { price_monthly:49, duration:12 }]);
+  const restoredCorrelated = core.restoreSchemaLibrary(core.serializeSchemaLibrary([correlatedSchema]))[0];
+  const restoredResult = core.validateWithSchema({ sourceId:"history", eventName:"product_view", payload:{ products:[{ price_monthly:29 }] }, rawInput:[] }, restoredCorrelated, []);
+  renderResult(mixedResult, { products:[{ price_monthly:29 }, {}, { duration:12 }, { price_monthly:49, duration:12 }] });
+  click(elements.eventInspector, "Show non-applicable properties");
+  const correlated = {
+    cases:correlatedCases,
+    mixed:mixedResult.evaluations.map(({ propertyPath, status }) => [propertyPath, status]),
+    issues:mixedResult.issues.filter(({ instancePath }) => instancePath.endsWith("/duration")).map(({ instancePath, templatePath, conditionSummary }) => ({ instancePath, templatePath, conditionSummary })),
+    rendered:Array.from(elements.eventInspector.querySelectorAll('[data-property-path^="/products/"][data-property-path$="/duration"]')).map(({ dataset, textContent }) => [dataset.propertyPath, textContent]),
+    persisted:{ predicate:restoredCorrelated.attachedRules[0].conditionGroup.predicates[0].propertyPath, consequence:restoredCorrelated.attachedRules[0].propertyPath, issue:restoredResult.issues.find(({ instancePath }) => instancePath === "/products/0/duration")?.instancePath },
+  };
+  return { editor, stored:{ count:stored.workingDraft.attachedRules.length, rule:storedRule, summary:conditionalCore.conditionalRuleSummary({ conditionGroup:storedRule.conditionGroup, consequence:{ propertyPath:storedRule.propertyPath, operator:storedRule.operator, parameters:storedRule.parameters } }) }, evaluations, groups, truthGroups, predicateCases, invalidConfigurations, presentation, lifecycle, correlated };
 })()`;
 
 const schemaDocumentationRuntime = `(async () => {
@@ -4215,6 +4251,14 @@ try {
       assert.equal(liveGuidedConditionalRuleObservation.lifecycle.version,4);
       assert.equal(liveGuidedConditionalRuleObservation.lifecycle.workingDraftAbsent&&liveGuidedConditionalRuleObservation.lifecycle.conditionRetained,true);
       assert.equal(liveGuidedConditionalRuleObservation.lifecycle.pinnedVersion===1&&liveGuidedConditionalRuleObservation.lifecycle.revisedVersion===2&&liveGuidedConditionalRuleObservation.lifecycle.revisedConditionRetained,true);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.wildcard.options,["/products/*/price_monthly"]);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.wildcard.concreteOptions,[]);
+      assert.equal(liveGuidedConditionalRuleObservation.wildcard.preview,"Failed for the current event");
+      assert.match(liveGuidedConditionalRuleObservation.wildcard.review,/For each products item, when price_monthly exists, duration must be present/);
+      assert.deepEqual([liveGuidedConditionalRuleObservation.wildcard.predicate,liveGuidedConditionalRuleObservation.wildcard.consequence],["/products/*/price_monthly","/products/*/duration"]);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.wildcard.evaluations,[["/products/0/duration","error"],["/products/1/duration","not-applicable"],["/products/2/duration","not-applicable"],["/products/3/duration","pass"]]);
+      assert.deepEqual(liveGuidedConditionalRuleObservation.wildcard.issues,["/products/0/duration"]);
+      assert.equal(liveGuidedConditionalRuleObservation.wildcard.reloaded,true);
       socket.close();continue;
     }
     if (process.env.REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER === "1") {
@@ -4874,6 +4918,18 @@ try {
         ruleIds:["rule:reusable-products"], atomic:true,
         typedValue:{ type:"string", value:"product_detail" }, pinnedVersion:1, revisedVersion:2, revisedPreserved:true,
       }, "Conditional rule persistence did not preserve atomic definitions and pinned versions");
+      assert.deepEqual(conditionalValidationRulesObservation.correlated.cases, [
+        { priceMonthlyState:"number 29", durationState:"number 12", result:"Passed", issues:0 },
+        { priceMonthlyState:"null", durationState:"missing", result:"Failed", issues:1 },
+        { priceMonthlyState:"missing", durationState:"missing", result:"Not applicable", issues:0 },
+        { priceMonthlyState:"missing", durationState:"number 12", result:"Not applicable", issues:0 },
+      ], "Correlated wildcard examples did not bind trigger and consequence to the same item");
+      assert.deepEqual(conditionalValidationRulesObservation.correlated.mixed, [["/products/0/duration","error"],["/products/1/duration","not-applicable"],["/products/2/duration","not-applicable"],["/products/3/duration","pass"]]);
+      assert.deepEqual(conditionalValidationRulesObservation.correlated.issues.map(({ instancePath, templatePath }) => [instancePath, templatePath]), [["/products/0/duration","/products/*/duration"]]);
+      assert.equal(conditionalValidationRulesObservation.correlated.issues[0].conditionSummary, "For each products item, when price_monthly exists, duration must be present");
+      assert.deepEqual(conditionalValidationRulesObservation.correlated.persisted, { predicate:"/products/*/price_monthly", consequence:"/products/*/duration", issue:"/products/0/duration" });
+      assert.equal(conditionalValidationRulesObservation.correlated.rendered.some(([path,text]) => path === "/products/1/duration" && text.includes("not applicable")), true);
+      assert.equal(conditionalValidationRulesObservation.correlated.rendered.some(([path,text]) => path === "/products/3/duration" && text.includes("passed")), true);
       socket.close(); continue;
     }
     if (width === 720 && process.env.GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER === "1") {

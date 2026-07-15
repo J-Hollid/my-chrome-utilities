@@ -138,6 +138,45 @@ export function conditionGroupAppliesToValue(value: unknown, group: ConditionalR
     evaluateConditionPredicate(conditionValueAtPath(value, predicate.propertyPath), predicate));
 }
 
+function wildcardIndexes(segments: readonly string[]): number[] {
+  return segments.flatMap((segment, index) => segment === "*" ? [index] : []);
+}
+
+function sharesWildcardContext(candidate: readonly string[], template: readonly string[], wildcardIndex: number): boolean {
+  return candidate[wildcardIndex] === "*"
+    && candidate.slice(0, wildcardIndex).every((segment, index) => segment === template[index]);
+}
+
+function correlatedPredicatePath(
+  predicatePath: string,
+  consequenceTemplatePath: string,
+  consequenceConcretePath: string,
+): string {
+  const predicate = pointerSegments(predicatePath);
+  const template = pointerSegments(consequenceTemplatePath);
+  const concrete = pointerSegments(consequenceConcretePath);
+  const templateWildcards = wildcardIndexes(template);
+  const predicateWildcards = wildcardIndexes(predicate);
+  if (!predicateWildcards.length || predicateWildcards.length > templateWildcards.length) return predicatePath;
+  const sharesContexts = predicateWildcards.every((index, ordinal) =>
+    templateWildcards[ordinal] === index && sharesWildcardContext(predicate, template, index));
+  if (!sharesContexts) return predicatePath;
+  let wildcard = 0;
+  return `/${predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++] as number] : segment).join("/")}`;
+}
+
+export function conditionGroupAppliesToConsequence(
+  value: unknown,
+  group: ConditionalRuleConditionGroup,
+  consequenceTemplatePath: string,
+  consequenceConcretePath: string,
+): boolean {
+  return conditionGroupApplies(group, (predicate) => {
+    const path = correlatedPredicatePath(predicate.propertyPath, consequenceTemplatePath, consequenceConcretePath);
+    return evaluateConditionPredicate(conditionValueAtPath(value, path), predicate);
+  });
+}
+
 export function evaluateConditionalRule(
   value: unknown,
   rule: ConditionalRuleDefinition,
@@ -175,6 +214,21 @@ function consequenceSummary(consequence: ConditionalRuleConsequence): string {
 
 export function conditionalRuleSummary(rule: ConditionalRuleDefinition): string {
   const conjunction = rule.conditionGroup.operator === "All" ? " and " : " or ";
+  const consequenceSegments = pointerSegments(rule.consequence.propertyPath);
+  const wildcardIndex = consequenceSegments.indexOf("*");
+  const correlated = wildcardIndex > 0 && rule.conditionGroup.predicates.every((predicate) =>
+    sharesWildcardContext(pointerSegments(predicate.propertyPath), consequenceSegments, wildcardIndex));
+  if (correlated) {
+    const localPredicate = (predicate: ConditionalRulePredicate): ConditionalRulePredicate => ({
+      ...predicate,
+      propertyPath:`/${pointerSegments(predicate.propertyPath).slice(wildcardIndex + 1).join("/")}`,
+    });
+    const localConsequence = {
+      ...rule.consequence,
+      propertyPath:`/${consequenceSegments.slice(wildcardIndex + 1).join("/")}`,
+    };
+    return `For each ${consequenceSegments[wildcardIndex - 1]} item, when ${rule.conditionGroup.predicates.map((predicate) => conditionPredicateSummary(localPredicate(predicate))).join(conjunction)}, ${consequenceSummary(localConsequence)}`;
+  }
   return `When ${rule.conditionGroup.predicates.map(conditionPredicateSummary).join(conjunction)}, ${consequenceSummary(rule.consequence)}`;
 }
 

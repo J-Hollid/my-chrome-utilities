@@ -27,7 +27,31 @@
     :runtime-error "Live guided conditional rule browser runtime failed."
     :missing-error "Live guided conditional rule browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation review local reusable cancelled lifecycle] :as observed}]
+(defn- assert-wildcard! [wildcard]
+  (support/assert!
+   (= {:options ["/products/*/price_monthly"]
+       :concreteOptions []
+       :preview "Failed for the current event"
+       :predicate "/products/*/price_monthly"
+       :consequence "/products/*/duration"
+       :evaluations [["/products/0/duration" "error"]
+                     ["/products/1/duration" "not-applicable"]
+                     ["/products/2/duration" "not-applicable"]
+                     ["/products/3/duration" "pass"]]
+       :issues ["/products/0/duration"]
+       :reloaded true}
+      (select-keys wildcard
+                   [:options :concreteOptions :preview :predicate :consequence
+                    :evaluations :issues :reloaded]))
+   "Rendered guided authoring did not preserve one correlated wildcard condition."
+   wildcard)
+  (support/assert!
+   (str/includes? (:review wildcard)
+                  "For each products item, when price_monthly exists, duration must be present")
+   "Rendered guided authoring did not describe the correlated wildcard condition."
+   wildcard))
+
+(defn- assert-authoring! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation]}]
   (support/assert! (and (= "Define requirement" (:heading requirement))
                         (:applyOnlyWhen requirement)
                         (:schemaEditorHidden requirement)
@@ -64,7 +88,9 @@
                    preview)
   (support/assert! (and (:open confirmation) (:retained confirmation) (:discarded confirmation))
                    "Conditional predicate discard confirmation did not preserve both choices."
-                   confirmation)
+                   confirmation))
+
+(defn- assert-persistence! [{:keys [review local reusable cancelled lifecycle]}]
   (support/assert! (and (:storageUnchanged review)
                         (str/includes? (:text review) "When page_type equals product_detail, oOrder.aProducts.0 must be present"))
                    "The joint guided review was incomplete or mutated storage."
@@ -98,7 +124,12 @@
                         (= 2 (:revisedVersion lifecycle))
                         (:revisedConditionRetained lifecycle))
                    "Publication and export/import/reload lost conditional identities or typed predicates."
-                   lifecycle)
+                   lifecycle))
+
+(defn- assert-runtime! [{:keys [wildcard] :as observed}]
+  (assert-authoring! observed)
+  (assert-persistence! observed)
+  (assert-wildcard! wildcard)
   observed)
 
 (def model-example-values

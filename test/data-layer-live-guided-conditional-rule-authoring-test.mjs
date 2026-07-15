@@ -19,6 +19,7 @@ import {
   setGuidedRequirement,
 } from "../dist/data-layer-guided-validation.js";
 import { guidedAttachedRule } from "../dist/data-layer-guided-rule-parameter-integrity.js";
+import { conditionalRuleSummary } from "../dist/data-layer-conditional-validation-rules.js";
 
 const payload={
   page_type:"product_detail",
@@ -43,6 +44,13 @@ assert.deepEqual(options.find(({path})=>path==="/customer/type"),{
 });
 assert.equal(options.filter(({path})=>path==="/customer/type").length,1);
 assert.equal(options.some(({path})=>path==="/oOrder/aProducts/0"),false,"the consequence must not be its own suggested trigger");
+
+const productPayload={products:[{price_monthly:29,duration:12},{price_monthly:49}]};
+const productOptions=guidedConditionPropertyOptions(productPayload,{"products.*.price_monthly":"Number","products.*.duration":"Number"},"/products/*/duration");
+assert.deepEqual(productOptions.filter(({path})=>path==="/products/*/price_monthly"),[{
+  path:"/products/*/price_monthly",type:"number",source:"current event",observedValue:49,
+}]);
+assert.equal(productOptions.some(({path})=>/^\/products\/\d+\//.test(path)),false);
 
 let conditional=createGuidedConditionalDraft();
 assert.deepEqual(validateGuidedConditionalDraft(conditional,{propertyPath:"/oOrder/aProducts/0",operator:"required"}),{
@@ -99,6 +107,18 @@ assert.deepEqual(attachment.conditionGroup,guidedConditionGroup(draft.conditiona
 assert.equal(attachment.propertyPath,"/oOrder/aProducts/0");
 assert.equal(attachment.enabled,true);
 assert.equal(JSON.parse(JSON.stringify(attachment)).conditionGroup.predicates[0].comparison.type,"string");
+
+let productConditional=addGuidedCondition(createGuidedConditionalDraft());
+productConditional=selectGuidedConditionProperty(productConditional,0,productOptions.find(({path})=>path==="/products/*/price_monthly"));
+productConditional=setGuidedConditionOperator(productConditional,0,"Exists");
+assert.equal(
+  guidedConditionalPreview(productPayload,productConditional,{propertyPath:"/products/*/duration",operator:"required"}).result,
+  "Failed",
+);
+assert.equal(
+  conditionalRuleSummary({conditionGroup:productConditional.conditionGroup,consequence:{propertyPath:"/products/*/duration",operator:"required"}}),
+  "For each products item, when price_monthly exists, duration must be present",
+);
 
 assert.throws(
   ()=>publishGuidedValidation({...draft,conditional:reviewed},true),

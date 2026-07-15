@@ -69,3 +69,27 @@ Feature: Data layer conditional validation rules runtime
     Then production persistence retains each conditional rule identity exactly once
     And validation after reload uses the retained trigger conditions and consequence parameters
     And the reusable rule version remains distinct from its schema attachment
+
+  # Data layer conditional validation rules runtime 006
+  Scenario Outline: Data layer conditional validation rules runtime 006
+    Given production conditional rule When /products/*/price_monthly Exists, /products/*/duration is Required
+    When production validation receives one product with price_monthly <price_monthly_state> and duration <duration_state>
+    Then the production item evaluation is <item_result>
+    And production validation creates <issue_count> issues for /products/0/duration
+
+    Examples:
+      | price_monthly_state | duration_state | item_result    | issue_count |
+      | number 29           | number 12      | Passed         | 0           |
+      | null                | missing        | Failed         | 1           |
+      | missing             | missing        | Not applicable | 0           |
+      | missing             | number 12      | Not applicable | 0           |
+
+  # Data layer conditional validation rules runtime 007
+  Scenario: Data layer conditional validation rules runtime 007
+    Given production conditional rule When /products/*/price_monthly Exists, /products/*/duration is Required
+    And production payload contains products whose same-item results are Failed, Not applicable, Not applicable, and Passed
+    When production validation evaluates the wildcard condition and consequence
+    Then exactly one issue identifies concrete path /products/0/duration
+    And no issue is created for products items whose own price_monthly is absent
+    And the rendered evaluation details distinguish each item's result
+    And production persistence and reload retain both wildcard template paths in one conditional rule
