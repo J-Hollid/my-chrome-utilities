@@ -9,6 +9,7 @@ Feature: Data layer defect report provenance presentation runtime
     Given the built extension side panel is running with production validation, captured-event defect reporting, Jira export, and Defect Library persistence
     And a production report removes undeclared /action, adds schema-provided /error_action, and adds custom /error_message
     And production corrections retain response sources and effective rule provenance
+    And production Include validation rules covered is selected
 
   # Data layer defect report provenance presentation runtime 001
   Scenario: Data layer defect report provenance presentation runtime 001

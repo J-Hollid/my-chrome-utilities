@@ -9,6 +9,7 @@ Feature: Data layer defect report Jira Cloud export
     Given a completed defect report is previewed for Jira Cloud
     And Actual result contains invalid field /commerce/currency
     And Expected result replaces /commerce/currency with EUR
+    And Include validation rules covered and Include capture metadata are selected
 
   # Data layer defect report Jira Cloud export 001
   Scenario: Data layer defect report Jira Cloud export 001

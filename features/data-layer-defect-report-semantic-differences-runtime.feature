@@ -85,6 +85,7 @@ Feature: Data layer defect report semantic differences runtime
   # Data layer defect report semantic differences runtime 008
   Scenario: Data layer defect report semantic differences runtime 008
     Given the production report contains semantic Actual and Expected differences
+    And production Include validation rules covered is selected
     When Copy for Jira Cloud, plain-text fallback, Save defect, reopen, and recopy are exercised through actual controls
     Then preview, rich clipboard, plain clipboard, persisted report, reopened preview, and recopied output retain identical semantic lines
     And all retain pointers, issue identities, operations, validation evidence, and actual-versus-expected grouping
