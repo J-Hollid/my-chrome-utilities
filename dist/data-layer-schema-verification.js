@@ -362,7 +362,7 @@ export function restoreSchemaLibrary(serialized) {
         return [];
     }
 }
-function issuesFor(value, schema, path, schemaPath, result, metadata) {
+function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclaredProperties) {
     if (schema.type && valueType(value) !== schema.type)
         result.push({ instancePath: path, message: "Type mismatch", expected: schema.type, actual: valueType(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: schemaPath });
     if (schema.type === "object" && value && typeof value === "object" && !Array.isArray(value)) {
@@ -373,13 +373,13 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
         for (const property of schema.forbidden ?? [])
             if (property in record)
                 result.push({ instancePath: `${path}/${property}`, message: "Forbidden property", expected: "absent", actual: valueType(record[property]), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/forbidden` });
-        if (schema.additionalProperties === false)
+        if (onlyDeclaredProperties)
             for (const property of Object.keys(record))
                 if (!(property in (schema.properties ?? {})))
                     result.push({ instancePath: `${path}/${property}`, message: "Undeclared property", expected: "declared property", actual: valueType(record[property]), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/additionalProperties` });
         for (const [property, child] of Object.entries(schema.properties ?? {}))
             if (property in record)
-                issuesFor(record[property], child, `${path}/${property}`, `${schemaPath}/properties/${property}`, result, metadata);
+                issuesFor(record[property], child, `${path}/${property}`, `${schemaPath}/properties/${property}`, result, metadata, onlyDeclaredProperties);
     }
     if (schema.type === "number" && typeof value === "number") {
         if (schema.minimum !== undefined && value < schema.minimum)
@@ -388,7 +388,7 @@ function issuesFor(value, schema, path, schemaPath, result, metadata) {
             result.push({ instancePath: path, message: "Value above maximum", expected: String(schema.maximum), actual: String(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/maximum` });
     }
     if (schema.type === "array" && Array.isArray(value) && schema.items)
-        value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata));
+        value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata, onlyDeclaredProperties));
 }
 function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
     return {
@@ -681,7 +681,8 @@ function validationEvaluations(value, schema, schemas) {
     return result;
 }
 function collectSchemaIssues(value, schema, schemas, result) {
-    issuesFor(value, normalizeCanonicalSchemaDocument(inheritedDocument(schema, schemas)), "", "#", result, schema);
+    const document = normalizeCanonicalSchemaDocument(inheritedDocument(schema, schemas));
+    issuesFor(value, document, "", "#", result, schema, document.additionalProperties === false);
     attachedRuleIssues(value, schema, result);
     inheritedAttachedRuleIssues(value, schema, schemas, result);
 }

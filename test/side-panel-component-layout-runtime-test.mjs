@@ -22,6 +22,7 @@ let guidedDraftContinuationReloadObservation;
 let schemaPropertyRulePickerObservation;
 let schemaRulePropertyIdentityObservation;
 let canonicalDeclaredPropertyValidationObservation;
+let recursiveDeclaredPropertyValidationObservation;
 let schemaManualPropertyObservation;
 let schemaContainerChildObservation;
 let schemaRenamingObservation;
@@ -77,6 +78,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER === "1" ? [320]
   : process.env.GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -2427,6 +2429,39 @@ const canonicalDeclaredPropertyValidationRuntime = `(async () => {
   return{policy,representationCases,pageCases,inheritance,disabled,publication,live,reopened,runtimeErrors};
 })()`;
 
+const recursiveDeclaredPropertyValidationRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find((button)=>button.textContent===label||button.textContent.startsWith(label));if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const runtimeErrors=[];addEventListener("error",(event)=>runtimeErrors.push(String(event.error??event.message)));addEventListener("unhandledrejection",(event)=>runtimeErrors.push(String(event.reason)));
+  const verification=await import("/data-layer-schema-verification.js");const publicationModule=await import("/data-layer-schema-publication-refresh.js");const observer=await import("/data-layer-live-observer.js");const queries=await import("/data-layer-event-feed-query.js");const defects=await import("/data-layer-defect-library.js");const sessions=await import("/data-layer-saved-sessions.js");
+  const stored=()=>JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));const current=()=>stored()[0];const event=(payload)=>({sourceId:"history",eventName:"pageview",payload,rawInput:["pageview",payload]});
+  const draftSchema=()=>{const schema=current();return{...schema,document:schema.workingDraft.document,attachedRules:schema.workingDraft.attachedRules};};const validate=(payload,schema=draftSchema())=>verification.validateWithSchema(event(payload),schema,[schema]);
+  const base={page_type:"product",commerce:{currency:"EUR",order:{id:"1"}},products:[{product_name:"phone"},{product_name:"case"}]};
+  q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find((item)=>item.textContent.includes("Generic pageview"));if(!row)throw new Error("Missing Generic pageview");click(row,"Edit working draft");const checkbox=q("#schema-only-declared-properties");const draftBytes=JSON.stringify(current().workingDraft.document);const valid=validate(base);
+  const cases=[
+    ["/commerce/debug",{...base,commerce:{...base.commerce,debug:true}}],
+    ["/commerce/order/internal_id",{...base,commerce:{...base.commerce,order:{...base.commerce.order,internal_id:"internal"}}}],
+    ["/products/0/debug",{...base,products:[{...base.products[0],debug:true},base.products[1]]}],
+  ].map(([pointer,payload])=>{const issues=validate(payload).issues.filter(({message})=>message==="Undeclared property");return{pointer,count:issues.length,issue:issues[0]};});
+  const repeated=validate({...base,products:[{...base.products[0],debug:true},{...base.products[1],debug:false,metadata:{internal_id:"1",source:"feed"}}]}).issues.filter(({message})=>message==="Undeclared property").map(({instancePath,actual})=>({instancePath,actual}));
+  const representations=[];for(const [name,document,payload] of [
+    ["nested",current().workingDraft.document,base],
+    ["path-keyed",{type:"object",additionalProperties:false,properties:{"/commerce/order/id":{type:"string"},"/products/*/product_name":{type:"string"}}},{commerce:{order:{id:"1"}},products:[{product_name:"phone"},{product_name:"case"}]}],
+  ]){const schema={id:"case:"+name,name,version:1,document,assignments:[]};const bytes=JSON.stringify(document);representations.push({name,issues:verification.validateWithSchema(event(payload),schema,[schema]).issues,unchanged:bytes===JSON.stringify(document)});}
+  const extras={...base,root_extra:true,commerce:{...base.commerce,currency:"GBP",debug:true},products:[{...base.products[0],debug:true},base.products[1]]};checkbox.checked=false;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await pause();const disabledResult=validate(extras);const disabled={stored:current().workingDraft.document.additionalProperties===undefined,undeclared:disabledResult.issues.filter(({message})=>message==="Undeclared property").length,ruleActive:disabledResult.issues.some(({instancePath,message})=>instancePath==="/commerce/currency"&&message==="Value is not allowed")};
+  const archived=sessions.saveCompletedSession(sessions.createSavedSessionLibrary(),{id:"session:old",pageScope:"https://shop.example/products",startedAt:"2026-07-15T15:00:00Z",endedAt:"2026-07-15T15:01:00Z",events:[{id:"saved:event",sourceId:"history",sourceName:"Event history",name:"pageview",payload:base,rawInput:[],validation:"Valid",validationDetails:{issues:[],evaluations:[],schema:{id:current().id,name:current().name,version:4}}}]},"Before recursive policy");const archivedBytes=sessions.serializeSavedSessionLibrary(archived);
+  checkbox.checked=true;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await pause();const enabledResult=validate(extras);const enabled={stored:current().workingDraft.document.additionalProperties===false,paths:enabledResult.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),draftUnchanged:JSON.stringify(current().workingDraft.document)===draftBytes};
+  q("#save-schema").click();q("#confirm-schema-revision").click();await pause();await pause();const published=current();
+  q("#data-layer-view-live").click();const feedButtons=Array.from(q("#live-event-feed").querySelectorAll("button"));const extraButton=feedButtons.find(({dataset})=>dataset.eventId==="event:nested-extra");if(!extraButton)throw new Error("Missing nested-extra event");extraButton.click();await pause();const detail=q("#live-event-inspector").textContent;
+  const liveEvents=[
+    {id:"event:declared",name:"pageview",sourceId:"history",sourceName:"Event history",captureTime:"2026-07-15T15:02:00Z",pageUrl:"https://shop.example/products",payload:base,rawInput:[]},
+    {id:"event:nested-extra",name:"pageview",sourceId:"history",sourceName:"Event history",captureTime:"2026-07-15T15:02:01Z",pageUrl:"https://shop.example/products",payload:extras,rawInput:[]},
+  ];const state={...observer.createLiveObserverState({pageUrl:"https://shop.example/products",sources:[]}),events:liveEvents};const refreshed=publicationModule.revalidateCurrentLiveSession(state,[published],{}).state.events;const refreshedExtra=refreshed.find(({id})=>id==="event:nested-extra");const queryMatches=queries.filterEventsByQuery(refreshed,{conditions:[{id:"nested",field:"Affected property",operator:"is",values:["commerce.debug"]}]}).map(({id})=>id);const nestedIssue=defects.currentDefectIssues(refreshedExtra).find(({concretePath})=>concretePath==="/commerce/debug");const defect=defects.createValidationDefect({id:"defect:nested",now:"2026-07-15T15:03:00Z",report:{},issues:[nestedIssue]});
+  const publication={version:published.version,result:q("#schema-result").textContent,feed:feedButtons.map(({dataset,textContent})=>({id:dataset.eventId,text:textContent})),detail,refreshed:refreshed.map(({id,validation,validationDetails})=>({id,validation,paths:validationDetails.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath)})),queryMatches,defectMatch:defects.eventContainsDefectIssue(refreshedExtra,defect),archivedUnchanged:archivedBytes===sessions.serializeSavedSessionLibrary(archived),archivedVersion:archived.sessions[0].events[0].validationDetails.schema.version};
+  return{checkbox:checkbox.checked,valid:{issues:valid.issues,canonical:["/commerce/order/id","/products/*/product_name"]},cases,repeated,representations,disabled,enabled,publication,runtimeErrors};
+})()`;
+
 const defectReportUndeclaredRemovalRuntime = `(async () => {
   const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
   const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
@@ -4633,6 +4668,23 @@ try {
       assert.deepEqual(defectReportUndeclaredRemovalObservation.refreshed,{issues:[],corrections:[]});assert.deepEqual(defectReportUndeclaredRemovalObservation.historicalExpected,{page_type:"product_detail"});assert.deepEqual(defectReportUndeclaredRemovalObservation.immutable,{payload:true,validation:true});assert.equal(defectReportUndeclaredRemovalObservation.layout.body<=defectReportUndeclaredRemovalObservation.layout.width,true);assert.equal(defectReportUndeclaredRemovalObservation.runtimeErrors.length,0);
       socket.close();continue;
     }
+    if (process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        const publishedDocument={type:"object",properties:{page_type:{type:"string"},commerce:{type:"object",properties:{currency:{type:"string"},order:{type:"object",properties:{id:{type:"string"}}}}},products:{type:"array",items:{type:"object",properties:{product_name:{type:"string"}}}}}};
+        const draftDocument={...publishedDocument,additionalProperties:false};const assignment={id:"assignment:pageview",name:"Generic pageviews",schemaId:"schema-generic-pageview",sourceId:"history",eventName:"pageview",target:"payload",versionPolicy:"follow latest",enabled:true};const rule={id:"rule:currency",name:"Allowed currency",version:1,propertyPath:"/commerce/currency",operator:"allowed-values",allowedValues:["EUR"],severity:"error"};
+        const schema={id:"schema-generic-pageview",name:"Generic pageview",version:4,published:true,document:publishedDocument,assignments:[assignment],attachedRules:[rule],workingDraft:{baseVersion:4,sourceVersion:4,document:draftDocument,assignments:[assignment],attachedRules:[rule],pendingChanges:["Change additional-property policy"]}};
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1","[]");
+        const observed=(id,payload,time)=>({type:"observed",url:"https://shop.example/products",timestamp:time,observerPath:"dataLayer",id,name:"pageview",sessionId:"session:recursive-declared",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",pageUrl:"https://shop.example/products",payload,rawInput:["pageview",payload],rawValue:["pageview",payload],validation:"Not checked"});
+        const base={page_type:"product",commerce:{currency:"EUR",order:{id:"1"}},products:[{product_name:"phone"},{product_name:"case"}]};const extras={...base,root_extra:true,commerce:{...base.commerce,debug:true},products:[{...base.products[0],debug:true},base.products[1]]};const timeline=[observed("event:declared",base,"2026-07-15T15:02:00Z"),observed("event:nested-extra",extras,"2026-07-15T15:02:01Z")];
+        localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:recursive-declared",status:"active",freshBoundary:true,tabId:1,historyPath:"dataLayer",startUrl:"https://shop.example/products",currentUrl:"https://shop.example/products",timeline}}));return true;
+      })()`);
+      await reloadPanel(socket);recursiveDeclaredPropertyValidationObservation=await evaluate(socket,recursiveDeclaredPropertyValidationRuntime);const observed=recursiveDeclaredPropertyValidationObservation;
+      assert.equal(observed.checkbox,true);assert.deepEqual(observed.valid.issues,[]);assert.equal(observed.cases.every(({count,issue})=>count===1&&issue.expected==="declared property"),true);assert.deepEqual(observed.repeated,[{instancePath:"/products/0/debug",actual:"boolean"},{instancePath:"/products/1/debug",actual:"boolean"},{instancePath:"/products/1/metadata",actual:"object"}]);
+      assert.equal(observed.representations.every(({issues,unchanged})=>issues.length===0&&unchanged),true);assert.deepEqual(observed.disabled,{stored:true,undeclared:0,ruleActive:true});assert.equal(observed.enabled.stored&&observed.enabled.draftUnchanged,true);assert.deepEqual(observed.enabled.paths,["/root_extra","/commerce/debug","/products/0/debug"]);
+      assert.equal(observed.publication.version,5);assert.match(observed.publication.result,/Revalidated 2 current Live events/);assert.equal(observed.publication.detail.includes("commerce.debug")||observed.publication.detail.includes("/commerce/debug"),true);assert.deepEqual(observed.publication.queryMatches,["event:nested-extra"]);assert.equal(observed.publication.defectMatch&&observed.publication.archivedUnchanged&&observed.publication.archivedVersion===4,true);assert.deepEqual(observed.runtimeErrors,[]);
+      socket.close();continue;
+    }
     if (process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -5797,6 +5849,9 @@ try {
   }
   if (process.env.SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaPublicationRefresh:schemaPublicationRefreshObservation }));
+  }
+  if (process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ recursiveDeclaredPropertyValidation:recursiveDeclaredPropertyValidationObservation }));
   }
   if (process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ allowedValueExpansion:allowedValueExpansionObservation }));

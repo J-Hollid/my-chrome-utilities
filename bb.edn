@@ -9,6 +9,7 @@
   test:unit {:doc "Run focused unit tests."
              :requires ([clojure.test :as test]
                         [acceptance.canonical-declared-property-validation-steps-test]
+                        [acceptance.recursive-declared-property-validation-steps-test]
                         [babashka.process :as process]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
@@ -73,6 +74,7 @@
                         [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.runtime-test
                                                 'acceptance.canonical-declared-property-validation-steps-test
+                                                'acceptance.recursive-declared-property-validation-steps-test
                                                 'acceptance.generator-test
                                                 'acceptance.steps-support-test
                                                 'acceptance.side-panel-steps-test
