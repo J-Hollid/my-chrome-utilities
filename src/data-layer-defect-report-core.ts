@@ -15,7 +15,7 @@ function normalizedConstraint(constraint: string): string {
   return /^must\b/i.test(constraint) ? constraint : `must be ${constraint}`;
 }
 
-function allowedValues(issue: Pick<DefectIssue, "constraint" | "allowedValues">): string[] {
+function allowedValues(issue: Pick<DefectIssue, "constraint" | "allowedValues">): Array<string | number | boolean | null> {
   if (issue.allowedValues?.length) return [...issue.allowedValues];
   const match = issue.constraint.match(/(?:must\s+be\s+)?one\s+of\s+(.+)$/i);
   if (!match?.[1]) return [];
@@ -32,8 +32,10 @@ function assistanceConstraint(issue: DefectIssue): string {
 export function expectedResultAssistance(issue: DefectIssue): ExpectedResultAssistance {
   return {
     genericConstraint: `${issue.pointer} ${assistanceConstraint(issue)}`,
-    schemaValues: allowedValues(issue).filter((value) => value !== String(issue.actual)),
+    schemaValues: allowedValues(issue).filter((value) => !Object.is(value, issue.actual)),
     customAvailable: true,
+    ...(issue.schemaChoiceProvenance ? { provenance:structuredClone(issue.schemaChoiceProvenance) } : {}),
+    ...(issue.schemaChoiceConflict ? { conflict:issue.schemaChoiceConflict } : {}),
   };
 }
 
@@ -42,7 +44,7 @@ export function validateAssistedResponse(
   response: unknown,
 ): { valid: true } | { valid: false; warning: string } {
   const values = allowedValues(issue);
-  if (!values.length || values.includes(String(response))) return { valid: true };
+  if (!values.length || values.some((value) => Object.is(value, response))) return { valid: true };
   return { valid: false, warning: `${String(response)} does not satisfy the current schema constraint.` };
 }
 
@@ -52,6 +54,14 @@ function issueName(issue: DefectIssue): string {
 
 export function isUndeclaredPropertyIssue(issue: DefectIssue): boolean {
   return issue.violation === "Undeclared property";
+}
+
+export function isRequiredPropertyViolation(violation: string | undefined): boolean {
+  return violation === "Required value";
+}
+
+export function isRequiredPropertyIssue(issue: DefectIssue): boolean {
+  return isRequiredPropertyViolation(issue.violation);
 }
 
 function undeclaredPropertyChoice(issue: ReportIssue): ExpectedResultChoice {
@@ -126,10 +136,14 @@ export function applyExpectedResult(
   const payload = cloneValue(report.event.payload);
   const corrections: ExpectedCorrection[] = [];
   const explanations: string[] = [];
-  const explicitlyChosen = new Set(choices.map(({ issueId }) => issueId));
+  const applicableChoices = choices.filter(({ issueId }) => {
+    const issue = report.issues.find(({ id }) => id === issueId);
+    return !issue || !isRequiredPropertyIssue(issue) || issue.selected;
+  });
+  const explicitlyChosen = new Set(applicableChoices.map(({ issueId }) => issueId));
   const effectiveChoices = [
     ...report.issues.filter((issue) => issue.selected && isUndeclaredPropertyIssue(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
-    ...choices,
+    ...applicableChoices,
   ];
   for (const choice of effectiveChoices) {
     const issue = report.issues.find(({ id }) => id === choice.issueId);
@@ -170,6 +184,7 @@ export function applyExpectedResult(
       ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
       ...(choice.operatorProvided ? { operatorProvided: true } : {}),
       ...(presentation ? { responsePresentation: presentation } : {}),
+      ...(choice.responseProvenance ? { responseProvenance:structuredClone(choice.responseProvenance) } : {}),
     });
     explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
   }

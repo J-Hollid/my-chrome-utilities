@@ -1,3 +1,5 @@
+import type { SchemaChoiceProvenance, SchemaChoiceValue } from "./data-layer-defect-schema-choices.js";
+
 export type DefectSeverity = "error" | "warning" | "pass";
 
 export interface DefectIssue {
@@ -9,7 +11,9 @@ export interface DefectIssue {
   actual: unknown;
   rule: string;
   ruleVersion: number;
-  allowedValues?: readonly string[];
+  allowedValues?: readonly SchemaChoiceValue[];
+  schemaChoiceProvenance?: SchemaChoiceProvenance;
+  schemaChoiceConflict?: string;
 }
 
 export interface DefectCapturedEvent {
@@ -39,17 +43,18 @@ export interface ExpectedCorrection {
   responseSource?: string;
   operatorProvided?: boolean;
   responsePresentation?: ExpectedResponsePresentation;
+  responseProvenance?: SchemaChoiceProvenance;
   marker?: "+";
 }
 
 export type ExpectedResponsePresentation =
-  | { kind: "constraint"; property: string; allowedValues: string[] }
+  | { kind: "constraint"; property: string; allowedValues: SchemaChoiceValue[] }
   | {
       kind: "value";
       property: string;
       value: unknown;
       quoteValue: boolean;
-      allowedValuesComment?: string[];
+      allowedValuesComment?: SchemaChoiceValue[];
     };
 
 export interface DefectReport {
@@ -68,12 +73,15 @@ export interface ExpectedResultChoice {
   responseSource?: string;
   operatorProvided?: boolean;
   includeAllowedValuesComment?: boolean;
+  responseProvenance?: SchemaChoiceProvenance;
 }
 
 export interface ExpectedResultAssistance {
   genericConstraint: string;
-  schemaValues: string[];
+  schemaValues: SchemaChoiceValue[];
   customAvailable: true;
+  provenance?: SchemaChoiceProvenance;
+  conflict?: string;
 }
 
 export interface PathnameVisit { id: string; pathname: string; eventIds: readonly string[] }

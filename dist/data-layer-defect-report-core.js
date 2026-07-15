@@ -20,13 +20,15 @@ function assistanceConstraint(issue) {
 export function expectedResultAssistance(issue) {
     return {
         genericConstraint: `${issue.pointer} ${assistanceConstraint(issue)}`,
-        schemaValues: allowedValues(issue).filter((value) => value !== String(issue.actual)),
+        schemaValues: allowedValues(issue).filter((value) => !Object.is(value, issue.actual)),
         customAvailable: true,
+        ...(issue.schemaChoiceProvenance ? { provenance: structuredClone(issue.schemaChoiceProvenance) } : {}),
+        ...(issue.schemaChoiceConflict ? { conflict: issue.schemaChoiceConflict } : {}),
     };
 }
 export function validateAssistedResponse(issue, response) {
     const values = allowedValues(issue);
-    if (!values.length || values.includes(String(response)))
+    if (!values.length || values.some((value) => Object.is(value, response)))
         return { valid: true };
     return { valid: false, warning: `${String(response)} does not satisfy the current schema constraint.` };
 }
@@ -35,6 +37,12 @@ function issueName(issue) {
 }
 export function isUndeclaredPropertyIssue(issue) {
     return issue.violation === "Undeclared property";
+}
+export function isRequiredPropertyViolation(violation) {
+    return violation === "Required value";
+}
+export function isRequiredPropertyIssue(issue) {
+    return isRequiredPropertyViolation(issue.violation);
 }
 function undeclaredPropertyChoice(issue) {
     return {
@@ -99,10 +107,14 @@ export function applyExpectedResult(report, choices) {
     const payload = cloneValue(report.event.payload);
     const corrections = [];
     const explanations = [];
-    const explicitlyChosen = new Set(choices.map(({ issueId }) => issueId));
+    const applicableChoices = choices.filter(({ issueId }) => {
+        const issue = report.issues.find(({ id }) => id === issueId);
+        return !issue || !isRequiredPropertyIssue(issue) || issue.selected;
+    });
+    const explicitlyChosen = new Set(applicableChoices.map(({ issueId }) => issueId));
     const effectiveChoices = [
         ...report.issues.filter((issue) => issue.selected && isUndeclaredPropertyIssue(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
-        ...choices,
+        ...applicableChoices,
     ];
     for (const choice of effectiveChoices) {
         const issue = report.issues.find(({ id }) => id === choice.issueId);
@@ -145,6 +157,7 @@ export function applyExpectedResult(report, choices) {
             ...(choice.responseSource ? { responseSource: choice.responseSource } : {}),
             ...(choice.operatorProvided ? { operatorProvided: true } : {}),
             ...(presentation ? { responsePresentation: presentation } : {}),
+            ...(choice.responseProvenance ? { responseProvenance: structuredClone(choice.responseProvenance) } : {}),
         });
         explanations.push(`${name} is ${String(choice.response)}${choice.operatorProvided ? " (operator-provided Custom value or response)" : ""}`);
     }
