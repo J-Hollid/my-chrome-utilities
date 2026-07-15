@@ -288,7 +288,7 @@ export function renderMissingEventDefectReportBuilder(
         update:(next) => { expectedPayloadDraft = next; },
         refresh:() => refreshPreview(),
         issues:() => expectedPayloadEvaluation(selected.schema, expectedPayloadDraft!).issues,
-      });
+      }, schemas);
       expectation.append(properties);
       const evaluation = expectedPayloadEvaluation(selected.schema, expectedPayloadDraft);
       const evaluationState = element("output", evaluation.state); evaluationState.dataset.expectedPayloadValidation = "state";
