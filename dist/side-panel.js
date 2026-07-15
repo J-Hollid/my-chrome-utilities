@@ -47,7 +47,7 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./data-layer-allowed-value-expansion.js";
 import { allowedValueText, openAllowedValueExpansionDialog } from "./data-layer-allowed-value-expansion-ui.js";
@@ -192,6 +192,11 @@ const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetail = document.querySelector("#schema-detail");
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
+const schemaEditorNameAssistance = document.createElement("output");
+schemaEditorNameAssistance.id = "schema-editor-name-assistance";
+schemaEditorNameAssistance.setAttribute("aria-live", "polite");
+schemaEditorName?.setAttribute("aria-describedby", schemaEditorNameAssistance.id);
+schemaEditorName?.after(schemaEditorNameAssistance);
 const schemaEditorDescription = document.querySelector("#schema-editor-description");
 const saveSchemaDescriptionButton = document.querySelector("#save-schema-description");
 const schemaDescriptionOrigin = document.querySelector("#schema-description-origin");
@@ -2101,7 +2106,7 @@ function renderSchemaDraft() {
     schemaPropertyTree.scrollTop = propertyTreeScrollTop;
     if (schemaEditor)
         schemaEditor.scrollTop = schemaEditorScrollTop;
-    const existing = schemas.find((schema) => schema.name === draft.name);
+    const existing = schemas.find((schema) => schema.id === draft.id);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     if (schemaEditorParent) {
         const parents = schemas.filter((schema) => schema.id !== candidate.id);
@@ -2130,8 +2135,10 @@ function renderSchemaDraft() {
     renderSchemaInheritancePresentation(draft);
     const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
     const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
-    const ready = Boolean(draft.name.trim() && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
-    const reason = !draft.name.trim() ? "Enter a schema name" : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one property" : inheritanceError ?? "Ready to save";
+    const rename = inspectSchemaRename(existing ?? candidate, schemas, draft.name);
+    const ready = Boolean(rename.ready && Object.keys(draft.document.properties ?? {}).length && !inheritanceError);
+    const reason = !rename.ready ? rename.assistance : !Object.keys(draft.document.properties ?? {}).length ? "Add at least one property" : inheritanceError ?? "Ready to save";
+    schemaEditorNameAssistance.textContent = rename.assistance;
     if (saveSchemaButton)
         saveSchemaButton.disabled = !ready;
     if (saveSchemaButton)
@@ -2250,6 +2257,7 @@ function schemaEditorDraft(schema) {
     const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = structuredClone(schema);
     return {
         ...current,
+        name: draft.name ?? current.name,
         document: structuredClone(draft.document),
         assignments: structuredClone(draft.assignments),
         ...(draft.attachedRules !== undefined ? { attachedRules: structuredClone(draft.attachedRules) } : {}),
@@ -2272,7 +2280,8 @@ function persistSchemaEditorDraft(change) {
         inheritedRuleOverrides: schemaDraft.inheritedRuleOverrides,
         documentation: schemaDraft.documentation,
     };
-    const updated = updateSchemaWorkingDraft(stored, changes, change);
+    const renamed = proposeSchemaWorkingDraftName(stored, schemaDraft.name);
+    const updated = updateSchemaWorkingDraft(renamed, changes, change);
     schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
     persistSchemaLibrary();
     renderSchemas();
@@ -4607,10 +4616,13 @@ templateEmptyRecovery?.addEventListener("click", () => {
 });
 schemaSearch?.addEventListener("input", renderSchemas);
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls"))));
-schemaEditorName?.addEventListener("input", () => { if (schemaDraft) {
+schemaEditorName?.addEventListener("input", () => {
+    if (!schemaDraft)
+        return;
     schemaDraft = { ...schemaDraft, name: schemaEditorName.value };
+    persistSchemaEditorDraft();
     renderSchemaDraft();
-} });
+});
 saveSchemaDescriptionButton?.addEventListener("click", () => {
     if (!schemaDraft || !schemaEditorDescription)
         return;
@@ -4649,16 +4661,18 @@ saveSchemaButton?.addEventListener("click", () => {
         return;
     const draft = schemaDraft;
     if (schemaRevisionReview) {
-        const existing = schemas.find((schema) => schema.id === draft.id || schema.name === draft.name);
+        const existing = schemas.find((schema) => schema.id === draft.id);
         if (existing)
             persistSchemaEditorDraft();
-        const pendingChangeSummary = schemas.find((schema) => schema.id === draft.id)?.workingDraft?.pendingChanges
-            .filter((change) => change.startsWith("Remove property ")).join("; ") ?? "";
+        const persisted = schemas.find((schema) => schema.id === draft.id);
+        const pendingChangeSummary = persisted?.workingDraft?.pendingChanges.join("; ") ?? "";
+        const proposedName = persisted?.workingDraft?.name ?? draft.name;
+        const renameSummary = existing && proposedName !== existing.name ? ` Rename schema from ${existing.name} to ${proposedName}.` : "";
         if (schemaRevisionReviewSummary)
             schemaRevisionReviewSummary.textContent = existing?.published === false
                 ? `${draft.name} draft will be published as current revision 1.`
                 : existing
-                    ? `${draft.name} working draft will be compared with current revision ${existing.version}; confirmation publishes revision ${existing.version + 1}.${pendingChangeSummary ? ` Draft changes: ${pendingChangeSummary}.` : ""}`
+                    ? `${existing.name} working draft will be compared with current revision ${existing.version}; confirmation publishes revision ${existing.version + 1}.${renameSummary}${pendingChangeSummary ? ` Pending changes: ${pendingChangeSummary}.` : ""}`
                     : `${draft.name} will be published as current revision 1.`;
         if (confirmSchemaRevisionButton)
             confirmSchemaRevisionButton.textContent = existing?.published === false || !existing ? "Publish revision 1" : `Publish revision ${existing.version + 1}`;
@@ -4692,7 +4706,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
         return;
     const draft = schemaDraft;
     const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
-    const existing = schemas.find((schema) => schema.id === draft.id || schema.name === draft.name);
+    const existing = schemas.find((schema) => schema.id === draft.id);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
     const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
@@ -4703,6 +4717,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     }
     const saved = existing
         ? publishSchemaWorkingDraft(updateSchemaWorkingDraft(existing, {
+            name: draft.name.trim(),
             document: draft.document,
             assignments: draft.assignments,
             attachedRules: draft.attachedRules,
