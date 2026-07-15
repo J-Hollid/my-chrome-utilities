@@ -4589,7 +4589,9 @@ saveSchemaButton?.addEventListener("click", () => {
     const existing = schemas.find((schema) => schema.id === draft.id);
     if (existing) persistSchemaEditorDraft();
     const persisted = schemas.find((schema) => schema.id === draft.id);
-    const pendingChangeSummary = persisted?.workingDraft?.pendingChanges.join("; ") ?? "";
+    const pendingChangeSummary = persisted?.workingDraft?.pendingChanges
+      .filter((change) => !change.startsWith("Rename schema from "))
+      .join("; ") ?? "";
     const proposedName = persisted?.workingDraft?.name ?? draft.name;
     const renameSummary = existing && proposedName !== existing.name ? ` Rename schema from ${existing.name} to ${proposedName}.` : "";
     if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = existing?.published === false
