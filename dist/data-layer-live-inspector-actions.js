@@ -31,6 +31,7 @@ export function createLiveInspectorActions(effects) {
         ...(effects.expandAllowedValue ? { expandAllowedValue(event, evaluation, trigger) { effects.expandAllowedValue?.(event, evaluation, trigger); } } : {}),
         ...(effects.draftContinuation ? { draftContinuation(event) { return effects.draftContinuation?.(event); } } : {}),
         ...(effects.startDefectReport ? { startDefectReport(event) { effects.startDefectReport?.(event); } } : {}),
+        ...(effects.startOccurrenceDefectReport ? { startOccurrenceDefectReport(event, mode) { effects.startOccurrenceDefectReport?.(event, mode); } } : {}),
         ...(effects.openReportedDefect ? { openReportedDefect(defectId, event, issueIndex, trigger) { effects.openReportedDefect?.(defectId, event, issueIndex, trigger); } } : {}),
         validationAvailability(event) {
             return effects.validationAvailable?.(event) === false
