@@ -7,6 +7,7 @@
 
 (def entry-modes
   {"a captured product_view event contains products with product_name and product_id" :model
+   "the built extension side panel is running with production guided validation, Schema Library persistence, and schema validation" :runtime
    "captured product_view contains products with product_name and product_id" :runtime})
 
 (defonce model-verified? (atom false))
@@ -76,3 +77,7 @@
   (support/verified-feature-mode-handlers
    feature-files entry-modes :guided-nested-property-merge-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T15:44:46.991216983+02:00", :module-hash "2136525742", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1880471612"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-1100780065"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 11, :hash "2141139184"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "def/example-rows", :kind "def", :line 16, :end-line 19, :hash "254306185"} {:id "defn-/verify-model!", :kind "defn-", :line 21, :end-line 25, :hash "-105212784"} {:id "defn-/runtime-observation!", :kind "defn-", :line 27, :end-line 33, :hash "1690801121"} {:id "defn-/validate-example!", :kind "defn-", :line 35, :end-line 44, :hash "-225202464"} {:id "defn-/assert-runtime!", :kind "defn-", :line 46, :end-line 74, :hash "847892441"} {:id "def/handlers", :kind "def", :line 76, :end-line 79, :hash "174785666"}]}
+;; clj-mutate-manifest-end
