@@ -283,6 +283,8 @@ import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRule
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
+import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./data-layer-schema-property-copy.js";
+import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-copy-ui.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation } from "./data-layer-schema-documentation.js";
 import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
 import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
@@ -519,6 +521,10 @@ addSchemaPropertyButton?.after(schemaPropertyTree);
 const schemaPropertyRemovalFeedback = document.createElement("output"); schemaPropertyRemovalFeedback.id = "schema-property-removal-feedback"; schemaPropertyRemovalFeedback.setAttribute("aria-live", "polite");
 const undoSchemaPropertyRemovalButton = document.createElement("button"); undoSchemaPropertyRemovalButton.type = "button"; undoSchemaPropertyRemovalButton.textContent = "Undo"; undoSchemaPropertyRemovalButton.hidden = true;
 schemaPropertyTree.after(schemaPropertyRemovalFeedback, undoSchemaPropertyRemovalButton);
+const schemaPropertyCopyFeedback = document.createElement("output"); schemaPropertyCopyFeedback.id = "schema-property-copy-feedback"; schemaPropertyCopyFeedback.setAttribute("aria-live", "polite");
+const undoSchemaPropertyCopyButton = document.createElement("button"); undoSchemaPropertyCopyButton.type = "button"; undoSchemaPropertyCopyButton.textContent = "Undo property copy"; undoSchemaPropertyCopyButton.hidden = true;
+schemaPropertyRemovalFeedback.after(schemaPropertyCopyFeedback, undoSchemaPropertyCopyButton);
+const schemaPropertyCopyDialog = document.createElement("dialog"); schemaPropertyCopyDialog.id = "schema-property-copy-dialog"; document.body.append(schemaPropertyCopyDialog);
 const schemaPropertyRemovalDialog = document.createElement("dialog"); schemaPropertyRemovalDialog.id = "schema-property-removal-dialog"; schemaPropertyRemovalDialog.setAttribute("aria-labelledby", "schema-property-removal-heading");
 const schemaPropertyRemovalHeading = document.createElement("h4"); schemaPropertyRemovalHeading.id = "schema-property-removal-heading"; schemaPropertyRemovalHeading.tabIndex = -1; schemaPropertyRemovalHeading.textContent = "Remove property?";
 const schemaPropertyRemovalSummary = document.createElement("output"); schemaPropertyRemovalSummary.id = "schema-property-removal-summary"; schemaPropertyRemovalSummary.setAttribute("aria-live", "polite");
@@ -528,6 +534,7 @@ schemaPropertyRemovalDialog.append(schemaPropertyRemovalHeading, schemaPropertyR
 let selectedSchemaPropertyPath = "example";
 let pendingSchemaPropertyRemoval: { path:string; trigger:HTMLButtonElement } | undefined;
 let lastSchemaPropertyRemoval: SchemaPropertyRemoval | undefined;
+let lastSchemaPropertyCopy: AppliedSchemaPropertyCopy | undefined;
 let pendingSchemaDocumentationRemoval: { path:string; trigger:HTMLElement } | undefined;
 const schemaDocumentationRemovalDialog = document.createElement("dialog"); schemaDocumentationRemovalDialog.id = "schema-documentation-removal-dialog";
 const schemaDocumentationRemovalHeading = document.createElement("h4"); schemaDocumentationRemovalHeading.textContent = "Remove property documentation?"; schemaDocumentationRemovalHeading.tabIndex = -1;
@@ -2088,6 +2095,9 @@ function renderSchemaDraft(): void {
       }
       requestSchemaPropertyRemoval(canonicalPath, removeProperty);
     });
+    const copyProperty = document.createElement("button"); copyProperty.type="button"; copyProperty.textContent="Copy to another schema";
+    copyProperty.setAttribute("aria-label",`Copy ${persistedPath} to another schema`);
+    copyProperty.addEventListener("click",()=>openSchemaPropertyCopyReview(persistedPath,copyProperty));
     const addSpecificIndex = property?.type === "array" ? document.createElement("button") : undefined;
     if (addSpecificIndex) {
       addSpecificIndex.type = "button"; addSpecificIndex.textContent = "Add specific index rule";
@@ -2119,7 +2129,7 @@ function renderSchemaDraft(): void {
       }
       row.append(...(promotion ? [promotion] : []), toggle, remove); view.append(row);
     }
-    item.append(label, metadata, documentationSection, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), removeProperty, view); return item;
+    item.append(label, metadata, documentationSection, count, add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view); return item;
   });
   const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]!]));
   const roots: HTMLLIElement[] = [];
@@ -2298,6 +2308,34 @@ function persistSchemaEditorDraft(change?: string): void {
   schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
   persistSchemaLibrary(); renderSchemas();
 }
+
+function openSchemaPropertyCopyReview(path:string, trigger:HTMLButtonElement):void {
+  if(!schemaDraft)return;
+  const stored=schemas.find(({id})=>id===schemaDraft?.id);
+  if(!stored)return;
+  const source=stored.workingDraft
+    ? schemaPropertyCopySource(stored,{surface:"working draft"})
+    : schemaPropertyCopySource(stored,{surface:"current"});
+  const sources=[source,...(stored.workingDraft?[schemaPropertyCopySource(stored,{surface:"current"})]:[]),...schemaRevisionChoices(stored).map((version)=>schemaPropertyCopySource(stored,{surface:"historical",version}))];
+  const editorScroll=schemaEditor?.scrollTop??0;const treeScroll=schemaPropertyTree.scrollTop;
+  renderSchemaPropertyCopyReview(schemaPropertyCopyDialog,{
+    source,sources,selectedPath:path,destinations:schemas.filter(({id})=>id!==stored.id),schemas,reusableRuleIds:reusableSchemaRules.map(({id})=>id),trigger,
+    onApply:(transaction)=>{
+      schemas=schemas.map((schema)=>schema.id===transaction.schema.id?transaction.schema:schema);lastSchemaPropertyCopy=transaction;
+      persistSchemaLibrary();renderSchemas();renderSchemaWorkflowRows();renderSchemaDraft();undoSchemaPropertyCopyButton.hidden=false;
+      schemaPropertyCopyFeedback.textContent=`Copied ${path} from ${source.label} to ${transaction.schema.name}. Published revisions are unchanged.`;
+    },
+    onClose:()=>{if(schemaEditor)schemaEditor.scrollTop=editorScroll;schemaPropertyTree.scrollTop=treeScroll;Array.from(schemaPropertyTree.querySelectorAll<HTMLButtonElement>("button")).find((button)=>button.getAttribute("aria-label")===`Copy ${path} to another schema`)?.focus({preventScroll:true});},
+  });
+}
+
+undoSchemaPropertyCopyButton.addEventListener("click",()=>{
+  if(!lastSchemaPropertyCopy)return;
+  const restored=undoSchemaPropertyCopy(lastSchemaPropertyCopy).schema;
+  schemas=schemas.map((schema)=>schema.id===restored.id?restored:schema);persistSchemaLibrary();renderSchemas();renderSchemaWorkflowRows();renderSchemaDraft();
+  schemaPropertyCopyFeedback.textContent=`Undid property copy to ${restored.name}; the pre-copy working draft was restored.`;
+  undoSchemaPropertyCopyButton.hidden=true;lastSchemaPropertyCopy=undefined;
+});
 
 function requestSchemaDocumentationRemoval(path: string, trigger: HTMLElement): void {
   pendingSchemaDocumentationRemoval = { path, trigger };

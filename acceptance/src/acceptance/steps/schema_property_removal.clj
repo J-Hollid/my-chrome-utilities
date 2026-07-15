@@ -27,7 +27,7 @@
     (support/assert! (every? #(some #{"Remove property"} (get actions %))
                             ["page_type" "commerce" "commerce.order" "commerce.order.id" "commerce.order.value" "debug" "items"])
                      "Editable rows lost their property-specific removal action." actions)
-    (support/assert! (and (= ["Add rule" "Exclude inherited property"] (get actions "inherited_id"))
+    (support/assert! (and (= ["Add rule" "Copy to another schema" "Exclude inherited property"] (get actions "inherited_id"))
                           (not-any? #(str/includes? % "parent") (mapcat val actions)))
                      "Inherited property actions implied parent-schema mutation." actions)
     (support/assert! (= {:absent true :parentUnchanged true} (:excluded initial))

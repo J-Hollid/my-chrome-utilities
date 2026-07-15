@@ -4,14 +4,14 @@
 
 (def valid-observation
   {:initial
-   {:actions [{:path "page_type" :actions ["Add rule" "Remove property"]}
-              {:path "commerce" :actions ["Add rule" "Remove property"]}
-              {:path "commerce.order" :actions ["Add rule" "Remove property"]}
-              {:path "commerce.order.id" :actions ["Add rule" "Remove property"]}
-              {:path "commerce.order.value" :actions ["Add rule" "Remove property"]}
-              {:path "debug" :actions ["Add rule" "Remove property"]}
-              {:path "items" :actions ["Add rule" "Remove property"]}
-              {:path "inherited_id" :actions ["Add rule" "Exclude inherited property"]}]
+   {:actions [{:path "page_type" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "commerce" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "commerce.order" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "commerce.order.id" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "commerce.order.value" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "debug" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "items" :actions ["Add rule" "Copy to another schema" "Remove property"]}
+              {:path "inherited_id" :actions ["Add rule" "Copy to another schema" "Exclude inherited property"]}]
     :excluded {:absent true :parentUnchanged true}
     :immediate {:absent true
                 :undo true

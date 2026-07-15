@@ -51,6 +51,7 @@
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
+            [acceptance.steps.schema-property-copy :as schema-property-copy]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
@@ -65,7 +66,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat event-occurrence-defect-report/handlers
+  (vec (concat schema-property-copy/handlers
+               event-occurrence-defect-report/handlers
                defect-report-provenance-presentation/handlers
                defect-report-semantic-differences/handlers
                required-property-defect-schema-choices/handlers
