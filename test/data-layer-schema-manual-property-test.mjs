@@ -116,6 +116,14 @@ assert.deepEqual(
   contextualManualPropertyDefinition("/commerce/order", "line_items", "array", "object"),
   { path:"/commerce/order/line_items", type:"array", arrayItemType:"object" },
 );
+for (const childName of ["nested/path", "nested.path", "*"]) {
+  const contextual = contextualManualPropertyDefinition("/commerce", childName, "string");
+  assert.equal(
+    inspectManualProperty(containerDocument, [], contextual).result,
+    "blocked",
+    "a contextual child name must not escape its fixed parent path",
+  );
+}
 
 for (const path of ["products/*/product_id", "products.*.product_id"]) {
   const inspected = inspectManualProperty(containerDocument, [], { path, type:"number" });

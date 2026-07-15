@@ -6,11 +6,25 @@
   ["features/data-layer-schema-container-child-authoring.feature"
    "features/data-layer-schema-container-child-authoring-runtime.feature"])
 
+(def background-steps
+  #{"schema Page view has current revision 3"
+    "its working draft is open in the schema editor"})
+
 (def entry-steps
   #{"the working draft contains object /commerce"
     "the built extension side panel is running with the production Schema Library, schema editor, working drafts, and persistence"})
 
 (defonce ^:private observation (atom nil))
+
+(def ^:private contextual-example-relations
+  [{:keys ["action" "container_path" "parent_path" "child_name" "value_type" "canonical_path"]
+    :rows #{["Add child property" "/commerce" "/commerce" "order" "object" "/commerce/order"]
+            ["Add item property" "/products" "/products/*" "product_id" "number" "/products/*/product_id"]
+            ["Add child property" "/products/*" "/products/*" "product_sku" "string" "/products/*/product_sku"]}}
+   {:keys ["container_path" "child_name" "value_type" "canonical_path"]
+    :rows #{["/commerce" "order" "object" "/commerce/order"]
+            ["/products" "product_id" "number" "/products/*/product_id"]
+            ["/products/*" "product_sku" "string" "/products/*/product_sku"]}}])
 
 (defn- browser-observation! []
   (support/cached-browser-observation!
@@ -31,10 +45,15 @@
        "Full-path object-item authoring changed."
        {:example example :state state})))
   (when-let [canonical-path (support/example-value example "canonical_path")]
-    (support/assert!
-     (contains? (get-in observed [:reload :rows]) (keyword canonical-path))
-     "Contextual child path was not restored from the working draft."
-     {:example example :canonical-path canonical-path :reload (:reload observed)})))
+    (let [value-type (support/require-example example "value_type")]
+      (support/validate-example-relations!
+       contextual-example-relations example
+       "Schema container child example row was outside the specified relationship.")
+      (support/assert!
+       (= (str "Manual · type " value-type)
+          (get-in observed [:reload :rows (keyword canonical-path)]))
+       "Contextual child path and type were not restored from the working draft."
+       {:example example :canonical-path canonical-path :reload (:reload observed)}))))
 
 (defn- assert-observation! [example observed]
   (let [{:keys [initial context duplicate contextual recursive fullPaths conserved]} (:interaction observed)
@@ -89,8 +108,18 @@
     world))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{"schema Page view has current revision 3"})
-   entry-steps
-   :schema-container-child
-   transition))
+  (vec
+   (concat
+    (support/semantic-handlers
+     (filterv #(background-steps (:text %))
+              (support/feature-step-specs feature-files #{}))
+     (fn [world _example _captures _spec] world))
+    (support/stateful-semantic-handlers
+     (support/feature-step-specs feature-files background-steps)
+     entry-steps
+     :schema-container-child
+     transition))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-15T17:03:15.481943503+02:00", :module-hash "43745305", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "342629581"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1804555183"} {:id "def/background-steps", :kind "def", :line 9, :end-line 11, :hash "242332076"} {:id "def/entry-steps", :kind "def", :line 13, :end-line 15, :hash "754066455"} {:id "form/4/defonce", :kind "defonce", :line 17, :end-line 17, :hash "-1819867165"} {:id "def/contextual-example-relations", :kind "def", :line 19, :end-line 27, :hash "1461809842"} {:id "defn-/browser-observation!", :kind "defn-", :line 29, :end-line 35, :hash "1687675505"} {:id "defn-/assert-example!", :kind "defn-", :line 37, :end-line 56, :hash "858060643"} {:id "defn-/assert-observation!", :kind "defn-", :line 58, :end-line 101, :hash "-1404461627"} {:id "defn-/transition", :kind "defn-", :line 103, :end-line 108, :hash "-1663964979"} {:id "def/handlers", :kind "def", :line 110, :end-line 121, :hash "-172274975"}]}
+;; clj-mutate-manifest-end
