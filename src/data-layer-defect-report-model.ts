@@ -4,6 +4,7 @@ export interface DefectIssue {
   id: string;
   severity: DefectSeverity;
   pointer: string;
+  violation?: string;
   constraint: string;
   actual: unknown;
   rule: string;
@@ -137,6 +138,7 @@ export interface GeneratedDefectReport extends DefectReport {
       ruleVersion: number;
       severity: DefectSeverity;
       pointer: string;
+      violation?: string;
       constraint: string;
       actual: unknown;
     }>;

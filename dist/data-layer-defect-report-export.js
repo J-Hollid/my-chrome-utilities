@@ -14,6 +14,7 @@ export function generateReportDetails(report) {
                 ruleVersion: issue.ruleVersion,
                 severity: issue.severity,
                 pointer: issue.pointer,
+                ...(issue.violation ? { violation: issue.violation } : {}),
                 constraint: issue.constraint,
                 actual: cloneValue(issue.actual),
             })),
@@ -115,7 +116,9 @@ function reportSections(report) {
         ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
         ["Differences", [
                 ...report.actual.differences.map(({ pointer }) => `− ${pointer} invalid actual value`),
-                ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `+ ${pointer} corrected expected value`),
+                ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer, operation }) => operation === "remove"
+                    ? `+ ${pointer} was removed from the expected payload`
+                    : `+ ${pointer} corrected expected value`),
             ].join("\n")],
         ["Validation evidence", JSON.stringify(report.evidence, null, 2)],
         ...(report.timeline.length ? [["Supporting timeline", report.timeline.map((entry) => JSON.stringify(entry)).join("\n")]] : []),
@@ -149,7 +152,7 @@ export function renderJiraReport(report) {
     const sections = reportSections(report);
     const differenceHtml = [
         ...report.actual.differences.map(({ pointer }) => `<li style="background-color:#ffd7d7;color:#1f1f1f">− <code>${escapeHtml(pointer)}</code> invalid actual value</li>`),
-        ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer }) => `<li style="background-color:#d9f7d9;color:#1f1f1f">+ <code>${escapeHtml(pointer)}</code> corrected expected value</li>`),
+        ...report.expected.corrections.filter(({ operation }) => operation !== "none").map(({ pointer, operation }) => `<li style="background-color:#d9f7d9;color:#1f1f1f">+ <code>${escapeHtml(pointer)}</code> ${operation === "remove" ? "was removed from the expected payload" : "corrected expected value"}</li>`),
     ].join("");
     const html = sections.map(([heading, content]) => {
         if (heading === "Differences")
