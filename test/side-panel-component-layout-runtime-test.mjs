@@ -43,6 +43,7 @@ let allowedValueExpansionObservation;
 let localRulePromotionObservation;
 let localRulePromotionAvailabilityObservation;
 let liveGuidedConditionalRuleObservation;
+let savedEventFeedFiltersObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -52,6 +53,7 @@ const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINM
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1" ? [320]
   : process.env.CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER === "1" ? [720]
   : process.env.ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER === "1" ? [320]
@@ -1722,6 +1724,64 @@ const liveGuidedConditionalRuleRuntime = `(async () => {
   const published=product();const exported=core.serializeSchemaLibraryExport([published],JSON.parse(localStorage.getItem(ruleKey)));const imported=JSON.parse(exported);localStorage.setItem(schemaKey,JSON.stringify(imported.schemas));localStorage.setItem(ruleKey,JSON.stringify(imported.rules));const reloaded=core.restoreSchemaLibrary(localStorage.getItem(schemaKey))[0];const importedRule=JSON.parse(localStorage.getItem(ruleKey))[0];const revisedRule={...structuredClone(importedRule),version:2,revisionHistory:[structuredClone(importedRule)]};localStorage.setItem(ruleKey,JSON.stringify([revisedRule]));
   const reusablePinned=reloaded.attachedRules.find(({id})=>id===revisedRule.id);const lifecycle={version:reloaded.version,workingDraftAbsent:reloaded.workingDraft===undefined,attachmentIds:reloaded.attachedRules.map(({id})=>id),typedComparison:reloaded.attachedRules[0].conditionGroup.predicates[0].comparison,libraryIds:JSON.parse(localStorage.getItem(ruleKey)).map(({id})=>id),conditionRetained:reloaded.attachedRules.every(({conditionGroup})=>Boolean(conditionGroup)),pinnedVersion:reusablePinned.version,revisedVersion:revisedRule.version,revisedConditionRetained:JSON.stringify(revisedRule.conditionGroup)===JSON.stringify(reusablePinned.conditionGroup)};
   return {requirement,initial,absent,invalidEmpty,invalidPattern,invalidNoPredicates,preview:{allResult,allFalse,anyResult},confirmation,review,local,reusable,cancelled,lifecycle};
+})()`;
+
+const savedEventFeedFiltersSeedRuntime = `(async () => {
+  localStorage.clear();
+  const events=[
+    {id:"event:purchase",name:"purchase",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:01Z",pageUrl:"http://127.0.0.1:4173/checkout",payload:{currency:"EUR"},rawInput:[],validation:"1 issues",type:"observed"},
+    {id:"event:product",name:"product_view",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:02Z",pageUrl:"http://127.0.0.1:4173/products/1",payload:{currency:"EUR"},rawInput:[],validation:"Valid",type:"observed"},
+    {id:"event:page",name:"page_view",sourceId:"adobe",sourceName:"Adobe beacons",sourceKind:"Adobe",timestamp:"2026-07-15T00:00:03Z",pageUrl:"http://127.0.0.1:4173/home",payload:{currency:"GBP"},rawInput:[],validation:"Not checked",type:"observed"},
+  ];
+  localStorage.setItem("dataLayerTestingSession",JSON.stringify({session:{id:"session:saved-filters",status:"active",freshBoundary:true,tabId:1,windowId:1,historyPath:"dataLayer",startUrl:"http://127.0.0.1:4173/",currentUrl:"http://127.0.0.1:4173/",timeline:events}}));
+  const sessions=await import("/data-layer-saved-sessions.js");
+  const completed={id:"session:archive",pageScope:"http://127.0.0.1:4173/",startedAt:"2026-07-14T23:00:00Z",endedAt:"2026-07-14T23:01:00Z",events:events.map((event,index)=>({id:"saved:"+index,sourceId:event.sourceId,sourceName:event.sourceName,name:event.name,payload:event.payload,rawInput:[],pageUrl:event.pageUrl,captureOrder:index+1,captureTime:event.timestamp,validation:event.validation,provenance:{source:"runtime",capturedAt:event.timestamp}})),provenance:{source:"runtime",capturedAt:"2026-07-14T23:01:00Z"}};
+  const library=sessions.saveCompletedSession(sessions.createSavedSessionLibrary(),completed,"Saved checkout feed");
+  localStorage.setItem("my-chrome-utilities.saved-session-library.v1",sessions.serializeSavedSessionLibrary(library));
+  return true;
+})()`;
+
+const savedEventFeedFiltersRuntime = `(async () => {
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(label,root=document)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!value)throw new Error("Missing action "+label);value.click();return value;};
+  const change=(selector,value,event="change")=>{const input=q(selector);input.value=value;input.dispatchEvent(new Event(event,{bubbles:true}));return input;};
+  const root=q("#live-event-query"); const storageKey="my-chrome-utilities.saved-event-feed-filters.v1";
+  const actions=()=>{const value=q("#saved-event-feed-filter-actions");value.open=true;return value;};
+  const add=(field,value)=>{click("Add filter",root);change("#event-feed-query-field",field);change("#event-feed-query-operator","is");change("#event-feed-query-value",value,"input");click("Apply condition",root);};
+  const name=(action,value)=>{click(action,actions());change("#saved-event-feed-filter-name",value,"input");const assistance=q("#saved-event-feed-filter-name-assistance").textContent;click(action==="Rename"?"Rename":"Save",q("#saved-event-feed-filter-name-dialog"));return assistance;};
+  const select=(value)=>change("#saved-event-feed-filter-selector",value);
+  const library=()=>JSON.parse(localStorage.getItem(storageKey));
+  const count=()=>q("#live-event-query-count").textContent;
+  const identity=()=>q("#saved-event-feed-filter-identity").textContent;
+  const feedNames=()=>Array.from(q("#live-event-feed").querySelectorAll("button")).map(({textContent})=>textContent).filter(Boolean);
+  const initial={identity:identity(),saveAbsent:!Array.from(actions().querySelectorAll("button")).some(({textContent})=>textContent==="Save current filter"),withinWidth:root.scrollWidth<=root.clientWidth};
+  add("Event name","purchase");add("Validation state","Issues");name("Save current filter","Checkout issues");
+  const checkout=library().filters[0];
+  const created={identity:identity(),count:count(),stored:checkout,storageKeys:Object.keys(checkout).sort(),eventKeys:Object.keys(checkout).filter((key)=>/event|session|scroll|capture|inspector/i.test(key))};
+  select("");add("Event name","product_view");name("Save current filter","Product events");
+  const product=library().filters.find(({name})=>name==="Product events"); const checkoutStored=JSON.stringify(library().filters.find(({name})=>name==="Checkout issues"));
+  select(checkout.id);const checkoutApplied={identity:identity(),count:count(),conditions:q("#active-event-feed-filters").textContent,feed:feedNames()};
+  add("Pathname","/checkout");select(product.id);const switchOpen=q("#saved-event-feed-filter-switch-dialog").open;click("Cancel",q("#saved-event-feed-filter-switch-dialog"));const cancelled=identity();
+  select(product.id);click("Discard and switch",q("#saved-event-feed-filter-switch-dialog"));const switched={identity:identity(),count:count(),checkoutUnchanged:JSON.stringify(library().filters.find(({name})=>name==="Checkout issues"))===checkoutStored};
+  select(checkout.id);add("Source","Event history");select(product.id);click("Save changes",q("#saved-event-feed-filter-switch-dialog"));const savedSwitch={identity:identity(),updated:library().filters.find(({id})=>id===checkout.id).conditions.length===3};
+  select(checkout.id);add("Pathname","/checkout");click("Revert changes",actions());const reverted={identity:identity(),conditionCount:q("#active-event-feed-filters").querySelectorAll("li").length};
+  const failures=[];const failNextWrite=()=>{const original=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key===storageKey){Storage.prototype.setItem=original;throw new Error("forced");}return original.call(this,key,value);};};
+  const failureSnapshot=(operation,before)=>failures.push({operation,unchanged:localStorage.getItem(storageKey)===before,feedback:q("#saved-event-feed-filter-feedback").textContent,identity:identity(),conditionCount:q("#active-event-feed-filters").querySelectorAll("li").length});
+  add("Source","Event history");let failureBefore=localStorage.getItem(storageKey);failNextWrite();click("Update",actions());failureSnapshot("update",failureBefore);click("Revert changes",actions());
+  failureBefore=localStorage.getItem(storageKey);failNextWrite();name("Rename","Failure rename");failureSnapshot("rename",failureBefore);
+  failureBefore=localStorage.getItem(storageKey);failNextWrite();click("Set as default",actions());failureSnapshot("default",failureBefore);
+  failureBefore=localStorage.getItem(storageKey);failNextWrite();click("Delete",actions());click("Delete",q("#saved-event-feed-filter-delete-dialog"));failureSnapshot("delete",failureBefore);
+  select("");add("Source","Event history");failureBefore=localStorage.getItem(storageKey);failNextWrite();name("Save current filter","Failure create");failureSnapshot("create",failureBefore);select(checkout.id);
+  add("Pathname","/checkout");name("Save as new","Checkout path");const copyId=library().filters.find(({name})=>name==="Checkout path").id;const originalId=library().filters.find(({name})=>name==="Checkout issues").id;
+  name("Rename","Purchase defects");click("Set as default",actions());const renamed={identity:identity(),sameId:library().filters.find(({name})=>name==="Purchase defects").id===copyId,originalUnchanged:originalId===checkout.id,defaultId:library().defaultFilterId};
+  click("Delete",actions());const deleteDialog=q("#saved-event-feed-filter-delete-dialog");const scrollBefore=q("#live-event-list").scrollTop=19;click("Delete",deleteDialog);const deleted={identity:identity(),queryRetained:q("#active-event-feed-filters").querySelectorAll("li").length,defaultRemoved:library().defaultFilterId===undefined,scroll:q("#live-event-list").scrollTop,filterRemoved:!library().filters.some(({id})=>id===copyId)};
+  const duplicate=name("Save current filter"," checkout ISSUES ");click("Cancel",q("#saved-event-feed-filter-name-dialog"));
+  const currentWorking=q("#active-event-feed-filters").textContent;const globalBefore=localStorage.getItem(storageKey);const archiveBefore=localStorage.getItem("my-chrome-utilities.saved-session-library.v1");
+  q("#data-layer-view-sessions").click();const archiveRow=Array.from(q("#saved-session-list").children).find(({textContent})=>textContent.includes("Saved checkout feed"));click("Open in Live feed",archiveRow);select(checkout.id);const savedIdentity=identity();const savedCount=count();q("#return-to-current-live-feed").click();
+  const isolation={savedIdentity,savedCount,currentIdentity:identity(),currentWorkingRestored:q("#active-event-feed-filters").textContent===currentWorking,globalUnchanged:localStorage.getItem(storageKey)===globalBefore,archiveUnchanged:localStorage.getItem("my-chrome-utilities.saved-session-library.v1")===archiveBefore};
+  select(product.id);click("Set as default",actions());click("Start fresh session");click("Discard and start fresh",q("#fresh-session-confirmation"));
+  const fresh={identity:identity(),count:count(),defaultId:library().defaultFilterId,filters:library().filters.map(({name})=>name),working:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-event-feed-filter-working.v1"))};
+  return {initial,created,checkoutApplied,switchOpen,cancelled,switched,savedSwitch,reverted,failures,renamed,deleted,duplicate,isolation,fresh,selectorWidth:q("#saved-event-feed-filter-selector").getBoundingClientRect().width,rootWidth:root.getBoundingClientRect().width};
 })()`;
 
 const conditionalValidationRulesRuntime = `(async () => {
@@ -3707,6 +3767,41 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,savedEventFeedFiltersSeedRuntime);await reloadPanel(socket);
+      savedEventFeedFiltersObservation=await evaluate(socket,savedEventFeedFiltersRuntime);
+      await reloadPanel(socket);
+      savedEventFeedFiltersObservation.reloaded=await evaluate(socket,`(() => ({identity:document.querySelector("#saved-event-feed-filter-identity")?.textContent,count:document.querySelector("#live-event-query-count")?.textContent,activeId:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-event-feed-filter-working.v1"))?.activeFilterId,libraryCount:JSON.parse(localStorage.getItem("my-chrome-utilities.saved-event-feed-filters.v1"))?.filters.length}))()`);
+      assert.deepEqual(savedEventFeedFiltersObservation.initial,{identity:"All events",saveAbsent:true,withinWidth:true});
+      assert.equal(savedEventFeedFiltersObservation.created.identity,"Checkout issues");
+      assert.equal(savedEventFeedFiltersObservation.created.count,"1 of 3 events");
+      assert.deepEqual(savedEventFeedFiltersObservation.created.storageKeys,["conditions","id","match","name","valueMatch","version"]);
+      assert.deepEqual(savedEventFeedFiltersObservation.created.eventKeys,[]);
+      assert.deepEqual(savedEventFeedFiltersObservation.created.stored.conditions.map(({field,operator,values})=>[field,operator,values]),[["Event name","is",["purchase"]],["Validation state","is",["Issues"]]]);
+      assert.equal(savedEventFeedFiltersObservation.checkoutApplied.identity,"Checkout issues");
+      assert.equal(savedEventFeedFiltersObservation.checkoutApplied.count,"1 of 3 events");
+      assert.equal(savedEventFeedFiltersObservation.switchOpen,true);
+      assert.equal(savedEventFeedFiltersObservation.cancelled,"Checkout issues · Modified");
+      assert.deepEqual(savedEventFeedFiltersObservation.switched,{identity:"Product events",count:"1 of 3 events",checkoutUnchanged:true});
+      assert.deepEqual(savedEventFeedFiltersObservation.savedSwitch,{identity:"Product events",updated:true});
+      assert.deepEqual(savedEventFeedFiltersObservation.reverted,{identity:"Checkout issues",conditionCount:3});
+      assert.deepEqual(savedEventFeedFiltersObservation.failures.map(({operation,unchanged,feedback})=>[operation,unchanged,feedback]),[
+        ["update",true,"Updating saved filter failed"],["rename",true,"Renaming saved filter failed"],["default",true,"Setting default failed"],["delete",true,"Deleting saved filter failed"],["create",true,"Saving saved filter failed"],
+      ]);
+      assert.equal(savedEventFeedFiltersObservation.renamed.identity,"Purchase defects");
+      assert.equal(savedEventFeedFiltersObservation.renamed.sameId&&savedEventFeedFiltersObservation.renamed.originalUnchanged,true);
+      assert.equal(savedEventFeedFiltersObservation.deleted.identity,"Custom · Unsaved");
+      assert.equal(savedEventFeedFiltersObservation.deleted.queryRetained,4);
+      assert.equal(savedEventFeedFiltersObservation.deleted.defaultRemoved&&savedEventFeedFiltersObservation.deleted.filterRemoved,true);
+      assert.match(savedEventFeedFiltersObservation.duplicate,/A saved filter with this name exists/);
+      assert.deepEqual(savedEventFeedFiltersObservation.isolation,{savedIdentity:"Checkout issues",savedCount:"1 of 3 events",currentIdentity:"Custom · Unsaved",currentWorkingRestored:true,globalUnchanged:true,archiveUnchanged:true});
+      assert.equal(savedEventFeedFiltersObservation.fresh.identity,"Product events");
+      assert.equal(savedEventFeedFiltersObservation.fresh.count,"0 of 0 events");
+      assert.equal(savedEventFeedFiltersObservation.fresh.working.activeFilterId,savedEventFeedFiltersObservation.fresh.defaultId);
+      assert.deepEqual(savedEventFeedFiltersObservation.reloaded,{identity:"Product events",count:"0 of 0 events",activeId:savedEventFeedFiltersObservation.fresh.defaultId,libraryCount:2});
+      assert.equal(savedEventFeedFiltersObservation.selectorWidth<=savedEventFeedFiltersObservation.rootWidth,true);
+      socket.close();continue;
+    }
     if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
       await evaluate(socket,liveGuidedConditionalRuleSeedRuntime);await reloadPanel(socket);
       liveGuidedConditionalRuleObservation=await evaluate(socket,liveGuidedConditionalRuleRuntime);
@@ -4883,6 +4978,9 @@ try {
   }
   if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveGuidedConditionalRule:liveGuidedConditionalRuleObservation }));
+  }
+  if (process.env.SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ savedEventFeedFilters:savedEventFeedFiltersObservation }));
   }
   if (process.env.LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveValidationVisuals:liveValidationVisualsObservation }));

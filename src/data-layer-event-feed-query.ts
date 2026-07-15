@@ -187,6 +187,9 @@ function ruleMatches(event: QueryableEvent, condition: Extract<EventFeedQueryCon
 }
 
 export function eventMatchesQueryCondition(event: QueryableEvent, condition: EventFeedQueryCondition): boolean {
+  const field = condition.field as EventFeedQueryField;
+  if (!(eventFeedQueryFields() as string[]).includes(field) && !field.startsWith("Payload · ")) return false;
+  if (!(eventFeedQueryOperators(field) as string[]).includes(condition.operator)) return false;
   if (condition.field === "Validation rule") return ruleMatches(event, condition);
   const actualValues = eventValues(event, condition.field);
   const matches = (actual: string, expected: string) => condition.field === "Validation state"
@@ -205,6 +208,10 @@ export function filterEventsByQuery<Event extends QueryableEvent>(events: readon
 
 export function queryConditionSummary(condition: EventFeedQueryCondition): string {
   const values = condition.values.join(" or ");
+  const field = condition.field as EventFeedQueryField;
+  if (!(eventFeedQueryFields() as string[]).includes(field) && !field.startsWith("Payload · ") || !(eventFeedQueryOperators(field) as string[]).includes(condition.operator)) {
+    return `${condition.field} ${condition.operator} ${values} · Needs repair`;
+  }
   return condition.field === "Validation rule"
     ? `Validation rule ${values} ${condition.operator}`
     : `${condition.field} ${condition.operator} ${values}`;

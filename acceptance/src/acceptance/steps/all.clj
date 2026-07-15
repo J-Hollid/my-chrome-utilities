@@ -52,6 +52,7 @@
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
+            [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
             [acceptance.steps.unified-defect-builder :as unified-defect-builder]
@@ -79,6 +80,7 @@
                fresh-live-session/handlers
                lossless-observation-activation/handlers
                recursive-property-validation/handlers
+               saved-event-feed-filters/handlers
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                guided-rule-parameter-integrity/handlers

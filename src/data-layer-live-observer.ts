@@ -56,6 +56,7 @@ export interface LiveObserverState {
   events: readonly LiveEvent[];
   filter?: LiveFilter;
   query?: EventFeedQuery;
+  savedFilterId?: string;
   inspectorEventId?: string;
   listVisible: boolean;
 }
@@ -161,6 +162,7 @@ export function resetLiveObserverForSession(state: LiveObserverState): LiveObser
   const {
     filter: _filter,
     query: _query,
+    savedFilterId: _savedFilterId,
     inspectorEventId: _inspectorEventId,
     ...sessionIndependentState
   } = state;
