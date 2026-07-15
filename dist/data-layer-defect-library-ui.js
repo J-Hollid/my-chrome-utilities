@@ -1,4 +1,5 @@
 import { defectLifecycleAction, } from "./data-layer-defect-library.js";
+import { renderJiraReport } from "./data-layer-defect-report-export.js";
 import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
 export function findDefectLibraryElements(root = document) {
     return {
@@ -90,9 +91,10 @@ function renderDetail(root, defect, actions) {
     const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
     const preview = element("section");
     preview.setAttribute("aria-label", "Final report preview");
-    if (missingEvent)
-        preview.innerHTML = generateMissingEventRepresentations(defect.report).previewHtml;
-    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), ...(missingEvent ? [preview] : []), label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
+    preview.innerHTML = missingEvent
+        ? generateMissingEventRepresentations(defect.report).previewHtml
+        : renderJiraReport(defect.report).html;
+    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), preview, label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
     root.hidden = false;
     title.focus({ preventScroll: true });
 }

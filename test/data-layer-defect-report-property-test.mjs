@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 
 import {
+  actualDifferenceDescription,
   addManualReproductionStep,
   adjustManualReproductionStep,
   applyExpectedResult,
   createDefectReport,
   expectedResultAssistance,
+  expectedDifferenceDescription,
   filterTimelineEvents,
   generatePathnameSkeleton,
   generateReportDetails,
@@ -64,6 +66,72 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(toggleReportIssue(toggleReportIssue(report, issueId), issueId), report);
   assert.deepEqual(event.payload, payload);
 
+  const semanticCases = [
+    ["Undeclared property", "undeclared property is present in the actual payload", true],
+    ["Required value", "required property is missing from the actual payload", false],
+    ["Value is not allowed", "actual value is not allowed", true],
+    ["Type mismatch", "actual value has the wrong type", true],
+    ["Value is not exact", "actual value does not equal the required value", true],
+    [`Custom violation ${iteration}`, `validation failed: Custom violation ${iteration}`, true],
+    [undefined, "validation failed", true],
+  ];
+  const [semanticViolation, semanticDescription, semanticPresent] = semanticCases[iteration % semanticCases.length];
+  const semanticKey = `semantic~${iteration}/value`;
+  const semanticPointer = `/nested/${semanticKey.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+  const semanticPayload = semanticPresent
+    ? { nested:{ retained:`retained-${iteration}`, [semanticKey]:iteration } }
+    : { nested:{ retained:`retained-${iteration}` } };
+  const semanticSnapshot = structuredClone(semanticPayload);
+  const semanticEvent = {
+    ...event,
+    payload:semanticPayload,
+    issues:[
+      {
+        id:`semantic-${iteration}`,
+        severity:"error",
+        pointer:semanticPointer,
+        ...(semanticViolation ? { violation:semanticViolation } : {}),
+        constraint:"generated constraint",
+        actual:semanticPresent ? iteration : undefined,
+        rule:`semantic-rule-${iteration}`,
+        ruleVersion:iteration + 1,
+      },
+      {
+        id:`legacy-${iteration}`,
+        severity:"error",
+        pointer:semanticPointer,
+        constraint:"legacy constraint",
+        actual:semanticPresent ? iteration : undefined,
+        rule:`legacy-rule-${iteration}`,
+        ruleVersion:iteration + 1,
+      },
+    ],
+  };
+  const semanticReport = createDefectReport(semanticEvent);
+  assert.deepEqual(semanticReport.actual.differences.map(({ issueId: differenceIssueId, pointer, actualPresence }) => ({
+    issueId:differenceIssueId, pointer, actualPresence,
+  })), [
+    { issueId:`semantic-${iteration}`, pointer:semanticPointer, actualPresence:semanticPresent ? "present" : "missing" },
+    { issueId:`legacy-${iteration}`, pointer:semanticPointer, actualPresence:semanticPresent ? "present" : "missing" },
+  ], "duplicate pointers must retain distinct issue identities and derived presence");
+  assert.equal(actualDifferenceDescription(semanticReport.actual.differences[0]), semanticDescription);
+  assert.equal(actualDifferenceDescription(semanticReport.actual.differences[1]), "validation failed");
+  assert.deepEqual(["add", "replace", "remove", "none"].map((operation) =>
+    expectedDifferenceDescription({ operation })), [
+    "was added to the expected payload",
+    "was replaced in the expected payload",
+    "was removed from the expected payload",
+    undefined,
+  ]);
+  const semanticRendered = renderJiraReport(generateReportDetails(semanticReport));
+  for (const identity of [`semantic-${iteration}`, `legacy-${iteration}`]) {
+    assert.match(semanticRendered.text, new RegExp(`${identity}.*${semanticPointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.match(semanticRendered.html, new RegExp(`${identity}.*${semanticPointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  }
+  assert.doesNotMatch(semanticRendered.text, /invalid actual value|corrected expected value/);
+  assert.deepEqual(semanticPayload, semanticSnapshot,
+    "semantic difference creation and rendering must not mutate captured payloads");
+
   const undeclaredKey = `extra~${iteration}/value`;
   const undeclaredPointer = `/nested/${undeclaredKey.replaceAll("~", "~0").replaceAll("/", "~1")}`;
   const undeclaredPayload = {
@@ -118,7 +186,7 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   const undeclaredRendered = renderJiraReport(generateReportDetails(undeclaredReport));
   assert.deepEqual(JSON.parse(undeclaredRendered.actualJson), undeclaredSnapshot);
   assert.deepEqual(JSON.parse(undeclaredRendered.expectedJson), undeclaredReport.expected.payload);
-  assert.match(undeclaredRendered.text, new RegExp(`${undeclaredPointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} was removed`));
+  assert.match(undeclaredRendered.text, new RegExp(`${undeclaredPointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*was removed`));
   assert.deepEqual(undeclaredPayload, undeclaredSnapshot,
     "report creation, toggles, overrides, and rendering must not mutate captured payloads");
 
@@ -145,7 +213,7 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   const inlineEvent = {
     ...event,
     payload: { choice: actualAllowed },
-    issues: [{ ...rawAllowedIssue, id: "choice", pointer: "/choice" }],
+    issues: [{ ...rawAllowedIssue, id: "choice", severity:"error", pointer: "/choice" }],
   };
   const inlineReport = createDefectReport(inlineEvent);
   const genericInline = applyExpectedResult(inlineReport, [{
@@ -171,7 +239,10 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(inlineEvent.payload, { choice: actualAllowed });
 
   const replacement = `replacement-${iteration}`;
-  const corrected = applyExpectedResult(report, [{
+  const selectedReport = report.issues.find(({ id }) => id === issueId)?.selected
+    ? report
+    : toggleReportIssue(report, issueId);
+  const corrected = applyExpectedResult(selectedReport, [{
     issueId,
     method: "enter a valid response",
     response: replacement,

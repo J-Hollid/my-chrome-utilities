@@ -196,6 +196,8 @@ const schemaResponses = descendants(root)
   .map(({ value }) => value);
 assert.deepEqual(schemaResponses, ["EUR", "USD"]);
 assert.equal(schemaResponses.includes("GBP"), false);
+issueCheckbox.checked = true;
+issueCheckbox.dispatch("change");
 const currencyAssistance = element(root, ({ attributes }) => attributes.get("aria-label") === "currency expected-result assistance");
 const correctionMethod = element(currencyAssistance, ({ dataset, type }) => dataset.responseSource === "Custom value or response" && type === "radio");
 const correctionResponse = element(currencyAssistance, ({ placeholder }) => placeholder === "Custom value or response");

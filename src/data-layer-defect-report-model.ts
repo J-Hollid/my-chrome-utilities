@@ -30,7 +30,10 @@ export interface DefectCapturedEvent {
 
 export interface ReportIssue extends DefectIssue { selected: boolean }
 export interface ReportDifference {
+  issueId?: string;
   pointer: string;
+  violation?: string;
+  actualPresence?: "present" | "missing";
   marker: "+" | "−";
   treatment: "green" | "red";
   value: unknown;

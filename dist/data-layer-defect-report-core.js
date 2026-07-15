@@ -67,9 +67,22 @@ function responsePresentation(issue, choice) {
         ...(choice.includeAllowedValuesComment && values.length ? { allowedValuesComment: values } : {}),
     };
 }
+function pointerPresent(payload, pointer) {
+    let current = payload;
+    for (const segment of pointerSegments(pointer)) {
+        if (current === null || typeof current !== "object"
+            || !Object.prototype.hasOwnProperty.call(current, segment))
+            return false;
+        current = current[segment];
+    }
+    return true;
+}
 function actualDifferences(payload, issues) {
     return issues.filter(({ selected }) => selected).map((issue) => ({
+        issueId: issue.id,
         pointer: issue.pointer,
+        ...(issue.violation ? { violation: issue.violation } : {}),
+        actualPresence: pointerPresent(payload, issue.pointer) ? "present" : "missing",
         marker: "−",
         treatment: "red",
         value: cloneValue(pointerValue(payload, issue.pointer)),
@@ -109,7 +122,7 @@ export function applyExpectedResult(report, choices) {
     const explanations = [];
     const applicableChoices = choices.filter(({ issueId }) => {
         const issue = report.issues.find(({ id }) => id === issueId);
-        return !issue || !isRequiredPropertyIssue(issue) || issue.selected;
+        return !issue || issue.selected;
     });
     const explicitlyChosen = new Set(applicableChoices.map(({ issueId }) => issueId));
     const effectiveChoices = [

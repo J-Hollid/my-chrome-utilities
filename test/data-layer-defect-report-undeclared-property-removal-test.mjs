@@ -66,7 +66,7 @@ assert.equal(replacement.expected.corrections.filter(({ issueId }) => issueId ==
 const rendered = renderJiraReport(generateReportDetails(report));
 assert.deepEqual(JSON.parse(rendered.actualJson), sourcePayload);
 assert.deepEqual(JSON.parse(rendered.expectedJson), { page_type:"product_detail", commerce:{ currency:"EUR" } });
-assert.match(rendered.text, /\/debug was removed from the expected payload/);
+assert.match(rendered.text, /Expected · debug · remove · \+ \/debug · was removed from the expected payload/);
 assert.match(rendered.html, /\/debug[\s\S]*removed from the expected payload/);
 assert.doesNotMatch(rendered.expectedJson, /debug|null/);
 
