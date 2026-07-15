@@ -14,7 +14,7 @@ function parsePath(path) {
 function propertyAt(document, segments) {
     let property = document;
     for (const segment of segments)
-        property = property?.properties?.[segment];
+        property = segment === "*" ? property?.items : property?.properties?.[segment];
     return property;
 }
 function inheritedPropertyAt(documents, segments) {
@@ -32,15 +32,16 @@ export function inspectManualProperty(document, inheritedDocuments, definition) 
         const local = propertyAt(document, prefix);
         const inherited = inheritedPropertyAt(inheritedDocuments, prefix);
         const existing = local ?? inherited;
-        if (existing && existing.type !== "object") {
+        const traversesArrayItems = existing?.type === "array" && parsed.segments[index + 1] === "*";
+        if (existing && existing.type !== "object" && !traversesArrayItems) {
             return { result: "blocked", normalizedPath: parsed.normalizedPath, missingObjectPath, assistance: `${prefix.join(".")} cannot contain child properties` };
         }
-        if (!local)
+        if (!local && parsed.segments[index] !== "*")
             missingObjectPath.push(parsed.segments[index]);
     }
     const local = propertyAt(document, parsed.segments);
     if (local) {
-        const existingPath = parsed.segments.join(".");
+        const existingPath = parsed.segments.includes("*") ? parsed.normalizedPath : parsed.segments.join(".");
         return { result: "blocked", normalizedPath: parsed.normalizedPath, missingObjectPath, assistance: `Go to existing property ${existingPath}`, existingPath };
     }
     if (inheritedPropertyAt(inheritedDocuments, parsed.segments)) {
@@ -63,11 +64,33 @@ function addAtPath(document, segments, definition) {
     const [name, ...rest] = segments;
     if (!name)
         return structuredClone(document);
+    if (name === "*") {
+        const item = document.items ?? { type: "object", propertyOrigin: "manual" };
+        return { ...structuredClone(document), items: rest.length ? addAtPath(item, rest, definition) : manualLeaf(definition) };
+    }
     const properties = document.properties ?? {};
     if (!rest.length)
         return { ...structuredClone(document), type: document.type ?? "object", properties: { ...structuredClone(properties), [name]: manualLeaf(definition) } };
     const child = properties[name] ?? { type: "object", propertyOrigin: "manual" };
     return { ...structuredClone(document), type: document.type ?? "object", properties: { ...structuredClone(properties), [name]: addAtPath(child, rest, definition) } };
+}
+export function manualPropertyContainerAction(document, path) {
+    const parsed = parsePath(path);
+    const container = propertyAt(document, parsed.segments);
+    if (container?.type === "object")
+        return { label: "Add child property", parentPath: parsed.normalizedPath };
+    if (container?.type === "array" && container.items?.type === "object") {
+        return { label: "Add item property", parentPath: `${parsed.normalizedPath}/*` };
+    }
+    return undefined;
+}
+export function contextualManualPropertyDefinition(parentPath, childName, type, arrayItemType) {
+    const parent = parsePath(parentPath).normalizedPath;
+    return {
+        path: `${parent}/${childName.trim()}`,
+        type,
+        ...(type === "array" && arrayItemType ? { arrayItemType } : {}),
+    };
 }
 export function addManualProperty(document, inheritedDocuments, definition) {
     const inspection = inspectManualProperty(document, inheritedDocuments, definition);

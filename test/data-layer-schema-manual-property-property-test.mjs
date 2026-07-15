@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 
 import {
   addManualProperty,
+  contextualManualPropertyDefinition,
   inspectManualProperty,
+  manualPropertyContainerAction,
   manualPropertyPreview,
 } from "../dist/data-layer-schema-manual-property.js";
 
@@ -16,7 +18,10 @@ function nextToken() {
 }
 
 function propertyAt(document, segments) {
-  return segments.reduce((property, segment) => property?.properties?.[segment], document);
+  return segments.reduce(
+    (property, segment) => segment === "*" ? property?.items : property?.properties?.[segment],
+    document,
+  );
 }
 
 for (let sample = 0; sample < 200; sample += 1) {
@@ -85,4 +90,64 @@ for (let sample = 0; sample < 200; sample += 1) {
     /is defined by the parent schema/,
     "the domain write must reject every inherited collision reported by inspection",
   );
+
+  const itemChild = `item_${nextToken()}`;
+  const container = {
+    type:"object",
+    title:`Container ${sample}`,
+    properties:{
+      products:{
+        type:"array",
+        minItems:sample % 4,
+        items:{
+          type:"object",
+          additionalProperties:false,
+          required:["stable"],
+          properties:{ stable:{ type:"string", description:`Stable item ${sample}` } },
+        },
+      },
+      metadata:{ type:"object", minProperties:1, properties:{} },
+      tags:{ type:"array", items:{ type:"string" } },
+    },
+  };
+  const containerSnapshot = structuredClone(container);
+  assert.deepEqual(manualPropertyContainerAction(container, "/products"), {
+    label:"Add item property",
+    parentPath:"/products/*",
+  });
+  assert.deepEqual(manualPropertyContainerAction(container, "/products/*"), {
+    label:"Add child property",
+    parentPath:"/products/*",
+  });
+  assert.deepEqual(manualPropertyContainerAction(container, "/metadata"), {
+    label:"Add child property",
+    parentPath:"/metadata",
+  });
+  assert.equal(manualPropertyContainerAction(container, "/tags"), undefined,
+    "scalar-item arrays must never offer contextual item authoring");
+
+  const contextual = contextualManualPropertyDefinition(
+    "/products/*",
+    `  ${itemChild}  `,
+    type,
+    arrayItemType,
+  );
+  assert.deepEqual(contextual, {
+    path:`/products/*/${itemChild}`,
+    type,
+    ...(type === "array" ? { arrayItemType } : {}),
+  }, "contextual definitions must derive one canonical child path from fixed parent context");
+  assert.equal(inspectManualProperty(container, [], contextual).result, "ready");
+  const contextAdded = addManualProperty(container, [], contextual);
+  const contextLeaf = propertyAt(contextAdded, ["products", "*", itemChild]);
+  assert.equal(contextLeaf.type, type);
+  assert.equal(contextLeaf.propertyOrigin, "manual");
+  assert.deepEqual(contextAdded.properties.products.items.properties.stable,
+    container.properties.products.items.properties.stable,
+    "item authoring must conserve existing sibling definitions");
+  assert.equal(contextAdded.properties.products.minItems, container.properties.products.minItems);
+  assert.equal(contextAdded.properties.products.items.additionalProperties, false);
+  assert.deepEqual(contextAdded.properties.products.items.required, ["stable"]);
+  assert.deepEqual(container, containerSnapshot,
+    "contextual child authoring must not mutate the source container document");
 }

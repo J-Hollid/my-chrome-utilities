@@ -23,6 +23,7 @@ let schemaPropertyRulePickerObservation;
 let schemaRulePropertyIdentityObservation;
 let canonicalDeclaredPropertyValidationObservation;
 let schemaManualPropertyObservation;
+let schemaContainerChildObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
@@ -2750,6 +2751,108 @@ const schemaManualPropertyReloadRuntime = `(() => {
   return { present:true, metadata:row.querySelector(".schema-property-metadata").textContent, activeCount:row.querySelector("span:not(.schema-property-metadata)").textContent, currentVersion:stored.version, currentUnchanged:!stored.document.properties?.commerce };
 })()`;
 
+const schemaContainerChildRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const row = (path) => q('#schema-property-tree [data-schema-property-canonical-path="' + path + '"]');
+  const action = (path, label) => { const button = row(path).querySelector('button[aria-label="' + label + ' on ' + path + '"]'); if (!button) throw new Error("Missing " + label + " on " + path); return button; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const set = (selector, value, eventName = "input") => { const element = q(selector); element.value = value; element.dispatchEvent(new Event(eventName, { bubbles:true })); };
+  const addContextual = (path, label, name, type, itemType = "") => {
+    action(path, label).click(); set("#schema-manual-property-child-name", name); set("#schema-manual-property-type", type, "change");
+    if (type === "array") set("#schema-manual-array-item-type", itemType, "change");
+    click(q("#schema-manual-property-dialog"), "Add property");
+  };
+  const stored = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Page view");
+  q("#data-layer-view-schemas").click();
+  const libraryRow = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(libraryRow, "Edit working draft");
+  const initial = {
+    commerce:action("/commerce", "Add child property").textContent,
+    products:action("/products", "Add item property").textContent,
+    item:action("/products/*", "Add child property").textContent,
+    leaf:!row("/products/*/product_name").querySelector(".schema-property-add-child"),
+    tags:!row("/tags").querySelector(".schema-property-add-child"),
+    root:q("#add-schema-property").textContent,
+  };
+  const productTrigger = action("/products", "Add item property"); productTrigger.click();
+  const dialog = q("#schema-manual-property-dialog");
+  const context = {
+    open:dialog.open,
+    focused:document.activeElement === q("#schema-manual-property-child-name"),
+    parent:q("#schema-manual-property-parent-context").textContent,
+    noEditablePath:q("#schema-manual-property-path").hidden,
+  };
+  const duplicateBefore = localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  set("#schema-manual-property-child-name", "product_name");
+  const duplicate = {
+    blocked:dialog.querySelector('button[type="submit"]').disabled,
+    assistance:q("#schema-manual-property-assistance").textContent,
+    recovery:click(dialog, "Go to existing property /products/*/product_name").textContent,
+    unchanged:duplicateBefore === localStorage.getItem("my-chrome-utilities.schema-library.v1"),
+  };
+  action("/products", "Add item property").click(); set("#schema-manual-property-child-name", "product_name");
+  const cancelTrigger = action("/products", "Add item property");
+  click(dialog, "Cancel"); duplicate.cancelFocus = document.activeElement === cancelTrigger;
+  const publishedBefore = JSON.stringify(stored().document);
+  addContextual("/products", "Add item property", "product_id", "number");
+  const afterProduct = stored();
+  const productNameBefore = JSON.stringify(afterProduct.workingDraft.document.properties.products.items.properties.product_name);
+  const productConstraintsBefore = JSON.stringify({ array:afterProduct.workingDraft.document.properties.products.minimum, item:afterProduct.workingDraft.document.properties.products.items.additionalProperties, required:afterProduct.workingDraft.document.properties.products.items.required });
+  const contextual = {
+    stored:afterProduct.workingDraft.document.properties.products.items.properties.product_id,
+    selected:row("/products/*/product_id").getAttribute("aria-current") === "true",
+    publishedUnchanged:JSON.stringify(afterProduct.document) === publishedBefore,
+  };
+  addContextual("/commerce", "Add child property", "order", "object");
+  addContextual("/commerce/order", "Add child property", "line_items", "array", "object");
+  const recursiveAction = action("/commerce/order/line_items", "Add item property").textContent;
+  addContextual("/commerce/order/line_items", "Add item property", "sku", "string");
+  addContextual("/products/*", "Add child property", "product_sku", "string");
+  const recursive = {
+    orderType:stored().workingDraft.document.properties.commerce.properties.order.type,
+    array:stored().workingDraft.document.properties.commerce.properties.order.properties.line_items,
+    sku:stored().workingDraft.document.properties.commerce.properties.order.properties.line_items.items.properties.sku,
+    recursiveAction,
+  };
+  const removeProductId = () => click(row("/products/*/product_id"), "Remove property");
+  removeProductId();
+  const fullPaths = {};
+  for (const entered of ["products/*/product_id", "products.*.product_id"]) {
+    q("#add-schema-property").click(); set("#schema-manual-property-path", entered); set("#schema-manual-property-type", "number", "change");
+    fullPaths[entered] = {
+      assistance:q("#schema-manual-property-assistance").textContent,
+      preview:q("#schema-manual-property-preview").textContent,
+      canAdd:!dialog.querySelector('button[type="submit"]').disabled,
+    };
+    click(dialog, "Add property");
+    fullPaths[entered].siblings = Boolean(stored().workingDraft.document.properties.products.items.properties.product_name && stored().workingDraft.document.properties.products.items.properties.product_id);
+    if (entered.includes("/")) removeProductId();
+  }
+  const after = stored();
+  const conserved = {
+    productName:JSON.stringify(after.workingDraft.document.properties.products.items.properties.product_name) === productNameBefore,
+    productConstraints:JSON.stringify({ array:after.workingDraft.document.properties.products.minimum, item:after.workingDraft.document.properties.products.items.additionalProperties, required:after.workingDraft.document.properties.products.items.required }) === productConstraintsBefore,
+    rule:(after.workingDraft.attachedRules ?? []).some(({ id, propertyPath }) => id === "product-name-rule" && propertyPath === "/products/*/product_name"),
+    documentation:after.workingDraft.documentation?.properties?.["/products/*/product_name"]?.description,
+    currentVersion:after.version,
+    publishedUnchanged:JSON.stringify(after.document) === publishedBefore,
+  };
+  return { initial, context, duplicate, contextual, recursive, fullPaths, conserved };
+})()`;
+
+const schemaContainerChildReloadRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  q("#data-layer-view-schemas").click();
+  const libraryRow = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view"));
+  Array.from(libraryRow.querySelectorAll("button")).find(({ textContent }) => textContent === "Edit working draft").click();
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ name }) => name === "Page view");
+  const paths = ["/commerce/order", "/commerce/order/line_items/*/sku", "/products/*/product_id", "/products/*/product_name", "/products/*/product_sku"];
+  const rows = Object.fromEntries(paths.map((path) => {
+    const row = q('[data-schema-property-canonical-path="' + path + '"]');
+    return [path, row.querySelector(".schema-property-metadata").textContent];
+  }));
+  return { rows, version:stored.version, publishedProductId:Boolean(stored.document.properties.products.items.properties.product_id) };
+})()`;
+
 const schemaNestedPathRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -4810,6 +4913,24 @@ try {
         await reloadPanel(socket);
         const reload = await evaluate(socket, schemaManualPropertyReloadRuntime);
         schemaManualPropertyObservation = { interaction, reload };
+        await evaluate(socket, `(() => {
+          const document = { type:"object", required:["products", "tags"], properties:{
+            commerce:{ type:"object", minimum:1, properties:{} },
+            products:{ type:"array", minimum:1, items:{ type:"object", additionalProperties:false, required:["product_name"], properties:{ product_name:{ type:"string", propertyOrigin:"manual", minimum:2 } } } },
+            tags:{ type:"array", items:{ type:"string" } }
+          } };
+          const documentation = { properties:{ "/products/*/product_name":{ displayName:"Product name", description:"Existing product documentation" } } };
+          const attachedRules = [{ id:"product-name-rule", version:2, propertyPath:"/products/*/product_name", operator:"non-empty-string", enabled:true }];
+          const current = { id:"schema-page-view", name:"Page view", version:3, published:true, document, documentation, assignments:[], attachedRules, workingDraft:{ baseVersion:3, sourceVersion:3, document, documentation, assignments:[], attachedRules, pendingChanges:[] } };
+          localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([current]));
+          localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", "[]");
+          return true;
+        })()`);
+        await reloadPanel(socket);
+        const containerInteraction = await evaluate(socket, schemaContainerChildRuntime);
+        await reloadPanel(socket);
+        const containerReload = await evaluate(socket, schemaContainerChildReloadRuntime);
+        schemaContainerChildObservation = { interaction:containerInteraction, reload:containerReload };
       }
       if (process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1") {
         await evaluate(socket, `(() => {
@@ -5579,7 +5700,7 @@ try {
     console.log(JSON.stringify({ canonicalDeclaredPropertyValidation:canonicalDeclaredPropertyValidationObservation }));
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
-    console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation }));
+    console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation, schemaContainerChild:schemaContainerChildObservation }));
   }
   if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
