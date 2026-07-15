@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=8fbbbc550c87fd2eabe085cae529416e93467ffba97d6ef4a6ace202ae1aeb3d
+# mutation-stamp: sha256=87e4dba0175ec669ee30447a6ad5e7b875f3fee618404ca67fe7645a76b058cd
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-14T22:02:29.711201977Z","feature_name":"Data layer missing-event expected payload hardening runtime","feature_path":"features/data-layer-missing-event-expected-payload-hardening-runtime.feature","background_hash":"74f7a83d64ea4348d2c47376e3b2884d455b3dfab52b66d9b21edced3c27f028","implementation_hash":"unknown","scenarios":[{"index":3,"name":"Data layer missing-event expected payload hardening runtime 004","scenario_hash":"7a3e98a026596e595835864c8b3a56a4b133a66896d15923c57ff8a0e2fa599e","mutation_count":28,"result":{"Total":28,"Killed":28,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:02:29.711201977Z"}]}
+# {"version":1,"tested_at":"2026-07-15T13:22:02.042135578Z","feature_name":"Data layer missing-event expected payload hardening runtime","feature_path":"features/data-layer-missing-event-expected-payload-hardening-runtime.feature","background_hash":"74f7a83d64ea4348d2c47376e3b2884d455b3dfab52b66d9b21edced3c27f028","implementation_hash":"sha256:116f8879a4b7215755733c48f9359274d2fe4f66fd94a58a698b6d3a30a6dff8","scenarios":[{"index":3,"name":"Data layer missing-event expected payload hardening runtime 004","scenario_hash":"7a3e98a026596e595835864c8b3a56a4b133a66896d15923c57ff8a0e2fa599e","mutation_count":28,"result":{"Total":28,"Killed":28,"Survived":0,"Errors":0},"tested_at":"2026-07-14T22:02:29.711201977Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer missing-event expected payload hardening runtime

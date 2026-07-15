@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=6b46a66fe491c3a94a1165015adae97f5598d55e7e4938a4b42cde2a2eb52331
+# mutation-stamp: sha256=8ad0970951784921a58623e8d982f72185b563945e23b9b93b9614e8a6cbb831
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-15T01:32:04.616968115Z","feature_name":"Data layer defect report undeclared property removal runtime","feature_path":"features/data-layer-defect-report-undeclared-property-removal-runtime.feature","background_hash":"f97c847edecf3d580ab404b6e26c3e38b2cd20dfc89a79a2eb25b2d19644db8e","implementation_hash":"sha256:71d34b28559c8942f57144f10832310dc51302cf71bde17c8696cc7d1fcdb612","scenarios":[{"index":2,"name":"Data layer defect report undeclared property removal runtime 003","scenario_hash":"96cbd6b39c9f1d9b6da0c54c07059db76a46c8d16b8bda6dc16800c676a48f3b","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:32:04.616968115Z"}]}
+# {"version":1,"tested_at":"2026-07-15T13:22:01.814664758Z","feature_name":"Data layer defect report undeclared property removal runtime","feature_path":"features/data-layer-defect-report-undeclared-property-removal-runtime.feature","background_hash":"f97c847edecf3d580ab404b6e26c3e38b2cd20dfc89a79a2eb25b2d19644db8e","implementation_hash":"sha256:3e9356e02f94a339e7b460f7df4b60ed90bb0aca881acaf3fdcd22aa5653dd60","scenarios":[{"index":2,"name":"Data layer defect report undeclared property removal runtime 003","scenario_hash":"96cbd6b39c9f1d9b6da0c54c07059db76a46c8d16b8bda6dc16800c676a48f3b","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:32:04.616968115Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer defect report undeclared property removal runtime

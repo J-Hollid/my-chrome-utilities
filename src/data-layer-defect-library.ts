@@ -356,10 +356,6 @@ export function updateDefectStatus(
   };
 }
 
-export function defectLifecycleAction(defect: ReportedDefect): "Resolve" | "Reopen" | "none" {
-  return defect.status === "Reported" ? "Resolve" : defect.status === "Resolved" ? "Reopen" : "none";
-}
-
 export function serializeDefectLibrary(library: DefectLibrary): string {
   return JSON.stringify({ defects:library.defects });
 }
