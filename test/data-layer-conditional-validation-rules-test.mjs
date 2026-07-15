@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   comparisonValueFromInput,
   conditionGroupApplies,
+  conditionGroupAppliesToConsequence,
   conditionalRuleSummary,
   evaluateConditionalRule,
   evaluateConditionPredicate,
@@ -10,6 +11,7 @@ import {
   typedComparisonValue,
   validateConditionalRule,
 } from "../dist/data-layer-conditional-validation-rules.js";
+import { validateWithSchema } from "../dist/data-layer-schema-verification.js";
 
 assert.deepEqual(comparisonValueFromInput(" 42 ", "number"), typedComparisonValue(42));
 assert.deepEqual(comparisonValueFromInput("false", "boolean"), typedComparisonValue(false));
@@ -95,3 +97,62 @@ for (const [groupOperator, payload, expected] of [
 ]) {
   assert.deepEqual(evaluateConditionalRule(payload, { conditionGroup:{ operator:groupOperator, predicates:[productDetail, currencyEuro] }, consequence }, () => true), expected);
 }
+
+const correlatedRule = {
+  id:"local:product-duration",
+  name:"Duration when monthly price exists",
+  version:1,
+  propertyPath:"/products/*/duration",
+  operator:"required",
+  conditionGroup:{ operator:"All", predicates:[{ propertyPath:"/products/*/price_monthly", operator:"Exists", detectedType:"number" }] },
+};
+const correlatedSchema = {
+  id:"schema:products",
+  name:"Products",
+  version:1,
+  document:{ type:"object", properties:{ products:{ type:"array", items:{ type:"object", properties:{ price_monthly:{ type:"number" }, duration:{ type:"number" } } } } } },
+  assignments:[],
+  attachedRules:[correlatedRule],
+};
+for (const [product, state, issueCount] of [
+  [{ price_monthly:29, duration:12 }, "pass", 0],
+  [{ price_monthly:null }, "error", 1],
+  [{}, "not-applicable", 0],
+  [{ duration:12 }, "not-applicable", 0],
+]) {
+  const result = validateWithSchema({ sourceId:"history", eventName:"product_view", payload:{ products:[product] }, rawInput:[] }, correlatedSchema, []);
+  assert.equal(result.evaluations[0].status, state);
+  const durationIssues = result.issues.filter(({ instancePath }) => instancePath === "/products/0/duration");
+  assert.equal(durationIssues.length, issueCount);
+  if (issueCount) {
+    assert.equal(durationIssues[0].templatePath, "/products/*/duration");
+    assert.match(durationIssues[0].conditionSummary, /price_monthly exists/);
+  }
+}
+
+const mixed = validateWithSchema({
+  sourceId:"history",
+  eventName:"product_view",
+  payload:{ products:[{ price_monthly:29 }, {}, { duration:12 }, { price_monthly:49, duration:12 }] },
+  rawInput:[],
+}, correlatedSchema, []);
+assert.deepEqual(mixed.evaluations.map(({ propertyPath, status }) => [propertyPath, status]), [
+  ["/products/0/duration", "error"],
+  ["/products/1/duration", "not-applicable"],
+  ["/products/2/duration", "not-applicable"],
+  ["/products/3/duration", "pass"],
+]);
+assert.deepEqual(mixed.issues.map(({ instancePath }) => instancePath), ["/products/0/duration"]);
+
+assert.equal(conditionGroupAppliesToConsequence(
+  { products:[{ "a/b":true, "tilde~name":true }] },
+  {
+    operator:"All",
+    predicates:[
+      { propertyPath:"/products/*/a~1b", operator:"Exists" },
+      { propertyPath:"/products/*/tilde~0name", operator:"Exists" },
+    ],
+  },
+  "/products/*/duration",
+  "/products/0/duration",
+), true, "correlated paths must preserve escaped JSON Pointer property segments");

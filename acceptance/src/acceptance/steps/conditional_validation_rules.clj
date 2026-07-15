@@ -23,7 +23,7 @@
   (support/assert! condition message data))
 
 (defn validate-browser-observation! [observation]
-  (let [{:keys [editor stored evaluations groups presentation lifecycle]} observation]
+  (let [{:keys [editor stored evaluations groups presentation lifecycle correlated]} observation]
     (require! (= ["Apply only when" "/page_type" "Equals" "product_detail" 1]
                  [(:applyOnlyWhen editor) (:property editor) (:operator editor)
                   (:initializedValue editor) (:oneConsequence editor)])
@@ -53,6 +53,29 @@
                    (= [1 2 true] [(:pinnedVersion lifecycle) (:revisedVersion lifecycle) (:revisedPreserved lifecycle)]))
               "Conditional rule persistence lost atomic data or reusable version pinning."
               lifecycle)
+    (require! (= [["number 29" "number 12" "Passed" 0]
+                  ["null" "missing" "Failed" 1]
+                  ["missing" "missing" "Not applicable" 0]
+                  ["missing" "number 12" "Not applicable" 0]]
+                 (mapv (juxt :priceMonthlyState :durationState :result :issues) (:cases correlated)))
+              "Wildcard condition examples were not evaluated within their own products item."
+              correlated)
+    (require! (= [["/products/0/duration" "error"]
+                  ["/products/1/duration" "not-applicable"]
+                  ["/products/2/duration" "not-applicable"]
+                  ["/products/3/duration" "pass"]]
+                 (:mixed correlated))
+              "Mixed products borrowed a wildcard condition match from another item."
+              correlated)
+    (require! (and (= {:predicate "/products/*/price_monthly"
+                       :consequence "/products/*/duration"
+                       :issue "/products/0/duration"}
+                      (:persisted correlated))
+                   (= "/products/*/duration" (get-in correlated [:issues 0 :templatePath]))
+                   (some (fn [[path text]] (and (= path "/products/1/duration") (re-find #"not applicable" text))) (:rendered correlated))
+                   (some (fn [[path text]] (and (= path "/products/3/duration") (re-find #"passed" text))) (:rendered correlated)))
+              "Wildcard templates, reload, or rendered per-item details were not retained."
+              correlated)
     observation))
 
 (defn- example-value [example key]
@@ -81,7 +104,13 @@
       (assert-example! (expected example) (observed row) key example))))
 
 (def example-validators
-  [["products_value"
+  [["price_monthly_state"
+    {:rows (comp :cases :correlated)
+     :comparisons [["price_monthly_state" :priceMonthlyState]
+                   ["duration_state" :durationState]]
+     :assertions [["item_result" (expected-value "item_result") :result]
+                  ["issue_count" (expected-value "issue_count") (comp str :issues)]]}]
+   ["products_value"
     {:rows :evaluations
      :comparisons [["page_type_value" :page_type]
                    ["products_value" :products]]
@@ -129,5 +158,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T19:46:53.198322473+02:00", :module-hash "-996922945", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1393853260"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2067815109"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-2040109592"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 20, :hash "1279255030"} {:id "defn-/require!", :kind "defn-", :line 22, :end-line 23, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 25, :end-line 56, :hash "-639609645"} {:id "defn-/example-value", :kind "defn-", :line 58, :end-line 59, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 61, :end-line 64, :hash "1583223720"} {:id "defn-/matching-row", :kind "defn-", :line 66, :end-line 73, :hash "1214301808"} {:id "defn-/expected-value", :kind "defn-", :line 75, :end-line 76, :hash "-1174460561"} {:id "defn-/validate-row-example!", :kind "defn-", :line 78, :end-line 81, :hash "565976123"} {:id "def/example-validators", :kind "def", :line 83, :end-line 113, :hash "-806894585"} {:id "defn/validate-example!", :kind "defn", :line 115, :end-line 117, :hash "1286172312"} {:id "defn-/transition", :kind "defn-", :line 119, :end-line 122, :hash "454780542"} {:id "def/handlers", :kind "def", :line 124, :end-line 129, :hash "1225550685"}]}
+;; {:version 1, :tested-at "2026-07-15T16:30:19.450322971+02:00", :module-hash "1353116451", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1393853260"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2067815109"} {:id "def/entry-step-texts", :kind "def", :line 8, :end-line 10, :hash "-2040109592"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1618529344"} {:id "defn/browser-observation!", :kind "defn", :line 14, :end-line 20, :hash "1279255030"} {:id "defn-/require!", :kind "defn-", :line 22, :end-line 23, :hash "-2090315788"} {:id "defn/validate-browser-observation!", :kind "defn", :line 25, :end-line 79, :hash "464057563"} {:id "defn-/example-value", :kind "defn-", :line 81, :end-line 82, :hash "369719940"} {:id "defn-/assert-example!", :kind "defn-", :line 84, :end-line 87, :hash "1583223720"} {:id "defn-/matching-row", :kind "defn-", :line 89, :end-line 96, :hash "1214301808"} {:id "defn-/expected-value", :kind "defn-", :line 98, :end-line 99, :hash "-1174460561"} {:id "defn-/validate-row-example!", :kind "defn-", :line 101, :end-line 104, :hash "565976123"} {:id "def/example-validators", :kind "def", :line 106, :end-line 142, :hash "1137838356"} {:id "defn/validate-example!", :kind "defn", :line 144, :end-line 146, :hash "1286172312"} {:id "defn-/transition", :kind "defn-", :line 148, :end-line 151, :hash "454780542"} {:id "def/handlers", :kind "def", :line 153, :end-line 158, :hash "1225550685"}]}
 ;; clj-mutate-manifest-end

@@ -5,6 +5,7 @@ import { urlConditionsMatch, type PathCondition } from "./data-layer-path-condit
 import { canonicalNestedPath, resolveNestedValues, type NestedValueMatch } from "./data-layer-schema-nested-path.js";
 import type { ValidationEvaluation } from "./data-layer-validation-model.js";
 import {
+  conditionGroupAppliesToConsequence,
   conditionGroupAppliesToValue,
   conditionalRuleSummary,
   type ConditionalRuleConditionGroup,
@@ -499,10 +500,10 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
   for (const storedRule of rules) {
     const rule = effectiveAttachedRule(storedRule, schema.document);
     if (rule.enabled === false) continue;
-    if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) continue;
     if (rule.propertyPath?.startsWith("/")) {
       const definition = schemaDefinitionAtPath(normalizedDocument, rule.propertyPath);
       for (const match of resolveNestedValues(value, rule.propertyPath)) {
+        if (rule.conditionGroup && !conditionGroupAppliesToConsequence(value, rule.conditionGroup, match.templatePath, match.concretePath)) continue;
         const failure = nestedRuleFailure(rule, match);
         const declaredTypeMismatch = match.exists
           && definition?.type !== undefined && valueType(match.value) !== definition.type;
@@ -519,6 +520,7 @@ function attachedRuleIssues(value: unknown, schema: SchemaDefinition, result: Va
       }
       continue;
     }
+    if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) continue;
     const record = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
     if (rule.operator === "required") for (const property of rule.parameters?.split(",").map((item) => item.trim()).filter(Boolean) ?? []) if (!record || !(property in record)) result.push(issueFromAttachedRule(rule, schema, { instancePath:`/${property}`, message:"Required value", expected:"value", actual:"missing" }));
     const [property, constraint] = rule.parameters?.split(":", 2) ?? [];
@@ -559,7 +561,7 @@ function valueChoiceEvaluationEvidence(rule: AttachedSchemaRule, schema: SchemaD
 function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules: readonly AttachedSchemaRule[]): ValidationEvaluation[] {
   return rules.filter(({ enabled }) => enabled !== false).flatMap<ValidationEvaluation>((storedRule): ValidationEvaluation[] => {
     const rule = effectiveAttachedRule(storedRule, schema.document);
-    if (rule.conditionGroup && !conditionGroupAppliesToValue(value, rule.conditionGroup)) {
+    if (rule.conditionGroup && !rule.propertyPath?.startsWith("/") && !conditionGroupAppliesToValue(value, rule.conditionGroup)) {
       const summary = rule.propertyPath && rule.operator
         ? conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath, operator:rule.operator, ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } })
         : "Conditional rule";
@@ -580,6 +582,22 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
     }
     if (rule.propertyPath?.startsWith("/")) {
       return resolveNestedValues(value, rule.propertyPath).map((match): ValidationEvaluation => {
+        if (rule.conditionGroup && !conditionGroupAppliesToConsequence(value, rule.conditionGroup, match.templatePath, match.concretePath)) {
+          const summary = conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath!, operator:rule.operator ?? "required", ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } });
+          return {
+            propertyPath:match.concretePath,
+            status:"not-applicable",
+            message:`Not applicable: ${summary}`,
+            expected:summary,
+            actual:"condition not satisfied",
+            rule:rule.name ?? rule.id,
+            ruleVersion:rule.version,
+            severity:rule.severity ?? "error",
+            schemaName:schema.name,
+            schemaVersion:schema.version,
+            notApplicableReason:"condition-not-satisfied",
+          };
+        }
         const failure = nestedRuleFailure(rule, match);
         const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
         if (!match.exists && operator !== "required") return {
