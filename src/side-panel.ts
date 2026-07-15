@@ -2082,7 +2082,12 @@ function renderSchemaDraft(): void {
       ...schemas.filter(({ id }) => id !== draft.id),
       draftSchema,
     ]);
-    const exampleType = schemaPropertyExampleInputType({ document:draft.document }, persistedPath, localDocumentation?.example?.value ?? propertyDocumentation?.example?.value ?? allowedExamples[0]);
+    const exampleType = schemaPropertyExampleInputType(
+      draftSchema,
+      persistedPath,
+      localDocumentation?.example?.value ?? propertyDocumentation?.example?.value ?? allowedExamples[0],
+      [...schemas.filter(({ id }) => id !== draft.id), draftSchema],
+    );
     let exampleDraft: SchemaPropertyExample | undefined = structuredClone(localDocumentation?.example ?? propertyDocumentation?.example);
     let customInitialized = exampleDraft?.selectionMethod === "custom";
     const exampleAssistance = document.createElement("output"); exampleAssistance.className = "schema-property-example-assistance"; exampleAssistance.setAttribute("aria-live", "polite");
