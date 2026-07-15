@@ -1,6 +1,8 @@
 (ns acceptance.steps.defect-report
-  (:require [acceptance.steps.defect-report-timeline-assertions :as timeline-assertions]
+  (:require [acceptance.steps.defect-report-delivery-assertions :as delivery-assertions]
+            [acceptance.steps.defect-report-expected-result-assertions :as expected-result-assertions]
             [acceptance.steps.defect-report-reproduction-assertions :as reproduction-assertions]
+            [acceptance.steps.defect-report-timeline-assertions :as timeline-assertions]
             [acceptance.steps.support :as support]
             [babashka.process :as process]
             [cheshire.core :as json]
@@ -64,88 +66,6 @@
   (support/assert! (= "red" (get-in observation [:actual :differences 0 :treatment])) "The actual difference is not red." observation)
   (support/assert! (= "−" (get-in observation [:actual :differences 0 :marker])) "The actual difference lacks a minus marker." observation))
 
-(defn- assert-expected-example! [example observation]
-  (when (:issue example)
-    (let [match (some (fn [candidate]
-                        (when (and (= (:issue example) (:issueId candidate))
-                                   (= (:constraint example) (:constraint candidate))
-                                   (= (:response example) (:response candidate))
-                                   (= (:response_source example) (:responseSource candidate)))
-                          candidate))
-                      (:cases observation))]
-      (support/assert! match "Expected-result example was not exercised by production code." {:example example :cases (:cases observation)})
-      (support/assert! (= (:expected_outcome example) (:outcome match)) "Expected explanation differs." match)
-      (support/assert! (= (:json_operation example) (:jsonOperation match)) "JSON operation differs." match)
-      (support/assert! (= (:response_source example) (:responseSource match)) "Expected response provenance differs." match))))
-
-(defn- assert-inline-example! [example observation]
-  (when-let [selection (:selection example)]
-    (let [match (some #(when (= selection (:selection %)) %) (get-in observation [:pageType :inlineCases]))]
-      (support/assert! match "Inline expected-response selection was not exercised by production code." {:example example})
-      (support/assert! (= (:expected_response example) (:inlineResponse match)) "Inline expected response differs." match)
-      (support/assert! (= (:response_source example) (:responseSource match)) "Inline response provenance differs." match)
-      (support/assert! (= 1 (:correctionCount match)) "Changing selection retained more than one inline correction." match)
-      (support/assert! (str/includes? (get-in match [:preview :text]) (:expected_response example)) "Plain preview omitted the inline expected response." match)
-      (support/assert! (str/includes? (get-in match [:preview :html]) "background-color:#d9f7d9") "Rich preview omitted green inline highlighting." match)
-      (support/assert! (= {:page_type "unknown"} (get-in observation [:pageType :original])) "Inline selection mutated the captured event." observation))))
-
-(defn- assert-comment-example! [example observation]
-  (when-let [checkbox-state (:checkbox_state example)]
-    (let [match (some #(when (= checkbox-state (:checkboxState %)) %) (get-in observation [:pageType :commentCases]))
-          expected-json (some-> (:expectedJson match) (json/parse-string true))]
-      (support/assert! match "Allowed-values comment state was not exercised by production code." {:example example})
-      (support/assert! (= (:expected_line example) (:inlineResponse match)) "Allowed-values inline line differs." match)
-      (support/assert! (= "homepage" (:response match)) "Comment toggling changed the selected expected value." match)
-      (support/assert! (= "homepage" (:page_type expected-json)) "Expected JSON lost the selected page_type value." {:expected-json expected-json})
-      (support/assert! (not (str/includes? (:expectedJson match) "must be of type")) "Schema comment was inserted into Expected JSON." match))))
-
-(defn- assert-assistance! [observation]
-  (support/assert! (= "/commerce/currency must be one of EUR or USD" (get-in observation [:assistance :genericConstraint])) "Generic constraint assistance is incorrect." observation)
-  (support/assert! (= ["EUR" "USD"] (get-in observation [:assistance :schemaValues])) "Schema allowed values are incorrect." observation)
-  (support/assert! (not (some #{"GBP"} (get-in observation [:assistance :schemaValues]))) "The invalid actual value was offered as valid." observation)
-  (support/assert! (= "/commerce/currency must be one of EUR or USD" (get-in observation [:generic :explanation])) "Generic Expected result is incorrect." observation)
-  (support/assert! (= (:original observation) (get-in observation [:generic :payload])) "Generic constraint changed Expected JSON." observation)
-  (support/assert! (= "none" (get-in observation [:generic :corrections 0 :operation])) "Generic constraint invented a JSON operation." observation)
-  (support/assert! (= ["homepage" "product listing" "product detail" "checkout"] (get-in observation [:pageType :assistance :schemaValues])) "Page type schema values are incorrect." observation)
-  (support/assert! (not (some #{"unknown"} (get-in observation [:pageType :assistance :schemaValues]))) "Invalid page_type was offered as a valid value." observation)
-  (support/assert! (false? (get-in observation [:pageType :customValidation :valid])) "Invalid custom page_type was accepted as schema-valid." observation)
-  (support/assert! (str/includes? (get-in observation [:pageType :customValidation :warning]) "category landing does not satisfy") "Custom page_type warning is missing." observation))
-
-(defn- assert-inline-delivery! [observation]
-  (let [generic-inline (get-in observation [:pageType :inlineCases 0])
-        commented-inline (get-in observation [:pageType :commentCases 0])
-        generic-copy (get-in observation [:pageType :inlineRichWrites 0])
-        commented-copy (get-in observation [:pageType :inlineRichWrites 1])]
-    (support/assert! (= "unknown" (:page_type (json/parse-string (:expectedJson generic-inline) true))) "Generic constraint became a selected literal JSON value." generic-inline)
-    (doseq [representation [(get-in generic-inline [:preview :text]) (:text generic-copy)]]
-      (support/assert! (str/includes? representation "page_type: homepage OR product listing OR product detail OR checkout") "Generic inline response is absent from preview or clipboard." {}))
-    (doseq [representation [(get-in commented-inline [:preview :text]) (:text commented-copy)]]
-      (support/assert! (str/includes? representation "page_type: \"homepage\", // must be of type homepage, product listing, product detail, or checkout") "Commented inline response is absent from preview or clipboard." {}))
-    (support/assert! (not (str/includes? (:html generic-copy) "page_type response source: schema constraint")) "Generic rich clipboard exposed generated response provenance." generic-copy)
-    (support/assert! (str/includes? (:html commented-copy) "background-color:#d9f7d9") "Commented rich clipboard omitted green highlighting." commented-copy)))
-
-(defn- assert-custom-override! [observation]
-  (support/assert! (false? (get-in observation [:custom :validation :valid])) "Invalid custom response was accepted as schema-valid." observation)
-  (support/assert! (str/includes? (get-in observation [:custom :validation :warning]) "does not satisfy") "Invalid custom response warning is missing." observation)
-  (support/assert! (true? (get-in observation [:custom :correction :operatorProvided])) "Kept custom override lacks operator provenance." observation))
-
-(defn- assert-raw-allowed-values! [observation]
-  (let [runtime-values (:productAllowedValues observation)
-        ui-values (get-in observation [:ui :productAllowedValues])
-        expected-json (json/parse-string (:expectedJson runtime-values) true)]
-    (support/assert! (= "product,content" (:displayedExpected runtime-values)) "The production validator did not expose the raw allowed-values expectation." runtime-values)
-    (support/assert! (not (str/includes? (:displayedExpected runtime-values) "one of")) "The regression fixture still relies on prose parsing." runtime-values)
-    (support/assert! (= ["product" "content"] (:ruleValues runtime-values)) "Assigned schema rule values were not preserved on the captured issue." runtime-values)
-    (support/assert! (= ["product" "content"] (:schemaValues runtime-values)) "Defect assistance did not derive separate schema choices." runtime-values)
-    (support/assert! (str/includes? (:issueText ui-values) "/page_type — product,content") "The product validation issue did not display the raw expectation." ui-values)
-    (support/assert! (= ["product" "content"] (:schemaResponses ui-values)) "The product report did not render separate schema-provided values." ui-values)
-    (support/assert! (str/includes? (:genericInline ui-values) "page_type: product OR content") "The raw allowed-values rule did not render a generic inline response." ui-values)
-    (support/assert! (true? (:commentAvailable ui-values)) "The raw allowed-values rule omitted the comment control." ui-values)
-    (support/assert! (str/includes? (:commentedInline ui-values) "page_type: &quot;product&quot;, // must be of type product or content") "The selected product response omitted its allowed-values comment." ui-values)
-    (support/assert! (= "product" (:page_type expected-json)) "The expected JSON payload lost the selected product value." expected-json)
-    (support/assert! (not (str/includes? (:expectedJson runtime-values) "must be of type")) "Presentation metadata leaked into expected JSON." runtime-values)
-    (support/assert! (= {:page_type "product test"} (:original runtime-values) (:original ui-values)) "Defect assistance mutated the captured product event." {:runtime runtime-values :ui ui-values})))
-
 (defn- assert-reproduction-and-timeline! [observation]
   (support/assert! (= ["/products" "/checkout" "/products" "/checkout"] (mapv :pathname (:steps observation))) "Pathname skeleton is not visit-ordered." observation)
   (support/assert! (= "Open the selected product" (get-in observation [:steps 0 :text])) "Operator reproduction edits were lost." observation)
@@ -155,52 +75,20 @@
   (support/assert! (= "Products opened" (get-in observation [:selectedTimeline 0 :summary])) "Requested timeline summary is missing." observation)
   (support/assert! (seq (get-in observation [:selectedTimeline 1 :validationDetails])) "Requested validation details are missing." observation))
 
-(defn- assert-preview-and-copy! [observation]
-  (doseq [heading ["Summary" "Description" "Steps to reproduce" "Actual result" "Expected result" "Differences" "Supporting timeline"]]
-    (support/assert! (str/includes? (get-in observation [:preview :text]) heading) "Report preview section is missing." {:heading heading}))
-  (support/assert! (str/includes? (get-in observation [:preview :html]) "background-color:#ffd7d7") "Rich actual highlighting is missing." observation)
-  (support/assert! (str/includes? (get-in observation [:preview :html]) "background-color:#d9f7d9") "Rich expected highlighting is missing." observation)
-  (support/assert! (= "success" (get-in observation [:copies :richCopy :status])) "Rich clipboard copy did not succeed." observation)
-  (support/assert! (= "warning" (get-in observation [:copies :plainCopy :status])) "Plain clipboard fallback did not warn." observation)
-  (support/assert! (= "failure" (get-in observation [:copies :failedCopy :status])) "Clipboard failure was not reported." observation)
-  (support/assert! (not= "success" (get-in observation [:copies :failedCopy :status])) "Clipboard failure reported success." observation))
-
-(defn- assert-production-ui! [observation]
-  (support/assert! (= 2 (get-in observation [:ui :reproductionSteps])) "Production UI did not generate pathname reproduction steps." observation)
-  (support/assert! (= 0 (get-in observation [:ui :timelineEntries])) "Production UI preselected timeline entries." observation)
-  (support/assert! (true? (get-in observation [:ui :editedSummaryVisible])) "Production UI did not preserve editable report details." observation)
-  (support/assert! (= 1 (get-in observation [:ui :copied])) "Production UI did not invoke the Jira clipboard callback." observation)
-  (support/assert! (= ["EUR" "USD"] (get-in observation [:ui :schemaResponses])) "Production UI did not render separate schema responses." observation)
-  (support/assert! (true? (get-in observation [:ui :pageType :genericSelected])) "Production UI did not initially select Use generic constraint." observation)
-  (support/assert! (= ["homepage" "product listing" "product detail" "checkout"] (get-in observation [:ui :pageType :schemaResponses])) "Production UI did not render page_type schema responses." observation)
-  (support/assert! (true? (get-in observation [:ui :pageType :commentAvailable])) "Production UI omitted the allowed-values comment control." observation)
-  (support/assert! (str/includes? (get-in observation [:ui :pageType :genericInline]) "page_type: homepage OR product listing OR product detail OR checkout") "Production UI omitted the generic inline response." observation)
-  (support/assert! (str/includes? (get-in observation [:ui :pageType :schemaInline]) "page_type: product detail") "Production UI did not replace the generic inline response." observation)
-  (support/assert! (str/includes? (get-in observation [:ui :pageType :commentedInline]) "// must be of type homepage, product listing, product detail, or checkout") "Production UI omitted the selected schema comment." observation)
-  (support/assert! (not (str/includes? (get-in observation [:ui :pageType :clearedInline]) "must be of type homepage")) "Production UI retained a cleared schema comment." observation)
-  (support/assert! (true? (get-in observation [:ui :customInitiallyHidden])) "Custom input was displayed before selection." observation)
-  (support/assert! (true? (get-in observation [:ui :customVisibleAfterSelection])) "Custom input did not appear after selection." observation)
-  (support/assert! (str/includes? (get-in observation [:ui :invalidCustomWarning]) "does not satisfy") "Production UI omitted custom constraint warning." observation)
-  (support/assert! (true? (get-in observation [:ui :customOverrideVisible])) "Production UI omitted operator override provenance." observation)
-  (support/assert! (= ["Back to captured event" "Back to Live feed"] (get-in observation [:ui :navigationActions])) "Builder navigation actions are missing or unordered." observation)
-  (support/assert! (= {:backToCapturedEvent 1 :focusCreateDefectReport 1 :backToLiveFeed 1} (get-in observation [:ui :navigation])) "Builder navigation callbacks did not restore both destinations and focus." observation)
-  (support/assert! (= 480 (get-in observation [:ui :liveFeedScrollTop])) "Builder navigation changed Live feed scroll." observation)
-  (support/assert! (>= (:contrast observation) 4.5) "Highlighted text contrast is below 4.5:1." observation))
-
 (defn- assert-observation! [_text example observation]
   (assert-builder-state! observation)
-  (assert-expected-example! example observation)
-  (assert-inline-example! example observation)
-  (assert-comment-example! example observation)
-  (assert-assistance! observation)
-  (assert-inline-delivery! observation)
-  (assert-custom-override! observation)
-  (assert-raw-allowed-values! observation)
+  (expected-result-assertions/assert-expected-example! example observation)
+  (expected-result-assertions/assert-inline-example! example observation)
+  (expected-result-assertions/assert-comment-example! example observation)
+  (expected-result-assertions/assert-assistance! observation)
+  (expected-result-assertions/assert-inline-delivery! observation)
+  (expected-result-assertions/assert-custom-override! observation)
+  (expected-result-assertions/assert-raw-allowed-values! observation)
   (assert-reproduction-and-timeline! observation)
-  (assert-preview-and-copy! observation)
+  (delivery-assertions/assert-preview-and-copy! observation)
   (reproduction-assertions/assert-reproduction-composer! example observation)
   (timeline-assertions/assert-timeline-composer! observation)
-  (assert-production-ui! observation)
+  (delivery-assertions/assert-production-ui! observation)
   true)
 
 (defn- transition [world example _captures {:keys [text]}]
@@ -218,5 +106,5 @@
         (support/feature-step-specs feature-files #{})))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T10:25:33.086319629+02:00", :module-hash "1134916381", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 7, :hash "1578704479"} {:id "def/feature-files", :kind "def", :line 9, :end-line 13, :hash "1040459923"} {:id "form/2/defonce", :kind "defonce", :line 15, :end-line 15, :hash "140063040"} {:id "def/entry-steps", :kind "def", :line 17, :end-line 21, :hash "-2005533574"} {:id "defn-/json-output-line?", :kind "defn-", :line 23, :end-line 24, :hash "1279333289"} {:id "defn-/last-json-output-line", :kind "defn-", :line 26, :end-line 27, :hash "-463411948"} {:id "defn-/result-observation", :kind "defn-", :line 29, :end-line 31, :hash "-11906012"} {:id "defn-/assert-runtime-result!", :kind "defn-", :line 33, :end-line 36, :hash "-1095752944"} {:id "defn-/load-observation!", :kind "defn-", :line 38, :end-line 54, :hash "-563091226"} {:id "defn-/observation!", :kind "defn-", :line 56, :end-line 56, :hash "-569553941"} {:id "defn-/assert-builder-state!", :kind "defn-", :line 58, :end-line 65, :hash "1920614534"} {:id "defn-/assert-expected-example!", :kind "defn-", :line 67, :end-line 79, :hash "738700816"} {:id "defn-/assert-inline-example!", :kind "defn-", :line 81, :end-line 90, :hash "11811025"} {:id "defn-/assert-comment-example!", :kind "defn-", :line 92, :end-line 100, :hash "1007838976"} {:id "defn-/assert-assistance!", :kind "defn-", :line 102, :end-line 112, :hash "-493777955"} {:id "defn-/assert-inline-delivery!", :kind "defn-", :line 114, :end-line 125, :hash "-613829259"} {:id "defn-/assert-custom-override!", :kind "defn-", :line 127, :end-line 130, :hash "1425250104"} {:id "defn-/assert-raw-allowed-values!", :kind "defn-", :line 132, :end-line 147, :hash "-678647453"} {:id "defn-/assert-reproduction-and-timeline!", :kind "defn-", :line 149, :end-line 156, :hash "1789303158"} {:id "defn-/assert-preview-and-copy!", :kind "defn-", :line 158, :end-line 166, :hash "-1088697637"} {:id "defn-/assert-production-ui!", :kind "defn-", :line 168, :end-line 188, :hash "-712946011"} {:id "defn-/assert-observation!", :kind "defn-", :line 190, :end-line 204, :hash "1753617643"} {:id "defn-/transition", :kind "defn-", :line 206, :end-line 209, :hash "-650328638"} {:id "def/handlers", :kind "def", :line 211, :end-line 218, :hash "-914950263"}]}
+;; {:version 1, :tested-at "2026-07-15T18:43:39.296454009+02:00", :module-hash "221761395", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 9, :hash "1727629619"} {:id "def/feature-files", :kind "def", :line 11, :end-line 15, :hash "1040459923"} {:id "form/2/defonce", :kind "defonce", :line 17, :end-line 17, :hash "140063040"} {:id "def/entry-steps", :kind "def", :line 19, :end-line 23, :hash "-2005533574"} {:id "defn-/json-output-line?", :kind "defn-", :line 25, :end-line 26, :hash "1279333289"} {:id "defn-/last-json-output-line", :kind "defn-", :line 28, :end-line 29, :hash "-463411948"} {:id "defn-/result-observation", :kind "defn-", :line 31, :end-line 33, :hash "-11906012"} {:id "defn-/assert-runtime-result!", :kind "defn-", :line 35, :end-line 38, :hash "-1095752944"} {:id "defn-/load-observation!", :kind "defn-", :line 40, :end-line 56, :hash "-563091226"} {:id "defn-/observation!", :kind "defn-", :line 58, :end-line 58, :hash "-569553941"} {:id "defn-/assert-builder-state!", :kind "defn-", :line 60, :end-line 67, :hash "1920614534"} {:id "defn-/assert-reproduction-and-timeline!", :kind "defn-", :line 69, :end-line 76, :hash "1789303158"} {:id "defn-/assert-observation!", :kind "defn-", :line 78, :end-line 92, :hash "-2014586088"} {:id "defn-/transition", :kind "defn-", :line 94, :end-line 97, :hash "-650328638"} {:id "def/handlers", :kind "def", :line 99, :end-line 106, :hash "-914950263"}]}
 ;; clj-mutate-manifest-end
