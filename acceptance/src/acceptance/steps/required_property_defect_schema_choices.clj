@@ -46,11 +46,12 @@
   (support/assert! (and (= {:page_type "product_detail"} (:expected saved))
                         (= [["/page_type" "add"]] (mapv (juxt :pointer :operation) (:corrections saved)))
                         (= 7 (get-in saved [:corrections 0 :responseProvenance :schema :version]))
-                        (str/includes? (get-in clipboard [:rich :text]) "Allowed page types v3")
+                        (not (str/includes? (get-in clipboard [:rich :text]) "value-rule provenance:"))
+                        (not (str/includes? (:plain clipboard) "response source:"))
                         (str/includes? (:plain clipboard) "product_detail")
                         (str/includes? reopened "Required value")
-                        (str/includes? recopied "Generic pageview revision 7"))
-                   "Clipboard or persisted representations lost the typed add correction or provenance." observed)
+                        (str/includes? recopied "product_detail"))
+                   "Clipboard or persisted representations lost the typed add correction or exposed provenance prose." observed)
   (support/assert! (and (= [["string" "add"] ["number" "add"] ["boolean" "add"]]
                            (mapv (juxt :type :operation) typed))
                         (= [{:page_type "content"} {:market_id 2} {:logged_in false}]
@@ -114,5 +115,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T04:00:42.279744764+02:00", :module-hash "-504671305", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "913455753"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1745956364"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "461692332"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1351604940"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "414377822"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 84, :hash "270288215"} {:id "def/model-example-values", :kind "def", :line 86, :end-line 95, :hash "506791056"} {:id "def/runtime-example-values", :kind "def", :line 97, :end-line 104, :hash "290371615"} {:id "defn-/validate-example!", :kind "defn-", :line 106, :end-line 109, :hash "269278485"} {:id "def/handlers", :kind "def", :line 111, :end-line 114, :hash "1429757079"}]}
+;; {:version 1, :tested-at "2026-07-15T10:25:40.724831443+02:00", :module-hash "102556133", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "913455753"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "1745956364"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "461692332"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1351604940"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "414377822"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 85, :hash "-48169828"} {:id "def/model-example-values", :kind "def", :line 87, :end-line 96, :hash "506791056"} {:id "def/runtime-example-values", :kind "def", :line 98, :end-line 105, :hash "290371615"} {:id "defn-/validate-example!", :kind "defn-", :line 107, :end-line 110, :hash "269278485"} {:id "def/handlers", :kind "def", :line 112, :end-line 115, :hash "1429757079"}]}
 ;; clj-mutate-manifest-end

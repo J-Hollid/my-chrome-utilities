@@ -7,7 +7,7 @@ import {
   type TimelineSelection,
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
-import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
+import type { ComposableDefectReport, DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
 
 const resultWindowSize = 20;
 type ComposerStage = "idle" | "select" | "configure";
@@ -17,11 +17,11 @@ export interface TimelineControlOptions {
   onSelectionsChange?(selections: readonly TimelineSelection[]): void;
 }
 
-export function appendTimelineControls(
+export function appendTimelineControls<Report extends ComposableDefectReport>(
   composer: HTMLElement,
   entries: HTMLElement,
   context: DefectReportContext,
-  state: DefectReportBuilderState,
+  state: DefectReportBuilderState<Report>,
   options: TimelineControlOptions = {},
 ): void {
   let selections: TimelineSelection[] = (options.selections ?? []).map((selection) => ({ ...selection }));

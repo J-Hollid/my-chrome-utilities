@@ -4,11 +4,17 @@ import {
   type SavedSessionLibrary,
 } from "./data-layer-saved-sessions.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
+import {
+  occurrenceDefectIdentity,
+  occurrenceIdentityMatches,
+  type OccurrenceDefectMatchIdentity,
+  type OccurrenceReport,
+} from "./data-layer-event-occurrence-defect-report.js";
 
 export const DEFECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.defect-library.v1";
 
 export type DefectStatus = "Reported" | "Resolved" | "Archived";
-export type DefectType = "Validation issue" | "Missing event";
+export type DefectType = "Validation issue" | "Missing event" | "Unexpected event" | "Wrong event name";
 export type IssueTriageState = "Reported" | "New" | "Review required" | "Possible regression treated New";
 export type DefectReportAction = "Copy for Jira Cloud" | "Save as reported defect" | "Save as reported defect and copy";
 
@@ -54,6 +60,7 @@ export interface ReportedDefect {
   report: any;
   notes: string;
   issues: StoredDefectIssue[];
+  occurrenceMatch?: OccurrenceDefectMatchIdentity;
   savedSession?: { id:string; containsMatchingIssue:boolean };
 }
 
@@ -183,6 +190,25 @@ export function eventContainsDefectIssue(event: LiveEvent, defect: ReportedDefec
   });
 }
 
+function eventPathname(pageUrl: string | undefined): string {
+  try { return new URL(pageUrl ?? "https://local.invalid/").pathname; }
+  catch { return "/"; }
+}
+
+export function eventMatchesOccurrenceDefect(event: {
+  sourceId:string;
+  name:string;
+  pageUrl?:string | undefined;
+  validationDetails?:{ assignment?:{ target?:string } } | undefined;
+}, defect: ReportedDefect): boolean {
+  const identity = defect.occurrenceMatch;
+  return Boolean(identity)
+    && event.sourceId === identity?.sourceId
+    && event.name === identity.actualEventName
+    && (event.validationDetails?.assignment?.target ?? "payload") === identity.validationTarget
+    && eventPathname(event.pageUrl) === identity.pathname;
+}
+
 function createDefect(options: {
   id: string;
   now: string;
@@ -190,6 +216,7 @@ function createDefect(options: {
   report: unknown;
   notes?: string;
   issues?: readonly CurrentDefectIssue[];
+  occurrenceMatch?: OccurrenceDefectMatchIdentity;
 }): ReportedDefect {
   return clone({
     id:options.id,
@@ -200,6 +227,7 @@ function createDefect(options: {
     report:options.report,
     notes:options.notes ?? "",
     issues:(options.issues ?? []).map((evidence) => ({ match:issueMatchIdentity(evidence), evidence })),
+    ...(options.occurrenceMatch ? { occurrenceMatch:options.occurrenceMatch } : {}),
   });
 }
 
@@ -222,6 +250,20 @@ export function createMissingEventDefect(options: {
   return createDefect({ ...options, type:"Missing event", issues:[] });
 }
 
+export function createOccurrenceDefect(options: {
+  id: string;
+  now: string;
+  report: OccurrenceReport;
+  notes?: string;
+}): ReportedDefect {
+  return createDefect({
+    ...options,
+    type:options.report.mode,
+    issues:[],
+    occurrenceMatch:occurrenceDefectIdentity(options.report),
+  });
+}
+
 export function createDefectLibrary(): DefectLibrary { return { defects:[] }; }
 
 function activeIdentityMatches(defect: ReportedDefect, identity: IssueMatchIdentity): boolean {
@@ -233,6 +275,15 @@ function activeIdentityMatches(defect: ReportedDefect, identity: IssueMatchIdent
 export function matchingDefects(issue: CurrentDefectIssue, library: DefectLibrary): ReportedDefect[] {
   const identity = issueMatchIdentity(issue);
   return library.defects.filter((defect) => activeIdentityMatches(defect, identity)).map(clone);
+}
+
+export function matchingOccurrenceDefects(
+  identity: OccurrenceDefectMatchIdentity,
+  library: DefectLibrary,
+): ReportedDefect[] {
+  return library.defects.filter((defect) => defect.status === "Reported"
+    && defect.occurrenceMatch !== undefined
+    && occurrenceIdentityMatches(defect.occurrenceMatch, identity)).map(clone);
 }
 
 export function issueTriage(issue: CurrentDefectIssue, library: DefectLibrary): IssueTriage {
@@ -269,7 +320,9 @@ export function addDefect(library: DefectLibrary, defect: ReportedDefect, saveSe
   added: boolean;
   existing: ReportedDefect[];
 } {
-  const existing = defect.issues.flatMap(({ evidence }) => matchingDefects(evidence, library));
+  const existing = defect.occurrenceMatch
+    ? matchingOccurrenceDefects(defect.occurrenceMatch, library)
+    : defect.issues.flatMap(({ evidence }) => matchingDefects(evidence, library));
   const unique = [...new Map(existing.map((candidate) => [candidate.id, candidate])).values()];
   if (unique.length && !saveSeparately) return { library, defect:clone(defect), added:false, existing:unique };
   return { library:{ ...library, defects:[...library.defects, clone(defect)] }, defect:clone(defect), added:true, existing:unique };
@@ -349,11 +402,18 @@ function isSavedSessionLink(value: unknown): value is NonNullable<ReportedDefect
     && typeof value.containsMatchingIssue === "boolean";
 }
 
+function isOccurrenceMatchIdentity(value: unknown): value is OccurrenceDefectMatchIdentity {
+  if (!isRecord(value)) return false;
+  return ["sourceId", "actualEventName", "validationTarget", "pathname", "expectationMode"].every((field) => hasString(value, field))
+    && (value.expectationMode === "Unexpected event" || value.expectationMode === "Wrong event name")
+    && ["expectedSourceId", "expectedEventName", "expectedTarget"].every((field) => value[field] === undefined || hasString(value, field));
+}
+
 function isDefect(value: unknown): value is ReportedDefect {
   if (!value || typeof value !== "object") return false;
   const defect = value as Partial<ReportedDefect>;
   return typeof defect.id === "string"
-    && (defect.type === "Validation issue" || defect.type === "Missing event")
+    && (defect.type === "Validation issue" || defect.type === "Missing event" || defect.type === "Unexpected event" || defect.type === "Wrong event name")
     && (defect.status === "Reported" || defect.status === "Resolved" || defect.status === "Archived")
     && typeof defect.createdAt === "string"
     && typeof defect.updatedAt === "string"
@@ -361,6 +421,7 @@ function isDefect(value: unknown): value is ReportedDefect {
     && isRecord(defect.report)
     && Array.isArray(defect.issues)
     && defect.issues.every(isStoredDefectIssue)
+    && (defect.occurrenceMatch === undefined || isOccurrenceMatchIdentity(defect.occurrenceMatch))
     && (defect.savedSession === undefined || isSavedSessionLink(defect.savedSession));
 }
 
@@ -379,13 +440,14 @@ export function restoreDefectLibrary(serialized: string | null): DefectLibrary {
 export function searchDefects(library: DefectLibrary, filters: DefectSearch = {}): ReportedDefect[] {
   const includes = (value: unknown, query: string | undefined) => !query || String(value ?? "").toLowerCase().includes(query.trim().toLowerCase());
   return library.defects.filter((defect) => {
-    const searchable = JSON.stringify([defect.report, defect.notes, defect.issues]);
+    const searchable = JSON.stringify([defect.report, defect.notes, defect.issues, defect.occurrenceMatch]);
+    const occurrence = defect.occurrenceMatch;
     return (!filters.status || filters.status === "All" || defect.status === filters.status)
       && (!filters.type || filters.type === "All" || defect.type === filters.type)
       && includes(searchable, filters.query)
-      && includes(defect.issues.map(({ evidence }) => evidence.eventName).join(" "), filters.eventName)
-      && includes(defect.issues.map(({ evidence }) => `${evidence.schemaName ?? ""} ${evidence.schemaId}`).join(" "), filters.schema)
-      && includes(defect.issues.map(({ match }) => match.canonicalPath).join(" "), filters.path);
+      && includes(`${defect.issues.map(({ evidence }) => evidence.eventName).join(" ")} ${occurrence?.actualEventName ?? ""} ${occurrence?.expectedEventName ?? ""}`, filters.eventName)
+      && includes(`${defect.issues.map(({ evidence }) => `${evidence.schemaName ?? ""} ${evidence.schemaId}`).join(" ")} ${String(defect.report?.actual?.schema?.name ?? "")}`, filters.schema)
+      && includes(`${defect.issues.map(({ match }) => match.canonicalPath).join(" ")} ${occurrence?.pathname ?? ""}`, filters.path);
   }).map(clone);
 }
 
@@ -428,6 +490,10 @@ function currentIssueFromSavedEvent(event: CompletedSession["events"][number], i
 }
 
 function savedSessionContainsDefectIssue(completed: CompletedSession, defect: ReportedDefect): boolean {
+  if (defect.occurrenceMatch) {
+    const capturedId = String(defect.report?.actual?.id ?? "");
+    return completed.events.some((event) => (!capturedId || event.id === capturedId) && eventMatchesOccurrenceDefect(event, defect));
+  }
   return completed.events.some((event) => (event.validationDetails?.issues ?? []).some((issue) => {
     const current = issueMatchIdentity(currentIssueFromSavedEvent(event, issue));
     return defect.issues.some(({ match }) => sameIdentity(match, current));

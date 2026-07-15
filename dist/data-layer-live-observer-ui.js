@@ -523,6 +523,10 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
                     issues.focus({ preventScroll: false });
             } } } : {}),
         ...(event.validationDetails?.issues.length && actionHandlers.startDefectReport ? { "Create defect report": async () => actionHandlers.startDefectReport?.(event) } : {}),
+        ...(actionHandlers.startOccurrenceDefectReport ? {
+            "Report unexpected event": async () => actionHandlers.startOccurrenceDefectReport?.(event, "Unexpected event"),
+            "Report wrong event name": async () => actionHandlers.startOccurrenceDefectReport?.(event, "Wrong event name"),
+        } : {}),
         "Copy payload": async () => actionHandlers.copyPayload(event),
         "Save to Library": async () => actionHandlers.saveToLibrary(event),
         ...(actionHandlers.createSchema ? { "Create schema": async () => actionHandlers.createSchema?.(event) } : {}),
@@ -535,6 +539,8 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
         action.id = `live-inspector-action-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
         if (label === "Create defect report")
             action.setAttribute("aria-label", `Create defect report for ${event.name}`);
+        if (label === "Report unexpected event" || label === "Report wrong event name")
+            action.setAttribute("aria-label", `${label} for ${event.name}`);
         if (label === "Create validation from this event")
             action.dataset.action = "create-validation";
         action.dataset.actionVariant = label === "Copy payload" ? "quiet" : "secondary";
