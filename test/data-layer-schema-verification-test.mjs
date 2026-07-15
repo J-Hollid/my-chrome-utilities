@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, migrateSchemaLibrary, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validateWithSchema, validationSummary } from "../dist/data-layer-schema-verification.js";
+import { assignSchema, assignableSchemas, createSchema, createSchemaLibraryExport, createSchemaWorkingDraft, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, filterByValidation, importSchema, inspectSchemaRename, migrateSchemaLibrary, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, resolveSchemaAssignment, restoreSchemaLibrary, restoreSchemaRevisionDraft, revalidateExplicitly, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, serializeSchemaLibraryExport, updateSchemaWorkingDraft, validateEvent, validateWithSchema, validationSummary } from "../dist/data-layer-schema-verification.js";
 import { typedComparisonValue } from "../dist/data-layer-conditional-validation-rules.js";
 let schema = createSchema("Purchase event", 2, { type: "object", required: ["transaction_id"], properties: { transaction_id: { type: "string" }, revenue: { type: "number" } } });
 schema = assignSchema(schema, { sourceId: "history", eventName: "purchase", target: "payload" });
@@ -95,6 +95,33 @@ assert.equal(firstDraft.version, 3);
 assert.equal(firstDraft.workingDraft.baseVersion, 3);
 assert.deepEqual(firstDraft.document, stableProduct.document);
 assert.deepEqual(firstDraft.workingDraft.pendingChanges, []);
+assert.equal(firstDraft.workingDraft.name, "Product listing");
+
+const productDetail = { ...createSchema("Product detail", 2, { type:"object" }), id:"schema-product-detail" };
+assert.deepEqual(inspectSchemaRename(stableProduct, [stableProduct, productDetail], ""), {
+  ready:false, proposedName:"", assistance:"Enter a schema name",
+});
+assert.deepEqual(inspectSchemaRename(stableProduct, [stableProduct, productDetail], "product DETAIL"), {
+  ready:false, proposedName:"product DETAIL", assistance:"A schema named Product detail already exists",
+});
+assert.deepEqual(inspectSchemaRename(stableProduct, [stableProduct, productDetail], " Generic page view "), {
+  ready:true, proposedName:"Generic page view", assistance:"Ready to rename",
+});
+
+const renamedDraft = proposeSchemaWorkingDraftName(firstDraft, "Generic page view");
+assert.equal(renamedDraft.name, "Product listing");
+assert.equal(renamedDraft.id, stableProduct.id);
+assert.equal(renamedDraft.workingDraft.name, "Generic page view");
+assert.deepEqual(renamedDraft.workingDraft.pendingChanges, ["Rename schema from Product listing to Generic page view"]);
+const renamedAgain = proposeSchemaWorkingDraftName(renamedDraft, "Generic page view");
+assert.deepEqual(renamedAgain.workingDraft.pendingChanges, renamedDraft.workingDraft.pendingChanges, "repeated input must not duplicate the rename change");
+assert.equal(restoreSchemaLibrary(serializeSchemaLibrary([renamedDraft]))[0].workingDraft.name, "Generic page view");
+const publishedRename = publishSchemaWorkingDraft(renamedDraft);
+assert.equal(publishedRename.id, stableProduct.id);
+assert.equal(publishedRename.name, "Generic page view");
+assert.equal(publishedRename.version, 4);
+assert.equal(publishedRename.revisionHistory.at(-1).name, "Product listing");
+assert.equal(discardSchemaWorkingDraft(renamedDraft).name, "Product listing");
 const pageTypeDraft = updateSchemaWorkingDraft(firstDraft, {
   document:{ type:"object", properties:{ product_id:{ type:"string" }, page_type:{ type:"string" } } },
   attachedRules:[{ id:"rule:page-type", version:1, propertyPath:"page_type", operator:"allowed-values", parameters:"page_type:product,listing" }],

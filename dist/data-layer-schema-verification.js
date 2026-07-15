@@ -96,6 +96,7 @@ export function createSchemaWorkingDraft(schema, sourceVersion = schema.version)
     return {
         ...clone(schema),
         workingDraft: {
+            name: source.name,
             baseVersion: schema.version,
             sourceVersion,
             document: clone(source.document),
@@ -113,6 +114,30 @@ export function updateSchemaWorkingDraft(schema, changes, change) {
     const draft = withDraft.workingDraft;
     return { ...withDraft, workingDraft: { ...draft, ...clone(changes), pendingChanges: change ? [...draft.pendingChanges, change] : draft.pendingChanges } };
 }
+export function inspectSchemaRename(schema, schemas, proposedName) {
+    const proposed = proposedName.trim();
+    if (!proposed)
+        return { ready: false, proposedName: "", assistance: "Enter a schema name" };
+    const duplicate = schemas.find((candidate) => candidate.id !== schema.id && candidate.name.trim().toLocaleLowerCase() === proposed.toLocaleLowerCase());
+    if (duplicate)
+        return { ready: false, proposedName: proposed, assistance: `A schema named ${duplicate.name} already exists` };
+    return { ready: true, proposedName: proposed, assistance: proposed === schema.name ? "Name is unchanged" : "Ready to rename" };
+}
+export function proposeSchemaWorkingDraftName(schema, proposedName) {
+    const withDraft = schema.workingDraft ? clone(schema) : createSchemaWorkingDraft(schema);
+    const draft = withDraft.workingDraft;
+    const proposed = proposedName.trim();
+    const previousRenameIndex = draft.pendingChanges.findIndex((change) => change.startsWith("Rename schema from "));
+    const pendingChanges = draft.pendingChanges.filter((change) => !change.startsWith("Rename schema from "));
+    if (proposed && proposed !== schema.name) {
+        const rename = `Rename schema from ${schema.name} to ${proposed}`;
+        pendingChanges.splice(previousRenameIndex < 0 ? pendingChanges.length : previousRenameIndex, 0, rename);
+    }
+    const nextDraft = { ...draft, pendingChanges };
+    if (proposed !== schema.name || draft.name !== undefined)
+        nextDraft.name = proposed;
+    return { ...withDraft, workingDraft: nextDraft };
+}
 export function discardSchemaWorkingDraft(schema) {
     const { workingDraft: _draft, ...current } = clone(schema);
     return current;
@@ -125,6 +150,7 @@ export function publishSchemaWorkingDraft(schema) {
     const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = snapshot;
     return {
         ...current,
+        name: draft.name ?? schema.name,
         version: schema.published === false ? 1 : schema.version + 1,
         published: true,
         document: clone(draft.document),

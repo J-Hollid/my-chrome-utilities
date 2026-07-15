@@ -37,7 +37,7 @@
    :requirement {:heading "Define requirement" :destinationAbsent true :selectedSchema "schema-product-listing"}
    :prefill {:configurationAbsent true :selectionAbsent true}
    :review {:name "Product listing" :status "Working draft based on revision 3 · 2 pending changes" :checkoutUnchanged true}
-   :publication {:review "Product listing working draft will be compared with current revision 3; confirmation publishes revision 4."
+   :publication {:review "Product listing working draft will be compared with current revision 3; confirmation publishes revision 4. Pending changes: Add page_type; Add page_name."
                  :productCurrent 3 :checkoutUnchanged true}
    :switchOpen {:heading "Choose schema destination"
                 :choices ["Product listing revision 3 · 2 pending changes" "Checkout revision 2 · 1 pending changes"]

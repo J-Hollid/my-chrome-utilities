@@ -86,7 +86,7 @@
     :cancel {:dialogClosed true :draftUnchanged true :current 4}
     :confirmed {:current 4 :source 2 :pending ["Restore revision 2"]}}
    :publication
-   {:review "Product listing working draft will be compared with current revision 4; confirmation publishes revision 5."
+   {:review "Product listing working draft will be compared with current revision 4; confirmation publishes revision 5. Pending changes: Restore revision 2."
     :current 5
     :history [1 2 3 4]
     :draftCleared true}})
