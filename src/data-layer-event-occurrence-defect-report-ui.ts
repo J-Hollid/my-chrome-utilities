@@ -1,4 +1,4 @@
-import type { DefectReport, DefectReportBuilderNavigation, DefectReportClipboard } from "./data-layer-defect-report.js";
+import type { DefectReportBuilderNavigation, DefectReportClipboard } from "./data-layer-defect-report.js";
 import { generatePathnameSkeleton } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectReportContext } from "./data-layer-defect-report-browser.js";
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
@@ -147,9 +147,9 @@ export function renderOccurrenceDefectReportBuilder(
       if (input.dataset.edited !== "true") input.value = report[field];
     }
   };
-  const state: DefectReportBuilderState = {
-    report:() => draft as unknown as DefectReport,
-    update:(next) => { draft = next as unknown as OccurrenceDefectDraft; },
+  const state: DefectReportBuilderState<OccurrenceDefectDraft> = {
+    report:() => draft,
+    update:(next) => { draft = next; },
     refresh,
   };
 
