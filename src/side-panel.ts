@@ -284,6 +284,7 @@ import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
+import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./data-layer-schema-property-copy.js";
 import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-copy-ui.js";
@@ -521,12 +522,37 @@ const schemaRevisionComparison = document.querySelector<HTMLElement>("#schema-re
 const duplicateSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#duplicate-schema-revision");
 const restoreSchemaRevisionButton = document.querySelector<HTMLButtonElement>("#restore-schema-revision");
 const addSchemaPropertyButton = document.querySelector<HTMLButtonElement>("#add-schema-property");
+const schemaPropertyViewControls = document.createElement("div"); schemaPropertyViewControls.id = "schema-property-view-controls";
+const schemaPropertyFilterLabel = document.createElement("label"); schemaPropertyFilterLabel.htmlFor = "schema-property-filter"; schemaPropertyFilterLabel.textContent = "Filter properties";
+const schemaPropertyFilter = document.createElement("input"); schemaPropertyFilter.id = "schema-property-filter"; schemaPropertyFilter.type = "search";
+const schemaPropertySortLabel = document.createElement("label"); schemaPropertySortLabel.htmlFor = "schema-property-sort"; schemaPropertySortLabel.textContent = "Sort properties";
+const schemaPropertySort = document.createElement("select"); schemaPropertySort.id = "schema-property-sort";
+schemaPropertySort.append(
+  Object.assign(document.createElement("option"), { value:"schema", textContent:"Schema order" }),
+  Object.assign(document.createElement("option"), { value:"name-asc", textContent:"Name A-Z" }),
+  Object.assign(document.createElement("option"), { value:"name-desc", textContent:"Name Z-A" }),
+);
+const schemaPropertyResultStatus = document.createElement("output"); schemaPropertyResultStatus.id = "schema-property-result-status"; schemaPropertyResultStatus.setAttribute("aria-live", "polite");
+const schemaPropertyEmpty = document.createElement("div"); schemaPropertyEmpty.id = "schema-property-empty"; schemaPropertyEmpty.hidden = true;
+const schemaPropertyEmptyMessage = document.createElement("p");
+const clearSchemaPropertyFilter = document.createElement("button"); clearSchemaPropertyFilter.type = "button"; clearSchemaPropertyFilter.textContent = "Clear filter";
+schemaPropertyEmpty.append(schemaPropertyEmptyMessage, clearSchemaPropertyFilter);
+schemaPropertyViewControls.append(schemaPropertyFilterLabel, schemaPropertyFilter, schemaPropertySortLabel, schemaPropertySort, schemaPropertyResultStatus);
+addSchemaPropertyButton?.before(schemaPropertyViewControls);
 const schemaPropertyTree = document.createElement("ul");
 schemaPropertyTree.id = "schema-property-tree";
 addSchemaPropertyButton?.after(schemaPropertyTree);
+schemaPropertyTree.before(schemaPropertyEmpty);
 const schemaPropertyRemovalFeedback = document.createElement("output"); schemaPropertyRemovalFeedback.id = "schema-property-removal-feedback"; schemaPropertyRemovalFeedback.setAttribute("aria-live", "polite");
 const undoSchemaPropertyRemovalButton = document.createElement("button"); undoSchemaPropertyRemovalButton.type = "button"; undoSchemaPropertyRemovalButton.textContent = "Undo"; undoSchemaPropertyRemovalButton.hidden = true;
 schemaPropertyTree.after(schemaPropertyRemovalFeedback, undoSchemaPropertyRemovalButton);
+schemaPropertyFilter.addEventListener("input", () => renderSchemaDraft());
+schemaPropertySort.addEventListener("change", () => renderSchemaDraft());
+clearSchemaPropertyFilter.addEventListener("click", () => {
+  schemaPropertyFilter.value = "";
+  renderSchemaDraft();
+  schemaPropertyFilter.focus({ preventScroll:true });
+});
 const schemaPropertyCopyFeedback = document.createElement("output"); schemaPropertyCopyFeedback.id = "schema-property-copy-feedback"; schemaPropertyCopyFeedback.setAttribute("aria-live", "polite");
 const undoSchemaPropertyCopyButton = document.createElement("button"); undoSchemaPropertyCopyButton.type = "button"; undoSchemaPropertyCopyButton.textContent = "Undo property copy"; undoSchemaPropertyCopyButton.hidden = true;
 schemaPropertyRemovalFeedback.after(schemaPropertyCopyFeedback, undoSchemaPropertyCopyButton);
@@ -538,6 +564,7 @@ const confirmSchemaPropertyRemovalButton = document.createElement("button"); con
 const cancelSchemaPropertyRemovalButton = document.createElement("button"); cancelSchemaPropertyRemovalButton.type = "button"; cancelSchemaPropertyRemovalButton.textContent = "Cancel";
 schemaPropertyRemovalDialog.append(schemaPropertyRemovalHeading, schemaPropertyRemovalSummary, confirmSchemaPropertyRemovalButton, cancelSchemaPropertyRemovalButton); document.body.append(schemaPropertyRemovalDialog);
 let selectedSchemaPropertyPath = "example";
+const expandedSchemaPropertyRulePaths = new Set<string>();
 let pendingSchemaPropertyRemoval: { path:string; trigger:HTMLButtonElement } | undefined;
 let lastSchemaPropertyRemoval: SchemaPropertyRemoval | undefined;
 let lastSchemaPropertyCopy: AppliedSchemaPropertyCopy | undefined;
@@ -2030,14 +2057,24 @@ function renderSchemaDraft(): void {
   if (schemaEditorTarget) schemaEditorTarget.value = draft.assignments[0]?.target ?? "payload";
   if (schemaOnlyDeclaredProperties) schemaOnlyDeclaredProperties.checked = draft.document.additionalProperties === false;
   const parentDocuments = schemaParentDocuments();
+  for (const details of Array.from(schemaPropertyTree.querySelectorAll<HTMLDetailsElement>("li[data-schema-property-canonical-path] details[data-attached-rules]"))) {
+    const path = details.closest<HTMLElement>("li[data-schema-property-canonical-path]")?.dataset.schemaPropertyCanonicalPath;
+    if (!path) continue;
+    if (details.open) expandedSchemaPropertyRulePaths.add(path);
+    else expandedSchemaPropertyRulePaths.delete(path);
+  }
   const excludedInheritedPaths = new Set(Object.entries(draft.inheritedRuleOverrides ?? {})
     .filter(([, state]) => state === "disabled")
     .map(([path]) => canonicalRulePropertyPath(path)));
-  const propertyRows = schemaPropertyRows(draft.document, parentDocuments, excludedInheritedPaths);
+  const allPropertyRows = schemaPropertyRows(draft.document, parentDocuments, excludedInheritedPaths);
+  const propertyView = filterAndSortSchemaPropertyRows(allPropertyRows, schemaPropertyFilter.value, schemaPropertySort.value as SchemaPropertySortOrder);
+  const propertyRows = propertyView.rows;
   const propertyPaths = propertyRows.map(({ displayPath }) => displayPath);
-  if (!propertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = propertyPaths[0] ?? "example";
-  const expandedRulePaths = new Set(Array.from(schemaPropertyTree.querySelectorAll<HTMLDetailsElement>("li[data-schema-property-canonical-path] details[data-attached-rules][open]"))
-    .flatMap((details) => details.closest<HTMLElement>("li[data-schema-property-canonical-path]")?.dataset.schemaPropertyCanonicalPath ?? []));
+  const allPropertyPaths = allPropertyRows.map(({ displayPath }) => displayPath);
+  if (!allPropertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = allPropertyPaths[0] ?? "example";
+  schemaPropertyResultStatus.textContent = `${propertyView.matchCount} of ${propertyView.totalCount} properties${schemaPropertyFilter.value.trim() && propertyView.matchCount ? `, ${propertyView.contextCount} context` : ""}`;
+  schemaPropertyEmpty.hidden = propertyRows.length > 0;
+  schemaPropertyEmptyMessage.textContent = propertyRows.length ? "" : `No properties match ${schemaPropertyFilter.value.trim()}`;
   const propertyTreeScrollTop = schemaPropertyTree.scrollTop;
   const schemaEditorScrollTop = schemaEditor?.scrollTop ?? 0;
   const propertyItems = propertyRows.map((propertyRow) => {
@@ -2051,7 +2088,7 @@ function renderSchemaDraft(): void {
     const inherited = propertyRow.origin === "inherited";
     const property = propertyRow.schema;
     const metadata = document.createElement("span"); metadata.className = "schema-property-metadata";
-    metadata.textContent = `${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
+    metadata.textContent = `${propertyRow.filterContext ? "Filter context · " : ""}${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
     const persistedPath = propertyRow.canonicalPath;
     const documentationPath = canonicalDocumentationPath(persistedPath);
     const localDocumentation = draft.documentation?.properties?.[documentationPath];
@@ -2159,7 +2196,7 @@ function renderSchemaDraft(): void {
         schemaSpecificIndexAssistance.textContent = "Enter a non-negative zero-based index"; schemaSpecificIndexDialog.showModal(); schemaSpecificIndex.focus({ preventScroll:true });
       });
     }
-    const view = document.createElement("details"); view.dataset.attachedRules = "true"; view.open = expandedRulePaths.has(persistedPath); const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
+    const view = document.createElement("details"); view.dataset.attachedRules = "true"; view.open = expandedSchemaPropertyRulePaths.has(persistedPath); view.addEventListener("toggle", () => { if (view.open) expandedSchemaPropertyRulePaths.add(persistedPath); else expandedSchemaPropertyRulePaths.delete(persistedPath); }); const summary = document.createElement("summary"); summary.textContent = `View attached rules (${attached.length})`; view.append(summary);
     if (!attached.length) view.append("No rules attached to this property.");
     for (const rule of attached) {
       const row = document.createElement("div");
