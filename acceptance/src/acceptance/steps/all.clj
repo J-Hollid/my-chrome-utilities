@@ -24,6 +24,7 @@
             [acceptance.steps.guided-assignment-coverage :as guided-assignment-coverage]
             [acceptance.steps.guided-draft-continuation :as guided-draft-continuation]
             [acceptance.steps.guided-rule-parameter-integrity :as guided-rule-parameter-integrity]
+            [acceptance.steps.guided-nested-property-merge :as guided-nested-property-merge]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.information-architecture :as information-architecture]
             [acceptance.steps.live-observer :as live-observer]
@@ -100,6 +101,7 @@
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                guided-rule-parameter-integrity/handlers
+               guided-nested-property-merge/handlers
                project-skeleton/handlers
                observation-targets/priority-handlers
                observation-targets/handlers

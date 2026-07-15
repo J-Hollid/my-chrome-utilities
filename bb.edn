@@ -52,6 +52,7 @@
                         [acceptance.event-library-editor-steps-test]
                         [acceptance.fresh-live-session-steps-test]
                         [acceptance.guided-assignment-coverage-steps-test]
+                        [acceptance.guided-nested-property-merge-steps-test]
                         [acceptance.guided-rule-parameter-integrity-steps-test]
                         [acceptance.missing-event-defect-report-steps-test]
                         [acceptance.missing-event-payload-hardening-steps-test]
@@ -110,6 +111,7 @@
                                                 'acceptance.event-library-editor-steps-test
                                                 'acceptance.fresh-live-session-steps-test
                                                 'acceptance.guided-assignment-coverage-steps-test
+                                                'acceptance.guided-nested-property-merge-steps-test
                                                 'acceptance.guided-rule-parameter-integrity-steps-test
                                                 'acceptance.missing-event-defect-report-steps-test
                                                 'acceptance.missing-event-payload-hardening-steps-test
