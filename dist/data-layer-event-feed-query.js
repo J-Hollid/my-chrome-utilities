@@ -85,7 +85,14 @@ export function eventFeedQueryOperators(field) {
 export function eventFeedQuerySuggestions(events, field) {
     if (field === "Payload property")
         return [];
-    return distinct(events.flatMap((event) => eventValues(event, field)));
+    const observed = events.flatMap((event) => eventValues(event, field));
+    if (field !== "Validation state")
+        return distinct(observed);
+    return distinct([
+        ...observed,
+        ...(observed.some((value) => validationStateMatches(value, "is", "Issues")) ? ["Issues"] : []),
+        ...(observed.some((value) => validationStateMatches(value, "is", "Warnings")) ? ["Warnings"] : []),
+    ]);
 }
 export function queryConditionComplete(condition) {
     if (!condition.id || !condition.field || condition.field === "Payload property" ||

@@ -6,6 +6,7 @@ import {
   type EventFeedQueryCondition,
   type EventFeedQueryField,
   type EventFeedQueryOperator,
+  type EventFeedQueryableEvent,
 } from "./data-layer-event-feed-query.js";
 
 export const SAVED_EVENT_FEED_FILTER_STORAGE_KEY = "my-chrome-utilities.saved-event-feed-filters.v1";
@@ -33,19 +34,11 @@ export interface SavedEventFeedFilterLibrary {
   defaultFilterId?: string;
 }
 
-interface QueryableEvent {
-  name: string;
-  sourceId: string;
-  sourceName?: string;
-  sourceKind?: string;
-  pageUrl?: string;
-  payload?: unknown;
-  validation?: string;
-  validationDetails?: {
-    schema?: { name: string };
-    evaluations?: readonly { rule: string; severity: string; propertyPath: string; status: "pass" | "warning" | "error" | "not-applicable" }[];
-    issues?: readonly { severity?: string; instancePath: string }[];
-  };
+export interface SavedEventFeedWorkingView {
+  version: 1;
+  sessionId: string;
+  query: EventFeedQuery;
+  activeFilterId?: string;
 }
 
 function clone<T>(value: T): T { return structuredClone(value); }
@@ -76,13 +69,20 @@ function semanticConditions(value: SavedEventFeedFilter | EventFeedQuery): unkno
   return value.conditions.map(({ field, operator, values }) => [field, operator, [...values]]);
 }
 
+function validCondition(value: unknown): value is StoredEventFeedFilterCondition {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredEventFeedFilterCondition>;
+  return typeof candidate.id === "string" && typeof candidate.field === "string"
+    && typeof candidate.operator === "string" && Array.isArray(candidate.values)
+    && candidate.values.every((item: unknown) => typeof item === "string");
+}
+
 function validFilter(value: unknown): value is SavedEventFeedFilter {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<SavedEventFeedFilter>;
   return typeof candidate.id === "string" && typeof candidate.name === "string" && candidate.version === 1
     && candidate.match === "all" && candidate.valueMatch === "any" && Array.isArray(candidate.conditions)
-    && candidate.conditions.every((entry) => entry && typeof entry.id === "string" && typeof entry.field === "string"
-      && typeof entry.operator === "string" && Array.isArray(entry.values) && entry.values.every((item: unknown) => typeof item === "string"));
+    && candidate.conditions.every(validCondition);
 }
 
 export function restoreSavedEventFeedFilterLibrary(serialized: string | null): SavedEventFeedFilterLibrary {
@@ -100,6 +100,36 @@ export function restoreSavedEventFeedFilterLibrary(serialized: string | null): S
 
 export function serializeSavedEventFeedFilterLibrary(library: SavedEventFeedFilterLibrary): string {
   return JSON.stringify(library);
+}
+
+export function restoreSavedEventFeedWorkingView(
+  serialized: string | null,
+  sessionId: string | undefined,
+  library: SavedEventFeedFilterLibrary,
+): SavedEventFeedWorkingView | undefined {
+  if (!serialized || !sessionId) return undefined;
+  try {
+    const parsed = JSON.parse(serialized) as Partial<SavedEventFeedWorkingView>;
+    if (parsed.version !== 1 || parsed.sessionId !== sessionId || !parsed.query || !Array.isArray(parsed.query.conditions)
+      || !parsed.query.conditions.every(validCondition)) return undefined;
+    const activeFilterId = library.filters.some(({ id }) => id === parsed.activeFilterId) ? parsed.activeFilterId : undefined;
+    return {
+      version:1,
+      sessionId,
+      query:clone(parsed.query),
+      ...(activeFilterId ? { activeFilterId } : {}),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export function serializeSavedEventFeedWorkingView(
+  sessionId: string,
+  query: EventFeedQuery,
+  activeFilterId?: string,
+): string {
+  return JSON.stringify({ version:1, sessionId, query, ...(activeFilterId ? { activeFilterId } : {}) });
 }
 
 export function savedEventFeedFilterNameResult(
@@ -200,7 +230,7 @@ function supportedCondition(candidate: StoredEventFeedFilterCondition): boolean 
   return (eventFeedQueryOperators(field) as string[]).includes(candidate.operator as EventFeedQueryOperator);
 }
 
-export function inspectSavedEventFeedFilter(filter: SavedEventFeedFilter, events: readonly QueryableEvent[]): {
+export function inspectSavedEventFeedFilter(filter: SavedEventFeedFilter, events: readonly EventFeedQueryableEvent[]): {
   query: EventFeedQuery;
   ready: boolean;
   conditions: readonly { condition: StoredEventFeedFilterCondition; status: "observed" | "not observed" | "needs repair" }[];

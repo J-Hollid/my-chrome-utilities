@@ -147,6 +147,8 @@ import {
   deleteSavedEventFeedFilter,
   renameSavedEventFeedFilter,
   restoreSavedEventFeedFilterLibrary,
+  restoreSavedEventFeedWorkingView,
+  serializeSavedEventFeedWorkingView,
   setDefaultSavedEventFeedFilter,
   updateSavedEventFeedFilter,
   SAVED_EVENT_FEED_FILTER_STORAGE_KEY,
@@ -703,13 +705,19 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let restoredSavedEventFeedWorkingView = false;
-try {
-  const restored = JSON.parse(localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY) ?? "null") as { version?: number; sessionId?: string; query?: EventFeedQuery; activeFilterId?: string } | null;
-  if (restored?.version === 1 && restored.sessionId === dataLayerSessionState.session?.id && restored.query?.conditions) {
-    liveObserverState = { ...liveObserverState, query:structuredClone(restored.query), ...(restored.activeFilterId ? { savedFilterId:restored.activeFilterId } : {}) };
-    restoredSavedEventFeedWorkingView = true;
-  }
-} catch { /* Invalid working-view state starts from the configured default or All events. */ }
+const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(
+  localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY),
+  dataLayerSessionState.session?.id,
+  savedEventFeedFilterLibrary,
+);
+if (restoredSavedEventFeedView) {
+  liveObserverState = {
+    ...liveObserverState,
+    query:restoredSavedEventFeedView.query,
+    ...(restoredSavedEventFeedView.activeFilterId ? { savedFilterId:restoredSavedEventFeedView.activeFilterId } : {}),
+  };
+  restoredSavedEventFeedWorkingView = true;
+}
 if (!restoredSavedEventFeedWorkingView && savedEventFeedFilterLibrary.defaultFilterId) {
   const defaultFilter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === savedEventFeedFilterLibrary.defaultFilterId);
   if (defaultFilter) liveObserverState = { ...liveObserverState, query:applySavedEventFeedFilter({ conditions:[] }, defaultFilter), savedFilterId:defaultFilter.id };
@@ -1300,12 +1308,11 @@ function persistSavedEventFeedWorkingView(): void {
   if (savedSessionLiveFeed) { synchronizeSavedSessionFeedView(); return; }
   const sessionId = dataLayerSessionState.session?.id;
   if (!sessionId) { localStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY); return; }
-  localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, JSON.stringify({
-    version:1,
+  localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(
     sessionId,
-    query:liveObserverState.query ?? { conditions:[] },
-    ...(liveObserverState.savedFilterId ? { activeFilterId:liveObserverState.savedFilterId } : {}),
-  }));
+    liveObserverState.query ?? { conditions:[] },
+    liveObserverState.savedFilterId,
+  ));
 }
 
 function installSavedEventFeedWorkingQuery(query: EventFeedQuery, activeFilterId?: string): void {

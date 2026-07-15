@@ -27,7 +27,7 @@ import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-sess
 import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
 import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./data-layer-live-observer.js";
 import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
-import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./data-layer-saved-event-feed-filters.js";
+import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./data-layer-saved-event-feed-filters.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./data-layer-saved-sessions.js";
 import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./data-layer-saved-session-live-feed.js";
 import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
@@ -468,14 +468,15 @@ let liveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let restoredSavedEventFeedWorkingView = false;
-try {
-    const restored = JSON.parse(localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY) ?? "null");
-    if (restored?.version === 1 && restored.sessionId === dataLayerSessionState.session?.id && restored.query?.conditions) {
-        liveObserverState = { ...liveObserverState, query: structuredClone(restored.query), ...(restored.activeFilterId ? { savedFilterId: restored.activeFilterId } : {}) };
-        restoredSavedEventFeedWorkingView = true;
-    }
+const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY), dataLayerSessionState.session?.id, savedEventFeedFilterLibrary);
+if (restoredSavedEventFeedView) {
+    liveObserverState = {
+        ...liveObserverState,
+        query: restoredSavedEventFeedView.query,
+        ...(restoredSavedEventFeedView.activeFilterId ? { savedFilterId: restoredSavedEventFeedView.activeFilterId } : {}),
+    };
+    restoredSavedEventFeedWorkingView = true;
 }
-catch { /* Invalid working-view state starts from the configured default or All events. */ }
 if (!restoredSavedEventFeedWorkingView && savedEventFeedFilterLibrary.defaultFilterId) {
     const defaultFilter = savedEventFeedFilterLibrary.filters.find(({ id }) => id === savedEventFeedFilterLibrary.defaultFilterId);
     if (defaultFilter)
@@ -1033,12 +1034,7 @@ function persistSavedEventFeedWorkingView() {
         localStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY);
         return;
     }
-    localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, JSON.stringify({
-        version: 1,
-        sessionId,
-        query: liveObserverState.query ?? { conditions: [] },
-        ...(liveObserverState.savedFilterId ? { activeFilterId: liveObserverState.savedFilterId } : {}),
-    }));
+    localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(sessionId, liveObserverState.query ?? { conditions: [] }, liveObserverState.savedFilterId));
 }
 function installSavedEventFeedWorkingQuery(query, activeFilterId) {
     const { savedFilterId: _previous, ...state } = setLiveQuery(liveObserverState, query);
