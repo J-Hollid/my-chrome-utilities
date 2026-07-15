@@ -67,10 +67,16 @@ function evaluatePredicate(value, predicate) {
     };
 }
 export function evaluateAssignmentDataConditions(value, group) {
-    const predicates = group.predicates.map((predicate) => evaluatePredicate(value, predicate));
+    const validation = validateAssignmentDataConditions(group);
+    const predicates = group.predicates.map((predicate) => {
+        const evidence = evaluatePredicate(value, predicate);
+        return validation.ready ? evidence : { ...evidence, matched: false };
+    });
     return {
         operator: group.operator,
-        matched: group.operator === "All" ? predicates.length > 0 && predicates.every(({ matched }) => matched) : predicates.some(({ matched }) => matched),
+        configurationReady: validation.ready,
+        assistance: validation.assistance,
+        matched: validation.ready && (group.operator === "All" ? predicates.length > 0 && predicates.every(({ matched }) => matched) : predicates.some(({ matched }) => matched)),
         predicates,
     };
 }
@@ -80,6 +86,8 @@ function comparisonRequired(operator) {
 export function validateAssignmentDataConditions(group) {
     if (!group)
         return { ready: true, assistance: "Assignment is unrestricted by event data" };
+    if (group.operator !== "All" && group.operator !== "Any")
+        return { ready: false, assistance: "Choose All or Any" };
     if (!group.predicates.length)
         return { ready: false, assistance: "Add at least one condition" };
     for (const predicate of group.predicates) {
@@ -95,6 +103,9 @@ export function validateAssignmentDataConditions(group) {
             const hasValue = predicate.operator === "Is one of" ? Boolean(predicate.comparisons?.length) : predicate.comparison !== undefined;
             if (!hasValue)
                 return { ready: false, assistance: "Enter a comparison value" };
+            if (configuredValues(predicate).some(({ type }) => type !== detectedType)) {
+                return { ready: false, assistance: `Enter a ${detectedType} comparison value` };
+            }
         }
         if (predicate.operator === "Matches pattern") {
             try {
