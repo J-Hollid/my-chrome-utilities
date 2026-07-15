@@ -4,6 +4,7 @@ import {
   attachRuleToSchemaProperty,
   schemaPropertyRows,
 } from "../dist/data-layer-schema-rule-property-identity.js";
+import { filterAndSortSchemaPropertyRows } from "../dist/data-layer-schema-property-view.js";
 
 let seed = 0x6964656e;
 
@@ -52,6 +53,48 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(rows.find(({ canonicalPath }) => canonicalPath === `/${names[0]}`).origin, "local",
     "a local definition must win over an inherited definition with the same identity");
   assert.deepEqual(inputs, inputSnapshot, "row derivation must not mutate schema documents");
+
+  const rowsSnapshot = structuredClone(rows);
+  for (const sortOrder of ["schema", "name-asc", "name-desc"]) {
+    const view = filterAndSortSchemaPropertyRows(rows, "", sortOrder);
+    assert.equal(view.matchCount, rows.length);
+    assert.equal(view.contextCount, 0);
+    assert.equal(view.totalCount, rows.length);
+    assert.equal(view.rows.every(({ filterContext }) => !filterContext), true);
+    assert.deepEqual(new Set(view.rows.map(({ canonicalPath }) => canonicalPath)), new Set(expectedPaths),
+      "sorting must conserve every canonical row identity");
+    for (const { canonicalPath } of view.rows) {
+      const parent = canonicalPath.slice(0, canonicalPath.lastIndexOf("/"));
+      if (parent) {
+        assert.ok(view.rows.findIndex((row) => row.canonicalPath === parent)
+          < view.rows.findIndex((row) => row.canonicalPath === canonicalPath),
+        "every generated ancestor must remain before its descendants");
+      }
+    }
+  }
+  const rootPaths = expectedPaths.filter((path) => path.indexOf("/", 1) < 0);
+  const compareRootNames = (left, right) => left.slice(1).localeCompare(right.slice(1), undefined, { sensitivity:"base" });
+  assert.deepEqual(
+    filterAndSortSchemaPropertyRows(rows, "", "name-asc").rows
+      .map(({ canonicalPath }) => canonicalPath).filter((path) => rootPaths.includes(path)),
+    [...rootPaths].sort(compareRootNames),
+  );
+  assert.deepEqual(
+    filterAndSortSchemaPropertyRows(rows, "", "name-desc").rows
+      .map(({ canonicalPath }) => canonicalPath).filter((path) => rootPaths.includes(path)),
+    [...rootPaths].sort((left, right) => -compareRootNames(left, right)),
+  );
+  const leafPath = `/${names[0]}/*/value`;
+  const leafView = filterAndSortSchemaPropertyRows(rows, leafPath.toUpperCase(), "schema");
+  assert.deepEqual(leafView.rows.map(({ canonicalPath }) => canonicalPath), [
+    `/${names[0]}`,
+    `/${names[0]}/*`,
+    leafPath,
+  ], "an exact generated leaf query must restore only its ancestor chain");
+  assert.deepEqual(leafView.rows.map(({ filterContext }) => filterContext), [true, true, false]);
+  assert.equal(leafView.matchCount, 1);
+  assert.equal(leafView.contextCount, 2);
+  assert.deepEqual(rows, rowsSnapshot, "filtering and sorting must not mutate source rows");
   rows[0].schema.type = "object";
   assert.deepEqual(inputs, inputSnapshot, "row metadata must not provide a mutation path into schema documents");
 
