@@ -159,8 +159,17 @@ assert.deepEqual(focusOptions, { preventScroll: true });
 assert.equal(closeLiveFeed, 1);
 
 const headings = descendants(root).filter(({ tagName }) => tagName === "H4" || tagName === "H5").map(({ textContent }) => textContent);
-assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Expected result", "Steps to reproduce", "Supporting timeline", "Report details"]);
+assert.deepEqual(headings, ["Defect report: purchase", "Validation issues", "Expected result", "Steps to reproduce", "Supporting timeline", "Report details", "Report sections"]);
 const preview = element(root, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
+const reportSections = element(root, ({ attributes }) => attributes.get("aria-label") === "Report sections");
+const reportSectionInputs = descendants(reportSections).filter(({ tagName }) => tagName === "INPUT");
+assert.deepEqual(reportSectionInputs.map(({ checked }) => checked), [true, false, false]);
+assert.match(preview.innerHTML, /Differences/);
+assert.doesNotMatch(preview.innerHTML, /Validation evidence|Validation rules covered|Capture metadata/);
+reportSectionInputs[1].checked = true; reportSectionInputs[1].dispatch("change");
+assert.match(preview.innerHTML, /Validation evidence[\s\S]*Validation rules covered/);
+assert.doesNotMatch(preview.innerHTML, /Capture metadata/);
+reportSectionInputs[1].checked = false; reportSectionInputs[1].dispatch("change");
 
 const pageTypeGeneric = element(root, ({ name, dataset }) => name === "defect-response-page_type" && dataset.responseSource === "Use generic constraint");
 assert.equal(pageTypeGeneric.checked, true);

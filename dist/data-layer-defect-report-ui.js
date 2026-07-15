@@ -1,4 +1,4 @@
-import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, } from "./data-layer-defect-report.js";
+import { applyExpectedResult, copyDefectReportForJira, createDefectReport, editReportDetails, generateReportDetails, renderJiraReport, reportComponents, updateReportComponents, } from "./data-layer-defect-report.js";
 import { browserDefectReportClipboard, defectCapturedEvent, defectReportContext, } from "./data-layer-defect-report-browser.js";
 import { appendDetailControls, } from "./data-layer-defect-report-ui-controls.js";
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
@@ -26,6 +26,9 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     timelineList.className = "defect-timeline-entries";
     timelineList.setAttribute("aria-label", "Supporting timeline entries");
     const detailControls = document.createElement("div");
+    const reportSections = document.createElement("fieldset");
+    reportSections.setAttribute("aria-label", "Report sections");
+    reportSections.append(heading("h5", "Report sections"));
     const preview = document.createElement("section");
     preview.setAttribute("aria-label", "Final report preview");
     const feedback = document.createElement("output");
@@ -100,6 +103,16 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
         update(next) { report = next; },
         refresh,
     };
+    const componentControl = (label, key) => {
+        const wrapper = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = reportComponents(report)[key];
+        checkbox.addEventListener("change", () => { report = updateReportComponents(report, { [key]: checkbox.checked }); refresh(); });
+        wrapper.append(checkbox, ` ${label}`);
+        return wrapper;
+    };
+    reportSections.append(componentControl("Include differences list", "differences"), componentControl("Include validation rules covered", "validationRules"), componentControl("Include capture metadata", "captureMetadata"));
     appendIssueControls(issues, expectedControls, state, selectedChoices);
     appendReproductionControls(reproductionControls, reproductionSteps, context, state);
     appendTimelineControls(timelineFilters, timelineList, context, state);
@@ -117,7 +130,7 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
         saveAndCopy.onclick = () => { void persist(true); };
         persistenceActions.append(save, saveAndCopy);
     }
-    root.replaceChildren(builderHeader, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, preview, copy, persistenceActions, duplicateReview, feedback);
+    root.replaceChildren(builderHeader, heading("h5", "Validation issues"), issues, heading("h5", "Expected result"), expectedControls, heading("h5", "Steps to reproduce"), reproductionControls, reproductionSteps, heading("h5", "Supporting timeline"), timelineFilters, timelineList, heading("h5", "Report details"), detailControls, reportSections, preview, copy, persistenceActions, duplicateReview, feedback);
     refresh();
     title.focus({ preventScroll: true });
 }

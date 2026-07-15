@@ -110,7 +110,7 @@ for (const pointer of ["/commerce/currency", "/products/0/name", "/a~1b", "/tild
     expected:{ payload:report.expected.payload, corrections:[{ issueId:`legacy-${pointer}`, pointer, operation:"replace", marker:"+" }], explanations:[] },
   });
   const legacyRendered = renderJiraReport(legacy);
-  const legacyDifferences = legacyRendered.text.match(/Differences\n([\s\S]*?)\n\nValidation evidence/)?.[1] ?? "";
+  const legacyDifferences = legacyRendered.text.match(/Differences\n([\s\S]*?)(?:\n\nValidation evidence|$)/)?.[1] ?? "";
   assert.match(legacyRendered.text, new RegExp(pointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(legacyDifferences, /validation failed/);
   assert.doesNotMatch(legacyDifferences, /missing|undeclared|invalid actual value/);

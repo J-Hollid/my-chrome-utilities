@@ -90,6 +90,7 @@ Feature: Data layer defect report undeclared property removal
   # Data layer defect report undeclared property removal 009
   Scenario: Data layer defect report undeclared property removal 009
     Given the corrected report is complete
+    And Include validation rules covered is selected
     When live preview, Jira rich text, Jira plain text, saved defect, reopened preview, and recopied output are compared
     Then every Expected result contains the same payload without debug
     And none contains debug as an expected JSON property
@@ -108,4 +109,3 @@ Feature: Data layer defect report undeclared property removal
     When undeclared-property choices are selected, deselected, previewed, copied, or saved
     Then the captured event, validation result, and assigned schema remain byte-for-byte unchanged
     And only the report's expected payload and correction model change
-
