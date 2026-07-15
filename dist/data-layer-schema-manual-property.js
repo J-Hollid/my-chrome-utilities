@@ -86,8 +86,10 @@ export function manualPropertyContainerAction(document, path) {
 }
 export function contextualManualPropertyDefinition(parentPath, childName, type, arrayItemType) {
     const parent = parsePath(parentPath).normalizedPath;
+    const child = childName.trim();
+    const contextualChild = child === "*" || child.includes("/") || child.includes(".") ? "" : child;
     return {
-        path: `${parent}/${childName.trim()}`,
+        path: `${parent}/${contextualChild}`,
         type,
         ...(type === "array" && arrayItemType ? { arrayItemType } : {}),
     };
