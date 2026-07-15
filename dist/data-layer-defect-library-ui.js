@@ -1,6 +1,4 @@
-import { renderJiraReport } from "./data-layer-defect-report-export.js";
-import { renderOccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
-import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
+import { storedDefectRepresentations } from "./data-layer-defect-library-copy.js";
 export function findDefectLibraryElements(root = document) {
     return {
         count: root.querySelector("#defect-library-count"),
@@ -56,7 +54,6 @@ function renderDetail(root, defect, actions) {
     description.value = reportField(defect.report, "description");
     description.dataset.defectField = "description";
     const missingEvent = defect.type === "Missing event";
-    const occurrence = defect.type === "Unexpected event" || defect.type === "Wrong event name";
     const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
     const expected = element("textarea");
     expected.value = reportField(defect.report, expectedField);
@@ -102,11 +99,7 @@ function renderDetail(root, defect, actions) {
     const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
     const preview = element("section");
     preview.setAttribute("aria-label", "Final report preview");
-    preview.innerHTML = missingEvent
-        ? generateMissingEventRepresentations(defect.report).previewHtml
-        : occurrence
-            ? renderOccurrenceReport(defect.report).html
-            : renderJiraReport(defect.report).html;
+    preview.innerHTML = storedDefectRepresentations(defect).html;
     root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), preview, label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls, feedback);
     root.hidden = false;
     title.focus({ preventScroll: true });

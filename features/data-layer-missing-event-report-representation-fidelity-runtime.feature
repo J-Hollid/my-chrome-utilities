@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=e6701bf44d8ebd47097bec1b18073478b2ae91c9eb986c1642b3920f9c7af98a
+# mutation-stamp: sha256=bbc023d3eb120583a203d6c4f494ec1eee3bc959137b8550f09e2704734d9e48
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-14T23:52:25.361669170Z","feature_name":"Data layer missing-event report representation fidelity runtime","feature_path":"features/data-layer-missing-event-report-representation-fidelity-runtime.feature","background_hash":"262e27bf6936d8e3112de14368be18ebf316985fcea3106068e4204ade0a4857","implementation_hash":"unknown","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-15T13:22:02.122501832Z","feature_name":"Data layer missing-event report representation fidelity runtime","feature_path":"features/data-layer-missing-event-report-representation-fidelity-runtime.feature","background_hash":"262e27bf6936d8e3112de14368be18ebf316985fcea3106068e4204ade0a4857","implementation_hash":"sha256:c511bb0ff6c1902306010533fee2804631cae21eaacec9a41bc9478050ae87ac","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer missing-event report representation fidelity runtime
