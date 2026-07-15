@@ -1,38 +1,69 @@
 import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
 import { schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
-import { conditionalRuleSummary } from "./data-layer-conditional-validation-rules.js";
+import { schemaRevision } from "./data-layer-schema-verification.js";
+function withoutWorkingState(schema) {
+    const { workingDraft: _draft, revisionHistory: _history, ...surface } = structuredClone(schema);
+    return surface;
+}
+function workingDraftSurface(schema) {
+    const draft = schema.workingDraft;
+    if (!draft)
+        return undefined;
+    const { workingDraft: _draft, revisionHistory: _history, attachedRules: _rules, parentSchemaId: _parent, inheritedRuleOverrides: _overrides, documentation: _documentation, ...published } = structuredClone(schema);
+    return {
+        ...published,
+        name: draft.name ?? schema.name,
+        document: structuredClone(draft.document),
+        assignments: structuredClone(draft.assignments),
+        ...(draft.attachedRules !== undefined ? { attachedRules: structuredClone(draft.attachedRules) } : {}),
+        ...(draft.parentSchemaId !== undefined ? { parentSchemaId: draft.parentSchemaId } : {}),
+        ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides: structuredClone(draft.inheritedRuleOverrides) } : {}),
+        ...(draft.documentation !== undefined ? { documentation: structuredClone(draft.documentation) } : {}),
+    };
+}
+export function specificationSurfaces(schema) {
+    const published = schemaRevision(schema, schema.version) ?? withoutWorkingState(schema);
+    const historical = (schema.revisionHistory ?? [])
+        .map(({ version }) => schemaRevision(schema, version))
+        .filter((revision) => Boolean(revision))
+        .sort((left, right) => right.version - left.version)
+        .map((revision) => ({
+        key: `historical:${revision.version}`,
+        label: `historical revision ${revision.version}`,
+        schema: revision,
+    }));
+    const draft = workingDraftSurface(schema);
+    return [
+        { key: `published:${published.version}`, label: `published revision ${published.version}`, schema: published },
+        ...historical,
+        ...(draft ? [{ key: "working-draft", label: `working draft based on revision ${schema.workingDraft.sourceVersion}`, schema: draft }] : []),
+    ];
+}
 function typeLabel(schema) {
     if (!schema?.type)
         return "Unspecified";
-    const type = schema.type;
-    if (type === "array") {
+    if (schema.type === "array") {
         const itemType = schema.items?.type;
-        return itemType === "object" ? "Array of Object" : `Array of ${itemType ? itemType.charAt(0).toUpperCase() + itemType.slice(1) : "Unspecified"}`;
+        return itemType === "object"
+            ? "Array of Object"
+            : `Array of ${itemType ? itemType.charAt(0).toUpperCase() + itemType.slice(1) : "Unspecified"}`;
     }
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return schema.type.charAt(0).toUpperCase() + schema.type.slice(1);
 }
-function requiredFor(path, document, rules) {
-    const conditional = rulesFor(path, rules).filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "required" && rule.conditionGroup);
-    if (conditional.length)
-        return conditional.map((rule) => `Yes when ${conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: path, operator: "required" } }).replace(/^(When |For each [^,]+, when )/u, "").replace(/, [^,]+$/u, "")}`).join("; ");
-    const segments = path.split("/").filter(Boolean);
-    let current = document;
-    let required = false;
-    for (const segment of segments) {
-        if (!current)
-            break;
-        if (segment === "*") {
-            current = current.items;
-            continue;
-        }
-        required = current.required?.includes(segment) ?? false;
-        current = current.properties?.[segment] ?? current.items;
-    }
-    return required ? "Yes" : "No";
+function pathSegments(path) {
+    return path.split("/").filter(Boolean);
+}
+function propertyName(path) {
+    return path.slice(1).replaceAll("/*", "[]").replaceAll("/", ".");
+}
+function overrideDisabled(schema, path) {
+    const overrides = schema.inheritedRuleOverrides ?? {};
+    const topLevel = pathSegments(path)[0] ?? "";
+    return overrides[path] === "disabled" || overrides[topLevel] === "disabled";
 }
 function parentChain(schema, allSchemas) {
     const result = [];
-    const visited = new Set();
+    const visited = new Set([schema.id]);
     let parentId = schema.parentSchemaId;
     while (parentId && !visited.has(parentId)) {
         visited.add(parentId);
@@ -44,57 +75,195 @@ function parentChain(schema, allSchemas) {
     }
     return result;
 }
+function ruleIdentity(rule) {
+    return `${rule.id}\u0000${rule.propertyPath ?? ""}`;
+}
 function effectiveRules(schema, allSchemas) {
-    const inherited = parentChain(schema, allSchemas).reverse().flatMap((parent) => parent.attachedRules ?? []).filter((rule) => schema.inheritedRuleOverrides?.[rule.propertyPath ?? ""] !== "disabled");
-    const local = schema.attachedRules ?? [];
-    const localKeys = new Set(local.map((rule) => `${rule.id}:${rule.propertyPath ?? ""}`));
-    return [...inherited.filter((rule) => !localKeys.has(`${rule.id}:${rule.propertyPath ?? ""}`)), ...local].filter((rule) => rule.enabled !== false);
+    const rules = new Map();
+    for (const parent of parentChain(schema, allSchemas).reverse()) {
+        for (const rule of parent.attachedRules ?? []) {
+            if (rule.enabled === false || (rule.propertyPath && overrideDisabled(schema, rule.propertyPath)))
+                continue;
+            rules.set(ruleIdentity(rule), rule);
+        }
+    }
+    for (const rule of schema.attachedRules ?? []) {
+        if (rule.enabled === false)
+            rules.delete(ruleIdentity(rule));
+        else
+            rules.set(ruleIdentity(rule), rule);
+    }
+    return [...rules.values()];
+}
+function rulesFor(path, rules) {
+    return rules.filter(({ propertyPath, enabled }) => enabled !== false && propertyPath === path);
+}
+function schemaAt(document, path) {
+    return pathSegments(path).reduce((current, segment) => segment === "*" ? current?.items : current?.properties?.[segment], document);
+}
+function owningDocument(schema, path, allSchemas) {
+    return [schema, ...parentChain(schema, allSchemas)]
+        .find((candidate) => schemaAt(candidate.document, path))?.document ?? schema.document;
+}
+function structuralRequirement(path, document) {
+    const segments = pathSegments(path);
+    const conditions = [];
+    let current = document;
+    let readable = "";
+    for (let index = 0; index < segments.length; index += 1) {
+        const segment = segments[index];
+        if (segment === "*") {
+            const arrayName = readable.split(".").at(-1) ?? "array";
+            conditions.push(`a ${arrayName} item exists`);
+            current = current?.items;
+            continue;
+        }
+        if (!current)
+            return undefined;
+        const required = current.required?.includes(segment) ?? false;
+        const leaf = index === segments.length - 1;
+        readable = readable ? `${readable}.${segment}` : segment;
+        const child = current.properties?.[segment];
+        if (leaf) {
+            if (!required)
+                return undefined;
+            return conditions.length ? `Yes when ${conditions.join(" and ")}` : "Yes";
+        }
+        const followedByItem = child?.type === "array" && segments[index + 1] === "*";
+        if (!required && !followedByItem)
+            conditions.push(`${readable} exists`);
+        current = child;
+    }
+    return undefined;
+}
+function comparisonText(predicate) {
+    if (predicate.operator === "Is one of")
+        return predicate.comparisons?.map(({ value }) => String(value)).join(" or ") ?? "";
+    return predicate.comparison ? String(predicate.comparison.value) : "";
+}
+function conditionPath(path, targetPath) {
+    const predicate = pathSegments(path);
+    const target = pathSegments(targetPath);
+    const targetWildcard = target.indexOf("*");
+    if (targetWildcard > 0
+        && predicate[targetWildcard] === "*"
+        && predicate.slice(0, targetWildcard).every((segment, index) => segment === target[index])) {
+        return {
+            name: propertyName(`/${predicate.slice(targetWildcard + 1).join("/")}`),
+            context: `the same ${target[targetWildcard - 1]} item`,
+        };
+    }
+    return { name: propertyName(path) };
+}
+function predicateText(predicate, targetPath) {
+    const path = conditionPath(predicate.propertyPath, targetPath);
+    const comparison = comparisonText(predicate);
+    const relation = predicate.operator === "Exists" ? "exists"
+        : predicate.operator === "Does not exist" ? "does not exist"
+            : predicate.operator === "Equals" ? `equals ${comparison}`
+                : predicate.operator === "Does not equal" ? `does not equal ${comparison}`
+                    : predicate.operator === "Is one of" ? `is one of ${comparison}`
+                        : predicate.operator === "Matches pattern" ? `matches ${comparison}`
+                            : `${predicate.operator.toLowerCase()} ${comparison}`;
+    return `${path.name} ${relation}${path.context ? ` for ${path.context}` : ""}`;
+}
+function conditionText(group, targetPath) {
+    return group.predicates.map((predicate) => predicateText(predicate, targetPath))
+        .join(group.operator === "All" ? " and " : " or ");
+}
+function requiredFor(path, document, rules) {
+    const requiredRules = rulesFor(path, rules)
+        .filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "required");
+    if (requiredRules.some(({ conditionGroup }) => !conditionGroup))
+        return "Yes";
+    const structural = structuralRequirement(path, document);
+    if (structural)
+        return structural;
+    const conditional = requiredRules.filter((rule) => Boolean(rule.conditionGroup));
+    return conditional.length
+        ? conditional.map(({ conditionGroup }) => `Yes when ${conditionText(conditionGroup, path)}`).join("; ")
+        : "No";
+}
+function uniqueValues(values) {
+    return values.filter((value, index) => values.findIndex((candidate) => Object.is(candidate, value)) === index);
+}
+function allowedFor(path, rules) {
+    const relevant = rulesFor(path, rules)
+        .filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values" && rule.allowedValues);
+    const unconditional = relevant.filter(({ conditionGroup }) => !conditionGroup);
+    const conditional = relevant.filter((rule) => Boolean(rule.conditionGroup));
+    let intersection = unconditional.length ? uniqueValues(unconditional[0].allowedValues) : [];
+    for (const rule of unconditional.slice(1)) {
+        intersection = intersection.filter((value) => rule.allowedValues.some((candidate) => Object.is(candidate, value)));
+    }
+    const conflict = unconditional.length > 1 && !intersection.length;
+    const groups = [
+        ...(conflict ? ["Conflict: no values satisfy all effective rules"] : intersection.length ? [intersection.join(" | ")] : []),
+        ...conditional.map((rule) => `${uniqueValues(rule.allowedValues).join(" | ")} when ${conditionText(rule.conditionGroup, path)}`),
+    ];
+    return {
+        values: uniqueValues([...intersection, ...conditional.flatMap((rule) => rule.allowedValues)]),
+        groups,
+    };
 }
 export function specificationProperties(schema, allSchemas = [schema]) {
     const parents = parentChain(schema, allSchemas);
-    return schemaPropertyRows(schema.document, parents.map(({ document }) => document)).filter(({ canonicalPath }) => !canonicalPath.endsWith("/*")).map((row) => {
+    return schemaPropertyRows(schema.document, parents.map(({ document }) => document))
+        .filter(({ canonicalPath, origin }) => !canonicalPath.endsWith("/*") && !(origin === "inherited" && overrideDisabled(schema, canonicalPath)))
+        .map((row) => {
         const container = row.schema.type === "object" || row.schema.type === "array";
-        return { canonicalPath: row.canonicalPath, propertyName: row.canonicalPath.slice(1).replaceAll("/*", "[]").replaceAll("/", "."), origin: row.origin, container, selectedByDefault: !container };
+        return {
+            canonicalPath: row.canonicalPath,
+            propertyName: propertyName(row.canonicalPath),
+            origin: row.origin,
+            container,
+            selectedByDefault: !container,
+        };
     });
-}
-function rulesFor(path, rules) {
-    return rules.filter((rule) => rule.enabled !== false && rule.propertyPath === path);
-}
-function allowedFor(path, rules) {
-    const relevant = rulesFor(path, rules).filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values" && rule.allowedValues);
-    const unconditional = relevant.filter(({ conditionGroup }) => !conditionGroup);
-    const conditional = relevant.filter(({ conditionGroup }) => conditionGroup);
-    let values = unconditional.length ? [...unconditional[0].allowedValues] : [];
-    for (const rule of unconditional.slice(1))
-        values = values.filter((value) => rule.allowedValues.some((candidate) => Object.is(candidate, value)));
-    const conflict = unconditional.length > 1 && !values.length;
-    const groups = [conflict ? "Conflict: no values satisfy all effective rules" : values.join(" | ")];
-    conditional.forEach((rule) => groups.push(`${rule.allowedValues.join(" | ")} when ${conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: path, operator: "allowed-values" } }).replace(/^(When |For each [^,]+, when )/u, "").replace(/, [^,]+$/u, "")}`));
-    return { values, text: groups.filter(Boolean).join("; ") };
-}
-function schemaAt(document, path) {
-    return path.split("/").filter(Boolean).reduce((current, segment) => segment === "*" ? current?.items : current?.properties?.[segment] ?? current?.items, document);
 }
 export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [schema]) {
     const documentation = resolveEffectiveSchemaDocumentation(schema, allSchemas);
     const rules = effectiveRules(schema, allSchemas);
     return selectedPaths.map((canonicalPath) => {
-        const documents = [schema.document, ...parentChain(schema, allSchemas).map(({ document }) => document)];
-        const owningDocument = documents.find((document) => schemaAt(document, canonicalPath)) ?? schema.document;
-        const property = schemaAt(owningDocument, canonicalPath);
-        const doc = resolvePropertyDocumentation(documentation, canonicalPath);
-        const example = doc?.example?.value;
+        const document = owningDocument(schema, canonicalPath, allSchemas);
+        const property = schemaAt(document, canonicalPath);
+        const resolvedDocumentation = resolvePropertyDocumentation(documentation, canonicalPath);
+        const documented = resolvedDocumentation?.inherited && overrideDisabled(schema, canonicalPath)
+            ? undefined
+            : resolvedDocumentation;
+        const example = documented?.example?.value;
         const allowed = allowedFor(canonicalPath, rules);
-        return { canonicalPath, propertyName: canonicalPath.slice(1).replaceAll("/*", "[]").replaceAll("/", "."), description: doc?.description ?? "", mandatory: requiredFor(canonicalPath, owningDocument, rules), type: typeLabel(property), ...(example !== undefined ? { example: String(example) } : {}), allowedValues: allowed.values, ...(allowed.text ? { allowedValuesText: allowed.text } : {}) };
+        return {
+            canonicalPath,
+            propertyName: propertyName(canonicalPath),
+            description: documented?.description ?? "",
+            mandatory: requiredFor(canonicalPath, document, rules),
+            type: typeLabel(property),
+            ...(example !== undefined ? { example: String(example) } : {}),
+            allowedValues: allowed.values,
+            allowedValueGroups: allowed.groups,
+            ...(allowed.groups.length ? { allowedValuesText: allowed.groups.join("; ") } : {}),
+        };
     });
 }
-function escape(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;"); }
-function cell(row, key) { const value = key === "allowedValues" ? row.allowedValuesText ?? row.allowedValues.join(" | ") : row[key] ?? ""; return String(value); }
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+}
+function plainCell(value) {
+    return String(value ?? "").replace(/[\t\r\n]+/gu, " ");
+}
 export function renderSpecificationClipboard(rows) {
-    const columns = ["propertyName", "description", "mandatory", "type", "example", "allowedValues"];
     const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values"];
-    const html = `<table><thead><tr>${labels.map((label) => `<th>${escape(label)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map((key) => `<td>${escape(cell(row, key))}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-    const plain = [labels, ...rows.map((row) => columns.map((key) => cell(row, key)))].map((line) => line.map((value) => String(value).replaceAll("\t", " ").replaceAll("\n", " ")).join("\t")).join("\n");
+    const ordinaryCells = (row) => [row.propertyName, row.description, row.mandatory, row.type, row.example ?? ""];
+    const htmlRows = rows.map((row) => `<tr>${ordinaryCells(row).map((value) => `<td>${escapeHtml(value)}</td>`).join("")}<td>${row.allowedValueGroups.map(escapeHtml).join("<br>")}</td></tr>`).join("");
+    const html = `<table><thead><tr>${labels.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${htmlRows}</tbody></table>`;
+    const plain = [labels, ...rows.map((row) => [...ordinaryCells(row), row.allowedValueGroups.join("; ")])]
+        .map((line) => line.map(plainCell).join("\t"))
+        .join("\n");
     return { html, plain };
 }
 //# sourceMappingURL=data-layer-schema-specification-builder.js.map

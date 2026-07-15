@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7a4c9614cdf97c03d2734aae9b640d5b054f60c78298e32697cb91afb912360f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T21:16:33.886514848Z","feature_name":"Data layer schema specification builder","feature_path":"features/data-layer-schema-specification-builder.feature","background_hash":"f022be2a83d79dcc4f6b82950b12546e803f1737ac1f71b529ffd4ffe83d5bd8","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer schema specification builder 001","scenario_hash":"3aa4ea1c06cea04fbce5bac042a1322ed3e26174b624b7622fce109d2caab493","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-15T21:16:33.886514848Z"},{"index":3,"name":"Data layer schema specification builder 004","scenario_hash":"f517cc541978cc9e5c52a344fa4a1617537989f26d1ea2bc667d0bb335e3e57a","mutation_count":49,"result":{"Total":49,"Killed":49,"Survived":0,"Errors":0},"tested_at":"2026-07-15T21:16:33.886514848Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification builder
 
   Background:

@@ -733,8 +733,9 @@ const confirmSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#co
 const cancelSchemaDeleteButton = document.querySelector<HTMLButtonElement>("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector<HTMLSelectElement>("#schema-editor-parent");
 const schemaOnlyDeclaredProperties = document.querySelector<HTMLInputElement>("#schema-only-declared-properties");
-const schemaSpecificationBuilder = document.createElement("section"); schemaSpecificationBuilder.id = "schema-specification-builder"; schemaSpecificationBuilder.hidden = true; schemaEditor?.append(schemaSpecificationBuilder);
+const schemaSpecificationBuilder = document.createElement("section"); schemaSpecificationBuilder.id = "schema-specification-builder"; schemaSpecificationBuilder.hidden = true; schemaDetail?.append(schemaSpecificationBuilder);
 const buildSpecificationButton = document.createElement("button"); buildSpecificationButton.type = "button"; buildSpecificationButton.textContent = "Build specification"; buildSpecificationButton.id = "build-specification"; schemaEditor?.prepend(buildSpecificationButton);
+const buildHistoricalSpecificationButton = document.createElement("button"); buildHistoricalSpecificationButton.type = "button"; buildHistoricalSpecificationButton.textContent = "Build specification"; buildHistoricalSpecificationButton.id = "build-historical-specification"; restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton);
 const schemaCount = document.querySelector<HTMLElement>("#schema-count");
 const schemaList = document.querySelector<HTMLElement>("#schema-list");
 const schemaResult = document.querySelector<HTMLElement>("#schema-result");
@@ -1925,7 +1926,7 @@ function renderSchemas(): void {
       renderSchemaDraft();
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
-    build.addEventListener("click", () => openSchemaSpecification(schema, build));
+    build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
     reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
     remove.addEventListener("click", () => {
       const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -2051,8 +2052,11 @@ function renderSchemaDraft(): void {
   if (discardWorkingSchemaDraftButton) discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
   if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(draft);
   if (!draft) return;
-  buildSpecificationButton.onclick = () => openSchemaSpecification(draft, buildSpecificationButton);
   const storedSchema = schemas.find((schema) => schema.id === draft.id);
+  buildSpecificationButton.hidden = !storedSchema?.workingDraft;
+  buildSpecificationButton.onclick = storedSchema?.workingDraft
+    ? () => openSchemaSpecification(storedSchema, "working-draft", buildSpecificationButton)
+    : null;
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
   if (status) status.textContent = storedSchema?.published === false
@@ -2286,14 +2290,33 @@ function renderSchemaDraft(): void {
   }
   if (duplicateSchemaRevisionButton) duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
   if (restoreSchemaRevisionButton) restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
+  buildHistoricalSpecificationButton.disabled = historyVersions.length === 0;
+  buildHistoricalSpecificationButton.onclick = storedSchema && historyVersions.length
+    ? () => openSchemaSpecification(storedSchema, `historical:${Number(schemaRevisionSelector?.value)}`, buildHistoricalSpecificationButton)
+    : null;
   if (schemaRevisionComparison) schemaRevisionComparison.textContent = historyVersions.length ? `Select one historical revision to compare with current revision ${storedSchema?.version}.` : "No historical revisions.";
 }
 
-function openSchemaSpecification(source: SchemaDefinition, trigger: HTMLButtonElement): void {
+function openSchemaSpecification(source: SchemaDefinition, surface: `published:${number}` | `historical:${number}` | "working-draft", trigger: HTMLButtonElement): void {
   schemaSpecificationBuilder.hidden = false;
-  renderSchemaSpecificationBuilder(schemaSpecificationBuilder, source, schemas, () => { schemaSpecificationBuilder.hidden = true; trigger.focus({ preventScroll:true }); }, async (items) => {
-    if (!navigator.clipboard?.write) throw new Error("Rich clipboard unavailable");
-    await navigator.clipboard.write(items);
+  if (schemaEditor) schemaEditor.hidden = true;
+  if (schemaDetailEmpty) schemaDetailEmpty.hidden = true;
+  renderSchemaSpecificationBuilder(schemaSpecificationBuilder, source, schemas, surface, () => {
+    schemaSpecificationBuilder.hidden = true;
+    renderSchemaDraft();
+    trigger.focus({ preventScroll:true });
+  }, {
+    async writeRich(html, plain) {
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") throw new Error("Rich clipboard unavailable");
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html":new Blob([html], { type:"text/html" }),
+        "text/plain":new Blob([plain], { type:"text/plain" }),
+      })]);
+    },
+    async writePlain(plain) {
+      if (!navigator.clipboard?.writeText) throw new Error("Plain clipboard unavailable");
+      await navigator.clipboard.writeText(plain);
+    },
   });
 }
 

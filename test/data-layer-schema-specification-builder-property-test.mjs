@@ -63,7 +63,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.deepEqual(rows.map(({ canonicalPath }) => canonicalPath), selected,
     "row derivation must conserve caller-selected order");
   assert.deepEqual(rows.map(({ propertyName }) => propertyName), [`${group}[].${leaf}`, root]);
-  assert.equal(rows[0].mandatory, "Yes");
+  assert.equal(rows[0].mandatory, `Yes when a ${group} item exists`);
   assert.equal(rows[1].mandatory, "Yes");
   assert.deepEqual(rows[1].allowedValues, allowed);
 
