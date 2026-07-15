@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=0ff244d76c906901eaf913cdc163c74c05a5de43b80c3f3e65ad929046eb6568
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T10:54:27.527341743Z","feature_name":"Data layer schema assignment data conditions runtime","feature_path":"features/data-layer-schema-assignment-data-conditions-runtime.feature","background_hash":"9b7be49ca19946c3250d48c64fc30e68bb9cc0b56f7b3c77d5c5bbd2093352ee","implementation_hash":"d7379854c194fe12500194b627adba06aa84f489d85b2466d461f71da67ecfe5","scenarios":[{"index":1,"name":"Data layer schema assignment data conditions runtime 002","scenario_hash":"1db9237ab28a05d0be9745cc7da9773c86bcd1ee954778b3911ecb13b10c16fd","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T10:54:27.527341743Z"},{"index":2,"name":"Data layer schema assignment data conditions runtime 003","scenario_hash":"faf36b56810cf032d8244b311c753291d72e4eae4bb4641d300eceac8bc9a4bb","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-15T10:54:27.527341743Z"},{"index":3,"name":"Data layer schema assignment data conditions runtime 004","scenario_hash":"45c0df2dcf0c9a3386b379258014731e99180849c1a90a5cfcc7b83bf7e11e56","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-15T10:54:27.527341743Z"},{"index":4,"name":"Data layer schema assignment data conditions runtime 005","scenario_hash":"045a458f2e00c037fbc99fa05a51051f1d693992d0c35d82c51d3ffbf7792331","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-15T10:54:27.527341743Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema assignment data conditions runtime
 
   Background:
