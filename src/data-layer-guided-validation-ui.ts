@@ -38,6 +38,23 @@ import {
 } from "./data-layer-guided-validation.js";
 import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.js";
 import { inspectValidationTarget, normalizeTargetExpression, parseTargetExpression, type TargetSegment } from "./data-layer-recursive-property-tree.js";
+import {
+  addGuidedCondition,
+  createGuidedConditionalDraft,
+  guidedConditionComparisonText,
+  guidedConditionGroup,
+  guidedConditionPropertyOptions,
+  guidedConditionalPreview,
+  reconcileGuidedConditions,
+  removeGuidedCondition,
+  selectGuidedConditionProperty,
+  setGuidedConditionComparison,
+  setGuidedConditionGroupOperator,
+  setGuidedConditionOperator,
+  validateGuidedConditionalDraft,
+  type GuidedConditionPropertyOption,
+} from "./data-layer-live-guided-conditional-rule-authoring.js";
+import { conditionalRuleSummary, operatorsForConditionType, type ConditionalRuleConsequence } from "./data-layer-conditional-validation-rules.js";
 
 export interface GuidedValidationFlow {
   open(event: GuidedValidationDraft["event"], continuation?: GuidedSchemaCandidate): void;
@@ -102,11 +119,37 @@ export function createGuidedValidationFlow(
   let targetExpression = "";
   let observedTargetPath = "";
   let targetExpectedType: GuidedValueType | "" = "";
+  let conditionalDiscardPending = false;
 
   function announce(message: string): void { status = message; render(); }
 
   function setDraft(next: GuidedValidationDraft, message?: string): void {
     draft = next; errors = []; status = message ?? status; render();
+  }
+
+  function guidedConsequence(candidate: GuidedValidationDraft): ConditionalRuleConsequence | undefined {
+    if (!candidate.property || !candidate.requirement) return undefined;
+    const operator = candidate.requirement === "Must be one of these values" ? "allowed-values"
+      : candidate.requirement === "Must match a pattern" ? "regular-expression"
+        : "required";
+    const parameters = operator === "allowed-values" ? candidate.allowedValues.join(",")
+      : operator === "regular-expression" ? candidate.allowedValues[0]
+        : undefined;
+    return { propertyPath:candidate.property.path, operator, ...(parameters !== undefined ? { parameters } : {}) };
+  }
+
+  function conditionalOptions(candidate: GuidedValidationDraft): GuidedConditionPropertyOption[] {
+    const destination = candidate.destination;
+    const selected = destination?.kind === "existing"
+      ? effects.schemaCandidates().find(({ id }) => id === destination.schemaId)
+      : undefined;
+    return guidedConditionPropertyOptions(candidate.event.payload, selected?.propertyTypes ?? {}, candidate.property?.path ?? "");
+  }
+
+  function reconcileConditionalDraft(candidate: GuidedValidationDraft): GuidedValidationDraft {
+    return candidate.conditional
+      ? { ...candidate, conditional:reconcileGuidedConditions(candidate.conditional, conditionalOptions(candidate)) }
+      : candidate;
   }
 
   function move(next: GuidedValidationDraft): void {
@@ -128,6 +171,19 @@ export function createGuidedValidationFlow(
       if (draft.requirement === "Must be one of these values") {
         const result = validateAllowedValues(draft.allowedValues);
         if (!result.valid) return [{ id:"guided-allowed-values", message:result.assistance }];
+      }
+      if (draft.conditional) {
+        const consequence = guidedConsequence(draft);
+        if (consequence) {
+          const result = validateGuidedConditionalDraft(draft.conditional, consequence);
+          if (!result.ready) {
+            const id = result.assistance === "Add at least one condition" ? "guided-condition-group"
+              : result.assistance === "Choose a condition property" || result.assistance.startsWith("Review condition property") ? "guided-condition-property-0"
+                : result.assistance === "Enter a comparison value" || result.assistance === "Correct the regular expression" ? "guided-condition-comparison-0"
+                  : "guided-condition-operator-0";
+            return [{ id, message:result.assistance }];
+          }
+        }
       }
     }
     if (draft.stage === "scope" && draft.scope.kind === "selected-paths") {
@@ -240,7 +296,78 @@ export function createGuidedValidationFlow(
     requirement.addEventListener("change", () => { if (requirement.value) setDraft(setGuidedRequirement(draft!, requirement.value as GuidedRequirement), `${requirement.value} selected.`); });
     const hint = element("p", "Choose the plain-language condition that this property must satisfy."); hint.id = "guided-requirement-hint";
     const preview = element("p", draft.preview.message); preview.id = "guided-validation-preview"; preview.setAttribute("role", "status");
-    container.append(typeLabel, type, typeHint, requirementLabel, requirement, hint, preview); renderAllowedValues(container); renderCompatibleAssignments(container);
+    container.append(typeLabel, type, typeHint, requirementLabel, requirement, hint, preview); renderAllowedValues(container); renderGuidedConditions(container); renderCompatibleAssignments(container);
+  }
+
+  function renderGuidedConditions(container: HTMLElement): void {
+    if (!draft?.property || !draft.requirement) return;
+    const toggleLabel = element("label"); const toggle = element("input"); toggle.type = "checkbox"; toggle.id = "guided-apply-condition"; toggle.checked = Boolean(draft.conditional);
+    toggleLabel.append(toggle, " Apply only when"); container.append(toggleLabel);
+    toggle.addEventListener("change", () => {
+      if (toggle.checked) {
+        setDraft({ ...draft!, conditional:addGuidedCondition(createGuidedConditionalDraft()) }, "Conditional controls opened; nothing has been saved.");
+        return;
+      }
+      if ((draft!.conditional?.conditionGroup.predicates.length ?? 0) > 0) {
+        conditionalDiscardPending = true; render();
+        return;
+      }
+      const { conditional: _conditional, ...unconditional } = draft!;
+      setDraft(unconditional, "The consequence is unconditional.");
+    });
+    if (!draft.conditional) return;
+    const consequence = guidedConsequence(draft);
+    const options = conditionalOptions(draft);
+    const group = element("fieldset"); group.id = "guided-condition-group"; group.append(element("legend", "Trigger conditions"));
+    const groupLabel = element("label", "Apply when"); const groupOperator = element("select"); groupOperator.id = "guided-condition-group-operator"; groupLabel.htmlFor = groupOperator.id;
+    for (const value of ["All", "Any"] as const) groupOperator.append(Object.assign(element("option", value), { value, selected:draft.conditional.conditionGroup.operator === value }));
+    groupOperator.addEventListener("change", () => setDraft({ ...draft!, conditional:setGuidedConditionGroupOperator(draft!.conditional!, groupOperator.value as "All" | "Any") }, "Condition group updated."));
+    group.append(groupLabel, groupOperator);
+    draft.conditional.conditionGroup.predicates.forEach((predicate, index) => {
+      const row = element("section"); row.className = "guided-condition-row"; row.setAttribute("aria-label", `Condition ${index + 1}`);
+      const propertyLabel = element("label", "Condition property"); const property = element("select"); property.id = `guided-condition-property-${index}`; propertyLabel.htmlFor = property.id;
+      property.append(Object.assign(element("option", "Choose a condition property"), { value:"" }));
+      if (predicate.propertyPath && !options.some(({ path }) => path === predicate.propertyPath)) {
+        property.append(Object.assign(element("option", `${predicate.propertyPath} — unavailable, review required`), { value:predicate.propertyPath, selected:true }));
+      }
+      for (const option of options) property.append(Object.assign(element("option", `${option.path} — ${option.source}`), { value:option.path, selected:predicate.propertyPath === option.path }));
+      property.addEventListener("change", () => setDraft({ ...draft!, conditional:selectGuidedConditionProperty(draft!.conditional!, index, options.find(({ path }) => path === property.value)) }, `${property.value || "Condition property"} selected.`));
+      const detected = element("output", predicate.propertyPath ? `Detected type: ${predicate.detectedType ?? "string"}` : "Choose a property to detect its type"); detected.id = `guided-condition-type-${index}`;
+      const operatorLabel = element("label", "Trigger operator"); const operator = element("select"); operator.id = `guided-condition-operator-${index}`; operatorLabel.htmlFor = operator.id;
+      const compatible = operatorsForConditionType(predicate.detectedType ?? "string");
+      if (!compatible.includes(predicate.operator)) operator.append(Object.assign(element("option", predicate.operator), { value:predicate.operator, selected:true }));
+      for (const value of compatible) operator.append(Object.assign(element("option", value), { value, selected:predicate.operator === value }));
+      operator.addEventListener("change", () => setDraft({ ...draft!, conditional:setGuidedConditionOperator(draft!.conditional!, index, operator.value as Parameters<typeof setGuidedConditionOperator>[2]) }, "Trigger operator updated."));
+      row.append(propertyLabel, property, detected, operatorLabel, operator);
+      if (predicate.operator !== "Exists" && predicate.operator !== "Does not exist") {
+        const comparisonLabel = element("label", "Comparison value"); const comparison = element("input"); comparison.id = `guided-condition-comparison-${index}`; comparison.value = guidedConditionComparisonText(predicate); comparisonLabel.htmlFor = comparison.id;
+        comparison.addEventListener("input", () => {
+          if (!draft?.conditional) return;
+          draft = { ...draft, conditional:setGuidedConditionComparison(draft.conditional, index, comparison.value) };
+          const currentConsequence = guidedConsequence(draft);
+          const currentConditional = draft.conditional;
+          const output = root?.querySelector<HTMLOutputElement>("#guided-condition-preview");
+          if (output && currentConsequence && currentConditional) output.textContent = `${guidedConditionalPreview(draft.event.payload, currentConditional, currentConsequence).result} for the current event`;
+        });
+        row.append(comparisonLabel, comparison);
+      }
+      const remove = element("button", "Remove condition"); remove.type = "button"; remove.addEventListener("click", () => setDraft({ ...draft!, conditional:removeGuidedCondition(draft!.conditional!, index) }, "Condition removed.")); row.append(remove); group.append(row);
+    });
+    const add = element("button", "Add another condition"); add.type = "button"; add.addEventListener("click", () => setDraft({ ...draft!, conditional:addGuidedCondition(draft!.conditional!) }, "Another condition added.")); group.append(add);
+    if (consequence) {
+      const cleanGroup = guidedConditionGroup(draft.conditional);
+      const summary = cleanGroup && cleanGroup.predicates.length ? conditionalRuleSummary({ conditionGroup:cleanGroup, consequence }) : "Add at least one condition";
+      const readable = element("p", summary); readable.id = "guided-condition-summary";
+      const result = element("output", `${guidedConditionalPreview(draft.event.payload, draft.conditional, consequence).result} for the current event`); result.id = "guided-condition-preview"; result.setAttribute("aria-live", "polite"); group.append(readable, result);
+    }
+    container.append(group);
+    if (conditionalDiscardPending) {
+      const dialog = element("dialog"); dialog.id = "guided-condition-discard-confirmation"; const heading = element("h5", "Discard trigger conditions?");
+      dialog.append(heading, element("p", `${draft.conditional.conditionGroup.predicates.map(({ propertyPath }) => propertyPath || "unfinished condition").join(", ")} will be discarded.`));
+      const keep = element("button", "Keep conditions"); keep.type = "button"; keep.addEventListener("click", () => { conditionalDiscardPending = false; render(); });
+      const discard = element("button", "Discard conditions"); discard.type = "button"; discard.addEventListener("click", () => { const { conditional: _conditional, ...unconditional } = draft!; conditionalDiscardPending = false; setDraft(unconditional, "The consequence is unconditional."); });
+      dialog.addEventListener("cancel", (event) => { event.preventDefault(); conditionalDiscardPending = false; render(); }); dialog.append(keep, discard); container.append(dialog); dialog.showModal(); heading.tabIndex = -1; heading.focus({ preventScroll:true });
+    }
   }
 
   function updateScope(kind: GuidedScopeKind): void {
@@ -336,7 +463,7 @@ export function createGuidedValidationFlow(
 
   function selectSchemaCandidate(candidate: GuidedSchemaCandidate): void {
     if (!draft) return;
-    draft = applyGuidedSchemaCandidate(draft, candidate);
+    draft = reconcileConditionalDraft(applyGuidedSchemaCandidate(draft, candidate));
     errors = [];
     status = `${candidate.name} version ${candidate.version} selected.`;
     schemaPickerOpen = false;
@@ -350,7 +477,7 @@ export function createGuidedValidationFlow(
     const candidates = effects.schemaCandidates();
     const choices = element("fieldset"); choices.id = "guided-schema-destination"; choices.append(element("legend", "Where should this validation be saved?"));
     const newLabel = element("label"); const createNew = element("input"); createNew.type = "radio"; createNew.name = "guided-schema-destination"; createNew.value = "new"; createNew.checked = draft.destination?.kind === "new";
-    createNew.addEventListener("change", () => { schemaPickerOpen = false; setDraft(setGuidedSchemaDestination(draft!, { kind:"new", schemaName:"" }), "Create a new schema selected."); });
+    createNew.addEventListener("change", () => { schemaPickerOpen = false; setDraft(reconcileConditionalDraft(setGuidedSchemaDestination(draft!, { kind:"new", schemaName:"" })), "Create a new schema selected."); });
     newLabel.append(createNew, " Create a new schema");
     const existingLabel = element("label"); const useExisting = element("input"); useExisting.id = "guided-existing-schema-picker"; useExisting.type = "radio"; useExisting.name = "guided-schema-destination"; useExisting.value = "existing"; useExisting.checked = draft.destination?.kind === "existing"; useExisting.setAttribute("aria-haspopup", "dialog"); useExisting.setAttribute("aria-controls", "guided-schema-picker");
     useExisting.addEventListener("change", () => openSchemaPicker(useExisting.id));
@@ -491,7 +618,7 @@ export function createGuidedValidationFlow(
     const apply = element("button", "Apply target path"); apply.type = "button"; apply.addEventListener("click", () => {
       const inspection = inspectValidationTarget(draft!.event.payload, targetExpression);
       if (inspection.result !== "accepted" && inspection.result !== "unobserved") return;
-      draft = retargetGuidedValidation(draft!, String(inspection.expression), targetExpectedType || undefined);
+      draft = reconcileConditionalDraft(retargetGuidedValidation(draft!, String(inspection.expression), targetExpectedType || undefined));
       targetEditorOpen = false; status = "Target path applied; review refreshed inferred values before saving."; render();
     });
     const cancel = element("button", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", () => { targetEditorOpen = false; render(); });
@@ -510,7 +637,9 @@ export function createGuidedValidationFlow(
         api.close();
         effects.saved?.(result);
       } catch (error) {
-        showErrors([{ id:"guided-validation-review", message:error instanceof Error && error.message === "Guided validation draft is incomplete." ? error.message : "Saving failed. Check storage access and try again." }]);
+        const message = error instanceof Error ? error.message : "Saving failed. Check storage access and try again.";
+        const conditionalError = ["Add at least one condition", "Choose a condition property", "Enter a comparison value", "Correct the regular expression"].includes(message) || message.startsWith("Choose an operator compatible with") || message.startsWith("Review condition property");
+        showErrors([{ id:conditionalError ? "guided-condition-group" : "guided-validation-review", message:conditionalError ? message : error instanceof Error && message === "Guided validation draft is incomplete." ? message : "Saving failed. Check storage access and try again." }]);
       }
     });
     container.append(review, element("p", draft.preview.message), publishLabel, save);
@@ -542,9 +671,9 @@ export function createGuidedValidationFlow(
   }
 
   const api: GuidedValidationFlow = {
-    open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
-    openProperty(event, path, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationForProperty(event, continuation, path) : createGuidedValidationForProperty(event, path); errors = []; status = `${path} selected from the event property tree; nothing has been saved.`; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; observedTargetPath = path; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
-    close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; render(); effects.close?.(); },
+    open(event, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationDraft(event, continuation) : createGuidedValidationDraft(event); errors = []; status = "Validation draft opened; nothing has been saved."; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; conditionalDiscardPending = false; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
+    openProperty(event, path, continuation) { continuationCandidate = continuation; draft = continuation ? createGuidedContinuationForProperty(event, continuation, path) : createGuidedValidationForProperty(event, path); errors = []; status = `${path} selected from the event property tree; nothing has been saved.`; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; conditionalDiscardPending = false; observedTargetPath = path; render(); root?.querySelector<HTMLElement>("#guided-validation-heading")?.focus({ preventScroll:true }); },
+    close() { continuationCandidate = undefined; draft = undefined; errors = []; status = ""; testPath = ""; testPathStatus = ""; schemaPickerOpen = false; schemaPickerQuery = ""; targetEditorOpen = false; conditionalDiscardPending = false; render(); effects.close?.(); },
     currentDraft() { return draft; },
   };
   return api;

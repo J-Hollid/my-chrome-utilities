@@ -1,5 +1,6 @@
 import type { GuidedRequirement, PublishedGuidedRule } from "./data-layer-guided-validation.js";
 import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
+import { parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import type { AttachedSchemaRule } from "./data-layer-schema-verification.js";
 
 function guidedOperator(requirement: GuidedRequirement): string {
@@ -16,7 +17,9 @@ function guidedParameters(rule: PublishedGuidedRule): string | undefined {
 }
 
 export function guidedAttachedRule(rule: PublishedGuidedRule, name: string, localRuleId?: string): AttachedSchemaRule {
-  const propertyPath = canonicalNestedPath(rule.path);
+  const propertyPath = rule.path.startsWith("$")
+    ? `/${parseTargetExpression(rule.path).map((segment) => segment.kind === "property" ? String(segment.value).replaceAll("~", "~0").replaceAll("/", "~1") : segment.kind === "every" ? "*" : String(segment.value)).join("/")}`
+    : canonicalNestedPath(rule.path);
   const parameters = guidedParameters(rule);
   return {
     id:rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,
@@ -25,7 +28,9 @@ export function guidedAttachedRule(rule: PublishedGuidedRule, name: string, loca
     propertyPath,
     operator:guidedOperator(rule.requirement),
     ...(parameters !== undefined ? { parameters } : {}),
-    severity:"error",
-    enabled:true,
+    severity:rule.severity ?? "error",
+    ...(rule.message !== undefined ? { message:rule.message } : {}),
+    ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}),
+    enabled:rule.enabled ?? true,
   };
 }
