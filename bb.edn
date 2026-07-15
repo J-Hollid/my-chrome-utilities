@@ -20,6 +20,7 @@
                         [acceptance.live-guided-conditional-rules-steps-test]
                         [acceptance.saved-event-feed-filters-steps-test]
                         [acceptance.defect-report-undeclared-property-removal-steps-test]
+                        [acceptance.required-property-defect-schema-choices-steps-test]
                         [acceptance.unified-defect-builder-steps-test]
                         [acceptance.command-registry-steps-test]
                         [acceptance.conditional-validation-rules-steps-test]
@@ -71,6 +72,7 @@
                                                 'acceptance.live-guided-conditional-rules-steps-test
                                                 'acceptance.saved-event-feed-filters-steps-test
                                                 'acceptance.defect-report-undeclared-property-removal-steps-test
+                                                'acceptance.required-property-defect-schema-choices-steps-test
                                                 'acceptance.unified-defect-builder-steps-test
                                                 'acceptance.command-registry-steps-test
                                                 'acceptance.conditional-validation-rules-steps-test

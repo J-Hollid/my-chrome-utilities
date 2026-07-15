@@ -16,4 +16,5 @@ export interface ValidationEvaluation {
   schemaId?: string;
   actualValue?: unknown;
   allowedValues?: readonly (string | number | boolean | null)[];
+  notApplicableReason?: "target-absent" | "condition-not-satisfied";
 }

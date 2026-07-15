@@ -44,6 +44,12 @@ export function appendIssueControls(
 
     selected.addEventListener("change", () => { state.update(toggleReportIssue(state.report(), reportIssue.id)); state.refresh(); });
     const assistance = expectedResultAssistance(reportIssue);
+    if (assistance.conflict) {
+      const conflict = document.createElement("output");
+      conflict.dataset.schemaChoiceConflict = reportIssue.id;
+      conflict.textContent = assistance.conflict;
+      group.append(conflict);
+    }
     const includeComment = document.createElement("input");
     includeComment.type = "checkbox";
     includeComment.dataset.allowedValuesComment = reportIssue.id;
@@ -75,20 +81,24 @@ export function appendIssueControls(
     for (const value of assistance.schemaValues) {
       const schemaLabel = document.createElement("label");
       const schemaValue = document.createElement("input");
-      schemaValue.type = "radio"; schemaValue.name = `defect-response-${reportIssue.id}`; schemaValue.value = value;
-      schemaValue.dataset.responseSource = `${state.report().event.schema.name} schema`;
+      schemaValue.type = "radio"; schemaValue.name = `defect-response-${reportIssue.id}`; schemaValue.value = String(value);
+      const schemaSource = assistance.provenance
+        ? `${assistance.provenance.schema.name} revision ${assistance.provenance.schema.version}`
+        : `${state.report().event.schema.name} schema`;
+      schemaValue.dataset.responseSource = schemaSource;
       schemaValue.addEventListener("change", () => {
         hideCustomResponse();
         selectedChoices.set(reportIssue.id, {
           issueId: reportIssue.id,
           method: "choose an allowed value",
           response: value,
-          responseSource: "schema-provided value",
+          responseSource: schemaSource,
+          ...(assistance.provenance ? { responseProvenance:assistance.provenance } : {}),
           ...(includeComment.checked ? { includeAllowedValuesComment: true } : {}),
         });
         state.refresh();
       });
-      schemaLabel.append(schemaValue, `${value} — ${state.report().event.schema.name} schema`);
+      schemaLabel.append(schemaValue, `${String(value)} — ${schemaSource}`);
       group.append(schemaLabel);
     }
 

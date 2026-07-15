@@ -65,7 +65,7 @@ function jsonLines(value, depth = 0, pointer = "") {
 }
 function naturalList(values) {
     if (values.length < 2)
-        return values[0] ?? "";
+        return values.length ? String(values[0]) : "";
     if (values.length === 2)
         return `${values[0]} or ${values[1]}`;
     return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
@@ -104,9 +104,15 @@ function expectedPresentation(report) {
     return expectedLines(report).map(({ text }) => text).join("\n");
 }
 function reportSections(report) {
-    const responseSources = report.expected.corrections.flatMap((correction) => correction.responseSource
-        ? [`${correction.issueId} response source: ${correction.responseSource}${correction.operatorProvided ? " (operator-provided)" : ""}`]
-        : []);
+    const responseSources = report.expected.corrections.flatMap((correction) => {
+        const source = correction.responseSource
+            ? [`${correction.issueId} response source: ${correction.responseSource}${correction.operatorProvided ? " (operator-provided)" : ""}`]
+            : [];
+        const provenance = correction.responseProvenance
+            ? [`${correction.issueId} value-rule provenance: ${correction.responseProvenance.rules.map(({ name, version }) => `${name} v${version}`).join(", ")} · ${correction.responseProvenance.schema.name} revision ${correction.responseProvenance.schema.version}`]
+            : [];
+        return [...source, ...provenance];
+    });
     const expectedNarrative = [report.expectedExplanation, ...responseSources].filter(Boolean).join("\n");
     return [
         ["Summary", report.summary],
