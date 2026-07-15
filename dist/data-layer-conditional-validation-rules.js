@@ -90,6 +90,30 @@ export function conditionValueAtPath(value, path) {
 export function conditionGroupAppliesToValue(value, group) {
     return conditionGroupApplies(group, (predicate) => evaluateConditionPredicate(conditionValueAtPath(value, predicate.propertyPath), predicate));
 }
+function correlatedPredicatePath(predicatePath, consequenceTemplatePath, consequenceConcretePath) {
+    const predicate = pointerSegments(predicatePath);
+    const template = pointerSegments(consequenceTemplatePath);
+    const concrete = pointerSegments(consequenceConcretePath);
+    const templateWildcards = template.flatMap((segment, index) => segment === "*" ? [index] : []);
+    const predicateWildcards = predicate.flatMap((segment, index) => segment === "*" ? [index] : []);
+    if (!predicateWildcards.length || predicateWildcards.length > templateWildcards.length)
+        return predicatePath;
+    const sharesContexts = predicateWildcards.every((index, ordinal) => {
+        const templateIndex = templateWildcards[ordinal];
+        return templateIndex === index
+            && predicate.slice(0, index).every((segment, candidate) => segment === template[candidate]);
+    });
+    if (!sharesContexts)
+        return predicatePath;
+    let wildcard = 0;
+    return `/${predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++]] : segment).join("/")}`;
+}
+export function conditionGroupAppliesToConsequence(value, group, consequenceTemplatePath, consequenceConcretePath) {
+    return conditionGroupApplies(group, (predicate) => {
+        const path = correlatedPredicatePath(predicate.propertyPath, consequenceTemplatePath, consequenceConcretePath);
+        return evaluateConditionPredicate(conditionValueAtPath(value, path), predicate);
+    });
+}
 export function evaluateConditionalRule(value, rule, evaluateConsequence) {
     if (!conditionGroupAppliesToValue(value, rule.conditionGroup))
         return { result: "Not applicable", invocationCount: 0 };
@@ -123,6 +147,24 @@ function consequenceSummary(consequence) {
 }
 export function conditionalRuleSummary(rule) {
     const conjunction = rule.conditionGroup.operator === "All" ? " and " : " or ";
+    const consequenceSegments = pointerSegments(rule.consequence.propertyPath);
+    const wildcardIndex = consequenceSegments.indexOf("*");
+    const correlated = wildcardIndex > 0 && rule.conditionGroup.predicates.every((predicate) => {
+        const segments = pointerSegments(predicate.propertyPath);
+        return segments[wildcardIndex] === "*"
+            && segments.slice(0, wildcardIndex).every((segment, index) => segment === consequenceSegments[index]);
+    });
+    if (correlated) {
+        const localPredicate = (predicate) => ({
+            ...predicate,
+            propertyPath: `/${pointerSegments(predicate.propertyPath).slice(wildcardIndex + 1).join("/")}`,
+        });
+        const localConsequence = {
+            ...rule.consequence,
+            propertyPath: `/${consequenceSegments.slice(wildcardIndex + 1).join("/")}`,
+        };
+        return `For each ${consequenceSegments[wildcardIndex - 1]} item, when ${rule.conditionGroup.predicates.map((predicate) => conditionPredicateSummary(localPredicate(predicate))).join(conjunction)}, ${consequenceSummary(localConsequence)}`;
+    }
     return `When ${rule.conditionGroup.predicates.map(conditionPredicateSummary).join(conjunction)}, ${consequenceSummary(rule.consequence)}`;
 }
 function comparisonRequired(operator) {

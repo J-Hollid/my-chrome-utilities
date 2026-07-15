@@ -1,5 +1,6 @@
 import {
   comparisonValueFromInput,
+  conditionGroupAppliesToConsequence,
   conditionValueAtPath,
   evaluateConditionalRule,
   operatorsForConditionType,
@@ -12,6 +13,7 @@ import {
   type ConditionalRulePredicate,
 } from "./data-layer-conditional-validation-rules.js";
 import type { GuidedValueType } from "./data-layer-guided-validation-types.js";
+import { resolveNestedValues } from "./data-layer-schema-nested-path.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 
 export interface GuidedConditionPropertyOption {
@@ -53,7 +55,8 @@ function guidedType(type: GuidedValueType): ConditionPropertyType {
 }
 
 function eventOptions(value: unknown, path = ""): GuidedConditionPropertyOption[] {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => eventOptions(item, `${path}/*`));
+  if (!value || typeof value !== "object") return [];
   return Object.entries(value as Record<string, unknown>).flatMap(([name, child]) => {
     const childPath = `${path}/${name.replaceAll("~", "~0").replaceAll("/", "~1")}`;
     const own: GuidedConditionPropertyOption = {
@@ -62,7 +65,7 @@ function eventOptions(value: unknown, path = ""): GuidedConditionPropertyOption[
       source:"current event",
       observedValue:child,
     };
-    return child && typeof child === "object" && !Array.isArray(child)
+    return child && typeof child === "object"
       ? [own, ...eventOptions(child, childPath)]
       : [own];
   });
@@ -241,6 +244,15 @@ export function guidedConditionalPreview(
   draft: GuidedConditionalDraft,
   consequence: ConditionalRuleConsequence,
 ): { result: "Passed" | "Failed" | "Not applicable"; invocationCount: 0 | 1 } {
+  if (consequence.propertyPath.includes("*")) {
+    const results = resolveNestedValues(payload, consequence.propertyPath).map((match) => {
+      const applies = conditionGroupAppliesToConsequence(payload, draft.conditionGroup, match.templatePath, match.concretePath);
+      return !applies ? "Not applicable" : consequencePasses(payload, { ...consequence, propertyPath:match.concretePath }) ? "Passed" : "Failed";
+    });
+    if (results.includes("Failed")) return { result:"Failed", invocationCount:1 };
+    if (results.includes("Passed")) return { result:"Passed", invocationCount:1 };
+    return { result:"Not applicable", invocationCount:0 };
+  }
   return evaluateConditionalRule(payload, { conditionGroup:draft.conditionGroup, consequence }, () => consequencePasses(payload, consequence));
 }
 
