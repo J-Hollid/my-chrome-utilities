@@ -9,6 +9,8 @@ export interface ExamplePrefillState {
   initialized: readonly string[];
 }
 
+type ExampleSchema = Pick<SchemaDefinition, "document"> & Partial<Pick<SchemaDefinition, "id" | "parentSchemaId">>;
+
 function decode(segment: string): string {
   return segment.replaceAll("~1", "/").replaceAll("~0", "~");
 }
@@ -24,6 +26,20 @@ function schemaAtPointer(document: JsonSchema, pointer: string): JsonSchema | un
     current = segment === "*" || /^\d+$/.test(segment) ? current?.items : current?.properties?.[segment];
   }
   return current;
+}
+
+function schemaLineage<T extends ExampleSchema>(schema: T, schemas: readonly T[]): T[] {
+  const lineage = [schema];
+  const visited = new Set(schema.id ? [schema.id] : []);
+  let parentSchemaId = schema.parentSchemaId;
+  while (parentSchemaId && !visited.has(parentSchemaId)) {
+    const parent = schemas.find(({ id }) => id === parentSchemaId);
+    if (!parent) break;
+    lineage.push(parent);
+    if (parent.id) visited.add(parent.id);
+    parentSchemaId = parent.parentSchemaId;
+  }
+  return lineage;
 }
 
 function inputType(definition: JsonSchema | undefined, value?: unknown): SchemaPropertyExampleInputType {
@@ -68,16 +84,7 @@ export function schemaPropertyExampleChoices(
   schemas: readonly Pick<SchemaDefinition, "id" | "parentSchemaId" | "document" | "attachedRules">[] = [schema],
 ): SchemaPropertyExampleScalar[] {
   const template = templatePointer(pointer);
-  const lineage = [schema];
-  const visited = new Set([schema.id]);
-  let parentSchemaId = schema.parentSchemaId;
-  while (parentSchemaId && !visited.has(parentSchemaId)) {
-    const parent = schemas.find(({ id }) => id === parentSchemaId);
-    if (!parent) break;
-    lineage.push(parent);
-    visited.add(parent.id);
-    parentSchemaId = parent.parentSchemaId;
-  }
+  const lineage = schemaLineage(schema, schemas);
   const definition = lineage.map(({ document }) => schemaAtPointer(document, pointer)).find(Boolean);
   const rule = lineage.flatMap(({ attachedRules }) => attachedRules ?? []).find((candidate) => candidate.enabled !== false
     && normalizedOperator(candidate) === "allowed-values"
@@ -86,11 +93,13 @@ export function schemaPropertyExampleChoices(
 }
 
 export function schemaPropertyExampleInputType(
-  schema: Pick<SchemaDefinition, "document">,
+  schema: ExampleSchema,
   pointer: string,
   value?: unknown,
+  schemas: readonly ExampleSchema[] = [schema],
 ): SchemaPropertyExampleInputType {
-  return inputType(schemaAtPointer(schema.document, pointer), value);
+  const definition = schemaLineage(schema, schemas).map(({ document }) => schemaAtPointer(document, pointer)).find(Boolean);
+  return inputType(definition, value);
 }
 
 export function schemaPropertyExampleConflicts(

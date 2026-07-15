@@ -12,6 +12,21 @@ function schemaAtPointer(document, pointer) {
     }
     return current;
 }
+function schemaLineage(schema, schemas) {
+    const lineage = [schema];
+    const visited = new Set(schema.id ? [schema.id] : []);
+    let parentSchemaId = schema.parentSchemaId;
+    while (parentSchemaId && !visited.has(parentSchemaId)) {
+        const parent = schemas.find(({ id }) => id === parentSchemaId);
+        if (!parent)
+            break;
+        lineage.push(parent);
+        if (parent.id)
+            visited.add(parent.id);
+        parentSchemaId = parent.parentSchemaId;
+    }
+    return lineage;
+}
 function inputType(definition, value) {
     if (value === null)
         return "null";
@@ -50,25 +65,16 @@ function configuredAllowedValues(rule, definition) {
 }
 export function schemaPropertyExampleChoices(schema, pointer, schemas = [schema]) {
     const template = templatePointer(pointer);
-    const lineage = [schema];
-    const visited = new Set([schema.id]);
-    let parentSchemaId = schema.parentSchemaId;
-    while (parentSchemaId && !visited.has(parentSchemaId)) {
-        const parent = schemas.find(({ id }) => id === parentSchemaId);
-        if (!parent)
-            break;
-        lineage.push(parent);
-        visited.add(parent.id);
-        parentSchemaId = parent.parentSchemaId;
-    }
+    const lineage = schemaLineage(schema, schemas);
     const definition = lineage.map(({ document }) => schemaAtPointer(document, pointer)).find(Boolean);
     const rule = lineage.flatMap(({ attachedRules }) => attachedRules ?? []).find((candidate) => candidate.enabled !== false
         && normalizedOperator(candidate) === "allowed-values"
         && templatePointer(candidate.propertyPath ?? "") === template);
     return rule ? configuredAllowedValues(rule, definition) : [];
 }
-export function schemaPropertyExampleInputType(schema, pointer, value) {
-    return inputType(schemaAtPointer(schema.document, pointer), value);
+export function schemaPropertyExampleInputType(schema, pointer, value, schemas = [schema]) {
+    const definition = schemaLineage(schema, schemas).map(({ document }) => schemaAtPointer(document, pointer)).find(Boolean);
+    return inputType(definition, value);
 }
 export function schemaPropertyExampleConflicts(example, allowedValues) {
     return Boolean(example && allowedValues.length && !allowedValues.some((value) => Object.is(value, example.value)));

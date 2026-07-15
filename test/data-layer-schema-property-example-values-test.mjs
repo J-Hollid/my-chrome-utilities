@@ -6,6 +6,7 @@ import {
   prefillExampleOnce,
   schemaPropertyExampleChoices,
   schemaPropertyExampleConflicts,
+  schemaPropertyExampleInputType,
 } from "../dist/data-layer-schema-property-example-values.js";
 import {
   resolveEffectiveSchemaDocumentation,
@@ -44,6 +45,15 @@ const inheritedRuleChild = { ...schema, id:"allowed-child", parentSchemaId:"allo
 assert.deepEqual(
   schemaPropertyExampleChoices(inheritedRuleChild, "/login_status", [inheritedRuleParent, inheritedRuleChild]),
   ["not logged in", "logged in"],
+);
+assert.equal(
+  schemaPropertyExampleInputType(
+    { ...inheritedRuleChild, document:{ type:"object" } },
+    "/product_id",
+    undefined,
+    [inheritedRuleParent, { ...inheritedRuleChild, document:{ type:"object" } }],
+  ),
+  "number",
 );
 assert.deepEqual(exampleValueFromInput("robot", "string"), { value:"robot", selectionMethod:"custom" });
 assert.deepEqual(exampleValueFromInput("1", "number"), { value:1, selectionMethod:"custom" });

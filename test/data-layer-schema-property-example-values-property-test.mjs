@@ -130,6 +130,13 @@ for (let sample = 0; sample < 200; sample += 1) {
     type,
     "concrete array pointers must resolve their schema-defined input type",
   );
+  if (type !== "null") {
+    assert.equal(
+      schemaPropertyExampleInputType(child, concretePath, undefined, schemas),
+      type,
+      "custom inputs for inherited properties must use the parent schema type without an existing example hint",
+    );
+  }
   assert.equal(schemaPropertyExampleInputType({ document:{ type:"object" } }, "/missing", numberValue), "number");
   assert.equal(schemaPropertyExampleInputType({ document:{ type:"object" } }, "/missing", booleanValue), "boolean");
   assert.equal(schemaPropertyExampleInputType({ document:{ type:"object" } }, "/missing", null), "null");
