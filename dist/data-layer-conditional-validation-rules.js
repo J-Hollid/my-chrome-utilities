@@ -78,6 +78,9 @@ export function conditionGroupApplies(group, evaluate) {
 function pointerSegments(path) {
     return path.replace(/^\//, "").split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
+function pointerPath(segments) {
+    return `/${segments.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
 export function conditionValueAtPath(value, path) {
     let current = value;
     for (const segment of pointerSegments(path)) {
@@ -109,7 +112,7 @@ function correlatedPredicatePath(predicatePath, consequenceTemplatePath, consequ
     if (!sharesContexts)
         return predicatePath;
     let wildcard = 0;
-    return `/${predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++]] : segment).join("/")}`;
+    return pointerPath(predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++]] ?? segment : segment));
 }
 export function conditionGroupAppliesToConsequence(value, group, consequenceTemplatePath, consequenceConcretePath) {
     return conditionGroupApplies(group, (predicate) => {

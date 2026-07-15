@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   comparisonValueFromInput,
   conditionGroupApplies,
+  conditionGroupAppliesToConsequence,
   conditionalRuleSummary,
   evaluateConditionalRule,
   evaluateConditionPredicate,
@@ -142,3 +143,16 @@ assert.deepEqual(mixed.evaluations.map(({ propertyPath, status }) => [propertyPa
   ["/products/3/duration", "pass"],
 ]);
 assert.deepEqual(mixed.issues.map(({ instancePath }) => instancePath), ["/products/0/duration"]);
+
+assert.equal(conditionGroupAppliesToConsequence(
+  { products:[{ "a/b":true, "tilde~name":true }] },
+  {
+    operator:"All",
+    predicates:[
+      { propertyPath:"/products/*/a~1b", operator:"Exists" },
+      { propertyPath:"/products/*/tilde~0name", operator:"Exists" },
+    ],
+  },
+  "/products/*/duration",
+  "/products/0/duration",
+), true, "correlated paths must preserve escaped JSON Pointer property segments");

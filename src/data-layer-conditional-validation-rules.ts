@@ -124,6 +124,10 @@ function pointerSegments(path: string): string[] {
   return path.replace(/^\//, "").split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
 
+function pointerPath(segments: readonly string[]): string {
+  return `/${segments.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
+
 export function conditionValueAtPath(value: unknown, path: string): ObservedConditionValue {
   let current = value;
   for (const segment of pointerSegments(path)) {
@@ -162,7 +166,8 @@ function correlatedPredicatePath(
     templateWildcards[ordinal] === index && sharesWildcardContext(predicate, template, index));
   if (!sharesContexts) return predicatePath;
   let wildcard = 0;
-  return `/${predicate.map((segment) => segment === "*" ? concrete[templateWildcards[wildcard++] as number] : segment).join("/")}`;
+  return pointerPath(predicate.map((segment) =>
+    segment === "*" ? concrete[templateWildcards[wildcard++] as number] ?? segment : segment));
 }
 
 export function conditionGroupAppliesToConsequence(
