@@ -27,7 +27,7 @@
     :runtime-error "Live guided conditional rule browser runtime failed."
     :missing-error "Live guided conditional rule browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation review local reusable cancelled lifecycle] :as observed}]
+(defn- assert-runtime! [{:keys [requirement initial absent invalidEmpty invalidPattern invalidNoPredicates preview confirmation review local reusable wildcard cancelled lifecycle] :as observed}]
   (support/assert! (and (= "Define requirement" (:heading requirement))
                         (:applyOnlyWhen requirement)
                         (:schemaEditorHidden requirement)
@@ -84,6 +84,20 @@
                       reusable)
                    "Reusable guided save did not create one pinned identity with the complete condition group."
                    reusable)
+  (support/assert! (and (= ["/products/*/price_monthly"] (:options wildcard))
+                        (empty? (:concreteOptions wildcard))
+                        (= "Failed for the current event" (:preview wildcard))
+                        (str/includes? (:review wildcard) "For each products item, when price_monthly exists, duration must be present")
+                        (= ["/products/*/price_monthly" "/products/*/duration"] [(:predicate wildcard) (:consequence wildcard)])
+                        (= [["/products/0/duration" "error"]
+                            ["/products/1/duration" "not-applicable"]
+                            ["/products/2/duration" "not-applicable"]
+                            ["/products/3/duration" "pass"]]
+                           (:evaluations wildcard))
+                        (= ["/products/0/duration"] (:issues wildcard))
+                        (:reloaded wildcard))
+                   "Rendered guided authoring did not preserve one correlated wildcard condition."
+                   wildcard)
   (support/assert! (and (:storageUnchanged cancelled)
                         (:inspectorVisible cancelled)
                         (= "Add validation for /oOrder/aProducts" (:focus cancelled)))

@@ -23,7 +23,7 @@
   (support/assert! condition message data))
 
 (defn validate-browser-observation! [observation]
-  (let [{:keys [editor stored evaluations groups presentation lifecycle]} observation]
+  (let [{:keys [editor stored evaluations groups presentation lifecycle correlated]} observation]
     (require! (= ["Apply only when" "/page_type" "Equals" "product_detail" 1]
                  [(:applyOnlyWhen editor) (:property editor) (:operator editor)
                   (:initializedValue editor) (:oneConsequence editor)])
@@ -53,6 +53,29 @@
                    (= [1 2 true] [(:pinnedVersion lifecycle) (:revisedVersion lifecycle) (:revisedPreserved lifecycle)]))
               "Conditional rule persistence lost atomic data or reusable version pinning."
               lifecycle)
+    (require! (= [["number 29" "number 12" "Passed" 0]
+                  ["null" "missing" "Failed" 1]
+                  ["missing" "missing" "Not applicable" 0]
+                  ["missing" "number 12" "Not applicable" 0]]
+                 (mapv (juxt :priceMonthlyState :durationState :result :issues) (:cases correlated)))
+              "Wildcard condition examples were not evaluated within their own products item."
+              correlated)
+    (require! (= [["/products/0/duration" "error"]
+                  ["/products/1/duration" "not-applicable"]
+                  ["/products/2/duration" "not-applicable"]
+                  ["/products/3/duration" "pass"]]
+                 (:mixed correlated))
+              "Mixed products borrowed a wildcard condition match from another item."
+              correlated)
+    (require! (and (= {:predicate "/products/*/price_monthly"
+                       :consequence "/products/*/duration"
+                       :issue "/products/0/duration"}
+                      (:persisted correlated))
+                   (= "/products/*/duration" (get-in correlated [:issues 0 :templatePath]))
+                   (some (fn [[path text]] (and (= path "/products/1/duration") (re-find #"not applicable" text))) (:rendered correlated))
+                   (some (fn [[path text]] (and (= path "/products/3/duration") (re-find #"passed" text))) (:rendered correlated)))
+              "Wildcard templates, reload, or rendered per-item details were not retained."
+              correlated)
     observation))
 
 (defn- example-value [example key]
@@ -81,7 +104,13 @@
       (assert-example! (expected example) (observed row) key example))))
 
 (def example-validators
-  [["products_value"
+  [["price_monthly_state"
+    {:rows (comp :cases :correlated)
+     :comparisons [["price_monthly_state" :priceMonthlyState]
+                   ["duration_state" :durationState]]
+     :assertions [["item_result" (expected-value "item_result") :result]
+                  ["issue_count" (expected-value "issue_count") (comp str :issues)]]}]
+   ["products_value"
     {:rows :evaluations
      :comparisons [["page_type_value" :page_type]
                    ["products_value" :products]]
