@@ -8,9 +8,10 @@ import {
 import { parseTargetExpression, resolveTargetValues } from "./data-layer-recursive-property-tree.js";
 import { conditionalRuleSummary, type ConditionalRuleConditionGroup, type ConditionalRuleConsequence } from "./data-layer-conditional-validation-rules.js";
 import { guidedConditionGroup, validateGuidedConditionalDraft, type GuidedConditionalDraft } from "./data-layer-live-guided-conditional-rule-authoring.js";
+import type { GuidedValueType } from "./data-layer-guided-validation-types.js";
 
 export type GuidedValidationStage = "property" | "requirement" | "scope" | "destination" | "review";
-export type GuidedValueType = "String" | "Number" | "Array" | "Object" | "Boolean" | "Null";
+export type { GuidedValueType } from "./data-layer-guided-validation-types.js";
 export type GuidedRequirement =
   | "Must be present"
   | "Must be one of these values"
