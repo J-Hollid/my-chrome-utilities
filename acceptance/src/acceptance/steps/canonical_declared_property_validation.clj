@@ -27,7 +27,7 @@
     :runtime-error "Canonical declared property validation browser runtime failed."
     :missing-error "Canonical declared property validation browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [policy representationCases pageCases inheritance disabled publication live reopened runtimeErrors] :as observed}]
+(defn- assert-policy! [policy]
   (support/assert! (and (:checked policy)
                         (:stored policy)
                         (:propertiesUnchanged policy)
@@ -35,24 +35,30 @@
                         (= [{:instancePath "/debug" :expected "declared property" :actual "boolean"}]
                            (:extraIssues policy)))
                    "The production checkbox or canonical closed-object policy changed property definitions or misclassified payload keys."
-                   policy)
-  (support/assert! (and (= #{"nested" "path-keyed" "flat-array"} (set (map :name representationCases)))
-                        (every? #(and (zero? (:undeclared %)) (:documentUnchanged %)) representationCases))
+                   policy))
+
+(defn- assert-representations! [representation-cases]
+  (support/assert! (and (= #{"nested" "path-keyed" "flat-array"} (set (map :name representation-cases)))
+                        (every? #(and (zero? (:undeclared %)) (:documentUnchanged %)) representation-cases))
                    "A nested, path-keyed, or flat-array declaration was not resolved canonically."
-                   representationCases)
-  (support/assert! (and (= ["Required value"] (get-in pageCases [:missing :issues]))
-                        (= ["Type mismatch"] (get-in pageCases [:numeric :issues]))
-                        (= ["Value is not allowed"] (get-in pageCases [:disallowed :issues]))
-                        (empty? (get-in pageCases [:allowed :issues]))
-                        (every? false? (map :undeclared (vals pageCases)))
+                   representation-cases))
+
+(defn- assert-page-cases! [page-cases]
+  (support/assert! (and (= ["Required value"] (get-in page-cases [:missing :issues]))
+                        (= ["Type mismatch"] (get-in page-cases [:numeric :issues]))
+                        (= ["Value is not allowed"] (get-in page-cases [:disallowed :issues]))
+                        (empty? (get-in page-cases [:allowed :issues]))
+                        (every? false? (map :undeclared (vals page-cases)))
                         (every? (fn [result]
                                   (every? #(and (= "/page_type" (:propertyPath %))
                                                 (= "Approved page types" (:rule %))
                                                 (= 2 (:ruleVersion %)))
                                           (:evaluations result)))
-                                (vals pageCases)))
+                                (vals page-cases)))
                    "Type, required, allowed-value, or provenance behavior diverged for canonical page_type."
-                   pageCases)
+                   page-cases))
+
+(defn- assert-persistence! [inheritance disabled publication]
   (support/assert! (and (= ["/debug"] (:undeclared inheritance))
                         (:parentUnchanged inheritance)
                         (:childUnchanged inheritance))
@@ -69,7 +75,9 @@
                         (:propertiesUnchanged publication)
                         (str/includes? (:result publication) "Revalidated 2 current Live events"))
                    "Publication did not persist and apply the canonical declared-property policy."
-                   publication)
+                   publication))
+
+(defn- assert-live! [live reopened runtime-errors]
   (support/assert! (and (= #{["event:extra" true] ["event:declared" true]}
                            (set (map (fn [{:keys [eventId textContent]}]
                                        [eventId (if (= eventId "event:extra")
@@ -81,9 +89,16 @@
                         (= 1 (:debugRows live))
                         (:checked reopened)
                         (:propertiesUnchanged reopened)
-                        (empty? runtimeErrors))
+                        (empty? runtime-errors))
                    "Live results, reopen state, or runtime error evidence did not preserve the published policy."
-                   {:live live :reopened reopened :runtimeErrors runtimeErrors})
+                   {:live live :reopened reopened :runtimeErrors runtime-errors}))
+
+(defn- assert-runtime! [{:keys [policy representationCases pageCases inheritance disabled publication live reopened runtimeErrors] :as observed}]
+  (assert-policy! policy)
+  (assert-representations! representationCases)
+  (assert-page-cases! pageCases)
+  (assert-persistence! inheritance disabled publication)
+  (assert-live! live reopened runtimeErrors)
   observed)
 
 (def model-example-values

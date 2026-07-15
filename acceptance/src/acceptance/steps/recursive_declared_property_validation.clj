@@ -92,9 +92,12 @@
    mode runtime-example-values model-example-values example
    "Recursive declared-property example value was outside the specified contract."))
 
+(defn- preserve-world [world _example _captures]
+  world)
+
 (def handlers
   (into [{:pattern #"^the built extension side panel is running with production schema editing, validation, persistence, and Live event presentation$"
-          :handler (fn [world _example _captures] world)}]
+          :handler preserve-world}]
         (support/verified-feature-mode-handlers
          feature-files entry-modes :recursive-declared-property-validation-mode
          verify-model! validate-example! runtime-observation! assert-runtime!)))
