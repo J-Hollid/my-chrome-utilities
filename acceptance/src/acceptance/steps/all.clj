@@ -151,5 +151,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T17:57:02.05016055+02:00", :module-hash "1546295471", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 72, :hash "-5806331"} {:id "def/handlers", :kind "def", :line 74, :end-line 147, :hash "-2027551008"}]}
+;; {:version 1, :tested-at "2026-07-15T18:43:26.029633416+02:00", :module-hash "-2005268745", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 73, :hash "1015202847"} {:id "def/handlers", :kind "def", :line 75, :end-line 149, :hash "-1315867297"}]}
 ;; clj-mutate-manifest-end
