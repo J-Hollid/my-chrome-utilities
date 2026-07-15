@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=a202b65e1bc4416ca350dde00b65b8ccfb57ccdad8d501284830417b990eabb0
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T11:24:18.354532387Z","feature_name":"Data layer schema property example values","feature_path":"features/data-layer-schema-property-example-values.feature","background_hash":"62fa6059afd83d20238dd00f8e334cd31429859cb7c9096156255795fa01dc35","implementation_hash":"860b6639581bc5b1d4339c6e3547eb326af1359b0bc9cfe4e1007d4eff0d17e9","scenarios":[{"index":1,"name":"Data layer schema property example values 002","scenario_hash":"079422b226f29dba4b4329e62c78dd6c72bf1da8ba2e4cfd469ef8cc087b1670","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-15T11:24:18.354532387Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property example values
 
   Background:
