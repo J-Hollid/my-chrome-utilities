@@ -6,6 +6,7 @@ import {
   adjustManualReproductionStep,
   applyExpectedResult,
   createDefectReport,
+  editReportDetails,
   expectedResultAssistance,
   expectedDifferenceDescription,
   filterTimelineEvents,
@@ -239,6 +240,11 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
   assert.deepEqual(inlineEvent.payload, { choice: actualAllowed });
 
   const replacement = `replacement-${iteration}`;
+  const issueIndex = Number(issueId.slice("issue-".length));
+  const responseProvenance = {
+    schema:{ id:`schema-${iteration}`, name:`Schema ${iteration}`, version:iteration + 1 },
+    rules:[{ id:`rule-${iteration}`, name:`Rule ${iteration}`, version:iteration + 2, propertyPath:issues[issueIndex].pointer }],
+  };
   const selectedReport = report.issues.find(({ id }) => id === issueId)?.selected
     ? report
     : toggleReportIssue(report, issueId);
@@ -248,11 +254,23 @@ for (let iteration = 0; iteration < 200; iteration += 1) {
     response: replacement,
     responseSource: "Custom value or response",
     operatorProvided: true,
+    responseProvenance,
   }]);
-  const issueIndex = Number(issueId.slice("issue-".length));
   assert.equal(corrected.expected.payload.nested[`field~${issueIndex}/value`], replacement);
   assert.equal(corrected.expected.corrections[0].responseSource, "Custom value or response");
   assert.equal(corrected.expected.corrections[0].operatorProvided, true);
+  assert.deepEqual(corrected.expected.corrections[0].responseProvenance, responseProvenance);
+  const correctionSnapshot = structuredClone(corrected.expected.corrections);
+  const operatorExplanation = `${issueId} response source: confirm generated case ${iteration} with the implementation team`;
+  const provenancePresentation = renderJiraReport(editReportDetails(generateReportDetails(corrected), {
+    expectedExplanation:operatorExplanation,
+  }));
+  assert.match(provenancePresentation.text, new RegExp(operatorExplanation));
+  assert.doesNotMatch(provenancePresentation.text, new RegExp(`${issueId} response source: Custom value or response`));
+  assert.doesNotMatch(provenancePresentation.text, new RegExp(`${issueId} value-rule provenance: Rule ${iteration}`));
+  assert.match(provenancePresentation.text, new RegExp(replacement));
+  assert.deepEqual(corrected.expected.corrections, correctionSnapshot,
+    "rendering must retain structured correction provenance while suppressing generated prose");
   assert.deepEqual(event.payload, payload);
 
   const visitCount = 2 + integer(15);

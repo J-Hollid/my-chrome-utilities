@@ -1,8 +1,17 @@
-import type { DefectReport } from "./data-layer-defect-report.js";
+import type {
+  DefectReport,
+  ReproductionStep,
+  SupportingTimelineEntry,
+} from "./data-layer-defect-report.js";
 
-export interface DefectReportBuilderState {
-  report(): DefectReport;
-  update(report: DefectReport): void;
+export interface ComposableDefectReport {
+  reproductionSteps: ReproductionStep[];
+  timeline: SupportingTimelineEntry[];
+}
+
+export interface DefectReportBuilderState<Report extends ComposableDefectReport = DefectReport> {
+  report(): Report;
+  update(report: Report): void;
   refresh(): void;
 }
 
