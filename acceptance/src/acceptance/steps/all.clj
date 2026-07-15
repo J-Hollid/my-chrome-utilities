@@ -50,6 +50,7 @@
             [acceptance.steps.schema-nested-path :as schema-nested-path]
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-container-child-authoring :as schema-container-child-authoring]
+            [acceptance.steps.schema-renaming :as schema-renaming]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
@@ -129,6 +130,7 @@
                schema-nested-path/handlers
                schema-manual-property/handlers
                schema-container-child-authoring/handlers
+               schema-renaming/handlers
                schema-property-removal/handlers
                schema-property-rule-picker/handlers
                schema-revision-lifecycle/handlers

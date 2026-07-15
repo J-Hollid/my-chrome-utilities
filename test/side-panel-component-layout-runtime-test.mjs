@@ -24,6 +24,7 @@ let schemaRulePropertyIdentityObservation;
 let canonicalDeclaredPropertyValidationObservation;
 let schemaManualPropertyObservation;
 let schemaContainerChildObservation;
+let schemaRenamingObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
@@ -91,6 +92,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
     : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
@@ -2853,6 +2855,64 @@ const schemaContainerChildReloadRuntime = `(() => {
   return { rows, version:stored.version, publishedProductId:Boolean(stored.document.properties.products.items.properties.product_id) };
 })()`;
 
+const schemaRenamingDraftRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click();
+  const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
+  const name = q("#schema-editor-name"); name.value = "Generic page view"; name.dispatchEvent(new Event("input", { bubbles:true }));
+  const stored = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({ id }) => id === "schema-page-view");
+  const draft = { proposed:stored.workingDraft.name, current:stored.name, pending:stored.workingDraft.pendingChanges, version:stored.version };
+  q("#close-schema-editor").click();
+  return draft;
+})()`;
+
+const schemaRenamingPublishRuntime = `(async () => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  const stored = () => JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  q("#data-layer-view-schemas").click(); const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
+  const restored = { name:q("#schema-editor-name").value, pending:stored().find(({ id }) => id === "schema-page-view").workingDraft.pendingChanges };
+  q("#schema-only-declared-properties").click();
+  const beforeReview = localStorage.getItem("my-chrome-utilities.schema-library.v1"); q("#save-schema").click();
+  const review = { text:q("#schema-revision-review-summary").textContent, unchanged:beforeReview === localStorage.getItem("my-chrome-utilities.schema-library.v1") };
+  q("#confirm-schema-revision").click();
+  const library = stored(); const current = library.find(({ id }) => id === "schema-page-view");
+  const model = await import("/data-layer-schema-verification.js");
+  const event = { sourceId:"history", eventName:"pageview", payload:{ page_type:"home" }, rawInput:[] };
+  const latest = model.validateEvent(event, library, "https://example.test/");
+  const pinnedSchema = { ...current, assignments:current.assignments.map((assignment) => ({ ...assignment, versionPolicy:"pinned", schemaVersion:3 })) };
+  const pinned = model.validateEvent(event, [pinnedSchema, ...library.filter(({ id }) => id !== current.id)], "https://example.test/");
+  const refs = {
+    assignment:current.assignments[0].schemaId,
+    child:library.find(({ id }) => id === "schema-child").parentSchemaId,
+    template:JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0].schemaId,
+    rule:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"))[0].attachments[0],
+  };
+  return {
+    restored, review,
+    published:{ id:current.id, name:current.name, version:current.version, workingDraftAbsent:!current.workingDraft, history:current.revisionHistory.map(({ name, version }) => ({ name, version })), otherEdit:current.document.additionalProperties === false, count:library.filter(({ id }) => id === "schema-page-view").length, rows:q("#schema-list").textContent },
+    refs, latest:{ name:latest.schema?.name, version:latest.schema?.version }, pinned:{ name:pinned.schema?.name, version:pinned.schema?.version },
+  };
+})()`;
+
+const schemaRenamingInvalidAndDiscardRuntime = `(() => {
+  const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
+  q("#data-layer-view-schemas").click(); const row = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(row, "Edit working draft");
+  const name = q("#schema-editor-name"); const invalid = {};
+  for (const proposed of ["", "Product detail", "product DETAIL"]) {
+    name.value = proposed; name.dispatchEvent(new Event("input", { bubbles:true }));
+    invalid[proposed || "empty"] = { disabled:q("#save-schema").disabled, assistance:q("#schema-editor-name-assistance").textContent };
+  }
+  name.value = "Generic page view"; name.dispatchEvent(new Event("input", { bubbles:true }));
+  q("#discard-working-schema-draft").click();
+  const library = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));
+  const current = library.find(({ id }) => id === "schema-page-view"); const product = library.find(({ id }) => id === "schema-product-detail");
+  const reopenedRow = Array.from(q("#schema-list").children).find(({ textContent }) => textContent.includes("Page view")); click(reopenedRow, "Edit working draft");
+  return { invalid, identities:[current.id, product.id], discarded:{ draftAbsent:!current.workingDraft, current:current.name, rendered:q("#schema-editor-name").value } };
+})()`;
+
 const schemaNestedPathRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const click = (root, label) => { const button = Array.from(root.querySelectorAll("button")).find(({ textContent }) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
@@ -4250,6 +4310,31 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1") {
+      const seed = `(() => {
+        const assignment = { id:"assignment-page", name:"Page views", schemaId:"schema-page-view", sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"follow latest", enabled:true };
+        const page = { id:"schema-page-view", name:"Page view", version:3, published:true, document:{ type:"object", properties:{ page_type:{ type:"string" } } }, assignments:[assignment], attachedRules:[{ id:"rule-page", name:"Page rule", version:1, propertyPath:"/page_type" }] };
+        const product = { id:"schema-product-detail", name:"Product detail", version:2, published:true, document:{ type:"object", properties:{ product_id:{ type:"string" } } }, assignments:[] };
+        const child = { id:"schema-child", name:"Child page", version:1, published:true, parentSchemaId:"schema-page-view", document:{ type:"object" }, assignments:[] };
+        const template = { id:"template-page", name:"Page template", eventName:"pageview", sourceId:"history", sourceName:"Event history", destination:"dataLayer", tags:[], schemaId:"schema-page-view", validation:"Valid", payload:{ page_type:"home" }, version:1, provenance:"saved" };
+        localStorage.clear();
+        localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([page, product, child]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1", JSON.stringify([{ id:"rule-reusable", name:"Reusable", kind:"Required", version:1, enabled:true, attachments:["schema-page-view"] }]));
+        localStorage.setItem("my-chrome-utilities.event-template-library.v1", JSON.stringify([template]));
+        return true;
+      })()`;
+      await evaluate(socket, seed); await reloadPanel(socket);
+      const draft = await evaluate(socket, schemaRenamingDraftRuntime); await reloadPanel(socket);
+      const published = await evaluate(socket, schemaRenamingPublishRuntime);
+      await evaluate(socket, seed); await reloadPanel(socket);
+      const invalidAndDiscard = await evaluate(socket, schemaRenamingInvalidAndDiscardRuntime);
+      schemaRenamingObservation = { draft, published, invalidAndDiscard };
+      assert.deepEqual(draft.pending, ["Rename schema from Page view to Generic page view"]);
+      assert.equal(published.published.id, "schema-page-view");
+      assert.equal(published.published.history[0].name, "Page view");
+      assert.equal(invalidAndDiscard.discarded.current, "Page view");
+      socket.close(); continue;
+    }
     if (process.env.GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         const assignment = { id:"assignment:product-detail", name:"Product detail", schemaId:"schema-product-detail", sourceId:"event-history", eventName:"product_view", target:"payload", domainCondition:"127.0.0.1", pathnameCondition:"/", enabled:true };
@@ -5428,7 +5513,7 @@ try {
       schemaMasterVisible:true,
       actions:["Edit", "Duplicate", "Disable", "Delete"],
       duplicateCount:3,
-      revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2.", status:"Current revision 2 · no working draft" },
+      revisionReview:{ open:false, summary:"Checkout schema working draft will be compared with current revision 1; confirmation publishes revision 2. Pending changes: Attach Known page types to example; Update attached rule on /example; Update attached rule on /example.", status:"Current revision 2 · no working draft" },
       closeReview:{ open:false, summary:"", result:"Working draft retained without publishing." },
       rows:["Checkout schema automatic · event-history/page_view · payload · No data conditions · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · No data conditions · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
@@ -5536,7 +5621,7 @@ try {
         requirement:{ heading:"Define requirement", destinationAbsent:true, selectedSchema:"schema-product-listing" },
         prefill:{ configurationAbsent:true, selectionAbsent:true },
         review:{ name:"Product listing", status:"Working draft based on revision 3 · 2 pending changes", checkoutUnchanged:true },
-        publication:{ review:"Product listing working draft will be compared with current revision 3; confirmation publishes revision 4.", productCurrent:3, checkoutUnchanged:true },
+        publication:{ review:"Product listing working draft will be compared with current revision 3; confirmation publishes revision 4. Pending changes: Add page_type; Add page_name.", productCurrent:3, checkoutUnchanged:true },
         switchOpen:{ heading:"Choose schema destination", choices:["Product listing revision 3 · 2 pending changes", "Checkout revision 2 · 1 pending changes"], productUnchanged:true },
         afterCancel:{ context:"Product listing working draft", productUnchanged:true },
         afterSwitch:{ context:"Checkout working draft", sectionCount:1, unnamedAbsent:true, productUnchanged:true },
@@ -5581,7 +5666,7 @@ try {
           cancel:{ dialogClosed:true, draftUnchanged:true, current:4 },
           confirmed:{ current:4, source:2, pending:["Restore revision 2"] },
         },
-        publication:{ review:"Product listing working draft will be compared with current revision 4; confirmation publishes revision 5.", current:5, history:[1,2,3,4], draftCleared:true },
+        publication:{ review:"Product listing working draft will be compared with current revision 4; confirmation publishes revision 5. Pending changes: Restore revision 2.", current:5, history:[1,2,3,4], draftCleared:true },
       }, "Schema revision lifecycle UI callbacks violated their browser contract");
       schemaRevisionLifecycleObservation = await evaluate(socket, schemaRevisionLifecycleRuntime);
       assert.deepEqual(schemaRevisionLifecycleObservation, {
@@ -5701,6 +5786,9 @@ try {
   }
   if (process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaManualProperty:schemaManualPropertyObservation, schemaContainerChild:schemaContainerChildObservation }));
+  }
+  if (process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaRenaming:schemaRenamingObservation }));
   }
   if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
