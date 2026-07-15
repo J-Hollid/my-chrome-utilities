@@ -51,6 +51,7 @@
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-container-child-authoring :as schema-container-child-authoring]
             [acceptance.steps.schema-renaming :as schema-renaming]
+            [acceptance.steps.schema-property-filter-sort :as schema-property-filter-sort]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
@@ -82,6 +83,7 @@
                canonical-declared-property-validation/handlers
                cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
+               schema-property-filter-sort/handlers
                missing-event-report-fidelity/handlers
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
@@ -145,5 +147,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T17:40:34.450202031+02:00", :module-hash "-326454256", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 71, :hash "1920278817"} {:id "def/handlers", :kind "def", :line 73, :end-line 145, :hash "342926220"}]}
+;; {:version 1, :tested-at "2026-07-15T17:57:02.05016055+02:00", :module-hash "1546295471", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 72, :hash "-5806331"} {:id "def/handlers", :kind "def", :line 74, :end-line 147, :hash "-2027551008"}]}
 ;; clj-mutate-manifest-end

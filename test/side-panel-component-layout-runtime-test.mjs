@@ -25,6 +25,7 @@ let canonicalDeclaredPropertyValidationObservation;
 let schemaManualPropertyObservation;
 let schemaContainerChildObservation;
 let schemaRenamingObservation;
+let schemaPropertyFilterSortObservation;
 let schemaNestedPathObservation;
 let savedSessionLiveFeedObservation;
 let savedSessionLiveFeedReloadObservation;
@@ -93,6 +94,7 @@ const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1"
   : process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER === "1" ? [320]
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
     : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
@@ -4310,6 +4312,49 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        const document={type:"object",properties:{page_type:{type:"string"},commerce:{type:"object",properties:{order:{type:"object",properties:{id:{type:"string"}}}}},products:{type:"array",items:{type:"object",properties:{product_name:{type:"string"},product_id:{type:"string"},price_monthly:{type:"number"}}}}}};
+        const schema={id:"schema-page-view",name:"Page view",version:3,published:true,document,assignments:[],attachedRules:[],workingDraft:{baseVersion:3,sourceVersion:3,document,assignments:[],attachedRules:[],documentation:{description:"Owner documentation"},pendingChanges:["Document schema owner"]}};
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{id:"rule:product-id",name:"Required product id",kind:"Required",version:1,operator:"required",applicableType:"string",enabled:true,attachments:[]} ]));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      schemaPropertyFilterSortObservation = await evaluate(socket, `(async () => {
+        const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+        const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label||textContent.startsWith(label));if(!value)throw new Error("Missing "+label);value.click();return value;};
+        const set=(element,value,event)=>{element.value=value;element.dispatchEvent(new Event(event,{bubbles:true}));};
+        const paths=()=>Array.from(q("#schema-property-tree").querySelectorAll("li[data-schema-property-canonical-path]"),({dataset})=>dataset.schemaPropertyCanonicalPath);
+        const contexts=()=>Array.from(q("#schema-property-tree").querySelectorAll("li[data-schema-property-canonical-path]"))
+          .filter((row)=>q(":scope > .schema-property-metadata",row).textContent.includes("Filter context"))
+          .map(({dataset})=>dataset.schemaPropertyCanonicalPath);
+        const roots=()=>Array.from(q("#schema-property-tree").children,({dataset})=>dataset.schemaPropertyCanonicalPath);
+        const itemChildren=()=>Array.from(q('[data-schema-property-canonical-path="/products/*"] > ul').children,({dataset})=>dataset.schemaPropertyCanonicalPath);
+        q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Page view"));click(row,"Edit working draft");
+        const filter=q("#schema-property-filter"),sort=q("#schema-property-sort"),tree=q("#schema-property-tree"),status=q("#schema-property-result-status");
+        const initial={filter:filter.value,sort:sort.selectedOptions[0].textContent,status:status.textContent,count:paths().length,add:!q("#add-schema-property").disabled,controlsAbove:filter.getBoundingClientRect().top<tree.getBoundingClientRect().top};
+        const before=localStorage.getItem("my-chrome-utilities.schema-library.v1");
+        const filtered={};
+        for(const query of ["product_id","products","/commerce/order","PRODUCT_NAME"]){set(filter,query,"input");filtered[query]={paths:paths(),contexts:contexts(),status:status.textContent,hiddenActions:document.querySelectorAll('#schema-property-tree [data-schema-property-canonical-path="/page_type"] button').length};}
+        set(filter,"","input");const sorted={};for(const [value,label] of [["schema","Schema order"],["name-asc","Name A-Z"],["name-desc","Name Z-A"]]){set(sort,value,"change");sorted[label]={roots:roots(),items:itemChildren(),paths:paths()};}
+        set(filter,"missing_property","input");const empty={status:status.textContent,message:q("#schema-property-empty p").textContent,clearReachable:!q("#schema-property-empty button").disabled};q("#schema-property-empty button").click();empty.restored=paths().length;empty.focus=document.activeElement===filter;
+        set(filter,"product_","input");set(sort,"name-asc","change");tree.style.height="140px";tree.style.overflow="auto";tree.scrollTop=37;
+        const storageAfterControls=localStorage.getItem("my-chrome-utilities.schema-library.v1");const trigger=q('[data-schema-property-canonical-path="/products/*/product_id"] .schema-property-add-rule');trigger.focus({preventScroll:true});trigger.click();click(q("#schema-property-rule-picker"),"Required product id version 1");await new Promise((resolve)=>setTimeout(resolve,0));
+        const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
+        const refreshed={filter:filter.value,sort:sort.selectedOptions[0].textContent,paths:paths(),contexts:contexts(),selected:q('[data-schema-property-canonical-path="/products/*/product_id"]').getAttribute("aria-current"),focus:document.activeElement?.getAttribute("aria-label"),scroll:tree.scrollTop,documentUnchanged:JSON.stringify(stored.workingDraft.document)===JSON.stringify(JSON.parse(before)[0].workingDraft.document),pending:stored.workingDraft.pendingChanges,rules:stored.workingDraft.attachedRules.map(({id,propertyPath})=>[id,propertyPath])};
+        return {initial,filtered,sorted,empty,storageUnchanged:before===storageAfterControls,refreshed,noOverflow:document.documentElement.scrollWidth<=innerWidth};
+      })()`);
+      assert.equal(schemaPropertyFilterSortObservation.initial.status, "9 of 9 properties");
+      assert.deepEqual(schemaPropertyFilterSortObservation.filtered.product_id.contexts, ["/products", "/products/*"]);
+      assert.deepEqual(schemaPropertyFilterSortObservation.sorted["Name A-Z"].roots, ["/commerce", "/page_type", "/products"]);
+      assert.equal(schemaPropertyFilterSortObservation.storageUnchanged, true);
+      assert.equal(schemaPropertyFilterSortObservation.refreshed.filter, "product_");
+      assert.equal(schemaPropertyFilterSortObservation.refreshed.focus, "Add rule for products.*.product_id");
+      assert.equal(schemaPropertyFilterSortObservation.noOverflow, true);
+      socket.close(); continue;
+    }
     if (process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1") {
       const seed = `(() => {
         const assignment = { id:"assignment-page", name:"Page views", schemaId:"schema-page-view", sourceId:"history", eventName:"pageview", target:"payload", versionPolicy:"follow latest", enabled:true };
@@ -5789,6 +5834,9 @@ try {
   }
   if (process.env.SCHEMA_RENAMING_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaRenaming:schemaRenamingObservation }));
+  }
+  if (process.env.SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ schemaPropertyFilterSort:schemaPropertyFilterSortObservation }));
   }
   if (process.env.SCHEMA_NESTED_PATH_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaNestedPath:schemaNestedPathObservation }));
