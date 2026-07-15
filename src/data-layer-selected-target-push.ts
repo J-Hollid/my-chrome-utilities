@@ -1,4 +1,5 @@
 import type {
+  EditableEventTemplate,
   JsonValue,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
@@ -20,6 +21,17 @@ export interface SelectedTargetPushRecord {
 
 export type PushToPage = (request: SelectedTargetPushRequest) => Promise<void>;
 
+interface PreparedTargetPush {
+  destination: string;
+  eventName: string;
+  payload: JsonValue;
+}
+
+interface PreparedTargetPushFeedback {
+  success: string;
+  failure: (error: unknown) => string;
+}
+
 const pathSegment = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const unsafePathSegments = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -36,6 +48,67 @@ export function pushDestinationPathError(path: string): string | undefined {
 
 function summary(target: ObservationTarget, destination: string, result: string): string {
   return `${target.title}; ${target.pageUrl}; ${destination}; ${result}.`;
+}
+
+async function executePreparedTargetPush(
+  prepared: PreparedTargetPush,
+  target: ObservationTarget,
+  pushToPage: PushToPage,
+  feedback: PreparedTargetPushFeedback,
+): Promise<SelectedTargetPushRecord> {
+  try {
+    await pushToPage({
+      tabId: target.tabId,
+      destination: prepared.destination,
+      eventName: prepared.eventName,
+      payload: structuredClone(prepared.payload),
+    });
+    return {
+      success: true,
+      result: feedback.success,
+      summary: summary(target, prepared.destination, feedback.success),
+    };
+  } catch (error) {
+    const result = feedback.failure(error);
+    return {
+      success: false,
+      result,
+      summary: summary(target, prepared.destination, result),
+    };
+  }
+}
+
+export async function pushSavedTemplateToSelectedTarget(
+  template: EditableEventTemplate,
+  target: ObservationTarget | undefined,
+  pushToPage: PushToPage,
+): Promise<SelectedTargetPushRecord> {
+  if (!target) {
+    const result = "Select a target before pushing";
+    return { success: false, result, summary: result };
+  }
+  if (target.accessState !== "Ready") {
+    const result = `Request access for ${target.title}`;
+    return { success: false, result, summary: result };
+  }
+  const pathError = pushDestinationPathError(template.destination);
+  if (pathError) {
+    const result = `Invalid push destination path ${template.destination}`;
+    return { success: false, result, summary: result };
+  }
+  return executePreparedTargetPush(
+    {
+      destination: template.destination,
+      eventName: template.eventName,
+      payload: template.payload,
+    },
+    target,
+    pushToPage,
+    {
+      success: `Pushed ${template.name} to ${target.title}`,
+      failure: () => `Push to ${target.title} failed`,
+    },
+  );
 }
 
 export async function pushTemplateToSelectedTarget(
@@ -64,16 +137,17 @@ export async function pushTemplateToSelectedTarget(
       summary: summary(target, destination, editor.jsonError),
     };
   }
-  try {
-    await pushToPage({
-      tabId: target.tabId,
+  return executePreparedTargetPush(
+    {
       destination,
       eventName: editor.template.eventName,
-      payload: structuredClone(editor.draft),
-    });
-    return { success: true, result: "Pushed", summary: summary(target, destination, "Pushed") };
-  } catch (error) {
-    const result = error instanceof Error ? error.message : "Push failed";
-    return { success: false, result, summary: summary(target, destination, result) };
-  }
+      payload: editor.draft,
+    },
+    target,
+    pushToPage,
+    {
+      success: "Pushed",
+      failure: (error) => error instanceof Error ? error.message : "Push failed",
+    },
+  );
 }

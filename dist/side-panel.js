@@ -77,7 +77,7 @@ import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResu
 import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
 import { beginTemplateRename, renameValidation, saveTemplateRename, } from "./data-layer-event-template-renaming.js";
 import { closePushReview, handlePushReviewKeydown, openPushReview, } from "./data-layer-workflow-focus-ui.js";
-import { pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
+import { pushSavedTemplateToSelectedTarget, pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
 import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
 import { findPushDraftReviewElements, renderPushDraftReview, } from "./data-layer-push-draft-review-ui.js";
 import { createTemplateChangeReview } from "./data-layer-template-change-review.js";
@@ -1603,8 +1603,7 @@ function renderEventTemplateLibrary() {
             renderEventTemplateLibrary();
         },
         push: (template) => {
-            openTemplateEditor(template);
-            void pushCurrentTemplateDraft();
+            void pushLibraryTemplate(template);
         },
         delete: requestEventTemplateDeletion,
         createSchema: (template) => openSchemaFromSource({
@@ -3817,6 +3816,10 @@ async function pushCurrentTemplateDraft(editor = propertyEditorState, target = s
     setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
     if (record.fieldError)
         setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
+    setEventLibraryResult(eventLibraryEditorElements, record.summary);
+}
+async function pushLibraryTemplate(template, target = selectedObservationTarget(observationTargetState)) {
+    const record = await pushSavedTemplateToSelectedTarget(template, target, pushPayloadToSelectedTargetPage);
     setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }
 function openRevisionChangeReview() {
