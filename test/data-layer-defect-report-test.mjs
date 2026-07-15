@@ -125,7 +125,7 @@ const genericPageType = applyExpectedResult(pageTypeReport, [{
 }]);
 const genericPageTypePreview = renderJiraReport(generateReportDetails(genericPageType));
 assert.match(genericPageTypePreview.text, /page_type: homepage OR product listing OR product detail OR checkout/);
-assert.match(genericPageTypePreview.text, /page_type response source: schema constraint/);
+assert.doesNotMatch(genericPageTypePreview.text, /page_type response source: schema constraint/);
 assert.match(genericPageTypePreview.html, /background-color:#d9f7d9[^>]+data-json-pointer="\/page_type"/);
 assert.equal(JSON.parse(genericPageTypePreview.expectedJson).page_type, "unknown");
 assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
@@ -211,7 +211,7 @@ const customPageType = applyExpectedResult(pageTypeReport, [{
 }]);
 const customPageTypePreview = renderJiraReport(generateReportDetails(customPageType));
 assert.match(customPageTypePreview.text, /page_type: category landing/);
-assert.match(customPageTypePreview.text, /page_type response source: operator custom override \(operator-provided\)/);
+assert.doesNotMatch(customPageTypePreview.text, /page_type response source: operator custom override/);
 assert.deepEqual(pageTypeEvent.payload, { page_type: "unknown" });
 
 const removed = applyExpectedResult(createDefectReport({
@@ -313,8 +313,8 @@ for (const heading of ["Summary", "Description", "Steps to reproduce", "Actual r
 }
 assert.match(rendered.text, /− \/commerce\/currency/);
 assert.match(rendered.text, /\+ \/commerce\/currency/);
-assert.match(rendered.text, /currency response source: Checkout schema/);
-assert.match(rendered.text, /order_id response source: Custom value or response/);
+assert.doesNotMatch(rendered.text, /currency response source: Checkout schema/);
+assert.doesNotMatch(rendered.text, /order_id response source: Custom value or response/);
 assert.match(rendered.html, /background-color:#ffd7d7/);
 assert.match(rendered.html, /background-color:#d9f7d9/);
 assert.match(rendered.html, /background-color:#ffd7d7;color:#1f1f1f/);
