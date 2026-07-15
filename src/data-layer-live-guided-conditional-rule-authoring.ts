@@ -264,6 +264,6 @@ export function guidedConditionGroup(draft: GuidedConditionalDraft | undefined):
   if (!draft?.enabled) return undefined;
   return {
     operator:draft.conditionGroup.operator,
-    predicates:draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => ({ ...predicate })),
+    predicates:draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => structuredClone(predicate)),
   };
 }

@@ -202,7 +202,7 @@ export function guidedConditionGroup(draft) {
         return undefined;
     return {
         operator: draft.conditionGroup.operator,
-        predicates: draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => ({ ...predicate })),
+        predicates: draft.conditionGroup.predicates.map(({ comparisonEdited: _edited, requiresReview: _review, ...predicate }) => structuredClone(predicate)),
     };
 }
 //# sourceMappingURL=data-layer-live-guided-conditional-rule-authoring.js.map
