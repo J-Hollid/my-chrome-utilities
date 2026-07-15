@@ -12,6 +12,7 @@
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
             [acceptance.steps.defect-report :as defect-report]
             [acceptance.steps.defect-report-provenance-presentation :as defect-report-provenance-presentation]
+            [acceptance.steps.event-occurrence-defect-report :as event-occurrence-defect-report]
             [acceptance.steps.defect-report-semantic-differences :as defect-report-semantic-differences]
             [acceptance.steps.defect-report-undeclared-property-removal :as defect-report-undeclared-property-removal]
             [acceptance.steps.required-property-defect-schema-choices :as required-property-defect-schema-choices]
@@ -64,7 +65,8 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat defect-report-provenance-presentation/handlers
+  (vec (concat event-occurrence-defect-report/handlers
+               defect-report-provenance-presentation/handlers
                defect-report-semantic-differences/handlers
                required-property-defect-schema-choices/handlers
                defect-report-undeclared-property-removal/handlers
