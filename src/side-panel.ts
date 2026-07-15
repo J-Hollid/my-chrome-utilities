@@ -283,7 +283,8 @@ import { addManualProperty, contextualManualPropertyDefinition, inspectManualPro
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
-import { attachRuleToSchemaProperty, filterAndSortSchemaPropertyRows, schemaPropertyRows, type SchemaPropertySortOrder } from "./data-layer-schema-rule-property-identity.js";
+import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
+import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
 import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./data-layer-schema-property-copy.js";
 import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-copy-ui.js";

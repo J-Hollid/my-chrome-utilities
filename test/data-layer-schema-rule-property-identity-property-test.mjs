@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 
 import {
   attachRuleToSchemaProperty,
-  filterAndSortSchemaPropertyRows,
   schemaPropertyRows,
 } from "../dist/data-layer-schema-rule-property-identity.js";
+import { filterAndSortSchemaPropertyRows } from "../dist/data-layer-schema-property-view.js";
 
 let seed = 0x6964656e;
 
