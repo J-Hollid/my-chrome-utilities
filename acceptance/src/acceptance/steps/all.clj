@@ -52,6 +52,7 @@
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
+            [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
             [acceptance.steps.unified-defect-builder :as unified-defect-builder]
@@ -79,6 +80,7 @@
                fresh-live-session/handlers
                lossless-observation-activation/handlers
                recursive-property-validation/handlers
+               saved-event-feed-filters/handlers
                saved-session-live-feed/handlers
                guided-draft-continuation/handlers
                guided-rule-parameter-integrity/handlers
@@ -121,5 +123,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T02:33:37.37521382+02:00", :module-hash "542081095", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 59, :hash "-1341743205"} {:id "def/handlers", :kind "def", :line 61, :end-line 121, :hash "-1659873382"}]}
+;; {:version 1, :tested-at "2026-07-15T03:10:02.029865414+02:00", :module-hash "1726532827", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 60, :hash "-238566809"} {:id "def/handlers", :kind "def", :line 62, :end-line 123, :hash "-231188384"}]}
 ;; clj-mutate-manifest-end

@@ -80,7 +80,7 @@ export function closeLiveInspector(state) {
     return { ...withoutInspector, listVisible: true };
 }
 export function resetLiveObserverForSession(state) {
-    const { filter: _filter, query: _query, inspectorEventId: _inspectorEventId, ...sessionIndependentState } = state;
+    const { filter: _filter, query: _query, savedFilterId: _savedFilterId, inspectorEventId: _inspectorEventId, ...sessionIndependentState } = state;
     return { ...sessionIndependentState, status: "Live", events: [], listVisible: true };
 }
 //# sourceMappingURL=data-layer-live-observer.js.map

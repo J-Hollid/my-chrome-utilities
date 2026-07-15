@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=35db75e7955982ae5d21173014fdb89e99e884742117d516d9a43c58350b3381
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-15T01:10:32.464841408Z","feature_name":"Data layer saved event feed filters","feature_path":"features/data-layer-saved-event-feed-filters.feature","background_hash":"ff8e57f98db210e022188f966aba22708b7b196c7f808ff001c863f289caf663","implementation_hash":"sha256:ed577e18442ad2cf9f903b4d2a51f28d1db3aa582cc5382c0f8b3f460c22fa38","scenarios":[{"index":1,"name":"Data layer saved event feed filters 002","scenario_hash":"74cb34e6b8b7ce94c64b19b6b6c13c665879309c3bac43e2cd06e151a65dc0c9","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:32.464841408Z"},{"index":3,"name":"Data layer saved event feed filters 004","scenario_hash":"58f5faa51ee4765e6e5c846d32481e6dd6e3310088f25de5df0e1b3dde985197","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:32.464841408Z"},{"index":5,"name":"Data layer saved event feed filters 006","scenario_hash":"d51a8a4e991b52f3abeb26cfcdc08c80bf676f1933e1c46e5bc4987e7e28614c","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:32.464841408Z"},{"index":12,"name":"Data layer saved event feed filters 013","scenario_hash":"1794340520e04cfb47a1fcf20f133b89ab52cea6e238ae4bf0b029b9ba8a7368","mutation_count":5,"result":{"Total":5,"Killed":5,"Survived":0,"Errors":0},"tested_at":"2026-07-15T01:10:32.464841408Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer saved event feed filters
 
   Background:
