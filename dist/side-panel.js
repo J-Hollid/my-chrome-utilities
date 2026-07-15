@@ -64,6 +64,7 @@ import { addManualProperty, contextualManualPropertyDefinition, inspectManualPro
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { filterAndSortSchemaPropertyRows } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
@@ -521,6 +522,15 @@ const confirmSchemaDeleteButton = document.querySelector("#confirm-schema-delete
 const cancelSchemaDeleteButton = document.querySelector("#cancel-schema-delete");
 const schemaEditorParent = document.querySelector("#schema-editor-parent");
 const schemaOnlyDeclaredProperties = document.querySelector("#schema-only-declared-properties");
+const schemaSpecificationBuilder = document.createElement("section");
+schemaSpecificationBuilder.id = "schema-specification-builder";
+schemaSpecificationBuilder.hidden = true;
+schemaEditor?.append(schemaSpecificationBuilder);
+const buildSpecificationButton = document.createElement("button");
+buildSpecificationButton.type = "button";
+buildSpecificationButton.textContent = "Build specification";
+buildSpecificationButton.id = "build-specification";
+schemaEditor?.prepend(buildSpecificationButton);
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
 const schemaResult = document.querySelector("#schema-result");
@@ -1664,6 +1674,7 @@ function renderSchemas() {
             const item = document.createElement("li");
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
+            const build = document.createElement("button");
             const reportMissing = document.createElement("button");
             const remove = document.createElement("button");
             const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
@@ -1672,9 +1683,10 @@ function renderSchemas() {
             item.textContent = schema.published === false
                 ? `${schema.name} · unpublished draft · ${pending} pending changes. `
                 : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = reportMissing.type = remove.type = "button";
+            revise.type = duplicate.type = build.type = reportMissing.type = remove.type = "button";
             revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
+            build.textContent = "Build specification";
             reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
@@ -1682,6 +1694,7 @@ function renderSchemas() {
                 renderSchemaDraft();
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+            build.addEventListener("click", () => { schemaDraft = schemaEditorDraft(schema); renderSchemaDraft(); buildSpecificationButton.click(); });
             reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
             remove.addEventListener("click", () => {
                 const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -1698,7 +1711,7 @@ function renderSchemas() {
                     schemaDeleteReview.showModal();
                 }
             });
-            item.append(revise, duplicate, reportMissing, remove);
+            item.append(revise, duplicate, build, reportMissing, remove);
             return item;
         }));
 }
@@ -1829,6 +1842,14 @@ function renderSchemaDraft() {
         schemaDetailEmpty.hidden = Boolean(draft);
     if (!draft)
         return;
+    buildSpecificationButton.onclick = () => {
+        schemaSpecificationBuilder.hidden = false;
+        renderSchemaSpecificationBuilder(schemaSpecificationBuilder, draft, () => { schemaSpecificationBuilder.hidden = true; buildSpecificationButton.focus({ preventScroll: true }); }, async (items) => {
+            if (!navigator.clipboard?.write)
+                throw new Error("Rich clipboard unavailable");
+            await navigator.clipboard.write(items);
+        });
+    };
     const storedSchema = schemas.find((schema) => schema.id === draft.id);
     const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
     const status = document.querySelector("#schema-editor-status");
