@@ -35,7 +35,7 @@ export function validateAssistedResponse(issue, response) {
 function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
-function isUndeclaredProperty(issue) {
+export function isUndeclaredPropertyIssue(issue) {
     return issue.violation === "Undeclared property";
 }
 function undeclaredPropertyChoice(issue) {
@@ -103,7 +103,7 @@ export function applyExpectedResult(report, choices) {
     const explanations = [];
     const explicitlyChosen = new Set(choices.map(({ issueId }) => issueId));
     const effectiveChoices = [
-        ...report.issues.filter((issue) => issue.selected && isUndeclaredProperty(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
+        ...report.issues.filter((issue) => issue.selected && isUndeclaredPropertyIssue(issue) && !explicitlyChosen.has(issue.id)).map(undeclaredPropertyChoice),
         ...choices,
     ];
     for (const choice of effectiveChoices) {
@@ -126,11 +126,11 @@ export function applyExpectedResult(report, choices) {
             continue;
         }
         if (choice.method === "apply the rule") {
-            if (!isUndeclaredProperty(issue) && !/forbidden/i.test(issue.constraint))
+            if (!isUndeclaredPropertyIssue(issue) && !/forbidden/i.test(issue.constraint))
                 throw new Error(`The ${issue.id} rule cannot be applied without a response.`);
             updatePointer(payload, issue.pointer, "remove");
             corrections.push({ issueId: issue.id, pointer: issue.pointer, operation: "remove", marker: "+", ...(choice.responseSource ? { responseSource: choice.responseSource } : {}) });
-            explanations.push(isUndeclaredProperty(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
+            explanations.push(isUndeclaredPropertyIssue(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
             continue;
         }
         if (choice.response === undefined || choice.response === null || choice.response === "") {

@@ -1,5 +1,6 @@
 import {
   expectedResultAssistance,
+  isUndeclaredPropertyIssue,
   toggleReportIssue,
   validateAssistedResponse,
   type ExpectedResultChoice,
@@ -22,7 +23,7 @@ export function appendIssueControls(
 
     const group = document.createElement("fieldset");
     group.setAttribute("aria-label", `${reportIssue.id} expected-result assistance`);
-    if (reportIssue.violation === "Undeclared property") {
+    if (isUndeclaredPropertyIssue(reportIssue)) {
       const removalLabel = document.createElement("label");
       const removal = document.createElement("input");
       removal.type = "radio";
