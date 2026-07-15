@@ -51,6 +51,7 @@
             [acceptance.steps.schema-manual-property :as schema-manual-property]
             [acceptance.steps.schema-container-child-authoring :as schema-container-child-authoring]
             [acceptance.steps.schema-renaming :as schema-renaming]
+            [acceptance.steps.schema-property-filter-sort :as schema-property-filter-sort]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
@@ -82,6 +83,7 @@
                canonical-declared-property-validation/handlers
                cross-tab-reattachment/handlers
                schema-rule-property-identity/handlers
+               schema-property-filter-sort/handlers
                missing-event-report-fidelity/handlers
                missing-event-payload-hardening/handlers
                unified-defect-builder/handlers
