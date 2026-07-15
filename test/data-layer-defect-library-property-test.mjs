@@ -7,7 +7,6 @@ import {
   createDefectLibrary,
   createMissingEventDefect,
   createValidationDefect,
-  defectLifecycleAction,
   editDefect,
   issueTriage,
   matchingDefects,
@@ -62,6 +61,7 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   assert.deepEqual({ evidence, report }, inputSnapshot, "defect creation must not mutate its inputs");
   assert.equal(defect.issues[0].match.canonicalPath, "/products/*/sku");
+  assert.equal(defect.status, "Saved");
 
   const initial = addDefect(createDefectLibrary(), defect);
   assert.equal(initial.added, true);
@@ -78,6 +78,9 @@ for (let sample = 0; sample < 200; sample += 1) {
     ruleName:"Renamed rule",
     concretePath:`/products/${(sample + 3) % 11}/sku`,
   });
+  assert.equal(issueTriage(changedEvidence, library).state, "New");
+  assert.deepEqual(matchingDefects(changedEvidence, library), []);
+  library = updateDefectStatus(library, id, "Reported", now);
   assert.equal(issueTriage(changedEvidence, library).state, "Reported");
   assert.deepEqual(matchingDefects(changedEvidence, library).map(({ id: defectId }) => defectId), [id]);
 
@@ -144,21 +147,28 @@ for (let sample = 0; sample < 200; sample += 1) {
     path:"products/*/sku",
   }).map(({ id: defectId }) => defectId), [id]);
 
-  library = updateDefectStatus(edited, id, "Resolved", editedAt);
-  assert.equal(defectLifecycleAction(library.defects[0]), "Reopen");
-  assert.equal(issueTriage(changedEvidence, library).state, "Possible regression treated New");
-  library = updateDefectStatus(library, id, "Reported", editedAt);
-  assert.equal(defectLifecycleAction(library.defects[0]), "Resolve");
-  assert.equal(issueTriage(changedEvidence, library).state, "Reported");
-  library = updateDefectStatus(library, id, "Archived", editedAt);
-  assert.equal(defectLifecycleAction(library.defects[0]), "none");
-  assert.equal(issueTriage(changedEvidence, library).state, "New");
+  for (const [status, expectedTriage] of [
+    ["Saved", "New"],
+    ["Reported", "Reported"],
+    ["Resolved", "Possible regression treated New"],
+    ["Archived", "New"],
+  ]) {
+    const transitioned = updateDefectStatus(edited, id, status, editedAt);
+    assert.equal(transitioned.defects[0].status, status);
+    assert.equal(transitioned.defects[0].updatedAt, editedAt);
+    assert.equal(edited.defects[0].status, "Reported", "state selection must not mutate the source library");
+    assert.equal(issueTriage(changedEvidence, transitioned).state, expectedTriage);
+    assert.deepEqual(restoreDefectLibrary(serializeDefectLibrary(transitioned)), transitioned,
+      "every lifecycle state must round trip through persistence");
+  }
+  library = updateDefectStatus(edited, id, "Archived", editedAt);
 
   const missing = createMissingEventDefect({
     id:`missing-${id}`,
     now,
     report:{ summary:`missing-${nextToken()}` },
   });
+  assert.equal(missing.status, "Saved");
   const withMissing = addDefect(library, missing).library;
   assert.equal(matchingDefects(evidence, withMissing).some(({ id: defectId }) => defectId === missing.id), false);
 

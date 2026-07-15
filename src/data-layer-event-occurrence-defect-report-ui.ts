@@ -126,8 +126,8 @@ export function renderOccurrenceDefectReportBuilder(
   const timeline = document.createElement("ul"); timeline.setAttribute("aria-label", "Supporting timeline entries");
   const detailControls = document.createElement("div");
   const copy = document.createElement("button"); copy.type = "button"; copy.textContent = "Copy for Jira Cloud"; copy.dataset.actionVariant = "primary";
-  const persistenceControls = document.createElement("section"); persistenceControls.setAttribute("aria-label", "Reported defect actions");
-  const duplicateReview = document.createElement("section"); duplicateReview.hidden = true; duplicateReview.setAttribute("aria-label", "Existing reported defects");
+  const persistenceControls = document.createElement("section"); persistenceControls.setAttribute("aria-label", "Defect actions");
+  const duplicateReview = document.createElement("section"); duplicateReview.hidden = true; duplicateReview.setAttribute("aria-label", "Existing defects");
   let report: OccurrenceReport | undefined;
 
   const applyDetails = (generated: OccurrenceReport): OccurrenceReport => ({
@@ -212,8 +212,8 @@ export function renderOccurrenceDefectReportBuilder(
     }
   };
   if (persistence) {
-    const save = document.createElement("button"); save.type = "button"; save.textContent = "Save as reported defect"; save.onclick = () => { void persist(false); };
-    const saveCopy = document.createElement("button"); saveCopy.type = "button"; saveCopy.textContent = "Save as reported defect and copy"; saveCopy.onclick = () => { void persist(true); };
+    const save = document.createElement("button"); save.type = "button"; save.textContent = "Save defect"; save.onclick = () => { void persist(false); };
+    const saveCopy = document.createElement("button"); saveCopy.type = "button"; saveCopy.textContent = "Save defect and copy"; saveCopy.onclick = () => { void persist(true); };
     persistenceControls.append(save, saveCopy);
   }
   root.replaceChildren(header, heading("Occurrence evidence"), evidence, heading("Expected result"), expectation, heading("Steps to reproduce"), reproductionControls, reproductionSteps, heading("Supporting timeline"), timelineControls, timeline, heading("Report details"), detailControls, preview, copy, persistenceControls, duplicateReview, feedback);

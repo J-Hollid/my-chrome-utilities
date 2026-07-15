@@ -1,7 +1,4 @@
-import { defectLifecycleAction, } from "./data-layer-defect-library.js";
-import { renderJiraReport } from "./data-layer-defect-report-export.js";
-import { renderOccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
-import { generateMissingEventRepresentations } from "./data-layer-missing-event-defect-report.js";
+import { storedDefectRepresentations } from "./data-layer-defect-library-copy.js";
 export function findDefectLibraryElements(root = document) {
     return {
         count: root.querySelector("#defect-library-count"),
@@ -57,7 +54,6 @@ function renderDetail(root, defect, actions) {
     description.value = reportField(defect.report, "description");
     description.dataset.defectField = "description";
     const missingEvent = defect.type === "Missing event";
-    const occurrence = defect.type === "Unexpected event" || defect.type === "Wrong event name";
     const expectedField = missingEvent ? "expectedResultAdditionalText" : "expectedExplanation";
     const expected = element("textarea");
     expected.value = reportField(defect.report, expectedField);
@@ -71,17 +67,27 @@ function renderDetail(root, defect, actions) {
             delete edited.expectedResultAdditionalText;
         actions.save(defect.id, edited, notes.value);
     });
-    const recopy = button("Recopy for Jira Cloud", () => actions.recopy(defect.id));
-    const lifecycle = defectLifecycleAction(defect);
+    const feedback = element("output");
+    feedback.setAttribute("aria-live", "polite");
+    const recopy = button("Recopy for Jira Cloud", () => {
+        feedback.textContent = "";
+        void Promise.resolve(actions.recopy(defect.id)).then((message) => { feedback.textContent = message; });
+    });
+    const stateLabel = element("label", "State");
+    const state = element("select");
+    state.setAttribute("aria-label", "Defect state");
+    for (const status of ["Saved", "Reported", "Resolved", "Archived"]) {
+        const option = element("option", status);
+        option.value = status;
+        state.append(option);
+    }
+    state.value = defect.status;
+    stateLabel.append(state);
+    const updateState = button("Update state", () => actions.updateStatus(defect.id, state.value));
     const controls = element("section");
     controls.setAttribute("aria-label", "Defect actions");
     controls.append(save, recopy);
-    if (lifecycle === "Resolve")
-        controls.append(button("Resolve", () => actions.updateStatus(defect.id, "Resolved")));
-    if (lifecycle === "Reopen")
-        controls.append(button("Reopen", () => actions.updateStatus(defect.id, "Reported")));
-    if (defect.status !== "Archived")
-        controls.append(button("Archive", () => actions.updateStatus(defect.id, "Archived")));
+    controls.append(stateLabel, updateState);
     if (defect.type !== "Missing event" && !defect.savedSession)
         controls.append(button("Attach current session", () => actions.attachCurrentSession(defect.id)));
     if (defect.savedSession)
@@ -93,18 +99,14 @@ function renderDetail(root, defect, actions) {
     const session = defect.savedSession ? element("p", `Linked session ${defect.savedSession.id} · ${defect.savedSession.containsMatchingIssue ? "contains a matching issue" : "does not contain a matching issue"}`) : element("p", "No linked saved session.");
     const preview = element("section");
     preview.setAttribute("aria-label", "Final report preview");
-    preview.innerHTML = missingEvent
-        ? generateMissingEventRepresentations(defect.report).previewHtml
-        : occurrence
-            ? renderOccurrenceReport(defect.report).html
-            : renderJiraReport(defect.report).html;
-    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), preview, label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls);
+    preview.innerHTML = storedDefectRepresentations(defect).html;
+    root.replaceChildren(header, identity, label("Summary", summary), label("Description", description), label(missingEvent ? "Expected result additional text (optional)" : "Expected result", expected), preview, label("Internal notes", notes), noteLinks(defect.notes), issues, session, controls, feedback);
     root.hidden = false;
     title.focus({ preventScroll: true });
 }
 export function renderDefectLibrary(elements, defects, selectedId, deletionConfirmationId, actions) {
     if (elements.count)
-        elements.count.textContent = `${defects.length} reported defects`;
+        elements.count.textContent = `${defects.length} saved defects`;
     if (elements.empty)
         elements.empty.hidden = defects.length > 0;
     if (elements.list) {

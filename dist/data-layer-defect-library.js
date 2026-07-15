@@ -99,7 +99,7 @@ function createDefect(options) {
     return clone({
         id: options.id,
         type: options.type,
-        status: "Reported",
+        status: "Saved",
         createdAt: options.now,
         updatedAt: options.now,
         report: options.report,
@@ -191,9 +191,6 @@ export function updateDefectStatus(library, defectId, status, now) {
             : defect),
     };
 }
-export function defectLifecycleAction(defect) {
-    return defect.status === "Reported" ? "Resolve" : defect.status === "Resolved" ? "Reopen" : "none";
-}
 export function serializeDefectLibrary(library) {
     return JSON.stringify({ defects: library.defects });
 }
@@ -244,7 +241,7 @@ function isDefect(value) {
     const defect = value;
     return typeof defect.id === "string"
         && (defect.type === "Validation issue" || defect.type === "Missing event" || defect.type === "Unexpected event" || defect.type === "Wrong event name")
-        && (defect.status === "Reported" || defect.status === "Resolved" || defect.status === "Archived")
+        && (defect.status === "Saved" || defect.status === "Reported" || defect.status === "Resolved" || defect.status === "Archived")
         && typeof defect.createdAt === "string"
         && typeof defect.updatedAt === "string"
         && typeof defect.notes === "string"
@@ -345,12 +342,12 @@ export async function completeDefectReportAction(library, defect, action, clipbo
     let added = false;
     let existing = [];
     if (action !== "Copy for Jira Cloud") {
-        const result = addDefect(next, defect);
+        const result = addDefect(next, { ...defect, status: "Saved" });
         next = result.library;
         added = result.added;
         existing = result.existing;
     }
-    const shouldCopy = action !== "Save as reported defect";
+    const shouldCopy = action !== "Save defect";
     if (shouldCopy) {
         if (!clipboard.writeText)
             throw new Error("Clipboard access is unavailable.");

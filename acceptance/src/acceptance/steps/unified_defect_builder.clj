@@ -25,6 +25,21 @@
      :runtime-error "Unified defect builder browser runtime failed."
      :missing-error "Unified defect builder browser evidence is missing."}))
 
+(defn- assert-nested-payload! [nested]
+  (support/assert! (and (= {:page_name "test" :products [{:id 1 :name "robot"}]} (:payload nested))
+                        (= 2 (:duplicatedItems nested))
+                        (= 1 (:itemCount nested))
+                        (= [false false false] (:actions nested))
+                        (= 3 (count (:sources nested)))
+                        (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
+                        (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
+                        (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
+                        (str/includes? (:preview nested) "pageview is fired with\n")
+                        (not (str/includes? (:preview nested) "{\"page_name\":\"test\""))
+                        (str/includes? (:html nested) "&quot;products&quot;: ["))
+                   "Recursive typed expected-payload editing or shared representation diverged."
+                   nested))
+
 (defn- assert-runtime! [observed]
   (let [initial (get-in observed [:unified :initial])
         complete (get-in observed [:unified :complete])
@@ -54,19 +69,7 @@
                           (str/includes? (:preview complete) "Expect purchase to be pushed"))
                      "Completion did not retain absence evidence, schema identity, journey assertion, copy, and save."
                      observed)
-    (support/assert! (and (= {:page_name "test" :products [{:id 1 :name "robot"}]} (:payload nested))
-                          (= 2 (:duplicatedItems nested))
-                          (= 1 (:itemCount nested))
-                          (= [false false false] (:actions nested))
-                          (= 3 (count (:sources nested)))
-                          (= #{"schema-provided value" "operator custom response"} (set (vals (:sources nested))))
-                          (= {:saves 1 :copiedSame true :feedback "Missing-event report saved and copied for Jira Cloud."} (:combined nested))
-                          (every? #(str/includes? (:tree nested) %) ["page_name · string" "products · array" "products.0.id · number" "products.0.name · string"])
-                          (str/includes? (:preview nested) "pageview is fired with\n")
-                          (not (str/includes? (:preview nested) "{\"page_name\":\"test\""))
-                          (str/includes? (:html nested) "&quot;products&quot;: ["))
-                     "Recursive typed expected-payload editing or shared representation diverged."
-                     nested)
+    (assert-nested-payload! nested)
     (support/assert! (and (= "Copy failed" (:copyFailure failures))
                           (= "Save failed" (:saveFailure failures))
                           (= 1 (:rejectedSaveCalls failures))
@@ -97,7 +100,7 @@
    "step_kind" #{"Click component" "Log in as user" "Scroll" "Custom step"}
    "step_input" #{"Checkout, sticky footer button" "returning customer" "bottom of the page" "Apply the free delivery filter"}
    "step_text" #{"Click Checkout — sticky footer button" "Log in as returning customer" "Scroll to the bottom of the page" "Apply the free delivery filter"}
-   "report_action" #{"Copy for Jira Cloud" "Save as reported defect" "Save as reported defect and copy"}
+   "report_action" #{"Copy for Jira Cloud" "Save defect" "Save defect and copy"}
    "successful_effect" #{"the current preview is written through the Jira clipboard integration" "one discoverable Missing event defect is persisted in Defects" "one defect is persisted and the same representation is written to clipboard"}
    "failed_effect" #{"clipboard writing rejects" "Defect Library persistence rejects"}
    "boundary" #{"Jira clipboard adapter" "Defect Library persistence"}
@@ -114,5 +117,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T00:00:34.120496655+02:00", :module-hash "-1065613276", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-900589086"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-431635032"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1892810973"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "-187678025"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 26, :hash "984813460"} {:id "defn-/assert-runtime!", :kind "defn-", :line 28, :end-line 83, :hash "1620490442"} {:id "def/example-values", :kind "def", :line 85, :end-line 104, :hash "-359888496"} {:id "defn-/validate-example!", :kind "defn-", :line 106, :end-line 109, :hash "-637635270"} {:id "def/handlers", :kind "def", :line 111, :end-line 114, :hash "4626468"}]}
+;; {:version 1, :tested-at "2026-07-15T15:19:37.698307899+02:00", :module-hash "-1427578344", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-900589086"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-431635032"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1892810973"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "-187678025"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 26, :hash "984813460"} {:id "defn-/assert-nested-payload!", :kind "defn-", :line 28, :end-line 41, :hash "1511615580"} {:id "defn-/assert-runtime!", :kind "defn-", :line 43, :end-line 86, :hash "-125193311"} {:id "def/example-values", :kind "def", :line 88, :end-line 107, :hash "-934926054"} {:id "defn-/validate-example!", :kind "defn-", :line 109, :end-line 112, :hash "-637635270"} {:id "def/handlers", :kind "def", :line 114, :end-line 117, :hash "4626468"}]}
 ;; clj-mutate-manifest-end

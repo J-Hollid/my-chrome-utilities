@@ -350,8 +350,8 @@ export function renderMissingEventDefectReportBuilder(
     const legacyPreview = element("section"); legacyPreview.setAttribute("aria-label", "Final missing-event report preview"); legacyPreview.hidden = true;
     const preview = element("section"); preview.setAttribute("aria-label", "Final report preview");
     const copy = element("button", "Copy for Jira Cloud"); copy.type = "button";
-    const save = element("button", "Save as reported defect"); save.type = "button";
-    const saveAndCopy = element("button", "Save as reported defect and copy"); saveAndCopy.type = "button";
+    const save = element("button", "Save defect"); save.type = "button";
+    const saveAndCopy = element("button", "Save defect and copy"); saveAndCopy.type = "button";
     const status = element("output", feedback); status.setAttribute("aria-live", "polite");
     refreshPreview = () => {
       const summary = detailEdits.summary ?? `Missing event: ${selected?.eventName || "expected event"}`;
