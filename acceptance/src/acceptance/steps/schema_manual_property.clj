@@ -4,7 +4,20 @@
 
 (def feature-file "features/data-layer-schema-manual-property-authoring.feature")
 (defonce ^:private observation (atom nil))
-(def ^:private entry-step "schema Page view has current revision 3")
+(def ^:private background-steps
+  #{"schema Page view has current revision 3"
+    "its working draft is open in the schema editor"})
+(def ^:private entry-steps
+  #{"Property rules are displayed"
+    "the operator activates Add property"
+    "the manual-property form contains path <entered_path>"
+    "the manual-property form defines commerce.order.id as string"
+    "the manual-property form has property definition <property_definition>"
+    "the manual-property form defines property items as array"
+    "page_type already exists in the property tree"
+    "the manual-property form contains an unsaved property definition"
+    "manual property /commerce/order/id has been added to the Page view working draft"
+    "manual property /commerce/order/id has been added without a rule"})
 
 (defn- load-observation! []
   (reset! observation
@@ -86,19 +99,29 @@
     (assert-example! example interaction)))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [world (if (= text entry-step) (assoc world :schema-manual-property (observation!)) world)
+  (let [world (if (entry-steps text) (assoc world :schema-manual-property (observation!)) world)
         observed (:schema-manual-property world)]
     (support/assert! observed "Schema manual property browser adapter was not executed." {:step text})
     (assert-observation! example observed)
     world))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs [feature-file] #{})
-   #{entry-step}
-   :schema-manual-property
-   transition))
+  (vec
+   (concat
+    (support/semantic-handlers
+     (filterv #(background-steps (:text %)) (support/feature-step-specs [feature-file] #{}))
+     (fn [world _example _captures _spec] world))
+    (mapv
+     (fn [handler]
+       (if (re-matches (:pattern handler) "the operator activates Add property")
+         (assoc handler :applies? #(not (contains? % :schema-container-child)))
+         handler))
+     (support/stateful-semantic-handlers
+      (support/feature-step-specs [feature-file] background-steps)
+      entry-steps
+      :schema-manual-property
+      transition)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T12:55:36.655075592+02:00", :module-hash "2078606229", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-977688718"} {:id "def/feature-file", :kind "def", :line 5, :end-line 5, :hash "-2065882356"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1819867165"} {:id "def/entry-step", :kind "def", :line 7, :end-line 7, :hash "-1126408050"} {:id "defn-/load-observation!", :kind "defn-", :line 9, :end-line 15, :hash "-923451232"} {:id "defn-/observation!", :kind "defn-", :line 17, :end-line 17, :hash "-775394783"} {:id "defn-/assert-path-preview-example!", :kind "defn-", :line 19, :end-line 27, :hash "1160533904"} {:id "defn-/assert-validation-example!", :kind "defn-", :line 29, :end-line 35, :hash "-599702326"} {:id "defn-/assert-array-item-example!", :kind "defn-", :line 37, :end-line 43, :hash "1647259779"} {:id "defn-/assert-example!", :kind "defn-", :line 45, :end-line 48, :hash "-297448000"} {:id "defn-/assert-observation!", :kind "defn-", :line 50, :end-line 86, :hash "-1836551644"} {:id "defn-/transition", :kind "defn-", :line 88, :end-line 93, :hash "1376036018"} {:id "def/handlers", :kind "def", :line 95, :end-line 100, :hash "1304839288"}]}
+;; {:version 1, :tested-at "2026-07-15T16:58:08.485165087+02:00", :module-hash "-2119441623", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-977688718"} {:id "def/feature-file", :kind "def", :line 5, :end-line 5, :hash "-2065882356"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1819867165"} {:id "def/background-steps", :kind "def", :line 7, :end-line 9, :hash "242332076"} {:id "def/entry-steps", :kind "def", :line 10, :end-line 20, :hash "-1739970022"} {:id "defn-/load-observation!", :kind "defn-", :line 22, :end-line 28, :hash "-923451232"} {:id "defn-/observation!", :kind "defn-", :line 30, :end-line 30, :hash "-775394783"} {:id "defn-/assert-path-preview-example!", :kind "defn-", :line 32, :end-line 40, :hash "1160533904"} {:id "defn-/assert-validation-example!", :kind "defn-", :line 42, :end-line 48, :hash "-599702326"} {:id "defn-/assert-array-item-example!", :kind "defn-", :line 50, :end-line 56, :hash "1647259779"} {:id "defn-/assert-example!", :kind "defn-", :line 58, :end-line 61, :hash "-297448000"} {:id "defn-/assert-observation!", :kind "defn-", :line 63, :end-line 99, :hash "-1836551644"} {:id "defn-/transition", :kind "defn-", :line 101, :end-line 106, :hash "2112625307"} {:id "def/handlers", :kind "def", :line 108, :end-line 123, :hash "-237954673"}]}
 ;; clj-mutate-manifest-end

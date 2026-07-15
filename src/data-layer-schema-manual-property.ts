@@ -9,6 +9,11 @@ export interface ManualPropertyDefinition {
   arrayItemType?: ManualArrayItemType;
 }
 
+export interface ManualPropertyContainerAction {
+  label: "Add child property" | "Add item property";
+  parentPath: string;
+}
+
 export type ManualPropertyInspection =
   | { result:"ready"; normalizedPath:string; missingObjectPath:readonly string[] }
   | { result:"blocked"; normalizedPath:string; missingObjectPath:readonly string[]; assistance:string; existingPath?:string };
@@ -34,7 +39,7 @@ function parsePath(path: string): ParsedPath {
 
 function propertyAt(document: JsonSchema, segments: readonly string[]): JsonSchema | undefined {
   let property: JsonSchema | undefined = document;
-  for (const segment of segments) property = property?.properties?.[segment];
+  for (const segment of segments) property = segment === "*" ? property?.items : property?.properties?.[segment];
   return property;
 }
 
@@ -57,15 +62,16 @@ export function inspectManualProperty(
     const local = propertyAt(document, prefix);
     const inherited = inheritedPropertyAt(inheritedDocuments, prefix);
     const existing = local ?? inherited;
-    if (existing && existing.type !== "object") {
+    const traversesArrayItems = existing?.type === "array" && parsed.segments[index + 1] === "*";
+    if (existing && existing.type !== "object" && !traversesArrayItems) {
       return { result:"blocked", normalizedPath:parsed.normalizedPath, missingObjectPath, assistance:`${prefix.join(".")} cannot contain child properties` };
     }
-    if (!local) missingObjectPath.push(parsed.segments[index] as string);
+    if (!local && parsed.segments[index] !== "*") missingObjectPath.push(parsed.segments[index] as string);
   }
 
   const local = propertyAt(document, parsed.segments);
   if (local) {
-    const existingPath = parsed.segments.join(".");
+    const existingPath = parsed.segments.includes("*") ? parsed.normalizedPath : parsed.segments.join(".");
     return { result:"blocked", normalizedPath:parsed.normalizedPath, missingObjectPath, assistance:`Go to existing property ${existingPath}`, existingPath };
   }
   if (inheritedPropertyAt(inheritedDocuments, parsed.segments)) {
@@ -89,10 +95,40 @@ function manualLeaf(definition: ManualPropertyDefinition): JsonSchema {
 function addAtPath(document: JsonSchema, segments: readonly string[], definition: ManualPropertyDefinition): JsonSchema {
   const [name, ...rest] = segments;
   if (!name) return structuredClone(document);
+  if (name === "*") {
+    const item = document.items ?? { type:"object", propertyOrigin:"manual" as const };
+    return { ...structuredClone(document), items:rest.length ? addAtPath(item, rest, definition) : manualLeaf(definition) };
+  }
   const properties = document.properties ?? {};
   if (!rest.length) return { ...structuredClone(document), type:document.type ?? "object", properties:{ ...structuredClone(properties), [name]:manualLeaf(definition) } };
   const child = properties[name] ?? { type:"object", propertyOrigin:"manual" as const };
   return { ...structuredClone(document), type:document.type ?? "object", properties:{ ...structuredClone(properties), [name]:addAtPath(child, rest, definition) } };
+}
+
+export function manualPropertyContainerAction(document: JsonSchema, path: string): ManualPropertyContainerAction | undefined {
+  const parsed = parsePath(path);
+  const container = propertyAt(document, parsed.segments);
+  if (container?.type === "object") return { label:"Add child property", parentPath:parsed.normalizedPath };
+  if (container?.type === "array" && container.items?.type === "object") {
+    return { label:"Add item property", parentPath:`${parsed.normalizedPath}/*` };
+  }
+  return undefined;
+}
+
+export function contextualManualPropertyDefinition(
+  parentPath: string,
+  childName: string,
+  type: ManualPropertyValueType,
+  arrayItemType?: ManualArrayItemType,
+): ManualPropertyDefinition {
+  const parent = parsePath(parentPath).normalizedPath;
+  const child = childName.trim();
+  const contextualChild = child === "*" || child.includes("/") || child.includes(".") ? "" : child;
+  return {
+    path:`${parent}/${contextualChild}`,
+    type,
+    ...(type === "array" && arrayItemType ? { arrayItemType } : {}),
+  };
 }
 
 export function addManualProperty(

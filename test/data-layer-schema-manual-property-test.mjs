@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 
 import {
   addManualProperty,
+  contextualManualPropertyDefinition,
   inspectManualProperty,
+  manualPropertyContainerAction,
   manualPropertyPreview,
 } from "../dist/data-layer-schema-manual-property.js";
 
@@ -69,3 +71,95 @@ assert.throws(
   /Go to existing property page_type/,
   "the domain write must not overwrite an existing property",
 );
+
+const containerDocument = {
+  type:"object",
+  required:["products", "tags"],
+  properties:{
+    commerce:{ type:"object", minimum:1, properties:{} },
+    products:{
+      type:"array",
+      minimum:1,
+      items:{
+        type:"object",
+        additionalProperties:false,
+        required:["product_name"],
+        properties:{
+          product_name:{ type:"string", propertyOrigin:"manual", minimum:2 },
+        },
+      },
+    },
+    tags:{ type:"array", items:{ type:"string" } },
+  },
+};
+
+assert.deepEqual(manualPropertyContainerAction(containerDocument, "/commerce"), {
+  label:"Add child property",
+  parentPath:"/commerce",
+});
+assert.deepEqual(manualPropertyContainerAction(containerDocument, "/products"), {
+  label:"Add item property",
+  parentPath:"/products/*",
+});
+assert.deepEqual(manualPropertyContainerAction(containerDocument, "/products/*"), {
+  label:"Add child property",
+  parentPath:"/products/*",
+});
+assert.equal(manualPropertyContainerAction(containerDocument, "/products/*/product_name"), undefined);
+assert.equal(manualPropertyContainerAction(containerDocument, "/tags"), undefined);
+
+assert.deepEqual(
+  contextualManualPropertyDefinition("/products/*", "product_id", "number"),
+  { path:"/products/*/product_id", type:"number" },
+);
+assert.deepEqual(
+  contextualManualPropertyDefinition("/commerce/order", "line_items", "array", "object"),
+  { path:"/commerce/order/line_items", type:"array", arrayItemType:"object" },
+);
+for (const childName of ["nested/path", "nested.path", "*"]) {
+  const contextual = contextualManualPropertyDefinition("/commerce", childName, "string");
+  assert.equal(
+    inspectManualProperty(containerDocument, [], contextual).result,
+    "blocked",
+    "a contextual child name must not escape its fixed parent path",
+  );
+}
+
+for (const path of ["products/*/product_id", "products.*.product_id"]) {
+  const inspected = inspectManualProperty(containerDocument, [], { path, type:"number" });
+  assert.deepEqual(inspected, {
+    result:"ready",
+    normalizedPath:"/products/*/product_id",
+    missingObjectPath:[],
+  });
+}
+
+const beforeContainerAddition = structuredClone(containerDocument);
+const productAdded = addManualProperty(containerDocument, [], { path:"products/*/product_id", type:"number" });
+assert.deepEqual(productAdded.properties.products.items.properties.product_id, { type:"number", propertyOrigin:"manual" });
+assert.deepEqual(productAdded.properties.products.items.properties.product_name, containerDocument.properties.products.items.properties.product_name);
+assert.deepEqual(productAdded.properties.products.items.required, ["product_name"]);
+assert.equal(productAdded.properties.products.minimum, 1);
+assert.equal(productAdded.properties.products.items.additionalProperties, false);
+assert.deepEqual(containerDocument, beforeContainerAddition, "object-item authoring must not mutate its source document");
+
+const duplicateItem = inspectManualProperty(containerDocument, [], { path:"/products/*/product_name", type:"string" });
+assert.deepEqual(duplicateItem, {
+  result:"blocked",
+  normalizedPath:"/products/*/product_name",
+  missingObjectPath:[],
+  assistance:"Go to existing property /products/*/product_name",
+  existingPath:"/products/*/product_name",
+});
+
+const orderAdded = addManualProperty(containerDocument, [], { path:"/commerce/order", type:"object" });
+const linesAdded = addManualProperty(orderAdded, [], { path:"/commerce/order/line_items", type:"array", arrayItemType:"object" });
+const skuAdded = addManualProperty(linesAdded, [], { path:"/commerce/order/line_items/*/sku", type:"string" });
+assert.deepEqual(skuAdded.properties.commerce.properties.order.properties.line_items, {
+  type:"array",
+  propertyOrigin:"manual",
+  items:{
+    type:"object",
+    properties:{ sku:{ type:"string", propertyOrigin:"manual" } },
+  },
+});
