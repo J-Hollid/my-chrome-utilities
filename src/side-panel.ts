@@ -16,6 +16,7 @@ import {
 } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell } from "./utility-registry.js";
+import { mountUtilityShell } from "./platform/utility-shell-dom.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
@@ -357,7 +358,9 @@ const PROJECT_NAME = "my-chrome-utilities";
 
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
-if (panelRoot) panelRoot.dataset.registeredUtilities = extensionShell.utilityIds.join(",");
+if (panelRoot) {
+  mountUtilityShell(extensionShell, panelRoot, window);
+}
 const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
 const startTestingButton = document.querySelector<HTMLButtonElement>("#start-data-layer-testing");

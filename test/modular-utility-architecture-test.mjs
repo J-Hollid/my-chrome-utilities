@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell } from "../dist/utility-registry.js";
+import { mountUtilityShell } from "../dist/platform/utility-shell-dom.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
 
@@ -11,6 +12,21 @@ for(const utility of utilityRegistry){
 }
 assert.equal(new Set(utilityRegistry.map(({storage})=>storage.namespace)).size,utilityRegistry.length);
 assert.deepEqual(composeUtilityShell(utilityRegistry).utilityIds,["command-palette","hotkeys","data-layer"]);
+const lifecycle=[];
+const lifecycleShell=composeUtilityShell([
+  {...utilityRegistry[0],id:"first",storage:{namespace:"test.first",version:1},lifecycle:{activate(){lifecycle.push("activate:first");},deactivate(){lifecycle.push("deactivate:first");}}},
+  {...utilityRegistry[1],id:"second",storage:{namespace:"test.second",version:1},lifecycle:{activate(){lifecycle.push("activate:second");},deactivate(){lifecycle.push("deactivate:second");}}},
+]);
+assert.deepEqual(lifecycleShell.activate(),["first","second"]);
+assert.deepEqual(lifecycleShell.activate(),["first","second"],"activation is idempotent");
+lifecycleShell.deactivate();lifecycleShell.deactivate();
+assert.deepEqual(lifecycle,["activate:first","activate:second","deactivate:second","deactivate:first"]);
+const root={dataset:{}};let pagehide;
+const mountedShell=composeUtilityShell(utilityRegistry);
+mountUtilityShell(mountedShell,root,{addEventListener(type,listener){if(type==="pagehide")pagehide=listener;}});
+assert.equal(root.dataset.registeredUtilities,"command-palette,hotkeys,data-layer");
+assert.equal(root.dataset.activeUtilities,"command-palette,hotkeys,data-layer");
+pagehide();assert.equal(root.dataset.activeUtilities,"");
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
