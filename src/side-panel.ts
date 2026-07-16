@@ -17,7 +17,7 @@ import {
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 import {
   tabPageObservation,
 } from "./active-page-observation.js";
@@ -284,7 +284,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { applySchemaPropertyTypeEdit, inspectSchemaPropertyTypeEdit, schemaPropertyTypeLabel, type EditablePropertyType, type TypeMismatchTreatment } from "./data-layer-schema-property-type-editing.js";
@@ -3250,7 +3250,7 @@ function renderSchemaPropertyRulePicker(): void {
   })));
   const library = document.createElement("section"); library.setAttribute("aria-label", "Attach from Rule Library"); library.append(Object.assign(document.createElement("h5"), { textContent:"Attach from Rule Library" }), ...reusable.map((rule) => resultButton(
     `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`,
-    `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`,
+    reusableRuleMetadata(rule, propertyType),
     () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
     rule.alreadyAttached,
   )));
@@ -3374,9 +3374,9 @@ function renderSchemaAssignmentConditionEditor(): void {
 function renderSchemaWorkflowRows(): void {
   const choices = assignableSchemas(schemas);
   if (schemaAssignmentSchema) schemaAssignmentSchema.replaceChildren(...choices.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} version ${schema.version}` })));
-  const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
+  const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind} ${allowedValuesRuleLibrarySearchText(rule)}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
   schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
-    const item = document.createElement("li"); const summary = document.createElement("span"); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
+    const item = document.createElement("li"); const summary = document.createElement("span"); const allowedValuesMetadata=allowedValuesRuleLibraryMetadata(rule); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${allowedValuesMetadata ? ` · ${allowedValuesMetadata}` : ""}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
     const edit = document.createElement("button"); const duplicate = document.createElement("button"); const exportRule = document.createElement("button"); const disable = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = exportRule.type = disable.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; exportRule.textContent = "Export"; disable.textContent = rule.enabled === false ? "Enable" : "Disable"; remove.textContent = "Delete";
     edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleTypes) schemaRuleTypes.value = rule.applicableType ?? applicablePropertyTypesForRule(rule)[0] ?? "string"; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage) schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples) schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) { schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}`, selected:rule.attachments?.includes(schema.id) ?? false }))); } if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
     edit.addEventListener("click", () => { if (schemaRuleParameters && rule.allowedValues) schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });

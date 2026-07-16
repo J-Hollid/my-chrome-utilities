@@ -3,7 +3,7 @@ import { createPaletteController } from "./command-palette-ui.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
@@ -63,7 +63,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { applySchemaPropertyTypeEdit, inspectSchemaPropertyTypeEdit, schemaPropertyTypeLabel } from "./data-layer-schema-property-type-editing.js";
@@ -3466,7 +3466,7 @@ function renderSchemaPropertyRulePicker() {
     })));
     const library = document.createElement("section");
     library.setAttribute("aria-label", "Attach from Rule Library");
-    library.append(Object.assign(document.createElement("h5"), { textContent: "Attach from Rule Library" }), ...reusable.map((rule) => resultButton(`${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`, `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`, () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll: true }); }, rule.alreadyAttached)));
+    library.append(Object.assign(document.createElement("h5"), { textContent: "Attach from Rule Library" }), ...reusable.map((rule) => resultButton(`${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`, reusableRuleMetadata(rule, propertyType), () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll: true }); }, rule.alreadyAttached)));
     if (!builtIns.length && !reusable.length) {
         const empty = document.createElement("p");
         empty.id = "schema-property-rule-empty";
@@ -3609,11 +3609,12 @@ function renderSchemaWorkflowRows() {
     const choices = assignableSchemas(schemas);
     if (schemaAssignmentSchema)
         schemaAssignmentSchema.replaceChildren(...choices.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} version ${schema.version}` })));
-    const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
+    const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind} ${allowedValuesRuleLibrarySearchText(rule)}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
     schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
         const item = document.createElement("li");
         const summary = document.createElement("span");
-        summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
+        const allowedValuesMetadata = allowedValuesRuleLibraryMetadata(rule);
+        summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${allowedValuesMetadata ? ` · ${allowedValuesMetadata}` : ""}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
         const edit = document.createElement("button");
         const duplicate = document.createElement("button");
         const exportRule = document.createElement("button");

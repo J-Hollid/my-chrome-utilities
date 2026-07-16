@@ -40,4 +40,14 @@ export function typedAllowedValues(values, type) {
         throw new Error(`Allowed values must all be valid ${type ?? "string"} values.`);
     return converted;
 }
+export function allowedValuesRuleLibraryMetadata(rule) {
+    if (!isAllowedValuesOperator(rule.operator) || rule.allowedValues === undefined)
+        return undefined;
+    return `Allowed values: ${rule.allowedValues.map(String).join(", ")}`;
+}
+export function allowedValuesRuleLibrarySearchText(rule) {
+    return isAllowedValuesOperator(rule.operator) && rule.allowedValues !== undefined
+        ? rule.allowedValues.map(String).join(" ")
+        : "";
+}
 //# sourceMappingURL=data-layer-allowed-values-rule.js.map

@@ -3,6 +3,7 @@ import { restoreSchemaLibrary, serializeSchemaLibrary, validateWithSchema } from
 import { configuredRuleDetails, createRuleConfiguration } from "../dist/data-layer-schema-property-rule-picker.js";
 import { guidedAttachedRule } from "../dist/data-layer-guided-rule-parameter-integrity.js";
 import { deriveSpecificationRows, renderSpecificationClipboard, specificationExampleChoices } from "../dist/data-layer-schema-specification-builder.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText } from "../dist/data-layer-allowed-values-rule.js";
 
 const identity={id:"rule:error-type",name:"Allowed values for error_type",version:1,propertyPath:"/error_type",operator:"allowed-values",severity:"warning",message:"Choose a known error type",enabled:true,conditionGroup:{operator:"All",predicates:[{propertyPath:"/market",operator:"Equals",comparison:{type:"string",value:"retail"}}]}};
 const document={type:"object",properties:{error_type:{type:"string"},quantity:{type:"number"},enabled:{type:"boolean"},context:{}}};
@@ -35,6 +36,10 @@ const picker=createRuleConfiguration("Allowed values","number");picker.allowedVa
 assert.deepEqual(configuredRuleDetails(picker),{operator:"allowed-values",allowedValues:[1,2]});
 const guidedRule=guidedAttachedRule({path:"/enabled",expectedType:"Boolean",requirement:"Must be one of these values",values:["true","false"]},"Enabled values");
 assert.deepEqual(guidedRule.allowedValues,[true,false]);assert.equal(guidedRule.parameters,undefined);
+const canonicalReusable={id:"rule:searchable",name:"Known errors",kind:"Allowed values",operator:"allowed-values",allowedValues:["technical","validation"],parameters:undefined};
+assert.equal(allowedValuesRuleLibraryMetadata(canonicalReusable),"Allowed values: technical, validation");
+assert.equal(allowedValuesRuleLibrarySearchText(canonicalReusable),"technical validation");
+assert.equal(allowedValuesRuleLibraryMetadata({...canonicalReusable,operator:"required",allowedValues:undefined}),undefined);
 
 const wildcardDocument={type:"object",properties:{products:{type:"array",items:{type:"object",properties:{code:{type:"string"},tier:{type:"string"}}}}}};
 const wildcardCondition={operator:"All",predicates:[{propertyPath:"/products/*/tier",operator:"Equals",comparison:{type:"string",value:"vip"}}]};

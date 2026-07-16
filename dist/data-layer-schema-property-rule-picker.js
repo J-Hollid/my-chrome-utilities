@@ -1,5 +1,5 @@
 import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
-import { typedAllowedValues } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, typedAllowedValues } from "./data-layer-allowed-values-rule.js";
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
@@ -47,9 +47,13 @@ export function reusableRulesForProperty(rules, propertyType, query, attachedIds
     const normalized = query.trim().toLowerCase();
     return rules
         .filter((rule) => rule.enabled !== false && applicablePropertyTypesForRule(rule).includes(propertyType))
-        .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
+        .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, allowedValuesRuleLibrarySearchText(rule), rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
         .filter(Boolean).join(" ").toLowerCase().includes(normalized))
         .map((rule) => ({ ...rule, alreadyAttached: attachedIds.has(rule.id) }));
+}
+export function reusableRuleMetadata(rule, propertyType) {
+    const values = allowedValuesRuleLibraryMetadata(rule);
+    return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`;
 }
 function valueInputType(propertyType) {
     return propertyType === "number" ? "number" : propertyType === "boolean" ? "select" : "text";
