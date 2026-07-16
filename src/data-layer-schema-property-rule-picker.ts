@@ -4,12 +4,13 @@ import {
 } from "./data-layer-conditional-validation-rules.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, typedAllowedValues, type AllowedValue } from "./data-layer-allowed-values-rule.js";
+import { cardinalityComparisons, type CardinalityComparison } from "./data-layer-cardinality.js";
 
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+export type { CardinalityComparison } from "./data-layer-cardinality.js";
 
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
 export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count" | "Allow undeclared properties";
-export type CardinalityComparison = ">" | ">=" | "==" | "<" | "<=";
 
 export interface PropertyRuleChoice {
   id: string;
@@ -133,7 +134,7 @@ export function ruleConfigurationControls(ruleType: SchemaRuleType, propertyType
   if (ruleType === "Allowed values") return [{ key:"allowedValues", label:"Allowed values", inputType:valueInputType(propertyType), repeatable:true }];
   if (ruleType === "Regular expression") return [{ key:"pattern", label:"Pattern", inputType:"text" }];
   if (ruleType === "Text length" || ruleType === "Item count") return [
-    { key:"comparison", label:"Comparison", inputType:"select", choices:[">", ">=", "==", "<", "<="] },
+    { key:"comparison", label:"Comparison", inputType:"select", choices:cardinalityComparisons },
     { key:"limit", label:"Limit", inputType:"number", minimum:0, step:1 },
   ];
   if (ruleType === "Numeric range") return [
