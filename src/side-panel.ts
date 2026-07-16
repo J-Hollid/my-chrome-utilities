@@ -1,5 +1,6 @@
 import {
   listCommands,
+  commandsForUtilityShell,
   runCommandById,
   createPaletteController,
   type CommandRunRecord,
@@ -756,7 +757,7 @@ let schemaExportTrigger: HTMLButtonElement | undefined;
 let pendingStandardSchemaExport: { scope:"library" | "schema"; schema?: SchemaDefinition; review:JsonSchemaCompatibilityReview } | undefined;
 const guidedValidationRoot = document.querySelector<HTMLElement>("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
-const allCommands = [...listCommands()];
+const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
 let activeHotkeyKeymap: HotkeyKeymap =
   loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence: string[] = [];

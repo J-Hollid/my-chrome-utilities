@@ -1,4 +1,4 @@
-import { listCommands, runCommandById, createPaletteController, } from "./utilities/command-palette/index.js";
+import { listCommands, commandsForUtilityShell, runCommandById, createPaletteController, } from "./utilities/command-palette/index.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell } from "./utility-registry.js";
@@ -559,7 +559,7 @@ let schemaExportTrigger;
 let pendingStandardSchemaExport;
 const guidedValidationRoot = document.querySelector("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
-const allCommands = [...listCommands()];
+const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
 let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence = [];
 let dataLayerSessionState = restoreSession();

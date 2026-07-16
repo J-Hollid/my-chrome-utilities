@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { utilityRegistry, composeUtilityShell } from "../dist/utility-registry.js";
+import { utilityRegistry, composeUtilityShell, extensionShell } from "../dist/utility-registry.js";
 import { mountUtilityShell } from "../dist/platform/utility-shell-dom.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
+import { commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
 
 assert.deepEqual(utilityRegistry.map(({id})=>id),["command-palette","hotkeys","data-layer"]);
@@ -11,6 +12,10 @@ for(const utility of utilityRegistry){
   assert.equal(typeof utility.lifecycle.activate,"function");assert.match(utility.storage.namespace,/^my-chrome-utilities\./);
 }
 assert.equal(new Set(utilityRegistry.map(({storage})=>storage.namespace)).size,utilityRegistry.length);
+assert.deepEqual(new Set(extensionShell.commands),new Set(listCommands().map(({id})=>id)),"Every product command is owned by a registered utility");
+assert.deepEqual(commandsForUtilityShell(listCommands(),extensionShell.commands).map(({id})=>id),listCommands().map(({id})=>id));
+assert.deepEqual(commandsForUtilityShell(listCommands(),["demo.say-hello"]).map(({id})=>id),["demo.say-hello"]);
+assert.throws(()=>commandsForUtilityShell(listCommands(),["missing.command"]),/commands are unavailable/);
 assert.deepEqual(composeUtilityShell(utilityRegistry).utilityIds,["command-palette","hotkeys","data-layer"]);
 const lifecycle=[];
 const lifecycleShell=composeUtilityShell([
