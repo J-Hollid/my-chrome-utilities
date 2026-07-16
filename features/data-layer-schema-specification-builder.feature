@@ -38,7 +38,7 @@ Feature: Data layer schema specification builder
   Scenario: Data layer schema specification builder 003
     Given page_type and products product_name are selected
     When the specification preview is displayed
-    Then its columns are ordered Property name, Description, Mandatory, Type, Example value, and Allowed values
+    Then its columns are ordered Property name, Description, Mandatory, Type, Example value, Allowed values, and Comments
     And property rows use readable full paths page_type and products[].product_name
     And each row is populated from the effective selected schema source
     And missing descriptions, examples, or allowed values produce blank cells without blocking copy
@@ -54,16 +54,17 @@ Feature: Data layer schema specification builder
     And Type is <data_type>
     And Example value is <example_value>
     And Allowed values contains <allowed_values> in order
+    And Comments is <comments>
 
     Examples:
-      | canonical_path                    | property_name                 | description                  | mandatory                                                | data_type       | example_value  | allowed_values                         |
-      | /page_type                        | page_type                     | Page classification          | Yes                                                      | String          | product_detail | product_detail and product_list        |
-      | /commerce/currency                | commerce.currency             | Transaction currency         | Yes when commerce exists                                 | String          | EUR            | EUR and GBP                            |
-      | /products                         | products                      | Products in the event        | No                                                       | Array of Object | blank          | no values                              |
-      | /products/*/product_name          | products[].product_name       | Displayed product name       | Yes when a products item exists                          | String          | Phone          | no values                              |
-      | /products/*/duration              | products[].duration           | Contract duration in months  | Yes when price_monthly exists for the same products item | Number          | 24             | 12 and 24                              |
-      | /site_id inherited from Base event | site_id                       | Site identifier              | Yes                                                      | String          | otelo          | otelo, hollandsnieuwe, and ben         |
-      | /tracking_context without a type  | tracking_context              | Tracking integration context | No                                                       | Unspecified     | blank          | no values                              |
+      | canonical_path                     | property_name           | description                  | mandatory                                                | data_type       | example_value  | allowed_values                 | comments                    |
+      | /page_type                         | page_type               | Page classification          | Yes                                                      | String          | product_detail | product_detail and product_list | Used for page routing       |
+      | /commerce/currency                 | commerce.currency       | Transaction currency         | Yes when commerce exists                                 | String          | EUR            | EUR and GBP                    | ISO 4217 code               |
+      | /products                          | products                | Products in the event        | No                                                       | Array of Object | blank          | no values                      | One row per product         |
+      | /products/*/product_name           | products[].product_name | Displayed product name       | Yes when a products item exists                          | String          | Phone          | no values                      | Customer-facing label       |
+      | /products/*/duration               | products[].duration     | Contract duration in months  | Yes when price_monthly exists for the same products item | Number          | 24             | 12 and 24                      | Whole months                |
+      | /site_id inherited from Base event | site_id                 | Site identifier              | Yes                                                      | String          | otelo          | otelo, hollandsnieuwe, and ben | Shared across events        |
+      | /tracking_context without a type   | tracking_context        | Tracking integration context | No                                                       | Unspecified     | blank          | no values                      | blank                       |
 
   # Data layer schema specification builder 005
   Scenario: Data layer schema specification builder 005
@@ -89,9 +90,9 @@ Feature: Data layer schema specification builder
   Scenario: Data layer schema specification builder 007
     Given selected rows include commerce.currency and orders[].products[].product_id
     When the specification table is copied
-    Then the clipboard receives one HTML table and one tab-separated plain-text table with the same six columns and row order
+    Then the clipboard receives one HTML table and one tab-separated plain-text table with the same seven columns and row order
     And the HTML representation uses table headings and cells suitable for rich paste into Confluence or Jira
-    And the plain representation pastes into six spreadsheet columns
+    And the plain representation pastes into seven spreadsheet columns
     And HTML markup, tabs, line breaks, and vertical bars inside property content cannot corrupt table boundaries
     And a plain-text fallback remains available with visible feedback when rich clipboard writing fails
     And copying does not change the schema or builder selection

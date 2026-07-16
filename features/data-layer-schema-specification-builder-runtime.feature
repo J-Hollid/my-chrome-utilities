@@ -30,7 +30,7 @@ Feature: Data layer schema specification builder runtime
     And effective leaf rows are selected by default and container rows can be included independently
     And Select all, Clear selection, descendant refinement, and independent container-row inclusion operate on the preview
     And Schema order and Property name sorting produce the matching preview order
-    And the rendered preview headings are Property name, Description, Mandatory, Type, Example value, and Allowed values in that order
+    And the rendered preview headings are Property name, Description, Mandatory, Type, Example value, Allowed values, and Comments in that order
 
   # Data layer schema specification builder runtime 003
   Scenario Outline: Data layer schema specification builder runtime 003
@@ -40,14 +40,15 @@ Feature: Data layer schema specification builder runtime
     And its Mandatory cell is <mandatory>
     And its Type cell is <data_type>
     And its Allowed values cell contains <allowed_values> in order
+    And its Comments cell is <comments>
 
     Examples:
-      | canonical_path            | property_name           | mandatory                                                | data_type       | allowed_values                |
-      | /page_type                | page_type               | Yes                                                      | String          | product_detail and product_list |
-      | /commerce/currency        | commerce.currency       | Yes when commerce exists                                 | String          | EUR and GBP                    |
-      | /products                 | products                | No                                                       | Array of Object | no values                      |
-      | /products/*/duration      | products[].duration     | Yes when price_monthly exists for the same products item | Number          | 12 and 24                      |
-      | /tracking_context         | tracking_context        | No                                                       | Unspecified     | no values                      |
+      | canonical_path       | property_name       | mandatory                                                | data_type       | allowed_values                  | comments              |
+      | /page_type           | page_type           | Yes                                                      | String          | product_detail and product_list | Used for page routing |
+      | /commerce/currency   | commerce.currency   | Yes when commerce exists                                 | String          | EUR and GBP                     | ISO 4217 code         |
+      | /products            | products            | No                                                       | Array of Object | no values                       | One row per product   |
+      | /products/*/duration | products[].duration | Yes when price_monthly exists for the same products item | Number          | 12 and 24                       | Whole months          |
+      | /tracking_context    | tracking_context    | No                                                       | Unspecified     | no values                       | blank                 |
 
   # Data layer schema specification builder runtime 004
   Scenario: Data layer schema specification builder runtime 004
@@ -63,7 +64,7 @@ Feature: Data layer schema specification builder runtime
   Scenario: Data layer schema specification builder runtime 005
     Given production builder has selected nested and inherited rows in schema order
     When the operator clicks Copy specification table
-    Then production clipboard writing receives text/html containing one six-column table
+    Then production clipboard writing receives text/html containing one seven-column table
     And it receives text/plain containing matching tab-separated headings and rows
     And property content is escaped without changing its displayed meaning
     And fallback feedback identifies when only plain text was copied

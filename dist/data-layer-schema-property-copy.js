@@ -144,7 +144,7 @@ export function planSchemaPropertyCopy(options) {
     const effectiveDocumentation = resolveEffectiveSchemaDocumentation(options.source.schema, options.schemas);
     const documentation = propertyPaths.flatMap((path) => {
         const entry = effectiveDocumentation.properties[path];
-        return entry ? [{ path, entry: { displayName: entry.displayName, description: entry.description, ...(entry.example ? { example: clone(entry.example) } : {}) }, origin: { ...entry.origin } }] : [];
+        return entry ? [{ path, entry: { displayName: entry.displayName, description: entry.description, ...(entry.comments ? { comments: entry.comments } : {}), ...(entry.example ? { example: clone(entry.example) } : {}) }, origin: { ...entry.origin } }] : [];
     });
     for (const item of documentation) {
         const destinationEntry = (options.destination.workingDraft?.documentation ?? options.destination.documentation)?.properties?.[item.path];
