@@ -45,3 +45,22 @@ export function renderUtilityDirectory(
   });
   container.replaceChildren(...items);
 }
+
+export function bindUtilityPanels(
+  utilities: readonly UtilityModuleEntry[],
+  root: Pick<ParentNode, "querySelector">,
+): void {
+  const owners = new Map<string, string>();
+  for (const utility of utilities) {
+    for (const panelId of utility.panels) {
+      const previousOwner = owners.get(panelId);
+      if (previousOwner) {
+        throw new Error(`Panel ${panelId} is owned by both ${previousOwner} and ${utility.id}`);
+      }
+      const panel = root.querySelector<HTMLElement>(`#${panelId}`);
+      if (!panel) throw new Error(`Registered utility panel is missing: ${panelId}`);
+      panel.dataset.utilityOwner = utility.id;
+      owners.set(panelId, utility.id);
+    }
+  }
+}

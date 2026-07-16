@@ -2,7 +2,7 @@ import { listCommands, commandsForUtilityShell, runCommandById, createPaletteCon
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell, utilityRegistry } from "./utility-registry.js";
-import { mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
+import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import { createUtilityStorage } from "./platform/utility-storage.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
@@ -118,6 +118,7 @@ if (panelRoot) {
 if (utilityDirectory) {
     renderUtilityDirectory(utilityRegistry, utilityDirectory);
 }
+bindUtilityPanels(utilityRegistry, document);
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
 const startTestingButton = document.querySelector("#start-data-layer-testing");

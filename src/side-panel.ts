@@ -17,7 +17,7 @@ import {
 } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell, utilityRegistry } from "./utility-registry.js";
-import { mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
+import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import { createUtilityStorage } from "./platform/utility-storage.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
@@ -379,6 +379,7 @@ if (panelRoot) {
 if (utilityDirectory) {
   renderUtilityDirectory(utilityRegistry, utilityDirectory);
 }
+bindUtilityPanels(utilityRegistry, document);
 const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
 const startTestingButton = document.querySelector<HTMLButtonElement>("#start-data-layer-testing");
