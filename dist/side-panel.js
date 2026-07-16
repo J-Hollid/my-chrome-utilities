@@ -2,6 +2,7 @@ import { listCommands, runCommandById, createPaletteController, } from "./utilit
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell } from "./utility-registry.js";
+import { mountUtilityShell } from "./platform/utility-shell-dom.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
 import { tabPageObservation, } from "./active-page-observation.js";
@@ -96,8 +97,9 @@ import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-emp
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
-if (panelRoot)
-    panelRoot.dataset.registeredUtilities = extensionShell.utilityIds.join(",");
+if (panelRoot) {
+    mountUtilityShell(extensionShell, panelRoot, window);
+}
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
 const startTestingButton = document.querySelector("#start-data-layer-testing");

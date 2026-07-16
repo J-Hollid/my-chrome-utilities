@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { extensionShell, utilityRegistry } from "../../dist/utility-registry.js";
+import { mountUtilityShell } from "../../dist/platform/utility-shell-dom.js";
 import { inspectUtilityEntry } from "./shared-harness.mjs";
 assert.deepEqual(extensionShell.utilityIds,["command-palette","hotkeys","data-layer"]);
 for(const utility of utilityRegistry)inspectUtilityEntry(utility);
+const root={dataset:{}};let pagehide;
+mountUtilityShell(extensionShell,root,{addEventListener(type,listener){if(type==="pagehide")pagehide=listener;}});
+assert.equal(root.dataset.registeredUtilities,"command-palette,hotkeys,data-layer");
+assert.equal(root.dataset.activeUtilities,"command-palette,hotkeys,data-layer");
+pagehide();
+assert.equal(root.dataset.activeUtilities,"");
 console.log("shell browser adapter passed");
