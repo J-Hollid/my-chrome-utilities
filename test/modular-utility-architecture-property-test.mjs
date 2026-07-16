@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
+import { renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -128,4 +129,24 @@ for (let sample = 0; sample < 100; sample += 1) {
     new RegExp(`missing-${sample}`), "generated command discovery must reject unavailable registrations");
 }
 
-console.log("modular properties: 100 verification graphs, 200 lifecycle cases, and 100 command registries passed");
+for (let sample = 0; sample < 100; sample += 1) {
+  const count = sample % 15;
+  const utilities = Array.from({ length:count }, (_, index) => ({
+    id:`directory-${sample}-${index}`,
+    identity:{ name:`Directory ${index}`, description:`Description ${sample}-${index}` },
+    commands:[],
+    panels:[],
+    lifecycle:{ activate(){}, deactivate(){} },
+    storage:{ namespace:`directory.${sample}.${index}`, version:1 },
+  }));
+  const container = { children:[{ stale:true }], replaceChildren(...children){ this.children = children; } };
+  const ownerDocument = { createElement(tag){ return { tag, dataset:{} }; } };
+
+  renderUtilityDirectory(utilities, container, ownerDocument);
+  assert.deepEqual(container.children.map(({ tag }) => tag), Array(count).fill("li"));
+  assert.deepEqual(container.children.map(({ dataset }) => dataset.utilityId), utilities.map(({ id }) => id));
+  assert.deepEqual(container.children.map(({ textContent }) => textContent), utilities.map(({ identity }) => identity.name));
+  assert.deepEqual(container.children.map(({ title }) => title), utilities.map(({ identity }) => identity.description));
+}
+
+console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, and 100 utility directories passed");
