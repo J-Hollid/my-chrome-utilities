@@ -45,15 +45,29 @@
     ["revenue" "number" "Numeric range" "optional Minimum and Maximum"]
     ["items" "array" "Item count" "non-negative Minimum item count"]})
 
+(def keyboard-examples
+  {["Arrow key navigation followed by Enter" "the selected rule action runs"]
+   {:selected "Required" :configured true}
+   ["Escape" "no rule is created or attached"]
+   {:escapeClosed true}})
+
+(defn- property-rule-example [example]
+  [(support/require-example example "property_name")
+   (support/require-example example "property_type")
+   (support/require-example example "rule_type")])
+
+(defn- assert-property-rule-example! [example observed value-key examples observation-key unknown-message changed-message]
+  (when-let [expected (support/example-value example value-key)]
+    (let [[property-name property-type rule-type] (property-rule-example example)]
+      (support/assert! (contains? examples [property-name property-type rule-type expected])
+                       unknown-message {:example example})
+      (support/assert! (= expected (get-in observed [observation-key (keyword (str property-type ":" rule-type))]))
+                       changed-message {:example example}))))
+
 (defn- assert-availability-example! [example observed]
-  (when-let [expected (support/example-value example "availability")]
-    (let [property-name (support/require-example example "property_name")
-          property-type (support/require-example example "property_type")
-          rule-type (support/require-example example "rule_type")]
-      (support/assert! (contains? availability-examples [property-name property-type rule-type expected])
-                       "Unknown property-rule availability example." {:example example})
-      (support/assert! (= expected (get-in observed [:availability (keyword (str property-type ":" rule-type))]))
-                       "Property type compatibility changed." {:example example}))))
+  (assert-property-rule-example! example observed "availability" availability-examples :availability
+                                 "Unknown property-rule availability example."
+                                 "Property type compatibility changed."))
 
 (defn- assert-search-example! [example observed]
   (when-let [metadata (support/example-value example "matched_metadata")]
@@ -63,35 +77,28 @@
     (support/assert! (= ["Approved pages version 2"] (get-in observed [:searches (keyword metadata)]))
                      "Reusable rule metadata search changed." {:example example})))
 
-(defn- assert-example! [example observed]
-  (assert-availability-example! example observed)
-  (assert-search-example! example observed)
-  (when-let [parameter-controls (support/example-value example "parameter_controls")]
-    (let [property-name (support/require-example example "property_name")
-          property-type (support/require-example example "property_type")
-          rule-type (support/require-example example "rule_type")]
-      (support/assert! (contains? configuration-control-examples
-                                  [property-name property-type rule-type parameter-controls])
-                       "Unknown built-in configuration-control example." {:example example})
-      (support/assert! (= parameter-controls (get-in observed [:configurationControls (keyword (str property-type ":" rule-type))]))
-                       "Built-in rule configuration controls changed." {:example example})))
+(defn- assert-configuration-control-example! [example observed]
+  (assert-property-rule-example! example observed "parameter_controls" configuration-control-examples :configurationControls
+                                 "Unknown built-in configuration-control example."
+                                 "Built-in rule configuration controls changed."))
+
+(defn- assert-validation-example! [example observed]
   (when-let [configuration (support/example-value example "configuration")]
     (let [rule-type (support/require-example example "rule_type")
           expected-result (support/require-example example "creation_result")
           expected-assistance (support/require-example example "assistance")
           actual (get-in observed [:validations (keyword (str rule-type ":" configuration))])]
       (support/assert! (= {:creationResult expected-result :assistance expected-assistance} actual)
-                       "Local built-in rule validation changed." {:example example})))
+                       "Local built-in rule validation changed." {:example example}))))
+
+(defn- assert-keyboard-example! [example observed]
   (when-let [picker-input (support/example-value example "picker_input")]
-    (let [selection-outcome (support/require-example example "selection_outcome")]
-      (support/assert! (case [picker-input selection-outcome]
-                         ["Arrow key navigation followed by Enter" "the selected rule action runs"]
-                         (and (= "Required" (get-in observed [:keyboard :selected]))
-                              (true? (get-in observed [:keyboard :configured])))
-                         ["Escape" "no rule is created or attached"]
-                         (true? (get-in observed [:keyboard :escapeClosed]))
-                         false)
-                       "Rule-picker keyboard example changed." {:example example})))
+    (let [selection-outcome (support/require-example example "selection_outcome")
+          expected (get keyboard-examples [picker-input selection-outcome])]
+      (support/assert! (= expected (select-keys (:keyboard observed) (keys expected)))
+                       "Rule-picker keyboard example changed." {:example example}))))
+
+(defn- assert-navigation-example! [example observed]
   (when-let [navigation-action (support/example-value example "navigation_action")]
     (let [selection-outcome (support/require-example example "selection_outcome")]
       (support/assert! (case [navigation-action selection-outcome]
@@ -101,6 +108,14 @@
                          (= {:closed true :focusReturned true} (get-in observed [:navigation :cancel]))
                          false)
                        "Rule-configuration navigation example changed." {:example example}))))
+
+(defn- assert-example! [example observed]
+  (assert-availability-example! example observed)
+  (assert-search-example! example observed)
+  (assert-configuration-control-example! example observed)
+  (assert-validation-example! example observed)
+  (assert-keyboard-example! example observed)
+  (assert-navigation-example! example observed))
 
 (defn- assert-picker! [example observed]
   (support/assert! (= {:label "Add rule" :pickerAbsent true :inlineResults true :expandedMenu true} (:closed observed))
@@ -132,12 +147,12 @@
                        :unchecked {:fieldsHidden true :values ["ABC-1" "XYZ-2"] :severity "warning" :message "Use an approved SKU"}}
                       (:reusableToggle observed))
                    "Reusable-rule fields did not preserve local configuration." observed)
-  (support/assert! (= {:count 1 :operator "allowed-values" :parameters "ABC-1,XYZ-2" :severity "warning" :message "Use an approved SKU"
+  (support/assert! (= {:count 1 :operator "allowed-values" :allowedValues ["ABC-1" "XYZ-2"] :severity "warning" :message "Use an approved SKU"
                        :activeCount " (1 active rules)" :libraryUnchanged true :currentRules 0 :currentVersion 3 :closed true :focusReturned true}
                       (:localCreation observed))
                    "Local rule creation did not stay in the working draft." observed)
   (support/assert! (= {:libraryCount 1 :version 1 :type "string" :attachmentCount 1 :sameIdentity true :localCount 1
-                       :details {:parameters "ABC-1,XYZ-2" :severity "warning" :message "Use an approved SKU" :description "SKUs accepted by fulfilment"}
+                       :details {:allowedValues ["ABC-1" "XYZ-2"] :severity "warning" :message "Use an approved SKU" :description "SKUs accepted by fulfilment"}
                        :closed true :focusReturned true}
                       (:reusableCreation observed))
                    "Reusable rule creation lost identity or configuration." observed)

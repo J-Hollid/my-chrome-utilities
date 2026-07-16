@@ -1091,7 +1091,7 @@ const guidedValidationRuntime = `(async () => {
   const savedValidationResult = verification.validateWithSchema(guidedEvent, activeDraft, storedSchemas);
   const legacySchema = {
     ...activeDraft,
-    attachedRules:activeDraft.attachedRules.map((rule) => ({ ...rule, parameters:rule.propertyPath + ":" + rule.parameters })),
+    attachedRules:activeDraft.attachedRules.map(({ allowedValues, ...rule }) => ({ ...rule, parameters:rule.propertyPath + ":" + allowedValues.join(",") })),
   };
   const restoredLegacy = verification.restoreSchemaLibrary(JSON.stringify([legacySchema]))[0];
   const legacyValidationResult = verification.validateWithSchema(guidedEvent, restoredLegacy, [restoredLegacy]);
@@ -2337,7 +2337,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   let storedAfterLocal = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];
   const localRules = storedAfterLocal.workingDraft.attachedRules.filter(({ id, propertyPath }) => id.startsWith("local-rule:") && propertyPath === "/product/sku");
   const localCreation = {
-    count:localRules.length, operator:localRules[0]?.operator, parameters:localRules[0]?.parameters, severity:localRules[0]?.severity, message:localRules[0]?.message,
+    count:localRules.length, operator:localRules[0]?.operator, allowedValues:localRules[0]?.allowedValues, parameters:localRules[0]?.parameters, severity:localRules[0]?.severity, message:localRules[0]?.message,
     activeCount:q('#schema-property-tree [data-schema-property-path="product.sku"] span:not(.schema-property-metadata)').textContent,
     libraryUnchanged:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")).length === libraryBeforeLocal,
     currentRules:(storedAfterLocal.attachedRules ?? []).length, currentVersion:storedAfterLocal.version,
@@ -2353,7 +2353,7 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   const reusableCreation = {
     libraryCount:approved.length, version:approved[0]?.version, type:approved[0]?.applicableType, attachmentCount:approvedAttachments.length,
     sameIdentity:approvedAttachments[0]?.id === approved[0]?.id, localCount:storedAfterLocal.workingDraft.attachedRules.filter(({ id, propertyPath }) => id.startsWith("local-rule:") && propertyPath === "/product/sku").length,
-    details:{ parameters:approved[0]?.parameters, severity:approved[0]?.severity, message:approved[0]?.message, description:approved[0]?.description },
+    details:{ allowedValues:approved[0]?.allowedValues, parameters:approved[0]?.parameters, severity:approved[0]?.severity, message:approved[0]?.message, description:approved[0]?.description },
     closed:!dialog.open, focusReturned:document.activeElement?.getAttribute("aria-label") === "Add rule for product.sku",
   };
   const beforeNavigation = { schemas:localStorage.getItem("my-chrome-utilities.schema-library.v1"), rules:localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") };
@@ -5273,7 +5273,7 @@ try {
       assert.deepEqual(allowedValueExpansionObservation.cancelled, { focused:"stable-id-41",expanded:"true",scroll:37 });
       assert.deepEqual(allowedValueExpansionObservation.afterConfirm.values, ["product","content","product_test"]);
       assert.deepEqual(allowedValueExpansionObservation.afterConfirm.pending, ["Document checkout ownership","Allow string product_test for /page_type in Known page types (stable-id-41)"]);
-      assert.deepEqual({ publishedParameters:allowedValueExpansionObservation.afterConfirm.publishedParameters,publishedValues:allowedValueExpansionObservation.afterConfirm.publishedValues,condition:allowedValueExpansionObservation.afterConfirm.condition,severity:allowedValueExpansionObservation.afterConfirm.severity,message:allowedValueExpansionObservation.afterConfirm.message }, { publishedParameters:"product,content",publishedValues:null,condition:"consumer",severity:"error",message:"Choose a known page type" });
+      assert.deepEqual({ publishedParameters:allowedValueExpansionObservation.afterConfirm.publishedParameters,publishedValues:allowedValueExpansionObservation.afterConfirm.publishedValues,condition:allowedValueExpansionObservation.afterConfirm.condition,severity:allowedValueExpansionObservation.afterConfirm.severity,message:allowedValueExpansionObservation.afterConfirm.message }, { publishedParameters:undefined,publishedValues:["product","content"],condition:"consumer",severity:"error",message:"Choose a known page type" });
       assert.deepEqual({ focused:allowedValueExpansionObservation.afterConfirm.focused,expanded:allowedValueExpansionObservation.afterConfirm.expanded,scroll:allowedValueExpansionObservation.afterConfirm.scroll }, { focused:"stable-id-41",expanded:"true",scroll:37 });
       assert.match(allowedValueExpansionObservation.alreadyPending, /already pending/i); assert.equal(allowedValueExpansionObservation.duplicateUnchanged,true);
       assert.deepEqual(allowedValueExpansionObservation.openedDraft, { schemaView:"true",editor:true,focused:"schema-editor-name",values:["product","content","product_test"] });
@@ -6463,5 +6463,5 @@ try {
     }), wait(1000)]);
   }
   await new Promise((resolve) => assetServer.close(resolve));
-  await rm(chromeProfile, { recursive: true, force: true });
+  await rm(chromeProfile, { recursive:true, force:true, maxRetries:5, retryDelay:50 });
 }

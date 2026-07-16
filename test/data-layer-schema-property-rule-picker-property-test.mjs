@@ -117,7 +117,11 @@ const validConfiguration = (ruleType, sample, token) => {
         : "string";
   const configuration = createRuleConfiguration(ruleType, propertyType);
   if (ruleType === "Exact value") configuration.exactValue = ` value-${token} `;
-  if (ruleType === "Allowed values") configuration.allowedValues = [` value-${token} `, "", `other-${sample}`];
+  if (ruleType === "Allowed values") configuration.allowedValues = propertyType === "number"
+    ? [` ${sample} `, "", ` ${sample + 1} `]
+    : propertyType === "boolean"
+      ? [" true ", "", " false "]
+      : [` value-${token} `, "", `other-${sample}`];
   if (ruleType === "Regular expression") configuration.pattern = `^value-${token}[0-9]*$`;
   if (ruleType === "Text length") configuration.exactLength = ` ${sample} `;
   if (ruleType === "Numeric range") {
@@ -132,7 +136,10 @@ const expectedDetails = (configuration) => {
   const { ruleType } = configuration;
   if (ruleType === "Required") return { operator:"required" };
   if (ruleType === "Exact value") return { operator:"exact-value", parameters:configuration.exactValue };
-  if (ruleType === "Allowed values") return { operator:"allowed-values", parameters:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).join(",") };
+  if (ruleType === "Allowed values") return {
+    operator:"allowed-values",
+    allowedValues:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).map((value) => configuration.propertyType === "number" ? Number(value) : configuration.propertyType === "boolean" ? value === "true" : value),
+  };
   if (ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
   if (ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
   if (ruleType === "Digits only") return { operator:"digits-only" };

@@ -29,6 +29,7 @@
                         [acceptance.schema-property-copy-steps-test]
                         [acceptance.schema-property-comments-steps-test]
                         [acceptance.schema-property-type-editing-steps-test]
+                        [acceptance.schema-nested-path-steps-test]
                         [acceptance.schema-specification-container-defaults-steps-test]
                         [acceptance.allowed-values-rule-migration-steps-test]
                         [acceptance.schema-specification-builder-steps-test]
@@ -104,6 +105,7 @@
                                                 'acceptance.schema-property-copy-steps-test
                                                 'acceptance.schema-property-comments-steps-test
                                                 'acceptance.schema-property-type-editing-steps-test
+                                                'acceptance.schema-nested-path-steps-test
                                                 'acceptance.schema-specification-container-defaults-steps-test
                                                 'acceptance.allowed-values-rule-migration-steps-test
                                                 'acceptance.schema-specification-builder-steps-test
