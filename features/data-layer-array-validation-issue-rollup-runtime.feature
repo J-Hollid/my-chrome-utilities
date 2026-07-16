@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=02cd63550917f7045f6ec0aa5fda3e1abf8fe716f7bc9ec9ed0456adab2e7339
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T19:58:00.126502274Z","feature_name":"Data layer array validation issue rollup runtime","feature_path":"features/data-layer-array-validation-issue-rollup-runtime.feature","background_hash":"81c52c81a405128e2e568403266bc59301e30ec27cb67addff1ac9ef8c23489e","implementation_hash":"86f8bc63b6d65822dd0babea23efed7dc11c6b4de0945cce26369e4b32e74aa1","scenarios":[{"index":1,"name":"Data layer array validation issue rollup runtime 002","scenario_hash":"8be67b0c78657ff238ba1d4c5fbc675bee5f2e38fb81fe339471a24188c1e19e","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:57:49.099697666Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer array validation issue rollup runtime
 
   Background:

@@ -125,4 +125,52 @@ export function presentValidationPropertyTree(nodes, showNonApplicable) {
         .map((node) => presentPropertyNode(node, showNonApplicable))
         .filter((node) => Boolean(node));
 }
+function pointerSegments(path) { return path.split("/").filter(Boolean); }
+function canonicalArrayPath(path) { return `/${pointerSegments(path).map((part) => /^\d+$/.test(part) ? "*" : part).join("/")}`; }
+function readableEvaluationCounts(counts) {
+    return [counts.passed ? `${counts.passed} passed` : "", counts.warnings ? `${counts.warnings} warning${counts.warnings === 1 ? "" : "s"}` : "", counts.errors ? `${counts.errors} error${counts.errors === 1 ? "" : "s"}` : "", counts.notApplicable ? `${counts.notApplicable} not applicable` : ""].filter(Boolean).join(" and ");
+}
+export function applyArrayValidationRollups(nodes, evaluations) {
+    const wildcard = evaluations.filter((evaluation) => evaluation.templatePath?.includes("*"));
+    const visit = (source) => {
+        const path = source.technicalPath ?? `/${source.path.replaceAll(".", "/")}`;
+        const canonical = canonicalArrayPath(path);
+        const pathParts = pointerSegments(path);
+        const hasConcreteIndex = pathParts.some((part) => /^\d+$/.test(part));
+        const canonicalWildcardCount = pointerSegments(canonical).filter((part) => part === "*").length;
+        const candidates = wildcard.filter(({ templatePath }) => {
+            if (!(templatePath === canonical || templatePath?.startsWith(`${canonical}/`)))
+                return false;
+            return !hasConcreteIndex || pointerSegments(templatePath ?? "").filter((part) => part === "*").length > canonicalWildcardCount;
+        });
+        const specificItems = (source.specificItems ?? []).map(visit);
+        const affectedItems = specificItems.filter((item) => candidates.some((evaluation) => (evaluation.status === "error" || evaluation.status === "warning") && (evaluation.propertyPath === item.technicalPath || evaluation.propertyPath.startsWith(`${item.technicalPath}/`))));
+        const children = source.children.map(visit);
+        if (!candidates.length)
+            return { ...source, children, specificItems };
+        const affected = candidates.filter(({ status }) => status === "error" || status === "warning");
+        const wildcardIndexes = affected.map((evaluation) => {
+            const template = pointerSegments(evaluation.templatePath ?? "");
+            const concrete = pointerSegments(evaluation.propertyPath);
+            const indexes = template.map((part, index) => part === "*" ? index : -1).filter((index) => index >= 0);
+            const index = hasConcreteIndex ? indexes[canonicalWildcardCount] : canonicalWildcardCount ? indexes[canonicalWildcardCount - 1] : indexes[0];
+            return index === undefined ? undefined : concrete[index];
+        }).filter((part) => part !== undefined);
+        const totalItemCount = source.specificItems?.length || source.matchedValueCount || new Set(candidates.map((evaluation) => evaluation.propertyPath)).size;
+        const rollup = {
+            errors: candidates.filter(({ status }) => status === "error").length,
+            warnings: candidates.filter(({ status }) => status === "warning").length,
+            passed: candidates.filter(({ status }) => status === "pass").length,
+            notApplicable: candidates.filter(({ status }) => status === "not-applicable").length,
+            affectedItemCount: new Set(wildcardIndexes).size,
+            totalItemCount,
+            affectedPaths: [...new Set(affected.map(({ propertyPath }) => propertyPath))],
+            ruleCount: new Set(candidates.map(({ ruleId, rule, ruleVersion }) => ruleId ?? `${rule}:${ruleVersion}`)).size,
+        };
+        const exact = wildcard.filter(({ templatePath }) => templatePath === canonical);
+        const summary = exact.length ? { ...propertyValidationSummary(exact), status: readableEvaluationCounts(rollup) } : source.summary;
+        return { ...source, evaluations: exact.length ? exact : source.evaluations, summary, aggregate: { errors: rollup.errors, warnings: rollup.warnings }, children, specificItems, affectedItems, rollup };
+    };
+    return nodes.map(visit);
+}
 //# sourceMappingURL=data-layer-live-validation-presentation.js.map

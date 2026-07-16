@@ -2,7 +2,7 @@ import { dataLayerViews, filteredLiveEvents, } from "./data-layer-live-observer.
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
-import { buildValidationPropertyTree, presentValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
+import { buildValidationPropertyTree, applyArrayValidationRollups, presentValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
 import { buildRecursivePropertyTree, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import { resolvePropertyDocumentation, schemaDocumentationSearchText } from "./data-layer-schema-documentation.js";
 import { allowedValueExpansionAvailability } from "./data-layer-allowed-value-expansion.js";
@@ -122,6 +122,27 @@ function evaluationText(evaluation) {
 }
 function propertyStatusSymbol(symbol) {
     return symbol === "check" ? "✓" : symbol === "warning" ? "⚠" : symbol === "error" ? "!" : "○";
+}
+function revealLiveProperty(path) {
+    const target = document.querySelector(`.live-validation-property[data-property-path="${CSS.escape(path)}"]`);
+    if (!target)
+        return;
+    const concretePrefixes = new Set(path.split("/").slice(1, -1).map((_, index, parts) => `/${parts.slice(0, index + 1).join("/")}`));
+    const wildcardPrefixes = new Set([...concretePrefixes].map((prefix) => prefix.replace(/\/\d+(?=\/|$)/g, "/*")));
+    const propertyList = target.closest("#live-validation-properties");
+    for (const disclosure of Array.from(propertyList?.querySelectorAll("details[data-property-path]") ?? [])) {
+        const disclosurePath = disclosure.dataset.propertyPath ?? "";
+        const affectedBase = disclosurePath.endsWith("#affected") ? disclosurePath.slice(0, -"#affected".length) : undefined;
+        if (concretePrefixes.has(disclosurePath) || wildcardPrefixes.has(disclosurePath)
+            || (affectedBase && (path === affectedBase || path.startsWith(`${affectedBase}/`))))
+            disclosure.open = true;
+    }
+    let ancestor = target.parentElement?.closest("details");
+    while (ancestor) {
+        ancestor.open = true;
+        ancestor = ancestor.parentElement?.closest("details");
+    }
+    target.focus({ preventScroll: false });
 }
 function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllowedValue, addToSchema, declaration) {
     const item = document.createElement("li");
@@ -307,9 +328,15 @@ function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllo
         row.append(add);
     }
     if (node.aggregate.errors || node.aggregate.warnings) {
-        const aggregate = document.createElement("span");
+        const aggregate = document.createElement(node.rollup?.affectedPaths.length ? "button" : "span");
         aggregate.className = "live-property-aggregate";
-        aggregate.textContent = [node.aggregate.errors ? `${node.aggregate.errors} error${node.aggregate.errors === 1 ? "" : "s"}` : "", node.aggregate.warnings ? `${node.aggregate.warnings} warning${node.aggregate.warnings === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ");
+        const counts = [node.aggregate.errors ? `${node.aggregate.errors} error${node.aggregate.errors === 1 ? "" : "s"}` : "", node.aggregate.warnings ? `${node.aggregate.warnings} warning${node.aggregate.warnings === 1 ? "" : "s"}` : ""].filter(Boolean).join(" and ");
+        aggregate.textContent = node.rollup ? `${counts} in ${node.rollup.affectedItemCount} of ${node.rollup.totalItemCount} items${node.name === "Every item" ? ` · ${node.rollup.ruleCount} wildcard-scoped rule${node.rollup.ruleCount === 1 ? "" : "s"}` : ""}` : counts;
+        if (aggregate instanceof HTMLButtonElement) {
+            aggregate.type = "button";
+            aggregate.setAttribute("aria-label", `${node.name} aggregate status: ${aggregate.textContent}`);
+            aggregate.addEventListener("click", () => revealLiveProperty(node.rollup.affectedPaths[0]));
+        }
         row.append(aggregate);
     }
     item.append(row, preview, disclosure);
@@ -322,6 +349,17 @@ function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllo
         list.replaceChildren(...node.children.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue, addToSchema, declaration)));
         nested.append(nestedSummary, list);
         item.append(nested);
+    }
+    if (node.affectedItems?.length) {
+        const affected = document.createElement("details");
+        affected.className = "live-property-affected-items";
+        affected.dataset.propertyPath = `${node.technicalPath ?? node.path}#affected`;
+        const summary = document.createElement("summary");
+        summary.textContent = `Affected items (${node.affectedItems.length})`;
+        const list = document.createElement("ul");
+        list.replaceChildren(...node.affectedItems.map((child) => renderPropertyNode(child, addValidation, schemaDocumentation, expandAllowedValue, addToSchema, declaration)));
+        affected.append(summary, list);
+        item.append(affected);
     }
     if (node.specificItems?.length) {
         const specific = document.createElement("details");
@@ -359,7 +397,7 @@ function recursiveValidationTree(payload, evaluations, issues) {
         const specificItems = node.specificItems.map(convert);
         const summary = legacy?.summary ?? propertyValidationSummary([]);
         const aggregate = legacy?.aggregate ?? children.reduce((counts, child) => ({ errors: counts.errors + child.summary.errors + child.aggregate.errors, warnings: counts.warnings + child.summary.warnings + child.aggregate.warnings }), { errors: 0, warnings: 0 });
-        return { path: normalized, technicalPath: node.path, expression: node.expression, name: node.label, value: legacy?.value, valueLabel: [node.summary, node.assistance].filter(Boolean).join(" · "), missing: false, evaluations: legacy?.evaluations ?? [], summary, aggregate, children, specificItems, matchedValueCount: node.matchedValueCount, detectedTypes: node.detectedTypes, examples: node.examples };
+        return { path: normalized, technicalPath: node.path, expression: node.expression, name: node.label, value: legacy?.value, valueLabel: [node.summary, node.assistance].filter(Boolean).join(" · "), missing: false, evaluations: legacy?.evaluations ?? [], summary, aggregate, children, specificItems, matchedValueCount: node.matchedValueCount, detectedTypes: node.detectedTypes, examples: node.examples, ...(node.zeroBasedIndex === undefined ? {} : { zeroBasedIndex: node.zeroBasedIndex }) };
     };
     const roots = buildRecursivePropertyTree(payload).map(convert);
     for (const legacy of legacyRoots)
@@ -380,11 +418,10 @@ function renderEventLevelIssues(event, actionHandlers) {
         const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
         const text = `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
         if (path) {
-            const targetId = `live-property-${path.replace(/[^a-z0-9]+/gi, "-")}`;
             const link = document.createElement("button");
             link.type = "button";
             link.textContent = `${path}: ${text}`;
-            link.addEventListener("click", () => document.getElementById(targetId)?.focus({ preventScroll: false }));
+            link.addEventListener("click", () => revealLiveProperty(issue.instancePath));
             item.append(link);
         }
         else
@@ -423,6 +460,13 @@ function renderEventLevelIssues(event, actionHandlers) {
 export function renderLiveInspector(elements, event, actionHandlers, presentation = {}) {
     if (!elements.eventInspector)
         return;
+    const priorScrollTop = elements.eventInspector.scrollTop;
+    const priorOpenPaths = new Set(Array.from(elements.eventInspector.querySelectorAll("#live-validation-properties details[open][data-property-path]")).map(({ dataset }) => dataset.propertyPath ?? ""));
+    const priorFocusedPropertyPath = document.activeElement instanceof HTMLElement
+        && document.activeElement.classList.contains("live-validation-property")
+        && elements.eventInspector.contains(document.activeElement)
+        ? document.activeElement.dataset.propertyPath
+        : undefined;
     elements.eventInspector.classList.add("live-detail-view");
     const inspectorHeader = document.createElement("header");
     inspectorHeader.className = "detail-view-header";
@@ -510,7 +554,7 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
         payload.dataset.showNonApplicableProperties = String(showNonApplicable);
         nonApplicableVisibility.textContent = showNonApplicable ? "Hide non-applicable properties" : "Show non-applicable properties";
         nonApplicableVisibility.setAttribute("aria-pressed", String(showNonApplicable));
-        propertyList.replaceChildren(...presentValidationPropertyTree(propertyTree, showNonApplicable)
+        propertyList.replaceChildren(...applyArrayValidationRollups(presentValidationPropertyTree(propertyTree, showNonApplicable), event.validationDetails?.evaluations ?? [])
             .map((node) => renderPropertyNode(node, addValidation, event.validationDetails?.documentation, expandAllowedValue, addToSchema, declaration)));
         for (const disclosure of Array.from(propertyList.querySelectorAll("details[data-property-path]")))
             disclosure.toggleAttribute("open", openPaths.has(disclosure.dataset.propertyPath ?? ""));
@@ -618,6 +662,20 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
     const issues = renderEventLevelIssues(event, actionHandlers);
     issues.tabIndex = -1;
     elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, issues, payload, rawJson, raw, actions);
+    for (const disclosure of Array.from(propertyList.querySelectorAll("details[data-property-path]")))
+        disclosure.toggleAttribute("open", priorOpenPaths.has(disclosure.dataset.propertyPath ?? ""));
+    if (priorFocusedPropertyPath) {
+        const target = Array.from(propertyList.querySelectorAll(".live-validation-property[data-property-path]")).find(({ dataset }) => dataset.propertyPath === priorFocusedPropertyPath);
+        if (target) {
+            let ancestor = target.parentElement?.closest("details");
+            while (ancestor) {
+                ancestor.open = true;
+                ancestor = ancestor.parentElement?.closest("details");
+            }
+            target.focus({ preventScroll: true });
+        }
+    }
+    elements.eventInspector.scrollTop = priorScrollTop;
 }
 function appendSummaryItem(summary, label, value) {
     if (!value)

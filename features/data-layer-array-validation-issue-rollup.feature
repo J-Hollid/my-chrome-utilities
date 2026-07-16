@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=fdb1f0011aac60e167f2fa27d8921487d83d4d0490acb9d2a147b705f6ab9539
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T19:58:00.146941009Z","feature_name":"Data layer array validation issue rollup","feature_path":"features/data-layer-array-validation-issue-rollup.feature","background_hash":"a8318a2274d25c174d84b7b61d9811b5c4292b8f9ded6d7dd3097f69b11025bb","implementation_hash":"1ee565f03f75f64706c68979e4c29f65aba3a35e23fc17ce78d50ba692d17af7","scenarios":[{"index":2,"name":"Data layer array validation issue rollup 003","scenario_hash":"4716d7f7f756aa8111c57a90db5ab2919d5db3b7da8225aed1a7ffd37be23be4","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:57:36.414626887Z"},{"index":3,"name":"Data layer array validation issue rollup 004","scenario_hash":"c5ce68d85b4625df4c5924abbe77356d810c4ef7c75a2dcf182829e36216c453","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:57:36.414626887Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer array validation issue rollup
 
   Background:
