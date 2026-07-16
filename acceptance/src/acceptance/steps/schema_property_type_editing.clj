@@ -1,5 +1,6 @@
 (ns acceptance.steps.schema-property-type-editing
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [clojure.string :as str]))
 
 (def feature-files
   ["features/data-layer-schema-property-type-editing.feature"
@@ -26,7 +27,30 @@
     :runtime-error "Schema property type editing browser runtime failed."
     :missing-error "Schema property type editing browser evidence is missing."}))
 
+(defn- assert-runtime! [{:keys [review impactChoices descendantImpact remainingRules reusableUnchanged publication runtimeErrors] :as observed}]
+  (support/assert!
+   (and (str/includes? review "example value")
+        (str/includes? review "conditional dependency order-condition")
+        (:blocked impactChoices)
+        (:cancel impactChoices)
+        (str/includes? (:review descendantImpact) "descendant required relationships")
+        (:blocked descendantImpact)
+        (:unchanged descendantImpact)
+        (:focus descendantImpact)
+        (= ["product-name-required"] remainingRules)
+        reusableUnchanged
+        (= 4 (:version publication))
+        (:draftAbsent publication)
+        (= "string" (get-in publication [:current :order]))
+        (= "number" (get-in publication [:historical :order]))
+        (= "ignore" (get-in publication [:current :priceTreatment]))
+        (= "error" (get-in publication [:historical :priceTreatment]))
+        (empty? runtimeErrors))
+   "Production property type editing did not preserve impact and publication semantics."
+   observed)
+  observed)
+
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :schema-property-type-editing-mode
-   verify-model! (fn [_ _] true) runtime-observation! identity))
+   verify-model! (fn [_ _] true) runtime-observation! assert-runtime!))
