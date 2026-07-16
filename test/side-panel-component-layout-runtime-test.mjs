@@ -72,6 +72,7 @@ let schemaPropertyCommentsObservation;
 let schemaCardinalityComparisonObservation;
 let schemaDeclaredPropertyExceptionsObservation;
 let jsonSchemaExportObservation;
+let arrayValidationRollupObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -79,6 +80,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1" ? [320]
   : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER === "1" ? [720]
@@ -4764,6 +4766,22 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1") {
+      arrayValidationRollupObservation=await evaluate(socket,`(async()=>{
+        const verification=await import("/data-layer-schema-verification.js"),ui=await import("/data-layer-live-observer-ui.js");
+        const products=Array.from({length:10},(_,index)=>({id:String(index+1),type:index===7?"service":"physical"}));
+        const rule={id:"rule:product-type",name:"Allowed product type",version:1,propertyPath:"/products/*/type",operator:"allowed-values",allowedValues:["physical","digital"],severity:"error"};
+        const schema={id:"schema-products",name:"Products",version:1,assignments:[],document:{type:"object",properties:{products:{type:"array",items:{type:"object",properties:{id:{type:"string"},type:{type:"string"}}}}}},attachedRules:[rule]};
+        const result=verification.validateWithSchema({sourceId:"history",eventName:"products",payload:{products},rawInput:[]},schema,[schema]);
+        const host=document.createElement("section");host.style.width="320px";const inspector=document.createElement("section"),back=document.createElement("button");host.append(inspector);document.body.append(host);
+        ui.renderLiveInspector({livePanel:null,viewList:null,sessionMessage:null,sourceStatuses:null,eventFeed:null,eventList:null,eventInspector:inspector,backToEventsButton:back,pauseCaptureButton:null,resumeCaptureButton:null},{id:"event-products",sessionId:"session",sourceId:"history",sourceKind:"Data layer",name:"products",captureTime:"2026-07-16T20:00:00Z",pageUrl:"https://shop.example/products",destination:"dataLayer",payload:{products},rawInput:[],validation:result.state,provenance:"captured",validationDetails:{issues:result.issues,evaluations:result.evaluations,schema:result.schema}},{copyPayload:async()=>{},saveToLibrary:()=>{},validationAvailability:()=>({enabled:true}),validate:()=>{},manualSchemaChoices:()=>[],selectManualSchema:()=>{}});
+        const row=(path)=>inspector.querySelector('.live-validation-property[data-property-path="'+path+'"]');const product=row("/products"),every=row("/products/*"),type=row("/products/*/type");
+        const affected=product.querySelector(".live-property-affected-items");const itemRows=Array.from(affected.querySelectorAll(":scope > ul > .live-validation-property"));
+        product.querySelector(".live-property-aggregate").click();const focused=document.activeElement;
+        const observation={width:innerWidth,issues:result.issues.length,evaluations:result.evaluations.length,products:product.querySelector(".live-property-aggregate").textContent,every:every.querySelector(".live-property-aggregate").textContent,type:type.querySelector(".live-property-status").textContent,affectedSummary:affected.querySelector("summary").textContent,affectedItems:itemRows.map((item)=>item.querySelector("code").textContent),concretePaths:Array.from(affected.querySelectorAll("[data-property-path]")).map((item)=>item.dataset.propertyPath),details:itemRows[0]?.textContent,focusedPath:focused?.dataset?.propertyPath,ancestorsOpen:Array.from(focused?.closest("li")?.parentElement?.querySelectorAll("details")??[]).every((detail)=>detail.open),fits:host.scrollWidth<=320,symbol:type.querySelector(".live-property-status").textContent.trim()[0]};host.remove();return observation;
+      })()`);
+      assert.equal(arrayValidationRollupObservation.issues,1);assert.match(arrayValidationRollupObservation.products,/1 error in 1 of 10 items/);assert.match(arrayValidationRollupObservation.every,/1 error in 1 of 10 items/);assert.match(arrayValidationRollupObservation.type,/9 passed and 1 error/);assert.deepEqual(arrayValidationRollupObservation.affectedItems,["Item 8"]);assert.ok(arrayValidationRollupObservation.concretePaths.includes("/products/7/type"));assert.match(arrayValidationRollupObservation.details,/Allowed product type.*service/);assert.equal(arrayValidationRollupObservation.focusedPath,"/products/7/type");assert.equal(arrayValidationRollupObservation.fits,true);socket.close();continue;
+    }
     if (process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1") {
       await evaluate(socket, `(() => {
         localStorage.clear();
@@ -6462,6 +6480,7 @@ try {
   if(process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaCardinalityComparison:schemaCardinalityComparisonObservation}));
   if(process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaDeclaredPropertyExceptions:schemaDeclaredPropertyExceptionsObservation}));
   if(process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER==="1")console.log(JSON.stringify({jsonSchemaExport:jsonSchemaExportObservation}));
+  if(process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER==="1")console.log(JSON.stringify({arrayValidationRollup:arrayValidationRollupObservation}));
   if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }

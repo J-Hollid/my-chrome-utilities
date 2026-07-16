@@ -2,6 +2,7 @@ export type EvaluationStatus = "pass" | "warning" | "error" | "not-applicable";
 
 export interface ValidationEvaluation {
   propertyPath: string;
+  templatePath?: string;
   status: EvaluationStatus;
   message: string;
   expected: string;

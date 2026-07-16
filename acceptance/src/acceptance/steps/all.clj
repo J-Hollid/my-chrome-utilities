@@ -4,6 +4,7 @@
             [acceptance.steps.recursive-declared-property-validation :as recursive-declared-property-validation]
             [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
             [acceptance.steps.allowed-values-rule-migration :as allowed-values-rule-migration]
+            [acceptance.steps.array-validation-issue-rollup :as array-validation-issue-rollup]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
@@ -88,6 +89,7 @@
 
 (def handlers
   (vec (concat schema-specification-preview-layout/handlers
+               array-validation-issue-rollup/handlers
                json-schema-export/handlers
                schema-specification-builder-customization/handlers
                schema-specification-example-selection/handlers
