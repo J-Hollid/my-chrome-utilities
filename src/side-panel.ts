@@ -285,6 +285,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
+import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./data-layer-cardinality.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
@@ -3262,7 +3263,11 @@ function renderConditionalRuleConfiguration(path: string, configuration: RuleCon
 
 function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleConfiguration): void {
   const heading = document.createElement("h4"); heading.id = "schema-property-rule-picker-heading"; heading.textContent = `Configure ${configuration.ruleType} for ${path}`;
-  const context = document.createElement("p"); context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}`;
+  const context = document.createElement("p");
+  const measuredValue = configuration.ruleType === "Text length" || configuration.ruleType === "Item count"
+    ? ` · compares ${cardinalityMeasuredValue(configuration.propertyType as "string" | "array")}`
+    : "";
+  context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}${measuredValue}`;
   const form = document.createElement("form"); form.id = "schema-local-rule-configuration";
   const parameters = document.createElement("fieldset"); parameters.id = "schema-local-rule-parameters";
   parameters.append(Object.assign(document.createElement("legend"), { textContent:"Rule parameters" }));
@@ -3283,11 +3288,7 @@ function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleCon
             : undefined;
         const limit = Number(configuration.limit);
         const passed = measured === undefined ? observed.exists
-          : configuration.comparison === ">" ? measured > limit
-            : configuration.comparison === ">=" ? measured >= limit
-              : configuration.comparison === "==" ? measured === limit
-                : configuration.comparison === "<" ? measured < limit
-                  : configuration.comparison === "<=" && measured <= limit;
+          : configuration.comparison !== "" && cardinalityComparisonPasses(measured, configuration.comparison, limit);
         preview.textContent = `Current event preview: ${passed ? "Passed" : "Failed"}`;
       }
     }

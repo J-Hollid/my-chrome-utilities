@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=b79584dde6021013811bc6af4ebe6e3925a77f2ff604110fdfdbd0415074632e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T18:49:44.334377094Z","feature_name":"Data layer schema declared property exceptions","feature_path":"features/data-layer-schema-declared-property-exceptions.feature","background_hash":"8364edeb7a53e5c232311cb1952891599f86fcbee9606483a4baf65d5d72cc0e","implementation_hash":"540f2862a0f8898d6fe74929d073fc53c6751afdcf63dd90be55fdccebe9ef60","scenarios":[{"index":0,"name":"Data layer schema declared property exceptions 001","scenario_hash":"fbbf25d82240943e717a55de917667afb71109320ca9ebfca0f6bbf479397bc3","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-16T18:49:44.334377094Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema declared property exceptions
 
   Background:

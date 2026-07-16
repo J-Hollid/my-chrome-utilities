@@ -5,6 +5,7 @@ import { conditionGroupAppliesToConsequence, conditionGroupAppliesToValue, condi
 import { resolveEffectiveSchemaDocumentation, } from "./data-layer-schema-documentation.js";
 import { assignmentDataConditionSummary, evaluateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
 import { normalizeAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import { cardinalityComparisonPasses, cardinalityConstraint, } from "./data-layer-cardinality.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -437,21 +438,6 @@ function observedValueText(value) {
     catch {
         return String(value);
     }
-}
-function cardinalityComparisonPasses(actual, comparison, limit) {
-    if (comparison === ">")
-        return actual > limit;
-    if (comparison === ">=")
-        return actual >= limit;
-    if (comparison === "==")
-        return actual === limit;
-    if (comparison === "<")
-        return actual < limit;
-    return actual <= limit;
-}
-function cardinalityConstraint(kind, comparison, limit) {
-    const relation = comparison === ">" ? "greater than" : comparison === ">=" ? "at least" : comparison === "==" ? "exactly" : comparison === "<" ? "less than" : "at most";
-    return `${kind} ${relation} ${limit}`;
 }
 function nestedRuleFailure(rule, match) {
     const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";

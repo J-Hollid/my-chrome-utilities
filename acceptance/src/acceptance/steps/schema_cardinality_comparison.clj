@@ -20,13 +20,19 @@
    "<" ["pass" "issue" "issue"]
    "<=" ["pass" "pass" "issue"]})
 
-(def legacy-comparisons {"Text length" "==" "Item count" ">="})
+(def legacy-behaviors
+  {"exact length 8" [false true false]
+   "minimum item count 1" [false true true]})
 
 (defn- assert-compatibility! [example observed]
   (when-let [rule-type (support/example-value example "rule_type")]
     (when-let [property-type (support/example-value example "property_type")]
-      (support/assert! (= "available" (get-in observed [:availability (if (= property-type "string") :text :items)]))
-                       "Cardinality rule compatibility changed." {:example example})
+      (let [property-path (support/require-example example "property_path")]
+        (support/assert! (= {:propertyType property-type
+                             :measuredValue (support/require-example example "measured_value")
+                             :availability "available"}
+                            (get-in observed [:properties (keyword property-path)]))
+                         "Cardinality property compatibility or measurement changed." {:example example}))
       (support/assert! (= [{:label "Comparison" :choices [">" ">=" "==" "<" "<="]}
                            {:label "Limit" :minimum 0 :step 1}]
                           (get-in observed [:controls (keyword rule-type)]))
@@ -48,23 +54,25 @@
                         (support/example-value example "limit"))]
     (let [rule-type (support/require-example example "rule_type")
           comparison (support/require-example example "comparison")
-          text-length? (= rule-type "Text length")]
-      (support/assert! (some #(= {:operator (if text-length? "text-length" "item-count")
+          operator ({"Text length" "text-length" "Item count" "item-count"} rule-type)
+          property-path ({"Text length" "/title" "Item count" "/items"} rule-type)]
+      (support/assert! (some #(= {:operator operator
                                   :comparison comparison
                                   :limit (parse-long limit)} %)
                              (:reopened observed))
                        "Cardinality fields did not survive reopening." {:example example})
       (support/assert! (= (support/require-example example "expected_constraint")
-                          (get-in observed [:reopenedIssues (keyword (if text-length? "/title" "/items")) :expected]))
+                          (get-in observed [:reopenedIssues (keyword property-path) :expected]))
                        "Cardinality issue did not identify the expected constraint." {:example example}))))
 
 (defn- assert-legacy-behavior! [example observed]
   (when-let [legacy (support/example-value example "legacy_behavior")]
     (let [rule-type (support/require-example example "rule_type")
-          configuration (get-in observed [:legacy (if (= rule-type "Text length") :text :items)])]
-      (support/assert! (and (= (legacy-comparisons rule-type) (:comparison configuration))
+          configuration (get-in observed [:legacy ({"Text length" :text "Item count" :items} rule-type)])
+          behavior (support/require-example example "legacy_behavior")]
+      (support/assert! (and (= (support/require-example example "comparison") (:comparison configuration))
                             (= (support/require-example example "limit") (:limit configuration))
-                            (seq legacy))
+                            (= (legacy-behaviors behavior) (:outcomes configuration)))
                        "Legacy cardinality behavior changed." {:example example}))))
 
 (defn- assert-invalid-configuration! [example observed]
@@ -81,14 +89,14 @@
   (assert-invalid-configuration! example observed))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (let [[world observed] (support/stateful-observation world text #{entry-step} :schema-cardinality-comparison observation!
-                                                       "Schema cardinality browser adapter was not executed.")]
-    (assert-example! example observed)
-    world))
+  (support/stateful-transition
+   world example text #{entry-step} :schema-cardinality-comparison observation!
+   "Schema cardinality browser adapter was not executed." assert-example!))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs [feature-file] #{})
-   #{entry-step}
-   :schema-cardinality-comparison
-   transition))
+  (support/stateful-feature-handlers
+   feature-file entry-step :schema-cardinality-comparison transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-16T20:46:53.681045335+02:00", :module-hash "-704409972", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "70459626"} {:id "def/feature-file", :kind "def", :line 4, :end-line 4, :hash "-1743939847"} {:id "def/entry-step", :kind "def", :line 5, :end-line 5, :hash "-1527584830"} {:id "form/3/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1618529344"} {:id "defn-/observation!", :kind "defn-", :line 8, :end-line 14, :hash "1942335554"} {:id "def/expected-outcomes", :kind "def", :line 16, :end-line 21, :hash "1237275012"} {:id "def/legacy-behaviors", :kind "def", :line 23, :end-line 25, :hash "-824365357"} {:id "defn-/assert-compatibility!", :kind "defn-", :line 27, :end-line 39, :hash "2093458566"} {:id "defn-/assert-comparison-outcome!", :kind "defn-", :line 41, :end-line 50, :hash "-876127228"} {:id "defn-/assert-reopening!", :kind "defn-", :line 52, :end-line 66, :hash "-1601733972"} {:id "defn-/assert-legacy-behavior!", :kind "defn-", :line 68, :end-line 76, :hash "95919036"} {:id "defn-/assert-invalid-configuration!", :kind "defn-", :line 78, :end-line 82, :hash "-1875964690"} {:id "defn-/assert-example!", :kind "defn-", :line 84, :end-line 89, :hash "-1082319581"} {:id "defn-/transition", :kind "defn-", :line 91, :end-line 94, :hash "-1548213561"} {:id "def/handlers", :kind "def", :line 96, :end-line 98, :hash "470103277"}]}
+;; clj-mutate-manifest-end

@@ -64,6 +64,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
+import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./data-layer-cardinality.js";
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
@@ -3379,7 +3380,10 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     heading.id = "schema-property-rule-picker-heading";
     heading.textContent = `Configure ${configuration.ruleType} for ${path}`;
     const context = document.createElement("p");
-    context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}`;
+    const measuredValue = configuration.ruleType === "Text length" || configuration.ruleType === "Item count"
+        ? ` · compares ${cardinalityMeasuredValue(configuration.propertyType)}`
+        : "";
+    context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}${measuredValue}`;
     const form = document.createElement("form");
     form.id = "schema-local-rule-configuration";
     const parameters = document.createElement("fieldset");
@@ -3410,11 +3414,7 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
                         : undefined;
                 const limit = Number(configuration.limit);
                 const passed = measured === undefined ? observed.exists
-                    : configuration.comparison === ">" ? measured > limit
-                        : configuration.comparison === ">=" ? measured >= limit
-                            : configuration.comparison === "==" ? measured === limit
-                                : configuration.comparison === "<" ? measured < limit
-                                    : configuration.comparison === "<=" && measured <= limit;
+                    : configuration.comparison !== "" && cardinalityComparisonPasses(measured, configuration.comparison, limit);
                 preview.textContent = `Current event preview: ${passed ? "Passed" : "Failed"}`;
             }
         }
