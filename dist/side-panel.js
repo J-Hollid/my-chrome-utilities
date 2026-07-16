@@ -1977,12 +1977,13 @@ function renderSchemaDraft() {
         treatment.addEventListener("change", () => { confirmType.disabled = true; });
         reviewType.addEventListener("click", refreshTypeReview);
         confirmType.addEventListener("click", () => { if (!schemaDraft)
-            return; try {
-            schemaDraft = applySchemaPropertyTypeEdit(schemaDraft, { path: persistedPath, type: valueType.value, ...(valueType.value === "array" && itemType.value ? { itemType: itemType.value } : {}), treatment: treatment.value, removeIncompatible: false, resolutions: selectedResolutions() });
+            return; const previousDraft = structuredClone(schemaDraft); try {
+            schemaDraft = applySchemaPropertyTypeEdit(previousDraft, { path: persistedPath, type: valueType.value, ...(valueType.value === "array" && itemType.value ? { itemType: itemType.value } : {}), treatment: treatment.value, removeIncompatible: false, resolutions: selectedResolutions() });
             persistSchemaEditorDraft(`Change ${persistedPath} type from ${schemaPropertyTypeLabel(property)} to ${valueType.value}`);
             renderSchemaDraft();
         }
         catch (error) {
+            schemaDraft = previousDraft;
             typeReview.textContent = error instanceof Error ? error.message : "Type change failed";
         } });
         cancelType.addEventListener("click", () => { typeEditor.hidden = true; typeAction.setAttribute("aria-expanded", "false"); typeAction.focus({ preventScroll: true }); });
@@ -2482,8 +2483,15 @@ function persistSchemaEditorDraft(change) {
     };
     const renamed = proposeSchemaWorkingDraftName(stored, schemaDraft.name);
     const updated = updateSchemaWorkingDraft(renamed, changes, change);
+    const previousSchemas = schemas;
     schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
-    persistSchemaLibrary();
+    try {
+        persistSchemaLibrary();
+    }
+    catch (error) {
+        schemas = previousSchemas;
+        throw error;
+    }
     renderSchemas();
 }
 function openSchemaPropertyCopyReview(path, trigger) {

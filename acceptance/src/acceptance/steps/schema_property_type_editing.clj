@@ -27,7 +27,7 @@
     :runtime-error "Schema property type editing browser runtime failed."
     :missing-error "Schema property type editing browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [review impactChoices descendantImpact remainingRules reusableUnchanged publication runtimeErrors] :as observed}]
+(defn- assert-runtime! [{:keys [review impactChoices descendantImpact persistenceFailure remainingRules reusableUnchanged publication runtimeErrors] :as observed}]
   (support/assert!
    (and (str/includes? review "example value")
         (str/includes? review "conditional dependency order-condition")
@@ -39,6 +39,10 @@
         (:blocked descendantImpact)
         (:unchanged descendantImpact)
         (:focus descendantImpact)
+        (str/includes? (:message persistenceFailure) "Simulated persistence failure")
+        (:storedUnchanged persistenceFailure)
+        (= "Number" (:inMemoryType persistenceFailure))
+        (= ["replace" "remove" "replace"] (:resolutions persistenceFailure))
         (= ["product-name-required" "order-condition"] remainingRules)
         reusableUnchanged
         (= 4 (:version publication))
