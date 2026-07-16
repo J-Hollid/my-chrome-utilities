@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
+import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -111,4 +112,20 @@ for (let sample = 0; sample < 100; sample += 1) {
     "failed activation must leave no utility marked active");
 }
 
-console.log("modular properties: 100 verification graphs and 200 lifecycle cases passed");
+for (let sample = 0; sample < 100; sample += 1) {
+  const count = 1 + sample % 20;
+  const commands = Array.from({ length:count }, (_, index) => ({ id:`command-${sample}-${index}` }));
+  const registeredIds = commands
+    .filter((_, index) => (sample + index) % 3 !== 0)
+    .map(({ id }) => id);
+  const selected = commandsForUtilityShell(commands, registeredIds);
+
+  assert.deepEqual(selected.map(({ id }) => id), registeredIds,
+    "generated command discovery must return exactly the registered catalog subset");
+  assert.equal(new Set(selected.map(({ id }) => id)).size, selected.length,
+    "generated command discovery must not duplicate catalog entries");
+  assert.throws(() => commandsForUtilityShell(commands, [...registeredIds, `missing-${sample}`]),
+    new RegExp(`missing-${sample}`), "generated command discovery must reject unavailable registrations");
+}
+
+console.log("modular properties: 100 verification graphs, 200 lifecycle cases, and 100 command registries passed");
