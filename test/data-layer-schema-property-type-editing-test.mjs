@@ -14,7 +14,7 @@ assert.equal(ignored.issues.some(({instancePath,message})=>instancePath==="/pric
 
 const productsSchema={...schema,documentation:{properties:{...schema.documentation.properties,"/products/*/name":{displayName:"Name",description:"Product name"}}},attachedRules:[...schema.attachedRules,{id:"product-name-required",version:1,propertyPath:"/products/*/name",operator:"required"}]};
 assert.deepEqual(inspectSchemaPropertyTypeEdit(productsSchema,"/products","array"),{from:"Array of Object",to:"Array",compatible:[],incompatible:["descendant definitions","descendant required relationships","descendant documentation","descendant rules"]});
-assert.throws(()=>applySchemaPropertyTypeEdit(productsSchema,{path:"/products",type:"array",treatment:"error",removeIncompatible:false}),/Resolve incompatible/);
+assert.throws(()=>applySchemaPropertyTypeEdit(productsSchema,{path:"/products",type:"array",treatment:"error",removeIncompatible:false}),/Resolve every incompatible/);
 const flattened=applySchemaPropertyTypeEdit(productsSchema,{path:"/products",type:"array",treatment:"error",removeIncompatible:true});
 assert.deepEqual(flattened.document.properties.products,{type:"array",typeMismatchTreatment:"error"});assert.equal(flattened.documentation.properties["/products/*/name"],undefined);assert.equal(flattened.attachedRules.some(({id})=>id==="product-name-required"),false);
 
@@ -28,6 +28,9 @@ const reusableDefinition={id:"range",name:"Reusable range",kind:"Numeric range",
 const dependent={...schema,attachedRules:[...schema.attachedRules,conditional]};const reusableBefore=structuredClone(reusableDefinition);
 assert.deepEqual(inspectSchemaPropertyTypeEdit(dependent,"/order_id","string").incompatible,["example value","rule range","conditional dependency order-condition"]);
 assert.deepEqual(inspectSchemaPropertyTypeEdit(dependent,"/order_id","number").incompatible,[]);assert.equal(applySchemaPropertyTypeEdit(dependent,{path:"/order_id",type:"number",treatment:"warning",removeIncompatible:false}).attachedRules.length,2);
+assert.throws(()=>applySchemaPropertyTypeEdit(dependent,{path:"/order_id",type:"string",treatment:"warning",removeIncompatible:false,resolutions:{"example value":{action:"remove"}}}),/every incompatible/);
+const replaced=applySchemaPropertyTypeEdit(dependent,{path:"/order_id",type:"string",treatment:"warning",removeIncompatible:false,resolutions:{"example value":{action:"replace",value:"ORDER-42"},"rule range":{action:"remove"},"conditional dependency order-condition":{action:"replace",value:"ORDER-42"}}});
+assert.equal(replaced.documentation.properties["/order_id"].example.value,"ORDER-42");assert.deepEqual(replaced.attachedRules,[{...conditional,conditionGroup:{operator:"All",predicates:[{propertyPath:"/order_id",operator:"Equals",comparison:{type:"string",value:"ORDER-42"}}]}}]);
 const resolved=applySchemaPropertyTypeEdit(dependent,{path:"/order_id",type:"string",treatment:"warning",removeIncompatible:true});
 assert.deepEqual(resolved.attachedRules,[]);assert.deepEqual(reusableDefinition,reusableBefore);assert.equal(resolved.documentation.properties["/order_id"].example,undefined);
 

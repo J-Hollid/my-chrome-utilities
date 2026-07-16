@@ -10,6 +10,7 @@ export interface SchemaPropertyTypeEdit {
   itemType?: Exclude<EditablePropertyType, "array">;
   treatment: TypeMismatchTreatment;
   removeIncompatible: boolean;
+  resolutions?: Readonly<Record<string, { action: "remove" | "replace"; value?: string }>>;
 }
 
 function segments(path: string): string[] {
@@ -98,10 +99,33 @@ function replaceProperty(document: JsonSchema, path: string, replacement: JsonSc
   return visit(document, 0);
 }
 
+function replacementValue(value: string | undefined, type: EditablePropertyType): unknown {
+  if (value === undefined || value.trim() === "") throw new Error("Enter a replacement value");
+  if (type === "string") return value;
+  if (type === "number") {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) throw new Error("Enter a valid Number replacement");
+    return parsed;
+  }
+  if (type === "boolean") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    throw new Error("Enter true or false as the replacement");
+  }
+  try { return JSON.parse(value) as unknown; }
+  catch { throw new Error(`Enter valid JSON for the ${capital(type)} replacement`); }
+}
+
 export function applySchemaPropertyTypeEdit(schema: SchemaDefinition, edit: SchemaPropertyTypeEdit): SchemaDefinition {
   const property = propertyAt(schema.document, edit.path) ?? {};
   const impact = inspectSchemaPropertyTypeEdit(schema, edit.path, edit.type, edit.itemType);
-  if (impact.incompatible.length && !edit.removeIncompatible) throw new Error("Resolve incompatible schema data before saving the type change");
+  const resolutions: Record<string, { action: "remove" | "replace"; value?: string }> = edit.resolutions
+    ? Object.fromEntries(Object.entries(edit.resolutions).map(([key, resolution]) => [key, { ...resolution }]))
+    : edit.removeIncompatible ? Object.fromEntries(impact.incompatible.map((item) => [item, { action:"remove" as const }])) : {};
+  if (impact.incompatible.some((item) => !resolutions[item])) throw new Error("Resolve every incompatible schema artifact before saving the type change");
+  const unsupportedReplacement = impact.incompatible.find((item) => resolutions[item]?.action === "replace" && item !== "example value" && !item.startsWith("conditional dependency "));
+  if (unsupportedReplacement) throw new Error(`${unsupportedReplacement} must be removed before saving the type change`);
+  const remove = (item: string): boolean => resolutions[item]?.action === "remove";
   let replacement: JsonSchema = { type:edit.type, typeMismatchTreatment:edit.treatment };
   if (edit.type === "array" && edit.itemType) {
     replacement = {
@@ -124,17 +148,24 @@ export function applySchemaPropertyTypeEdit(schema: SchemaDefinition, edit: Sche
   const documentation = structuredClone(schema.documentation ?? {});
   const currentDocumentation = documentation.properties?.[edit.path];
   if (currentDocumentation?.example && !compatibleExample(currentDocumentation.example.value, edit.type, edit.itemType)) {
-    const { example:_example, ...retained } = currentDocumentation;
-    documentation.properties = { ...documentation.properties, [edit.path]:retained };
+    if (remove("example value")) {
+      const { example:_example, ...retained } = currentDocumentation;
+      documentation.properties = { ...documentation.properties, [edit.path]:retained };
+    } else {
+      const value = replacementValue(resolutions["example value"]?.value, edit.type) as string | number | boolean | null;
+      if (!compatibleExample(value, edit.type, edit.itemType)) throw new Error("Example replacement is not compatible with the selected type");
+      documentation.properties = { ...documentation.properties, [edit.path]:{ ...currentDocumentation, example:{ ...currentDocumentation.example, value } } };
+    }
   }
-  if (edit.removeIncompatible && documentation.properties) documentation.properties = Object.fromEntries(
-    Object.entries(documentation.properties).filter(([key]) => !key.startsWith(`${edit.path}/`)),
-  );
-  const attachedRules = (schema.attachedRules ?? []).filter((rule) => !(
-    impact.incompatible.includes(`rule ${rule.id}`)
-      || impact.incompatible.includes(`conditional dependency ${rule.id}`)
-      || (edit.removeIncompatible && rule.propertyPath?.startsWith(`${edit.path}/`))
-  ));
+  if (remove("descendant documentation") && documentation.properties) documentation.properties = Object.fromEntries(Object.entries(documentation.properties).filter(([key]) => !key.startsWith(`${edit.path}/`)));
+  const attachedRules = (schema.attachedRules ?? []).flatMap((rule) => {
+    if (remove(`rule ${rule.id}`) || (remove("descendant rules") && rule.propertyPath?.startsWith(`${edit.path}/`))) return [];
+    const dependency = `conditional dependency ${rule.id}`;
+    if (!impact.incompatible.includes(dependency)) return [rule];
+    if (remove(dependency)) return [];
+    const value = replacementValue(resolutions[dependency]?.value, edit.type);
+    return [{ ...rule, conditionGroup:{ ...rule.conditionGroup!, predicates:rule.conditionGroup!.predicates.map((predicate) => predicate.propertyPath === edit.path && predicate.operator !== "Exists" && predicate.operator !== "Does not exist" ? { ...predicate, comparison:{ type:edit.type as "string" | "number" | "boolean", value:value as string | number | boolean } } : predicate) } }];
+  });
   return {
     ...schema,
     document:replaceProperty(schema.document, edit.path, replacement),

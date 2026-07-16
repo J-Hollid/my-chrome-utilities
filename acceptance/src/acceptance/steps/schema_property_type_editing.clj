@@ -31,13 +31,15 @@
   (support/assert!
    (and (str/includes? review "example value")
         (str/includes? review "conditional dependency order-condition")
+        (= 3 (:count impactChoices))
         (:blocked impactChoices)
+        (:resolved impactChoices)
         (:cancel impactChoices)
         (str/includes? (:review descendantImpact) "descendant required relationships")
         (:blocked descendantImpact)
         (:unchanged descendantImpact)
         (:focus descendantImpact)
-        (= ["product-name-required"] remainingRules)
+        (= ["product-name-required" "order-condition"] remainingRules)
         reusableUnchanged
         (= 4 (:version publication))
         (:draftAbsent publication)

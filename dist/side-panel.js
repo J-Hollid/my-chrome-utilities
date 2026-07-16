@@ -1955,11 +1955,9 @@ function renderSchemaDraft() {
         reviewType.textContent = "Review type change";
         const typeReview = document.createElement("output");
         typeReview.className = "schema-property-type-review";
-        const destructiveLabel = document.createElement("label");
-        const destructive = document.createElement("input");
-        destructive.type = "checkbox";
-        destructiveLabel.append(destructive, " Remove incompatible schema data");
-        destructiveLabel.hidden = true;
+        const impactResolutions = document.createElement("div");
+        impactResolutions.className = "schema-property-type-impact-resolutions";
+        impactResolutions.setAttribute("aria-label", `Impact resolutions for ${persistedPath}`);
         const confirmType = document.createElement("button");
         confirmType.type = "button";
         confirmType.textContent = "Confirm type change";
@@ -1967,16 +1965,20 @@ function renderSchemaDraft() {
         const cancelType = document.createElement("button");
         cancelType.type = "button";
         cancelType.textContent = "Cancel";
+        let currentImpact;
+        const selectedResolutions = () => Object.fromEntries(Array.from(impactResolutions.querySelectorAll("select[data-impact]"), select => { const replacement = impactResolutions.querySelector(`input[data-impact-replacement="${CSS.escape(select.dataset.impact)}"]`); return [select.dataset.impact, { action: select.value, ...(select.value === "replace" && replacement ? { value: replacement.value } : {}) }]; }));
+        const refreshResolutionState = () => { if (!currentImpact)
+            return; confirmType.disabled = currentImpact.incompatible.some((impact) => { const select = impactResolutions.querySelector(`select[data-impact="${CSS.escape(impact)}"]`), replacement = impactResolutions.querySelector(`input[data-impact-replacement="${CSS.escape(impact)}"]`); return !select?.value || (select.value === "replace" && !replacement?.value.trim()); }); };
         const refreshTypeReview = () => { if (!schemaDraft)
-            return; const chosen = valueType.value; const impact = inspectSchemaPropertyTypeEdit(schemaDraft, persistedPath, chosen, itemType.value ? itemType.value : undefined); typeReview.textContent = `${impact.from} changing to ${impact.to}. Retained: ${impact.compatible.join(", ") || "none"}. Incompatible: ${impact.incompatible.join(", ") || "none"}.`; destructiveLabel.hidden = !impact.incompatible.length; destructive.checked = false; confirmType.disabled = Boolean(impact.incompatible.length); };
-        valueType.addEventListener("change", () => { itemTypeLabel.hidden = valueType.value !== "array"; confirmType.disabled = true; typeReview.textContent = ""; });
-        itemType.addEventListener("change", () => { confirmType.disabled = true; typeReview.textContent = ""; });
+            return; const chosen = valueType.value; currentImpact = inspectSchemaPropertyTypeEdit(schemaDraft, persistedPath, chosen, itemType.value ? itemType.value : undefined); typeReview.textContent = `${currentImpact.from} changing to ${currentImpact.to}. Retained: ${currentImpact.compatible.join(", ") || "none"}. Incompatible: ${currentImpact.incompatible.join(", ") || "none"}.`; impactResolutions.replaceChildren(...currentImpact.incompatible.map((impact) => { const row = document.createElement("label"); row.textContent = `${impact} `; const select = document.createElement("select"); select.dataset.impact = impact; select.setAttribute("aria-label", `Resolution for ${impact} at ${persistedPath}`); select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose resolution" }), Object.assign(document.createElement("option"), { value: "remove", textContent: "Remove artifact" })); const replaceable = impact === "example value" || impact.startsWith("conditional dependency "); if (replaceable)
+            select.append(Object.assign(document.createElement("option"), { value: "replace", textContent: "Replace artifact" })); const replacement = document.createElement("input"); replacement.dataset.impactReplacement = impact; replacement.setAttribute("aria-label", `Replacement for ${impact} at ${persistedPath}`); replacement.placeholder = "Replacement value"; replacement.hidden = true; select.addEventListener("change", () => { replacement.hidden = select.value !== "replace"; refreshResolutionState(); }); replacement.addEventListener("input", refreshResolutionState); row.append(select, replacement); return row; })); refreshResolutionState(); };
+        valueType.addEventListener("change", () => { itemTypeLabel.hidden = valueType.value !== "array"; confirmType.disabled = true; typeReview.textContent = ""; impactResolutions.replaceChildren(); });
+        itemType.addEventListener("change", () => { confirmType.disabled = true; typeReview.textContent = ""; impactResolutions.replaceChildren(); });
         treatment.addEventListener("change", () => { confirmType.disabled = true; });
         reviewType.addEventListener("click", refreshTypeReview);
-        destructive.addEventListener("change", () => { confirmType.disabled = !destructive.checked; });
         confirmType.addEventListener("click", () => { if (!schemaDraft)
             return; try {
-            schemaDraft = applySchemaPropertyTypeEdit(schemaDraft, { path: persistedPath, type: valueType.value, ...(valueType.value === "array" && itemType.value ? { itemType: itemType.value } : {}), treatment: treatment.value, removeIncompatible: destructive.checked });
+            schemaDraft = applySchemaPropertyTypeEdit(schemaDraft, { path: persistedPath, type: valueType.value, ...(valueType.value === "array" && itemType.value ? { itemType: itemType.value } : {}), treatment: treatment.value, removeIncompatible: false, resolutions: selectedResolutions() });
             persistSchemaEditorDraft(`Change ${persistedPath} type from ${schemaPropertyTypeLabel(property)} to ${valueType.value}`);
             renderSchemaDraft();
         }
@@ -1991,7 +1993,7 @@ function renderSchemaDraft() {
             }
             return;
         } typeEditor.hidden = false; typeAction.setAttribute("aria-expanded", "true"); valueType.focus({ preventScroll: true }); });
-        typeEditor.append(typeLegend, valueTypeLabel, itemTypeLabel, treatmentLabel, reviewType, typeReview, destructiveLabel, confirmType, cancelType);
+        typeEditor.append(typeLegend, valueTypeLabel, itemTypeLabel, treatmentLabel, reviewType, typeReview, impactResolutions, confirmType, cancelType);
         const documentationPath = canonicalDocumentationPath(persistedPath);
         const localDocumentation = draft.documentation?.properties?.[documentationPath];
         const propertyDocumentation = effectiveDocumentation.properties[documentationPath];
