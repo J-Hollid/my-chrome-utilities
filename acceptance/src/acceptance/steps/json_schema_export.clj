@@ -29,17 +29,23 @@
     :runtime-error "JSON Schema export browser runtime failed."
     :missing-error "JSON Schema export browser evidence is missing."}))
 
+(def ^:private payload-outcome-keys
+  [["undeclared root debug" :debug]
+   ["51-character" :long]
+   ["dynamic metadata" :metadata]
+   ["missing conditionally" :missing]])
+
+(defn- payload-outcome-key [payload]
+  (or (some (fn [[fragment key]]
+              (when (str/includes? payload fragment) key))
+            payload-outcome-keys)
+      :valid))
+
 (defn- validate-example! [mode example]
   (when (= mode :runtime)
     (when-let [payload (support/example-value example "payload")]
-      (let [key (cond
-                  (str/includes? payload "undeclared root debug") :debug
-                  (str/includes? payload "51-character") :long
-                  (str/includes? payload "dynamic metadata") :metadata
-                  (str/includes? payload "missing conditionally") :missing
-                  :else :valid)
-            expected (= "pass" (support/require-example example "validation_outcome"))
-            observed (get-in (observe-runtime!) [:extensionOutcomes key])]
+      (let [expected (= "pass" (support/require-example example "validation_outcome"))
+            observed (get-in (observe-runtime!) [:extensionOutcomes (payload-outcome-key payload)])]
         (support/assert! (= expected observed)
                          "Extension and independent JSON Schema validation parity changed."
                          {:payload payload :expected expected :observed observed})))))
