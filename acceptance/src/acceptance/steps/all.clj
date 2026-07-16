@@ -61,6 +61,7 @@
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-property-copy :as schema-property-copy]
             [acceptance.steps.schema-property-comments :as schema-property-comments]
+            [acceptance.steps.schema-property-type-editing :as schema-property-type-editing]
             [acceptance.steps.schema-specification-builder :as schema-specification-builder]
             [acceptance.steps.schema-specification-builder-customization :as schema-specification-builder-customization]
             [acceptance.steps.schema-specification-example-selection :as schema-specification-example-selection]
@@ -86,6 +87,7 @@
                schema-specification-builder-customization/handlers
                schema-specification-example-selection/handlers
                schema-specification-container-defaults/handlers
+               schema-property-type-editing/handlers
                schema-property-example-values/handlers
                schema-property-comments/handlers
                schema-specification-builder/handlers
@@ -167,5 +169,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-16T16:12:18.94036313+02:00", :module-hash "1258934361", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 82, :hash "1682862039"} {:id "def/handlers", :kind "def", :line 84, :end-line 167, :hash "-912557084"}]}
+;; {:version 1, :tested-at "2026-07-16T17:59:43.532483318+02:00", :module-hash "-1683502980", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 83, :hash "-357339699"} {:id "def/handlers", :kind "def", :line 85, :end-line 169, :hash "-899386622"}]}
 ;; clj-mutate-manifest-end

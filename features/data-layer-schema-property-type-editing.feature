@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=646ec9064a7d4a88fb89d3c1b9ce65a3d19a93dad02a2583f8b96a23c22e3a32
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T16:02:10.871996345Z","feature_name":"Data layer schema property type editing","feature_path":"features/data-layer-schema-property-type-editing.feature","background_hash":"4d5e29200ad481f0d25a4b89b7eaae5bedfdebbda9f01e949c413d48cfc6deed","implementation_hash":"98ffc0ff265060c88d1ad13c762472a8e01a318a","scenarios":[{"index":1,"name":"Data layer schema property type editing 002","scenario_hash":"f49483764d00f659861b65fc6b795cc341ca4be303e935ad301ee829ed574dec","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:02:10.871996345Z"},{"index":2,"name":"Data layer schema property type editing 003","scenario_hash":"6b9948f3a3a04eda026fdd10abf5caddc350afca2a427535e56b58324893da6f","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:02:10.871996345Z"},{"index":4,"name":"Data layer schema property type editing 005","scenario_hash":"1d08414b93160908c7e7ef31286de3112cf42fced4abad5a012f2c15ed581567","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:02:10.871996345Z"},{"index":9,"name":"Data layer schema property type editing 010","scenario_hash":"ae005b346047d3e2398e29ef69d8b18bb3188b14dd89ce8f2591d7e6f8e0eb11","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:02:10.871996345Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property type editing
 
   Background:

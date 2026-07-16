@@ -65,6 +65,8 @@ import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
+import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
+import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./data-layer-schema-property-type-editing.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { filterAndSortSchemaPropertyRows } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
@@ -1916,6 +1918,35 @@ function renderSchemaDraft() {
         metadata.className = "schema-property-metadata";
         metadata.textContent = `${propertyRow.filterContext ? "Filter context · " : ""}${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
         const persistedPath = propertyRow.canonicalPath;
+        const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
+        const typeControls = renderSchemaPropertyTypeEditor({
+            schema: draft,
+            path: persistedPath,
+            property,
+            ...(inherited ? { inheritedOwner: {
+                    name: owningSchema?.name ?? "parent schema",
+                    open: () => { if (owningSchema) {
+                        schemaDraft = schemaEditorDraft(owningSchema);
+                        renderSchemaDraft();
+                    } },
+                } } : {}),
+            confirm: (edit) => {
+                if (!schemaDraft)
+                    return;
+                const previousDraft = structuredClone(schemaDraft);
+                try {
+                    schemaDraft = applySchemaPropertyTypeEdit(previousDraft, edit);
+                    persistSchemaEditorDraft(`Change ${persistedPath} type from ${schemaPropertyTypeLabel(property)} to ${edit.type}`);
+                    renderSchemaDraft();
+                }
+                catch (error) {
+                    schemaDraft = previousDraft;
+                    throw error;
+                }
+            },
+        });
+        const typeAction = typeControls.action;
+        const typeEditor = typeControls.editor;
         const documentationPath = canonicalDocumentationPath(persistedPath);
         const localDocumentation = draft.documentation?.properties?.[documentationPath];
         const propertyDocumentation = effectiveDocumentation.properties[documentationPath];
@@ -2171,7 +2202,7 @@ function renderSchemaDraft() {
             row.append(...(promotion ? [promotion] : []), toggle, remove);
             view.append(row);
         }
-        item.append(label, metadata, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view);
+        item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view);
         return item;
     });
     const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]]));
@@ -2404,8 +2435,15 @@ function persistSchemaEditorDraft(change) {
     };
     const renamed = proposeSchemaWorkingDraftName(stored, schemaDraft.name);
     const updated = updateSchemaWorkingDraft(renamed, changes, change);
+    const previousSchemas = schemas;
     schemas = schemas.map((schema) => schema.id === updated.id ? updated : schema);
-    persistSchemaLibrary();
+    try {
+        persistSchemaLibrary();
+    }
+    catch (error) {
+        schemas = previousSchemas;
+        throw error;
+    }
     renderSchemas();
 }
 function openSchemaPropertyCopyReview(path, trigger) {

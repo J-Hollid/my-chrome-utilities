@@ -1,4 +1,5 @@
 export interface JsonSchema {
+  typeMismatchTreatment?: "error" | "warning" | "ignore";
   type?: "object" | "string" | "number" | "boolean" | "array";
   propertyOrigin?: "manual";
   required?: readonly string[];
