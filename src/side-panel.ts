@@ -284,7 +284,8 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./data-layer-cardinality.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
@@ -622,6 +623,7 @@ let pendingManualPropertyContext: { parentPath:string; trigger:HTMLButtonElement
 let schemaRulePickerPath: string | undefined;
 let schemaRulePickerTrigger: HTMLButtonElement | undefined;
 let schemaRuleConfiguration: RuleConfiguration | undefined;
+let editingAttachedCardinalityRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
@@ -832,7 +834,7 @@ const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validat
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; assignmentId?: string; assignmentName?: string; assignmentEvidence?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
+interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
 function normalizeReusableSchemaRule(rule: ReusableSchemaRule): ReusableSchemaRule {
   return normalizeAllowedValuesRuleLibraryEntry(rule) as ReusableSchemaRule;
 }
@@ -2268,7 +2270,20 @@ function renderSchemaDraft(): void {
         promotion.type = "button"; promotion.textContent = "Promote to reusable rule"; promotion.className = "local-rule-promotion-action"; promotion.dataset.ruleId = rule.id; promotion.dataset.propertyPath = persistedPath;
         promotion.addEventListener("click", () => openLocalRulePromotionReview(persistedPath, rule.id, promotion));
       }
-      row.append(...(promotion ? [promotion] : []), toggle, remove); view.append(row);
+      const normalizedOperator = rule.operator?.replaceAll("_", "-").toLowerCase();
+      const editCardinality = normalizedOperator === "text-length" || normalizedOperator === "item-count" ? document.createElement("button") : undefined;
+      if (editCardinality) {
+        editCardinality.type = "button"; editCardinality.textContent = "Edit";
+        editCardinality.addEventListener("click", () => {
+          const ruleType = normalizedOperator === "text-length" ? "Text length" : "Item count";
+          const propertyType = ruleType === "Text length" ? "string" : "array";
+          selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = editCardinality; editingAttachedCardinalityRule = rule;
+          schemaRuleConfiguration = createRuleConfigurationFromAttachedRule(ruleType, propertyType, rule);
+          renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.showModal();
+          schemaPropertyRulePicker.querySelector<HTMLSelectElement>("#schema-local-rule-comparison")?.focus({ preventScroll:true });
+        });
+      }
+      row.append(...(promotion ? [promotion] : []), ...(editCardinality ? [editCardinality] : []), toggle, remove); view.append(row);
     }
     item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view); return item;
   });
@@ -2990,6 +3005,7 @@ function closeSchemaPropertyRulePicker(): void {
   schemaRulePickerTrigger?.focus({ preventScroll:true });
   schemaRulePickerPath = undefined;
   schemaRuleConfiguration = undefined;
+  editingAttachedCardinalityRule = undefined;
 }
 
 function configuredRuleInput(control: ReturnType<typeof ruleConfigurationControls>[number], configuration: RuleConfiguration, updateValidation: () => void): HTMLElement {
@@ -2998,21 +3014,28 @@ function configuredRuleInput(control: ReturnType<typeof ruleConfigurationControl
   input.id = `schema-local-rule-${control.key}`; label.htmlFor = input.id; label.textContent = `${control.label}${control.optional ? " (optional)" : ""}`;
   if (input instanceof HTMLInputElement) {
     input.type = control.inputType; if (control.minimum !== undefined) input.min = String(control.minimum); if (control.step !== undefined) input.step = String(control.step);
-  } else input.append(Object.assign(document.createElement("option"), { value:"", textContent:"Choose a value" }), Object.assign(document.createElement("option"), { value:"true", textContent:"true" }), Object.assign(document.createElement("option"), { value:"false", textContent:"false" }));
+  } else input.append(
+    Object.assign(document.createElement("option"), { value:"", textContent:control.key === "comparison" ? "Choose a comparison" : "Choose a value" }),
+    ...(control.choices ?? ["true", "false"]).map((value) => Object.assign(document.createElement("option"), { value, textContent:value })),
+  );
   const current = control.key === "exactValue" ? configuration.exactValue
     : control.key === "pattern" ? configuration.pattern
       : control.key === "exactLength" ? configuration.exactLength
         : control.key === "minimum" ? configuration.minimum
           : control.key === "maximum" ? configuration.maximum
-            : configuration.minimumItemCount;
+            : control.key === "minimumItemCount" ? configuration.minimumItemCount
+              : control.key === "comparison" ? configuration.comparison
+                : configuration.limit;
   input.value = current;
-  input.addEventListener("input", () => {
+  input.addEventListener(input instanceof HTMLSelectElement ? "change" : "input", () => {
     if (control.key === "exactValue") configuration.exactValue = input.value;
     else if (control.key === "pattern") configuration.pattern = input.value;
     else if (control.key === "exactLength") configuration.exactLength = input.value;
     else if (control.key === "minimum") configuration.minimum = input.value;
     else if (control.key === "maximum") configuration.maximum = input.value;
     else if (control.key === "minimumItemCount") configuration.minimumItemCount = input.value;
+    else if (control.key === "comparison") configuration.comparison = input.value as RuleConfiguration["comparison"];
+    else if (control.key === "limit") configuration.limit = input.value;
     updateValidation();
   });
   const wrapper = document.createElement("div"); wrapper.append(label, input); return wrapper;
@@ -3021,20 +3044,37 @@ function configuredRuleInput(control: ReturnType<typeof ruleConfigurationControl
 function createConfiguredSchemaRule(path: string, configuration: RuleConfiguration): void {
   if (!schemaDraft || !validateRuleConfiguration(configuration).ready) return;
   const details = configuredRuleDetails(configuration);
-  const id = configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`;
-  const name = configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`;
+  const id = editingAttachedCardinalityRule?.id ?? (configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`);
+  const name = editingAttachedCardinalityRule?.name ?? (configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`);
   const rule: ReusableSchemaRule = {
-    id, name, kind:configuration.ruleType, version:1, enabled:true,
+    id, name, kind:configuration.ruleType, version:editingAttachedCardinalityRule?.version ?? 1, enabled:editingAttachedCardinalityRule?.enabled !== false,
     applicableType:configuration.propertyType,
     operator:details.operator,
     ...(details.parameters !== undefined ? { parameters:details.parameters } : {}),
     ...(details.allowedValues !== undefined ? { allowedValues:details.allowedValues } : {}),
+    ...(details.comparison !== undefined ? { comparison:details.comparison } : {}),
+    ...(details.limit !== undefined ? { limit:details.limit } : {}),
     severity:configuration.severity,
     ...(configuration.message.trim() ? { message:configuration.message.trim() } : {}),
     ...(configuration.applyOnlyWhen ? { conditionGroup:{ operator:configuration.conditionGroupOperator, predicates:structuredClone(configuration.conditions) } } : {}),
     ...(configuration.saveReusable && configuration.description.trim() ? { description:configuration.description.trim() } : {}),
     ...(configuration.saveReusable && schemaDraft.id ? { attachments:[schemaDraft.id] } : {}),
   };
+  if (editingAttachedCardinalityRule) {
+    const editedId = editingAttachedCardinalityRule.id;
+    editingAttachedCardinalityRule = undefined;
+    closeSchemaPropertyRulePicker();
+    updateAttachedRule(path, editedId, (attached) => ({
+      ...attached,
+      ...(rule.operator ? { operator:rule.operator } : {}),
+      ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}),
+      ...(rule.comparison ? { comparison:rule.comparison } : {}),
+      ...(rule.limit !== undefined ? { limit:rule.limit } : {}),
+      ...(rule.severity ? { severity:rule.severity } : {}),
+      ...(rule.message ? { message:rule.message } : {}),
+    }));
+    return;
+  }
   if (configuration.saveReusable) {
     reusableSchemaRules = [...reusableSchemaRules.filter((candidate) => candidate.id !== id), rule];
     localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
@@ -3151,7 +3191,11 @@ function renderConditionalRuleConfiguration(path: string, configuration: RuleCon
 
 function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleConfiguration): void {
   const heading = document.createElement("h4"); heading.id = "schema-property-rule-picker-heading"; heading.textContent = `Configure ${configuration.ruleType} for ${path}`;
-  const context = document.createElement("p"); context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}`;
+  const context = document.createElement("p");
+  const measuredValue = configuration.ruleType === "Text length" || configuration.ruleType === "Item count"
+    ? ` · compares ${cardinalityMeasuredValue(configuration.propertyType as "string" | "array")}`
+    : "";
+  context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}${measuredValue}`;
   const form = document.createElement("form"); form.id = "schema-local-rule-configuration";
   const parameters = document.createElement("fieldset"); parameters.id = "schema-local-rule-parameters";
   parameters.append(Object.assign(document.createElement("legend"), { textContent:"Rule parameters" }));
@@ -3167,9 +3211,12 @@ function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleCon
       if (!applies) preview.textContent = "Current event preview: Not applicable";
       else {
         const observed = valueAtSchemaPath(currentConditionPayload(), path);
-        const passed = configuration.ruleType === "Item count"
-          ? observed.exists && Array.isArray(observed.value) && observed.value.length >= Number(configuration.minimumItemCount)
-          : observed.exists;
+        const measured = configuration.ruleType === "Item count" && Array.isArray(observed.value) ? observed.value.length
+          : configuration.ruleType === "Text length" && typeof observed.value === "string" ? observed.value.length
+            : undefined;
+        const limit = Number(configuration.limit);
+        const passed = measured === undefined ? observed.exists
+          : configuration.comparison !== "" && cardinalityComparisonPasses(measured, configuration.comparison, limit);
         preview.textContent = `Current event preview: ${passed ? "Passed" : "Failed"}`;
       }
     }
@@ -3266,7 +3313,7 @@ function renderSchemaPropertyRulePicker(): void {
 }
 
 function openSchemaPropertyRulePicker(path: string, trigger: HTMLButtonElement): void {
-  selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = trigger; schemaRuleConfiguration = undefined;
+  selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = trigger; schemaRuleConfiguration = undefined; editingAttachedCardinalityRule = undefined;
   renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.showModal();
   schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.focus({ preventScroll:true });
 }
@@ -3309,6 +3356,9 @@ function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
     ...(rule.propertyPath ? { propertyPath:rule.propertyPath } : {}),
     ...(rule.parameters ? { parameters:rule.parameters } : {}),
     ...(rule.allowedValues ? { allowedValues:structuredClone(rule.allowedValues) } : {}),
+    ...(rule.comparison ? { comparison:rule.comparison } : {}),
+    ...(rule.limit !== undefined ? { limit:rule.limit } : {}),
+    ...(rule.applicableType ? { applicableType:rule.applicableType } : {}),
     ...(rule.severity ? { severity:rule.severity } : {}),
     ...(rule.message ? { message:rule.message } : {}),
     ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}),

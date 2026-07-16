@@ -10,8 +10,8 @@
              {"query" "Approved pages" "matched_metadata" "rule name"}
              {:searches {(keyword "rule name") ["Approved pages version 2"]}})))
   (is (nil? (#'picker/assert-example!
-             {"property_name" "items" "property_type" "array" "rule_type" "Item count" "parameter_controls" "non-negative Minimum item count"}
-             {:configurationControls {(keyword "array:Item count") "non-negative Minimum item count"}})))
+             {"property_name" "items" "property_type" "array" "rule_type" "Item count" "parameter_controls" "Comparison and non-negative Limit"}
+             {:configurationControls {(keyword "array:Item count") "Comparison and non-negative Limit"}})))
   (is (nil? (#'picker/assert-example!
              {"rule_type" "Numeric range"
               "configuration" "minimum 10 maximum 20"

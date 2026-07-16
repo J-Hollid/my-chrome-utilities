@@ -23,6 +23,14 @@ import {
 } from "../dist/data-layer-schema-verification.js";
 import { applySchemaPropertyTypeEdit } from "../dist/data-layer-schema-property-type-editing.js";
 
+const cardinalityComparisons = {
+  ">":(actual, limit) => actual > limit,
+  ">=":(actual, limit) => actual >= limit,
+  "==":(actual, limit) => actual === limit,
+  "<":(actual, limit) => actual < limit,
+  "<=":(actual, limit) => actual <= limit,
+};
+
 for (let sample = 0; sample < 100; sample += 1) {
   const version = 1 + (sample % 9);
   const name = `Schema ${sample}`;
@@ -133,17 +141,20 @@ for (let sample = 0; sample < 100; sample += 1) {
   let recursivePayload = { leaf:sample };
   const deepestPayload = recursivePayload;
   let deepestPath = "";
+  let deepestTemplatePath = "";
   for (let level = 0; level < recursiveDepth; level += 1) {
     if (level % 2 === 0) {
       const property = `level_${level}`;
       recursiveDocument = { type:"object", properties:{ [property]:recursiveDocument } };
       recursivePayload = { [property]:recursivePayload };
       deepestPath = `/${property}${deepestPath}`;
+      deepestTemplatePath = `/${property}${deepestTemplatePath}`;
     } else {
       const property = `items_${level}`;
       recursiveDocument = { type:"object", properties:{ [property]:{ type:"array", items:recursiveDocument } } };
       recursivePayload = { [property]:[recursivePayload] };
       deepestPath = `/${property}/0${deepestPath}`;
+      deepestTemplatePath = `/${property}/*${deepestTemplatePath}`;
     }
   }
   recursiveDocument = { ...recursiveDocument, additionalProperties:false };
@@ -163,10 +174,42 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(validateWithSchema(recursiveEvent, openRecursiveSchema, [openRecursiveSchema]).issues
     .some(({ message }) => message === "Undeclared property"), false,
   "opening the generated root policy must suppress recursive undeclared-property issues");
+  const exceptionRule = {
+    id:`exception-${sample}`, version:1, propertyPath:deepestTemplatePath,
+    operator:"allow-undeclared-properties", applicableType:"object", enabled:true,
+  };
+  const exceptionSchema = { ...recursiveSchema, attachedRules:[exceptionRule] };
+  assert.equal(validateWithSchema(recursiveEvent, exceptionSchema, [exceptionSchema]).issues.length, 0,
+    "an enabled generated exception must suppress only its matching recursive object boundary");
+  const restoredExceptionSchema = restoreSchemaLibrary(serializeSchemaLibrary([exceptionSchema]))[0];
+  assert.equal(validateWithSchema(recursiveEvent, restoredExceptionSchema, [restoredExceptionSchema]).issues.length, 0,
+    "generated wildcard exception paths must survive canonical storage round trips");
+  const disabledExceptionSchema = { ...exceptionSchema, attachedRules:[{ ...exceptionRule, enabled:false }] };
+  assert.deepEqual(validateWithSchema(recursiveEvent, disabledExceptionSchema, [disabledExceptionSchema]).issues, recursiveIssues,
+    "disabling a generated exception must restore the original recursive issue");
   assert.deepEqual(recursiveDocument, recursiveDocumentSnapshot,
     "recursive validation must conserve generated schema documents");
   assert.deepEqual(recursivePayload, recursivePayloadSnapshot,
     "recursive validation must conserve generated payloads");
+
+  const comparison = Object.keys(cardinalityComparisons)[sample % Object.keys(cardinalityComparisons).length];
+  const limit = sample % 23;
+  const actual = (sample * 17) % 31;
+  const cardinalitySchema = {
+    ...createSchema(`Cardinality ${sample}`, 1, {
+      type:"object", properties:{ title:{ type:"string" }, items:{ type:"array", items:{ type:"object" } } },
+    }),
+    attachedRules:[
+      { id:`text-${sample}`, version:1, propertyPath:"/title", operator:"text-length", comparison, limit, parameters:String(limit) },
+      { id:`items-${sample}`, version:1, propertyPath:"/items", operator:"item-count", comparison, limit, parameters:String(limit) },
+    ],
+  };
+  const cardinalityResult = validateWithSchema({
+    sourceId:"source", eventName:"cardinality", rawInput:null,
+    payload:{ title:"x".repeat(actual), items:Array.from({ length:actual }, () => ({})) },
+  }, cardinalitySchema, [cardinalitySchema]);
+  assert.equal(cardinalityResult.issues.length === 0, cardinalityComparisons[comparison](actual, limit),
+    "generated text and item cardinalities must obey the selected comparison over broad limits");
 
   const legacy = [version, version + 1, version + 2].map((legacyVersion, index) => assignSchema(
     createSchema(`Legacy ${sample}`, legacyVersion, { type: "object", properties: { [`revision_${legacyVersion}`]: { type: "string" } } }),

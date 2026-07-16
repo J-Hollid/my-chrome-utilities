@@ -54,21 +54,22 @@ const expectedControls = {
   "Exact value":["Exact value"],
   "Allowed values":["Allowed values"],
   "Regular expression":["Pattern"],
-  "Text length":["Exact length"],
+  "Text length":["Comparison", "Limit"],
   "Digits only":[],
   "Numeric range":["Minimum", "Maximum"],
-  "Item count":["Minimum item count"],
+  "Item count":["Comparison", "Limit"],
+  "Allow undeclared properties":[],
 };
 for (const [ruleType, labels] of Object.entries(expectedControls)) {
-  const propertyType = ruleType === "Numeric range" ? "number" : ruleType === "Item count" ? "array" : "string";
+  const propertyType = ruleType === "Numeric range" ? "number" : ruleType === "Item count" ? "array" : ruleType === "Allow undeclared properties" ? "object" : "string";
   assert.deepEqual(ruleConfigurationControls(ruleType, propertyType).map(({ label }) => label), labels);
 }
 assert.equal(ruleConfigurationControls("Exact value", "number")[0].inputType, "number");
 assert.equal(ruleConfigurationControls("Exact value", "boolean")[0].inputType, "select");
 assert.equal(ruleConfigurationControls("Allowed values", "number")[0].inputType, "number");
 assert.equal(ruleConfigurationControls("Allowed values", "boolean")[0].inputType, "select");
-assert.equal(ruleConfigurationControls("Text length", "string")[0].minimum, 0);
-assert.equal(ruleConfigurationControls("Item count", "array")[0].step, 1);
+assert.equal(ruleConfigurationControls("Text length", "string")[1].minimum, 0);
+assert.equal(ruleConfigurationControls("Item count", "array")[1].step, 1);
 
 const configuration = createRuleConfiguration("Allowed values", "string");
 assert.deepEqual(configuration, {
@@ -81,6 +82,8 @@ assert.deepEqual(configuration, {
   minimum:"",
   maximum:"",
   minimumItemCount:"",
+  comparison:"",
+  limit:"",
   severity:"error",
   message:"",
   saveReusable:false,

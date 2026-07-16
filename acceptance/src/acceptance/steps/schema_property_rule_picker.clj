@@ -40,10 +40,10 @@
     ["page_type" "string" "Exact value" "one type-aware Exact value field"]
     ["page_type" "string" "Allowed values" "repeatable type-aware value fields"]
     ["page_type" "string" "Regular expression" "Pattern"]
-    ["page_type" "string" "Text length" "non-negative Exact length"]
+    ["page_type" "string" "Text length" "Comparison and non-negative Limit"]
     ["page_type" "string" "Digits only" "no parameter controls"]
     ["revenue" "number" "Numeric range" "optional Minimum and Maximum"]
-    ["items" "array" "Item count" "non-negative Minimum item count"]})
+    ["items" "array" "Item count" "Comparison and non-negative Limit"]})
 
 (def keyboard-examples
   {["Arrow key navigation followed by Enter" "the selected rule action runs"]

@@ -73,6 +73,8 @@
                         [acceptance.schema-property-removal-steps-test]
                         [acceptance.schema-publication-refresh-steps-test]
                         [acceptance.schema-property-rule-picker-steps-test]
+                        [acceptance.schema-cardinality-comparison-steps-test]
+                        [acceptance.schema-declared-property-exceptions-steps-test]
                         [acceptance.schema-rule-property-identity-steps-test]
                         [acceptance.schema-container-child-authoring-steps-test]
                         [acceptance.schema-renaming-steps-test]
@@ -149,6 +151,8 @@
                                                 'acceptance.schema-property-removal-steps-test
                                                 'acceptance.schema-publication-refresh-steps-test
                                                 'acceptance.schema-property-rule-picker-steps-test
+                                                'acceptance.schema-cardinality-comparison-steps-test
+                                                'acceptance.schema-declared-property-exceptions-steps-test
                                                 'acceptance.schema-rule-property-identity-steps-test
                                                 'acceptance.schema-container-child-authoring-steps-test
                                                 'acceptance.schema-renaming-steps-test

@@ -4,11 +4,13 @@ import {
 } from "./data-layer-conditional-validation-rules.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, typedAllowedValues, type AllowedValue } from "./data-layer-allowed-values-rule.js";
+import { cardinalityComparisons, type CardinalityComparison } from "./data-layer-cardinality.js";
 
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+export type { CardinalityComparison } from "./data-layer-cardinality.js";
 
 export type SchemaPropertyType = "string" | "number" | "array" | "object" | "boolean";
-export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count";
+export type SchemaRuleType = "Required" | "Exact value" | "Allowed values" | "Regular expression" | "Text length" | "Digits only" | "Numeric range" | "Item count" | "Allow undeclared properties";
 
 export interface PropertyRuleChoice {
   id: string;
@@ -21,6 +23,8 @@ export interface PropertyRuleChoice {
   applicableType?: SchemaPropertyType;
   version?: number;
   enabled?: boolean;
+  comparison?: CardinalityComparison;
+  limit?: number;
 }
 
 export interface ReusablePropertyRuleChoice extends PropertyRuleChoice {
@@ -37,6 +41,8 @@ export interface RuleConfiguration {
   minimum: string;
   maximum: string;
   minimumItemCount: string;
+  comparison: "" | CardinalityComparison;
+  limit: string;
   severity: string;
   message: string;
   saveReusable: boolean;
@@ -48,13 +54,14 @@ export interface RuleConfiguration {
 }
 
 export interface RuleConfigurationControl {
-  key: keyof Pick<RuleConfiguration, "exactValue" | "allowedValues" | "pattern" | "exactLength" | "minimum" | "maximum" | "minimumItemCount">;
+  key: keyof Pick<RuleConfiguration, "exactValue" | "allowedValues" | "pattern" | "exactLength" | "minimum" | "maximum" | "minimumItemCount" | "comparison" | "limit">;
   label: string;
   inputType: "text" | "number" | "select";
   minimum?: number;
   step?: number;
   repeatable?: boolean;
   optional?: boolean;
+  choices?: readonly string[];
 }
 
 const compatibility: Record<SchemaRuleType, readonly SchemaPropertyType[]> = {
@@ -66,6 +73,7 @@ const compatibility: Record<SchemaRuleType, readonly SchemaPropertyType[]> = {
   "Digits only":["string"],
   "Numeric range":["number"],
   "Item count":["array"],
+  "Allow undeclared properties":["object"],
 };
 
 const builtIns: readonly PropertyRuleChoice[] = (Object.keys(compatibility) as SchemaRuleType[]).map((name) => ({
@@ -125,12 +133,14 @@ export function ruleConfigurationControls(ruleType: SchemaRuleType, propertyType
   if (ruleType === "Exact value") return [{ key:"exactValue", label:"Exact value", inputType:valueInputType(propertyType) }];
   if (ruleType === "Allowed values") return [{ key:"allowedValues", label:"Allowed values", inputType:valueInputType(propertyType), repeatable:true }];
   if (ruleType === "Regular expression") return [{ key:"pattern", label:"Pattern", inputType:"text" }];
-  if (ruleType === "Text length") return [{ key:"exactLength", label:"Exact length", inputType:"number", minimum:0, step:1 }];
+  if (ruleType === "Text length" || ruleType === "Item count") return [
+    { key:"comparison", label:"Comparison", inputType:"select", choices:cardinalityComparisons },
+    { key:"limit", label:"Limit", inputType:"number", minimum:0, step:1 },
+  ];
   if (ruleType === "Numeric range") return [
     { key:"minimum", label:"Minimum", inputType:"number", optional:true },
     { key:"maximum", label:"Maximum", inputType:"number", optional:true },
   ];
-  if (ruleType === "Item count") return [{ key:"minimumItemCount", label:"Minimum item count", inputType:"number", minimum:0, step:1 }];
   return [];
 }
 
@@ -145,6 +155,8 @@ export function createRuleConfiguration(ruleType: SchemaRuleType, propertyType: 
     minimum:"",
     maximum:"",
     minimumItemCount:"",
+    comparison:"",
+    limit:"",
     severity:"error",
     message:"",
     saveReusable:false,
@@ -160,6 +172,18 @@ function nonNegativeWholeNumber(value: string): boolean {
   return value.trim() !== "" && Number.isInteger(Number(value)) && Number(value) >= 0;
 }
 
+function legacyCardinalityComparison(configuration: RuleConfiguration): CardinalityComparison | "" {
+  if (configuration.comparison) return configuration.comparison;
+  if (configuration.ruleType === "Text length" && configuration.exactLength.trim()) return "==";
+  if (configuration.ruleType === "Item count" && configuration.minimumItemCount.trim()) return ">=";
+  return "";
+}
+
+function cardinalityLimit(configuration: RuleConfiguration): string {
+  if (configuration.limit.trim()) return configuration.limit;
+  return configuration.ruleType === "Text length" ? configuration.exactLength : configuration.minimumItemCount;
+}
+
 export function validateRuleConfiguration(configuration: RuleConfiguration): { ready: boolean; assistance: string } {
   if (configuration.ruleType === "Exact value" && !configuration.exactValue.trim()) return { ready:false, assistance:"Enter an exact value" };
   if (configuration.ruleType === "Allowed values" && !configuration.allowedValues.some((value) => value.trim())) return { ready:false, assistance:"Add at least one allowed value" };
@@ -167,14 +191,14 @@ export function validateRuleConfiguration(configuration: RuleConfiguration): { r
     if (!configuration.pattern) return { ready:false, assistance:"Enter a pattern" };
     try { new RegExp(configuration.pattern); } catch { return { ready:false, assistance:"Correct the regular expression" }; }
   }
-  if (configuration.ruleType === "Text length" && !nonNegativeWholeNumber(configuration.exactLength)) return { ready:false, assistance:"Enter a non-negative whole number" };
+  if ((configuration.ruleType === "Text length" || configuration.ruleType === "Item count") && !legacyCardinalityComparison(configuration)) return { ready:false, assistance:"Choose a comparison" };
+  if ((configuration.ruleType === "Text length" || configuration.ruleType === "Item count") && !nonNegativeWholeNumber(cardinalityLimit(configuration))) return { ready:false, assistance:"Enter a non-negative whole number" };
   if (configuration.ruleType === "Numeric range") {
     const minimum = configuration.minimum.trim(); const maximum = configuration.maximum.trim();
     if (!minimum && !maximum) return { ready:false, assistance:"Enter at least one boundary" };
     if ((minimum && !Number.isFinite(Number(minimum))) || (maximum && !Number.isFinite(Number(maximum)))) return { ready:false, assistance:"Enter numeric boundaries" };
     if (minimum && maximum && Number(minimum) >= Number(maximum)) return { ready:false, assistance:"Make minimum less than maximum" };
   }
-  if (configuration.ruleType === "Item count" && !nonNegativeWholeNumber(configuration.minimumItemCount)) return { ready:false, assistance:"Enter a non-negative whole number" };
   if (configuration.saveReusable && !configuration.reusableName.trim()) return { ready:false, assistance:"Enter a rule name" };
   if (configuration.applyOnlyWhen) {
     const details = configuredRuleDetails(configuration);
@@ -187,13 +211,34 @@ export function validateRuleConfiguration(configuration: RuleConfiguration): { r
   return { ready:true, assistance:"Ready to create rule" };
 }
 
-export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string; allowedValues?: readonly AllowedValue[] } {
+export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string; allowedValues?: readonly AllowedValue[]; comparison?: CardinalityComparison; limit?: number } {
   if (configuration.ruleType === "Required") return { operator:"required" };
   if (configuration.ruleType === "Exact value") return { operator:"exact-value", parameters:configuration.exactValue };
   if (configuration.ruleType === "Allowed values") return { operator:"allowed-values", allowedValues:typedAllowedValues(configuration.allowedValues, configuration.propertyType) };
   if (configuration.ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
-  if (configuration.ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
+  if (configuration.ruleType === "Text length" || configuration.ruleType === "Item count") {
+    const limit = cardinalityLimit(configuration);
+    return {
+      operator:configuration.ruleType === "Text length" ? "text-length" : "item-count",
+      parameters:limit,
+      comparison:legacyCardinalityComparison(configuration) as CardinalityComparison,
+      limit:Number(limit),
+    };
+  }
   if (configuration.ruleType === "Digits only") return { operator:"digits-only" };
   if (configuration.ruleType === "Numeric range") return { operator:"numeric-range", parameters:`${configuration.minimum.trim()},${configuration.maximum.trim()}` };
-  return { operator:"item-count", parameters:configuration.minimumItemCount };
+  return { operator:"allow-undeclared-properties" };
+}
+
+export function createRuleConfigurationFromAttachedRule(
+  ruleType: "Text length" | "Item count",
+  propertyType: "string" | "array",
+  rule: Pick<PropertyRuleChoice, "parameters" | "comparison" | "limit">,
+): RuleConfiguration {
+  const configuration = createRuleConfiguration(ruleType, propertyType);
+  return {
+    ...configuration,
+    comparison:rule.comparison ?? (ruleType === "Text length" ? "==" : ">="),
+    limit:String(rule.limit ?? rule.parameters ?? ""),
+  };
 }
