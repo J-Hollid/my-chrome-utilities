@@ -62,3 +62,7 @@
   (support/verified-feature-mode-handlers
    feature-files entry-modes :schema-specification-container-defaults-mode
    verify-model! (fn [_ _] true) runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-16T13:59:27.716577987+02:00", :module-hash "1075397449", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "518675952"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-196197508"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-514044435"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "175118376"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "1792381819"} {:id "defn-/assert-runtime!", :kind "defn-", :line 29, :end-line 59, :hash "2138545824"} {:id "def/handlers", :kind "def", :line 61, :end-line 64, :hash "-640643909"}]}
+;; clj-mutate-manifest-end
