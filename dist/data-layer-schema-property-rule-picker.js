@@ -1,5 +1,4 @@
 import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
-import { typedAllowedValues } from "./data-layer-allowed-values-rule.js";
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
@@ -144,7 +143,7 @@ export function configuredRuleDetails(configuration) {
     if (configuration.ruleType === "Exact value")
         return { operator: "exact-value", parameters: configuration.exactValue };
     if (configuration.ruleType === "Allowed values")
-        return { operator: "allowed-values", allowedValues: typedAllowedValues(configuration.allowedValues, configuration.propertyType) };
+        return { operator: "allowed-values", parameters: configuration.allowedValues.map((value) => value.trim()).filter(Boolean).join(",") };
     if (configuration.ruleType === "Regular expression")
         return { operator: "regular-expression", parameters: configuration.pattern };
     if (configuration.ruleType === "Text length")

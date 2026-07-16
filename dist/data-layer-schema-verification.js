@@ -4,7 +4,6 @@ import { canonicalNestedPath, resolveNestedValues } from "./data-layer-schema-ne
 import { conditionGroupAppliesToConsequence, conditionGroupAppliesToValue, conditionalRuleSummary, } from "./data-layer-conditional-validation-rules.js";
 import { resolveEffectiveSchemaDocumentation, } from "./data-layer-schema-documentation.js";
 import { assignmentDataConditionSummary, evaluateAssignmentDataConditions, } from "./data-layer-schema-assignment-data-conditions.js";
-import { normalizeAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 function clone(value) { return structuredClone(value); }
 function valueType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function schemaSlug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
@@ -40,8 +39,7 @@ function effectiveAttachedRule(rule, document) {
     if (!propertyPath && parameters && document) {
         const separator = parameters.indexOf(":");
         const legacyTarget = separator > 0 ? parameters.slice(0, separator).trim() : "";
-        const allowedValues = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
-        if (legacyTarget && (documentContainsPath(document, legacyTarget) || allowedValues))
+        if (legacyTarget && documentContainsPath(document, legacyTarget))
             propertyPath = canonicalAttachedRulePath(legacyTarget);
     }
     if (propertyPath && parameters !== undefined) {
@@ -53,13 +51,11 @@ function effectiveAttachedRule(rule, document) {
             parameters = undefined;
     }
     const { propertyPath: _propertyPath, parameters: _parameters, ...rest } = rule;
-    const canonical = {
+    return {
         ...rest,
         ...(propertyPath ? { propertyPath } : {}),
         ...(parameters !== undefined ? { parameters } : {}),
     };
-    const declaredType = propertyPath && document ? schemaDefinitionAtPath(normalizeCanonicalSchemaDocument(document), propertyPath)?.type : undefined;
-    return normalizeAllowedValuesRule(canonical, declaredType);
 }
 function canonicalSchemaRules(schema) {
     const normalized = clone(schema);
@@ -628,14 +624,13 @@ function attachedRuleEvaluations(value, schema, rules) {
                         propertyPath: match.concretePath,
                         status: "pass",
                         message: rule.message ?? `${rule.name ?? rule.id} passed`,
-                        expected: rule.allowedValues?.map(String).join(",") ?? rule.parameters ?? "rule satisfied",
+                        expected: rule.parameters ?? "rule satisfied",
                         actual: match.exists ? observedValueText(match.value) : "missing",
                         rule: rule.name ?? rule.id,
                         ruleVersion: rule.version,
                         severity: rule.severity ?? "error",
                         schemaName: schema.name,
                         schemaVersion: schema.version,
-                        ...valueChoiceEvaluationEvidence(rule, schema, match.value),
                     };
                 const issue = issueFromAttachedRule(rule, schema, {
                     instancePath: match.concretePath,

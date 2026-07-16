@@ -3,7 +3,6 @@ import {
   type ConditionalRulePredicate,
 } from "./data-layer-conditional-validation-rules.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
-import { typedAllowedValues, type AllowedValue } from "./data-layer-allowed-values-rule.js";
 
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 
@@ -181,10 +180,10 @@ export function validateRuleConfiguration(configuration: RuleConfiguration): { r
   return { ready:true, assistance:"Ready to create rule" };
 }
 
-export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string; allowedValues?: readonly AllowedValue[] } {
+export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string } {
   if (configuration.ruleType === "Required") return { operator:"required" };
   if (configuration.ruleType === "Exact value") return { operator:"exact-value", parameters:configuration.exactValue };
-  if (configuration.ruleType === "Allowed values") return { operator:"allowed-values", allowedValues:typedAllowedValues(configuration.allowedValues, configuration.propertyType) };
+  if (configuration.ruleType === "Allowed values") return { operator:"allowed-values", parameters:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).join(",") };
   if (configuration.ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
   if (configuration.ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
   if (configuration.ruleType === "Digits only") return { operator:"digits-only" };

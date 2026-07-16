@@ -22,11 +22,10 @@ import {
   type AssignmentDataConditionGroup,
   type AssignmentConditionTarget,
 } from "./data-layer-schema-assignment-data-conditions.js";
-import { normalizeAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export type { JsonSchema } from "./data-layer-schema-document.js";
-export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
+export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; }
 export interface SchemaWorkingDraft {
   name?: string;
   baseVersion: number;
@@ -119,8 +118,7 @@ function effectiveAttachedRule(rule: AttachedSchemaRule, document?: JsonSchema):
   if (!propertyPath && parameters && document) {
     const separator = parameters.indexOf(":");
     const legacyTarget = separator > 0 ? parameters.slice(0, separator).trim() : "";
-    const allowedValues = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
-    if (legacyTarget && (documentContainsPath(document, legacyTarget) || allowedValues)) propertyPath = canonicalAttachedRulePath(legacyTarget);
+    if (legacyTarget && documentContainsPath(document, legacyTarget)) propertyPath = canonicalAttachedRulePath(legacyTarget);
   }
   if (propertyPath && parameters !== undefined) {
     const prefix = exactLegacyParameterPrefix(parameters, propertyPath);
@@ -129,13 +127,11 @@ function effectiveAttachedRule(rule: AttachedSchemaRule, document?: JsonSchema):
       && canonicalAttachedRulePath(parameters) === propertyPath) parameters = undefined;
   }
   const { propertyPath:_propertyPath, parameters:_parameters, ...rest } = rule;
-  const canonical = {
+  return {
     ...rest,
     ...(propertyPath ? { propertyPath } : {}),
     ...(parameters !== undefined ? { parameters } : {}),
   };
-  const declaredType = propertyPath && document ? schemaDefinitionAtPath(normalizeCanonicalSchemaDocument(document), propertyPath)?.type : undefined;
-  return normalizeAllowedValuesRule(canonical, declaredType);
 }
 
 function canonicalSchemaRules(schema: SchemaDefinition): SchemaDefinition {
@@ -652,14 +648,13 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
           propertyPath:match.concretePath,
           status:"pass",
           message:rule.message ?? `${rule.name ?? rule.id} passed`,
-          expected:rule.allowedValues?.map(String).join(",") ?? rule.parameters ?? "rule satisfied",
+          expected:rule.parameters ?? "rule satisfied",
           actual:match.exists ? observedValueText(match.value) : "missing",
           rule:rule.name ?? rule.id,
           ruleVersion:rule.version,
           severity:rule.severity ?? "error",
           schemaName:schema.name,
           schemaVersion:schema.version,
-          ...valueChoiceEvaluationEvidence(rule, schema, match.value),
         };
         const issue = issueFromAttachedRule(rule, schema, {
           instancePath:match.concretePath,

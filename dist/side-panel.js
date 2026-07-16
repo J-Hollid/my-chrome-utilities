@@ -3,7 +3,6 @@ import { createPaletteController } from "./command-palette-ui.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
@@ -638,30 +637,13 @@ catch {
     return [];
 } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-function normalizeReusableAllowedValuesRule(rule, type) {
-    const allowedOperator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
-    const separator = rule.parameters?.indexOf(":") ?? -1;
-    const candidate = allowedOperator && !rule.propertyPath && separator > 0
-        ? { ...rule, propertyPath: canonicalRulePropertyPath(rule.parameters.slice(0, separator)), parameters: rule.parameters.slice(separator + 1) }
-        : rule;
-    return normalizeBaseAllowedValuesRule(candidate, type);
-}
-function normalizeReusableSchemaRule(rule) {
-    const normalized = normalizeReusableAllowedValuesRule(rule, rule.applicableType);
-    return normalized.revisionHistory
-        ? { ...normalized, revisionHistory: normalized.revisionHistory.map((snapshot) => normalizeReusableAllowedValuesRule(snapshot, rule.applicableType)) }
-        : normalized;
-}
-const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
 let reusableSchemaRules = (() => { try {
-    const saved = JSON.parse(storedReusableSchemaRules ?? "[]");
-    return Array.isArray(saved) ? saved.map(normalizeReusableSchemaRule) : [];
+    const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]");
+    return Array.isArray(saved) ? saved : [];
 }
 catch {
     return [];
 } })();
-if (storedReusableSchemaRules && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules)
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
     schemaCandidates: guidedSchemaCandidates,
     publish: persistPublishedGuidedValidation,
@@ -2936,7 +2918,6 @@ function persistPublishedGuidedValidation(result) {
                 version: publishedReusable.version,
                 ...(reusableAttachmentRule?.operator ? { operator: reusableAttachmentRule.operator } : {}),
                 ...(reusableAttachmentRule?.parameters !== undefined ? { parameters: reusableAttachmentRule.parameters } : {}),
-                ...(reusableAttachmentRule?.allowedValues !== undefined ? { allowedValues: reusableAttachmentRule.allowedValues } : {}),
                 ...(reusableAttachmentRule?.severity ? { severity: reusableAttachmentRule.severity } : {}),
                 ...(reusableAttachmentRule?.message !== undefined ? { message: reusableAttachmentRule.message } : {}),
                 ...(reusableAttachmentRule?.enabled !== undefined ? { enabled: reusableAttachmentRule.enabled } : {}),
@@ -3046,7 +3027,6 @@ function createConfiguredSchemaRule(path, configuration) {
         applicableType: configuration.propertyType,
         operator: details.operator,
         ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
-        ...(details.allowedValues !== undefined ? { allowedValues: details.allowedValues } : {}),
         severity: configuration.severity,
         ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
         ...(configuration.applyOnlyWhen ? { conditionGroup: { operator: configuration.conditionGroupOperator, predicates: structuredClone(configuration.conditions) } } : {}),
@@ -3459,9 +3439,7 @@ function attachReusableRule(path, rule) {
         name: rule.name,
         version: rule.version ?? 1,
         ...(rule.operator ? { operator: rule.operator } : {}),
-        ...(rule.propertyPath ? { propertyPath: rule.propertyPath } : {}),
         ...(rule.parameters ? { parameters: rule.parameters } : {}),
-        ...(rule.allowedValues ? { allowedValues: structuredClone(rule.allowedValues) } : {}),
         ...(rule.severity ? { severity: rule.severity } : {}),
         ...(rule.message ? { message: rule.message } : {}),
         ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),
@@ -3550,10 +3528,6 @@ function renderSchemaWorkflowRows() {
             schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}`, selected: rule.attachments?.includes(schema.id) ?? false })));
         } if (schemaRuleEditor)
             schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
-        edit.addEventListener("click", () => { if (schemaRuleParameters && rule.allowedValues)
-            schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });
-        if (rule.migrationIssue)
-            summary.textContent += ` · Migration issue: ${rule.migrationIssue}`;
         duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
         disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
@@ -5015,12 +4989,6 @@ saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleN
     schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id: rule.id, name: rule.name, version: rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}), enabled: rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules: attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
-saveSchemaRuleButton?.addEventListener("click", () => {
-    reusableSchemaRules = reusableSchemaRules.map(normalizeReusableSchemaRule);
-    schemas = restoreSchemaLibrary(serializeSchemaLibrary(schemas));
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
-    persistSchemaLibrary();
-});
 saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata)
     return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory: rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity: pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message: pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
 saveSchemaRuleButton?.addEventListener("click", (event) => {
@@ -5045,8 +5013,7 @@ saveSchemaRuleButton?.addEventListener("click", (event) => {
     const nextName = schemaRuleName?.value.trim() || previous.name;
     const nextParameters = schemaRuleParameters?.value.trim() ?? previous.parameters ?? "";
     const nextExamples = schemaRuleExamples?.value.trim() ?? previous.examples ?? "";
-    const previousParameters = previous.allowedValues?.map(String).join(",") ?? previous.parameters ?? "none";
-    schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previousParameters} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
+    schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
     schemaRuleRevisionReview.showModal();
 }, true);
 confirmSchemaRuleRevisionButton.addEventListener("click", () => {
@@ -5142,7 +5109,7 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
             if (issue)
                 throw new Error(issue);
         }
-        pendingSchemaImport = { schemas: importedSchemas, rules: archive.rules.map(normalizeReusableSchemaRule) };
+        pendingSchemaImport = { schemas: importedSchemas, rules: archive.rules };
         if (schemaImportReviewSummary)
             schemaImportReviewSummary.textContent = `${importedSchemas.length} schemas and ${pendingSchemaImport.rules.length} reusable rules are ready to import.`;
         if (schemaImportReview) {

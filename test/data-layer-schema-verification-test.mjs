@@ -30,7 +30,7 @@ const configuredRule = assignSchema({ ...createSchema("Configured rule", 3, { ty
 assert.equal(validateEvent({ sourceId:"history", eventName:"configured", payload:{ page_type:"unknown" }, rawInput:[] }, [configuredRule]).state, "1 warnings");
 assert.deepEqual(validateEvent({ sourceId:"history", eventName:"configured", payload:{ page_type:"unknown" }, rawInput:[] }, [configuredRule]).issues, [{ instancePath:"/page_type", message:"Choose a supported page type", expected:"product,checkout", actual:"unknown", schemaName:"Configured rule", schemaVersion:3, schemaLocation:"#/attachedRules/rule:page-type", rule:"Known page types v7", severity:"warning", origin:"Configured rule v3", allowedValues:["product", "checkout"] }]);
 assert.equal(validateEvent({ sourceId:"history", eventName:"configured", payload:{ page_type:"unknown" }, rawInput:[] }, [{ ...configuredRule, document:{ type:"object", required:["event_id"], properties:{ event_id:{ type:"string" } } } }]).state, "1 error and 1 warning");
-assert.deepEqual(validateEvent({ sourceId:"history", eventName:"configured", payload:{ page_type:"product" }, rawInput:[] }, [configuredRule]).evaluations, [{ propertyPath:"/page_type", status:"pass", message:"Choose a supported page type", expected:"product,checkout", actual:"product", rule:"Known page types", ruleVersion:7, severity:"warning", schemaName:"Configured rule", schemaVersion:3, ruleId:"rule:page-type", operator:"allowed-values", schemaId:configuredRule.id, actualValue:"product", allowedValues:["product","checkout"] }]);
+assert.deepEqual(validateEvent({ sourceId:"history", eventName:"configured", payload:{ page_type:"product" }, rawInput:[] }, [configuredRule]).evaluations, [{ propertyPath:"page_type", status:"pass", message:"Choose a supported page type", expected:"product,checkout", actual:"product", rule:"Known page types", ruleVersion:7, severity:"warning", schemaName:"Configured rule", schemaVersion:3 }]);
 const rangedRule = assignSchema({ ...createSchema("Ranged rule", 1, { type:"object", properties:{ revenue:{ type:"number" } } }), attachedRules:[{ id:"rule:revenue", name:"Expected revenue", version:1, propertyPath:"/revenue", operator:"numeric-range", parameters:"10,20" }] }, { sourceId:"history", eventName:"ranged", target:"payload" });
 assert.equal(validateEvent({ sourceId:"history", eventName:"ranged", payload:{ revenue:15 }, rawInput:[] }, [rangedRule]).state, "Valid");
 assert.equal(validateEvent({ sourceId:"history", eventName:"ranged", payload:{ revenue:25 }, rawInput:[] }, [rangedRule]).issues[0].message, "Value is outside range");
@@ -135,7 +135,7 @@ assert.equal(twoChangeDraft.document.properties.page_type, undefined);
 assert.deepEqual(twoChangeDraft.workingDraft.pendingChanges, ["Add page_type rule", "Add page_name rule"]);
 assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([twoChangeDraft]))[0].workingDraft, {
   ...twoChangeDraft.workingDraft,
-  attachedRules:[{ id:"rule:page-type", version:1, propertyPath:"/page_type", operator:"allowed-values", allowedValues:["product","listing"] }],
+  attachedRules:[{ ...twoChangeDraft.workingDraft.attachedRules[0], propertyPath:"/page_type", parameters:"product,listing" }],
 });
 
 const inheritedProduct = {
