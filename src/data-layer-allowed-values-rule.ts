@@ -1,3 +1,5 @@
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+
 export type AllowedValue = string | number | boolean | null;
 export type AllowedValueType = "string" | "number" | "boolean" | "array" | "object" | undefined;
 
@@ -6,6 +8,12 @@ export interface ParameterBackedRule {
   parameters?: string | undefined;
   allowedValues?: readonly AllowedValue[] | undefined;
   migrationIssue?: string | undefined;
+}
+
+export interface AllowedValuesRuleLibraryEntry extends ParameterBackedRule {
+  propertyPath?: string | undefined;
+  applicableType?: AllowedValueType;
+  revisionHistory?: readonly ParameterBackedRule[] | undefined;
 }
 
 function isAllowedValuesOperator(operator: string | undefined): boolean {
@@ -38,6 +46,27 @@ export function normalizeAllowedValuesRule<T extends ParameterBackedRule>(rule: 
   if (invalidIndex >= 0) return { ...structuredClone(rule), migrationIssue:`Allowed values migration could not convert ${tokens[invalidIndex]} to ${type ?? "string"}` };
   const { parameters:_parameters, migrationIssue:_migrationIssue, ...withoutLegacy } = structuredClone(rule);
   return { ...withoutLegacy, allowedValues:converted as AllowedValue[] } as unknown as T & ParameterBackedRule;
+}
+
+function normalizeLegacyTarget<T extends ParameterBackedRule & { propertyPath?: string | undefined }>(rule: T): T {
+  const separator = rule.parameters?.indexOf(":") ?? -1;
+  if (!isAllowedValuesOperator(rule.operator) || rule.propertyPath || separator <= 0) return rule;
+  return {
+    ...rule,
+    propertyPath:canonicalRulePropertyPath(rule.parameters!.slice(0, separator)),
+    parameters:rule.parameters!.slice(separator + 1),
+  };
+}
+
+export function normalizeAllowedValuesRuleLibraryEntry<T extends AllowedValuesRuleLibraryEntry>(rule: T): T {
+  const normalized = normalizeAllowedValuesRule(normalizeLegacyTarget(rule), rule.applicableType) as T;
+  return normalized.revisionHistory
+    ? {
+        ...normalized,
+        revisionHistory:normalized.revisionHistory.map((snapshot) =>
+          normalizeAllowedValuesRule(normalizeLegacyTarget(snapshot), rule.applicableType)),
+      }
+    : normalized;
 }
 
 export function typedAllowedValues(values: readonly string[], type?: AllowedValueType): AllowedValue[] {

@@ -1,3 +1,4 @@
+import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 function isAllowedValuesOperator(operator) {
     return operator?.trim().replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
 }
@@ -32,6 +33,25 @@ export function normalizeAllowedValuesRule(rule, type) {
         return { ...structuredClone(rule), migrationIssue: `Allowed values migration could not convert ${tokens[invalidIndex]} to ${type ?? "string"}` };
     const { parameters: _parameters, migrationIssue: _migrationIssue, ...withoutLegacy } = structuredClone(rule);
     return { ...withoutLegacy, allowedValues: converted };
+}
+function normalizeLegacyTarget(rule) {
+    const separator = rule.parameters?.indexOf(":") ?? -1;
+    if (!isAllowedValuesOperator(rule.operator) || rule.propertyPath || separator <= 0)
+        return rule;
+    return {
+        ...rule,
+        propertyPath: canonicalRulePropertyPath(rule.parameters.slice(0, separator)),
+        parameters: rule.parameters.slice(separator + 1),
+    };
+}
+export function normalizeAllowedValuesRuleLibraryEntry(rule) {
+    const normalized = normalizeAllowedValuesRule(normalizeLegacyTarget(rule), rule.applicableType);
+    return normalized.revisionHistory
+        ? {
+            ...normalized,
+            revisionHistory: normalized.revisionHistory.map((snapshot) => normalizeAllowedValuesRule(normalizeLegacyTarget(snapshot), rule.applicableType)),
+        }
+        : normalized;
 }
 export function typedAllowedValues(values, type) {
     const tokens = values.map((value) => value.trim()).filter(Boolean);

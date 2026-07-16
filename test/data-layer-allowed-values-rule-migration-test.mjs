@@ -3,7 +3,7 @@ import { restoreSchemaLibrary, serializeSchemaLibrary, validateWithSchema } from
 import { configuredRuleDetails, createRuleConfiguration } from "../dist/data-layer-schema-property-rule-picker.js";
 import { guidedAttachedRule } from "../dist/data-layer-guided-rule-parameter-integrity.js";
 import { deriveSpecificationRows, renderSpecificationClipboard, specificationExampleChoices } from "../dist/data-layer-schema-specification-builder.js";
-import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText } from "../dist/data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "../dist/data-layer-allowed-values-rule.js";
 
 const identity={id:"rule:error-type",name:"Allowed values for error_type",version:1,propertyPath:"/error_type",operator:"allowed-values",severity:"warning",message:"Choose a known error type",enabled:true,conditionGroup:{operator:"All",predicates:[{propertyPath:"/market",operator:"Equals",comparison:{type:"string",value:"retail"}}]}};
 const document={type:"object",properties:{error_type:{type:"string"},quantity:{type:"number"},enabled:{type:"boolean"},context:{}}};
@@ -40,6 +40,17 @@ const canonicalReusable={id:"rule:searchable",name:"Known errors",kind:"Allowed 
 assert.equal(allowedValuesRuleLibraryMetadata(canonicalReusable),"Allowed values: technical, validation");
 assert.equal(allowedValuesRuleLibrarySearchText(canonicalReusable),"technical validation");
 assert.equal(allowedValuesRuleLibraryMetadata({...canonicalReusable,operator:"required",allowedValues:undefined}),undefined);
+const migratedReusable=normalizeAllowedValuesRuleLibraryEntry({
+  ...canonicalReusable,
+  applicableType:"number",
+  propertyPath:undefined,
+  allowedValues:undefined,
+  parameters:"/products/*/quantity:1,2",
+  revisionHistory:[{operator:"allowed-values",parameters:"/products/*/quantity:3,4"}],
+});
+assert.deepEqual(migratedReusable.allowedValues,[1,2]);
+assert.equal(migratedReusable.propertyPath,"/products/*/quantity");
+assert.deepEqual(migratedReusable.revisionHistory[0],{operator:"allowed-values",propertyPath:"/products/*/quantity",allowedValues:[3,4]});
 
 const wildcardDocument={type:"object",properties:{products:{type:"array",items:{type:"object",properties:{code:{type:"string"},tier:{type:"string"}}}}}};
 const wildcardCondition={operator:"All",predicates:[{propertyPath:"/products/*/tier",operator:"Equals",comparison:{type:"string",value:"vip"}}]};

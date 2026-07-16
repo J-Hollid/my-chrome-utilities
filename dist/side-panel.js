@@ -3,7 +3,7 @@ import { createPaletteController } from "./command-palette-ui.js";
 import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./data-layer-allowed-values-rule.js";
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
@@ -640,19 +640,8 @@ catch {
     return [];
 } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-function normalizeReusableAllowedValuesRule(rule, type) {
-    const allowedOperator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
-    const separator = rule.parameters?.indexOf(":") ?? -1;
-    const candidate = allowedOperator && !rule.propertyPath && separator > 0
-        ? { ...rule, propertyPath: canonicalRulePropertyPath(rule.parameters.slice(0, separator)), parameters: rule.parameters.slice(separator + 1) }
-        : rule;
-    return normalizeBaseAllowedValuesRule(candidate, type);
-}
 function normalizeReusableSchemaRule(rule) {
-    const normalized = normalizeReusableAllowedValuesRule(rule, rule.applicableType);
-    return normalized.revisionHistory
-        ? { ...normalized, revisionHistory: normalized.revisionHistory.map((snapshot) => normalizeReusableAllowedValuesRule(snapshot, rule.applicableType)) }
-        : normalized;
+    return normalizeAllowedValuesRuleLibraryEntry(rule);
 }
 const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
 let reusableSchemaRules = (() => { try {
