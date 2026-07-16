@@ -56,7 +56,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values", "Comments"];
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
-    headRow.append(...labels.map((text) => Object.assign(document.createElement("th"), { textContent: text })));
+    headRow.append(...labels.map((text) => { const th = document.createElement("th"); th.append(Object.assign(document.createElement("span"), { textContent: text })); return th; }));
     head.append(headRow);
     const body = document.createElement("tbody");
     table.append(head, body);
