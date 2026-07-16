@@ -75,6 +75,7 @@
                         [acceptance.schema-property-rule-picker-steps-test]
                         [acceptance.schema-cardinality-comparison-steps-test]
                         [acceptance.schema-declared-property-exceptions-steps-test]
+                        [acceptance.json-schema-export-steps-test]
                         [acceptance.schema-rule-property-identity-steps-test]
                         [acceptance.schema-container-child-authoring-steps-test]
                         [acceptance.schema-renaming-steps-test]
@@ -153,6 +154,7 @@
                                                 'acceptance.schema-property-rule-picker-steps-test
                                                 'acceptance.schema-cardinality-comparison-steps-test
                                                 'acceptance.schema-declared-property-exceptions-steps-test
+                                                'acceptance.json-schema-export-steps-test
                                                 'acceptance.schema-rule-property-identity-steps-test
                                                 'acceptance.schema-container-child-authoring-steps-test
                                                 'acceptance.schema-renaming-steps-test
