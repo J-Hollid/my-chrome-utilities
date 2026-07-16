@@ -131,10 +131,10 @@ Feature: Data layer schema property rule picker
       | page_type     | string        | Exact value        | one type-aware Exact value field    |
       | page_type     | string        | Allowed values     | repeatable type-aware value fields  |
       | page_type     | string        | Regular expression | Pattern                             |
-      | page_type     | string        | Text length        | non-negative Exact length           |
+      | page_type     | string        | Text length        | Comparison and non-negative Limit   |
       | page_type     | string        | Digits only        | no parameter controls               |
       | revenue       | number        | Numeric range      | optional Minimum and Maximum        |
-      | items         | array         | Item count         | non-negative Minimum item count     |
+      | items         | array         | Item count         | Comparison and non-negative Limit   |
 
   # Data layer schema property rule picker 012
   Scenario: Data layer schema property rule picker 012
@@ -156,10 +156,10 @@ Feature: Data layer schema property rule picker
       | rule_type          | configuration                 | creation_result | assistance                            |
       | Exact value        | no value                      | blocked         | Enter an exact value                  |
       | Regular expression | malformed pattern [           | blocked         | Correct the regular expression        |
-      | Text length        | exact length -1               | blocked         | Enter a non-negative whole number     |
+      | Text length        | comparison <= and limit -1    | blocked         | Enter a non-negative whole number     |
       | Numeric range      | neither boundary              | blocked         | Enter at least one boundary           |
       | Numeric range      | minimum 10 and maximum 5      | blocked         | Make minimum less than maximum        |
-      | Item count         | minimum 1.5                   | blocked         | Enter a non-negative whole number     |
+      | Item count         | comparison >= and limit 1.5   | blocked         | Enter a non-negative whole number     |
 
   # Data layer schema property rule picker 014
   Scenario: Data layer schema property rule picker 014

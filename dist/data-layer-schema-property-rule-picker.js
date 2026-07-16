@@ -10,6 +10,7 @@ const compatibility = {
     "Digits only": ["string"],
     "Numeric range": ["number"],
     "Item count": ["array"],
+    "Allow undeclared properties": ["object"],
 };
 const builtIns = Object.keys(compatibility).map((name) => ({
     id: `built-in:${name.toLowerCase().replace(/\s+/g, "-")}`,
@@ -65,15 +66,16 @@ export function ruleConfigurationControls(ruleType, propertyType) {
         return [{ key: "allowedValues", label: "Allowed values", inputType: valueInputType(propertyType), repeatable: true }];
     if (ruleType === "Regular expression")
         return [{ key: "pattern", label: "Pattern", inputType: "text" }];
-    if (ruleType === "Text length")
-        return [{ key: "exactLength", label: "Exact length", inputType: "number", minimum: 0, step: 1 }];
+    if (ruleType === "Text length" || ruleType === "Item count")
+        return [
+            { key: "comparison", label: "Comparison", inputType: "select", choices: [">", ">=", "==", "<", "<="] },
+            { key: "limit", label: "Limit", inputType: "number", minimum: 0, step: 1 },
+        ];
     if (ruleType === "Numeric range")
         return [
             { key: "minimum", label: "Minimum", inputType: "number", optional: true },
             { key: "maximum", label: "Maximum", inputType: "number", optional: true },
         ];
-    if (ruleType === "Item count")
-        return [{ key: "minimumItemCount", label: "Minimum item count", inputType: "number", minimum: 0, step: 1 }];
     return [];
 }
 export function createRuleConfiguration(ruleType, propertyType) {
@@ -87,6 +89,8 @@ export function createRuleConfiguration(ruleType, propertyType) {
         minimum: "",
         maximum: "",
         minimumItemCount: "",
+        comparison: "",
+        limit: "",
         severity: "error",
         message: "",
         saveReusable: false,
@@ -99,6 +103,20 @@ export function createRuleConfiguration(ruleType, propertyType) {
 }
 function nonNegativeWholeNumber(value) {
     return value.trim() !== "" && Number.isInteger(Number(value)) && Number(value) >= 0;
+}
+function legacyCardinalityComparison(configuration) {
+    if (configuration.comparison)
+        return configuration.comparison;
+    if (configuration.ruleType === "Text length" && configuration.exactLength.trim())
+        return "==";
+    if (configuration.ruleType === "Item count" && configuration.minimumItemCount.trim())
+        return ">=";
+    return "";
+}
+function cardinalityLimit(configuration) {
+    if (configuration.limit.trim())
+        return configuration.limit;
+    return configuration.ruleType === "Text length" ? configuration.exactLength : configuration.minimumItemCount;
 }
 export function validateRuleConfiguration(configuration) {
     if (configuration.ruleType === "Exact value" && !configuration.exactValue.trim())
@@ -115,7 +133,9 @@ export function validateRuleConfiguration(configuration) {
             return { ready: false, assistance: "Correct the regular expression" };
         }
     }
-    if (configuration.ruleType === "Text length" && !nonNegativeWholeNumber(configuration.exactLength))
+    if ((configuration.ruleType === "Text length" || configuration.ruleType === "Item count") && !legacyCardinalityComparison(configuration))
+        return { ready: false, assistance: "Choose a comparison" };
+    if ((configuration.ruleType === "Text length" || configuration.ruleType === "Item count") && !nonNegativeWholeNumber(cardinalityLimit(configuration)))
         return { ready: false, assistance: "Enter a non-negative whole number" };
     if (configuration.ruleType === "Numeric range") {
         const minimum = configuration.minimum.trim();
@@ -127,8 +147,6 @@ export function validateRuleConfiguration(configuration) {
         if (minimum && maximum && Number(minimum) >= Number(maximum))
             return { ready: false, assistance: "Make minimum less than maximum" };
     }
-    if (configuration.ruleType === "Item count" && !nonNegativeWholeNumber(configuration.minimumItemCount))
-        return { ready: false, assistance: "Enter a non-negative whole number" };
     if (configuration.saveReusable && !configuration.reusableName.trim())
         return { ready: false, assistance: "Enter a rule name" };
     if (configuration.applyOnlyWhen) {
@@ -151,12 +169,27 @@ export function configuredRuleDetails(configuration) {
         return { operator: "allowed-values", allowedValues: typedAllowedValues(configuration.allowedValues, configuration.propertyType) };
     if (configuration.ruleType === "Regular expression")
         return { operator: "regular-expression", parameters: configuration.pattern };
-    if (configuration.ruleType === "Text length")
-        return { operator: "text-length", parameters: configuration.exactLength };
+    if (configuration.ruleType === "Text length" || configuration.ruleType === "Item count") {
+        const limit = cardinalityLimit(configuration);
+        return {
+            operator: configuration.ruleType === "Text length" ? "text-length" : "item-count",
+            parameters: limit,
+            comparison: legacyCardinalityComparison(configuration),
+            limit: Number(limit),
+        };
+    }
     if (configuration.ruleType === "Digits only")
         return { operator: "digits-only" };
     if (configuration.ruleType === "Numeric range")
         return { operator: "numeric-range", parameters: `${configuration.minimum.trim()},${configuration.maximum.trim()}` };
-    return { operator: "item-count", parameters: configuration.minimumItemCount };
+    return { operator: "allow-undeclared-properties" };
+}
+export function createRuleConfigurationFromAttachedRule(ruleType, propertyType, rule) {
+    const configuration = createRuleConfiguration(ruleType, propertyType);
+    return {
+        ...configuration,
+        comparison: rule.comparison ?? (ruleType === "Text length" ? "==" : ">="),
+        limit: String(rule.limit ?? rule.parameters ?? ""),
+    };
 }
 //# sourceMappingURL=data-layer-schema-property-rule-picker.js.map
