@@ -638,6 +638,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
           const summary = conditionalRuleSummary({ conditionGroup:rule.conditionGroup, consequence:{ propertyPath:rule.propertyPath!, operator:rule.operator ?? "required", ...(rule.parameters !== undefined ? { parameters:rule.parameters } : {}) } });
           return {
             propertyPath:match.concretePath,
+            ...(match.templatePath.includes("*") ? { templatePath:match.templatePath } : {}),
             status:"not-applicable",
             message:`Not applicable: ${summary}`,
             expected:summary,
@@ -668,6 +669,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
         };
         if (!failure) return {
           propertyPath:match.concretePath,
+          ...(match.templatePath.includes("*") ? { templatePath:match.templatePath } : {}),
           status:"pass",
           message:rule.message ?? `${rule.name ?? rule.id} passed`,
           expected:rule.allowedValues?.map(String).join(",") ?? rule.parameters ?? "rule satisfied",
@@ -686,6 +688,7 @@ function attachedRuleEvaluations(value: unknown, schema: SchemaDefinition, rules
         });
         return {
           propertyPath:issue.instancePath,
+          ...(match.templatePath.includes("*") ? { templatePath:match.templatePath } : {}),
           status:issue.severity === "warning" ? "warning" : "error",
           message:issue.message,
           expected:issue.expected,
