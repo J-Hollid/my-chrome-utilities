@@ -146,14 +146,14 @@ export function endDataLayerTestingSession(
   };
 }
 
-export function persistSession(state: DataLayerSessionState): void {
+export function persistSession(state: DataLayerSessionState, storage: Pick<Storage, "setItem"> = localStorage): void {
   if (state.session) {
-    localStorage.setItem(DATA_LAYER_SESSION_STORAGE_KEY, JSON.stringify(state));
+    storage.setItem(DATA_LAYER_SESSION_STORAGE_KEY, JSON.stringify(state));
   }
 }
 
-export function restoreSession(): DataLayerSessionState {
-  const raw = localStorage.getItem(DATA_LAYER_SESSION_STORAGE_KEY);
+export function restoreSession(storage: Pick<Storage, "getItem"> = localStorage): DataLayerSessionState {
+  const raw = storage.getItem(DATA_LAYER_SESSION_STORAGE_KEY);
 
   if (!raw) {
     return {};
