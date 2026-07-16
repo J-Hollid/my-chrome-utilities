@@ -3469,6 +3469,78 @@ const schemaPropertyCommentsLiveRuntime = `(async () => {
   };
 })()`;
 
+const schemaPropertyCommentsLifecycleRuntime = `(async () => {
+  const documentation = await import("/data-layer-schema-documentation.js");
+  const verification = await import("/data-layer-schema-verification.js");
+  const propertyCopy = await import("/data-layer-schema-property-copy.js");
+  const propertyRemoval = await import("/data-layer-schema-property-removal.js");
+  const document = { type:"object", properties:{ currency:{type:"string"}, page_type:{type:"string"}, products:{type:"array",items:{type:"object",properties:{product_id:{type:"string"}}}} } };
+  const parent = { id:"schema:generic-commerce", name:"Generic commerce", version:2, document, assignments:[], documentation:{properties:{"/currency":{displayName:"Currency",description:"ISO currency",comments:"Shared currency convention"}}} };
+  const revision3 = { id:"schema:product-detail", name:"Product detail", version:3, document, assignments:[], parentSchemaId:parent.id, documentation:{properties:{
+    "/currency":{displayName:"Currency",description:"ISO currency",comments:"Checkout currency exception"},
+    "/page_type":{displayName:"Page type",description:"Routing input",comments:"Legacy routing input"},
+    "/products/*/product_id":{displayName:"Product identifier",description:"Stable identifier",comments:"Sent by checkout\\nDo not derive from position"},
+  }} };
+  const parentBefore = JSON.stringify(parent);
+  const local = documentation.resolveEffectiveSchemaDocumentation(revision3,[parent,revision3]);
+  const restoredDocumentation = documentation.setPropertyDocumentation(revision3.documentation,"/currency",{displayName:"",description:"",comments:""});
+  const restoredSchema = {...revision3,documentation:restoredDocumentation};
+  const restoredInherited = documentation.resolveEffectiveSchemaDocumentation(restoredSchema,[parent,restoredSchema]);
+  const withDraft = verification.updateSchemaWorkingDraft(verification.createSchemaWorkingDraft(restoredSchema),{documentation:{properties:{...restoredSchema.documentation.properties,"/page_type":{displayName:"Page type",description:"Routing input",comments:"Current routing input"}}}},"Update comments");
+  const workingSurface = {...revision3,document:withDraft.workingDraft.document,assignments:withDraft.workingDraft.assignments,documentation:withDraft.workingDraft.documentation};
+  const working = documentation.resolveEffectiveSchemaDocumentation(workingSurface,[parent,workingSurface]);
+  const revision4 = verification.publishSchemaWorkingDraft(withDraft);
+  const current = documentation.resolveEffectiveSchemaDocumentation(revision4,[parent,revision4]);
+  const historicalSchema = verification.schemaRevision(revision4,3);
+  const historical = documentation.resolveEffectiveSchemaDocumentation(historicalSchema,[parent,historicalSchema]);
+  const duplicate = verification.duplicateSchemaRevision(revision4,3,[parent,revision4]);
+  const duplicateEffective = documentation.resolveEffectiveSchemaDocumentation(duplicate,[parent,duplicate]);
+  const destination = {id:"schema:destination",name:"Destination",version:1,document:{type:"object"},assignments:[]};
+  const source = propertyCopy.schemaPropertyCopySource(revision4,{surface:"current"});
+  const plan = propertyCopy.planSchemaPropertyCopy({source,destination,selectedPath:"/products/*/product_id",schemas:[parent,revision4,destination],reusableRuleIds:[]});
+  const copied = propertyCopy.applySchemaPropertyCopy(plan).schema;
+  const serialized = verification.serializeSchemaLibrary([parent,revision4]);
+  localStorage.setItem("comments-lifecycle-runtime",serialized);
+  const reloaded = verification.restoreSchemaLibrary(localStorage.getItem("comments-lifecycle-runtime"));
+  const imported = verification.importSchema(verification.exportSchema(revision4));
+  const removal = propertyRemoval.removeSchemaProperty(revision4.document,[],"/products",revision4.documentation);
+  const undone = propertyRemoval.undoSchemaPropertyRemoval(removal);
+  const legacy = verification.restoreSchemaLibrary(JSON.stringify([{id:"legacy",name:"Legacy",version:1,document:{type:"object",properties:{page_type:{type:"string"}}},assignments:[],documentation:{properties:{"/page_type":{displayName:"Page type",description:"Legacy entry"}}}}]))[0];
+  return {
+    inheritance:{local:local.properties["/currency"].comments,localOwner:local.properties["/currency"].origin.name,restored:restoredInherited.properties["/currency"].comments,restoredOwner:restoredInherited.properties["/currency"].origin.name,restoredInherited:restoredInherited.properties["/currency"].inherited,parentUnchanged:parentBefore===JSON.stringify(parent),pathCount:Object.keys(restoredInherited.properties).filter((path)=>path==="/currency").length},
+    revisions:{working:working.properties["/page_type"].comments,workingOwner:working.properties["/page_type"].origin.name,current:current.properties["/page_type"].comments,currentOwner:current.properties["/page_type"].origin.name,currentVersion:revision4.version,historical:historical.properties["/page_type"].comments,historicalOwner:historical.properties["/page_type"].origin.name,historicalVersion:historicalSchema.version},
+    duplicate:{local:duplicate.documentation.properties["/products/*/product_id"].comments,inherited:duplicate.documentation.properties["/currency"].comments,effectiveOwner:duplicateEffective.properties["/currency"].origin.name,pathCount:Object.keys(duplicate.documentation.properties).filter((path)=>path==="/currency").length},
+    copy:{planned:plan.documentation.find(({path})=>path==="/products/*/product_id").entry.comments,origin:plan.documentation.find(({path})=>path==="/products/*/product_id").origin.name,stored:copied.workingDraft.documentation.properties["/products/*/product_id"].comments,pathCount:Object.keys(copied.workingDraft.documentation.properties).filter((path)=>path==="/products/*/product_id").length},
+    persistence:{reloaded:reloaded[1].documentation.properties["/page_type"].comments,reloadedHistorical:reloaded[1].revisionHistory[0].documentation.properties["/page_type"].comments,imported:imported.documentation.properties["/page_type"].comments,legacyBlank:legacy.documentation.properties["/page_type"].comments??""},
+    removal:{removed:removal.documentation.properties?.["/products/*/product_id"]??null,restored:undone.documentation.properties["/products/*/product_id"].comments,propertyRemoved:removal.document.properties.products===undefined,propertyRestored:undone.document.properties.products.items.properties.product_id.type},
+  };
+})()`;
+
+const schemaPropertyCommentsRemovalRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const schemaKey="my-chrome-utilities.schema-library.v1";
+  q("#data-layer-view-schemas").click();
+  const schemaRow=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Generic pageview"));
+  Array.from(schemaRow.querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();
+  let property=q('[data-schema-property-canonical-path="/products/*/price_monthly"]');
+  property.querySelector(".schema-property-documentation-control").click();
+  property.querySelector('[id^="schema-documentation-comments-"]').value="Only local comment";
+  property.querySelector('input[value="Save documentation"]').click();await pause();
+  let stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  const rulesBefore=JSON.stringify(stored.workingDraft.attachedRules);
+  property=q('[data-schema-property-canonical-path="/products/*/price_monthly"]');property.querySelector(".schema-property-documentation-control").click();
+  property.querySelector('[id^="schema-documentation-comments-"]').value="";property.querySelector('input[value="Save documentation"]').click();
+  const dialog=q("#schema-documentation-removal-dialog");const requested=dialog.open;const summary=dialog.textContent;
+  Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Cancel").click();
+  stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  const cancelled={closed:!dialog.open,retained:stored.workingDraft.documentation.properties["/products/*/price_monthly"].comments};
+  property.querySelector('input[value="Save documentation"]').click();
+  Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Remove documentation").click();await pause();
+  stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  return {requested,summary,cancelled,confirmed:{removed:stored.workingDraft.documentation.properties?.["/products/*/price_monthly"]??null,propertyType:stored.workingDraft.document.properties.products.items.properties.price_monthly.type,rulesUnchanged:rulesBefore===JSON.stringify(stored.workingDraft.attachedRules)}};
+})()`;
+
 const libraryDirectTemplatePushSeedRuntime = `(() => {
   localStorage.clear();
   const base = { sourceId:"history", sourceName:"Event history", tags:[], validation:"Valid", provenance:"template:captured", revisionHistory:[] };
@@ -4869,7 +4941,20 @@ try {
       socket.close();continue;
     }
     if(process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER==="1"){
-      await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await reloadPanel(socket);schemaPropertyCommentsObservation=await evaluate(socket,schemaPropertyCommentsRuntime);const observed=schemaPropertyCommentsObservation;assert.equal(observed.saved,"Sent by checkout\nDo not derive from position");assert.equal(observed.reopened,observed.saved);assert.equal(observed.publishedUnchanged,true);assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(observed.cells[6],observed.saved);assert.match(observed.clipboard.html,/Comments[\s\S]*Sent by checkout<br>Do not derive from position/);assert.match(observed.clipboard.plain,/Allowed values\tComments/);assert.deepEqual(observed.runtimeErrors,[]);const live=await evaluate(socket,schemaPropertyCommentsLiveRuntime);assert.match(live.comments,/Comments: <img src=x/);assert.equal(live.searchMatched,true);assert.equal(live.wildcardPath,"/products/2/product_name");assert.equal(live.collapsedUnchanged,true);assert.equal(live.inert,true);assert.equal(live.payloadUnchanged,true);assert.equal(live.validation,"Valid");schemaPropertyCommentsObservation.live=live;socket.close();continue;
+      await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await reloadPanel(socket);
+      schemaPropertyCommentsObservation=await evaluate(socket,schemaPropertyCommentsRuntime);const observed=schemaPropertyCommentsObservation;
+      assert.equal(observed.saved,"Sent by checkout\nDo not derive from position");assert.equal(observed.reopened,observed.saved);assert.equal(observed.publishedUnchanged,true);assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(observed.cells[6],observed.saved);assert.match(observed.clipboard.html,/Comments[\s\S]*Sent by checkout<br>Do not derive from position/);assert.match(observed.clipboard.plain,/Allowed values\tComments/);assert.deepEqual(observed.runtimeErrors,[]);
+      await reloadPanel(socket);const removalWorkflow=await evaluate(socket,schemaPropertyCommentsRemovalRuntime);
+      assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,propertyType:"number",rulesUnchanged:true});
+      const lifecycle=await evaluate(socket,schemaPropertyCommentsLifecycleRuntime);
+      assert.deepEqual(lifecycle.inheritance,{local:"Checkout currency exception",localOwner:"Product detail",restored:"Shared currency convention",restoredOwner:"Generic commerce",restoredInherited:true,parentUnchanged:true,pathCount:1});
+      assert.deepEqual(lifecycle.revisions,{working:"Current routing input",workingOwner:"Product detail",current:"Current routing input",currentOwner:"Product detail",currentVersion:4,historical:"Legacy routing input",historicalOwner:"Product detail",historicalVersion:3});
+      assert.deepEqual(lifecycle.duplicate,{local:"Sent by checkout\nDo not derive from position",inherited:"Shared currency convention",effectiveOwner:"Product detail revision 3 copy",pathCount:1});
+      assert.deepEqual(lifecycle.copy,{planned:"Sent by checkout\nDo not derive from position",origin:"Product detail",stored:"Sent by checkout\nDo not derive from position",pathCount:1});
+      assert.deepEqual(lifecycle.persistence,{reloaded:"Current routing input",reloadedHistorical:"Legacy routing input",imported:"Current routing input",legacyBlank:""});
+      assert.deepEqual(lifecycle.removal,{removed:null,restored:"Sent by checkout\nDo not derive from position",propertyRemoved:true,propertyRestored:"string"});
+      const live=await evaluate(socket,schemaPropertyCommentsLiveRuntime);assert.match(live.comments,/Comments: <img src=x/);assert.equal(live.searchMatched,true);assert.equal(live.wildcardPath,"/products/2/product_name");assert.equal(live.collapsedUnchanged,true);assert.equal(live.inert,true);assert.equal(live.payloadUnchanged,true);assert.equal(live.validation,"Valid");
+      schemaPropertyCommentsObservation.removalWorkflow=removalWorkflow;schemaPropertyCommentsObservation.lifecycle=lifecycle;schemaPropertyCommentsObservation.live=live;socket.close();continue;
     }
     if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
