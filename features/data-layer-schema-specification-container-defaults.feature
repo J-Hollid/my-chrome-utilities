@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3857e8bc8c53821ea696c47e3ada68c0a701f1e5b201294fb4052f2099c1edaf
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T12:00:57.389872759Z","feature_name":"Data layer schema specification container defaults","feature_path":"features/data-layer-schema-specification-container-defaults.feature","background_hash":"ebe5ef09056b4398ef17551c6cdaf2e6d5355323404eec6640f44317a06ccfe2","implementation_hash":"6157b973c78b7c2290c36634945b5d4b3a262cdb","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification container defaults
 
   Background:
