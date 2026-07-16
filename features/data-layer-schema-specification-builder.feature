@@ -27,10 +27,11 @@ Feature: Data layer schema specification builder
   Scenario: Data layer schema specification builder 002
     When the property selector is displayed
     Then it presents the effective property hierarchy with local and inherited origins
-    And effective leaf properties are selected by default while container rows are excluded by default
+    And effective leaf, Object container, and Array container properties are selected by default
     And search, Select all, and Clear selection are available
     And selected descendant properties can be refined independently after selecting a container
     And a container can be included as its own table row independently of its descendants
+    And every default-selected local or inherited container appears once in the preview with its full readable path
     And Schema order and Property name sorting control preview order
     And only selected property rows appear in the preview
 
