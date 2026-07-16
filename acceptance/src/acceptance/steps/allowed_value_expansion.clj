@@ -55,7 +55,7 @@
                       (get-in observed [:afterConfirm :pending]))
                    "The existing draft changes or the identity-specific pending change were not preserved."
                    observed)
-  (support/assert! (= ["product,content" nil "consumer" "error" "Choose a known page type"]
+  (support/assert! (= [nil ["product" "content"] "consumer" "error" "Choose a known page type"]
                       ((juxt :publishedParameters :publishedValues :condition :severity :message)
                        (:afterConfirm observed)))
                    "The quick action mutated published or unrelated rule configuration."

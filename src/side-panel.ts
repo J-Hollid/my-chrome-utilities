@@ -17,6 +17,7 @@ import {
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
 import {
   tabPageObservation,
 } from "./active-page-observation.js";
@@ -283,7 +284,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
@@ -831,8 +832,24 @@ const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validat
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; assignmentId?: string; assignmentName?: string; assignmentEvidence?: string; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
-interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
-let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(localStorage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]"); return Array.isArray(saved) ? saved : []; } catch { return []; } })();
+interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
+function normalizeReusableAllowedValuesRule<T extends { propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string }>(rule: T, type?: SchemaPropertyType): T {
+  const allowedOperator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
+  const separator = rule.parameters?.indexOf(":") ?? -1;
+  const candidate = allowedOperator && !rule.propertyPath && separator > 0
+    ? { ...rule, propertyPath:canonicalRulePropertyPath(rule.parameters!.slice(0, separator)), parameters:rule.parameters!.slice(separator + 1) }
+    : rule;
+  return normalizeBaseAllowedValuesRule(candidate, type) as T;
+}
+function normalizeReusableSchemaRule(rule: ReusableSchemaRule): ReusableSchemaRule {
+  const normalized = normalizeReusableAllowedValuesRule(rule, rule.applicableType);
+  return normalized.revisionHistory
+    ? { ...normalized, revisionHistory:normalized.revisionHistory.map((snapshot) => normalizeReusableAllowedValuesRule(snapshot, rule.applicableType)) }
+    : normalized;
+}
+const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(storedReusableSchemaRules ?? "[]"); return Array.isArray(saved) ? saved.map(normalizeReusableSchemaRule) : []; } catch { return []; } })();
+if (storedReusableSchemaRules && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules) localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   schemaCandidates: guidedSchemaCandidates,
   publish: persistPublishedGuidedValidation,
@@ -2932,6 +2949,7 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
         version:publishedReusable.version,
         ...(reusableAttachmentRule?.operator ? { operator:reusableAttachmentRule.operator } : {}),
         ...(reusableAttachmentRule?.parameters !== undefined ? { parameters:reusableAttachmentRule.parameters } : {}),
+        ...(reusableAttachmentRule?.allowedValues !== undefined ? { allowedValues:reusableAttachmentRule.allowedValues } : {}),
         ...(reusableAttachmentRule?.severity ? { severity:reusableAttachmentRule.severity } : {}),
         ...(reusableAttachmentRule?.message !== undefined ? { message:reusableAttachmentRule.message } : {}),
         ...(reusableAttachmentRule?.enabled !== undefined ? { enabled:reusableAttachmentRule.enabled } : {}),
@@ -3021,6 +3039,7 @@ function createConfiguredSchemaRule(path: string, configuration: RuleConfigurati
     applicableType:configuration.propertyType,
     operator:details.operator,
     ...(details.parameters !== undefined ? { parameters:details.parameters } : {}),
+    ...(details.allowedValues !== undefined ? { allowedValues:details.allowedValues } : {}),
     severity:configuration.severity,
     ...(configuration.message.trim() ? { message:configuration.message.trim() } : {}),
     ...(configuration.applyOnlyWhen ? { conditionGroup:{ operator:configuration.conditionGroupOperator, predicates:structuredClone(configuration.conditions) } } : {}),
@@ -3238,7 +3257,7 @@ function renderSchemaPropertyRulePicker(): void {
   })));
   const library = document.createElement("section"); library.setAttribute("aria-label", "Attach from Rule Library"); library.append(Object.assign(document.createElement("h5"), { textContent:"Attach from Rule Library" }), ...reusable.map((rule) => resultButton(
     `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`,
-    `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`,
+    reusableRuleMetadata(rule, propertyType),
     () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
     rule.alreadyAttached,
   )));
@@ -3298,7 +3317,9 @@ function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
     name: rule.name,
     version: rule.version ?? 1,
     ...(rule.operator ? { operator:rule.operator } : {}),
+    ...(rule.propertyPath ? { propertyPath:rule.propertyPath } : {}),
     ...(rule.parameters ? { parameters:rule.parameters } : {}),
+    ...(rule.allowedValues ? { allowedValues:structuredClone(rule.allowedValues) } : {}),
     ...(rule.severity ? { severity:rule.severity } : {}),
     ...(rule.message ? { message:rule.message } : {}),
     ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}),
@@ -3360,11 +3381,13 @@ function renderSchemaAssignmentConditionEditor(): void {
 function renderSchemaWorkflowRows(): void {
   const choices = assignableSchemas(schemas);
   if (schemaAssignmentSchema) schemaAssignmentSchema.replaceChildren(...choices.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} version ${schema.version}` })));
-  const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
+  const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind} ${allowedValuesRuleLibrarySearchText(rule)}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
   schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
-    const item = document.createElement("li"); const summary = document.createElement("span"); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
+    const item = document.createElement("li"); const summary = document.createElement("span"); const allowedValuesMetadata=allowedValuesRuleLibraryMetadata(rule); summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${allowedValuesMetadata ? ` · ${allowedValuesMetadata}` : ""}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
     const edit = document.createElement("button"); const duplicate = document.createElement("button"); const exportRule = document.createElement("button"); const disable = document.createElement("button"); const remove = document.createElement("button"); edit.type = duplicate.type = exportRule.type = disable.type = remove.type = "button"; edit.textContent = "Edit"; duplicate.textContent = "Duplicate"; exportRule.textContent = "Export"; disable.textContent = rule.enabled === false ? "Enable" : "Disable"; remove.textContent = "Delete";
     edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleTypes) schemaRuleTypes.value = rule.applicableType ?? applicablePropertyTypesForRule(rule)[0] ?? "string"; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage) schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples) schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) { schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}`, selected:rule.attachments?.includes(schema.id) ?? false }))); } if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
+    edit.addEventListener("click", () => { if (schemaRuleParameters && rule.allowedValues) schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });
+    if (rule.migrationIssue) summary.textContent += ` · Migration issue: ${rule.migrationIssue}`;
     duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy`, version:1, enabled:true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
     exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type:"application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
     disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
@@ -4838,6 +4861,12 @@ let pendingRuleSnapshotMetadata: { id: string; severity?: string; message?: stri
 saveSchemaRuleButton?.addEventListener("pointerdown", () => { if (editingReusableSchemaRuleId) { const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); if (previous) pendingRuleSnapshotMetadata = { id: previous.id, ...(previous.severity ? { severity: previous.severity } : {}), ...(previous.message ? { message: previous.message } : {}) }; } });
 schemaRuleEditor?.addEventListener("click", (event) => { if ((event.target as HTMLElement).id === "schema-rule-save" && editingReusableSchemaRuleId) { const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); if (previous) pendingRuleSnapshotMetadata = { id: previous.id, ...(previous.severity ? { severity: previous.severity } : {}), ...(previous.message ? { message: previous.message } : {}) }; } });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const applicableType = schemaRuleTypes?.value as SchemaPropertyType | undefined; const operator = schemaRuleOperator?.value; const severity = schemaRuleSeverity?.value; const message = schemaRuleMessage?.value.trim(); const examples = schemaRuleExamples?.value.trim(); const metadata = [applicableType, operator, severity, message, examples].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule: ReusableSchemaRule = { id:editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true, ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), ...(previous?.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}), attachments:Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => option.value), ...(previous ? { revisionHistory:[...(previous.revisionHistory ?? []), { name:previous.name, kind:previous.kind, version:previous.version ?? 1, ...(previous.enabled === false ? { enabled:false } : {}), ...(previous.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}) }] } : {}) }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; if (!previous || updateSchemaRuleAttachments?.checked) schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id:rule.id, name:rule.name, version:rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}), enabled:rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules:attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
+saveSchemaRuleButton?.addEventListener("click", () => {
+  reusableSchemaRules = reusableSchemaRules.map(normalizeReusableSchemaRule);
+  schemas = restoreSchemaLibrary(serializeSchemaLibrary(schemas));
+  localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+  persistSchemaLibrary();
+});
 saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata) return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory:rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory!.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity:pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message:pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
 saveSchemaRuleButton?.addEventListener("click", (event) => {
   const previous = reusableSchemaRules.find((rule) => rule.id === editingReusableSchemaRuleId);
@@ -4853,7 +4882,8 @@ saveSchemaRuleButton?.addEventListener("click", (event) => {
   const nextName = schemaRuleName?.value.trim() || previous.name;
   const nextParameters = schemaRuleParameters?.value.trim() ?? previous.parameters ?? "";
   const nextExamples = schemaRuleExamples?.value.trim() ?? previous.examples ?? "";
-  schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previous.parameters ?? "none"} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
+  const previousParameters = previous.allowedValues?.map(String).join(",") ?? previous.parameters ?? "none";
+  schemaRuleRevisionReviewSummary.textContent = `${previous.name} v${previous.version ?? 1} will become ${nextName} v${(previous.version ?? 0) + 1}; parameters ${previousParameters} → ${nextParameters || "none"}; examples ${previous.examples ?? "none"} → ${nextExamples || "none"}.`;
   schemaRuleRevisionReview.showModal();
 }, true);
 confirmSchemaRuleRevisionButton.addEventListener("click", () => {
@@ -4906,7 +4936,7 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
     const importedSchemas = archive.schemas.map((schema) => importSchema(JSON.stringify(schema)));
     const candidates = [...schemas.filter((schema) => !importedSchemas.some((item) => item.id === schema.id)), ...importedSchemas];
     for (const schema of importedSchemas) { const issue = schemaInheritanceError(schema, candidates) ?? schemaInheritanceConflict(schema, candidates); if (issue) throw new Error(issue); }
-    pendingSchemaImport = { schemas:importedSchemas, rules:archive.rules as ReusableSchemaRule[] };
+    pendingSchemaImport = { schemas:importedSchemas, rules:(archive.rules as ReusableSchemaRule[]).map(normalizeReusableSchemaRule) };
     if (schemaImportReviewSummary) schemaImportReviewSummary.textContent = `${importedSchemas.length} schemas and ${pendingSchemaImport.rules.length} reusable rules are ready to import.`;
     if (schemaImportReview) { schemaImportReview.hidden = false; schemaImportReview.showModal(); }
   } catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema Library import failed."; }

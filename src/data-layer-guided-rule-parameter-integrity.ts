@@ -1,6 +1,7 @@
 import type { GuidedRequirement, PublishedGuidedRule } from "./data-layer-guided-validation.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import type { AttachedSchemaRule } from "./data-layer-schema-verification.js";
+import { typedAllowedValues } from "./data-layer-allowed-values-rule.js";
 
 function guidedOperator(requirement: GuidedRequirement): string {
   if (requirement === "Must be one of these values") return "allowed-values";
@@ -18,13 +19,16 @@ function guidedParameters(rule: PublishedGuidedRule): string | undefined {
 export function guidedAttachedRule(rule: PublishedGuidedRule, name: string, localRuleId?: string): AttachedSchemaRule {
   const propertyPath = canonicalRulePropertyPath(rule.path);
   const parameters = guidedParameters(rule);
+  const allowedValues = rule.requirement === "Must be one of these values"
+    ? typedAllowedValues(rule.values, rule.expectedType.toLowerCase() as "string" | "number" | "boolean")
+    : undefined;
   return {
     id:rule.reusableRuleId ?? localRuleId ?? `local-rule:${propertyPath}`,
     name,
     version:1,
     propertyPath,
     operator:guidedOperator(rule.requirement),
-    ...(parameters !== undefined ? { parameters } : {}),
+    ...(allowedValues !== undefined ? { allowedValues } : parameters !== undefined ? { parameters } : {}),
     severity:rule.severity ?? "error",
     ...(rule.message !== undefined ? { message:rule.message } : {}),
     ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}),

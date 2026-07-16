@@ -78,14 +78,14 @@
         reusable (get-in observation [:published :reusableRule])
         validation (get-in observation [:saved :validation])
         legacy (get-in observation [:saved :legacy])]
-    (support/assert! (= ["/page_type" "allowed-values" "product_list,homepage"]
-                        (mapv attachment [:propertyPath :operator :parameters]))
+    (support/assert! (= ["/page_type" "allowed-values" ["product_list" "homepage"] nil]
+                        (mapv attachment [:propertyPath :operator :allowedValues :parameters]))
                      "Rendered guided save did not persist canonical operator parameters."
                      {:attachment attachment})
-    (support/assert! (not (str/includes? (:parameters attachment) (:propertyPath attachment)))
+    (support/assert! (nil? (:parameters attachment))
                      "Rendered guided save duplicated its property path in operator parameters."
                      {:attachment attachment})
-    (support/assert! (= (:parameters published-attachment) (:parameters reusable))
+    (support/assert! (= (:allowedValues published-attachment) (:allowedValues reusable))
                      "Reusable rule and schema attachment diverged at the browser persistence boundary."
                      {:attachment published-attachment :reusable reusable})
     (support/assert! (= ["Valid" 0 [["/page_type" "pass" "product_list,homepage" "product_list"]]]
@@ -93,12 +93,12 @@
                          (mapv (juxt :propertyPath :status :expected :actual) (:evaluations validation))])
                      "The stored guided attachment was not immediately used by production validation."
                      validation)
-    (support/assert! (= ["product_list,homepage" "Valid" 0
+    (support/assert! (= [["product_list" "homepage"] "Valid" 0
                          [["/page_type" "pass" "product_list,homepage" "product_list"]]
-                         "product_list,homepage"]
-                        [(:parameters legacy) (:state legacy) (:issues legacy)
+                         ["product_list" "homepage"]]
+                        [(:allowedValues legacy) (:state legacy) (:issues legacy)
                          (mapv (juxt :propertyPath :status :expected :actual) (:evaluations legacy))
-                         (:exportedParameters legacy)])
+                         (:exportedAllowedValues legacy)])
                      "Legacy restore or export did not preserve canonical guided-rule semantics."
                      legacy)))
 
