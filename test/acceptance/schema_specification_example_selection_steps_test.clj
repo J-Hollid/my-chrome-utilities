@@ -1,0 +1,2 @@
+(ns acceptance.schema-specification-example-selection-steps-test (:require [acceptance.feature-support :as feature-support] [acceptance.steps.all :as all] [acceptance.steps.schema-specification-example-selection :as examples] [clojure.test :refer [deftest]]))
+(deftest verifies-schema-specification-example-selection-features (feature-support/verify-feature-suite! examples/feature-files examples/handlers all/handlers))

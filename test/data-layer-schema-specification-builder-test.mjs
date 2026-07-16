@@ -13,6 +13,9 @@ const clipboard=renderSpecificationClipboard(rows);
 assert.match(clipboard.html,/^<table>/);assert.match(clipboard.html,/Property name/);assert.match(clipboard.plain,/Property name\tDescription\tMandatory\tType\tExample value\tAllowed values/);assert.equal((clipboard.html.match(/<tr>/g)??[]).length,3);
 assert.doesNotMatch(clipboard.html,/<script/);
 assert.match(clipboard.html,/Routing note<br>Second line/);assert.match(clipboard.plain,/Allowed values\tComments/);
+const customized=renderSpecificationClipboard(rows,{columns:["propertyName","type","mandatory"],includeHeadings:false,style:"highlighted"});
+assert.doesNotMatch(customized.html,/<thead>/);assert.match(customized.html,/border:1px solid/);assert.equal(customized.plain.split("\n")[0],"page_type\tString\tYes");
+const headed=renderSpecificationClipboard(rows,{columns:["type","propertyName"],style:"bordered"});assert.match(headed.plain,/^Type\tProperty name/);assert.match(headed.html,/padding:4px/);
 
 const parent={id:"base",name:"Base event",version:2,document:{type:"object",required:["site_id"],properties:{site_id:{type:"string"}}},assignments:[],documentation:{properties:{"/site_id":{displayName:"site_id",description:"Site identifier",example:{value:"otelo",selectionMethod:"custom"}}}},attachedRules:[{id:"sites",version:1,propertyPath:"/site_id",operator:"allowed-values",allowedValues:["otelo","ben"]}]};
 const inherited={...schema,parentSchemaId:"base",document:{...schema.document,properties:{...schema.document.properties,commerce:{type:"object",properties:{currency:{type:"string"}}}}}};
