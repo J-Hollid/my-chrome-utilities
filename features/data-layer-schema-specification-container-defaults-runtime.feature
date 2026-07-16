@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c530966c9b7b89aa1fff941cfb33f607a4681a2668f88900e40dd61e9285d3f7
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T12:00:57.404307828Z","feature_name":"Data layer schema specification container defaults runtime","feature_path":"features/data-layer-schema-specification-container-defaults-runtime.feature","background_hash":"b67de80e5ed158820564a57974cf3108451ced0e496b6d85259c749dd22c6a46","implementation_hash":"6157b973c78b7c2290c36634945b5d4b3a262cdb","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification container defaults runtime
 
   Background:
@@ -28,4 +33,3 @@ Feature: Data layer schema specification container defaults runtime
     When the production source revision changes
     Then selection resets to every effective container and leaf from that source
     And Clear selection and Select all continue to clear and select every available row
-

@@ -28,6 +28,7 @@
                         [acceptance.event-occurrence-defect-report-steps-test]
                         [acceptance.schema-property-copy-steps-test]
                         [acceptance.schema-property-comments-steps-test]
+                        [acceptance.schema-specification-container-defaults-steps-test]
                         [acceptance.schema-specification-builder-steps-test]
                         [acceptance.schema-property-example-values-steps-test]
                         [acceptance.schema-assignment-data-conditions-steps-test]
@@ -97,6 +98,7 @@
                                                 'acceptance.event-occurrence-defect-report-steps-test
                                                 'acceptance.schema-property-copy-steps-test
                                                 'acceptance.schema-property-comments-steps-test
+                                                'acceptance.schema-specification-container-defaults-steps-test
                                                 'acceptance.schema-specification-builder-steps-test
                                                 'acceptance.schema-property-example-values-steps-test
                                                 'acceptance.schema-assignment-data-conditions-steps-test
