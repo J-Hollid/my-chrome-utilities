@@ -51,6 +51,7 @@ export function renderSchemaSpecificationBuilder(
   let selected = new Set(properties.filter(({ selectedByDefault }) => selectedByDefault).map(({ canonicalPath }) => canonicalPath));
   let sort: "schema" | "name" = "schema";
   let columns = [...defaultSpecificationColumns];
+  const exampleOverrides = new Map<string, string>();
 
   const heading = document.createElement("h4");
   heading.id = "schema-specification-builder-heading";
@@ -102,6 +103,15 @@ export function renderSchemaSpecificationBuilder(
   const copy = document.createElement("button");
   copy.type = "button";
   copy.textContent = "Copy specification table";
+  const copyModeLabel = document.createElement("label");
+  copyModeLabel.textContent = "Copy mode ";
+  const copyMode = document.createElement("select");
+  copyMode.setAttribute("aria-label", "Copy mode");
+  copyMode.append(
+    Object.assign(document.createElement("option"), { value:"rich", textContent:"Rich table" }),
+    Object.assign(document.createElement("option"), { value:"spreadsheet", textContent:"Spreadsheet" }),
+  );
+  copyModeLabel.append(copyMode);
   const includeHeadingsLabel = document.createElement("label");
   const includeHeadings = document.createElement("input");
   includeHeadings.type = "checkbox";
@@ -114,12 +124,14 @@ export function renderSchemaSpecificationBuilder(
   closeButton.type = "button";
   closeButton.textContent = "Close specification";
   closeButton.addEventListener("click", close);
-  root.replaceChildren(heading, sourceLabel, controls, summary, includeHeadingsLabel, resetColumns, table, copy, feedback, closeButton);
+  root.replaceChildren(heading, sourceLabel, controls, summary, copyModeLabel, includeHeadingsLabel, resetColumns, table, copy, feedback, closeButton);
 
   const selectedRows = () => {
     const paths = properties.filter(({ canonicalPath }) => selected.has(canonicalPath)).map(({ canonicalPath }) => canonicalPath);
     if (sort === "name") paths.sort((left, right) => left.localeCompare(right));
-    return deriveSpecificationRows(surface.schema, paths, allSchemas);
+    return deriveSpecificationRows(surface.schema, paths, allSchemas).map((row) => exampleOverrides.has(row.canonicalPath)
+      ? { ...row, example:exampleOverrides.get(row.canonicalPath)! }
+      : row);
   };
 
   const renderPreview = (): void => {
@@ -151,6 +163,18 @@ export function renderSchemaSpecificationBuilder(
       tableRow.append(...columns.map((column) => {
         const cell = document.createElement("td");
         if (column === "allowedValues") appendAllowedValueGroups(cell, row.allowedValueGroups);
+        else if (column === "example") {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = row.example ?? "";
+          input.dataset.specificationExamplePath = row.canonicalPath;
+          input.setAttribute("aria-label", `Example override for ${row.propertyName}`);
+          const text = document.createElement("span");
+          text.hidden = true;
+          text.textContent = input.value;
+          input.addEventListener("input", () => { exampleOverrides.set(row.canonicalPath, input.value); text.textContent = input.value; });
+          cell.append(text, input);
+        }
         else cell.textContent = value(row, column);
         return cell;
       }));
@@ -251,6 +275,15 @@ export function renderSchemaSpecificationBuilder(
   resetColumns.addEventListener("click", () => { columns = [...defaultSpecificationColumns]; renderPreview(); });
   copy.addEventListener("click", async () => {
     const clipboard = renderSpecificationClipboard(selectedRows(), { columns, includeHeadings:includeHeadings.checked });
+    if (copyMode.value === "spreadsheet") {
+      try {
+        await clipboardPort.writePlain(clipboard.plain);
+        feedback.textContent = "Copied spreadsheet table as plain text.";
+      } catch {
+        feedback.textContent = "Copy failed. Select and copy the preview manually.";
+      }
+      return;
+    }
     try {
       await clipboardPort.writeRich(clipboard.html, clipboard.plain);
       feedback.textContent = "Copied rich table and plain text.";

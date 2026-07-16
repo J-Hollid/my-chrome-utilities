@@ -124,7 +124,7 @@ const reordered = renderSpecificationClipboard([adversarialRow], {
   columns:["comments", "propertyName", "description"],
   includeHeadings:true,
 });
-assert.match(reordered.html, /^<table><thead><tr><th>Comments<\/th><th>Property name<\/th>/);
+assert.match(reordered.html, /^<table><style>[^<]*border:1px solid[^<]*<\/style><thead><tr><th>Comments<\/th><th>Property name<\/th>/);
 assert.match(reordered.html, /first line<br>second\tcell \| &lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 assert.equal(reordered.plain.split("\n")[1].split("\t").length, 3);
 assert.doesNotMatch(reordered.html, /<script>/);

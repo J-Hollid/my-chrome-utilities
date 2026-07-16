@@ -270,6 +270,7 @@ function plainCell(value) {
     return String(value ?? "").replace(/[\t\r\n]+/gu, " ");
 }
 export function renderSpecificationClipboard(rows, options = {}) {
+    const richTableStyle = "table{border-collapse:collapse}th,td{border:1px solid #8a8a8a;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f2f2f2;font-weight:700}";
     const columns = options.columns ?? defaultSpecificationColumns;
     const includeHeadings = options.includeHeadings !== false;
     const value = (row, column) => column === "propertyName" ? row.propertyName
@@ -286,7 +287,7 @@ export function renderSpecificationClipboard(rows, options = {}) {
             : escapeHtml(value(row, column));
     const htmlRows = rows.map((row) => `<tr>${columns.map((column) => `<td>${htmlCell(row, column)}</td>`).join("")}</tr>`).join("");
     const heading = includeHeadings ? `<thead><tr>${columns.map((column) => `<th>${escapeHtml(specificationColumnLabels[column])}</th>`).join("")}</tr></thead>` : "";
-    const html = `<table>${heading}<tbody>${htmlRows}</tbody></table>`;
+    const html = `<table><style>${richTableStyle}</style>${heading}<tbody>${htmlRows}</tbody></table>`;
     const plainRows = rows.map((row) => columns.map((column) => value(row, column)));
     const plain = [...(includeHeadings ? [columns.map((column) => specificationColumnLabels[column])] : []), ...plainRows]
         .map((line) => line.map(plainCell).join("\t"))
