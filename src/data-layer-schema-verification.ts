@@ -23,10 +23,15 @@ import {
   type AssignmentConditionTarget,
 } from "./data-layer-schema-assignment-data-conditions.js";
 import { normalizeAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import {
+  cardinalityComparisonPasses,
+  cardinalityConstraint,
+  type CardinalityComparison,
+} from "./data-layer-cardinality.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export type { JsonSchema } from "./data-layer-schema-document.js";
-export type CardinalityComparison = ">" | ">=" | "==" | "<" | "<=";
+export type { CardinalityComparison } from "./data-layer-cardinality.js";
 export interface AttachedSchemaRule { id: string; name?: string; version: number; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; applicableType?: "string" | "number" | "array" | "object" | "boolean"; severity?: string; message?: string; enabled?: boolean; conditionGroup?: ConditionalRuleConditionGroup; comparison?: CardinalityComparison; limit?: number; }
 export interface SchemaWorkingDraft {
   name?: string;
@@ -490,19 +495,6 @@ function observedValueText(value: unknown): string {
   if (value === undefined) return "undefined";
   try { return JSON.stringify(value) ?? String(value); }
   catch { return String(value); }
-}
-
-function cardinalityComparisonPasses(actual: number, comparison: CardinalityComparison, limit: number): boolean {
-  if (comparison === ">") return actual > limit;
-  if (comparison === ">=") return actual >= limit;
-  if (comparison === "==") return actual === limit;
-  if (comparison === "<") return actual < limit;
-  return actual <= limit;
-}
-
-function cardinalityConstraint(kind: "text length" | "item count", comparison: CardinalityComparison, limit: number): string {
-  const relation = comparison === ">" ? "greater than" : comparison === ">=" ? "at least" : comparison === "==" ? "exactly" : comparison === "<" ? "less than" : "at most";
-  return `${kind} ${relation} ${limit}`;
 }
 
 function nestedRuleFailure(rule: AttachedSchemaRule, match: NestedValueMatch): Pick<ValidationIssue, "message" | "expected" | "actual"> | undefined {

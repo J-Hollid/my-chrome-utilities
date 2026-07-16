@@ -1,5 +1,6 @@
 import { validateConditionalRule, } from "./data-layer-conditional-validation-rules.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, typedAllowedValues } from "./data-layer-allowed-values-rule.js";
+import { cardinalityComparisons } from "./data-layer-cardinality.js";
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 const compatibility = {
     "Required": ["string", "number", "array", "object", "boolean"],
@@ -68,7 +69,7 @@ export function ruleConfigurationControls(ruleType, propertyType) {
         return [{ key: "pattern", label: "Pattern", inputType: "text" }];
     if (ruleType === "Text length" || ruleType === "Item count")
         return [
-            { key: "comparison", label: "Comparison", inputType: "select", choices: [">", ">=", "==", "<", "<="] },
+            { key: "comparison", label: "Comparison", inputType: "select", choices: cardinalityComparisons },
             { key: "limit", label: "Limit", inputType: "number", minimum: 0, step: 1 },
         ];
     if (ruleType === "Numeric range")
