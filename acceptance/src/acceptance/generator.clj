@@ -30,10 +30,10 @@
 (def usage-exit-code 2)
 (def error-exit-code 1)
 
-(defn- entrypoint-text [ir-path]
+(defn- entrypoint-text [ir-path feature-path]
   (format
-   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.steps.all :as steps]\n            [aps.json :as aps-json]))\n\n(defn -main [& args]\n  (let [ir-path (or (first args) %s)\n        feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature steps/handlers)\n    (println \"acceptance passed\")))\n\n(apply -main *command-line-args*)\n"
-   (pr-str ir-path)))
+   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.pack-runtime :as packs]\n            [aps.json :as aps-json]))\n\n(defn -main [& args]\n  (let [ir-path (or (first args) %s)\n        feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature (packs/handlers-for-feature %s))\n    (println \"acceptance passed\")))\n\n(apply -main *command-line-args*)\n"
+   (pr-str ir-path) (pr-str feature-path)))
 
 (defn generate!
   ([ir-path output-dir] (generate! ir-path output-dir {}))
@@ -41,7 +41,7 @@
    (let [feature-path (or feature-path (infer-feature-path ir-path))
          generated-file (generated-file-path output-dir feature-path)
          metadata-file (metadata-file-path output-dir feature-path)
-         text (entrypoint-text ir-path)]
+         text (entrypoint-text ir-path feature-path)]
      (fs/create-dirs (fs/parent generated-file))
      (spit (str generated-file) text)
      (aps-json/write-pretty-file!
