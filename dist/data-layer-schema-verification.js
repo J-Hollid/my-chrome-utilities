@@ -364,8 +364,8 @@ export function restoreSchemaLibrary(serialized) {
     }
 }
 function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclaredProperties) {
-    if (schema.type && valueType(value) !== schema.type)
-        result.push({ instancePath: path, message: "Type mismatch", expected: schema.type, actual: valueType(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: schemaPath });
+    if (schema.type && valueType(value) !== schema.type && schema.typeMismatchTreatment !== "ignore")
+        result.push({ instancePath: path, message: "Type mismatch", expected: schema.type, actual: valueType(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: schemaPath, severity: schema.typeMismatchTreatment ?? "error" });
     if (schema.type === "object" && value && typeof value === "object" && !Array.isArray(value)) {
         const record = value;
         for (const property of schema.required ?? [])

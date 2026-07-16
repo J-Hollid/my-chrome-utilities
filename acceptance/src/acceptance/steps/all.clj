@@ -61,6 +61,7 @@
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-property-copy :as schema-property-copy]
             [acceptance.steps.schema-property-comments :as schema-property-comments]
+            [acceptance.steps.schema-property-type-editing :as schema-property-type-editing]
             [acceptance.steps.schema-specification-builder :as schema-specification-builder]
             [acceptance.steps.schema-specification-builder-customization :as schema-specification-builder-customization]
             [acceptance.steps.schema-specification-example-selection :as schema-specification-example-selection]
@@ -86,6 +87,7 @@
                schema-specification-builder-customization/handlers
                schema-specification-example-selection/handlers
                schema-specification-container-defaults/handlers
+               schema-property-type-editing/handlers
                schema-property-example-values/handlers
                schema-property-comments/handlers
                schema-specification-builder/handlers
