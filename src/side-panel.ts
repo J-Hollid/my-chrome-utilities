@@ -284,7 +284,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
@@ -3228,7 +3228,7 @@ function renderSchemaPropertyRulePicker(): void {
   })));
   const library = document.createElement("section"); library.setAttribute("aria-label", "Attach from Rule Library"); library.append(Object.assign(document.createElement("h5"), { textContent:"Attach from Rule Library" }), ...reusable.map((rule) => resultButton(
     `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`,
-    `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`,
+    reusableRuleMetadata(rule, propertyType),
     () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
     rule.alreadyAttached,
   )));

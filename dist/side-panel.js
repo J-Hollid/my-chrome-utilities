@@ -63,7 +63,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
@@ -3380,7 +3380,7 @@ function renderSchemaPropertyRulePicker() {
     })));
     const library = document.createElement("section");
     library.setAttribute("aria-label", "Attach from Rule Library");
-    library.append(Object.assign(document.createElement("h5"), { textContent: "Attach from Rule Library" }), ...reusable.map((rule) => resultButton(`${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`, `${rule.operator ?? rule.kind} · ${rule.parameters ?? "no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`, () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll: true }); }, rule.alreadyAttached)));
+    library.append(Object.assign(document.createElement("h5"), { textContent: "Attach from Rule Library" }), ...reusable.map((rule) => resultButton(`${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`, reusableRuleMetadata(rule, propertyType), () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll: true }); }, rule.alreadyAttached)));
     if (!builtIns.length && !reusable.length) {
         const empty = document.createElement("p");
         empty.id = "schema-property-rule-empty";
