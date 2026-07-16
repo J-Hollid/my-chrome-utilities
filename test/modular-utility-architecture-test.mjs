@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell } from "../dist/utility-registry.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
@@ -11,6 +12,9 @@ for(const utility of utilityRegistry){
 assert.equal(new Set(utilityRegistry.map(({storage})=>storage.namespace)).size,utilityRegistry.length);
 assert.deepEqual(composeUtilityShell(utilityRegistry).utilityIds,["command-palette","hotkeys","data-layer"]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
+const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
+assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
+assert.doesNotMatch(sidePanelSource,/from "\.\/command-palette/,"The shell must use the command-palette public entry");
 
 const packs=await loadVerificationPacks();
 await validateVerificationPacks(packs);
