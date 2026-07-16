@@ -1,4 +1,4 @@
-export interface UtilityStorageContract { namespace:string; version:number; }
+export interface UtilityStorageContract { namespace:string; version:number; legacyKeys?:readonly string[]; }
 export interface UtilityModuleEntry {
   id:string;
   identity:{ name:string; description:string };

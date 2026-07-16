@@ -70,13 +70,13 @@ export function endDataLayerTestingSession(state) {
         },
     };
 }
-export function persistSession(state) {
+export function persistSession(state, storage = localStorage) {
     if (state.session) {
-        localStorage.setItem(DATA_LAYER_SESSION_STORAGE_KEY, JSON.stringify(state));
+        storage.setItem(DATA_LAYER_SESSION_STORAGE_KEY, JSON.stringify(state));
     }
 }
-export function restoreSession() {
-    const raw = localStorage.getItem(DATA_LAYER_SESSION_STORAGE_KEY);
+export function restoreSession(storage = localStorage) {
+    const raw = storage.getItem(DATA_LAYER_SESSION_STORAGE_KEY);
     if (!raw) {
         return {};
     }

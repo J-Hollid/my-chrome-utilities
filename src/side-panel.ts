@@ -18,6 +18,7 @@ import {
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell, utilityRegistry } from "./utility-registry.js";
 import { mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
+import { createUtilityStorage } from "./platform/utility-storage.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
@@ -360,6 +361,18 @@ const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
 const utilityDirectory = document.querySelector<HTMLElement>("#utility-directory");
+const utilityStorageContract = (id: string) => {
+  const contract = utilityRegistry.find((utility) => utility.id === id)?.storage;
+  if (!contract) throw new Error(`Missing utility storage contract: ${id}`);
+  return contract;
+};
+const dataLayerStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("data-layer"));
+const hotkeyStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("hotkeys"));
+const shellStorage = createUtilityStorage(globalThis.localStorage, {
+  namespace:"my-chrome-utilities.shell",
+  version:1,
+  legacyKeys:["my-chrome-utilities.workspace-tab.v1"],
+});
 if (panelRoot) {
   mountUtilityShell(extensionShell, panelRoot, window);
 }
@@ -765,8 +778,8 @@ const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.c
 let activeHotkeyKeymap: HotkeyKeymap =
   loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence: string[] = [];
-let dataLayerSessionState: DataLayerSessionState = restoreSession();
-let savedEventFeedFilterLibrary: SavedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(localStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
+let dataLayerSessionState: DataLayerSessionState = restoreSession(dataLayerStorage);
+let savedEventFeedFilterLibrary: SavedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
 let savedEventFeedFilterFeedback = "";
 let dataLayerObserverState: DataLayerHistoryObserverState = {
   pageObject: samplePageObject(),
@@ -785,7 +798,7 @@ let liveObserverState: LiveObserverState = createLiveObserverState({
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let restoredSavedEventFeedWorkingView = false;
 const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(
-  localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY),
+  dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY),
   dataLayerSessionState.session?.id,
   savedEventFeedFilterLibrary,
 );
@@ -803,19 +816,19 @@ if (!restoredSavedEventFeedWorkingView && savedEventFeedFilterLibrary.defaultFil
 }
 let inspectorReturnSnapshot: InspectorReturnSnapshot | undefined;
 const liveInspectorPresentation = new Map<string, LiveInspectorPresentationSnapshot>();
-let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
-let defectLibrary: DefectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
+let savedSessionLibrary: SavedSessionLibrary = restoreSavedSessionLibrary(dataLayerStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
+let defectLibrary: DefectLibrary = restoreDefectLibrary(dataLayerStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
 let selectedDefectId: string | undefined;
 let defectReturn: { eventId:string; issueIndex:number; listScrollTop:number } | undefined;
 let defectListScrollTop = 0;
-let savedSessionLiveFeed: SavedSessionLiveFeed | undefined = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
+let savedSessionLiveFeed: SavedSessionLiveFeed | undefined = restoreSavedSessionLiveFeed(dataLayerStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
 if (savedSessionLiveFeed) liveObserverState = savedSessionLiveFeed.savedView;
 let archivedSavedSession: ArchivedSession | undefined;
 let pendingSessionSaveDraft: SessionSaveDraft | undefined;
 let startFreshAfterSessionSave = false;
 const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
-let savedThroughEventCount = Math.max(0, Number(localStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
-let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
+let savedThroughEventCount = Math.max(0, Number(dataLayerStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
+let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(dataLayerStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
 let pendingPushDraftReview: PushDraftReview | undefined;
 let pendingRevisionChangeReview: { editor: PropertyEditorState; review: TemplateChangeReview } | undefined;
@@ -825,13 +838,13 @@ let replaceEventLibraryArmed = false;
 let pendingEventLibraryDeletion: { id?: string; name?: string; count: number } | undefined;
 let templateEditorReturnTemplateId: string | undefined;
 let savedInspectorTemplateId: string | undefined;
-const storedSchemaLibrary = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 const restoredSchemaLibrary = serializeSchemaLibrary(schemas);
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
-  localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
+  dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
-let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(localStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(dataLayerStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
 let guidedPropertyReturn: { eventId:string; path:string; expanded:string[]; inspectorScroll:number; feedScroll:number } | undefined;
 let schemaDraft: SchemaDefinition | undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
@@ -844,18 +857,18 @@ let pendingReusableSchemaRuleDeletionId: string | undefined;
 let approvedRuleRevisionId: string | undefined;
 let approvedRuleAttachmentUpdateId: string | undefined;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
-let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
+let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(dataLayerStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; assignmentId?: string; assignmentName?: string; assignmentEvidence?: string; }
-let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
+let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(dataLayerStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
 function normalizeReusableSchemaRule(rule: ReusableSchemaRule): ReusableSchemaRule {
   return normalizeAllowedValuesRuleLibraryEntry(rule) as ReusableSchemaRule;
 }
-const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+const storedReusableSchemaRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
 let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(storedReusableSchemaRules ?? "[]"); return Array.isArray(saved) ? saved.map(normalizeReusableSchemaRule) : []; } catch { return []; } })();
-if (storedReusableSchemaRules && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules) localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+if (storedReusableSchemaRules && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules) dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
   schemaCandidates: guidedSchemaCandidates,
   publish: persistPublishedGuidedValidation,
@@ -1165,7 +1178,7 @@ async function attachSelectedTarget(): Promise<void> {
   const observation = await tabPageObservation(
     target.tabId,
     target.pageUrl,
-    getHistoryArrayPath(),
+    getHistoryArrayPath(dataLayerStorage),
     observationPageLoadId(target.tabId),
   );
   if (observation.pageAccessStatus !== "page access available") {
@@ -1176,7 +1189,7 @@ async function attachSelectedTarget(): Promise<void> {
   }
   currentTargetPathStatus = targetPathStatusForObservation(
     observation,
-    getHistoryArrayPath(),
+    getHistoryArrayPath(dataLayerStorage),
   );
   observationTargetState = decision.state;
   const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
@@ -1186,7 +1199,7 @@ async function attachSelectedTarget(): Promise<void> {
     url: target.pageUrl,
     targetTitle: target.title,
     targetOrigin: target.origin,
-    historyPath: getHistoryArrayPath(),
+    historyPath: getHistoryArrayPath(dataLayerStorage),
   });
   dataLayerSessionState = started.sessionState;
   liveObserverState = started.liveObserverState;
@@ -1202,7 +1215,7 @@ async function attachSelectedTarget(): Promise<void> {
   updateSessionFromObserverState();
   await startLiveHistoryCapture(observation);
   savedThroughEventCount = 0;
-  localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+  dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
   persistAndRenderObservationState();
   setObservationTargetResult("");
   setLiveSessionMessage("Testing started");
@@ -1255,14 +1268,14 @@ function showDataLayerView(view: DataLayerView, focus = false): void {
     savedSessionLiveFeed = { ...savedSessionLiveFeed, savedView:structuredClone(liveObserverState) };
     persistSavedSessionFeed();
   }
-  localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
+  dataLayerStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
   renderDataLayerView(liveObserverElements, view, focus);
   if (view === "Live" && liveObserverState.inspectorEventId) restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
   if (view === "Defects") renderDefects();
 }
 
 function persistDefectLibrary(): void {
-  localStorage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
+  dataLayerStorage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
 }
 
 function triagedEvent(event: LiveEvent): LiveEvent {
@@ -1391,8 +1404,8 @@ function renderSavedSessionLiveBanner(): void {
 function persistSavedEventFeedWorkingView(): void {
   if (savedSessionLiveFeed) { synchronizeSavedSessionFeedView(); return; }
   const sessionId = dataLayerSessionState.session?.id;
-  if (!sessionId) { localStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY); return; }
-  localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(
+  if (!sessionId) { dataLayerStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY); return; }
+  dataLayerStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(
     sessionId,
     liveObserverState.query ?? { conditions:[] },
     liveObserverState.savedFilterId,
@@ -1417,7 +1430,7 @@ function commitSavedEventFeedFilters(
   const result = commitSavedEventFeedFilterLibrary(
     savedEventFeedFilterLibrary,
     proposed,
-    (serialized) => localStorage.setItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY, serialized),
+    (serialized) => dataLayerStorage.setItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY, serialized),
     failureFeedback,
   );
   savedEventFeedFilterLibrary = result.library;
@@ -1541,7 +1554,7 @@ function currentLiveSessionSummary() {
     ),
     targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
     pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
-    observerPath: session?.historyPath ?? getHistoryArrayPath(),
+    observerPath: session?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
     capturedEventCount: liveObserverState.events.length,
     connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
   });
@@ -1640,16 +1653,16 @@ function storedReusableRule(rule: ReusableAllowedValueRule): ReusableSchemaRule 
 }
 
 function persistAllowedValueExpansion(nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): void {
-  const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
-  const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+  const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+  const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
   try {
-    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+    dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
   } catch (error) {
-    if (previousSchemas === null) localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
-    else localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
-    if (previousRules === null) localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
-    else localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+    if (previousSchemas === null) dataLayerStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    else dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+    if (previousRules === null) dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+    else dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
     throw error;
   }
 }
@@ -1827,7 +1840,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       return manual ? validateWithSchema(event, manual, schemas).state : validateEvent(event, schemas).state;
     },
     manualSchemaChoices: () => assignableSchemas(schemas).map((schema) => ({ id:schema.id, label:`${schema.name} v${schema.version}` })),
-    selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]:schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
+    selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]:schemaId } : remaining; dataLayerStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
     updateValidation: (selectedId, validation) => {
       const selected = liveObserverState.events.find((candidate) => candidate.id === selectedId);
       const event = selected && { sourceId:selected.sourceId, eventName:selected.name, payload:selected.payload, rawInput:selected.rawInput };
@@ -2119,7 +2132,7 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
         ? schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate)
         : schemas;
       const nextRules = storedPromotionRules(result.reusableRules);
-      persistLocalRulePromotion(localStorage, {
+      persistLocalRulePromotion(dataLayerStorage, {
         schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,
         schemaValue:serializeSchemaLibrary(nextSchemas),
         ruleKey:SCHEMA_RULE_STORAGE_KEY,
@@ -2541,7 +2554,7 @@ function openNewSchemaEditor(): void {
 }
 
 function persistSchemaLibrary(): void {
-  localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+  dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
 }
 
 function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
@@ -2924,7 +2937,7 @@ function restoreGuidedPropertyReturn(): void {
 
 function persistGuidedContinuation(event: Pick<LiveEvent, "sourceId" | "name">, schemaId: string): void {
   guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
-  localStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
+  dataLayerStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
 }
 
 function openGuidedDraft(schema: SchemaDefinition): void {
@@ -3044,17 +3057,17 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
       },
     ]
     : reusableSchemaRules;
-  const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
-  const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+  const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+  const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
   try {
-    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+    dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
   } catch (error) {
     try {
-      if (previousSchemas === null) localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
-      else localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
-      if (previousRules === null) localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
-      else localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+      if (previousSchemas === null) dataLayerStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+      else dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+      if (previousRules === null) dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+      else dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
     } catch { /* Preserve the original storage failure. */ }
     throw error;
   }
@@ -3159,7 +3172,7 @@ function createConfiguredSchemaRule(path: string, configuration: RuleConfigurati
   }
   if (configuration.saveReusable) {
     reusableSchemaRules = [...reusableSchemaRules.filter((candidate) => candidate.id !== id), rule];
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
     renderSchemaWorkflowRows();
   }
   closeSchemaPropertyRulePicker();
@@ -3509,9 +3522,9 @@ function renderSchemaWorkflowRows(): void {
     edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName) schemaRuleName.value = rule.name; if (schemaRuleTypes) schemaRuleTypes.value = rule.applicableType ?? applicablePropertyTypesForRule(rule)[0] ?? "string"; if (schemaRuleOperator) schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters) schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity) schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage) schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples) schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) { schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}`, selected:rule.attachments?.includes(schema.id) ?? false }))); } if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
     edit.addEventListener("click", () => { if (schemaRuleParameters && rule.allowedValues) schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });
     if (rule.migrationIssue) summary.textContent += ` · Migration issue: ${rule.migrationIssue}`;
-    duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy`, version:1, enabled:true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+    duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id:`rule:${crypto.randomUUID()}`, name:`${rule.name} copy`, version:1, enabled:true }]; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
     exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type:"application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
-    disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+    disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:candidate.enabled === false } : candidate); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
     remove.addEventListener("click", () => { const attached = schemas.filter((schema) => rule.attachments?.includes(schema.id) || JSON.stringify(schema.document).includes(rule.id)); if (attached.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${rule.name}: attached to ${attached.map((schema) => schema.name).join(", ")}.`; return; } pendingReusableSchemaRuleDeletionId = rule.id; if (schemaRuleDeleteReviewSummary) schemaRuleDeleteReviewSummary.textContent = `${rule.name} v${rule.version ?? 1} will be removed.`; if (schemaRuleDeleteReview) { schemaRuleDeleteReview.hidden = false; schemaRuleDeleteReview.showModal(); } });
     item.append(summary, edit, duplicate, exportRule, disable, remove); return item;
   }));
@@ -3559,7 +3572,7 @@ function recheckCapturedSchemaValidation(): void {
   renderLiveObserver();
   schemaValidationIssues?.replaceChildren(...issueRows);
   schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50);
-  localStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
+  dataLayerStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
   renderSchemaValidationRecords();
   if (schemaResult) schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
 }
@@ -3583,7 +3596,7 @@ function renderSchemaValidationRecords(): void {
 }
 
 function persistEventTemplateLibrary(): void {
-  localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
+  dataLayerStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 
 function downloadEventLibrary(): void {
@@ -3919,12 +3932,12 @@ function openPushDraftReview(): void {
 }
 
 function persistSavedSessionLibrary(): void {
-  localStorage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
+  dataLayerStorage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
 }
 
 function persistSavedSessionFeed(): void {
-  if (savedSessionLiveFeed) localStorage.setItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed(savedSessionLiveFeed));
-  else localStorage.removeItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY);
+  if (savedSessionLiveFeed) dataLayerStorage.setItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed(savedSessionLiveFeed));
+  else dataLayerStorage.removeItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY);
 }
 
 function currentUnsavedEventCount(): number {
@@ -3967,7 +3980,7 @@ function startLinkedCaptureFromSavedSession(session: SavedSessionLibrary["sessio
   savedSessionLiveFeed = undefined;
   persistSavedSessionFeed();
   savedThroughEventCount = 0;
-  localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+  dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
   liveObserverState = {
     ...currentView,
     view:"Live",
@@ -3982,7 +3995,7 @@ function startLinkedCaptureFromSavedSession(session: SavedSessionLibrary["sessio
       status:"active",
       tabId:previousSession?.tabId ?? 0,
       ...(previousSession?.windowId === undefined ? {} : { windowId:previousSession.windowId }),
-      historyPath:previousSession?.historyPath ?? getHistoryArrayPath(),
+      historyPath:previousSession?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
       startUrl:resumed.activeSession.pageUrl,
       currentUrl:resumed.activeSession.pageUrl,
       targetTitle:previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
@@ -3991,7 +4004,7 @@ function startLinkedCaptureFromSavedSession(session: SavedSessionLibrary["sessio
     },
   };
   installDefaultSavedEventFeedFilterForNewSession();
-  persistSession(dataLayerSessionState);
+  persistSession(dataLayerSessionState, dataLayerStorage);
   setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
   renderLiveObserver();
   showDataLayerView("Live");
@@ -4146,7 +4159,7 @@ function syncCapturedEventsToLive(): void {
 }
 
 function persistAndRenderSessionState(): void {
-  persistSession(dataLayerSessionState);
+  persistSession(dataLayerSessionState, dataLayerStorage);
   renderSessionState();
 }
 
@@ -4431,7 +4444,7 @@ function setKeymapWarning(message: string): void {
 
 const workspaceTabsController = createWorkspaceTabsController(
   workspaceTabList,
-  localStorage,
+  shellStorage,
 );
 
 const hotkeyEditor = createHotkeyEditor({
@@ -4508,11 +4521,11 @@ function shouldIgnoreHotkeyTarget(target: EventTarget | null): boolean {
 }
 
 function storeHotkeyKeymap(keymap: HotkeyKeymap): void {
-  localStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
+  hotkeyStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
 }
 
 function loadStoredHotkeyKeymap(): HotkeyKeymap | undefined {
-  const stored = localStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
+  const stored = hotkeyStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
 
   if (!stored) {
     return undefined;
@@ -4738,7 +4751,7 @@ function startFreshSession(): void {
   dataLayerObserverState = fresh.observerState;
   presentedSourceEventCount = 0;
   savedThroughEventCount = 0;
-  localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+  dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
   inspectorReturnSnapshot = undefined;
   savedInspectorTemplateId = undefined;
   if (guidedValidationFlow.currentDraft()) guidedValidationFlow.close();
@@ -4773,7 +4786,7 @@ saveLiveSessionForm?.addEventListener("submit", (event) => {
   if (!pendingSessionSaveDraft || !name) return;
   savedSessionLibrary = confirmSessionSave(savedSessionLibrary, pendingSessionSaveDraft, name);
   savedThroughEventCount = pendingSessionSaveDraft.completed.events.length;
-  localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));
+  dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));
   pendingSessionSaveDraft = undefined;
   persistSavedSessionLibrary();
   saveLiveSessionDialog?.close();
@@ -4934,7 +4947,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     if (!rule.id.startsWith("rule:") || reusableSchemaRules.some(({ id }) => id === rule.id)) continue;
     reusableSchemaRules = [...reusableSchemaRules, { id:rule.id, name:rule.name ?? rule.id, kind:rule.operator ?? "required", version:rule.version, enabled:rule.enabled !== false, ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.message ? { message:rule.message } : {}), attachments:[saved.id] }];
   }
-  persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+  persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
   const refreshedEventCount = refreshCurrentLiveAfterSchemaPublication();
   schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();
   if (schemaResult) schemaResult.textContent = `Published ${saved.name} revision ${saved.version}. Revalidated ${refreshedEventCount} current Live ${refreshedEventCount === 1 ? "event" : "events"}.`;
@@ -4981,14 +4994,14 @@ createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaR
 let pendingRuleSnapshotMetadata: { id: string; severity?: string; message?: string } | undefined;
 saveSchemaRuleButton?.addEventListener("pointerdown", () => { if (editingReusableSchemaRuleId) { const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); if (previous) pendingRuleSnapshotMetadata = { id: previous.id, ...(previous.severity ? { severity: previous.severity } : {}), ...(previous.message ? { message: previous.message } : {}) }; } });
 schemaRuleEditor?.addEventListener("click", (event) => { if ((event.target as HTMLElement).id === "schema-rule-save" && editingReusableSchemaRuleId) { const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); if (previous) pendingRuleSnapshotMetadata = { id: previous.id, ...(previous.severity ? { severity: previous.severity } : {}), ...(previous.message ? { message: previous.message } : {}) }; } });
-saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const applicableType = schemaRuleTypes?.value as SchemaPropertyType | undefined; const operator = schemaRuleOperator?.value; const severity = schemaRuleSeverity?.value; const message = schemaRuleMessage?.value.trim(); const examples = schemaRuleExamples?.value.trim(); const metadata = [applicableType, operator, severity, message, examples].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule: ReusableSchemaRule = { id:editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true, ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), ...(previous?.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}), attachments:Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => option.value), ...(previous ? { revisionHistory:[...(previous.revisionHistory ?? []), { name:previous.name, kind:previous.kind, version:previous.version ?? 1, ...(previous.enabled === false ? { enabled:false } : {}), ...(previous.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}) }] } : {}) }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; if (!previous || updateSchemaRuleAttachments?.checked) schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id:rule.id, name:rule.name, version:rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}), enabled:rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules:attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
+saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name) return; const parameters = schemaRuleParameters?.value.trim(); const applicableType = schemaRuleTypes?.value as SchemaPropertyType | undefined; const operator = schemaRuleOperator?.value; const severity = schemaRuleSeverity?.value; const message = schemaRuleMessage?.value.trim(); const examples = schemaRuleExamples?.value.trim(); const metadata = [applicableType, operator, severity, message, examples].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule: ReusableSchemaRule = { id:editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind:`${document.querySelector<HTMLSelectElement>("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version:(previous?.version ?? 0) + 1, enabled:previous?.enabled ?? true, ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), ...(previous?.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}), attachments:Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => option.value), ...(previous ? { revisionHistory:[...(previous.revisionHistory ?? []), { name:previous.name, kind:previous.kind, version:previous.version ?? 1, ...(previous.enabled === false ? { enabled:false } : {}), ...(previous.conditionGroup ? { conditionGroup:structuredClone(previous.conditionGroup) } : {}) }] } : {}) }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; if (!previous || updateSchemaRuleAttachments?.checked) schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id:rule.id, name:rule.name, version:rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}), enabled:rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules:attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult) schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor) schemaRuleEditor.hidden = true; });
 saveSchemaRuleButton?.addEventListener("click", () => {
   reusableSchemaRules = reusableSchemaRules.map(normalizeReusableSchemaRule);
   schemas = restoreSchemaLibrary(serializeSchemaLibrary(schemas));
-  localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+  dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
   persistSchemaLibrary();
 });
-saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata) return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory:rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory!.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity:pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message:pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
+saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata) return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory:rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory!.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity:pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message:pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
 saveSchemaRuleButton?.addEventListener("click", (event) => {
   const previous = reusableSchemaRules.find((rule) => rule.id === editingReusableSchemaRuleId);
   if (!previous) return;
@@ -5019,7 +5032,7 @@ updateSchemaRuleAttachments?.addEventListener("change", () => { approvedRuleAtta
 confirmSchemaRuleUpgradeButton?.addEventListener("click", () => { approvedRuleAttachmentUpdateId = editingReusableSchemaRuleId; if (schemaRuleUpgradeReview?.open) schemaRuleUpgradeReview.close(); if (schemaRuleUpgradeReview) schemaRuleUpgradeReview.hidden = true; });
 cancelSchemaRuleUpgradeButton?.addEventListener("click", () => { if (updateSchemaRuleAttachments) updateSchemaRuleAttachments.checked = false; if (schemaRuleUpgradeReview?.open) schemaRuleUpgradeReview.close(); if (schemaRuleUpgradeReview) schemaRuleUpgradeReview.hidden = true; });
 exportSchemaRulesButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(reusableSchemaRules, null, 2)}\n`], { type:"application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-rules.json"; link.click(); URL.revokeObjectURL(url); });
-confirmSchemaRuleDeleteButton?.addEventListener("click", () => { if (!pendingReusableSchemaRuleDeletionId) return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open) schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview) schemaRuleDeleteReview.hidden = true; });
+confirmSchemaRuleDeleteButton?.addEventListener("click", () => { if (!pendingReusableSchemaRuleDeletionId) return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open) schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview) schemaRuleDeleteReview.hidden = true; });
 cancelSchemaRuleDeleteButton?.addEventListener("click", () => { pendingReusableSchemaRuleDeletionId = undefined; if (schemaRuleDeleteReview?.open) schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview) schemaRuleDeleteReview.hidden = true; });
 schemaAssignmentTarget?.addEventListener("change", () => {
   if (!schemaAssignmentConditionState.group) {
@@ -5065,8 +5078,8 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
 });
 exportSchemaButton?.addEventListener("click", () => openSchemaExportChoices(exportSchemaButton));
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
-replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library replaced."; });
-appendSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = [...schemas.filter((schema) => !pendingSchemaImport!.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport!.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library appended."; });
+replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library replaced."; });
+appendSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport) return; schemas = [...schemas.filter((schema) => !pendingSchemaImport!.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport!.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; if (schemaResult) schemaResult.textContent = "Schema Library appended."; });
 cancelSchemaImportButton?.addEventListener("click", () => { pendingSchemaImport = undefined; if (schemaImportReview?.open) schemaImportReview.close(); if (schemaImportReview) schemaImportReview.hidden = true; });
 confirmSchemaDeleteButton?.addEventListener("click", () => { const schema = pendingSchemaDeletion; if (!schema) return; schemas = schemas.filter(({ id }) => id !== schema.id); pendingSchemaDeletion = undefined; persistSchemaLibrary(); renderSchemas(); if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`; });
 cancelSchemaDeleteButton?.addEventListener("click", () => { pendingSchemaDeletion = undefined; if (schemaDeleteReview?.open) schemaDeleteReview.close(); if (schemaDeleteReview) schemaDeleteReview.hidden = true; });
@@ -5322,18 +5335,18 @@ const targetPathStatusController = createTargetPathStatusController({
 });
 
 function refreshSelectedTargetPathStatus(): void {
-  const path = getHistoryArrayPath();
+  const path = getHistoryArrayPath(dataLayerStorage);
   void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
 }
 
 historyPathInput?.addEventListener("input", () => {
   const typedPath = historyPathInput.value;
-  const path = setHistoryArrayPath(typedPath);
+  const path = setHistoryArrayPath(typedPath, dataLayerStorage);
   void targetPathStatusController.configure(path, typedPath);
 });
 
 restartObservationButton?.addEventListener("click", () => {
-  void currentTargetObservation(getHistoryArrayPath()).then((observation) => {
+  void currentTargetObservation(getHistoryArrayPath(dataLayerStorage)).then((observation) => {
     if (!observation) return;
     dataLayerObserverState = restartObservation(
       dataLayerSessionState,
@@ -5472,7 +5485,7 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
   });
 }
 
-renderHistoryPath(getHistoryArrayPath());
+renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed) void recoverAttachedObservationTarget();
 renderSessionState();
