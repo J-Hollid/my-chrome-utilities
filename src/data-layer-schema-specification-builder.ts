@@ -152,22 +152,24 @@ function ruleIdentity(rule: AttachedSchemaRule): string {
   return `${rule.id}\u0000${rule.propertyPath ?? ""}`;
 }
 
-function effectiveRules(schema: SchemaDefinition, allSchemas: readonly SchemaDefinition[]): AttachedSchemaRule[] {
-  const rules = new Map<string, AttachedSchemaRule>();
+interface EffectiveAttachedSchemaRule extends AttachedSchemaRule { inherited?: boolean; }
+
+function effectiveRules(schema: SchemaDefinition, allSchemas: readonly SchemaDefinition[]): EffectiveAttachedSchemaRule[] {
+  const rules = new Map<string, EffectiveAttachedSchemaRule>();
   for (const parent of parentChain(schema, allSchemas).reverse()) {
     for (const rule of parent.attachedRules ?? []) {
       if (rule.enabled === false || (rule.propertyPath && overrideDisabled(schema, rule.propertyPath))) continue;
-      rules.set(ruleIdentity(rule), rule);
+      rules.set(ruleIdentity(rule), { ...rule, inherited:true });
     }
   }
   for (const rule of schema.attachedRules ?? []) {
     if (rule.enabled === false) rules.delete(ruleIdentity(rule));
-    else rules.set(ruleIdentity(rule), rule);
+    else rules.set(ruleIdentity(rule), { ...rule });
   }
   return [...rules.values()];
 }
 
-function rulesFor(path: string, rules: readonly AttachedSchemaRule[]): AttachedSchemaRule[] {
+function rulesFor(path: string, rules: readonly EffectiveAttachedSchemaRule[]): EffectiveAttachedSchemaRule[] {
   return rules.filter(({ propertyPath, enabled }) => enabled !== false && propertyPath === path);
 }
 
@@ -250,13 +252,13 @@ function conditionText(group: ConditionalRuleConditionGroup, targetPath: string)
     .join(group.operator === "All" ? " and " : " or ");
 }
 
-function requiredFor(path: string, document: JsonSchema, rules: readonly AttachedSchemaRule[]): string {
+function requiredFor(path: string, document: JsonSchema, rules: readonly EffectiveAttachedSchemaRule[]): string {
   const requiredRules = rulesFor(path, rules)
     .filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "required");
   if (requiredRules.some(({ conditionGroup }) => !conditionGroup)) return "Yes";
   const structural = structuralRequirement(path, document);
   if (structural) return structural;
-  const conditional = requiredRules.filter((rule): rule is AttachedSchemaRule & { conditionGroup: ConditionalRuleConditionGroup } => Boolean(rule.conditionGroup));
+  const conditional = requiredRules.filter((rule): rule is EffectiveAttachedSchemaRule & { conditionGroup: ConditionalRuleConditionGroup } => Boolean(rule.conditionGroup));
   return conditional.length
     ? conditional.map(({ conditionGroup }) => `Yes when ${conditionText(conditionGroup, path)}`).join("; ")
     : "No";
@@ -266,7 +268,7 @@ function uniqueValues(values: readonly (string | number | boolean | null)[]): (s
   return values.filter((value, index) => values.findIndex((candidate) => Object.is(candidate, value)) === index);
 }
 
-function allowedFor(path: string, rules: readonly AttachedSchemaRule[]): {
+function allowedFor(path: string, rules: readonly EffectiveAttachedSchemaRule[]): {
   values: (string | number | boolean | null)[];
   groups: string[];
   choices: SpecificationAllowedValueChoice[];
@@ -274,7 +276,7 @@ function allowedFor(path: string, rules: readonly AttachedSchemaRule[]): {
   const relevant = rulesFor(path, rules)
     .filter((rule) => rule.operator?.replaceAll("_", "-").toLowerCase() === "allowed-values" && rule.allowedValues);
   const unconditional = relevant.filter(({ conditionGroup }) => !conditionGroup);
-  const conditional = relevant.filter((rule): rule is AttachedSchemaRule & { conditionGroup: ConditionalRuleConditionGroup } => Boolean(rule.conditionGroup));
+  const conditional = relevant.filter((rule): rule is EffectiveAttachedSchemaRule & { conditionGroup: ConditionalRuleConditionGroup } => Boolean(rule.conditionGroup));
   let intersection = unconditional.length ? uniqueValues(unconditional[0]!.allowedValues!) : [];
   for (const rule of unconditional.slice(1)) {
     intersection = intersection.filter((value) => rule.allowedValues!.some((candidate) => Object.is(candidate, value)));
@@ -286,10 +288,13 @@ function allowedFor(path: string, rules: readonly AttachedSchemaRule[]): {
   ];
   const choices: SpecificationAllowedValueChoice[] = [];
   if (!conflict) {
-    for (const value of intersection) choices.push({ value, label:`Allowed value ${String(value)}` });
+    for (const value of intersection) {
+      const inherited = unconditional.some((rule) => rule.inherited && rule.allowedValues!.some((candidate) => Object.is(candidate, value)));
+      choices.push({ value, label:`Allowed value ${String(value)}${inherited ? " · inherited" : ""}` });
+    }
     for (const rule of conditional) for (const value of uniqueValues(rule.allowedValues!)) {
       if (choices.some((choice) => Object.is(choice.value, value))) continue;
-      choices.push({ value, label:`Allowed value ${String(value)} · when ${conditionText(rule.conditionGroup, path)}` });
+      choices.push({ value, label:`Allowed value ${String(value)} · when ${conditionText(rule.conditionGroup, path)}${rule.inherited ? " · inherited" : ""}` });
     }
   }
   return {
@@ -354,7 +359,6 @@ export function deriveSpecificationRows(
       : resolvedDocumentation;
     const example = documented?.example?.value;
     const allowed = allowedFor(canonicalPath, rules);
-    const inherited = schemaAt(schema.document, canonicalPath) === undefined;
     return {
       canonicalPath,
       propertyName:propertyName(canonicalPath),
@@ -364,7 +368,7 @@ export function deriveSpecificationRows(
       type:typeLabel(property),
       ...(example !== undefined ? { example:String(example) } : {}),
       allowedValues:allowed.values,
-      allowedValueChoices:allowed.choices.map((choice) => ({ ...choice, label:`${choice.label}${inherited ? " · inherited" : ""}` })),
+      allowedValueChoices:allowed.choices,
       allowedValueGroups:allowed.groups,
       ...(allowed.groups.length ? { allowedValuesText:allowed.groups.join("; ") } : {}),
     };

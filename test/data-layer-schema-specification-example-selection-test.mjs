@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  deriveSpecificationRows,
   specificationExampleChoices,
   typeSpecificationExampleSelection,
 } from "../dist/data-layer-schema-specification-builder.js";
@@ -41,3 +42,13 @@ assert.deepEqual(specificationExampleChoices(undocumented, { source:"blank" }).m
 
 const conflicted = { ...duration, allowedValues:[], allowedValueGroups:["Conflict: no values satisfy all effective rules"], allowedValueChoices:[] };
 assert.equal(specificationExampleChoices(conflicted, { source:"documentation", value:"24" }).some(({ id, available }) => id.startsWith("allowed:") && available), false);
+
+const parent = { id:"parent", name:"Parent", version:1, document:{type:"object",properties:{local_code:{type:"string"}}}, assignments:[], attachedRules:[
+  {id:"parent-values",version:1,propertyPath:"/local_code",operator:"allowed-values",allowedValues:["shared","shared"]},
+] };
+const child = { id:"child", name:"Child", version:1, parentSchemaId:"parent", document:{type:"object",properties:{local_code:{type:"string"}}}, assignments:[] };
+const inheritedRuleRow = deriveSpecificationRows(child,["/local_code"],[child,parent])[0];
+assert.deepEqual(inheritedRuleRow.allowedValueChoices,[{value:"shared",label:"Allowed value shared · inherited"}]);
+
+const localOverride = {...child,attachedRules:[{id:"parent-values",version:2,propertyPath:"/local_code",operator:"allowed-values",allowedValues:["shared"]}]};
+assert.deepEqual(deriveSpecificationRows(localOverride,["/local_code"],[localOverride,parent])[0].allowedValueChoices,[{value:"shared",label:"Allowed value shared"}]);

@@ -179,6 +179,8 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
                     cell.dataset.specificationExamplePath = row.canonicalPath;
                     cell.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
                     const openEditor = () => {
+                        if (cell.querySelector(".schema-specification-example-editor"))
+                            return;
                         body.querySelectorAll(".schema-specification-example-editor").forEach((editor) => editor.remove());
                         const baseRow = deriveSpecificationRows(surface.schema, [row.canonicalPath], allSchemas)[0] ?? row;
                         const previous = exampleSelections.get(row.canonicalPath) ?? (baseRow.example !== undefined ? { source: "documentation", value: baseRow.example } : { source: "blank" });
@@ -233,7 +235,8 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
                         cell.append(editor);
                         (editor.querySelector(`input[name="${CSS.escape(name)}"]:checked`) ?? editor.querySelector("input:not(:disabled)"))?.focus({ preventScroll: true });
                     };
-                    cell.addEventListener("click", openEditor, { once: true });
+                    cell.addEventListener("click", (event) => { if (event.target === cell)
+                        openEditor(); });
                     cell.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         openEditor();

@@ -189,6 +189,7 @@ export function renderSchemaSpecificationBuilder(
           cell.dataset.specificationExamplePath = row.canonicalPath;
           cell.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
           const openEditor = () => {
+            if (cell.querySelector(".schema-specification-example-editor")) return;
             body.querySelectorAll(".schema-specification-example-editor").forEach((editor) => editor.remove());
             const baseRow = deriveSpecificationRows(surface.schema, [row.canonicalPath], allSchemas)[0] ?? row;
             const previous = exampleSelections.get(row.canonicalPath) ?? (baseRow.example !== undefined ? { source:"documentation" as const, value:baseRow.example } : { source:"blank" as const });
@@ -209,7 +210,7 @@ export function renderSchemaSpecificationBuilder(
             const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; const cancelEditor = () => { editor.remove(); cell.focus({ preventScroll:true }); }; cancel.addEventListener("click", cancelEditor); editor.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.preventDefault(); cancelEditor(); } }); editor.append(apply, cancel); cell.append(editor);
             (editor.querySelector<HTMLInputElement>(`input[name="${CSS.escape(name)}"]:checked`) ?? editor.querySelector<HTMLInputElement>("input:not(:disabled)"))?.focus({ preventScroll:true });
           };
-          cell.addEventListener("click", openEditor, { once:true });
+          cell.addEventListener("click", (event) => { if (event.target === cell) openEditor(); });
           cell.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openEditor(); } });
         }
         else cell.textContent = value(row, column);

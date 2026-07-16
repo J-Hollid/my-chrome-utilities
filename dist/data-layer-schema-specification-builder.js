@@ -99,14 +99,14 @@ function effectiveRules(schema, allSchemas) {
         for (const rule of parent.attachedRules ?? []) {
             if (rule.enabled === false || (rule.propertyPath && overrideDisabled(schema, rule.propertyPath)))
                 continue;
-            rules.set(ruleIdentity(rule), rule);
+            rules.set(ruleIdentity(rule), { ...rule, inherited: true });
         }
     }
     for (const rule of schema.attachedRules ?? []) {
         if (rule.enabled === false)
             rules.delete(ruleIdentity(rule));
         else
-            rules.set(ruleIdentity(rule), rule);
+            rules.set(ruleIdentity(rule), { ...rule });
     }
     return [...rules.values()];
 }
@@ -218,13 +218,15 @@ function allowedFor(path, rules) {
     ];
     const choices = [];
     if (!conflict) {
-        for (const value of intersection)
-            choices.push({ value, label: `Allowed value ${String(value)}` });
+        for (const value of intersection) {
+            const inherited = unconditional.some((rule) => rule.inherited && rule.allowedValues.some((candidate) => Object.is(candidate, value)));
+            choices.push({ value, label: `Allowed value ${String(value)}${inherited ? " · inherited" : ""}` });
+        }
         for (const rule of conditional)
             for (const value of uniqueValues(rule.allowedValues)) {
                 if (choices.some((choice) => Object.is(choice.value, value)))
                     continue;
-                choices.push({ value, label: `Allowed value ${String(value)} · when ${conditionText(rule.conditionGroup, path)}` });
+                choices.push({ value, label: `Allowed value ${String(value)} · when ${conditionText(rule.conditionGroup, path)}${rule.inherited ? " · inherited" : ""}` });
             }
     }
     return {
@@ -281,7 +283,6 @@ export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [sch
             : resolvedDocumentation;
         const example = documented?.example?.value;
         const allowed = allowedFor(canonicalPath, rules);
-        const inherited = schemaAt(schema.document, canonicalPath) === undefined;
         return {
             canonicalPath,
             propertyName: propertyName(canonicalPath),
@@ -291,7 +292,7 @@ export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [sch
             type: typeLabel(property),
             ...(example !== undefined ? { example: String(example) } : {}),
             allowedValues: allowed.values,
-            allowedValueChoices: allowed.choices.map((choice) => ({ ...choice, label: `${choice.label}${inherited ? " · inherited" : ""}` })),
+            allowedValueChoices: allowed.choices,
             allowedValueGroups: allowed.groups,
             ...(allowed.groups.length ? { allowedValuesText: allowed.groups.join("; ") } : {}),
         };
