@@ -60,6 +60,7 @@
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-property-copy :as schema-property-copy]
+            [acceptance.steps.schema-property-comments :as schema-property-comments]
             [acceptance.steps.schema-specification-builder :as schema-specification-builder]
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
@@ -78,6 +79,7 @@
 
 (def handlers
   (vec (concat schema-property-example-values/handlers
+               schema-property-comments/handlers
                schema-specification-builder/handlers
                schema-assignment-data-conditions/handlers
                schema-property-copy/handlers
@@ -157,5 +159,5 @@
                operator-interface/regular-handlers)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T23:15:33.53489893+02:00", :module-hash "-492100380", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 77, :hash "-1093009651"} {:id "def/handlers", :kind "def", :line 79, :end-line 157, :hash "-2041052038"}]}
+;; {:version 1, :tested-at "2026-07-16T10:55:26.921179502+02:00", :module-hash "317315551", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 78, :hash "295560236"} {:id "def/handlers", :kind "def", :line 80, :end-line 159, :hash "-1159590223"}]}
 ;; clj-mutate-manifest-end

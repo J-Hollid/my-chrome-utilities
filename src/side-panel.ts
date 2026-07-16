@@ -2128,7 +2128,7 @@ function renderSchemaDraft(): void {
     }
     const documentationSummary = document.createElement("p"); documentationSummary.className = "schema-property-documentation";
     documentationSummary.textContent = propertyDocumentation
-      ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.example ? ` · Example: ${String(propertyDocumentation.example.value)}` : ""}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
+      ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.comments ? ` · Comments: ${propertyDocumentation.comments}` : ""}${propertyDocumentation.example ? ` · Example: ${String(propertyDocumentation.example.value)}` : ""}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
       : "No documentation";
     const editDocumentation = document.createElement("a"); editDocumentation.setAttribute("role", "button"); editDocumentation.tabIndex = 0; editDocumentation.className = "schema-property-documentation-control";
     editDocumentation.textContent = localDocumentation || propertyDocumentation ? "Edit documentation" : "Add documentation";
@@ -2137,6 +2137,7 @@ function renderSchemaDraft(): void {
     const legend = document.createElement("legend"); legend.textContent = `Documentation for ${documentationPath}`;
     const displayNameLabel = document.createElement("label"); const displayName = document.createElement("input"); displayName.type = "text"; displayName.value = localDocumentation?.displayName ?? propertyDocumentation?.displayName ?? ""; displayName.id = `schema-documentation-name-${path.replace(/[^a-z0-9]+/gi, "-")}`; displayNameLabel.htmlFor = displayName.id; displayNameLabel.textContent = "Display name";
     const descriptionLabel = document.createElement("label"); const description = document.createElement("textarea"); description.value = localDocumentation?.description ?? propertyDocumentation?.description ?? ""; description.id = `schema-documentation-description-${path.replace(/[^a-z0-9]+/gi, "-")}`; descriptionLabel.htmlFor = description.id; descriptionLabel.textContent = "Description";
+    const commentsLabel=document.createElement("label");const comments=document.createElement("textarea");comments.value=localDocumentation?.comments??propertyDocumentation?.comments??"";comments.id=`schema-documentation-comments-${path.replace(/[^a-z0-9]+/gi,"-")}`;commentsLabel.htmlFor=comments.id;commentsLabel.textContent="Comments";
     const exampleGroup = document.createElement("fieldset"); exampleGroup.className = "schema-property-example-editor";
     const exampleLegend = document.createElement("legend"); exampleLegend.textContent = "Example value"; exampleGroup.append(exampleLegend);
     const exampleName = `schema-documentation-example-${path.replace(/[^a-z0-9]+/gi, "-")}`;
@@ -2177,8 +2178,8 @@ function renderSchemaDraft(): void {
     saveDocumentation.addEventListener("click", () => {
       if (!schemaDraft) return;
       if (customExample.checked && !exampleDraft) { exampleAssistance.textContent = `Enter a valid ${exampleType} example value`; customInput.focus({ preventScroll:true }); return; }
-      const entry: SchemaPropertyDocumentation = { displayName:displayName.value, description:description.value, ...(exampleDraft ? { example:structuredClone(exampleDraft) } : {}) };
-      if (!entry.displayName.trim() && !entry.description.trim() && !entry.example && localDocumentation) { requestSchemaDocumentationRemoval(documentationPath, saveDocumentation); return; }
+      const trimmedComments=comments.value.trim();const entry: SchemaPropertyDocumentation = { displayName:displayName.value, description:description.value, ...(trimmedComments?{comments:trimmedComments}:{}), ...(exampleDraft ? { example:structuredClone(exampleDraft) } : {}) };
+      if (!entry.displayName.trim() && !entry.description.trim() && !entry.comments && !entry.example && localDocumentation) { requestSchemaDocumentationRemoval(documentationPath, saveDocumentation); return; }
       schemaDraft = { ...schemaDraft, documentation:setPropertyDocumentation(schemaDraft.documentation ?? {}, documentationPath, entry) };
       persistSchemaEditorDraft(`Document property ${documentationPath}`); renderSchemaDraft();
     });
@@ -2187,7 +2188,7 @@ function renderSchemaDraft(): void {
     removeDocumentation.addEventListener("click", () => requestSchemaDocumentationRemoval(documentationPath, removeDocumentation));
     editDocumentation.addEventListener("click", () => { documentationEditor.hidden = false; editDocumentation.setAttribute("aria-expanded", "true"); displayName.focus({ preventScroll:true }); });
     editDocumentation.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { editDocumentation.click(); event.preventDefault(); } });
-    documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, exampleGroup, saveDocumentation, removeDocumentation);
+    documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, commentsLabel, comments, exampleGroup, saveDocumentation, removeDocumentation);
     const documentationSection = document.createElement("section"); documentationSection.className = "schema-property-documentation-section"; documentationSection.setAttribute("aria-label", `Documentation for ${documentationPath}`); documentationSection.append(documentationSummary, editDocumentation, documentationEditor);
     const removeProperty = document.createElement("button"); removeProperty.type = "button";
     removeProperty.textContent = inherited ? "Exclude inherited property" : "Remove property";

@@ -238,12 +238,16 @@ function renderPropertyNode(node, addValidation, schemaDocumentation, expandAllo
         persistent.setAttribute("aria-label", `${documentation.displayName || node.name} documentation`);
         const persistentDescription = document.createElement("p");
         persistentDescription.textContent = documentation.description;
+        const comments = document.createElement("p");
+        comments.className = "live-property-documentation-comments";
+        comments.textContent = documentation.comments ? `Comments: ${documentation.comments}` : "";
+        comments.hidden = !documentation.comments;
         const example = document.createElement("p");
         example.textContent = documentation.example ? `Example value: ${String(documentation.example.value)}` : "";
         example.hidden = !documentation.example;
         const provenance = document.createElement("p");
         provenance.textContent = `${documentation.origin.name} revision ${documentation.origin.version}${documentation.inherited ? " · inherited" : " · local"}`;
-        persistent.append(persistentDescription, example, provenance);
+        persistent.append(persistentDescription, comments, example, provenance);
         const showDocumentationPreview = () => { if (persistent.hidden)
             documentationPreview.hidden = false; };
         const hideDocumentationPreview = () => { if (document.activeElement !== information)

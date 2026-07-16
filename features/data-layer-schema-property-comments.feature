@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=1e68f5ded711049f23fc360f85e2fac76a67e502b0a244ee8e71d7e694bb2b38
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T08:57:31.137928202Z","feature_name":"Data layer schema property comments","feature_path":"features/data-layer-schema-property-comments.feature","background_hash":"5da262a0f0d8f72d8f66fb8d9c0d79d7251476ace02e31a63c73c868a472ccbe","implementation_hash":"unknown","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property comments
 
   Background:
@@ -92,4 +97,3 @@ Feature: Data layer schema property comments
     Then Spreadsheet, Rich table, and plain fallback output use the preview's current Comments position
     And the heading and each property comment remain aligned
     And changing copy mode or example overrides does not reset the Comments position
-

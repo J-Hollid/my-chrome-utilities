@@ -270,6 +270,7 @@ export function duplicateSchema(schema: SchemaDefinition, name: string, schemas:
   const properties = Object.fromEntries(Object.entries(effective.properties).map(([path, entry]) => [path, {
     displayName:entry.displayName,
     description:entry.description,
+    ...(entry.comments ? { comments:entry.comments } : {}),
   }]));
   return {
     ...duplicate,

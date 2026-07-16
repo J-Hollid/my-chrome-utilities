@@ -21,10 +21,11 @@ export function setPropertyDocumentation(documentation, path, entry) {
     const canonicalPath = canonicalDocumentationPath(path);
     const displayName = cleanText(entry.displayName);
     const description = cleanText(entry.description);
+    const comments = cleanText(entry.comments);
     const example = entry.example ? structuredClone(entry.example) : undefined;
     const properties = structuredClone(documentation.properties ?? {});
-    if (displayName || description || example)
-        properties[canonicalPath] = { displayName, description, ...(example ? { example } : {}) };
+    if (displayName || description || comments || example)
+        properties[canonicalPath] = { displayName, description, ...(comments ? { comments } : {}), ...(example ? { example } : {}) };
     else
         delete properties[canonicalPath];
     return {
@@ -91,7 +92,7 @@ export function resolvePropertyDocumentation(documentation, path) {
         ?? Object.values(documentation.properties).find(({ mappingPath }) => mappingMatches(mappingPath, canonicalPath));
 }
 export function schemaDocumentationSearchText(path, documentation) {
-    return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description]
+    return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description, documentation?.comments]
         .filter(Boolean).join(" ").toLowerCase();
 }
 //# sourceMappingURL=data-layer-schema-documentation.js.map
