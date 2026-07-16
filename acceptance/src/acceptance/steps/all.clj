@@ -3,6 +3,7 @@
             [acceptance.steps.canonical-declared-property-validation :as canonical-declared-property-validation]
             [acceptance.steps.recursive-declared-property-validation :as recursive-declared-property-validation]
             [acceptance.steps.allowed-value-expansion :as allowed-value-expansion]
+            [acceptance.steps.allowed-values-rule-migration :as allowed-values-rule-migration]
             [acceptance.steps.conditional-validation-rules :as conditional-validation-rules]
             [acceptance.steps.cross-tab-reattachment :as cross-tab-reattachment]
             [acceptance.steps.data-layer :as data-layer]
@@ -86,6 +87,7 @@
                schema-specification-builder-customization/handlers
                schema-specification-example-selection/handlers
                schema-specification-container-defaults/handlers
+               allowed-values-rule-migration/handlers
                schema-property-example-values/handlers
                schema-property-comments/handlers
                schema-specification-builder/handlers

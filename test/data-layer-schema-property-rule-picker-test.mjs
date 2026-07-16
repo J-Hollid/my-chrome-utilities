@@ -101,5 +101,5 @@ for (const [draft, assistance] of validationCases) assert.deepEqual(validateRule
 
 const readyAllowed = { ...configuration, allowedValues:["ABC-1", "XYZ-2"], severity:"warning", message:"Use an approved SKU" };
 assert.deepEqual(validateRuleConfiguration(readyAllowed), { ready:true, assistance:"Ready to create rule" });
-assert.deepEqual(configuredRuleDetails(readyAllowed), { operator:"allowed-values", parameters:"ABC-1,XYZ-2" });
+assert.deepEqual(configuredRuleDetails(readyAllowed), { operator:"allowed-values", allowedValues:["ABC-1","XYZ-2"] });
 assert.deepEqual(configuredRuleDetails({ ...createRuleConfiguration("Numeric range", "number"), minimum:"10" }), { operator:"numeric-range", parameters:"10," });
