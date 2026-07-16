@@ -27,9 +27,23 @@ export interface ValidationPropertyNode {
   technicalPath?: string;
   expression?: string;
   specificItems?: ValidationPropertyNode[];
+  affectedItems?: ValidationPropertyNode[];
   matchedValueCount?: number;
   detectedTypes?: readonly string[];
   examples?: readonly unknown[];
+  zeroBasedIndex?: number;
+  rollup?: ArrayValidationRollup;
+}
+
+export interface ArrayValidationRollup {
+  errors: number;
+  warnings: number;
+  passed: number;
+  notApplicable: number;
+  affectedItemCount: number;
+  totalItemCount: number;
+  affectedPaths: string[];
+  ruleCount: number;
 }
 
 function countText(count: number, singular: string): string {
@@ -169,4 +183,50 @@ export function presentValidationPropertyTree(
   return nodes
     .map((node) => presentPropertyNode(node, showNonApplicable))
     .filter((node): node is ValidationPropertyNode => Boolean(node));
+}
+
+function pointerSegments(path: string): string[] { return path.split("/").filter(Boolean); }
+function canonicalArrayPath(path: string): string { return `/${pointerSegments(path).map((part) => /^\d+$/.test(part) ? "*" : part).join("/")}`; }
+function readableEvaluationCounts(counts: ArrayValidationRollup): string {
+  return [counts.passed ? `${counts.passed} passed` : "", counts.warnings ? `${counts.warnings} warning${counts.warnings === 1 ? "" : "s"}` : "", counts.errors ? `${counts.errors} error${counts.errors === 1 ? "" : "s"}` : "", counts.notApplicable ? `${counts.notApplicable} not applicable` : ""].filter(Boolean).join(" and ");
+}
+
+export function applyArrayValidationRollups(nodes: readonly ValidationPropertyNode[], evaluations: readonly ValidationEvaluation[]): ValidationPropertyNode[] {
+  const wildcard = evaluations.filter((evaluation) => evaluation.templatePath?.includes("*"));
+  const visit = (source: ValidationPropertyNode): ValidationPropertyNode => {
+    const path = source.technicalPath ?? `/${source.path.replaceAll(".", "/")}`;
+    const canonical = canonicalArrayPath(path);
+    const pathParts = pointerSegments(path); const hasConcreteIndex = pathParts.some((part) => /^\d+$/.test(part));
+    const canonicalWildcardCount = pointerSegments(canonical).filter((part) => part === "*").length;
+    const candidates = wildcard.filter(({ templatePath }) => {
+      if (!(templatePath === canonical || templatePath?.startsWith(`${canonical}/`))) return false;
+      return !hasConcreteIndex || pointerSegments(templatePath ?? "").filter((part) => part === "*").length > canonicalWildcardCount;
+    });
+    const specificItems = (source.specificItems ?? []).map(visit);
+    const affectedItems = specificItems.filter((item) => candidates.some((evaluation) => (evaluation.status === "error" || evaluation.status === "warning") && (evaluation.propertyPath === item.technicalPath || evaluation.propertyPath.startsWith(`${item.technicalPath}/`))));
+    const children = source.children.map(visit);
+    if (!candidates.length) return { ...source, children, specificItems };
+    const affected = candidates.filter(({ status }) => status === "error" || status === "warning");
+    const wildcardIndexes = affected.map((evaluation) => {
+      const template = pointerSegments(evaluation.templatePath ?? ""); const concrete = pointerSegments(evaluation.propertyPath);
+      const indexes = template.map((part, index) => part === "*" ? index : -1).filter((index) => index >= 0);
+      const index = hasConcreteIndex ? indexes[canonicalWildcardCount] : canonicalWildcardCount ? indexes[canonicalWildcardCount - 1] : indexes[0];
+      return index === undefined ? undefined : concrete[index];
+    }).filter((part): part is string => part !== undefined);
+    const totalItemCount = source.specificItems?.length || source.matchedValueCount || new Set(candidates.map((evaluation) => evaluation.propertyPath)).size;
+    const rollup: ArrayValidationRollup = {
+      errors:candidates.filter(({ status }) => status === "error").length,
+      warnings:candidates.filter(({ status }) => status === "warning").length,
+      passed:candidates.filter(({ status }) => status === "pass").length,
+      notApplicable:candidates.filter(({ status }) => status === "not-applicable").length,
+      affectedItemCount:new Set(wildcardIndexes).size,
+      totalItemCount,
+      affectedPaths:[...new Set(affected.map(({ propertyPath }) => propertyPath))],
+      ruleCount:new Set(candidates.map(({ ruleId, rule, ruleVersion }) => ruleId ?? `${rule}:${ruleVersion}`)).size,
+    };
+    const exact = wildcard.filter(({ templatePath }) => templatePath === canonical);
+    const summary = exact.length ? { ...propertyValidationSummary(exact), status:readableEvaluationCounts(rollup) } : source.summary;
+    return { ...source, evaluations:exact.length ? exact : source.evaluations, summary, aggregate:{ errors:rollup.errors, warnings:rollup.warnings }, children, specificItems, affectedItems, rollup };
+  };
+  return nodes.map(visit);
 }
