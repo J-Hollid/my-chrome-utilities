@@ -46,3 +46,14 @@ export function typedAllowedValues(values: readonly string[], type?: AllowedValu
   if (converted.some((value) => value === undefined)) throw new Error(`Allowed values must all be valid ${type ?? "string"} values.`);
   return converted as AllowedValue[];
 }
+
+export function allowedValuesRuleLibraryMetadata(rule: ParameterBackedRule): string | undefined {
+  if (!isAllowedValuesOperator(rule.operator) || rule.allowedValues === undefined) return undefined;
+  return `Allowed values: ${rule.allowedValues.map(String).join(", ")}`;
+}
+
+export function allowedValuesRuleLibrarySearchText(rule: ParameterBackedRule): string {
+  return isAllowedValuesOperator(rule.operator) && rule.allowedValues !== undefined
+    ? rule.allowedValues.map(String).join(" ")
+    : "";
+}
