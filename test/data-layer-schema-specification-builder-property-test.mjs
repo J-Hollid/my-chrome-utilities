@@ -56,8 +56,10 @@ for (let sample = 0; sample < 200; sample += 1) {
   const snapshot = structuredClone(schema);
 
   const properties = specificationProperties(schema);
-  assert.equal(properties.find(({ canonicalPath }) => canonicalPath === groupPath)?.selectedByDefault, false);
+  assert.equal(properties.find(({ canonicalPath }) => canonicalPath === groupPath)?.selectedByDefault, true);
   assert.equal(properties.find(({ canonicalPath }) => canonicalPath === leafPath)?.selectedByDefault, true);
+  assert.ok(properties.every(({ selectedByDefault }) => selectedByDefault),
+    "every effective container and leaf must default selected");
 
   const selected = [leafPath, rootPath];
   const rows = deriveSpecificationRows(schema, selected);
