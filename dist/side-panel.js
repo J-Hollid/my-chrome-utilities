@@ -1,7 +1,8 @@
-import { listCommands, runCommandById, } from "./commands.js";
+import { listCommands, runCommandById, } from "./utilities/command-palette/index.js";
 import { createPaletteController } from "./command-palette-ui.js";
-import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
-import { createHotkeyEditor } from "./hotkey-editor.js";
+import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
+import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
+import { extensionShell } from "./utility-registry.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./data-layer-allowed-values-rule.js";
 import { tabPageObservation, } from "./active-page-observation.js";
@@ -96,6 +97,8 @@ import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-emp
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
+if (panelRoot)
+    panelRoot.dataset.registeredUtilities = extensionShell.utilityIds.join(",");
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
 const startTestingButton = document.querySelector("#start-data-layer-testing");

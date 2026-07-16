@@ -1,0 +1,5 @@
+import { defineUtility } from "../../platform/utility-contract.js";
+export { createHotkeyEditor } from "../../hotkey-editor.js";
+export * from "../../hotkey-keymap.js";
+export const hotkeysUtility = defineUtility({ id: "hotkeys", identity: { name: "Hotkeys", description: "Key bindings and hotkey editing" }, commands: ["navigation.show-hotkeys"], panels: ["hotkeys"], lifecycle: { activate() { }, deactivate() { } }, storage: { namespace: "my-chrome-utilities.hotkeys", version: 1 } });
+//# sourceMappingURL=index.js.map
