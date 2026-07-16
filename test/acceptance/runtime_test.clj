@@ -52,3 +52,17 @@
                                 {:keyword "Then"
                                  :text "an unsupported step appears"}
                                 [])))))
+
+(deftest exposes-feature-identity-to-step-handlers
+  (let [seen (atom nil)
+        feature {:name "Feature identity"
+                 :background []
+                 :scenarios [{:name "Scenario"
+                              :steps [{:keyword "Then" :text "identity is visible"}]
+                              :examples []}]}
+        handlers [{:pattern #"^identity is visible$"
+                   :handler (fn [world _ _]
+                              (reset! seen (:acceptance/feature-name world))
+                              world)}]]
+    (runtime/run-feature! feature handlers)
+    (is (= "Feature identity" @seen))))

@@ -169,7 +169,8 @@ export function renderSchemaSpecificationBuilder(
       const later = document.createElement("button"); later.type = "button"; later.textContent = "Move right"; later.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} right`); later.disabled = index === columns.length - 1;
       earlier.addEventListener("click", () => { [columns[index - 1], columns[index]] = [columns[index]!, columns[index - 1]!]; renderPreview(); });
       later.addEventListener("click", () => { [columns[index], columns[index + 1]] = [columns[index + 1]!, columns[index]!]; renderPreview(); });
-      cell.addEventListener("dragstart", (event) => event.dataTransfer?.setData("text/plain", column));
+      cell.addEventListener("dragstart", (event) => { cell.classList.add("is-dragging"); event.dataTransfer?.setData("text/plain", column); });
+      cell.addEventListener("dragend", () => cell.classList.remove("is-dragging"));
       cell.addEventListener("dragover", (event) => event.preventDefault());
       cell.addEventListener("drop", (event) => { event.preventDefault(); const moved = event.dataTransfer?.getData("text/plain") as SpecificationColumn; const from = columns.indexOf(moved); const to = columns.indexOf(column); if (from < 0 || to < 0) return; columns.splice(from, 1); columns.splice(to, 0, moved); renderPreview(); });
       cell.append(earlier, later);
@@ -183,11 +184,12 @@ export function renderSchemaSpecificationBuilder(
         cell.dataset.specificationColumn = column;
         if (column === "allowedValues") appendAllowedValueGroups(cell, row.allowedValueGroups);
         else if (column === "example") {
-          cell.textContent = row.example ?? "";
-          cell.tabIndex = 0;
-          cell.setAttribute("role", "button");
           cell.dataset.specificationExamplePath = row.canonicalPath;
-          cell.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
+          const trigger = document.createElement("button");
+          trigger.type = "button";
+          trigger.className = "schema-specification-example-trigger";
+          trigger.textContent = row.example ?? "";
+          trigger.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
           const openEditor = () => {
             if (cell.querySelector(".schema-specification-example-editor")) return;
             body.querySelectorAll(".schema-specification-example-editor").forEach((editor) => editor.remove());
@@ -207,11 +209,13 @@ export function renderSchemaSpecificationBuilder(
               radio.addEventListener("change", () => { if (!radio.checked) return; exampleSelections.set(row.canonicalPath, typeSpecificationExampleSelection(baseRow, choice.id)); renderPreview(); });
             }
             const apply = document.createElement("button"); apply.type = "button"; apply.textContent = "Apply custom value"; apply.addEventListener("click", () => { exampleSelections.set(row.canonicalPath, typeSpecificationExampleSelection(baseRow, "custom", customInput?.value ?? "")); renderPreview(); });
-            const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; const cancelEditor = () => { editor.remove(); cell.focus({ preventScroll:true }); }; cancel.addEventListener("click", cancelEditor); editor.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.preventDefault(); cancelEditor(); } }); editor.append(apply, cancel); cell.append(editor);
+            const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel"; const cancelEditor = () => { editor.remove(); trigger.focus({ preventScroll:true }); }; cancel.addEventListener("click", cancelEditor); editor.addEventListener("keydown", (event) => { if (event.key === "Escape") { event.preventDefault(); cancelEditor(); } }); editor.append(apply, cancel); cell.append(editor);
             (editor.querySelector<HTMLInputElement>(`input[name="${CSS.escape(name)}"]:checked`) ?? editor.querySelector<HTMLInputElement>("input:not(:disabled)"))?.focus({ preventScroll:true });
           };
+          trigger.addEventListener("click", openEditor);
+          trigger.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openEditor(); } });
           cell.addEventListener("click", (event) => { if (event.target === cell) openEditor(); });
-          cell.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openEditor(); } });
+          cell.append(trigger);
         }
         else cell.textContent = value(row, column);
         return cell;

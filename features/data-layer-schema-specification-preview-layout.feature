@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8b7ccf473c2f9c6de0a107f563d940c1ef7d9714f6afdf5d1e0edeb784d4993a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T14:19:16.191289816Z","feature_name":"Data layer schema specification preview layout","feature_path":"features/data-layer-schema-specification-preview-layout.feature","background_hash":"3948e295acf4b8a6d1667eaa6f5cbd3e79a550777519a922bf10d6e2a7b10a21","implementation_hash":"2bf31ebbb091b81d5f8232353fd0b39bdddf062c","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification preview layout
 
   Background:
