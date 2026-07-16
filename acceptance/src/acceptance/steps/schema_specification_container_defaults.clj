@@ -26,20 +26,28 @@
     :runtime-error "Specification container defaults browser runtime failed."
     :missing-error "Specification container defaults browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [initial afterContainer afterDescendant retained reset cleared selected unchanged runtimeErrors] :as observed}]
+(defn- assert-runtime! [{:keys [initial inheritedContainer excluded afterContainer afterDescendant retained workingDraft reset cleared selected unchanged runtimeErrors] :as observed}]
   (support/assert!
    (and (:all initial)
         (:unique initial)
         (not-any? #(.endsWith ^String % "/*") (:available initial))
         (= (:paths initial) (:available initial))
-        (every? (set (:available initial)) ["/products" "/products/*/duration" "/site_id"])
+        (every? (set (:available initial)) ["/products" "/products/*/duration" "/site_id" "/context"])
+        (:checked inheritedContainer)
+        (:descendant inheritedContainer)
+        (re-find #"inherited.*container" (:label inheritedContainer))
+        (= {:initial true :workingDraft true :historical true} excluded)
         (false? (:container afterContainer))
         (:descendant afterContainer)
         (not (some #{"/products"} (:paths afterContainer)))
         (some #{"/products/*/duration"} (:paths afterContainer))
         (= {:container false :descendant false} afterDescendant)
         (= {:products false :duration false} retained)
+        (:all workingDraft)
+        (every? (set (:available workingDraft)) ["/draft_only" "/context"])
+        (= (set (:paths workingDraft)) (set (:available workingDraft)))
         (:all reset)
+        (some #{"/context"} (:available reset))
         (= (set (:paths reset)) (set (:available reset)))
         (= {:checked 0 :rows 0} cleared)
         (:all selected)
