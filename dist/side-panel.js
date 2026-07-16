@@ -66,7 +66,8 @@ import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
-import { applySchemaPropertyTypeEdit, inspectSchemaPropertyTypeEdit, schemaPropertyTypeLabel } from "./data-layer-schema-property-type-editing.js";
+import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
+import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./data-layer-schema-property-type-editing.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { filterAndSortSchemaPropertyRows } from "./data-layer-schema-property-view.js";
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
@@ -1935,84 +1936,35 @@ function renderSchemaDraft() {
         metadata.className = "schema-property-metadata";
         metadata.textContent = `${propertyRow.filterContext ? "Filter context · " : ""}${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
         const persistedPath = propertyRow.canonicalPath;
-        const typeAction = document.createElement("button");
-        typeAction.type = "button";
-        typeAction.className = "schema-property-edit-type";
-        const owningSchema = inherited && draft.parentSchemaId ? schemas.find(({ id }) => id === draft.parentSchemaId) : undefined;
-        typeAction.textContent = inherited ? `Type owned by ${owningSchema?.name ?? "parent schema"}` : `Edit type · ${schemaPropertyTypeLabel(property)}`;
-        typeAction.setAttribute("aria-label", inherited ? `${path} type is owned by ${owningSchema?.name ?? "parent schema"}` : `Edit type for ${persistedPath}`);
-        const typeEditor = document.createElement("fieldset");
-        typeEditor.className = "schema-property-type-editor";
-        typeEditor.hidden = true;
-        const typeLegend = document.createElement("legend");
-        typeLegend.textContent = `Type for ${persistedPath}`;
-        const valueTypeLabel = document.createElement("label");
-        valueTypeLabel.textContent = "Value type ";
-        const valueType = document.createElement("select");
-        valueType.setAttribute("aria-label", `Value type for ${persistedPath}`);
-        ["string", "number", "boolean", "object", "array"].forEach((value) => valueType.append(Object.assign(document.createElement("option"), { value, textContent: value.charAt(0).toUpperCase() + value.slice(1) })));
-        valueType.value = property.type ?? "string";
-        valueTypeLabel.append(valueType);
-        const itemTypeLabel = document.createElement("label");
-        itemTypeLabel.textContent = "Item type ";
-        const itemType = document.createElement("select");
-        itemType.setAttribute("aria-label", `Item type for ${persistedPath}`);
-        [["", "Any item type"], ["string", "String"], ["number", "Number"], ["boolean", "Boolean"], ["object", "Object"]].forEach(([value, textContent]) => itemType.append(Object.assign(document.createElement("option"), { value, textContent })));
-        itemType.value = property.items?.type ?? "";
-        itemTypeLabel.append(itemType);
-        itemTypeLabel.hidden = valueType.value !== "array";
-        const treatmentLabel = document.createElement("label");
-        treatmentLabel.textContent = "Type mismatch treatment ";
-        const treatment = document.createElement("select");
-        treatment.setAttribute("aria-label", `Type mismatch treatment for ${persistedPath}`);
-        ["error", "warning", "ignore"].forEach((value) => treatment.append(Object.assign(document.createElement("option"), { value, textContent: value.charAt(0).toUpperCase() + value.slice(1) })));
-        treatment.value = property.typeMismatchTreatment ?? "error";
-        treatmentLabel.append(treatment);
-        const reviewType = document.createElement("button");
-        reviewType.type = "button";
-        reviewType.textContent = "Review type change";
-        const typeReview = document.createElement("output");
-        typeReview.className = "schema-property-type-review";
-        const impactResolutions = document.createElement("div");
-        impactResolutions.className = "schema-property-type-impact-resolutions";
-        impactResolutions.setAttribute("aria-label", `Impact resolutions for ${persistedPath}`);
-        const confirmType = document.createElement("button");
-        confirmType.type = "button";
-        confirmType.textContent = "Confirm type change";
-        confirmType.disabled = true;
-        const cancelType = document.createElement("button");
-        cancelType.type = "button";
-        cancelType.textContent = "Cancel";
-        let currentImpact;
-        const selectedResolutions = () => Object.fromEntries(Array.from(impactResolutions.querySelectorAll("select[data-impact]"), select => { const replacement = impactResolutions.querySelector(`input[data-impact-replacement="${CSS.escape(select.dataset.impact)}"]`); return [select.dataset.impact, { action: select.value, ...(select.value === "replace" && replacement ? { value: replacement.value } : {}) }]; }));
-        const refreshResolutionState = () => { if (!currentImpact)
-            return; confirmType.disabled = currentImpact.incompatible.some((impact) => { const select = impactResolutions.querySelector(`select[data-impact="${CSS.escape(impact)}"]`), replacement = impactResolutions.querySelector(`input[data-impact-replacement="${CSS.escape(impact)}"]`); return !select?.value || (select.value === "replace" && !replacement?.value.trim()); }); };
-        const refreshTypeReview = () => { if (!schemaDraft)
-            return; const chosen = valueType.value; currentImpact = inspectSchemaPropertyTypeEdit(schemaDraft, persistedPath, chosen, itemType.value ? itemType.value : undefined); typeReview.textContent = `${currentImpact.from} changing to ${currentImpact.to}. Retained: ${currentImpact.compatible.join(", ") || "none"}. Incompatible: ${currentImpact.incompatible.join(", ") || "none"}.`; impactResolutions.replaceChildren(...currentImpact.incompatible.map((impact) => { const row = document.createElement("label"); row.textContent = `${impact} `; const select = document.createElement("select"); select.dataset.impact = impact; select.setAttribute("aria-label", `Resolution for ${impact} at ${persistedPath}`); select.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose resolution" }), Object.assign(document.createElement("option"), { value: "remove", textContent: "Remove artifact" })); const replaceable = impact === "example value" || impact.startsWith("conditional dependency "); if (replaceable)
-            select.append(Object.assign(document.createElement("option"), { value: "replace", textContent: "Replace artifact" })); const replacement = document.createElement("input"); replacement.dataset.impactReplacement = impact; replacement.setAttribute("aria-label", `Replacement for ${impact} at ${persistedPath}`); replacement.placeholder = "Replacement value"; replacement.hidden = true; select.addEventListener("change", () => { replacement.hidden = select.value !== "replace"; refreshResolutionState(); }); replacement.addEventListener("input", refreshResolutionState); row.append(select, replacement); return row; })); refreshResolutionState(); };
-        valueType.addEventListener("change", () => { itemTypeLabel.hidden = valueType.value !== "array"; confirmType.disabled = true; typeReview.textContent = ""; impactResolutions.replaceChildren(); });
-        itemType.addEventListener("change", () => { confirmType.disabled = true; typeReview.textContent = ""; impactResolutions.replaceChildren(); });
-        treatment.addEventListener("change", () => { confirmType.disabled = true; });
-        reviewType.addEventListener("click", refreshTypeReview);
-        confirmType.addEventListener("click", () => { if (!schemaDraft)
-            return; const previousDraft = structuredClone(schemaDraft); try {
-            schemaDraft = applySchemaPropertyTypeEdit(previousDraft, { path: persistedPath, type: valueType.value, ...(valueType.value === "array" && itemType.value ? { itemType: itemType.value } : {}), treatment: treatment.value, removeIncompatible: false, resolutions: selectedResolutions() });
-            persistSchemaEditorDraft(`Change ${persistedPath} type from ${schemaPropertyTypeLabel(property)} to ${valueType.value}`);
-            renderSchemaDraft();
-        }
-        catch (error) {
-            schemaDraft = previousDraft;
-            typeReview.textContent = error instanceof Error ? error.message : "Type change failed";
-        } });
-        cancelType.addEventListener("click", () => { typeEditor.hidden = true; typeAction.setAttribute("aria-expanded", "false"); typeAction.focus({ preventScroll: true }); });
-        typeAction.addEventListener("click", () => { if (inherited) {
-            if (owningSchema) {
-                schemaDraft = schemaEditorDraft(owningSchema);
-                renderSchemaDraft();
-            }
-            return;
-        } typeEditor.hidden = false; typeAction.setAttribute("aria-expanded", "true"); valueType.focus({ preventScroll: true }); });
-        typeEditor.append(typeLegend, valueTypeLabel, itemTypeLabel, treatmentLabel, reviewType, typeReview, impactResolutions, confirmType, cancelType);
+        const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
+        const typeControls = renderSchemaPropertyTypeEditor({
+            schema: draft,
+            path: persistedPath,
+            property,
+            ...(inherited ? { inheritedOwner: {
+                    name: owningSchema?.name ?? "parent schema",
+                    open: () => { if (owningSchema) {
+                        schemaDraft = schemaEditorDraft(owningSchema);
+                        renderSchemaDraft();
+                    } },
+                } } : {}),
+            confirm: (edit) => {
+                if (!schemaDraft)
+                    return;
+                const previousDraft = structuredClone(schemaDraft);
+                try {
+                    schemaDraft = applySchemaPropertyTypeEdit(previousDraft, edit);
+                    persistSchemaEditorDraft(`Change ${persistedPath} type from ${schemaPropertyTypeLabel(property)} to ${edit.type}`);
+                    renderSchemaDraft();
+                }
+                catch (error) {
+                    schemaDraft = previousDraft;
+                    throw error;
+                }
+            },
+        });
+        const typeAction = typeControls.action;
+        const typeEditor = typeControls.editor;
         const documentationPath = canonicalDocumentationPath(persistedPath);
         const localDocumentation = draft.documentation?.properties?.[documentationPath];
         const propertyDocumentation = effectiveDocumentation.properties[documentationPath];

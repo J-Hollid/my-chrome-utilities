@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=b1418a9d21f940ace442f3c22e8f4daf794e2b79ece31106d70a1ecc9a27172d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T16:03:20.989056776Z","feature_name":"Data layer schema property type editing runtime","feature_path":"features/data-layer-schema-property-type-editing-runtime.feature","background_hash":"839d1b37a623d0733967556d5ab64cf614f8121a1dfefea779e93a8bbb051fa2","implementation_hash":"98ffc0ff265060c88d1ad13c762472a8e01a318a","scenarios":[{"index":1,"name":"Data layer schema property type editing runtime 002","scenario_hash":"00494d6d9d0638bd2bcb514ec5cd03ae85727e2bf346b0d075ec2bc8b2058251","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:03:20.989056776Z"},{"index":2,"name":"Data layer schema property type editing runtime 003","scenario_hash":"f6341e979c289edbd07c19c21b4095fb5fd52656658548e66e5e4bf134e4060a","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:03:20.989056776Z"},{"index":6,"name":"Data layer schema property type editing runtime 007","scenario_hash":"553ac45deea18cecd280ad1551a2972784e03b9c7ebd3b2df40d0cd4a7b9b30f","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-16T16:03:20.989056776Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property type editing runtime
 
   Background:

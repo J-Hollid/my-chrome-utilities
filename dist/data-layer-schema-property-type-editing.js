@@ -1,5 +1,8 @@
+function decodeSegment(segment) {
+    return segment.replaceAll("~1", "/").replaceAll("~0", "~");
+}
 function segments(path) {
-    return path.split("/").filter(Boolean);
+    return path.split("/").filter(Boolean).map(decodeSegment);
 }
 function propertyAt(document, path) {
     return segments(path).reduce((current, segment) => segment === "*" ? current?.items : current?.properties?.[segment], document);
@@ -13,6 +16,20 @@ export function schemaPropertyTypeLabel(property) {
     if (property.type !== "array")
         return capital(property.type);
     return property.items?.type ? `Array of ${capital(property.items.type)}` : "Array";
+}
+export function schemaPropertyTypeOwner(schema, path, allSchemas) {
+    const visited = new Set();
+    let parentId = schema.parentSchemaId;
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = allSchemas.find(({ id }) => id === parentId);
+        if (!parent)
+            return undefined;
+        if (propertyAt(parent.document, path))
+            return parent;
+        parentId = parent.parentSchemaId;
+    }
+    return undefined;
 }
 function compatibleExample(value, type, itemType) {
     if (type === "array")
@@ -36,6 +53,21 @@ function ruleDependsOnPropertyType(rule, path) {
     return rule.conditionGroup?.predicates.some((predicate) => predicate.propertyPath === path
         && predicate.operator !== "Exists"
         && predicate.operator !== "Does not exist") ?? false;
+}
+function hasRequiredMembership(document, path) {
+    const parts = segments(path);
+    let current = document;
+    for (let index = 0; index < parts.length; index += 1) {
+        const segment = parts[index];
+        if (segment === "*")
+            current = current?.items;
+        else {
+            if (index === parts.length - 1)
+                return current?.required?.includes(segment) ?? false;
+            current = current?.properties?.[segment];
+        }
+    }
+    return false;
 }
 export function inspectSchemaPropertyTypeEdit(schema, path, type, itemType) {
     const property = propertyAt(schema.document, path);
@@ -64,11 +96,16 @@ export function inspectSchemaPropertyTypeEdit(schema, path, type, itemType) {
         from: schemaPropertyTypeLabel(property),
         to: type === "array" && itemType ? `Array of ${capital(itemType)}` : capital(type),
         compatible: [
-            ...(segments(path).length && schema.document.required?.includes(segments(path)[0]) ? ["required membership"] : []),
+            ...(hasRequiredMembership(schema.document, path) ? ["required membership"] : []),
             ...(documentation ? ["documentation"] : []),
+            "type mismatch treatment",
         ],
         incompatible,
     };
+}
+export function schemaPropertyTypeImpactCanReplace(impact, type) {
+    return impact === "example value"
+        || (impact.startsWith("conditional dependency ") && type !== "object" && type !== "array");
 }
 function replaceProperty(document, path, replacement) {
     const parts = segments(path);
@@ -115,7 +152,7 @@ export function applySchemaPropertyTypeEdit(schema, edit) {
         : edit.removeIncompatible ? Object.fromEntries(impact.incompatible.map((item) => [item, { action: "remove" }])) : {};
     if (impact.incompatible.some((item) => !resolutions[item]))
         throw new Error("Resolve every incompatible schema artifact before saving the type change");
-    const unsupportedReplacement = impact.incompatible.find((item) => resolutions[item]?.action === "replace" && item !== "example value" && !item.startsWith("conditional dependency "));
+    const unsupportedReplacement = impact.incompatible.find((item) => resolutions[item]?.action === "replace" && !schemaPropertyTypeImpactCanReplace(item, edit.type));
     if (unsupportedReplacement)
         throw new Error(`${unsupportedReplacement} must be removed before saving the type change`);
     const remove = (item) => resolutions[item]?.action === "remove";
