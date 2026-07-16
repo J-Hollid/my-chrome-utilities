@@ -295,7 +295,7 @@ async function openPanel(port, width, height = 900) {
   let loaded = false;
   for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await socket.call("Runtime.evaluate", {
-      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null && document.querySelector('#save-and-close-schema') !== null",
+      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true' && document.querySelector('#save-and-close-schema') !== null",
       returnByValue: true,
     });
     if (ready.result.value === true) {
@@ -324,7 +324,7 @@ async function reloadPanel(socket) {
     for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
       const ready = await evaluate(socket, `(() => {
         if (document.readyState !== "complete" || !document.querySelector("#side-panel-root") || document.documentElement.dataset.componentReloadToken === ${JSON.stringify(reloadToken)}) return false;
-        return document.querySelector("#schema-count")?.textContent !== "";
+        return document.querySelector("#side-panel-root")?.dataset.utilityShellReady === "true" && document.querySelector("#schema-count")?.textContent !== "";
       })()`);
       if (ready) return;
       await wait(50);
@@ -4735,6 +4735,7 @@ const workspacePanelContainmentRuntime = `(() => {
   const dataLayerPanel = document.querySelector("#workspace-panel-data-layer");
   const hotkeysPanel = document.querySelector("#workspace-panel-hotkeys");
   const hotkeysTab = document.querySelector("#workspace-tab-hotkeys");
+  const utilityItems = [...document.querySelectorAll("#utility-directory > li")];
   const peers = dataLayerPanel.parentElement === hotkeysPanel.parentElement;
   const nested = dataLayerPanel.contains(hotkeysPanel) || hotkeysPanel.contains(dataLayerPanel);
   hotkeysTab.click();
@@ -4744,6 +4745,11 @@ const workspacePanelContainmentRuntime = `(() => {
   const observation = {
     peers,
     nested,
+    utilityDirectory:{
+      ids:utilityItems.map(({dataset})=>dataset.utilityId),
+      labels:utilityItems.map(({textContent})=>textContent),
+      visible:utilityItems.every((item)=>item.checkVisibility()),
+    },
     afterActivation:{
       dataLayerHidden:dataLayerPanel.hidden,
       hotkeysHidden:hotkeysPanel.hidden,
@@ -5586,6 +5592,11 @@ try {
       assert.deepEqual(workspacePanelContainmentObservation, {
         peers:true,
         nested:false,
+        utilityDirectory:{
+          ids:["command-palette","hotkeys","data-layer"],
+          labels:["Command palette","Hotkeys","Data layer"],
+          visible:true,
+        },
         afterActivation:{
           dataLayerHidden:true,
           hotkeysHidden:false,

@@ -58,6 +58,10 @@
   .live-validation-property-row > :is(.live-property-status,.live-property-add-validation) { width:100%; min-width:0; white-space:normal; }
 }
 
+#application-header { flex-wrap:wrap; }
+#utility-directory { display:flex; flex:1 1 12rem; justify-content:center; gap:.25rem; margin:0; padding:0; list-style:none; }
+#utility-directory li { padding:.2rem .4rem; border:1px solid var(--line); border-radius:999px; color:var(--muted); font-size:.75rem; white-space:nowrap; }
+
 /* Keep the on-screen specification readable at side-panel widths. Copied
    table styles remain independently controlled by the export options. */
 #schema-specification-builder {
