@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=40c7d0334f7aa225fb2708482bda20a198675ba42f6821ecd83d9f42336837f9
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T19:24:10.268688287Z","feature_name":"Data layer schema export selection","feature_path":"features/data-layer-schema-export-selection.feature","background_hash":"7c800ab877ff6ca501dc16519f768932a2b66d501c677a3168e7144094421caf","implementation_hash":"f4bbc4d649ac0819f4c8d3e6c33c34514002fadbc4a90cc5b71280cc2966f0d5","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema export selection
 
   Background:
