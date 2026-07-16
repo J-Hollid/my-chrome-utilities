@@ -17,7 +17,7 @@ import {
 import { createHotkeyEditor } from "./hotkey-editor.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRule as normalizeBaseAllowedValuesRule } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./data-layer-allowed-values-rule.js";
 import {
   tabPageObservation,
 } from "./active-page-observation.js";
@@ -833,19 +833,8 @@ interface SchemaValidationRecord { eventId: string; eventName: string; state: st
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
-function normalizeReusableAllowedValuesRule<T extends { propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; migrationIssue?: string }>(rule: T, type?: SchemaPropertyType): T {
-  const allowedOperator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase() === "allowed-values";
-  const separator = rule.parameters?.indexOf(":") ?? -1;
-  const candidate = allowedOperator && !rule.propertyPath && separator > 0
-    ? { ...rule, propertyPath:canonicalRulePropertyPath(rule.parameters!.slice(0, separator)), parameters:rule.parameters!.slice(separator + 1) }
-    : rule;
-  return normalizeBaseAllowedValuesRule(candidate, type) as T;
-}
 function normalizeReusableSchemaRule(rule: ReusableSchemaRule): ReusableSchemaRule {
-  const normalized = normalizeReusableAllowedValuesRule(rule, rule.applicableType);
-  return normalized.revisionHistory
-    ? { ...normalized, revisionHistory:normalized.revisionHistory.map((snapshot) => normalizeReusableAllowedValuesRule(snapshot, rule.applicableType)) }
-    : normalized;
+  return normalizeAllowedValuesRuleLibraryEntry(rule) as ReusableSchemaRule;
 }
 const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
 let reusableSchemaRules: ReusableSchemaRule[] = (() => { try { const saved = JSON.parse(storedReusableSchemaRules ?? "[]"); return Array.isArray(saved) ? saved.map(normalizeReusableSchemaRule) : []; } catch { return []; } })();
