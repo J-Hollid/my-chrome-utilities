@@ -84,6 +84,7 @@
 (def handlers
   (vec (concat schema-specification-preview-layout/handlers
                schema-specification-builder-customization/handlers
+               schema-specification-example-selection/handlers
                schema-specification-container-defaults/handlers
                schema-property-example-values/handlers
                schema-property-comments/handlers

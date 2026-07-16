@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 
 import {
+  defaultSpecificationColumns,
   deriveSpecificationRows,
   renderSpecificationClipboard,
+  specificationColumnLabels,
   specificationProperties,
 } from "../dist/data-layer-schema-specification-builder.js";
 
@@ -81,6 +83,25 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(plainLines.length, rows.length + 1);
   assert.ok(plainLines.every((line) => line.split("\t").length === 7),
     "plain clipboard rows must conserve seven spreadsheet columns");
+
+  const offset = sample % defaultSpecificationColumns.length;
+  const columns = [...defaultSpecificationColumns.slice(offset), ...defaultSpecificationColumns.slice(0, offset)];
+  const includeHeadings = sample % 2 === 0;
+  const style = ["plain", "bordered", "highlighted"][sample % 3];
+  const customized = renderSpecificationClipboard(rows, { columns, includeHeadings, style });
+  const customizedLines = customized.plain.split("\n");
+  assert.ok(customizedLines.every((line) => line.split("\t").length === columns.length),
+    "custom clipboard rows must conserve the selected column count");
+  assert.equal((customized.html.match(/<td/g) ?? []).length, rows.length * columns.length);
+  assert.equal((customized.html.match(/<th(?:\s|>)/g) ?? []).length, includeHeadings ? columns.length : 0);
+  if (includeHeadings) {
+    assert.equal(customizedLines[0], columns.map((column) => specificationColumnLabels[column]).join("\t"),
+      "custom clipboard headings must preserve the requested column order");
+  }
+  if (style === "plain") assert.doesNotMatch(customized.html, /border:1px solid/);
+  else assert.match(customized.html, /border:1px solid/);
+  if (style === "highlighted" && includeHeadings) assert.match(customized.html, /background:#eee/);
+
   assert.deepEqual(schema, snapshot,
     "property discovery, row derivation, and clipboard rendering must not mutate schemas");
 }
