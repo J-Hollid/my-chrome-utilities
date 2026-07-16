@@ -1,6 +1,18 @@
 import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
 import { schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
 import { schemaRevision } from "./data-layer-schema-verification.js";
+export const defaultSpecificationColumns = [
+    "propertyName", "description", "mandatory", "type", "example", "allowedValues", "comments",
+];
+export const specificationColumnLabels = {
+    propertyName: "Property name",
+    description: "Description",
+    mandatory: "Mandatory",
+    type: "Type",
+    example: "Example value",
+    allowedValues: "Allowed values",
+    comments: "Comments",
+};
 function withoutWorkingState(schema) {
     const { workingDraft: _draft, revisionHistory: _history, ...surface } = structuredClone(schema);
     return surface;
@@ -237,6 +249,7 @@ export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [sch
             canonicalPath,
             propertyName: propertyName(canonicalPath),
             description: documented?.description ?? "",
+            comments: documented?.comments ?? "",
             mandatory: requiredFor(canonicalPath, document, rules),
             type: typeLabel(property),
             ...(example !== undefined ? { example: String(example) } : {}),
@@ -256,12 +269,27 @@ function escapeHtml(value) {
 function plainCell(value) {
     return String(value ?? "").replace(/[\t\r\n]+/gu, " ");
 }
-export function renderSpecificationClipboard(rows) {
-    const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values"];
-    const ordinaryCells = (row) => [row.propertyName, row.description, row.mandatory, row.type, row.example ?? ""];
-    const htmlRows = rows.map((row) => `<tr>${ordinaryCells(row).map((value) => `<td>${escapeHtml(value)}</td>`).join("")}<td>${row.allowedValueGroups.map(escapeHtml).join("<br>")}</td></tr>`).join("");
-    const html = `<table><thead><tr>${labels.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${htmlRows}</tbody></table>`;
-    const plain = [labels, ...rows.map((row) => [...ordinaryCells(row), row.allowedValueGroups.join("; ")])]
+export function renderSpecificationClipboard(rows, options = {}) {
+    const richTableStyle = "table{border-collapse:collapse}th,td{border:1px solid #8a8a8a;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f2f2f2;font-weight:700}";
+    const columns = options.columns ?? defaultSpecificationColumns;
+    const includeHeadings = options.includeHeadings !== false;
+    const value = (row, column) => column === "propertyName" ? row.propertyName
+        : column === "description" ? row.description
+            : column === "mandatory" ? row.mandatory
+                : column === "type" ? row.type
+                    : column === "example" ? row.example ?? ""
+                        : column === "allowedValues" ? row.allowedValueGroups.join("; ")
+                            : row.comments;
+    const htmlCell = (row, column) => column === "allowedValues"
+        ? row.allowedValueGroups.map(escapeHtml).join("<br>")
+        : column === "comments"
+            ? escapeHtml(row.comments).replaceAll("\n", "<br>")
+            : escapeHtml(value(row, column));
+    const htmlRows = rows.map((row) => `<tr>${columns.map((column) => `<td>${htmlCell(row, column)}</td>`).join("")}</tr>`).join("");
+    const heading = includeHeadings ? `<thead><tr>${columns.map((column) => `<th>${escapeHtml(specificationColumnLabels[column])}</th>`).join("")}</tr></thead>` : "";
+    const html = `<table><style>${richTableStyle}</style>${heading}<tbody>${htmlRows}</tbody></table>`;
+    const plainRows = rows.map((row) => columns.map((column) => value(row, column)));
+    const plain = [...(includeHeadings ? [columns.map((column) => specificationColumnLabels[column])] : []), ...plainRows]
         .map((line) => line.map(plainCell).join("\t"))
         .join("\n");
     return { html, plain };

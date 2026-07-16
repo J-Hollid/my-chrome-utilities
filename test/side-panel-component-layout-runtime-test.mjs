@@ -61,6 +61,7 @@ let guidedNestedPropertyMergeObservation;
 let libraryDirectTemplatePushObservation;
 let liveSchemaPropertyDeclarationObservation;
 let schemaSpecificationBuilderObservation;
+let schemaPropertyCommentsObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -69,6 +70,7 @@ const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROW
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1" ? [720]
@@ -3419,7 +3421,7 @@ const schemaSpecificationBuilderRuntime = `(async()=>{
   q("#schema-revision-history").open=true;const revision=q("#schema-revision-selector");revision.value="2";revision.dispatchEvent(new Event("change",{bubbles:true}));q("#build-historical-specification").click();await pause();const historical={visible:visible(),source:source(),paths:previewPaths()};close();await pause();historical.focus=document.activeElement===q("#build-historical-specification");
   q("#build-specification").click();await pause();const sourceSelect=q("#schema-specification-source");sourceSelect.value="published:4";sourceSelect.dispatchEvent(new Event("change",{bubbles:true}));await pause();
   const list=q("#schema-specification-property-list"),table=q("#schema-specification-preview"),selector=q("#schema-specification-selector");const checkbox=(path)=>q('input[data-path="'+path+'"]',list);const setChecked=(path,checked)=>{const control=checkbox(path);if(control.checked!==checked)control.click();};const clear=()=>click(selector,"Clear selection");const row=(path)=>{const tr=q('tbody tr[data-property-path="'+path+'"]',table);return Array.from(tr.children,({textContent})=>textContent);};const only=(path)=>{clear();setChecked(path,true);return row(path);};
-  const headings=Array.from(table.querySelectorAll("th"),({textContent})=>textContent);const defaults={leaves:["/page_type","/products/*/product_name","/site_id"].map((path)=>checkbox(path).checked),containers:["/commerce","/products"].map((path)=>checkbox(path).checked)};const hierarchy={durationParent:checkbox("/products/*/duration").closest("li").parentElement.closest("li")?.dataset.propertyPath,site:checkbox("/site_id").closest("label").textContent,legacyAbsent:!list.querySelector('[data-path="/legacy_flag"]')};
+  const headings=Array.from(table.querySelectorAll("th > span"),({textContent})=>textContent);const defaults={leaves:["/page_type","/products/*/product_name","/site_id"].map((path)=>checkbox(path).checked),containers:["/commerce","/products"].map((path)=>checkbox(path).checked)};const hierarchy={durationParent:checkbox("/products/*/duration").closest("li").parentElement.closest("li")?.dataset.propertyPath,site:checkbox("/site_id").closest("label").textContent,legacyAbsent:!list.querySelector('[data-path="/legacy_flag"]')};
   const search=q('[aria-label="Search properties"]');search.value="duration";search.dispatchEvent(new Event("input",{bubbles:true}));const filtered=Array.from(list.querySelectorAll("input[data-path]"),({dataset})=>dataset.path);search.value="";search.dispatchEvent(new Event("input",{bubbles:true}));
   clear();setChecked("/products",true);const containerOnly=previewPaths();setChecked("/products/*/duration",true);const withDescendant=previewPaths();setChecked("/products",false);const descendantOnly=previewPaths();
   click(selector,"Select all");const schemaOrder=previewPaths();const sort=q('[aria-label="Preview order"]');sort.value="name";sort.dispatchEvent(new Event("change",{bubbles:true}));const nameOrder=previewPaths();
@@ -3427,6 +3429,163 @@ const schemaSpecificationBuilderRuntime = `(async()=>{
   clear();setChecked("/page_type",true);setChecked("/tracking_context",true);const completeness=q("#schema-specification-completeness").textContent;
   clear();for(const path of ["/commerce/currency","/products/*/product_name","/site_id","/payment_method","/unsafe_text"])setChecked(path,true);sort.value="schema";sort.dispatchEvent(new Event("change",{bubbles:true}));const selectionBefore=previewPaths();click(builder(),"Copy specification table");await pause();const rich=copied.find(({kind})=>kind==="rich").item;const clipboard={types:rich.types,html:await rich.data["text/html"].text(),plain:await rich.data["text/plain"].text(),feedback:q("#schema-specification-copy-feedback").textContent};failRich=true;click(builder(),"Copy specification table");await pause();const fallback={plain:copied.at(-1).plain,feedback:q("#schema-specification-copy-feedback").textContent};
   return{entryPoints:{library,editor,historical},source:source(),headings,defaults,hierarchy,filtered,selection:{containerOnly,withDescendant,descendantOnly,schemaOrder,nameOrder},cases,completeness,clipboard,fallback,selectionUnchanged:JSON.stringify(selectionBefore)===JSON.stringify(previewPaths()),unchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),editorButton:Boolean(editorButton),runtimeErrors:globalThis.__sidePanelRuntimeErrors??[]};
+})()`;
+
+const schemaPropertyCommentsRuntime=`(async()=>{const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};const copied=[];globalThis.ClipboardItem=class{constructor(data){this.data=data;this.types=Object.keys(data);}};Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>copied.push(items[0]),writeText:async(plain)=>copied.push({plain})}});const original=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({name})=>name==="Generic pageview"),publishedBefore=JSON.stringify(original.documentation);q("#data-layer-view-schemas").click();const row=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Generic pageview"));Array.from(row.querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();let property=q('[data-schema-property-canonical-path="/products/*/product_name"]');property.querySelector(".schema-property-documentation-control").click();const comments=q('[id^="schema-documentation-comments-"]',property);comments.value="  Sent by checkout"+String.fromCharCode(10)+"Do not derive from position  ";property.querySelector('input[value="Save documentation"]').click();await pause();const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({name})=>name==="Generic pageview"),saved=stored.workingDraft.documentation.properties["/products/*/product_name"].comments,publishedUnchanged=JSON.stringify(stored.documentation)===publishedBefore;property=q('[data-schema-property-canonical-path="/products/*/product_name"]');property.querySelector(".schema-property-documentation-control").click();const reopened=q('[id^="schema-documentation-comments-"]',property).value;q("#build-specification").click();const builder=q("#schema-specification-builder"),headings=Array.from(builder.querySelectorAll("th > span"),({textContent})=>textContent),specRow=q('tr[data-property-path="/products/*/product_name"]',builder),cells=Array.from(specRow.children,({textContent})=>textContent);Array.from(builder.querySelectorAll("button")).find(({textContent})=>textContent==="Copy specification table").click();await pause();const item=copied[0],html=await item.data["text/html"].text(),plain=await item.data["text/plain"].text();return{saved,reopened,publishedUnchanged,headings,cells,clipboard:{html,plain},runtimeErrors:globalThis.__sidePanelRuntimeErrors??[]};})()`;
+
+const schemaPropertyCommentsLiveRuntime = `(async () => {
+  const verification = await import("/data-layer-schema-verification.js");
+  const observerUi = await import("/data-layer-live-observer-ui.js");
+  const inspectorActions = await import("/data-layer-live-inspector-actions.js");
+  const comment = "<img src=x onerror=globalThis.commentExecuted=true>\\nSent by checkout";
+  const schema = {
+    id:"schema:comments-live", name:"Comments live", version:3,
+    document:{ type:"object", properties:{ products:{ type:"array", items:{ type:"object", properties:{ product_name:{ type:"string" } } } } } },
+    assignments:[], documentation:{ properties:{ "/products/*/product_name":{ displayName:"Product name", description:"Displayed product", comments:comment } } },
+  };
+  const payload = { products:[{ product_name:"one" }, { product_name:"two" }, { product_name:"three" }] };
+  const payloadBefore = JSON.stringify(payload);
+  const result = verification.validateWithSchema({ sourceId:"history", eventName:"product_detail", payload, rawInput:[] }, schema, [schema]);
+  const host = document.createElement("section");
+  host.innerHTML = '<section id="live-event-list"><ul id="live-event-feed"></ul></section><aside id="live-event-inspector"></aside><button id="back-to-events"></button><div id="live-source-statuses"></div>';
+  document.body.append(host);
+  const elements = observerUi.findLiveObserverElements(host);
+  const actions = inspectorActions.createLiveInspectorActions({ currentPageUrl:()=>"https://shop.example/products", writeClipboard:async()=>{}, storeTemplate:()=>{}, validationState:()=>result.state, updateValidation:()=>{}, manualSchemaChoices:()=>[], selectManualSchema:()=>{} });
+  observerUi.renderLiveInspector(elements, { id:"comments-event", name:"product_detail", sourceId:"history", captureTime:"2026-07-16T10:00:00Z", pageUrl:"https://shop.example/products", payload, rawInput:[], validation:result.state, validationDetails:{ issues:result.issues, evaluations:result.evaluations??[], schema:result.schema, documentation:result.documentation } }, actions);
+  const row = host.querySelector('[data-property-path="/products/2/product_name"]');
+  if (!row) throw new Error("Missing concrete wildcard property row");
+  const collapsedText = row.querySelector(".live-validation-property-row").textContent;
+  const searchText = row.querySelector(".live-validation-property-row").dataset.documentationSearch ?? "";
+  row.querySelector(".live-property-documentation-control").click();
+  const details = row.querySelector(".live-property-documentation-details");
+  return {
+    comments:details.querySelector(".live-property-documentation-comments").textContent,
+    searchMatched:searchText.includes("sent by checkout"),
+    wildcardPath:row.dataset.propertyPath,
+    collapsedUnchanged:!collapsedText.includes("Sent by checkout"),
+    inert:!details.querySelector("img,script") && globalThis.commentExecuted !== true,
+    payloadUnchanged:payloadBefore===JSON.stringify(payload),
+    validation:result.state,
+  };
+})()`;
+
+const schemaPropertyCommentsLifecycleRuntime = `(async () => {
+  const documentation = await import("/data-layer-schema-documentation.js");
+  const verification = await import("/data-layer-schema-verification.js");
+  const propertyCopy = await import("/data-layer-schema-property-copy.js");
+  const propertyRemoval = await import("/data-layer-schema-property-removal.js");
+  const document = { type:"object", properties:{ currency:{type:"string"}, page_type:{type:"string"}, products:{type:"array",items:{type:"object",properties:{product_id:{type:"string"}}}} } };
+  const parent = { id:"schema:generic-commerce", name:"Generic commerce", version:2, document, assignments:[], documentation:{properties:{"/currency":{displayName:"Currency",description:"ISO currency",comments:"Shared currency convention"}}} };
+  const revision3 = { id:"schema:product-detail", name:"Product detail", version:3, document, assignments:[], parentSchemaId:parent.id, documentation:{properties:{
+    "/currency":{displayName:"Currency",description:"ISO currency",comments:"Checkout currency exception"},
+    "/page_type":{displayName:"Page type",description:"Routing input",comments:"Legacy routing input"},
+    "/products/*/product_id":{displayName:"Product identifier",description:"Stable identifier",comments:"Sent by checkout\\nDo not derive from position"},
+  }} };
+  const parentBefore = JSON.stringify(parent);
+  const local = documentation.resolveEffectiveSchemaDocumentation(revision3,[parent,revision3]);
+  const restoredDocumentation = documentation.setPropertyDocumentation(revision3.documentation,"/currency",{displayName:"",description:"",comments:""});
+  const restoredSchema = {...revision3,documentation:restoredDocumentation};
+  const restoredInherited = documentation.resolveEffectiveSchemaDocumentation(restoredSchema,[parent,restoredSchema]);
+  const withDraft = verification.updateSchemaWorkingDraft(verification.createSchemaWorkingDraft(restoredSchema),{documentation:{properties:{...restoredSchema.documentation.properties,"/page_type":{displayName:"Page type",description:"Routing input",comments:"Current routing input"}}}},"Update comments");
+  const workingSurface = {...revision3,document:withDraft.workingDraft.document,assignments:withDraft.workingDraft.assignments,documentation:withDraft.workingDraft.documentation};
+  const working = documentation.resolveEffectiveSchemaDocumentation(workingSurface,[parent,workingSurface]);
+  const revision4 = verification.publishSchemaWorkingDraft(withDraft);
+  const current = documentation.resolveEffectiveSchemaDocumentation(revision4,[parent,revision4]);
+  const historicalSchema = verification.schemaRevision(revision4,3);
+  const historical = documentation.resolveEffectiveSchemaDocumentation(historicalSchema,[parent,historicalSchema]);
+  const duplicate = verification.duplicateSchemaRevision(revision4,3,[parent,revision4]);
+  const duplicateEffective = documentation.resolveEffectiveSchemaDocumentation(duplicate,[parent,duplicate]);
+  const destination = {id:"schema:destination",name:"Destination",version:1,document:{type:"object"},assignments:[]};
+  const source = propertyCopy.schemaPropertyCopySource(revision4,{surface:"current"});
+  const plan = propertyCopy.planSchemaPropertyCopy({source,destination,selectedPath:"/products/*/product_id",schemas:[parent,revision4,destination],reusableRuleIds:[]});
+  const copied = propertyCopy.applySchemaPropertyCopy(plan).schema;
+  const serialized = verification.serializeSchemaLibrary([parent,revision4]);
+  localStorage.setItem("comments-lifecycle-runtime",serialized);
+  const reloaded = verification.restoreSchemaLibrary(localStorage.getItem("comments-lifecycle-runtime"));
+  const imported = verification.importSchema(verification.exportSchema(revision4));
+  const removal = propertyRemoval.removeSchemaProperty(revision4.document,[],"/products",revision4.documentation);
+  const undone = propertyRemoval.undoSchemaPropertyRemoval(removal);
+  const legacy = verification.restoreSchemaLibrary(JSON.stringify([{id:"legacy",name:"Legacy",version:1,document:{type:"object",properties:{page_type:{type:"string"}}},assignments:[],documentation:{properties:{"/page_type":{displayName:"Page type",description:"Legacy entry"}}}}]))[0];
+  return {
+    inheritance:{local:local.properties["/currency"].comments,localOwner:local.properties["/currency"].origin.name,restored:restoredInherited.properties["/currency"].comments,restoredOwner:restoredInherited.properties["/currency"].origin.name,restoredInherited:restoredInherited.properties["/currency"].inherited,parentUnchanged:parentBefore===JSON.stringify(parent),pathCount:Object.keys(restoredInherited.properties).filter((path)=>path==="/currency").length},
+    revisions:{working:working.properties["/page_type"].comments,workingOwner:working.properties["/page_type"].origin.name,current:current.properties["/page_type"].comments,currentOwner:current.properties["/page_type"].origin.name,currentVersion:revision4.version,historical:historical.properties["/page_type"].comments,historicalOwner:historical.properties["/page_type"].origin.name,historicalVersion:historicalSchema.version},
+    duplicate:{local:duplicate.documentation.properties["/products/*/product_id"].comments,inherited:duplicate.documentation.properties["/currency"].comments,effectiveOwner:duplicateEffective.properties["/currency"].origin.name,pathCount:Object.keys(duplicate.documentation.properties).filter((path)=>path==="/currency").length},
+    copy:{planned:plan.documentation.find(({path})=>path==="/products/*/product_id").entry.comments,origin:plan.documentation.find(({path})=>path==="/products/*/product_id").origin.name,stored:copied.workingDraft.documentation.properties["/products/*/product_id"].comments,pathCount:Object.keys(copied.workingDraft.documentation.properties).filter((path)=>path==="/products/*/product_id").length},
+    persistence:{reloaded:reloaded[1].documentation.properties["/page_type"].comments,reloadedHistorical:reloaded[1].revisionHistory[0].documentation.properties["/page_type"].comments,imported:imported.documentation.properties["/page_type"].comments,legacyBlank:legacy.documentation.properties["/page_type"].comments??""},
+    removal:{removed:removal.documentation.properties?.["/products/*/product_id"]??null,restored:undone.documentation.properties["/products/*/product_id"].comments,propertyRemoved:removal.document.properties.products===undefined,propertyRestored:undone.document.properties.products.items.properties.product_id.type},
+  };
+})()`;
+
+const schemaPropertyCommentsRemovalRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const schemaKey="my-chrome-utilities.schema-library.v1";
+  q("#data-layer-view-schemas").click();
+  const schemaRow=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Generic pageview"));
+  Array.from(schemaRow.querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();
+  let property=q('[data-schema-property-canonical-path="/products/*/price_monthly"]');
+  property.querySelector(".schema-property-documentation-control").click();
+  property.querySelector('[id^="schema-documentation-comments-"]').value="Only local comment";
+  property.querySelector('input[value="Save documentation"]').click();await pause();
+  let stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  const rulesBefore=JSON.stringify(stored.workingDraft.attachedRules);
+  property=q('[data-schema-property-canonical-path="/products/*/price_monthly"]');property.querySelector(".schema-property-documentation-control").click();
+  property.querySelector('[id^="schema-documentation-comments-"]').value="";property.querySelector('input[value="Save documentation"]').click();
+  const dialog=q("#schema-documentation-removal-dialog");const requested=dialog.open;const summary=dialog.textContent;
+  Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Cancel").click();
+  stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  const cancelled={closed:!dialog.open,retained:stored.workingDraft.documentation.properties["/products/*/price_monthly"].comments};
+  property.querySelector('input[value="Save documentation"]').click();
+  Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Remove documentation").click();await pause();
+  stored=JSON.parse(localStorage.getItem(schemaKey)).find(({name})=>name==="Generic pageview");
+  return {requested,summary,cancelled,confirmed:{removed:stored.workingDraft.documentation.properties?.["/products/*/price_monthly"]??null,propertyType:stored.workingDraft.document.properties.products.items.properties.price_monthly.type,rulesUnchanged:rulesBefore===JSON.stringify(stored.workingDraft.attachedRules)}};
+})()`;
+
+const schemaPropertyCommentsSpecificationSeedRuntime = `(() => {
+  const key="my-chrome-utilities.schema-library.v1";
+  const schemas=JSON.parse(localStorage.getItem(key));
+  const parent=schemas.find(({name})=>name==="Base event");
+  const schema=schemas.find(({name})=>name==="Generic pageview");
+  parent.documentation.properties["/site_id"].comments="Inherited site comment";
+  schema.documentation.properties["/page_type"].comments="Published page comment";
+  schema.revisionHistory[0].documentation.properties["/legacy"].comments="Historical legacy comment";
+  schema.workingDraft.documentation.properties["/products/*/product_name"].comments="First line\\nSecond\\tcell | <script>globalThis.specificationCommentExecuted=true</script>";
+  schema.workingDraft.documentation.properties["/page_type"].comments="Working page comment";
+  schema.workingDraft.documentation.properties["/draft_only"].comments="Working draft comment";
+  localStorage.setItem(key,JSON.stringify(schemas));
+  return true;
+})()`;
+
+const schemaPropertyCommentsSpecificationContractRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const copied=[];let failRich=false;
+  globalThis.ClipboardItem=class{constructor(data){this.data=data;this.types=Object.keys(data);}};
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{if(failRich)throw new Error("rich unavailable");copied.push(items[0]);},writeText:async(plain)=>copied.push({plain})}});
+  q("#data-layer-view-schemas").click();const schemaRow=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Generic pageview"));
+  Array.from(schemaRow.querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();q("#build-specification").click();
+  const builder=q("#schema-specification-builder");const source=q("#schema-specification-source",builder);
+  const headings=()=>Array.from(builder.querySelectorAll("th > span"),({textContent})=>textContent);
+  const row=(path)=>q('tr[data-property-path="'+path+'"]',builder);
+  const comments=(path)=>{const index=headings().indexOf("Comments");return row(path).children[index].textContent;};
+  const working={page:comments("/page_type"),nested:comments("/products/*/product_name"),blank:comments("/products/*/price_monthly"),draft:comments("/draft_only"),inherited:comments("/site_id")};
+  source.value="published:4";source.dispatchEvent(new Event("change",{bubbles:true}));
+  const published={page:comments("/page_type"),nested:comments("/products/*/product_name"),inherited:comments("/site_id")};
+  source.value="historical:2";source.dispatchEvent(new Event("change",{bubbles:true}));
+  const historical={legacy:comments("/legacy"),inherited:comments("/site_id")};
+  source.value="working-draft";source.dispatchEvent(new Event("change",{bubbles:true}));
+  q('[aria-label="Move Comments earlier"]',builder).click();q('[aria-label="Move Comments earlier"]',builder).click();
+  const reordered=headings();const completeness=q("#schema-specification-completeness",builder).textContent;
+  const copy=Array.from(builder.querySelectorAll("button")).find(({textContent})=>textContent==="Copy specification table");
+  const copyMode=q('[aria-label="Copy mode"]',builder);copyMode.value="spreadsheet";copyMode.dispatchEvent(new Event("change",{bubbles:true}));const afterMode=headings();
+  const exampleOverride=q('[data-specification-example-path="/products/*/product_name"]',builder);exampleOverride.value="Override phone";exampleOverride.dispatchEvent(new Event("input",{bubbles:true}));const afterExample=headings();
+  copy.click();await pause();const spreadsheet=copied[0].plain;
+  copyMode.value="rich";copyMode.dispatchEvent(new Event("change",{bubbles:true}));copy.click();await pause();const headedItem=copied[1];const headed={html:await headedItem.data["text/html"].text(),plain:await headedItem.data["text/plain"].text()};
+  const includeHeadings=Array.from(builder.querySelectorAll("label")).find(({textContent})=>textContent.includes("Include headings")).querySelector("input");
+  includeHeadings.checked=false;includeHeadings.dispatchEvent(new Event("change",{bubbles:true}));copy.click();await pause();const unheadedItem=copied[2];const unheaded={html:await unheadedItem.data["text/html"].text(),plain:await unheadedItem.data["text/plain"].text()};
+  includeHeadings.checked=true;includeHeadings.dispatchEvent(new Event("change",{bubbles:true}));failRich=true;copy.click();await pause();const fallback=copied[3].plain;
+  Array.from(builder.querySelectorAll("button")).find(({textContent})=>textContent==="Reset column order").click();const reset=headings();
+  return{working,published,historical,reordered,afterMode,afterExample,completeness,spreadsheet,headed,unheaded,fallback,reset,inert:globalThis.specificationCommentExecuted!==true&&!builder.querySelector("script"),runtimeErrors:globalThis.__sidePanelRuntimeErrors??[]};
 })()`;
 
 const libraryDirectTemplatePushSeedRuntime = `(() => {
@@ -4822,11 +4981,34 @@ try {
       await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await reloadPanel(socket);
       schemaSpecificationBuilderObservation=await evaluate(socket,schemaSpecificationBuilderRuntime);const observed=schemaSpecificationBuilderObservation;
       assert.deepEqual(Object.fromEntries(Object.entries(observed.entryPoints).map(([key,value])=>[key,{visible:value.visible,source:value.source,focus:value.focus}])),{library:{visible:true,source:"published revision 4",focus:true},editor:{visible:true,source:"working draft based on revision 4",focus:true},historical:{visible:true,source:"historical revision 2",focus:true}});assert.equal(observed.entryPoints.library.paths.includes("/draft_only"),false);assert.equal(observed.entryPoints.editor.paths.includes("/draft_only"),true);assert.equal(observed.entryPoints.historical.paths.includes("/legacy"),true);
-      assert.equal(observed.source,"published revision 4");assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values"]);assert.deepEqual(observed.defaults,{leaves:[true,true,true],containers:[false,false]});assert.deepEqual(observed.hierarchy,{durationParent:"/products",site:" site_id · inherited",legacyAbsent:true});assert.deepEqual(observed.filtered,["/products","/products/*/duration"]);
+      assert.equal(observed.source,"published revision 4");assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.deepEqual(observed.defaults,{leaves:[true,true,true],containers:[false,false]});assert.deepEqual(observed.hierarchy,{durationParent:"/products",site:" site_id · inherited",legacyAbsent:true});assert.deepEqual(observed.filtered,["/products","/products/*/duration"]);
       assert.deepEqual(observed.selection.containerOnly,["/products"]);assert.deepEqual(observed.selection.withDescendant,["/products","/products/*/duration"]);assert.deepEqual(observed.selection.descendantOnly,["/products/*/duration"]);assert.equal(observed.selection.schemaOrder.length>=12,true);assert.deepEqual(observed.selection.nameOrder,[...observed.selection.nameOrder].sort());
-      assert.deepEqual(observed.cases.pageType,["page_type","Page classification","Yes","String","product_detail","product_detail | product_list"]);assert.deepEqual(observed.cases.currency,["commerce.currency","Transaction currency","Yes when commerce exists","String","EUR","EUR | GBP"]);assert.deepEqual(observed.cases.products,["products","Products in the event","No","Array of Object","",""]);assert.deepEqual(observed.cases.productName,["products[].product_name","Displayed product name","Yes when a products item exists","String","Phone",""]);assert.deepEqual(observed.cases.duration,["products[].duration","Contract duration in months","Yes when price_monthly exists for the same products item","Number","24","12 | 24 when price_monthly exists for the same products item"]);assert.deepEqual(observed.cases.site,["site_id","Site identifier","Yes","String","otelo","otelo | hollandsnieuwe | ben"]);assert.deepEqual(observed.cases.tracking,["tracking_context","Tracking integration context","No","Unspecified","",""]);assert.deepEqual(observed.cases.payment,["payment_method","Payment method","No","String","card","card | paypalcash when commerce.currency equals EUR"]);assert.match(observed.cases.conflict.at(-1),/Conflict: no values satisfy all effective rules/);assert.match(observed.completeness,/2 selected properties · 0 missing descriptions · 1 missing examples/);
-      assert.deepEqual(observed.clipboard.types,["text/html","text/plain"]);assert.match(observed.clipboard.html,/<table>[\s\S]*<th>Property name<\/th>/);assert.match(observed.clipboard.html,/card \| paypal<br>cash when commerce\.currency equals EUR/);assert.match(observed.clipboard.html,/Unsafe &lt;tag &amp; &quot;quote&quot;&gt;/);assert.equal(observed.clipboard.plain.split("\n").every((line)=>line.split("\t").length===6),true);assert.match(observed.clipboard.feedback,/Copied rich table and plain text/);assert.equal(observed.fallback.plain,observed.clipboard.plain);assert.match(observed.fallback.feedback,/copied plain text/);assert.equal(observed.selectionUnchanged&&observed.unchanged,true);assert.deepEqual(observed.runtimeErrors,[]);
+      assert.deepEqual(observed.cases.pageType,["page_type","Page classification","Yes","String","product_detail","product_detail | product_list",""]);assert.deepEqual(observed.cases.currency,["commerce.currency","Transaction currency","Yes when commerce exists","String","EUR","EUR | GBP",""]);assert.deepEqual(observed.cases.products,["products","Products in the event","No","Array of Object","","",""]);assert.deepEqual(observed.cases.productName,["products[].product_name","Displayed product name","Yes when a products item exists","String","Phone","",""]);assert.deepEqual(observed.cases.duration,["products[].duration","Contract duration in months","Yes when price_monthly exists for the same products item","Number","24","12 | 24 when price_monthly exists for the same products item",""]);assert.deepEqual(observed.cases.site,["site_id","Site identifier","Yes","String","otelo","otelo | hollandsnieuwe | ben",""]);assert.deepEqual(observed.cases.tracking,["tracking_context","Tracking integration context","No","Unspecified","","",""]);assert.deepEqual(observed.cases.payment,["payment_method","Payment method","No","String","card","card | paypalcash when commerce.currency equals EUR",""]);assert.match(observed.cases.conflict.at(-2),/Conflict: no values satisfy all effective rules/);assert.match(observed.completeness,/2 selected properties · 0 missing descriptions · 1 missing examples/);
+      assert.deepEqual(observed.clipboard.types,["text/html","text/plain"]);assert.match(observed.clipboard.html,/<table>[\s\S]*<th>Property name<\/th>/);assert.match(observed.clipboard.html,/card \| paypal<br>cash when commerce\.currency equals EUR/);assert.match(observed.clipboard.html,/Unsafe &lt;tag &amp; &quot;quote&quot;&gt;/);assert.equal(observed.clipboard.plain.split("\n").every((line)=>line.split("\t").length===7),true);assert.match(observed.clipboard.feedback,/Copied rich table and plain text/);assert.equal(observed.fallback.plain,observed.clipboard.plain);assert.match(observed.fallback.feedback,/copied plain text/);assert.equal(observed.selectionUnchanged&&observed.unchanged,true);assert.deepEqual(observed.runtimeErrors,[]);
       socket.close();continue;
+    }
+    if(process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER==="1"){
+      await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await reloadPanel(socket);
+      schemaPropertyCommentsObservation=await evaluate(socket,schemaPropertyCommentsRuntime);const observed=schemaPropertyCommentsObservation;
+      assert.equal(observed.saved,"Sent by checkout\nDo not derive from position");assert.equal(observed.reopened,observed.saved);assert.equal(observed.publishedUnchanged,true);assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(observed.cells[6],observed.saved);assert.match(observed.clipboard.html,/Comments[\s\S]*Sent by checkout<br>Do not derive from position/);assert.match(observed.clipboard.plain,/Allowed values\tComments/);assert.deepEqual(observed.runtimeErrors,[]);
+      await reloadPanel(socket);const removalWorkflow=await evaluate(socket,schemaPropertyCommentsRemovalRuntime);
+      assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,propertyType:"number",rulesUnchanged:true});
+      const lifecycle=await evaluate(socket,schemaPropertyCommentsLifecycleRuntime);
+      assert.deepEqual(lifecycle.inheritance,{local:"Checkout currency exception",localOwner:"Product detail",restored:"Shared currency convention",restoredOwner:"Generic commerce",restoredInherited:true,parentUnchanged:true,pathCount:1});
+      assert.deepEqual(lifecycle.revisions,{working:"Current routing input",workingOwner:"Product detail",current:"Current routing input",currentOwner:"Product detail",currentVersion:4,historical:"Legacy routing input",historicalOwner:"Product detail",historicalVersion:3});
+      assert.deepEqual(lifecycle.duplicate,{local:"Sent by checkout\nDo not derive from position",inherited:"Shared currency convention",effectiveOwner:"Product detail revision 3 copy",pathCount:1});
+      assert.deepEqual(lifecycle.copy,{planned:"Sent by checkout\nDo not derive from position",origin:"Product detail",stored:"Sent by checkout\nDo not derive from position",pathCount:1});
+      assert.deepEqual(lifecycle.persistence,{reloaded:"Current routing input",reloadedHistorical:"Legacy routing input",imported:"Current routing input",legacyBlank:""});
+      assert.deepEqual(lifecycle.removal,{removed:null,restored:"Sent by checkout\nDo not derive from position",propertyRemoved:true,propertyRestored:"string"});
+      const live=await evaluate(socket,schemaPropertyCommentsLiveRuntime);assert.match(live.comments,/Comments: <img src=x/);assert.equal(live.searchMatched,true);assert.equal(live.wildcardPath,"/products/2/product_name");assert.equal(live.collapsedUnchanged,true);assert.equal(live.inert,true);assert.equal(live.payloadUnchanged,true);assert.equal(live.validation,"Valid");
+      await evaluate(socket,schemaPropertyCommentsSpecificationSeedRuntime);await reloadPanel(socket);const specification=await evaluate(socket,schemaPropertyCommentsSpecificationContractRuntime);
+      assert.deepEqual(specification.working,{page:"Working page comment",nested:"First line\nSecond\tcell | <script>globalThis.specificationCommentExecuted=true</script>",blank:"",draft:"Working draft comment",inherited:"Inherited site comment"});
+      assert.deepEqual(specification.published,{page:"Published page comment",nested:"",inherited:"Inherited site comment"});assert.deepEqual(specification.historical,{legacy:"Historical legacy comment",inherited:"Inherited site comment"});
+      assert.deepEqual(specification.reordered,["Property name","Description","Mandatory","Type","Comments","Example value","Allowed values"]);assert.deepEqual(specification.reset,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);
+      assert.deepEqual(specification.afterMode,specification.reordered);assert.deepEqual(specification.afterExample,specification.reordered);assert.equal(specification.completeness,"12 selected properties · 1 missing descriptions · 4 missing examples");assert.doesNotMatch(specification.completeness,/comment/i);assert.match(specification.spreadsheet,/Type\tComments\tExample value/);assert.match(specification.spreadsheet,/Override phone/);
+      assert.match(specification.headed.html,/border:1px solid/);assert.match(specification.headed.html,/th\{background:#f2f2f2;font-weight:700\}/);assert.match(specification.headed.html,/<th>Comments<\/th><th>Example value<\/th>/);assert.match(specification.headed.html,/First line<br>Second\tcell \| &lt;script&gt;globalThis\.specificationCommentExecuted=true&lt;\/script&gt;/);assert.match(specification.headed.html,/Override phone/);assert.doesNotMatch(specification.headed.html,/<script>/);assert.match(specification.headed.plain,/Type\tComments\tExample value/);assert.equal(specification.headed.plain.split("\n").every((line)=>line.split("\t").length===7),true);
+      assert.doesNotMatch(specification.unheaded.html,/<thead>/);assert.doesNotMatch(specification.unheaded.plain,/Property name\tDescription/);assert.equal(specification.unheaded.plain.split("\n").every((line)=>line.split("\t").length===7),true);assert.match(specification.fallback,/Type\tComments\tExample value/);assert.equal(specification.inert,true);assert.deepEqual(specification.runtimeErrors,[]);
+      schemaPropertyCommentsObservation.removalWorkflow=removalWorkflow;schemaPropertyCommentsObservation.lifecycle=lifecycle;schemaPropertyCommentsObservation.live=live;schemaPropertyCommentsObservation.specification=specification;socket.close();continue;
     }
     if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
@@ -6029,6 +6211,7 @@ try {
   if (process.env.SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaSpecificationBuilder:schemaSpecificationBuilderObservation }));
   }
+  if(process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaPropertyComments:schemaPropertyCommentsObservation}));
   if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }

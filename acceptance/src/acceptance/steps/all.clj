@@ -60,6 +60,7 @@
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-property-copy :as schema-property-copy]
+            [acceptance.steps.schema-property-comments :as schema-property-comments]
             [acceptance.steps.schema-specification-builder :as schema-specification-builder]
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
@@ -78,6 +79,7 @@
 
 (def handlers
   (vec (concat schema-property-example-values/handlers
+               schema-property-comments/handlers
                schema-specification-builder/handlers
                schema-assignment-data-conditions/handlers
                schema-property-copy/handlers
