@@ -9,6 +9,7 @@ export interface SchemaPropertyExample {
 export interface SchemaPropertyDocumentation {
   displayName: string;
   description: string;
+  comments?: string;
   example?: SchemaPropertyExample;
 }
 
@@ -68,9 +69,10 @@ export function setPropertyDocumentation(
   const canonicalPath = canonicalDocumentationPath(path);
   const displayName = cleanText(entry.displayName);
   const description = cleanText(entry.description);
+  const comments = cleanText(entry.comments);
   const example = entry.example ? structuredClone(entry.example) : undefined;
   const properties: Record<string, SchemaPropertyDocumentation> = structuredClone(documentation.properties ?? {});
-  if (displayName || description || example) properties[canonicalPath] = { displayName, description, ...(example ? { example } : {}) };
+  if (displayName || description || comments || example) properties[canonicalPath] = { displayName, description, ...(comments ? { comments } : {}), ...(example ? { example } : {}) };
   else delete properties[canonicalPath];
   return {
     ...(documentation.description ? { description:documentation.description } : {}),

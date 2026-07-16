@@ -237,6 +237,7 @@ export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [sch
             canonicalPath,
             propertyName: propertyName(canonicalPath),
             description: documented?.description ?? "",
+            comments: documented?.comments ?? "",
             mandatory: requiredFor(canonicalPath, document, rules),
             type: typeLabel(property),
             ...(example !== undefined ? { example: String(example) } : {}),
@@ -257,11 +258,11 @@ function plainCell(value) {
     return String(value ?? "").replace(/[\t\r\n]+/gu, " ");
 }
 export function renderSpecificationClipboard(rows) {
-    const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values"];
+    const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values", "Comments"];
     const ordinaryCells = (row) => [row.propertyName, row.description, row.mandatory, row.type, row.example ?? ""];
-    const htmlRows = rows.map((row) => `<tr>${ordinaryCells(row).map((value) => `<td>${escapeHtml(value)}</td>`).join("")}<td>${row.allowedValueGroups.map(escapeHtml).join("<br>")}</td></tr>`).join("");
+    const htmlRows = rows.map((row) => `<tr>${ordinaryCells(row).map((value) => `<td>${escapeHtml(value)}</td>`).join("")}<td>${row.allowedValueGroups.map(escapeHtml).join("<br>")}</td><td>${escapeHtml(row.comments).replaceAll("\n", "<br>")}</td></tr>`).join("");
     const html = `<table><thead><tr>${labels.map((label) => `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${htmlRows}</tbody></table>`;
-    const plain = [labels, ...rows.map((row) => [...ordinaryCells(row), row.allowedValueGroups.join("; ")])]
+    const plain = [labels, ...rows.map((row) => [...ordinaryCells(row), row.allowedValueGroups.join("; "), row.comments])]
         .map((line) => line.map(plainCell).join("\t"))
         .join("\n");
     return { html, plain };

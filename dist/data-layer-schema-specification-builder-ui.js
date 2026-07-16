@@ -53,7 +53,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     summary.id = "schema-specification-completeness";
     const table = document.createElement("table");
     table.id = "schema-specification-preview";
-    const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values"];
+    const labels = ["Property name", "Description", "Mandatory", "Type", "Example value", "Allowed values", "Comments"];
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
     headRow.append(...labels.map((text) => Object.assign(document.createElement("th"), { textContent: text })));
@@ -90,6 +90,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             const allowed = document.createElement("td");
             appendAllowedValueGroups(allowed, row.allowedValueGroups);
             tableRow.append(allowed);
+            tableRow.append(Object.assign(document.createElement("td"), { textContent: row.comments }));
             return tableRow;
         }));
         copy.disabled = rows.length === 0;

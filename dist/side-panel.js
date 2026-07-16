@@ -1942,7 +1942,7 @@ function renderSchemaDraft() {
         const documentationSummary = document.createElement("p");
         documentationSummary.className = "schema-property-documentation";
         documentationSummary.textContent = propertyDocumentation
-            ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.example ? ` · Example: ${String(propertyDocumentation.example.value)}` : ""}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
+            ? `${propertyDocumentation.displayName || path} · ${propertyDocumentation.description}${propertyDocumentation.comments ? ` · Comments: ${propertyDocumentation.comments}` : ""}${propertyDocumentation.example ? ` · Example: ${String(propertyDocumentation.example.value)}` : ""}${propertyDocumentation.inherited ? ` · inherited from ${propertyDocumentation.origin.name} revision ${propertyDocumentation.origin.version}` : " · local"}`
             : "No documentation";
         const editDocumentation = document.createElement("a");
         editDocumentation.setAttribute("role", "button");
@@ -1968,6 +1968,12 @@ function renderSchemaDraft() {
         description.id = `schema-documentation-description-${path.replace(/[^a-z0-9]+/gi, "-")}`;
         descriptionLabel.htmlFor = description.id;
         descriptionLabel.textContent = "Description";
+        const commentsLabel = document.createElement("label");
+        const comments = document.createElement("textarea");
+        comments.value = localDocumentation?.comments ?? propertyDocumentation?.comments ?? "";
+        comments.id = `schema-documentation-comments-${path.replace(/[^a-z0-9]+/gi, "-")}`;
+        commentsLabel.htmlFor = comments.id;
+        commentsLabel.textContent = "Comments";
         const exampleGroup = document.createElement("fieldset");
         exampleGroup.className = "schema-property-example-editor";
         const exampleLegend = document.createElement("legend");
@@ -2059,8 +2065,9 @@ function renderSchemaDraft() {
                 customInput.focus({ preventScroll: true });
                 return;
             }
-            const entry = { displayName: displayName.value, description: description.value, ...(exampleDraft ? { example: structuredClone(exampleDraft) } : {}) };
-            if (!entry.displayName.trim() && !entry.description.trim() && !entry.example && localDocumentation) {
+            const trimmedComments = comments.value.trim();
+            const entry = { displayName: displayName.value, description: description.value, ...(trimmedComments ? { comments: trimmedComments } : {}), ...(exampleDraft ? { example: structuredClone(exampleDraft) } : {}) };
+            if (!entry.displayName.trim() && !entry.description.trim() && !entry.comments && !entry.example && localDocumentation) {
                 requestSchemaDocumentationRemoval(documentationPath, saveDocumentation);
                 return;
             }
@@ -2078,7 +2085,7 @@ function renderSchemaDraft() {
             editDocumentation.click();
             event.preventDefault();
         } });
-        documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, exampleGroup, saveDocumentation, removeDocumentation);
+        documentationEditor.append(legend, displayNameLabel, displayName, descriptionLabel, description, commentsLabel, comments, exampleGroup, saveDocumentation, removeDocumentation);
         const documentationSection = document.createElement("section");
         documentationSection.className = "schema-property-documentation-section";
         documentationSection.setAttribute("aria-label", `Documentation for ${documentationPath}`);
