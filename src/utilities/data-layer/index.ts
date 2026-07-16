@@ -1,10 +1,10 @@
 import { defineUtility, type DataLayerModuleEntry } from "../../platform/utility-contract.js";
-export * as capture from "../../data-layer-observer.js";
-export * as liveInspection from "../../data-layer-live-observer.js";
-export * as eventLibrary from "../../data-layer-event-library-editor.js";
-export * as schemas from "../../data-layer-schema-verification.js";
-export * as defectReporting from "../../data-layer-defect-report.js";
-export * as replay from "../../data-layer-sequence-replay.js";
+export * as capture from "./capture.js";
+export * as liveInspection from "./live-inspection.js";
+export * as eventLibrary from "./event-library.js";
+export * as schemas from "./schemas.js";
+export * as defectReporting from "./defect-reporting.js";
+export * as replay from "./replay.js";
 export const dataLayerModules:readonly DataLayerModuleEntry[]=[
   {id:"capture",capability:"source observation and sessions",publicInterface:["capture"]},
   {id:"live-inspection",capability:"event feed and event inspection",publicInterface:["liveInspection"]},

@@ -1,9 +1,9 @@
 import {
   listCommands,
   runCommandById,
+  createPaletteController,
   type CommandRunRecord,
 } from "./utilities/command-palette/index.js";
-import { createPaletteController } from "./command-palette-ui.js";
 import {
   advanceHotkeySequence,
   blankHotkeyKeymap,
@@ -18,7 +18,7 @@ import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell } from "./utility-registry.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
 import {
   tabPageObservation,
 } from "./active-page-observation.js";
@@ -37,7 +37,7 @@ import {
   updateObservationTargetAccess,
   type ObservationTarget,
   type ObservationTargetState,
-} from "./data-layer-observation-targets.js";
+} from "./utilities/data-layer/capture.js";
 import {
   closeDetachTargetConfirmation,
   closeObservationTargetPicker,
@@ -49,19 +49,19 @@ import {
   setObservationTargetResult as setObservationTargetResultUi,
   showDetachTargetConfirmation,
   showObservationTargetPicker,
-} from "./data-layer-observation-targets-ui.js";
+} from "./utilities/data-layer/capture.js";
 import {
   getHistoryArrayPath,
   samplePageObject,
   setHistoryArrayPath,
-} from "./data-layer.js";
+} from "./utilities/data-layer/capture.js";
 import {
   appendObservedHistoryEntry,
   attachHistoryArrayObserver,
   attachHistoryArraySnapshot,
   stopHistoryArrayObserver,
   type DataLayerHistoryObserverState,
-} from "./data-layer-observer.js";
+} from "./utilities/data-layer/capture.js";
 import {
   beginObservedPageLoad,
   initialObservationRefreshState,
@@ -72,20 +72,20 @@ import {
   observationRefreshRequestIsCurrent,
   shouldRetryObservationRefresh,
   type ObservationRefreshRequest,
-} from "./data-layer-observation-refresh.js";
+} from "./utilities/data-layer/capture.js";
 import {
   initialObservationActivationState,
   nextObservationActivation,
   observationActivationIsCurrent,
-} from "./data-layer-observation-activation.js";
+} from "./utilities/data-layer/capture.js";
 import {
   startLiveHistoryPushCapture,
   type StopLiveHistoryPushCapture,
-} from "./data-layer-live-observation.js";
+} from "./utilities/data-layer/capture.js";
 import {
   observerAttachmentStatus,
   restartObservation,
-} from "./data-layer-recovery.js";
+} from "./utilities/data-layer/capture.js";
 import {
   captureEntry,
   DATA_LAYER_SESSION_STORAGE_KEY,
@@ -94,36 +94,36 @@ import {
   restoreSession,
   sessionScope,
   type DataLayerSessionState,
-} from "./data-layer-session.js";
-import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
-import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
-import { endLiveSession } from "./data-layer-live-session-end.js";
+} from "./utilities/data-layer/capture.js";
+import { beginDataLayerTestingSession } from "./utilities/data-layer/capture.js";
+import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./utilities/data-layer/capture.js";
+import { endLiveSession } from "./utilities/data-layer/capture.js";
 import {
   attachedTargetRecoveryIsCurrent,
   captureAttachedTargetRecovery,
   completeAttachedTargetRecovery,
-} from "./data-layer-target-recovery.js";
-import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
+} from "./utilities/data-layer/capture.js";
+import { liveGuidedWorkflow } from "./utilities/data-layer/capture.js";
 import {
   findLiveGuidedWorkflowElements,
   renderLiveGuidedWorkflow,
-} from "./data-layer-live-guided-workflow-ui.js";
-import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
+} from "./utilities/data-layer/capture.js";
+import { renderLiveSessionControls } from "./utilities/data-layer/capture.js";
 import {
   canonicalLiveObserverStatus,
   createLiveSessionSummary,
-} from "./data-layer-live-session-summary.js";
-import { createLiveNotificationController } from "./data-layer-live-notifications.js";
+} from "./utilities/data-layer/capture.js";
+import { createLiveNotificationController } from "./utilities/data-layer/capture.js";
 import {
   createTargetPathStatusController,
   targetPathStatusForObservation,
   type TargetPathStatus,
-} from "./data-layer-target-path-status.js";
-import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
+} from "./utilities/data-layer/capture.js";
+import { copyLivePageUrl as copyLivePageUrlAction } from "./utilities/data-layer/capture.js";
 import {
   findLiveSessionSummaryElements,
   renderLiveSessionSummary,
-} from "./data-layer-live-session-summary-ui.js";
+} from "./utilities/data-layer/capture.js";
 import type { ActivePageObservationResult } from "./active-page-observation.js";
 import {
   createLiveObserverState,
@@ -139,9 +139,9 @@ import {
   type DataLayerView,
   type LiveEvent,
   type LiveObserverState,
-} from "./data-layer-live-observer.js";
-import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
-import type { EventFeedQuery } from "./data-layer-event-feed-query.js";
+} from "./utilities/data-layer/live-inspection.js";
+import { renderEventFeedQueryBuilder } from "./utilities/data-layer/live-inspection.js";
+import type { EventFeedQuery } from "./utilities/data-layer/live-inspection.js";
 import {
   applySavedEventFeedFilter,
   commitSavedEventFeedFilterLibrary,
@@ -156,7 +156,7 @@ import {
   SAVED_EVENT_FEED_FILTER_STORAGE_KEY,
   SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY,
   type SavedEventFeedFilterLibrary,
-} from "./data-layer-saved-event-feed-filters.js";
+} from "./utilities/data-layer/live-inspection.js";
 import {
   confirmSavedSessionDeletion,
   cancelSavedSessionDeletion,
@@ -173,7 +173,7 @@ import {
   serializeSavedSessionLibrary,
   type ArchivedSession,
   type SavedSessionLibrary,
-} from "./data-layer-saved-sessions.js";
+} from "./utilities/data-layer/live-inspection.js";
 import {
   confirmSessionSave,
   createSessionSaveDraft,
@@ -188,7 +188,7 @@ import {
   updateSavedSessionLiveFeedView,
   type SavedSessionLiveFeed,
   type SessionSaveDraft,
-} from "./data-layer-saved-session-live-feed.js";
+} from "./utilities/data-layer/live-inspection.js";
 import {
   findLiveObserverElements,
   renderDataLayerView,
@@ -196,20 +196,20 @@ import {
   renderLiveObserverState,
   renderLiveSessionMessage,
   setEventValidationUpdateStatus,
-} from "./data-layer-live-observer-ui.js";
-import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
+} from "./utilities/data-layer/live-inspection.js";
+import { createLiveInspectorActions } from "./utilities/data-layer/live-inspection.js";
 import {
   captureLiveInspectorPresentation,
   restoreLiveInspectorPresentation,
   type LiveInspectorPresentationSnapshot,
-} from "./data-layer-live-inspector-presentation-ui.js";
-import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
-import { renderOccurrenceDefectReportBuilder } from "./data-layer-event-occurrence-defect-report-ui.js";
-import { renderOccurrenceReport, type OccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
-import { renderJiraReport, type GeneratedDefectReport } from "./data-layer-defect-report.js";
-import { browserDefectReportClipboard } from "./data-layer-defect-report-browser.js";
-import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./data-layer-missing-event-defect-report-ui.js";
-import { generateMissingEventRepresentations, type MissingEventReport } from "./data-layer-missing-event-defect-report.js";
+} from "./utilities/data-layer/live-inspection.js";
+import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
+import { renderOccurrenceDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
+import { renderOccurrenceReport, type OccurrenceReport } from "./utilities/data-layer/defect-reporting.js";
+import { renderJiraReport, type GeneratedDefectReport } from "./utilities/data-layer/defect-reporting.js";
+import { browserDefectReportClipboard } from "./utilities/data-layer/defect-reporting.js";
+import { missingEventVisits, renderMissingEventDefectReportBuilder, type MissingEventBuilderController } from "./utilities/data-layer/defect-reporting.js";
+import { generateMissingEventRepresentations, type MissingEventReport } from "./utilities/data-layer/defect-reporting.js";
 import {
   addDefect,
   attachSavedSessionToDefect,
@@ -232,15 +232,15 @@ import {
   type DefectLibrary,
   type DefectStatus,
   type ReportedDefect,
-} from "./data-layer-defect-library.js";
-import { findDefectLibraryElements, renderDefectLibrary } from "./data-layer-defect-library-ui.js";
-import { copyStoredDefectForJira } from "./data-layer-defect-library-copy.js";
+} from "./utilities/data-layer/defect-reporting.js";
+import { findDefectLibraryElements, renderDefectLibrary } from "./utilities/data-layer/defect-reporting.js";
+import { copyStoredDefectForJira } from "./utilities/data-layer/defect-reporting.js";
 import {
   captureInspectorReturn,
   restoreInspectorReturn,
   type InspectorReturnSnapshot,
-} from "./data-layer-live-inspector-return.js";
-import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
+} from "./utilities/data-layer/live-inspection.js";
+import { restoreInspectorReturnUi } from "./utilities/data-layer/live-inspection.js";
 import {
   createEditableTemplate,
   createNewEventEditor,
@@ -261,53 +261,53 @@ import {
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
   type EditableEventTemplate,
   type PropertyEditorState,
-} from "./data-layer-event-library-editor.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   appendImportedTemplates,
   eventLibraryExport,
   eventLibraryImport,
   replaceImportedTemplates,
-} from "./data-layer-event-library-transfer.js";
-import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./data-layer-schema-verification.js";
-import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport, type JsonSchemaCompatibilityReview } from "./data-layer-json-schema-export.js";
-import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
-import { applyAllowedValueExpansion, reviewAllowedValueExpansion, type ReusableAllowedValueRule } from "./data-layer-allowed-value-expansion.js";
-import { allowedValueText, openAllowedValueExpansionDialog } from "./data-layer-allowed-value-expansion-ui.js";
-import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, type PromotableReusableRule } from "./data-layer-local-rule-promotion.js";
-import { createLocalRulePromotionDialog } from "./data-layer-local-rule-promotion-ui.js";
-import type { ValidationEvaluation } from "./data-layer-validation-model.js";
-import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
-import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./data-layer-guided-validation.js";
-import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
-import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
-import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./data-layer-live-schema-property-declaration.js";
-import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schema-property-declaration-ui.js";
-import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./data-layer-guided-validation-continuation.js";
-import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./data-layer-schema-manual-property.js";
-import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./data-layer-cardinality.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./data-layer-schema-property-rule-picker.js";
-import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
-import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
-import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
-import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./data-layer-schema-property-type-editing.js";
-import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
-import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from "./data-layer-schema-property-view.js";
-import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
-import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./data-layer-schema-property-copy.js";
-import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-copy-ui.js";
-import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions, type AssignmentConditionTarget, type AssignmentDataConditionGroup } from "./data-layer-schema-assignment-data-conditions.js";
-import { renderAssignmentDataConditionEditor, type AssignmentDataConditionEditorState } from "./data-layer-schema-assignment-data-conditions-ui.js";
-import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation, type SchemaPropertyExample } from "./data-layer-schema-documentation.js";
-import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "./data-layer-schema-property-example-values.js";
-import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
-import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./data-layer-sequence-replay.js";
+} from "./utilities/data-layer/event-library.js";
+import { clearEventLibrary, deleteEventTemplate } from "./utilities/data-layer/event-library.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY, type SchemaAssignment, type SchemaDefinition, type SchemaWorkingDraft } from "./utilities/data-layer/schemas.js";
+import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport, type JsonSchemaCompatibilityReview } from "./utilities/data-layer/schemas.js";
+import { revalidateCurrentLiveSession } from "./utilities/data-layer/schemas.js";
+import { applyAllowedValueExpansion, reviewAllowedValueExpansion, type ReusableAllowedValueRule } from "./utilities/data-layer/schemas.js";
+import { allowedValueText, openAllowedValueExpansionDialog } from "./utilities/data-layer/schemas.js";
+import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, type PromotableReusableRule } from "./utilities/data-layer/schemas.js";
+import { createLocalRulePromotionDialog } from "./utilities/data-layer/schemas.js";
+import type { ValidationEvaluation } from "./utilities/data-layer/schemas.js";
+import { createGuidedValidationFlow } from "./utilities/data-layer/schemas.js";
+import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch, type GuidedValueType, type PublishedGuidedValidation } from "./utilities/data-layer/schemas.js";
+import { guidedAttachedRule } from "./utilities/data-layer/schemas.js";
+import { guidedPropertyDocument, mergeGuidedDocument } from "./utilities/data-layer/schemas.js";
+import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./utilities/data-layer/schemas.js";
+import { openLiveSchemaPropertyDeclarationDialog } from "./utilities/data-layer/schemas.js";
+import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, type GuidedContinuationSelections } from "./utilities/data-layer/schemas.js";
+import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview, type ManualArrayItemType, type ManualPropertyDefinition, type ManualPropertyValueType } from "./utilities/data-layer/schemas.js";
+import { inspectSpecificIndexRuleTarget } from "./utilities/data-layer/schemas.js";
+import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utilities/data-layer/schemas.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./utilities/data-layer/schemas.js";
+import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
+import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
+import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
+import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
+import { attachRuleToSchemaProperty, schemaPropertyRows } from "./utilities/data-layer/schemas.js";
+import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from "./utilities/data-layer/schemas.js";
+import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./utilities/data-layer/schemas.js";
+import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./utilities/data-layer/schemas.js";
+import { renderSchemaPropertyCopyReview } from "./utilities/data-layer/schemas.js";
+import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions, type AssignmentConditionTarget, type AssignmentDataConditionGroup } from "./utilities/data-layer/schemas.js";
+import { renderAssignmentDataConditionEditor, type AssignmentDataConditionEditorState } from "./utilities/data-layer/schemas.js";
+import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation, type SchemaPropertyExample } from "./utilities/data-layer/schemas.js";
+import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "./utilities/data-layer/schemas.js";
+import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue, type ConditionPropertyType, type ConditionalRulePredicate } from "./utilities/data-layer/schemas.js";
+import { createSequence, readiness, runSequence, type ReplaySequence, type ReplayTemplate } from "./utilities/data-layer/replay.js";
 import {
   findSequenceReplayElements,
   renderSequenceReplay,
   setSequenceReplayResult,
-} from "./data-layer-sequence-replay-ui.js";
+} from "./utilities/data-layer/replay.js";
 import {
   findEventLibraryEditorElements,
   focusTemplateEditAction,
@@ -316,37 +316,37 @@ import {
   setEventLibraryResult,
   setEventLibraryValidation,
   setPushDestinationValidation,
-} from "./data-layer-event-library-editor-ui.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   beginTemplateRename,
   renameValidation,
   saveTemplateRename,
   type TemplateRenameDraft,
-} from "./data-layer-event-template-renaming.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   closePushReview,
   handlePushReviewKeydown,
   openPushReview,
-} from "./data-layer-workflow-focus-ui.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   pushSavedTemplateToSelectedTarget,
   pushTemplateToSelectedTarget,
   type SelectedTargetPushRequest,
-} from "./data-layer-selected-target-push.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   createPushDraftReview,
   type PushDraftReview,
-} from "./data-layer-push-draft-review.js";
+} from "./utilities/data-layer/event-library.js";
 import {
   findPushDraftReviewElements,
   renderPushDraftReview,
-} from "./data-layer-push-draft-review-ui.js";
-import { createTemplateChangeReview, type TemplateChangeReview } from "./data-layer-template-change-review.js";
-import { renderTemplateChangeReview } from "./data-layer-template-change-review-ui.js";
+} from "./utilities/data-layer/event-library.js";
+import { createTemplateChangeReview, type TemplateChangeReview } from "./utilities/data-layer/event-library.js";
+import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import {
   pushPayloadInPage,
   type PagePushResult,
-} from "./data-layer-selected-target-push-page.js";
+} from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import {
   findPanelEmptyStateElements,
