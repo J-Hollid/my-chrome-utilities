@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=2f5d1ca599a6f0f2a5075fdd73c996d68b02ecd48c0a27a42d6a967580ca9d65
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T08:57:43.897035446Z","feature_name":"Data layer schema property comments runtime","feature_path":"features/data-layer-schema-property-comments-runtime.feature","background_hash":"b56de7e517c05cbbf4e481a39e5c625d41bc453255e8e1e9eefb9fde7000babc","implementation_hash":"unknown","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema property comments runtime
 
   Background:

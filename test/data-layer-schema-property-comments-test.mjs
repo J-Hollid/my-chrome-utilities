@@ -4,6 +4,7 @@ import {
   resolveEffectiveSchemaDocumentation,
   resolvePropertyDocumentation,
   schemaDocumentationSearchText,
+  setPropertyDocumentation,
 } from "../dist/data-layer-schema-documentation.js";
 import {
   createSchemaWorkingDraft,
@@ -52,6 +53,22 @@ const revision3 = {
     "/products/*/product_id":{ displayName:"Product identifier", description:"Stable identifier", comments:"Sent by checkout\nDo not derive from position" },
   } },
 };
+
+const normalized = setPropertyDocumentation({}, "/products/0/product_id", {
+  displayName:"Product identifier",
+  description:"Stable identifier",
+  comments:"  Sent by checkout\nDo not derive from position  ",
+});
+assert.equal(normalized.properties["/products/0/product_id"].comments, "Sent by checkout\nDo not derive from position");
+const commentCleared = setPropertyDocumentation(normalized, "/products/0/product_id", {
+  displayName:"Product identifier",
+  description:"Stable identifier",
+  comments:"",
+});
+assert.equal(commentCleared.properties["/products/0/product_id"].description, "Stable identifier");
+assert.equal(commentCleared.properties["/products/0/product_id"].comments, undefined);
+const commentsOnly = setPropertyDocumentation({}, "/page_type", { displayName:"", description:"", comments:"Only local comment" });
+assert.equal(setPropertyDocumentation(commentsOnly, "/page_type", { displayName:"", description:"", comments:"" }).properties, undefined);
 
 const inherited = resolveEffectiveSchemaDocumentation(revision3, [parent, revision3]);
 assert.equal(inherited.properties["/currency"].comments, "Shared currency convention");
