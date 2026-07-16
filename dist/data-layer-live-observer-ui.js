@@ -127,6 +127,16 @@ function revealLiveProperty(path) {
     const target = document.querySelector(`.live-validation-property[data-property-path="${CSS.escape(path)}"]`);
     if (!target)
         return;
+    const concretePrefixes = new Set(path.split("/").slice(1, -1).map((_, index, parts) => `/${parts.slice(0, index + 1).join("/")}`));
+    const wildcardPrefixes = new Set([...concretePrefixes].map((prefix) => prefix.replace(/\/\d+(?=\/|$)/g, "/*")));
+    const propertyList = target.closest("#live-validation-properties");
+    for (const disclosure of Array.from(propertyList?.querySelectorAll("details[data-property-path]") ?? [])) {
+        const disclosurePath = disclosure.dataset.propertyPath ?? "";
+        const affectedBase = disclosurePath.endsWith("#affected") ? disclosurePath.slice(0, -"#affected".length) : undefined;
+        if (concretePrefixes.has(disclosurePath) || wildcardPrefixes.has(disclosurePath)
+            || (affectedBase && (path === affectedBase || path.startsWith(`${affectedBase}/`))))
+            disclosure.open = true;
+    }
     let ancestor = target.parentElement?.closest("details");
     while (ancestor) {
         ancestor.open = true;
@@ -450,6 +460,13 @@ function renderEventLevelIssues(event, actionHandlers) {
 export function renderLiveInspector(elements, event, actionHandlers, presentation = {}) {
     if (!elements.eventInspector)
         return;
+    const priorScrollTop = elements.eventInspector.scrollTop;
+    const priorOpenPaths = new Set(Array.from(elements.eventInspector.querySelectorAll("#live-validation-properties details[open][data-property-path]")).map(({ dataset }) => dataset.propertyPath ?? ""));
+    const priorFocusedPropertyPath = document.activeElement instanceof HTMLElement
+        && document.activeElement.classList.contains("live-validation-property")
+        && elements.eventInspector.contains(document.activeElement)
+        ? document.activeElement.dataset.propertyPath
+        : undefined;
     elements.eventInspector.classList.add("live-detail-view");
     const inspectorHeader = document.createElement("header");
     inspectorHeader.className = "detail-view-header";
@@ -645,6 +662,20 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
     const issues = renderEventLevelIssues(event, actionHandlers);
     issues.tabIndex = -1;
     elements.eventInspector.replaceChildren(inspectorHeader, source, status, summary, issues, payload, rawJson, raw, actions);
+    for (const disclosure of Array.from(propertyList.querySelectorAll("details[data-property-path]")))
+        disclosure.toggleAttribute("open", priorOpenPaths.has(disclosure.dataset.propertyPath ?? ""));
+    if (priorFocusedPropertyPath) {
+        const target = Array.from(propertyList.querySelectorAll(".live-validation-property[data-property-path]")).find(({ dataset }) => dataset.propertyPath === priorFocusedPropertyPath);
+        if (target) {
+            let ancestor = target.parentElement?.closest("details");
+            while (ancestor) {
+                ancestor.open = true;
+                ancestor = ancestor.parentElement?.closest("details");
+            }
+            target.focus({ preventScroll: true });
+        }
+    }
+    elements.eventInspector.scrollTop = priorScrollTop;
 }
 function appendSummaryItem(summary, label, value) {
     if (!value)
