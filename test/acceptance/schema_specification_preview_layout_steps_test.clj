@@ -1,0 +1,2 @@
+(ns acceptance.schema-specification-preview-layout-steps-test (:require [acceptance.feature-support :as feature-support] [acceptance.steps.all :as all] [acceptance.steps.schema-specification-preview-layout :as layout] [clojure.test :refer [deftest]]))
+(deftest verifies-schema-specification-preview-layout-features (feature-support/verify-feature-suite! layout/feature-files layout/handlers all/handlers))
