@@ -2,6 +2,6 @@
 (def feature-files ["features/data-layer-schema-property-comments.feature" "features/data-layer-schema-property-comments-runtime.feature"])
 (def entry-modes {"Product detail revision 3 declares /products/*/product_id and /page_type" :model "the built extension side panel is running with production schema documentation, Live inspection, specification building, and clipboard controls" :runtime})
 (defonce model-verified? (atom false))(defonce browser-observation (atom nil))
-(defn- verify-model! [] (support/cached-command-verification! model-verified? "Schema property comments model verification failed. " "node" "test/data-layer-schema-specification-builder-test.mjs"))
+(defn- verify-model! [] (support/cached-command-verification! model-verified? "Schema property comments model verification failed. " "npm" "run" "test:unit:schema-property-comments"))
 (defn- runtime-observation! [] (support/cached-browser-observation! browser-observation {:adapter-env "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER" :observation-key :schemaPropertyComments :runtime-error "Schema property comments browser runtime failed." :missing-error "Schema property comments browser evidence is missing."}))
 (def handlers (support/verified-feature-mode-handlers feature-files entry-modes :schema-property-comments-mode verify-model! (fn [_ _] true) runtime-observation! identity))

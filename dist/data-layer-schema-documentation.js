@@ -92,7 +92,7 @@ export function resolvePropertyDocumentation(documentation, path) {
         ?? Object.values(documentation.properties).find(({ mappingPath }) => mappingMatches(mappingPath, canonicalPath));
 }
 export function schemaDocumentationSearchText(path, documentation) {
-    return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description]
+    return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description, documentation?.comments]
         .filter(Boolean).join(" ").toLowerCase();
 }
 //# sourceMappingURL=data-layer-schema-documentation.js.map

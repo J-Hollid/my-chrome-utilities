@@ -153,6 +153,6 @@ export function schemaDocumentationSearchText(
   path: string,
   documentation: ResolvedPropertyDocumentation | undefined,
 ): string {
-  return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description]
+  return [canonicalDocumentationPath(path), documentation?.displayName, documentation?.description, documentation?.comments]
     .filter(Boolean).join(" ").toLowerCase();
 }

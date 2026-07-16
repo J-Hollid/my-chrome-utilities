@@ -65,7 +65,7 @@
    "The production entry points did not expose their immutable schema surfaces or restore focus."
    entryPoints)
   (support/assert!
-   (and (= ["Property name" "Description" "Mandatory" "Type" "Example value" "Allowed values"] headings)
+   (and (= ["Property name" "Description" "Mandatory" "Type" "Example value" "Allowed values" "Comments"] headings)
         (= {:leaves [true true true] :containers [false false]} defaults)
         (= "/products" (:durationParent hierarchy))
         (:legacyAbsent hierarchy)
@@ -75,7 +75,7 @@
    "The production selector did not preserve hierarchy, defaults, filtering, or independent selection."
    observed)
   (support/assert!
-   (and (= ["page_type" "Page classification" "Yes" "String" "product_detail" "product_detail | product_list"] (:pageType cases))
+   (and (= ["page_type" "Page classification" "Yes" "String" "product_detail" "product_detail | product_list" ""] (:pageType cases))
         (= "Yes when commerce exists" (get-in cases [:currency 2]))
         (= "Yes when a products item exists" (get-in cases [:productName 2]))
         (= "Yes when price_monthly exists for the same products item" (get-in cases [:duration 2]))
