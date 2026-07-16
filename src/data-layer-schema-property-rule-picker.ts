@@ -3,6 +3,7 @@ import {
   type ConditionalRulePredicate,
 } from "./data-layer-conditional-validation-rules.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, typedAllowedValues, type AllowedValue } from "./data-layer-allowed-values-rule.js";
 
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 
@@ -15,6 +16,7 @@ export interface PropertyRuleChoice {
   kind: string;
   operator?: string;
   parameters?: string;
+  allowedValues?: readonly AllowedValue[];
   description?: string;
   applicableType?: SchemaPropertyType;
   version?: number;
@@ -105,9 +107,14 @@ export function reusableRulesForProperty<T extends PropertyRuleChoice>(
   const normalized = query.trim().toLowerCase();
   return rules
     .filter((rule) => rule.enabled !== false && applicablePropertyTypesForRule(rule).includes(propertyType))
-    .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
+    .filter((rule) => !normalized || [rule.name, rule.kind, rule.operator, rule.parameters, allowedValuesRuleLibrarySearchText(rule), rule.description, ...applicablePropertyTypesForRule(rule), `version ${rule.version ?? 1}`]
       .filter(Boolean).join(" ").toLowerCase().includes(normalized))
     .map((rule) => ({ ...rule, alreadyAttached:attachedIds.has(rule.id) }));
+}
+
+export function reusableRuleMetadata(rule: PropertyRuleChoice, propertyType: SchemaPropertyType): string {
+  const values = allowedValuesRuleLibraryMetadata(rule);
+  return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`;
 }
 
 function valueInputType(propertyType: SchemaPropertyType): RuleConfigurationControl["inputType"] {
@@ -180,10 +187,10 @@ export function validateRuleConfiguration(configuration: RuleConfiguration): { r
   return { ready:true, assistance:"Ready to create rule" };
 }
 
-export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string } {
+export function configuredRuleDetails(configuration: RuleConfiguration): { operator: string; parameters?: string; allowedValues?: readonly AllowedValue[] } {
   if (configuration.ruleType === "Required") return { operator:"required" };
   if (configuration.ruleType === "Exact value") return { operator:"exact-value", parameters:configuration.exactValue };
-  if (configuration.ruleType === "Allowed values") return { operator:"allowed-values", parameters:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).join(",") };
+  if (configuration.ruleType === "Allowed values") return { operator:"allowed-values", allowedValues:typedAllowedValues(configuration.allowedValues, configuration.propertyType) };
   if (configuration.ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
   if (configuration.ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
   if (configuration.ruleType === "Digits only") return { operator:"digits-only" };

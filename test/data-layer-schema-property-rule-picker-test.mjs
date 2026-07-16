@@ -9,6 +9,7 @@ import {
   ruleConfigurationControls,
   validateRuleConfiguration,
   reusableRulesForProperty,
+  reusableRuleMetadata,
   ruleTypeAvailability,
 } from "../dist/data-layer-schema-property-rule-picker.js";
 
@@ -32,6 +33,9 @@ const reusable = [
   { id:"numbers", name:"Revenue range", kind:"Numeric range", operator:"numeric range", parameters:"0–100", description:"Revenue", applicableType:"number", version:3 },
   { id:"disabled", name:"Old pages", kind:"Allowed values", applicableType:"string", version:1, enabled:false },
 ];
+const canonicalReusable={id:"canonical",name:"Canonical pages",kind:"Allowed values",operator:"allowed-values",allowedValues:["homepage","checkout"],applicableType:"string",version:4};
+assert.deepEqual(reusableRulesForProperty([canonicalReusable],"string","checkout",new Set()).map(({id})=>id),["canonical"]);
+assert.equal(reusableRuleMetadata(canonicalReusable,"string"),"allowed-values · Allowed values: homepage, checkout · type string · version 4");
 
 for (const query of ["Approved pages", "allowed values", "checkout", "public pages", "string", "version 2"]) {
   assert.deepEqual(reusableRulesForProperty(reusable, "string", query, new Set()).map(({ id }) => id), ["approved"]);
@@ -101,5 +105,5 @@ for (const [draft, assistance] of validationCases) assert.deepEqual(validateRule
 
 const readyAllowed = { ...configuration, allowedValues:["ABC-1", "XYZ-2"], severity:"warning", message:"Use an approved SKU" };
 assert.deepEqual(validateRuleConfiguration(readyAllowed), { ready:true, assistance:"Ready to create rule" });
-assert.deepEqual(configuredRuleDetails(readyAllowed), { operator:"allowed-values", parameters:"ABC-1,XYZ-2" });
+assert.deepEqual(configuredRuleDetails(readyAllowed), { operator:"allowed-values", allowedValues:["ABC-1","XYZ-2"] });
 assert.deepEqual(configuredRuleDetails({ ...createRuleConfiguration("Numeric range", "number"), minimum:"10" }), { operator:"numeric-range", parameters:"10," });

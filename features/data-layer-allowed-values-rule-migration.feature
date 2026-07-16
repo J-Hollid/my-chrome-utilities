@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=494f2b582141dc41014db6f626077b39eb21347d514b90e7aca96bd6fae8d37c
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T17:14:55.854443097Z","feature_name":"Data layer Allowed values rule migration","feature_path":"features/data-layer-allowed-values-rule-migration.feature","background_hash":"23890abc6a815907199b4feaff1a639371779356352f89aa03e33d2315b71f22","implementation_hash":"3e89a4421c73fcdc2fe2b662d64196c43f00f628","scenarios":[{"index":1,"name":"Data layer Allowed values rule migration 002","scenario_hash":"e9e42327fa76b517e173de8750f69eaf85f06acea592495aea7dc0d4e6190ba0","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-16T17:14:55.854443097Z"},{"index":2,"name":"Data layer Allowed values rule migration 003","scenario_hash":"152c603c8425482f4becf6271dc9907aae3e9fb5ba744b3d182850e24b8f5331","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-16T17:14:55.854443097Z"},{"index":3,"name":"Data layer Allowed values rule migration 004","scenario_hash":"abe820ac1e504f51e2eb60797ecc19d700706901e08d3648609b08c671b38dfb","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-16T17:14:55.854443097Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Allowed values rule migration
 
   Background:

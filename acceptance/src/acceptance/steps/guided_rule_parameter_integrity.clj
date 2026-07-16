@@ -78,14 +78,14 @@
         reusable (get-in observation [:published :reusableRule])
         validation (get-in observation [:saved :validation])
         legacy (get-in observation [:saved :legacy])]
-    (support/assert! (= ["/page_type" "allowed-values" "product_list,homepage"]
-                        (mapv attachment [:propertyPath :operator :parameters]))
+    (support/assert! (= ["/page_type" "allowed-values" ["product_list" "homepage"] nil]
+                        (mapv attachment [:propertyPath :operator :allowedValues :parameters]))
                      "Rendered guided save did not persist canonical operator parameters."
                      {:attachment attachment})
-    (support/assert! (not (str/includes? (:parameters attachment) (:propertyPath attachment)))
+    (support/assert! (nil? (:parameters attachment))
                      "Rendered guided save duplicated its property path in operator parameters."
                      {:attachment attachment})
-    (support/assert! (= (:parameters published-attachment) (:parameters reusable))
+    (support/assert! (= (:allowedValues published-attachment) (:allowedValues reusable))
                      "Reusable rule and schema attachment diverged at the browser persistence boundary."
                      {:attachment published-attachment :reusable reusable})
     (support/assert! (= ["Valid" 0 [["/page_type" "pass" "product_list,homepage" "product_list"]]]
@@ -93,12 +93,12 @@
                          (mapv (juxt :propertyPath :status :expected :actual) (:evaluations validation))])
                      "The stored guided attachment was not immediately used by production validation."
                      validation)
-    (support/assert! (= ["product_list,homepage" "Valid" 0
+    (support/assert! (= [["product_list" "homepage"] "Valid" 0
                          [["/page_type" "pass" "product_list,homepage" "product_list"]]
-                         "product_list,homepage"]
-                        [(:parameters legacy) (:state legacy) (:issues legacy)
+                         ["product_list" "homepage"]]
+                        [(:allowedValues legacy) (:state legacy) (:issues legacy)
                          (mapv (juxt :propertyPath :status :expected :actual) (:evaluations legacy))
-                         (:exportedParameters legacy)])
+                         (:exportedAllowedValues legacy)])
                      "Legacy restore or export did not preserve canonical guided-rule semantics."
                      legacy)))
 
@@ -118,5 +118,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T16:06:46.114424491+02:00", :module-hash "-1548145408", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-762672925"} {:id "def/feature-files", :kind "def", :line 6, :end-line 8, :hash "1096474843"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-87847049"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "def/canonical-example-rows", :kind "def", :line 17, :end-line 45, :hash "2090364792"} {:id "defn-/validate-example!", :kind "defn-", :line 47, :end-line 56, :hash "-669540829"} {:id "defn-/verify-model!", :kind "defn-", :line 58, :end-line 65, :hash "-95545936"} {:id "defn-/browser-observation!", :kind "defn-", :line 67, :end-line 73, :hash "-540147877"} {:id "defn-/assert-runtime-boundary!", :kind "defn-", :line 75, :end-line 103, :hash "-464116667"} {:id "defn-/transition", :kind "defn-", :line 105, :end-line 111, :hash "1146911008"} {:id "def/handlers", :kind "def", :line 113, :end-line 118, :hash "-1569659581"}]}
+;; {:version 1, :tested-at "2026-07-16T19:11:53.360379444+02:00", :module-hash "-613938763", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-762672925"} {:id "def/feature-files", :kind "def", :line 6, :end-line 8, :hash "1096474843"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-87847049"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line 14, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line 15, :hash "-1618529344"} {:id "def/canonical-example-rows", :kind "def", :line 17, :end-line 45, :hash "2090364792"} {:id "defn-/validate-example!", :kind "defn-", :line 47, :end-line 56, :hash "-669540829"} {:id "defn-/verify-model!", :kind "defn-", :line 58, :end-line 65, :hash "-95545936"} {:id "defn-/browser-observation!", :kind "defn-", :line 67, :end-line 73, :hash "-540147877"} {:id "defn-/assert-runtime-boundary!", :kind "defn-", :line 75, :end-line 103, :hash "2115354429"} {:id "defn-/transition", :kind "defn-", :line 105, :end-line 111, :hash "1146911008"} {:id "def/handlers", :kind "def", :line 113, :end-line 118, :hash "-1569659581"}]}
 ;; clj-mutate-manifest-end

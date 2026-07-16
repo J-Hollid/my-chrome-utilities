@@ -38,7 +38,8 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(attachment.id, publishedRule.reusableRuleId);
   assert.equal(attachment.propertyPath, path);
   assert.equal(attachment.operator, "allowed-values");
-  assert.equal(attachment.parameters, values.join(","));
+  assert.deepEqual(attachment.allowedValues, values);
+  assert.equal(attachment.parameters, undefined);
   assert.equal(guidedAttachedRule({ ...publishedRule, path:property }, "Canonical").propertyPath, path);
   assert.equal(guidedAttachedRule({ ...publishedRule, requirement:"Must be present", values:[] }, "Required").parameters, undefined);
   assert.equal(guidedAttachedRule({ ...publishedRule, requirement:"Must match a pattern", values:[`^${values[0]}$`, "ignored"] }, "Pattern").parameters, `^${values[0]}$`);
@@ -49,7 +50,7 @@ for (let sample = 0; sample < 200; sample += 1) {
       properties:{ [property]:{ type:"string" } },
     }),
     attachedRules:[{
-      ...attachment,
+      ...(({ allowedValues, ...legacyAttachment }) => legacyAttachment)(attachment),
       version:sample + 2,
       parameters:`${path}:${values.join(",")}`,
       severity:sample % 2 ? "warning" : "error",
@@ -62,7 +63,8 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   assert.deepEqual(schema, schemaSnapshot, "canonical storage must not mutate source schemas");
   assert.equal(restoredRule.propertyPath, path);
-  assert.equal(restoredRule.parameters, values.join(","));
+  assert.deepEqual(restoredRule.allowedValues, values);
+  assert.equal(restoredRule.parameters, undefined);
   for (const field of ["id", "name", "version", "severity", "message", "enabled"]) {
     assert.equal(restoredRule[field], schema.attachedRules[0][field], `${field} metadata must survive migration`);
   }
@@ -85,10 +87,11 @@ for (let sample = 0; sample < 200; sample += 1) {
   const prefixedValue = sample % 2 ? `urn:${nextToken()}` : `/other_${nextToken()}:${nextToken()}`;
   const prefixSchema = {
     ...schema,
-    attachedRules:[{ ...schema.attachedRules[0], parameters:`${prefixedValue},${values[1]}` }],
+    attachedRules:[{ ...schema.attachedRules[0], allowedValues:[prefixedValue, values[1]], parameters:undefined }],
   };
   const prefixRestored = restoreSchemaLibrary(serializeSchemaLibrary([prefixSchema]))[0];
-  assert.equal(prefixRestored.attachedRules[0].parameters, `${prefixedValue},${values[1]}`);
+  assert.deepEqual(prefixRestored.attachedRules[0].allowedValues, [prefixedValue, values[1]]);
+  assert.equal(prefixRestored.attachedRules[0].parameters, undefined);
   assert.equal(validateWithSchema(event({ [property]:prefixedValue }), prefixRestored, []).state, "Valid");
 
   const inferred = restoreSchemaLibrary(JSON.stringify([{
@@ -96,15 +99,17 @@ for (let sample = 0; sample < 200; sample += 1) {
     attachedRules:[{ ...schema.attachedRules[0], propertyPath:undefined, parameters:`${property}:${values.join(",")}` }],
   }]))[0];
   assert.equal(inferred.attachedRules[0].propertyPath, path);
-  assert.equal(inferred.attachedRules[0].parameters, values.join(","));
+  assert.deepEqual(inferred.attachedRules[0].allowedValues, values);
+  assert.equal(inferred.attachedRules[0].parameters, undefined);
 
   const missingPath = `missing_${nextToken()}`;
   const uninferred = restoreSchemaLibrary(JSON.stringify([{
     ...schema,
     attachedRules:[{ ...schema.attachedRules[0], propertyPath:undefined, parameters:`${missingPath}:${values.join(",")}` }],
   }]))[0].attachedRules[0];
-  assert.equal(uninferred.propertyPath, undefined);
-  assert.equal(uninferred.parameters, `${missingPath}:${values.join(",")}`);
+  assert.equal(uninferred.propertyPath, `/${missingPath}`);
+  assert.deepEqual(uninferred.allowedValues, values);
+  assert.equal(uninferred.parameters, undefined);
 
   const wildcardPath = `/products/*/${property}`;
   const wildcardSchema = {

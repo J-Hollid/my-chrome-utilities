@@ -22,7 +22,7 @@ assert.deepEqual(attachment, {
   version:1,
   propertyPath:"/login_status",
   operator:"allowed-values",
-  parameters:"not logged in,logged in",
+  allowedValues:["not logged in","logged in"],
   severity:"error",
   enabled:true,
 });
@@ -56,16 +56,22 @@ assert.deepEqual(passing.evaluations, [{
   severity:"warning",
   schemaName:"Login status",
   schemaVersion:1,
+  ruleId:"rule:login-status",
+  operator:"allowed-values",
+  schemaId:legacy.id,
+  actualValue:"not logged in",
+  allowedValues:["not logged in","logged in"],
 }]);
 
 const restored = restoreSchemaLibrary(serializeSchemaLibrary([legacy]))[0];
 assert.equal(restored.attachedRules[0].propertyPath, "/login_status");
-assert.equal(restored.attachedRules[0].parameters, "not logged in,logged in");
+assert.deepEqual(restored.attachedRules[0].allowedValues, ["not logged in","logged in"]);
+assert.equal(restored.attachedRules[0].parameters, undefined);
 assert.equal(restored.attachedRules[0].id, legacy.attachedRules[0].id);
 assert.equal(restored.attachedRules[0].version, legacy.attachedRules[0].version);
 assert.equal(restored.attachedRules[0].severity, legacy.attachedRules[0].severity);
 assert.equal(restored.attachedRules[0].message, legacy.attachedRules[0].message);
-assert.equal(createSchemaLibraryExport([legacy], []).schemas[0].attachedRules[0].parameters, "not logged in,logged in");
+assert.deepEqual(createSchemaLibraryExport([legacy], []).schemas[0].attachedRules[0].allowedValues, ["not logged in","logged in"]);
 
 for (const [parameters, actual] of [
   ["urn:status:not-logged-in,logged in", "urn:status:not-logged-in"],
@@ -85,7 +91,7 @@ const inferred = restoreSchemaLibrary(JSON.stringify([{ ...legacy, attachedRules
   parameters:"login_status:not logged in,logged in",
 }] }]))[0];
 assert.equal(inferred.attachedRules[0].propertyPath, "/login_status");
-assert.equal(inferred.attachedRules[0].parameters, "not logged in,logged in");
+assert.deepEqual(inferred.attachedRules[0].allowedValues, ["not logged in","logged in"]);
 
 const wildcard = {
   ...createSchema("Product statuses", 1, { type:"object", properties:{ products:{ type:"array", items:{ type:"object", properties:{ login_status:{ type:"string" } } } } } }),
