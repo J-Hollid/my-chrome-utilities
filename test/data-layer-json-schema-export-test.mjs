@@ -120,6 +120,17 @@ for (const [operator, comparison, expected] of [
   assert.deepEqual(Object.fromEntries(Object.entries(exportJsonSchemaResource(schema, [schema]).document.properties.value).filter(([key]) => key !== "type" && key !== "items")), expected);
 }
 
+for (const operator of ["text-length", "item-count"]) {
+  const type = operator === "text-length" ? "string" : "array";
+  const property = type === "string" ? { type } : { type, items:{ type:"string" } };
+  const schema = { id:`schema-${operator}-impossible`, name:"Impossible cardinality", version:1, published:true, assignments:[], document:{ type:"object", properties:{ value:property } }, attachedRules:[{ id:"rule", version:1, propertyPath:"/value", operator, comparison:"<", limit:0, parameters:"0" }] };
+  const exported = exportJsonSchemaResource(schema, [schema]).document;
+  assert.deepEqual(exported.properties.value.not, {});
+  assert.equal(ajv.validateSchema(exported), true, JSON.stringify(ajv.errors));
+  const validateImpossible = ajv.compile(exported);
+  assert.equal(validateImpossible({ value:type === "string" ? "" : [] }), false);
+}
+
 const unsupported = { ...product, id:"schema-unsupported", attachedRules:[...product.attachedRules, { id:"custom", name:"Partner contract", version:1, propertyPath:"/metadata", operator:"partner-contract", severity:"warning", message:"Custom" }] };
 const review = inspectJsonSchemaExport(unsupported, [parent, unsupported]);
 assert.deepEqual(review.omitted, [{ ruleId:"custom", ruleName:"Partner contract", propertyPath:"/metadata", behavior:"partner-contract" }]);

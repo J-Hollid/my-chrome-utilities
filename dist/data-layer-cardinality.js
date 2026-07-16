@@ -13,6 +13,17 @@ export function cardinalityComparisonPasses(actual, comparison, limit) {
         return actual < limit;
     return actual <= limit;
 }
+export function cardinalityBounds(comparison, limit) {
+    if (comparison === ">")
+        return { minimum: limit + 1 };
+    if (comparison === ">=")
+        return { minimum: limit };
+    if (comparison === "==")
+        return { minimum: limit, maximum: limit };
+    if (comparison === "<")
+        return limit <= 0 ? { impossible: true } : { maximum: limit - 1 };
+    return { maximum: limit };
+}
 export function cardinalityConstraint(kind, comparison, limit) {
     const relation = comparison === ">" ? "greater than"
         : comparison === ">=" ? "at least"

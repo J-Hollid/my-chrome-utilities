@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8149aa481804624f04dc53723e5377d9f2e970c2ea5c8ed86754931bc719ddd2
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T19:23:57.763053511Z","feature_name":"Data layer JSON Schema 2020-12 export runtime","feature_path":"features/data-layer-json-schema-2020-12-export-runtime.feature","background_hash":"8ff3f153e5d7b987f9d8ba89fc1233792d1fdfbc2a674e25cd4531cedf443d13","implementation_hash":"f4bbc4d649ac0819f4c8d3e6c33c34514002fadbc4a90cc5b71280cc2966f0d5","scenarios":[{"index":1,"name":"Data layer JSON Schema 2020-12 export runtime 002","scenario_hash":"cbce9e46a1cf19c0fe5094336de6e49206c01a544e336626fdd93b164acc3cad","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:23:57.763053511Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer JSON Schema 2020-12 export runtime
 
   Background:

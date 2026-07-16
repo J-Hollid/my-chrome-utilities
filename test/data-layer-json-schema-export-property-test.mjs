@@ -12,7 +12,7 @@ const comparisons = [">", ">=", "==", "<", "<="];
 const expectedCardinality = (prefix, comparison, limit) => comparison === ">" ? { [`min${prefix}`]:limit + 1 }
   : comparison === ">=" ? { [`min${prefix}`]:limit }
     : comparison === "==" ? { [`min${prefix}`]:limit, [`max${prefix}`]:limit }
-      : comparison === "<" ? { [`max${prefix}`]:Math.max(0, limit - 1) }
+      : comparison === "<" ? limit === 0 ? { not:{} } : { [`max${prefix}`]:limit - 1 }
         : { [`max${prefix}`]:limit };
 const ajv = new Ajv2020({ strict:false });
 
