@@ -4743,6 +4743,7 @@ const workspacePanelContainmentRuntime = `(() => {
   const hotkeysPanel = document.querySelector("#workspace-panel-hotkeys");
   const hotkeysTab = document.querySelector("#workspace-tab-hotkeys");
   const utilityItems = [...document.querySelectorAll("#utility-directory > li")];
+  const ownedPanels = [...document.querySelectorAll("[data-utility-owner]")];
   const peers = dataLayerPanel.parentElement === hotkeysPanel.parentElement;
   const nested = dataLayerPanel.contains(hotkeysPanel) || hotkeysPanel.contains(dataLayerPanel);
   hotkeysTab.click();
@@ -4761,6 +4762,12 @@ const workspacePanelContainmentRuntime = `(() => {
       ids:utilityItems.map(({dataset})=>dataset.utilityId),
       labels:utilityItems.map(({textContent})=>textContent),
       visible:utilityItems.every((item)=>item.checkVisibility()),
+    },
+    panelOwnership:{
+      count:ownedPanels.length,
+      commandPalette:document.querySelector("#palette")?.dataset.utilityOwner,
+      hotkeys:hotkeysPanel.dataset.utilityOwner,
+      dataLayer:dataLayerPanel.dataset.utilityOwner,
     },
     afterActivation:{
       dataLayerHidden:dataLayerPanel.hidden,
@@ -5610,6 +5617,7 @@ try {
           labels:["Command palette","Hotkeys","Data layer"],
           visible:true,
         },
+        panelOwnership:{count:8,commandPalette:"command-palette",hotkeys:"hotkeys",dataLayer:"data-layer"},
         afterActivation:{
           dataLayerHidden:true,
           hotkeysHidden:false,

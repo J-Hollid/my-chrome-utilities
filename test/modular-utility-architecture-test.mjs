@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell, extensionShell } from "../dist/utility-registry.js";
-import { mountUtilityShell, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
+import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
+import { architectureViolations } from "../scripts/check-architecture.mjs";
 
 assert.deepEqual(utilityRegistry.map(({id})=>id),["command-palette","hotkeys","data-layer"]);
 for(const utility of utilityRegistry){
@@ -47,6 +48,11 @@ ownedStorage.setItem("legacy.data","after");
 assert.equal(backing.getItem("legacy.data"),"after","legacy storage remains compatible");
 assert.equal(JSON.parse(backing.getItem("test.data"))["legacy.data"],"after","utility serialization is namespaced");
 assert.throws(()=>ownedStorage.getItem("legacy.hotkeys"),/does not own storage key/);
+const panelElements=new Map(extensionShell.panels.map((id)=>[id,{dataset:{}}]));
+bindUtilityPanels(utilityRegistry,{querySelector(selector){return panelElements.get(selector.slice(1))??null;}});
+for(const utility of utilityRegistry)for(const panel of utility.panels)assert.equal(panelElements.get(panel).dataset.utilityOwner,utility.id);
+assert.throws(()=>bindUtilityPanels([{...utilityRegistry[0],panels:["missing-panel"]}],{querySelector(){return null;}}),/missing-panel/);
+assert.deepEqual(architectureViolations(new Map([["src/side-panel.ts",'import "./data-layer-session.js";']])),[{file:"src/side-panel.ts",dependency:"./data-layer-session.js",reason:"shell composition must use public utility entries"}]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");

@@ -12,5 +12,5 @@ export function commandsForUtilityShell(commands, registeredCommandIds) {
     }
     return selected;
 }
-export const commandPaletteUtility = defineUtility({ id: "command-palette", identity: { name: "Command palette", description: "Command discovery and execution" }, commands: ["demo.say-hello"], panels: ["command-palette"], lifecycle: { activate() { }, deactivate() { } }, storage: { namespace: "my-chrome-utilities.command-palette", version: 1 } });
+export const commandPaletteUtility = defineUtility({ id: "command-palette", identity: { name: "Command palette", description: "Command discovery and execution" }, commands: ["demo.say-hello"], panels: ["palette"], lifecycle: { activate() { }, deactivate() { } }, storage: { namespace: "my-chrome-utilities.command-palette", version: 1 } });
 //# sourceMappingURL=index.js.map

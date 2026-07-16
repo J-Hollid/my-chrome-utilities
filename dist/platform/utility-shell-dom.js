@@ -22,4 +22,20 @@ export function renderUtilityDirectory(utilities, container, ownerDocument = doc
     });
     container.replaceChildren(...items);
 }
+export function bindUtilityPanels(utilities, root) {
+    const owners = new Map();
+    for (const utility of utilities) {
+        for (const panelId of utility.panels) {
+            const previousOwner = owners.get(panelId);
+            if (previousOwner) {
+                throw new Error(`Panel ${panelId} is owned by both ${previousOwner} and ${utility.id}`);
+            }
+            const panel = root.querySelector(`#${panelId}`);
+            if (!panel)
+                throw new Error(`Registered utility panel is missing: ${panelId}`);
+            panel.dataset.utilityOwner = utility.id;
+            owners.set(panelId, utility.id);
+        }
+    }
+}
 //# sourceMappingURL=utility-shell-dom.js.map
