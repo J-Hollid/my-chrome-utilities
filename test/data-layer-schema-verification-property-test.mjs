@@ -21,6 +21,7 @@ import {
   validateEvent,
   validateWithSchema,
 } from "../dist/data-layer-schema-verification.js";
+import { applySchemaPropertyTypeEdit } from "../dist/data-layer-schema-property-type-editing.js";
 
 for (let sample = 0; sample < 100; sample += 1) {
   const version = 1 + (sample % 9);
@@ -36,6 +37,17 @@ for (let sample = 0; sample < 100; sample += 1) {
     sourceId: "source", eventName: "latest", target: "payload", enabled: true,
   });
   const currentSnapshot = structuredClone(current);
+
+  const editedType = ["string", "boolean", "object"][sample % 3];
+  const treatment = ["error", "warning", "ignore"][sample % 3];
+  const typeEdited = applySchemaPropertyTypeEdit(current, {
+    path:"/id", type:editedType, treatment, removeIncompatible:false,
+  });
+  assert.deepEqual(current, currentSnapshot, "type editing must not mutate the source schema");
+  assert.deepEqual(typeEdited.document.properties.id, { type:editedType, typeMismatchTreatment:treatment });
+  assert.deepEqual(typeEdited.document.required, ["id"], "type editing must retain compatible required membership");
+  assert.deepEqual(restoreSchemaLibrary(serializeSchemaLibrary([typeEdited])), [typeEdited],
+    "generated type edits must round-trip through canonical storage");
 
   const emptyDraft = createSchemaWorkingDraft(current);
   assert.deepEqual(current, currentSnapshot, "creating a working draft must not mutate the current revision");
