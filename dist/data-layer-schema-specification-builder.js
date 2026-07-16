@@ -229,7 +229,7 @@ export function specificationProperties(schema, allSchemas = [schema]) {
             propertyName: propertyName(row.canonicalPath),
             origin: row.origin,
             container,
-            selectedByDefault: !container,
+            selectedByDefault: true,
         };
     });
 }

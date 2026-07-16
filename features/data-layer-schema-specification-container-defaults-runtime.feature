@@ -28,4 +28,3 @@ Feature: Data layer schema specification container defaults runtime
     When the production source revision changes
     Then selection resets to every effective container and leaf from that source
     And Clear selection and Select all continue to clear and select every available row
-

@@ -291,7 +291,7 @@ export function specificationProperties(
         propertyName:propertyName(row.canonicalPath),
         origin:row.origin,
         container,
-        selectedByDefault:!container,
+        selectedByDefault:true,
       };
     });
 }

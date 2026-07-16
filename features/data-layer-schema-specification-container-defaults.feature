@@ -39,4 +39,3 @@ Feature: Data layer schema specification container defaults
     When the operator activates Select all
     Then every currently available container and leaf is selected
     And default selection does not change the behavior of either bulk action
-
