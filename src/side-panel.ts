@@ -16,8 +16,8 @@ import {
   type HotkeyKeymap,
 } from "./utilities/hotkeys/index.js";
 import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
-import { extensionShell } from "./utility-registry.js";
-import { mountUtilityShell } from "./platform/utility-shell-dom.js";
+import { extensionShell, utilityRegistry } from "./utility-registry.js";
+import { mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
@@ -359,8 +359,12 @@ const PROJECT_NAME = "my-chrome-utilities";
 
 const app = document.querySelector<HTMLElement>("#app");
 const panelRoot = document.querySelector<HTMLElement>("#side-panel-root");
+const utilityDirectory = document.querySelector<HTMLElement>("#utility-directory");
 if (panelRoot) {
   mountUtilityShell(extensionShell, panelRoot, window);
+}
+if (utilityDirectory) {
+  renderUtilityDirectory(utilityRegistry, utilityDirectory);
 }
 const sidePanelContent = document.querySelector<HTMLElement>("#side-panel-content");
 const commandLog = document.querySelector<HTMLElement>("#command-log");
@@ -5487,6 +5491,7 @@ renderSchemaWorkflowRows();
 renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
+if (panelRoot) panelRoot.dataset.utilityShellReady = "true";
 
 export {
   DATA_LAYER_SESSION_STORAGE_KEY,
