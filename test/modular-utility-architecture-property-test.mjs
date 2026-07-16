@@ -4,6 +4,7 @@ import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
+import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -149,4 +150,38 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.deepEqual(container.children.map(({ title }) => title), utilities.map(({ identity }) => identity.description));
 }
 
-console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, and 100 utility directories passed");
+for (let sample = 0; sample < 100; sample += 1) {
+  const keys = Array.from({ length:1 + sample % 10 }, (_, index) => `legacy-${sample}-${index}`);
+  const namespace = `storage.${sample}`;
+  const otherNamespace = `storage.other.${sample}`;
+  const otherKey = `other-${sample}`;
+  const values = new Map([["unowned.sentinel", "keep"], [otherKey, "other-value"]]);
+  if (sample % 2) values.set(namespace, "malformed envelope");
+  const backing = {
+    getItem:key => values.get(key) ?? null,
+    setItem:(key, value) => values.set(key, String(value)),
+    removeItem:key => values.delete(key),
+  };
+  const storage = createUtilityStorage(backing, { namespace, version:1, legacyKeys:keys });
+  const otherStorage = createUtilityStorage(backing, { namespace:otherNamespace, version:1, legacyKeys:[otherKey] });
+
+  assert.equal(storage.length, keys.length);
+  assert.deepEqual(keys.map((_, index) => storage.key(index)), keys);
+  assert.equal(storage.key(keys.length), null);
+  for (const [index, key] of keys.entries()) storage.setItem(key, `value-${sample}-${index}`);
+  assert.deepEqual(JSON.parse(values.get(namespace)), Object.fromEntries(
+    keys.map((key, index) => [key, `value-${sample}-${index}`]),
+  ));
+  assert.deepEqual(keys.map((key) => storage.getItem(key)), keys.map((_, index) => `value-${sample}-${index}`));
+  assert.throws(() => storage.setItem(otherKey, "cross-write"), /does not own storage key/);
+  assert.equal(otherStorage.getItem(otherKey), "other-value");
+
+  storage.removeItem(keys[0]);
+  assert.equal(storage.getItem(keys[0]), null);
+  storage.clear();
+  assert.equal(values.has(namespace), false);
+  assert.equal(values.get(otherKey), "other-value");
+  assert.equal(values.get("unowned.sentinel"), "keep");
+}
+
+console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, 100 utility directories, and 100 storage models passed");
