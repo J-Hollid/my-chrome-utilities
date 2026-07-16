@@ -1,5 +1,6 @@
 import { canonicalNestedPath } from "./data-layer-schema-nested-path.js";
 import { resolveEffectiveSchemaDocumentation } from "./data-layer-schema-documentation.js";
+import { cardinalityBounds } from "./data-layer-cardinality.js";
 export const JSON_SCHEMA_2020_12_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 const RESOURCE_BASE = "https://schemas.my-chrome-utilities.invalid";
 function clone(value) { return structuredClone(value); }
@@ -137,15 +138,13 @@ function typedParameter(rule, target) {
 function cardinalityAssertion(rule, prefix) {
     const limit = rule.limit ?? Number(rule.parameters ?? 0);
     const comparison = rule.comparison ?? (prefix === "Length" ? "==" : ">=");
-    if (comparison === ">")
-        return { [`min${prefix}`]: limit + 1 };
-    if (comparison === ">=")
-        return { [`min${prefix}`]: limit };
-    if (comparison === "==")
-        return { [`min${prefix}`]: limit, [`max${prefix}`]: limit };
-    if (comparison === "<")
-        return { [`max${prefix}`]: Math.max(0, limit - 1) };
-    return { [`max${prefix}`]: limit };
+    const bounds = cardinalityBounds(comparison, limit);
+    if (bounds.impossible)
+        return { not: {} };
+    return {
+        ...(bounds.minimum !== undefined ? { [`min${prefix}`]: bounds.minimum } : {}),
+        ...(bounds.maximum !== undefined ? { [`max${prefix}`]: bounds.maximum } : {}),
+    };
 }
 function standardAssertion(rule, target) {
     const operator = normalizedOperator(rule);
@@ -249,7 +248,7 @@ function decorateDocumentation(document, schema, schemas) {
             target.examples = [clone(entry.example.value)];
     }
 }
-export function inspectJsonSchemaExport(schema, schemas) {
+function buildJsonSchemaExport(schema, schemas) {
     const document = standardDocument(effectiveDocument(schema, schemas), schemaChain(schema, schemas).some(({ document }) => document.additionalProperties === false));
     const omitted = [];
     const conversions = [];
@@ -260,17 +259,13 @@ export function inspectJsonSchemaExport(schema, schemas) {
         else if (rule.severity === "warning" || rule.message)
             conversions.push({ ruleId: rule.id, propertyPath: rule.propertyPath ?? "/", conversion: "warning severity and custom issue message become a standard pass or fail assertion" });
     }
-    return { omitted, conversions };
+    return { document, compatibility: { omitted, conversions } };
+}
+export function inspectJsonSchemaExport(schema, schemas) {
+    return buildJsonSchemaExport(schema, schemas).compatibility;
 }
 export function exportJsonSchemaResource(schema, schemas) {
-    const document = standardDocument(effectiveDocument(schema, schemas), schemaChain(schema, schemas).some(({ document }) => document.additionalProperties === false));
-    const compatibility = { omitted: [], conversions: [] };
-    for (const rule of effectiveRules(schema, schemas)) {
-        if (!applyRule(document, rule))
-            compatibility.omitted.push({ ruleId: rule.id, ruleName: rule.name ?? rule.id, propertyPath: rule.propertyPath ?? "/", behavior: normalizedOperator(rule) || "unknown" });
-        else if (rule.severity === "warning" || rule.message)
-            compatibility.conversions.push({ ruleId: rule.id, propertyPath: rule.propertyPath ?? "/", conversion: "warning severity and custom issue message become a standard pass or fail assertion" });
-    }
+    const { document, compatibility } = buildJsonSchemaExport(schema, schemas);
     decorateDocumentation(document, schema, schemas);
     return {
         document: { $schema: JSON_SCHEMA_2020_12_DIALECT, $id: jsonSchemaResourceId(schema), title: schema.name, ...document },

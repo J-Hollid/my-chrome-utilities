@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=fbe3e10ba486f5f69506ca9a2d0565725e66af47d978d0c2ab967ad29a064420
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T19:21:51.945684668Z","feature_name":"Data layer JSON Schema 2020-12 export","feature_path":"features/data-layer-json-schema-2020-12-export.feature","background_hash":"2220f60393628828ef3d257df6066dc214f16620485b8c6961acda61e6c76c24","implementation_hash":"f4bbc4d649ac0819f4c8d3e6c33c34514002fadbc4a90cc5b71280cc2966f0d5","scenarios":[{"index":1,"name":"Data layer JSON Schema 2020-12 export 002","scenario_hash":"892b8da75ba5bad86c13bb487508d32cc2cf4593690f772cffb76d597dd26dff","mutation_count":27,"result":{"Total":27,"Killed":27,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:21:51.945684668Z"},{"index":2,"name":"Data layer JSON Schema 2020-12 export 003","scenario_hash":"8e5b022a768084025db0ff06b3bcc6c058745854faf0cd53f895fa52e65fe0af","mutation_count":30,"result":{"Total":30,"Killed":30,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:21:51.945684668Z"},{"index":4,"name":"Data layer JSON Schema 2020-12 export 005","scenario_hash":"4cf195227573ab96ba0e204af548057d96e1f95c62bb5d7af51ed934554ef324","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-16T19:21:51.945684668Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer JSON Schema 2020-12 export
 
   Background:
