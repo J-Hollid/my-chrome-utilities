@@ -27,7 +27,8 @@ Feature: Data layer schema specification builder runtime
   Scenario: Data layer schema specification builder runtime 002
     When the production property selector is rendered
     Then it contains searchable hierarchical local and inherited property controls
-    And effective leaf rows are selected by default and container rows can be included independently
+    And effective leaf, Object container, and Array container rows are selected by default
+    And every default-selected local or inherited container appears once in the rendered preview
     And Select all, Clear selection, descendant refinement, and independent container-row inclusion operate on the preview
     And Schema order and Property name sorting produce the matching preview order
     And the rendered preview headings are Property name, Description, Mandatory, Type, Example value, Allowed values, and Comments in that order
