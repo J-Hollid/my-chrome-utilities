@@ -13,8 +13,12 @@ export interface SchemaPropertyTypeEdit {
   resolutions?: Readonly<Record<string, { action: "remove" | "replace"; value?: string }>>;
 }
 
+function decodeSegment(segment: string): string {
+  return segment.replaceAll("~1", "/").replaceAll("~0", "~");
+}
+
 function segments(path: string): string[] {
-  return path.split("/").filter(Boolean);
+  return path.split("/").filter(Boolean).map(decodeSegment);
 }
 
 function propertyAt(document: JsonSchema, path: string): JsonSchema | undefined {
@@ -32,6 +36,23 @@ export function schemaPropertyTypeLabel(property: JsonSchema | undefined): strin
   if (!property?.type) return "Unspecified";
   if (property.type !== "array") return capital(property.type);
   return property.items?.type ? `Array of ${capital(property.items.type)}` : "Array";
+}
+
+export function schemaPropertyTypeOwner(
+  schema: Pick<SchemaDefinition, "parentSchemaId">,
+  path: string,
+  allSchemas: readonly SchemaDefinition[],
+): SchemaDefinition | undefined {
+  const visited = new Set<string>();
+  let parentId = schema.parentSchemaId;
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const parent = allSchemas.find(({ id }) => id === parentId);
+    if (!parent) return undefined;
+    if (propertyAt(parent.document, path)) return parent;
+    parentId = parent.parentSchemaId;
+  }
+  return undefined;
 }
 
 function compatibleExample(value: unknown, type: EditablePropertyType, itemType?: Exclude<EditablePropertyType, "array">): boolean {
@@ -53,6 +74,20 @@ function ruleDependsOnPropertyType(rule: AttachedSchemaRule, path: string): bool
   return rule.conditionGroup?.predicates.some((predicate) => predicate.propertyPath === path
     && predicate.operator !== "Exists"
     && predicate.operator !== "Does not exist") ?? false;
+}
+
+function hasRequiredMembership(document: JsonSchema, path: string): boolean {
+  const parts = segments(path);
+  let current: JsonSchema | undefined = document;
+  for (let index = 0; index < parts.length; index += 1) {
+    const segment = parts[index]!;
+    if (segment === "*") current = current?.items;
+    else {
+      if (index === parts.length - 1) return current?.required?.includes(segment) ?? false;
+      current = current?.properties?.[segment];
+    }
+  }
+  return false;
 }
 
 export function inspectSchemaPropertyTypeEdit(
@@ -81,11 +116,17 @@ export function inspectSchemaPropertyTypeEdit(
     from:schemaPropertyTypeLabel(property),
     to:type === "array" && itemType ? `Array of ${capital(itemType)}` : capital(type),
     compatible:[
-      ...(segments(path).length && schema.document.required?.includes(segments(path)[0]!) ? ["required membership"] : []),
+      ...(hasRequiredMembership(schema.document, path) ? ["required membership"] : []),
       ...(documentation ? ["documentation"] : []),
+      "type mismatch treatment",
     ],
     incompatible,
   };
+}
+
+export function schemaPropertyTypeImpactCanReplace(impact: string, type: EditablePropertyType): boolean {
+  return impact === "example value"
+    || (impact.startsWith("conditional dependency ") && type !== "object" && type !== "array");
 }
 
 function replaceProperty(document: JsonSchema, path: string, replacement: JsonSchema): JsonSchema {
@@ -123,7 +164,7 @@ export function applySchemaPropertyTypeEdit(schema: SchemaDefinition, edit: Sche
     ? Object.fromEntries(Object.entries(edit.resolutions).map(([key, resolution]) => [key, { ...resolution }]))
     : edit.removeIncompatible ? Object.fromEntries(impact.incompatible.map((item) => [item, { action:"remove" as const }])) : {};
   if (impact.incompatible.some((item) => !resolutions[item])) throw new Error("Resolve every incompatible schema artifact before saving the type change");
-  const unsupportedReplacement = impact.incompatible.find((item) => resolutions[item]?.action === "replace" && item !== "example value" && !item.startsWith("conditional dependency "));
+  const unsupportedReplacement = impact.incompatible.find((item) => resolutions[item]?.action === "replace" && !schemaPropertyTypeImpactCanReplace(item, edit.type));
   if (unsupportedReplacement) throw new Error(`${unsupportedReplacement} must be removed before saving the type change`);
   const remove = (item: string): boolean => resolutions[item]?.action === "remove";
   let replacement: JsonSchema = { type:edit.type, typeMismatchTreatment:edit.treatment };
