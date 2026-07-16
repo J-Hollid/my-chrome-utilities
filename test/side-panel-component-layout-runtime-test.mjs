@@ -3541,6 +3541,50 @@ const schemaPropertyCommentsRemovalRuntime = `(async () => {
   return {requested,summary,cancelled,confirmed:{removed:stored.workingDraft.documentation.properties?.["/products/*/price_monthly"]??null,propertyType:stored.workingDraft.document.properties.products.items.properties.price_monthly.type,rulesUnchanged:rulesBefore===JSON.stringify(stored.workingDraft.attachedRules)}};
 })()`;
 
+const schemaPropertyCommentsSpecificationSeedRuntime = `(() => {
+  const key="my-chrome-utilities.schema-library.v1";
+  const schemas=JSON.parse(localStorage.getItem(key));
+  const parent=schemas.find(({name})=>name==="Base event");
+  const schema=schemas.find(({name})=>name==="Generic pageview");
+  parent.documentation.properties["/site_id"].comments="Inherited site comment";
+  schema.documentation.properties["/page_type"].comments="Published page comment";
+  schema.revisionHistory[0].documentation.properties["/legacy"].comments="Historical legacy comment";
+  schema.workingDraft.documentation.properties["/products/*/product_name"].comments="First line\\nSecond\\tcell | <script>globalThis.specificationCommentExecuted=true</script>";
+  schema.workingDraft.documentation.properties["/page_type"].comments="Working page comment";
+  schema.workingDraft.documentation.properties["/draft_only"].comments="Working draft comment";
+  localStorage.setItem(key,JSON.stringify(schemas));
+  return true;
+})()`;
+
+const schemaPropertyCommentsSpecificationContractRuntime = `(async () => {
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const copied=[];let failRich=false;
+  globalThis.ClipboardItem=class{constructor(data){this.data=data;this.types=Object.keys(data);}};
+  Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{if(failRich)throw new Error("rich unavailable");copied.push(items[0]);},writeText:async(plain)=>copied.push({plain})}});
+  q("#data-layer-view-schemas").click();const schemaRow=Array.from(q("#schema-list").children).find(({textContent})=>textContent.includes("Generic pageview"));
+  Array.from(schemaRow.querySelectorAll("button")).find(({textContent})=>textContent==="Edit working draft").click();q("#build-specification").click();
+  const builder=q("#schema-specification-builder");const source=q("#schema-specification-source",builder);
+  const headings=()=>Array.from(builder.querySelectorAll("th > span"),({textContent})=>textContent);
+  const row=(path)=>q('tr[data-property-path="'+path+'"]',builder);
+  const comments=(path)=>{const index=headings().indexOf("Comments");return row(path).children[index].textContent;};
+  const working={page:comments("/page_type"),nested:comments("/products/*/product_name"),blank:comments("/products/*/price_monthly"),draft:comments("/draft_only"),inherited:comments("/site_id")};
+  source.value="published:4";source.dispatchEvent(new Event("change",{bubbles:true}));
+  const published={page:comments("/page_type"),nested:comments("/products/*/product_name"),inherited:comments("/site_id")};
+  source.value="historical:2";source.dispatchEvent(new Event("change",{bubbles:true}));
+  const historical={legacy:comments("/legacy"),inherited:comments("/site_id")};
+  source.value="working-draft";source.dispatchEvent(new Event("change",{bubbles:true}));
+  q('[aria-label="Move Comments earlier"]',builder).click();q('[aria-label="Move Comments earlier"]',builder).click();
+  const reordered=headings();
+  const copy=Array.from(builder.querySelectorAll("button")).find(({textContent})=>textContent==="Copy specification table");
+  copy.click();await pause();const headedItem=copied[0];const headed={html:await headedItem.data["text/html"].text(),plain:await headedItem.data["text/plain"].text()};
+  const includeHeadings=Array.from(builder.querySelectorAll("label")).find(({textContent})=>textContent.includes("Include headings")).querySelector("input");
+  includeHeadings.checked=false;includeHeadings.dispatchEvent(new Event("change",{bubbles:true}));copy.click();await pause();const unheadedItem=copied[1];const unheaded={html:await unheadedItem.data["text/html"].text(),plain:await unheadedItem.data["text/plain"].text()};
+  includeHeadings.checked=true;includeHeadings.dispatchEvent(new Event("change",{bubbles:true}));failRich=true;copy.click();await pause();const fallback=copied[2].plain;
+  Array.from(builder.querySelectorAll("button")).find(({textContent})=>textContent==="Reset column order").click();const reset=headings();
+  return{working,published,historical,reordered,headed,unheaded,fallback,reset,inert:globalThis.specificationCommentExecuted!==true&&!builder.querySelector("script"),runtimeErrors:globalThis.__sidePanelRuntimeErrors??[]};
+})()`;
+
 const libraryDirectTemplatePushSeedRuntime = `(() => {
   localStorage.clear();
   const base = { sourceId:"history", sourceName:"Event history", tags:[], validation:"Valid", provenance:"template:captured", revisionHistory:[] };
@@ -4954,7 +4998,13 @@ try {
       assert.deepEqual(lifecycle.persistence,{reloaded:"Current routing input",reloadedHistorical:"Legacy routing input",imported:"Current routing input",legacyBlank:""});
       assert.deepEqual(lifecycle.removal,{removed:null,restored:"Sent by checkout\nDo not derive from position",propertyRemoved:true,propertyRestored:"string"});
       const live=await evaluate(socket,schemaPropertyCommentsLiveRuntime);assert.match(live.comments,/Comments: <img src=x/);assert.equal(live.searchMatched,true);assert.equal(live.wildcardPath,"/products/2/product_name");assert.equal(live.collapsedUnchanged,true);assert.equal(live.inert,true);assert.equal(live.payloadUnchanged,true);assert.equal(live.validation,"Valid");
-      schemaPropertyCommentsObservation.removalWorkflow=removalWorkflow;schemaPropertyCommentsObservation.lifecycle=lifecycle;schemaPropertyCommentsObservation.live=live;socket.close();continue;
+      await evaluate(socket,schemaPropertyCommentsSpecificationSeedRuntime);await reloadPanel(socket);const specification=await evaluate(socket,schemaPropertyCommentsSpecificationContractRuntime);
+      assert.deepEqual(specification.working,{page:"Working page comment",nested:"First line\nSecond\tcell | <script>globalThis.specificationCommentExecuted=true</script>",blank:"",draft:"Working draft comment",inherited:"Inherited site comment"});
+      assert.deepEqual(specification.published,{page:"Published page comment",nested:"",inherited:"Inherited site comment"});assert.deepEqual(specification.historical,{legacy:"Historical legacy comment",inherited:"Inherited site comment"});
+      assert.deepEqual(specification.reordered,["Property name","Description","Mandatory","Type","Comments","Example value","Allowed values"]);assert.deepEqual(specification.reset,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);
+      assert.match(specification.headed.html,/<th>Comments<\/th><th>Example value<\/th>/);assert.match(specification.headed.html,/First line<br>Second\tcell \| &lt;script&gt;globalThis\.specificationCommentExecuted=true&lt;\/script&gt;/);assert.doesNotMatch(specification.headed.html,/<script>/);assert.match(specification.headed.plain,/Type\tComments\tExample value/);assert.equal(specification.headed.plain.split("\n").every((line)=>line.split("\t").length===7),true);
+      assert.doesNotMatch(specification.unheaded.html,/<thead>/);assert.doesNotMatch(specification.unheaded.plain,/Property name\tDescription/);assert.equal(specification.unheaded.plain.split("\n").every((line)=>line.split("\t").length===7),true);assert.match(specification.fallback,/Type\tComments\tExample value/);assert.equal(specification.inert,true);assert.deepEqual(specification.runtimeErrors,[]);
+      schemaPropertyCommentsObservation.removalWorkflow=removalWorkflow;schemaPropertyCommentsObservation.lifecycle=lifecycle;schemaPropertyCommentsObservation.live=live;schemaPropertyCommentsObservation.specification=specification;socket.close();continue;
     }
     if (process.env.LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER === "1") {
       await evaluate(socket, libraryDirectTemplatePushSeedRuntime); await reloadPanel(socket);
