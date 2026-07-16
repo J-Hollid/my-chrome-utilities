@@ -68,6 +68,8 @@ let schemaPropertyTypeEditingObservation;
 let schemaSpecificationContainerDefaultsObservation;
 let allowedValuesRuleMigrationObservation;
 let schemaPropertyCommentsObservation;
+let schemaCardinalityComparisonObservation;
+let schemaDeclaredPropertyExceptionsObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -75,6 +77,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER === "1" ? [720]
@@ -1951,7 +1954,8 @@ const conditionalValidationRulesRuntime = `(async () => {
   click(q("#schema-list"), "Edit working draft");
   q('#schema-property-tree button[aria-label="Add rule for oOrder.aProducts"]').click();
   click(q("#schema-property-rule-picker"), "Item count");
-  input("#schema-local-rule-minimumItemCount", "1");
+  input("#schema-local-rule-comparison", ">=", "change");
+  input("#schema-local-rule-limit", "1");
   const conditional = q("#schema-local-rule-conditional"); conditional.checked = true; conditional.dispatchEvent(new Event("change", { bubbles:true }));
   const editor = {
     applyOnlyWhen:q("#schema-local-rule-conditions").querySelector("legend").textContent,
@@ -2036,7 +2040,7 @@ const conditionalValidationRulesRuntime = `(async () => {
     issueCount:failed.issues.length,
     expectedPath:failed.issues[0].instancePath,
     conditionShown:failedText.includes("page_type equals product_detail"),
-    consequenceShown:failedText.includes("minimum 1 items"),
+    consequenceShown:failedText.includes("item count at least 1"),
     triggerNotFailing:!failed.evaluations.some(({ propertyPath, status }) => propertyPath === "/page_type" && (status === "error" || status === "warning")),
     notApplicableHiddenByDefault:!notApplicableDefaultText.includes("not applicable"),
     notApplicableShown:notApplicableText.includes("not applicable"),
@@ -2296,9 +2300,9 @@ const schemaPropertyRulePickerRuntime = `(async () => {
     if (rule === "Exact value") return parameters.querySelector('label[for="schema-local-rule-exactValue"]')?.textContent === "Exact value" && q("#schema-local-rule-exactValue").type === "text" ? "one type-aware Exact value field" : "missing Exact value";
     if (rule === "Allowed values") return parameters.querySelector("#schema-local-rule-allowed-values") && q("#schema-local-rule-allowed-value-1").type === "text" ? "repeatable type-aware value fields" : "missing allowed values";
     if (rule === "Regular expression") return parameters.querySelector('label[for="schema-local-rule-pattern"]')?.textContent === "Pattern" ? "Pattern" : "missing Pattern";
-    if (rule === "Text length") { const input = q("#schema-local-rule-exactLength"); return input.min === "0" && input.step === "1" ? "non-negative Exact length" : "invalid Exact length"; }
+    if (rule === "Text length") { const comparison=q("#schema-local-rule-comparison"),limit=q("#schema-local-rule-limit");return comparison.options.length===6&&limit.min==="0"&&limit.step==="1"?"Comparison and non-negative Limit":"invalid cardinality controls"; }
     if (rule === "Numeric range") return q("#schema-local-rule-minimum").type === "number" && q("#schema-local-rule-maximum").type === "number" ? "optional Minimum and Maximum" : "missing range";
-    const input = q("#schema-local-rule-minimumItemCount"); return input.min === "0" && input.step === "1" ? "non-negative Minimum item count" : "invalid item count";
+    const comparison=q("#schema-local-rule-comparison"),limit=q("#schema-local-rule-limit");return comparison.options.length===6&&limit.min==="0"&&limit.step==="1"?"Comparison and non-negative Limit":"invalid cardinality controls";
   };
   const configurationControls = {};
   let configurationCommon;
@@ -2315,10 +2319,10 @@ const schemaPropertyRulePickerRuntime = `(async () => {
   const validationDrafts = [
     ["Exact value:no value", model.createRuleConfiguration("Exact value", "string")],
     ["Regular expression:malformed pattern [", { ...model.createRuleConfiguration("Regular expression", "string"), pattern:"[" }],
-    ["Text length:exact length -1", { ...model.createRuleConfiguration("Text length", "string"), exactLength:"-1" }],
+    ["Text length:comparison <= and limit -1", { ...model.createRuleConfiguration("Text length", "string"), comparison:"<=", limit:"-1" }],
     ["Numeric range:neither boundary", model.createRuleConfiguration("Numeric range", "number")],
     ["Numeric range:minimum 10 and maximum 5", { ...model.createRuleConfiguration("Numeric range", "number"), minimum:"10", maximum:"5" }],
-    ["Item count:minimum 1.5", { ...model.createRuleConfiguration("Item count", "array"), minimumItemCount:"1.5" }],
+    ["Item count:comparison >= and limit 1.5", { ...model.createRuleConfiguration("Item count", "array"), comparison:">=", limit:"1.5" }],
   ];
   const validations = Object.fromEntries(validationDrafts.map(([key, draft]) => { const result = model.validateRuleConfiguration(draft); return [key, { creationResult:result.ready ? "available" : "blocked", assistance:result.assistance }]; }));
   const setValue = (selector, value, eventName = "input") => { const element = q(selector); element.value = value; element.dispatchEvent(new Event(eventName, { bubbles:true })); return element; };
@@ -4756,6 +4760,29 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1") {
+      const observations = await evaluate(socket, `(async () => {
+        const picker=await import("/data-layer-schema-property-rule-picker.js");
+        const verification=await import("/data-layer-schema-verification.js");
+        const comparisons=[">",">=","==","<","<="];
+        const event=(titleLength,itemCount)=>({sourceId:"history",eventName:"payload",rawInput:[],payload:{title:"x".repeat(titleLength),items:Array.from({length:itemCount},()=>({}))}});
+        const cardinality={availability:{text:picker.ruleTypeAvailability("string","Text length"),items:picker.ruleTypeAvailability("array","Item count")},controls:{}};
+        for(const [ruleType,propertyType] of [["Text length","string"],["Item count","array"]])cardinality.controls[ruleType]=picker.ruleConfigurationControls(ruleType,propertyType).map(({label,choices,minimum,step})=>({label,choices,minimum,step}));
+        cardinality.invalid={};for(const [name,draft] of [["no comparison",picker.createRuleConfiguration("Text length","string")],["no limit",{...picker.createRuleConfiguration("Text length","string"),comparison:"<="}],["limit -1",{...picker.createRuleConfiguration("Text length","string"),comparison:"<=",limit:"-1"}],["limit 1.5",{...picker.createRuleConfiguration("Text length","string"),comparison:"<=",limit:"1.5"}]])cardinality.invalid[name]=picker.validateRuleConfiguration(draft);
+        cardinality.outcomes={};for(const ruleType of ["Text length","Item count"])for(const comparison of comparisons){const schema={id:"schema:cardinality",name:"Cardinality",version:1,assignments:[],document:{type:"object",properties:{title:{type:"string"},items:{type:"array",items:{type:"object"}}}},attachedRules:[{id:"cardinality",version:1,propertyPath:ruleType==="Text length"?"/title":"/items",operator:ruleType==="Text length"?"text-length":"item-count",comparison,limit:50,parameters:"50"}]};for(const cardinalityValue of [49,50,51]){const result=verification.validateWithSchema(event(ruleType==="Text length"?cardinalityValue:1,ruleType==="Item count"?cardinalityValue:1),schema,[schema]);cardinality.outcomes[ruleType+":"+comparison+":"+cardinalityValue]=result.issues.length?{outcome:"issue",expected:result.issues[0].expected,actual:result.issues[0].actual}:{outcome:"pass"};}}
+        const saved={id:"schema:saved",name:"Saved",version:1,assignments:[],document:{type:"object",properties:{title:{type:"string"},items:{type:"array",items:{type:"object"}}}},attachedRules:[{id:"text",version:1,propertyPath:"/title",operator:"text-length",comparison:"<=",limit:50,parameters:"50"},{id:"items",version:1,propertyPath:"/items",operator:"item-count",comparison:">",limit:2,parameters:"2"}]};const reopenedCardinality=verification.importSchema(verification.exportSchema(saved));cardinality.reopened=reopenedCardinality.attachedRules.map(({operator,comparison,limit})=>({operator,comparison,limit}));cardinality.reopenedIssues=Object.fromEntries(verification.validateWithSchema(event(51,2),reopenedCardinality,[reopenedCardinality]).issues.map(({instancePath,expected,actual})=>[instancePath,{expected,actual}]));
+        cardinality.legacy={text:picker.createRuleConfigurationFromAttachedRule("Text length","string",{id:"legacy-text",version:1,parameters:"8"}),items:picker.createRuleConfigurationFromAttachedRule("Item count","array",{id:"legacy-items",version:1,parameters:"1"})};
+
+        const document={type:"object",additionalProperties:false,properties:{metadata:{type:"object",properties:{category:{type:"string"},settings:{type:"object",properties:{}}}},commerce:{type:"object",properties:{}},products:{type:"array",items:{type:"object",properties:{attributes:{type:"object",properties:{}}}}}}};
+        const exception=(propertyPath,enabled=true)=>({id:"exception:"+propertyPath,name:"Allow undeclared properties",version:1,propertyPath,operator:"allow-undeclared-properties",applicableType:"object",enabled});
+        const schema={id:"schema:exceptions",name:"Payload",version:1,assignments:[],document,attachedRules:[exception("/metadata"),exception("/products/*/attributes")]};const payload={metadata:{source:"feed",category:42,settings:{debug:true}},commerce:{internal:true},debug:true,products:[{attributes:{color:"black"},itemDebug:true},{attributes:{material:"steel"}}]};const validation=(candidate)=>verification.validateWithSchema({sourceId:"history",eventName:"payload",payload,rawInput:[]},candidate,[candidate]);const reopened=verification.importSchema(verification.exportSchema(schema));const exceptions={availability:{object:picker.ruleTypeAvailability("object","Allow undeclared properties"),string:picker.ruleTypeAvailability("string","Allow undeclared properties"),array:picker.ruleTypeAvailability("array","Allow undeclared properties")},paths:validation(schema).issues.map(({instancePath,message})=>[instancePath,message]),reopened:{rules:reopened.attachedRules.map(({propertyPath,enabled})=>({propertyPath,enabled})),paths:validation(reopened).issues.map(({instancePath})=>instancePath)},disabledPaths:validation({...schema,attachedRules:[exception("/metadata",false),exception("/products/*/attributes")]}).issues.map(({instancePath})=>instancePath),policy:document.additionalProperties===false};
+        return {cardinality,exceptions};
+      })()`);
+      schemaCardinalityComparisonObservation = observations.cardinality;
+      schemaDeclaredPropertyExceptionsObservation = observations.exceptions;
+      socket.close();
+      continue;
+    }
     if (process.env.DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER === "1") {
       defectReportComponentOptionsObservation = await evaluate(socket, `(async () => {
         const ui=await import("/data-layer-defect-report-ui.js");const reports=await import("/data-layer-defect-report.js");const library=await import("/data-layer-defect-library.js");const libraryUi=await import("/data-layer-defect-library-ui.js");const copies=await import("/data-layer-defect-library-copy.js");
@@ -6360,6 +6387,8 @@ try {
   if(process.env.ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER==="1")console.log(JSON.stringify({allowedValuesRuleMigration:allowedValuesRuleMigrationObservation}));
   if(process.env.SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaSpecificationContainerDefaults:schemaSpecificationContainerDefaultsObservation}));
   if(process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaPropertyComments:schemaPropertyCommentsObservation}));
+  if(process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaCardinalityComparison:schemaCardinalityComparisonObservation}));
+  if(process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaDeclaredPropertyExceptions:schemaDeclaredPropertyExceptionsObservation}));
   if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }

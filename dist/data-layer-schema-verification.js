@@ -367,7 +367,7 @@ export function restoreSchemaLibrary(serialized) {
         return [];
     }
 }
-function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclaredProperties) {
+function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclaredProperties, undeclaredPropertyExceptions, templatePath = "") {
     if (schema.type && valueType(value) !== schema.type && schema.typeMismatchTreatment !== "ignore")
         result.push({ instancePath: path, message: "Type mismatch", expected: schema.type, actual: valueType(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: schemaPath, severity: schema.typeMismatchTreatment ?? "error" });
     if (schema.type === "object" && value && typeof value === "object" && !Array.isArray(value)) {
@@ -378,13 +378,13 @@ function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclar
         for (const property of schema.forbidden ?? [])
             if (property in record)
                 result.push({ instancePath: `${path}/${property}`, message: "Forbidden property", expected: "absent", actual: valueType(record[property]), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/forbidden` });
-        if (onlyDeclaredProperties)
+        if (onlyDeclaredProperties && !undeclaredPropertyExceptions.has(templatePath || "/"))
             for (const property of Object.keys(record))
                 if (!(property in (schema.properties ?? {})))
                     result.push({ instancePath: `${path}/${property}`, message: "Undeclared property", expected: "declared property", actual: valueType(record[property]), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/additionalProperties` });
         for (const [property, child] of Object.entries(schema.properties ?? {}))
             if (property in record)
-                issuesFor(record[property], child, `${path}/${property}`, `${schemaPath}/properties/${property}`, result, metadata, onlyDeclaredProperties);
+                issuesFor(record[property], child, `${path}/${property}`, `${schemaPath}/properties/${property}`, result, metadata, onlyDeclaredProperties, undeclaredPropertyExceptions, `${templatePath}/${property}`);
     }
     if (schema.type === "number" && typeof value === "number") {
         if (schema.minimum !== undefined && value < schema.minimum)
@@ -393,7 +393,7 @@ function issuesFor(value, schema, path, schemaPath, result, metadata, onlyDeclar
             result.push({ instancePath: path, message: "Value above maximum", expected: String(schema.maximum), actual: String(value), schemaName: metadata.name, schemaVersion: metadata.version, schemaLocation: `${schemaPath}/maximum` });
     }
     if (schema.type === "array" && Array.isArray(value) && schema.items)
-        value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata, onlyDeclaredProperties));
+        value.forEach((item, index) => issuesFor(item, schema.items, `${path}/${index}`, `${schemaPath}/items`, result, metadata, onlyDeclaredProperties, undeclaredPropertyExceptions, `${templatePath}/*`));
 }
 function issueFromAttachedRule(rule, schema, issue, allowedValues = []) {
     return {
@@ -438,6 +438,21 @@ function observedValueText(value) {
         return String(value);
     }
 }
+function cardinalityComparisonPasses(actual, comparison, limit) {
+    if (comparison === ">")
+        return actual > limit;
+    if (comparison === ">=")
+        return actual >= limit;
+    if (comparison === "==")
+        return actual === limit;
+    if (comparison === "<")
+        return actual < limit;
+    return actual <= limit;
+}
+function cardinalityConstraint(kind, comparison, limit) {
+    const relation = comparison === ">" ? "greater than" : comparison === ">=" ? "at least" : comparison === "==" ? "exactly" : comparison === "<" ? "less than" : "at most";
+    return `${kind} ${relation} ${limit}`;
+}
 function nestedRuleFailure(rule, match) {
     const operator = rule.operator?.replaceAll("_", "-").toLowerCase() ?? "";
     const actual = match.exists ? observedValueText(match.value) : "missing";
@@ -454,8 +469,10 @@ function nestedRuleFailure(rule, match) {
     if (operator === "non-empty-string")
         return match.exists && typeof match.value === "string" && match.value.length > 0 ? undefined : { message: "Value is empty", expected: "non-empty string", actual };
     if (operator === "text-length") {
-        const length = Number(rule.parameters);
-        return match.exists && typeof match.value === "string" && match.value.length === length ? undefined : { message: "Text length mismatch", expected: `text length ${length}`, actual };
+        const limit = rule.limit ?? Number(rule.parameters);
+        const comparison = rule.comparison ?? "==";
+        const measured = typeof match.value === "string" ? match.value.length : Number.NaN;
+        return match.exists && Number.isFinite(measured) && cardinalityComparisonPasses(measured, comparison, limit) ? undefined : { message: "Text length mismatch", expected: rule.comparison ? cardinalityConstraint("text length", comparison, limit) : `text length ${limit}`, actual: Number.isFinite(measured) ? String(measured) : actual };
     }
     if (operator === "digits-only")
         return match.exists && typeof match.value === "string" && /^\d+$/.test(match.value) ? undefined : { message: "Value contains non-digits", expected: "digits only", actual };
@@ -480,8 +497,10 @@ function nestedRuleFailure(rule, match) {
         return inRange ? undefined : { message: "Value is outside range", expected: `${minimumText || "no minimum"} to ${maximumText || "no maximum"}`, actual };
     }
     if (operator === "item-count") {
-        const minimum = Number(rule.parameters ?? 0);
-        return match.exists && Array.isArray(match.value) && match.value.length >= minimum ? undefined : { message: "Too few items", expected: `minimum ${minimum} items`, actual };
+        const limit = rule.limit ?? Number(rule.parameters ?? 0);
+        const comparison = rule.comparison ?? ">=";
+        const measured = Array.isArray(match.value) ? match.value.length : Number.NaN;
+        return match.exists && Number.isFinite(measured) && cardinalityComparisonPasses(measured, comparison, limit) ? undefined : { message: rule.comparison ? "Item count mismatch" : "Too few items", expected: rule.comparison ? cardinalityConstraint("item count", comparison, limit) : `minimum ${limit} items`, actual: Number.isFinite(measured) ? String(measured) : actual };
     }
     return undefined;
 }
@@ -688,7 +707,10 @@ function validationEvaluations(value, schema, schemas) {
 }
 function collectSchemaIssues(value, schema, schemas, result) {
     const document = normalizeCanonicalSchemaDocument(inheritedDocument(schema, schemas));
-    issuesFor(value, document, "", "#", result, schema, document.additionalProperties === false);
+    const undeclaredPropertyExceptions = new Set((schema.attachedRules ?? [])
+        .filter((rule) => rule.enabled !== false && rule.operator?.replaceAll("_", "-").toLowerCase() === "allow-undeclared-properties" && rule.propertyPath)
+        .map((rule) => canonicalAttachedRulePath(rule.propertyPath)));
+    issuesFor(value, document, "", "#", result, schema, document.additionalProperties === false, undeclaredPropertyExceptions);
     attachedRuleIssues(value, schema, result);
     inheritedAttachedRuleIssues(value, schema, schemas, result);
 }

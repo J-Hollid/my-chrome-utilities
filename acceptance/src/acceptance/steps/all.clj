@@ -58,6 +58,8 @@
             [acceptance.steps.schema-renaming :as schema-renaming]
             [acceptance.steps.schema-property-filter-sort :as schema-property-filter-sort]
             [acceptance.steps.schema-property-rule-picker :as schema-property-rule-picker]
+            [acceptance.steps.schema-cardinality-comparison :as schema-cardinality-comparison]
+            [acceptance.steps.schema-declared-property-exceptions :as schema-declared-property-exceptions]
             [acceptance.steps.schema-rule-property-identity :as schema-rule-property-identity]
             [acceptance.steps.schema-property-removal :as schema-property-removal]
             [acceptance.steps.schema-property-copy :as schema-property-copy]
@@ -158,6 +160,8 @@
                schema-container-child-authoring/handlers
                schema-renaming/handlers
                schema-property-removal/handlers
+               schema-cardinality-comparison/handlers
+               schema-declared-property-exceptions/handlers
                schema-property-rule-picker/handlers
                schema-revision-lifecycle/handlers
                schema-verification/handlers
