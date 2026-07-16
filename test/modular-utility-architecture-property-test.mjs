@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
-import { renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
+import { bindUtilityPanels, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 
 const closure = (packs, initial, direction) => {
@@ -184,4 +184,30 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(values.get("unowned.sentinel"), "keep");
 }
 
-console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, 100 utility directories, and 100 storage models passed");
+for (let sample = 0; sample < 100; sample += 1) {
+  const utilities = Array.from({ length:1 + sample % 10 }, (_, utilityIndex) => ({
+    id:`panel-owner-${sample}-${utilityIndex}`,
+    identity:{ name:"Panel owner", description:"Generated panel owner" },
+    commands:[],
+    panels:Array.from({ length:1 + (sample + utilityIndex) % 4 },
+      (_, panelIndex) => `panel-${sample}-${utilityIndex}-${panelIndex}`),
+    lifecycle:{ activate(){}, deactivate(){} },
+    storage:{ namespace:`panels.${sample}.${utilityIndex}`, version:1 },
+  }));
+  const nodes = new Map(utilities.flatMap(({ panels }) => panels.map((panel) => [panel, { dataset:{} }])));
+  const root = { querySelector(selector){ return nodes.get(selector.slice(1)) ?? null; } };
+
+  bindUtilityPanels(utilities, root);
+  for (const utility of utilities) {
+    assert.deepEqual(utility.panels.map((panel) => nodes.get(panel).dataset.utilityOwner),
+      Array(utility.panels.length).fill(utility.id));
+  }
+  const missingPanel = utilities.at(-1).panels.at(-1);
+  nodes.delete(missingPanel);
+  assert.throws(() => bindUtilityPanels(utilities, root), new RegExp(missingPanel));
+  nodes.set(missingPanel, { dataset:{} });
+  assert.throws(() => bindUtilityPanels([...utilities, { ...utilities[0], id:"duplicate-owner" }], root),
+    /owned by both/);
+}
+
+console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, 100 utility directories, 100 storage models, and 100 panel models passed");
