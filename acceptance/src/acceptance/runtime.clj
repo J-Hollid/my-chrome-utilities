@@ -39,17 +39,20 @@
                             (:text step))
                     {:step step}))))
 
-(defn run-execution! [execution handlers]
-  (reduce (fn [world step]
-            (execute-step! world (:example execution) step handlers))
-          {}
-          (:steps execution)))
+(defn run-execution!
+  ([execution handlers]
+   (run-execution! execution handlers {}))
+  ([execution handlers initial-world]
+   (reduce (fn [world step]
+             (execute-step! world (:example execution) step handlers))
+           initial-world
+           (:steps execution))))
 
 (defn run-feature! [feature handlers]
   (let [executions (expand-executions feature)]
     (doseq [execution executions]
       (try
-        (run-execution! execution handlers)
+        (run-execution! execution handlers {:acceptance/feature-name (:name feature)})
         (catch Throwable t
           (throw (ex-info (format "Acceptance execution failed: %s: %s"
                                   (:name execution)
@@ -60,5 +63,5 @@
    :executions (count (expand-executions feature))})
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T14:51:18.882679238+02:00", :module-hash "2004639165", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1940847213"} {:id "defn-/scenario-examples", :kind "defn-", :line 4, :end-line nil, :hash "2012220682"} {:id "defn/expand-executions", :kind "defn", :line 10, :end-line nil, :hash "551090886"} {:id "defn-/match-handler", :kind "defn-", :line 27, :end-line nil, :hash "2055343244"} {:id "defn/execute-step!", :kind "defn", :line 34, :end-line nil, :hash "292110057"} {:id "defn/run-execution!", :kind "defn", :line 42, :end-line nil, :hash "230445371"} {:id "defn/run-feature!", :kind "defn", :line 48, :end-line nil, :hash "-189293122"}]}
+;; {:version 1, :tested-at "2026-07-16T16:11:30.865332991+02:00", :module-hash "1946156868", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1940847213"} {:id "defn-/scenario-examples", :kind "defn-", :line 4, :end-line 8, :hash "2012220682"} {:id "defn/expand-executions", :kind "defn", :line 10, :end-line 25, :hash "551090886"} {:id "defn-/match-handler", :kind "defn-", :line 27, :end-line 32, :hash "2055343244"} {:id "defn/execute-step!", :kind "defn", :line 34, :end-line 40, :hash "292110057"} {:id "defn/run-execution!", :kind "defn", :line 42, :end-line 49, :hash "281791651"} {:id "defn/run-feature!", :kind "defn", :line 51, :end-line 63, :hash "1113291075"}]}
 ;; clj-mutate-manifest-end

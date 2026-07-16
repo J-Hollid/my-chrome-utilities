@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c12d2c1590de910021da422a7a041c145bd285c718a5c8df32425b46d120b6ca
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T14:18:45.970755130Z","feature_name":"Data layer schema specification example selection","feature_path":"features/data-layer-schema-specification-example-selection.feature","background_hash":"6def84e1d7c5864afdc0ba249d2a73d0565f92b81ac9d279ea4776a57f54be98","implementation_hash":"2bf31ebbb091b81d5f8232353fd0b39bdddf062c","scenarios":[{"index":1,"name":"Data layer schema specification example selection 002","scenario_hash":"ddb9410a9a47cc6af8e1b73fdbdbf0da83936a66ff6b9fbe6f551b58f160ea94","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-16T14:18:45.970755130Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification example selection
 
   Background:

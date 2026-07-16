@@ -157,7 +157,8 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             later.disabled = index === columns.length - 1;
             earlier.addEventListener("click", () => { [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]]; renderPreview(); });
             later.addEventListener("click", () => { [columns[index], columns[index + 1]] = [columns[index + 1], columns[index]]; renderPreview(); });
-            cell.addEventListener("dragstart", (event) => event.dataTransfer?.setData("text/plain", column));
+            cell.addEventListener("dragstart", (event) => { cell.classList.add("is-dragging"); event.dataTransfer?.setData("text/plain", column); });
+            cell.addEventListener("dragend", () => cell.classList.remove("is-dragging"));
             cell.addEventListener("dragover", (event) => event.preventDefault());
             cell.addEventListener("drop", (event) => { event.preventDefault(); const moved = event.dataTransfer?.getData("text/plain"); const from = columns.indexOf(moved); const to = columns.indexOf(column); if (from < 0 || to < 0)
                 return; columns.splice(from, 1); columns.splice(to, 0, moved); renderPreview(); });
@@ -173,11 +174,12 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
                 if (column === "allowedValues")
                     appendAllowedValueGroups(cell, row.allowedValueGroups);
                 else if (column === "example") {
-                    cell.textContent = row.example ?? "";
-                    cell.tabIndex = 0;
-                    cell.setAttribute("role", "button");
                     cell.dataset.specificationExamplePath = row.canonicalPath;
-                    cell.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
+                    const trigger = document.createElement("button");
+                    trigger.type = "button";
+                    trigger.className = "schema-specification-example-trigger";
+                    trigger.textContent = row.example ?? "";
+                    trigger.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
                     const openEditor = () => {
                         if (cell.querySelector(".schema-specification-example-editor"))
                             return;
@@ -225,7 +227,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
                         const cancel = document.createElement("button");
                         cancel.type = "button";
                         cancel.textContent = "Cancel";
-                        const cancelEditor = () => { editor.remove(); cell.focus({ preventScroll: true }); };
+                        const cancelEditor = () => { editor.remove(); trigger.focus({ preventScroll: true }); };
                         cancel.addEventListener("click", cancelEditor);
                         editor.addEventListener("keydown", (event) => { if (event.key === "Escape") {
                             event.preventDefault();
@@ -235,12 +237,14 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
                         cell.append(editor);
                         (editor.querySelector(`input[name="${CSS.escape(name)}"]:checked`) ?? editor.querySelector("input:not(:disabled)"))?.focus({ preventScroll: true });
                     };
-                    cell.addEventListener("click", (event) => { if (event.target === cell)
-                        openEditor(); });
-                    cell.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
+                    trigger.addEventListener("click", openEditor);
+                    trigger.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         openEditor();
                     } });
+                    cell.addEventListener("click", (event) => { if (event.target === cell)
+                        openEditor(); });
+                    cell.append(trigger);
                 }
                 else
                     cell.textContent = value(row, column);

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=f15ddb31b8aebb7fbe6a1344e473e09b766fc732661b57567f419985545618b8
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-16T14:18:12.486735472Z","feature_name":"Data layer schema specification builder customization runtime","feature_path":"features/data-layer-schema-specification-builder-customization-runtime.feature","background_hash":"0da8f51750ec923f9098c520ed16be86500ec385428129052097424d6751b86a","implementation_hash":"2bf31ebbb091b81d5f8232353fd0b39bdddf062c","scenarios":[{"index":1,"name":"Data layer schema specification builder customization runtime 002","scenario_hash":"ae66b77189596ebef5170dfcab4bd0efe25a2e69581b876dc158d89588e92101","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-16T14:18:12.486735472Z"},{"index":2,"name":"Data layer schema specification builder customization runtime 003","scenario_hash":"0f2ef340dcc2948586654fbfc9de1d56cf3e34c0f1ab35fc2c2b2da6c6307a53","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-16T14:18:12.486735472Z"},{"index":4,"name":"Data layer schema specification builder customization runtime 005","scenario_hash":"c7debe448352438e2de5df771e900d800aa4af47d22a6daa8686daf003ae5a70","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-16T14:18:12.486735472Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer schema specification builder customization runtime
 
   Background:

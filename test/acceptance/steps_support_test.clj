@@ -45,3 +45,29 @@
               relations {"left" "a" "right" "c"} "invalid relation")
              :accepted
              (catch Exception _ :rejected))))))
+
+(deftest feature-mode-entry-handlers-are-scoped-to-their-own-feature
+  (let [entry "the specification builder is open for Generic pageview revision 4"
+        handlers (support/feature-mode-handlers
+                  ["features/data-layer-schema-specification-example-selection.feature"]
+                  {entry :model}
+                  :example-mode
+                  (fn [world _ _ _] world))
+        handler (some #(when (re-matches (:pattern %) entry) %) handlers)]
+    (is handler)
+    (is ((:applies? handler) {:acceptance/feature-name "Data layer schema specification example selection"}))
+    (is (not ((:applies? handler) {:acceptance/feature-name "Data layer schema specification builder customization"})))))
+
+(deftest validates-mode-specific-example-domains-and-relations-together
+  (let [runtime-values {"left" #{"runtime"} "right" #{"value"}}
+        model-values {"left" #{"model"} "right" #{"value"}}
+        runtime-relations [{:keys ["left" "right"] :rows #{["runtime" "value"]}}]
+        model-relations [{:keys ["left" "right"] :rows #{["model" "value"]}}]]
+    (is (= {"left" "runtime" "right" "value"}
+           (support/validate-mode-example!
+            :runtime runtime-values model-values runtime-relations model-relations
+            {"left" "runtime" "right" "value"} "invalid domain" "invalid relation")))
+    (is (thrown? Exception
+                 (support/validate-mode-example!
+                  :runtime runtime-values model-values runtime-relations model-relations
+                  {"left" "model" "right" "value"} "invalid domain" "invalid relation")))))
