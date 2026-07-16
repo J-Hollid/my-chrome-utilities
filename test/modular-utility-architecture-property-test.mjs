@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { planVerification } from "../scripts/verification-packs.mjs";
+import { composeUtilityShell } from "../dist/utility-registry.js";
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -53,4 +54,61 @@ for (let sample = 0; sample < 100; sample += 1) {
     /Assign every source path to one pack/);
 }
 
-console.log("modular verification planning properties: 100 generated graphs passed");
+for (let sample = 0; sample < 100; sample += 1) {
+  const count = 1 + sample % 12;
+  const calls = [];
+  const utilities = Array.from({ length:count }, (_, index) => ({
+    id:`utility-${sample}-${index}`,
+    identity:{ name:`Utility ${index}`, description:"Generated lifecycle utility" },
+    commands:[],
+    panels:[],
+    lifecycle:{
+      activate(){ calls.push(`activate:${index}`); },
+      deactivate(){ calls.push(`deactivate:${index}`); },
+    },
+    storage:{ namespace:`property.${sample}.${index}`, version:1 },
+  }));
+  const shell = composeUtilityShell(utilities);
+  const ids = utilities.map(({ id }) => id);
+
+  assert.deepEqual(shell.activate(), ids);
+  assert.deepEqual(shell.activate(), ids, "generated utility activation must be idempotent");
+  shell.deactivate();
+  shell.deactivate();
+  assert.deepEqual(calls, [
+    ...utilities.map((_, index) => `activate:${index}`),
+    ...utilities.map((_, index) => `deactivate:${count - index - 1}`),
+  ], "generated utilities must deactivate once in reverse activation order");
+}
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const count = 2 + sample % 11;
+  const failureIndex = sample % count;
+  const calls = [];
+  const utilities = Array.from({ length:count }, (_, index) => ({
+    id:`rollback-${sample}-${index}`,
+    identity:{ name:`Rollback ${index}`, description:"Generated rollback utility" },
+    commands:[],
+    panels:[],
+    lifecycle:{
+      activate(){
+        calls.push(`activate:${index}`);
+        if (index === failureIndex) throw new Error(`failure:${index}`);
+      },
+      deactivate(){ calls.push(`deactivate:${index}`); },
+    },
+    storage:{ namespace:`rollback.${sample}.${index}`, version:1 },
+  }));
+  const shell = composeUtilityShell(utilities);
+
+  assert.throws(() => shell.activate(), new RegExp(`failure:${failureIndex}`));
+  assert.deepEqual(calls, [
+    ...utilities.slice(0, failureIndex + 1).map((_, index) => `activate:${index}`),
+    ...utilities.slice(0, failureIndex).map((_, index) => `deactivate:${failureIndex - index - 1}`),
+  ], "failed activation must roll back only previously activated utilities in reverse order");
+  shell.deactivate();
+  assert.equal(calls.filter((call) => call.startsWith("deactivate:")).length, failureIndex,
+    "failed activation must leave no utility marked active");
+}
+
+console.log("modular properties: 100 verification graphs and 200 lifecycle cases passed");
