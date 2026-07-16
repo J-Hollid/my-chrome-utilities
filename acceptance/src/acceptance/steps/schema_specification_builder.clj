@@ -37,7 +37,9 @@
    "data_type" #{"String" "Array of Object" "Number" "Unspecified"}
    "example_value" #{"product_detail" "EUR" "blank" "Phone" "24" "otelo"}
    "allowed_values" #{"product_detail and product_list" "EUR and GBP" "no values" "12 and 24"
-                      "otelo, hollandsnieuwe, and ben"}})
+                      "otelo, hollandsnieuwe, and ben"}
+   "comments" #{"Used for page routing" "ISO 4217 code" "One row per product"
+                "Customer-facing label" "Whole months" "Shared across events" "blank"}})
 
 (def runtime-values
   {"entry_point" #{"Schema Library" "working-draft schema editor" "revision history"}
@@ -47,7 +49,8 @@
    "mandatory" #{"Yes" "Yes when commerce exists" "No"
                  "Yes when price_monthly exists for the same products item"}
    "data_type" #{"String" "Array of Object" "Number" "Unspecified"}
-   "allowed_values" #{"product_detail and product_list" "EUR and GBP" "no values" "12 and 24"}})
+   "allowed_values" #{"product_detail and product_list" "EUR and GBP" "no values" "12 and 24"}
+   "comments" #{"Used for page routing" "ISO 4217 code" "One row per product" "Whole months" "blank"}})
 
 (defn- validate-example! [mode example]
   (support/validate-mode-example-domain!
@@ -75,10 +78,12 @@
    "The production selector did not preserve hierarchy, defaults, filtering, or independent selection."
    observed)
   (support/assert!
-   (and (= ["page_type" "Page classification" "Yes" "String" "product_detail" "product_detail | product_list" ""] (:pageType cases))
+   (and (= ["page_type" "Page classification" "Yes" "String" "product_detail" "product_detail | product_list" "Used for page routing"] (:pageType cases))
         (= "Yes when commerce exists" (get-in cases [:currency 2]))
+        (= "ISO 4217 code" (get-in cases [:currency 6]))
         (= "Yes when a products item exists" (get-in cases [:productName 2]))
         (= "Yes when price_monthly exists for the same products item" (get-in cases [:duration 2]))
+        (= "Whole months" (get-in cases [:duration 6]))
         (= "Unspecified" (get-in cases [:tracking 3]))
         (= "otelo | hollandsnieuwe | ben" (get-in cases [:site 5]))
         (re-find #"Conflict" (get-in cases [:conflict 5]))
@@ -103,5 +108,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T23:15:52.641364881+02:00", :module-hash "-76687417", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-817787331"} {:id "def/feature-files", :kind "def", :line 4, :end-line 5, :hash "-929386589"} {:id "def/entry-modes", :kind "def", :line 6, :end-line 8, :hash "2017366871"} {:id "form/3/defonce", :kind "defonce", :line 9, :end-line 9, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 11, :end-line 15, :hash "1166323297"} {:id "defn-/runtime-observation!", :kind "defn-", :line 16, :end-line 22, :hash "-980239240"} {:id "def/model-values", :kind "def", :line 24, :end-line 40, :hash "-1302374516"} {:id "def/runtime-values", :kind "def", :line 42, :end-line 50, :hash "1971891087"} {:id "defn-/validate-example!", :kind "defn-", :line 52, :end-line 55, :hash "520558861"} {:id "defn-/assert-runtime!", :kind "defn-", :line 57, :end-line 98, :hash "-1308335171"} {:id "def/handlers", :kind "def", :line 100, :end-line 103, :hash "1565602464"}]}
+;; {:version 1, :tested-at "2026-07-16T10:56:28.191033399+02:00", :module-hash "-105857437", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-817787331"} {:id "def/feature-files", :kind "def", :line 4, :end-line 5, :hash "-929386589"} {:id "def/entry-modes", :kind "def", :line 6, :end-line 8, :hash "2017366871"} {:id "form/3/defonce", :kind "defonce", :line 9, :end-line 9, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 11, :end-line 15, :hash "1166323297"} {:id "defn-/runtime-observation!", :kind "defn-", :line 16, :end-line 22, :hash "-980239240"} {:id "def/model-values", :kind "def", :line 24, :end-line 42, :hash "88513631"} {:id "def/runtime-values", :kind "def", :line 44, :end-line 53, :hash "-1777363436"} {:id "defn-/validate-example!", :kind "defn-", :line 55, :end-line 58, :hash "520558861"} {:id "defn-/assert-runtime!", :kind "defn-", :line 60, :end-line 103, :hash "-1465174977"} {:id "def/handlers", :kind "def", :line 105, :end-line 108, :hash "1565602464"}]}
 ;; clj-mutate-manifest-end
