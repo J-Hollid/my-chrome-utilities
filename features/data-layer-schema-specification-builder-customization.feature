@@ -3,7 +3,7 @@ Feature: Data layer schema specification builder customization
   Background:
     Given the specification builder is open for Generic pageview revision 4
     And page_type, products[].duration, and products[].product_name are selected
-    And the preview has the default six columns in their default order
+    And the preview has the default seven columns in their default order
     And duration has documented example 24 and allowed values 12 and 24
     And product_name has neither a documented example nor allowed values
 
@@ -60,13 +60,13 @@ Feature: Data layer schema specification builder customization
   # Data layer schema specification builder customization 005
   Scenario: Data layer schema specification builder customization 005
     When the operator drags Type before Mandatory in the preview heading
-    Then the preview columns are ordered Property name, Description, Type, Mandatory, Example value, and Allowed values
+    Then the preview columns are ordered Property name, Description, Type, Mandatory, Example value, Allowed values, and Comments
     And every preview row and copied representation uses that column order
     And property row order is unchanged
     When the operator uses a heading's Move left or Move right action
     Then the same column movement is available without dragging
     And unavailable movement beyond the first or last position is disabled
-    And Reset column order restores the default six-column order
+    And Reset column order restores the default seven-column order with Comments last
 
   # Data layer schema specification builder customization 006
   Scenario: Data layer schema specification builder customization 006
@@ -124,4 +124,3 @@ Feature: Data layer schema specification builder customization
     When all clipboard writing fails
     Then the configured preview remains available for manual selection and copy
     And no builder configuration is lost
-

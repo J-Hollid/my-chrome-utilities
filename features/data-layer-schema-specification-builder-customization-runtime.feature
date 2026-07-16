@@ -48,7 +48,7 @@ Feature: Data layer schema specification builder customization runtime
     When the production keyboard movement action returns Type after Mandatory
     Then the rendered and copied order returns with it
     And first and last boundary actions are disabled
-    And Reset column order restores all six production headings
+    And Reset column order restores all seven production headings with Comments last
 
   # Data layer schema specification builder customization runtime 005
   Scenario Outline: Data layer schema specification builder customization runtime 005
@@ -81,4 +81,3 @@ Feature: Data layer schema specification builder customization runtime
     Then row-specific example overrides reset while copy and column preferences remain
     And clipboard fallback retains the configured headings, columns, rows, and examples
     And closing the builder leaves production schemas, documentation, and rules unchanged
-
