@@ -63,7 +63,7 @@ import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schem
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
 import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
 import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
 import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
 import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
@@ -407,6 +407,7 @@ let pendingManualPropertyContext;
 let schemaRulePickerPath;
 let schemaRulePickerTrigger;
 let schemaRuleConfiguration;
+let editingAttachedCardinalityRule;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
@@ -2206,7 +2207,24 @@ function renderSchemaDraft() {
                 promotion.dataset.propertyPath = persistedPath;
                 promotion.addEventListener("click", () => openLocalRulePromotionReview(persistedPath, rule.id, promotion));
             }
-            row.append(...(promotion ? [promotion] : []), toggle, remove);
+            const normalizedOperator = rule.operator?.replaceAll("_", "-").toLowerCase();
+            const editCardinality = normalizedOperator === "text-length" || normalizedOperator === "item-count" ? document.createElement("button") : undefined;
+            if (editCardinality) {
+                editCardinality.type = "button";
+                editCardinality.textContent = "Edit";
+                editCardinality.addEventListener("click", () => {
+                    const ruleType = normalizedOperator === "text-length" ? "Text length" : "Item count";
+                    const propertyType = ruleType === "Text length" ? "string" : "array";
+                    selectedSchemaPropertyPath = schemaRulePickerPath = path;
+                    schemaRulePickerTrigger = editCardinality;
+                    editingAttachedCardinalityRule = rule;
+                    schemaRuleConfiguration = createRuleConfigurationFromAttachedRule(ruleType, propertyType, rule);
+                    renderSchemaPropertyRulePicker();
+                    schemaPropertyRulePicker.showModal();
+                    schemaPropertyRulePicker.querySelector("#schema-local-rule-comparison")?.focus({ preventScroll: true });
+                });
+            }
+            row.append(...(promotion ? [promotion] : []), ...(editCardinality ? [editCardinality] : []), toggle, remove);
             view.append(row);
         }
         item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view);
@@ -3020,6 +3038,7 @@ function closeSchemaPropertyRulePicker() {
     schemaRulePickerTrigger?.focus({ preventScroll: true });
     schemaRulePickerPath = undefined;
     schemaRuleConfiguration = undefined;
+    editingAttachedCardinalityRule = undefined;
 }
 function configuredRuleInput(control, configuration, updateValidation) {
     const label = document.createElement("label");
@@ -3035,15 +3054,17 @@ function configuredRuleInput(control, configuration, updateValidation) {
             input.step = String(control.step);
     }
     else
-        input.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose a value" }), Object.assign(document.createElement("option"), { value: "true", textContent: "true" }), Object.assign(document.createElement("option"), { value: "false", textContent: "false" }));
+        input.append(Object.assign(document.createElement("option"), { value: "", textContent: control.key === "comparison" ? "Choose a comparison" : "Choose a value" }), ...(control.choices ?? ["true", "false"]).map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
     const current = control.key === "exactValue" ? configuration.exactValue
         : control.key === "pattern" ? configuration.pattern
             : control.key === "exactLength" ? configuration.exactLength
                 : control.key === "minimum" ? configuration.minimum
                     : control.key === "maximum" ? configuration.maximum
-                        : configuration.minimumItemCount;
+                        : control.key === "minimumItemCount" ? configuration.minimumItemCount
+                            : control.key === "comparison" ? configuration.comparison
+                                : configuration.limit;
     input.value = current;
-    input.addEventListener("input", () => {
+    input.addEventListener(input instanceof HTMLSelectElement ? "change" : "input", () => {
         if (control.key === "exactValue")
             configuration.exactValue = input.value;
         else if (control.key === "pattern")
@@ -3056,6 +3077,10 @@ function configuredRuleInput(control, configuration, updateValidation) {
             configuration.maximum = input.value;
         else if (control.key === "minimumItemCount")
             configuration.minimumItemCount = input.value;
+        else if (control.key === "comparison")
+            configuration.comparison = input.value;
+        else if (control.key === "limit")
+            configuration.limit = input.value;
         updateValidation();
     });
     const wrapper = document.createElement("div");
@@ -3066,20 +3091,37 @@ function createConfiguredSchemaRule(path, configuration) {
     if (!schemaDraft || !validateRuleConfiguration(configuration).ready)
         return;
     const details = configuredRuleDetails(configuration);
-    const id = configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`;
-    const name = configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`;
+    const id = editingAttachedCardinalityRule?.id ?? (configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`);
+    const name = editingAttachedCardinalityRule?.name ?? (configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`);
     const rule = {
-        id, name, kind: configuration.ruleType, version: 1, enabled: true,
+        id, name, kind: configuration.ruleType, version: editingAttachedCardinalityRule?.version ?? 1, enabled: editingAttachedCardinalityRule?.enabled !== false,
         applicableType: configuration.propertyType,
         operator: details.operator,
         ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
         ...(details.allowedValues !== undefined ? { allowedValues: details.allowedValues } : {}),
+        ...(details.comparison !== undefined ? { comparison: details.comparison } : {}),
+        ...(details.limit !== undefined ? { limit: details.limit } : {}),
         severity: configuration.severity,
         ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
         ...(configuration.applyOnlyWhen ? { conditionGroup: { operator: configuration.conditionGroupOperator, predicates: structuredClone(configuration.conditions) } } : {}),
         ...(configuration.saveReusable && configuration.description.trim() ? { description: configuration.description.trim() } : {}),
         ...(configuration.saveReusable && schemaDraft.id ? { attachments: [schemaDraft.id] } : {}),
     };
+    if (editingAttachedCardinalityRule) {
+        const editedId = editingAttachedCardinalityRule.id;
+        editingAttachedCardinalityRule = undefined;
+        closeSchemaPropertyRulePicker();
+        updateAttachedRule(path, editedId, (attached) => ({
+            ...attached,
+            ...(rule.operator ? { operator: rule.operator } : {}),
+            ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}),
+            ...(rule.comparison ? { comparison: rule.comparison } : {}),
+            ...(rule.limit !== undefined ? { limit: rule.limit } : {}),
+            ...(rule.severity ? { severity: rule.severity } : {}),
+            ...(rule.message ? { message: rule.message } : {}),
+        }));
+        return;
+    }
     if (configuration.saveReusable) {
         reusableSchemaRules = [...reusableSchemaRules.filter((candidate) => candidate.id !== id), rule];
         localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
@@ -3247,9 +3289,16 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
                 preview.textContent = "Current event preview: Not applicable";
             else {
                 const observed = valueAtSchemaPath(currentConditionPayload(), path);
-                const passed = configuration.ruleType === "Item count"
-                    ? observed.exists && Array.isArray(observed.value) && observed.value.length >= Number(configuration.minimumItemCount)
-                    : observed.exists;
+                const measured = configuration.ruleType === "Item count" && Array.isArray(observed.value) ? observed.value.length
+                    : configuration.ruleType === "Text length" && typeof observed.value === "string" ? observed.value.length
+                        : undefined;
+                const limit = Number(configuration.limit);
+                const passed = measured === undefined ? observed.exists
+                    : configuration.comparison === ">" ? measured > limit
+                        : configuration.comparison === ">=" ? measured >= limit
+                            : configuration.comparison === "==" ? measured === limit
+                                : configuration.comparison === "<" ? measured < limit
+                                    : configuration.comparison === "<=" && measured <= limit;
                 preview.textContent = `Current event preview: ${passed ? "Passed" : "Failed"}`;
             }
         }
@@ -3437,6 +3486,7 @@ function openSchemaPropertyRulePicker(path, trigger) {
     selectedSchemaPropertyPath = schemaRulePickerPath = path;
     schemaRulePickerTrigger = trigger;
     schemaRuleConfiguration = undefined;
+    editingAttachedCardinalityRule = undefined;
     renderSchemaPropertyRulePicker();
     schemaPropertyRulePicker.showModal();
     schemaPropertyRulePicker.querySelector("#schema-property-rule-search")?.focus({ preventScroll: true });
@@ -3489,6 +3539,9 @@ function attachReusableRule(path, rule) {
         ...(rule.propertyPath ? { propertyPath: rule.propertyPath } : {}),
         ...(rule.parameters ? { parameters: rule.parameters } : {}),
         ...(rule.allowedValues ? { allowedValues: structuredClone(rule.allowedValues) } : {}),
+        ...(rule.comparison ? { comparison: rule.comparison } : {}),
+        ...(rule.limit !== undefined ? { limit: rule.limit } : {}),
+        ...(rule.applicableType ? { applicableType: rule.applicableType } : {}),
         ...(rule.severity ? { severity: rule.severity } : {}),
         ...(rule.message ? { message: rule.message } : {}),
         ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),

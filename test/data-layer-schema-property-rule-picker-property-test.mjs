@@ -20,6 +20,7 @@ const compatibility = {
   "Digits only":["string"],
   "Numeric range":["number"],
   "Item count":["array"],
+  "Allow undeclared properties":["object"],
 };
 const propertyTypes = ["string", "number", "array", "object", "boolean"];
 const ruleTypes = Object.keys(compatibility);
@@ -112,6 +113,8 @@ const validConfiguration = (ruleType, sample, token) => {
     ? "number"
     : ruleType === "Item count"
       ? "array"
+      : ruleType === "Allow undeclared properties"
+        ? "object"
       : ruleType === "Exact value" || ruleType === "Allowed values"
         ? ["string", "number", "boolean"][sample % 3]
         : "string";
@@ -123,12 +126,14 @@ const validConfiguration = (ruleType, sample, token) => {
       ? [" true ", "", " false "]
       : [` value-${token} `, "", `other-${sample}`];
   if (ruleType === "Regular expression") configuration.pattern = `^value-${token}[0-9]*$`;
-  if (ruleType === "Text length") configuration.exactLength = ` ${sample} `;
+  if (ruleType === "Text length" || ruleType === "Item count") {
+    configuration.comparison = sample % 2 ? ">=" : "<=";
+    configuration.limit = ` ${sample} `;
+  }
   if (ruleType === "Numeric range") {
     configuration.minimum = ` ${sample - 100} `;
     configuration.maximum = ` ${sample + 1} `;
   }
-  if (ruleType === "Item count") configuration.minimumItemCount = ` ${sample} `;
   return configuration;
 };
 
@@ -141,10 +146,15 @@ const expectedDetails = (configuration) => {
     allowedValues:configuration.allowedValues.map((value) => value.trim()).filter(Boolean).map((value) => configuration.propertyType === "number" ? Number(value) : configuration.propertyType === "boolean" ? value === "true" : value),
   };
   if (ruleType === "Regular expression") return { operator:"regular-expression", parameters:configuration.pattern };
-  if (ruleType === "Text length") return { operator:"text-length", parameters:configuration.exactLength };
+  if (ruleType === "Text length" || ruleType === "Item count") return {
+    operator:ruleType === "Text length" ? "text-length" : "item-count",
+    parameters:configuration.limit,
+    comparison:configuration.comparison,
+    limit:Number(configuration.limit),
+  };
   if (ruleType === "Digits only") return { operator:"digits-only" };
   if (ruleType === "Numeric range") return { operator:"numeric-range", parameters:`${configuration.minimum.trim()},${configuration.maximum.trim()}` };
-  return { operator:"item-count", parameters:configuration.minimumItemCount };
+  return { operator:"allow-undeclared-properties" };
 };
 
 const invalidConfiguration = (ruleType, sample) => {
@@ -152,12 +162,11 @@ const invalidConfiguration = (ruleType, sample) => {
   if (ruleType === "Exact value") configuration.exactValue = "   ";
   if (ruleType === "Allowed values") configuration.allowedValues = ["", "   "];
   if (ruleType === "Regular expression") configuration.pattern = "[";
-  if (ruleType === "Text length") configuration.exactLength = sample % 2 ? "-1" : "1.5";
+  if (ruleType === "Text length" || ruleType === "Item count") configuration.limit = sample % 2 ? "-1" : "1.5";
   if (ruleType === "Numeric range") {
     configuration.minimum = sample % 3 === 0 ? "" : sample % 3 === 1 ? "not-a-number" : "10";
     configuration.maximum = sample % 3 === 0 ? "" : sample % 3 === 1 ? "20" : "5";
   }
-  if (ruleType === "Item count") configuration.minimumItemCount = sample % 2 ? "-1" : "1.5";
   return configuration;
 };
 
@@ -183,7 +192,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   reusable.reusableName = ` Rule ${token} `;
   assert.equal(validateRuleConfiguration(reusable).ready, true, "a generated reusable name must unblock an otherwise valid configuration");
 
-  if (ruleType !== "Required" && ruleType !== "Digits only") {
+  if (ruleType !== "Required" && ruleType !== "Digits only" && ruleType !== "Allow undeclared properties") {
     assert.equal(validateRuleConfiguration(invalidConfiguration(ruleType, sample)).ready, false, "generated malformed parameters must remain blocked");
   }
 
