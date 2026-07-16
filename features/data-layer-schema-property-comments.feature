@@ -97,4 +97,3 @@ Feature: Data layer schema property comments
     Then Spreadsheet, Rich table, and plain fallback output use the preview's current Comments position
     And the heading and each property comment remain aligned
     And changing copy mode or example overrides does not reset the Comments position
-

@@ -30,6 +30,9 @@
                         [acceptance.schema-property-comments-steps-test]
                         [acceptance.schema-specification-container-defaults-steps-test]
                         [acceptance.schema-specification-builder-steps-test]
+                        [acceptance.schema-specification-builder-customization-steps-test]
+                        [acceptance.schema-specification-example-selection-steps-test]
+                        [acceptance.schema-specification-preview-layout-steps-test]
                         [acceptance.schema-property-example-values-steps-test]
                         [acceptance.schema-assignment-data-conditions-steps-test]
                         [acceptance.required-property-defect-schema-choices-steps-test]
@@ -100,6 +103,9 @@
                                                 'acceptance.schema-property-comments-steps-test
                                                 'acceptance.schema-specification-container-defaults-steps-test
                                                 'acceptance.schema-specification-builder-steps-test
+                                                'acceptance.schema-specification-builder-customization-steps-test
+                                                'acceptance.schema-specification-example-selection-steps-test
+                                                'acceptance.schema-specification-preview-layout-steps-test
                                                 'acceptance.schema-property-example-values-steps-test
                                                 'acceptance.schema-assignment-data-conditions-steps-test
                                                 'acceptance.required-property-defect-schema-choices-steps-test

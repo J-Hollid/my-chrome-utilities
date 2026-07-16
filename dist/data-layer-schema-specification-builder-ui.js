@@ -1,4 +1,4 @@
-import { deriveSpecificationRows, defaultSpecificationColumns, renderSpecificationClipboard, specificationColumnLabels, specificationProperties, specificationSurfaces, } from "./data-layer-schema-specification-builder.js";
+import { deriveSpecificationRows, defaultSpecificationColumns, retainedSpecificationPreviewScroll, renderSpecificationClipboard, specificationExampleChoices, specificationColumnLabels, specificationProperties, specificationSurfaces, typeSpecificationExampleSelection, } from "./data-layer-schema-specification-builder.js";
 function isDescendant(parent, child) {
     return child.startsWith(`${parent}/`) || child.startsWith(`${parent}/*/`);
 }
@@ -22,7 +22,10 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     let selected = new Set(properties.filter(({ selectedByDefault }) => selectedByDefault).map(({ canonicalPath }) => canonicalPath));
     let sort = "schema";
     let columns = [...defaultSpecificationColumns];
-    const exampleOverrides = new Map();
+    let copyMode = "spreadsheet";
+    let includeHeadings = true;
+    let tableStyle = "plain";
+    const exampleSelections = new Map();
     const heading = document.createElement("h4");
     heading.id = "schema-specification-builder-heading";
     heading.tabIndex = -1;
@@ -51,10 +54,49 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     const list = document.createElement("ul");
     list.id = "schema-specification-property-list";
     controls.append(search, selectAll, clear, sortSelect, list);
+    const exportBar = document.createElement("fieldset");
+    exportBar.id = "schema-specification-export-bar";
+    const exportLegend = document.createElement("legend");
+    exportLegend.textContent = "Export";
+    const spreadsheetLabel = document.createElement("label");
+    const spreadsheet = document.createElement("input");
+    spreadsheet.type = "radio";
+    spreadsheet.name = "schema-specification-copy-mode";
+    spreadsheet.value = "spreadsheet";
+    spreadsheet.checked = true;
+    spreadsheetLabel.append(spreadsheet, " Spreadsheet");
+    const richLabel = document.createElement("label");
+    const rich = document.createElement("input");
+    rich.type = "radio";
+    rich.name = spreadsheet.name;
+    rich.value = "rich";
+    richLabel.append(rich, " Rich table for Confluence or Jira");
+    const headingsLabel = document.createElement("label");
+    const headings = document.createElement("input");
+    headings.type = "checkbox";
+    headings.checked = true;
+    headingsLabel.append(headings, " Include headings");
+    const styleLabel = document.createElement("label");
+    styleLabel.textContent = "Table style ";
+    const styleSelect = document.createElement("select");
+    styleSelect.setAttribute("aria-label", "Table style");
+    [["plain", "Plain"], ["bordered", "Bordered"], ["highlighted", "Bordered with highlighted headings"]].forEach(([value, textContent]) => styleSelect.append(Object.assign(document.createElement("option"), { value, textContent })));
+    styleLabel.append(styleSelect);
+    styleLabel.hidden = true;
+    const resetColumns = document.createElement("button");
+    resetColumns.type = "button";
+    resetColumns.textContent = "Reset column order";
+    exportBar.append(exportLegend, spreadsheetLabel, richLabel, headingsLabel, styleLabel, resetColumns);
     const summary = document.createElement("p");
     summary.id = "schema-specification-completeness";
     const table = document.createElement("table");
     table.id = "schema-specification-preview";
+    const preview = document.createElement("section");
+    preview.id = "schema-specification-preview-region";
+    preview.tabIndex = 0;
+    preview.setAttribute("role", "region");
+    preview.setAttribute("aria-label", "Specification preview");
+    preview.append(table);
     const head = document.createElement("thead");
     const headRow = document.createElement("tr");
     head.append(headRow);
@@ -66,34 +108,27 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     const copy = document.createElement("button");
     copy.type = "button";
     copy.textContent = "Copy specification table";
-    const copyModeLabel = document.createElement("label");
-    copyModeLabel.textContent = "Copy mode ";
-    const copyMode = document.createElement("select");
-    copyMode.setAttribute("aria-label", "Copy mode");
-    copyMode.append(Object.assign(document.createElement("option"), { value: "rich", textContent: "Rich table" }), Object.assign(document.createElement("option"), { value: "spreadsheet", textContent: "Spreadsheet" }));
-    copyModeLabel.append(copyMode);
-    const includeHeadingsLabel = document.createElement("label");
-    const includeHeadings = document.createElement("input");
-    includeHeadings.type = "checkbox";
-    includeHeadings.checked = true;
-    includeHeadingsLabel.append(includeHeadings, " Include headings");
-    const resetColumns = document.createElement("button");
-    resetColumns.type = "button";
-    resetColumns.textContent = "Reset column order";
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.textContent = "Close specification";
     closeButton.addEventListener("click", close);
-    root.replaceChildren(heading, sourceLabel, controls, summary, copyModeLabel, includeHeadingsLabel, resetColumns, table, copy, feedback, closeButton);
+    root.replaceChildren(heading, sourceLabel, controls, exportBar, summary, preview, copy, feedback, closeButton);
     const selectedRows = () => {
         const paths = properties.filter(({ canonicalPath }) => selected.has(canonicalPath)).map(({ canonicalPath }) => canonicalPath);
         if (sort === "name")
             paths.sort((left, right) => left.localeCompare(right));
-        return deriveSpecificationRows(surface.schema, paths, allSchemas).map((row) => exampleOverrides.has(row.canonicalPath)
-            ? { ...row, example: exampleOverrides.get(row.canonicalPath) }
-            : row);
+        return deriveSpecificationRows(surface.schema, paths, allSchemas).map((row) => {
+            const selection = exampleSelections.get(row.canonicalPath);
+            if (!selection || selection.source === "documentation")
+                return row;
+            if ((selection.source === "allowed" || selection.source === "custom") && selection.value !== undefined)
+                return { ...row, example: selection.value };
+            const { example: _example, ...blank } = row;
+            return blank;
+        });
     };
     const renderPreview = () => {
+        const previousScroll = preview.scrollLeft;
         const rows = selectedRows();
         const missingDescriptions = rows.filter(({ description }) => !description).length;
         const missingExamples = rows.filter(({ example }) => example === undefined).length;
@@ -108,19 +143,24 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
         headRow.replaceChildren(...columns.map((column, index) => {
             const cell = document.createElement("th");
             cell.dataset.specificationColumn = column;
+            cell.draggable = true;
             cell.append(Object.assign(document.createElement("span"), { textContent: specificationColumnLabels[column] }));
             const earlier = document.createElement("button");
             earlier.type = "button";
-            earlier.textContent = "Move earlier";
-            earlier.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} earlier`);
+            earlier.textContent = "Move left";
+            earlier.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} left`);
             earlier.disabled = index === 0;
             const later = document.createElement("button");
             later.type = "button";
-            later.textContent = "Move later";
-            later.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} later`);
+            later.textContent = "Move right";
+            later.setAttribute("aria-label", `Move ${specificationColumnLabels[column]} right`);
             later.disabled = index === columns.length - 1;
             earlier.addEventListener("click", () => { [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]]; renderPreview(); });
             later.addEventListener("click", () => { [columns[index], columns[index + 1]] = [columns[index + 1], columns[index]]; renderPreview(); });
+            cell.addEventListener("dragstart", (event) => event.dataTransfer?.setData("text/plain", column));
+            cell.addEventListener("dragover", (event) => event.preventDefault());
+            cell.addEventListener("drop", (event) => { event.preventDefault(); const moved = event.dataTransfer?.getData("text/plain"); const from = columns.indexOf(moved); const to = columns.indexOf(column); if (from < 0 || to < 0)
+                return; columns.splice(from, 1); columns.splice(to, 0, moved); renderPreview(); });
             cell.append(earlier, later);
             return cell;
         }));
@@ -129,19 +169,78 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             tableRow.dataset.propertyPath = row.canonicalPath;
             tableRow.append(...columns.map((column) => {
                 const cell = document.createElement("td");
+                cell.dataset.specificationColumn = column;
                 if (column === "allowedValues")
                     appendAllowedValueGroups(cell, row.allowedValueGroups);
                 else if (column === "example") {
-                    const input = document.createElement("input");
-                    input.type = "text";
-                    input.value = row.example ?? "";
-                    input.dataset.specificationExamplePath = row.canonicalPath;
-                    input.setAttribute("aria-label", `Example override for ${row.propertyName}`);
-                    const text = document.createElement("span");
-                    text.hidden = true;
-                    text.textContent = input.value;
-                    input.addEventListener("input", () => { exampleOverrides.set(row.canonicalPath, input.value); text.textContent = input.value; });
-                    cell.append(text, input);
+                    cell.textContent = row.example ?? "";
+                    cell.tabIndex = 0;
+                    cell.setAttribute("role", "button");
+                    cell.dataset.specificationExamplePath = row.canonicalPath;
+                    cell.setAttribute("aria-label", `Edit example for ${row.propertyName}`);
+                    const openEditor = () => {
+                        if (cell.querySelector(".schema-specification-example-editor"))
+                            return;
+                        body.querySelectorAll(".schema-specification-example-editor").forEach((editor) => editor.remove());
+                        const baseRow = deriveSpecificationRows(surface.schema, [row.canonicalPath], allSchemas)[0] ?? row;
+                        const previous = exampleSelections.get(row.canonicalPath) ?? (baseRow.example !== undefined ? { source: "documentation", value: baseRow.example } : { source: "blank" });
+                        const editor = document.createElement("fieldset");
+                        editor.className = "schema-specification-example-editor";
+                        const legend = document.createElement("legend");
+                        legend.textContent = `Example for ${row.propertyName}`;
+                        editor.append(legend);
+                        const name = `example-${row.canonicalPath}`;
+                        let customInput;
+                        for (const choice of specificationExampleChoices(baseRow, previous)) {
+                            const label = document.createElement("label");
+                            const radio = document.createElement("input");
+                            radio.type = "radio";
+                            radio.name = name;
+                            radio.value = choice.id;
+                            radio.checked = choice.selected;
+                            radio.disabled = !choice.available;
+                            label.append(radio, ` ${choice.label}`);
+                            if (choice.explanation)
+                                label.append(` — ${choice.explanation}`);
+                            editor.append(label);
+                            if (choice.id === "custom") {
+                                customInput = document.createElement("input");
+                                customInput.placeholder = "Custom value";
+                                customInput.value = previous.source === "custom" ? previous.value ?? "" : "";
+                                customInput.hidden = !choice.selected;
+                                radio.addEventListener("change", () => { if (customInput) {
+                                    customInput.hidden = false;
+                                    customInput.focus({ preventScroll: true });
+                                } });
+                                label.append(" ", customInput);
+                                continue;
+                            }
+                            radio.addEventListener("change", () => { if (!radio.checked)
+                                return; exampleSelections.set(row.canonicalPath, typeSpecificationExampleSelection(baseRow, choice.id)); renderPreview(); });
+                        }
+                        const apply = document.createElement("button");
+                        apply.type = "button";
+                        apply.textContent = "Apply custom value";
+                        apply.addEventListener("click", () => { exampleSelections.set(row.canonicalPath, typeSpecificationExampleSelection(baseRow, "custom", customInput?.value ?? "")); renderPreview(); });
+                        const cancel = document.createElement("button");
+                        cancel.type = "button";
+                        cancel.textContent = "Cancel";
+                        const cancelEditor = () => { editor.remove(); cell.focus({ preventScroll: true }); };
+                        cancel.addEventListener("click", cancelEditor);
+                        editor.addEventListener("keydown", (event) => { if (event.key === "Escape") {
+                            event.preventDefault();
+                            cancelEditor();
+                        } });
+                        editor.append(apply, cancel);
+                        cell.append(editor);
+                        (editor.querySelector(`input[name="${CSS.escape(name)}"]:checked`) ?? editor.querySelector("input:not(:disabled)"))?.focus({ preventScroll: true });
+                    };
+                    cell.addEventListener("click", (event) => { if (event.target === cell)
+                        openEditor(); });
+                    cell.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openEditor();
+                    } });
                 }
                 else
                     cell.textContent = value(row, column);
@@ -150,6 +249,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             return tableRow;
         }));
         copy.disabled = rows.length === 0;
+        preview.scrollLeft = retainedSpecificationPreviewScroll(previousScroll, preview.scrollWidth, preview.clientWidth);
     };
     const matchingProperties = () => {
         const query = search.value.trim().toLowerCase();
@@ -218,6 +318,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
         properties = specificationProperties(surface.schema, allSchemas);
         selected = new Set(properties.filter(({ selectedByDefault }) => selectedByDefault).map(({ canonicalPath }) => canonicalPath));
         search.value = "";
+        exampleSelections.clear();
         renderPropertyList();
         renderPreview();
     });
@@ -240,11 +341,16 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
         sort = sortSelect.value === "name" ? "name" : "schema";
         renderPreview();
     });
-    includeHeadings.addEventListener("change", () => { feedback.textContent = includeHeadings.checked ? "Headings will be included." : "Headings will be omitted."; });
+    spreadsheet.addEventListener("change", () => { if (!spreadsheet.checked)
+        return; copyMode = "spreadsheet"; styleLabel.hidden = true; });
+    rich.addEventListener("change", () => { if (!rich.checked)
+        return; copyMode = "rich"; styleLabel.hidden = false; });
+    headings.addEventListener("change", () => { includeHeadings = headings.checked; });
+    styleSelect.addEventListener("change", () => { tableStyle = styleSelect.value; });
     resetColumns.addEventListener("click", () => { columns = [...defaultSpecificationColumns]; renderPreview(); });
     copy.addEventListener("click", async () => {
-        const clipboard = renderSpecificationClipboard(selectedRows(), { columns, includeHeadings: includeHeadings.checked });
-        if (copyMode.value === "spreadsheet") {
+        const clipboard = renderSpecificationClipboard(selectedRows(), { columns, includeHeadings, style: tableStyle });
+        if (copyMode === "spreadsheet") {
             try {
                 await clipboardPort.writePlain(clipboard.plain);
                 feedback.textContent = "Copied spreadsheet table as plain text.";
