@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell, extensionShell } from "../dist/utility-registry.js";
-import { mountUtilityShell } from "../dist/platform/utility-shell-dom.js";
+import { mountUtilityShell, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
@@ -32,6 +32,11 @@ mountUtilityShell(mountedShell,root,{addEventListener(type,listener){if(type==="
 assert.equal(root.dataset.registeredUtilities,"command-palette,hotkeys,data-layer");
 assert.equal(root.dataset.activeUtilities,"command-palette,hotkeys,data-layer");
 pagehide();assert.equal(root.dataset.activeUtilities,"");
+const created=[];
+const elementFactory={createElement(tag){const node={tag,dataset:{},children:[],append(...children){this.children.push(...children);}};created.push(node);return node;}};
+const directory={children:[],replaceChildren(...children){this.children=children;}};
+renderUtilityDirectory(utilityRegistry,directory,elementFactory);
+assert.deepEqual(directory.children.map(({dataset,textContent})=>[dataset.utilityId,textContent]),[["command-palette","Command palette"],["hotkeys","Hotkeys"],["data-layer","Data layer"]]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");

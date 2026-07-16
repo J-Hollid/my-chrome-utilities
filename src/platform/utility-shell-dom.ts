@@ -1,4 +1,5 @@
 import type { UtilityShell } from "../utility-registry.js";
+import type { UtilityModuleEntry } from "./utility-contract.js";
 
 export interface UtilityShellRoot {
   dataset: Record<string, string | undefined>;
@@ -28,4 +29,19 @@ export function mountUtilityShell(
   };
   pageLifecycle.addEventListener("pagehide", unmount, { once: true });
   return { unmount };
+}
+
+export function renderUtilityDirectory(
+  utilities: readonly UtilityModuleEntry[],
+  container: HTMLElement,
+  ownerDocument: Pick<Document, "createElement"> = document,
+): void {
+  const items = utilities.map((utility) => {
+    const item = ownerDocument.createElement("li");
+    item.dataset.utilityId = utility.id;
+    item.textContent = utility.identity.name;
+    item.title = utility.identity.description;
+    return item;
+  });
+  container.replaceChildren(...items);
 }
