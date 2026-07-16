@@ -17,7 +17,7 @@ assert.match(clipboard.html,/Routing note<br>Second line/);assert.match(clipboar
 const parent={id:"base",name:"Base event",version:2,document:{type:"object",required:["site_id"],properties:{site_id:{type:"string"}}},assignments:[],documentation:{properties:{"/site_id":{displayName:"site_id",description:"Site identifier",example:{value:"otelo",selectionMethod:"custom"}}}},attachedRules:[{id:"sites",version:1,propertyPath:"/site_id",operator:"allowed-values",allowedValues:["otelo","ben"]}]};
 const inherited={...schema,parentSchemaId:"base",document:{...schema.document,properties:{...schema.document.properties,commerce:{type:"object",properties:{currency:{type:"string"}}}}}};
 const properties=specificationProperties(inherited,[inherited,parent]);
-assert.equal(properties.find(({canonicalPath})=>canonicalPath==="/products")?.selectedByDefault,false);
+assert.equal(properties.find(({canonicalPath})=>canonicalPath==="/products")?.selectedByDefault,true);
 assert.equal(properties.find(({canonicalPath})=>canonicalPath==="/products/*/product_name")?.selectedByDefault,true);
 assert.equal(properties.find(({canonicalPath})=>canonicalPath==="/site_id")?.origin,"inherited");
 const inheritedRow=deriveSpecificationRows(inherited,["/site_id"],[inherited,parent])[0];

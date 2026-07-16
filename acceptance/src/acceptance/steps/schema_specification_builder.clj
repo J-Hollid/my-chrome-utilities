@@ -69,7 +69,7 @@
    entryPoints)
   (support/assert!
    (and (= ["Property name" "Description" "Mandatory" "Type" "Example value" "Allowed values" "Comments"] headings)
-        (= {:leaves [true true true] :containers [false false]} defaults)
+        (= {:leaves [true true true] :containers [true true]} defaults)
         (= "/products" (:durationParent hierarchy))
         (:legacyAbsent hierarchy)
         (= ["/products" "/products/*/duration"] filtered)
