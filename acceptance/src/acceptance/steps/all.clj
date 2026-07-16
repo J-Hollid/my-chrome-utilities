@@ -62,6 +62,9 @@
             [acceptance.steps.schema-property-copy :as schema-property-copy]
             [acceptance.steps.schema-property-comments :as schema-property-comments]
             [acceptance.steps.schema-specification-builder :as schema-specification-builder]
+            [acceptance.steps.schema-specification-builder-customization :as schema-specification-builder-customization]
+            [acceptance.steps.schema-specification-example-selection :as schema-specification-example-selection]
+            [acceptance.steps.schema-specification-preview-layout :as schema-specification-preview-layout]
             [acceptance.steps.schema-specification-container-defaults :as schema-specification-container-defaults]
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
@@ -79,7 +82,10 @@
             [acceptance.steps.workspace-editor :as workspace-editor]))
 
 (def handlers
-  (vec (concat schema-specification-container-defaults/handlers
+  (vec (concat schema-specification-preview-layout/handlers
+               schema-specification-builder-customization/handlers
+               schema-specification-example-selection/handlers
+               schema-specification-container-defaults/handlers
                schema-property-example-values/handlers
                schema-property-comments/handlers
                schema-specification-builder/handlers

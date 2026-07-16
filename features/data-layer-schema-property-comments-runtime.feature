@@ -53,4 +53,3 @@ Feature: Data layer schema property comments runtime
     When Comments is reordered and headings are included or excluded
     Then every production preview and clipboard representation retains aligned Comments in the selected position
     And Reset column order restores Comments last
-

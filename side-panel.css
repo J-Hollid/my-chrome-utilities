@@ -57,6 +57,91 @@
   .live-validation-property-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .live-validation-property-row > :is(.live-property-status,.live-property-add-validation) { width:100%; min-width:0; white-space:normal; }
 }
+
+/* Keep the on-screen specification readable at side-panel widths. Copied
+   table styles remain independently controlled by the export options. */
+#schema-specification-builder {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-x: clip;
+}
+
+#schema-specification-builder > :not(#schema-specification-preview-region) { max-inline-size: 100%; }
+
+#schema-specification-preview-region {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  scrollbar-gutter: stable;
+}
+
+#schema-specification-preview-region:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+#schema-specification-preview {
+  inline-size: max-content;
+  min-inline-size: 52rem;
+  border-collapse: collapse;
+  color: var(--text);
+  background: var(--surface);
+}
+
+#schema-specification-preview :is(th, td) {
+  min-inline-size: 7rem;
+  max-inline-size: 20rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#schema-specification-preview th {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  font-weight: 750;
+  text-align: start;
+}
+
+#schema-specification-preview th button {
+  min-inline-size: 5.5rem;
+  margin: 0.25rem 0.25rem 0 0;
+}
+
+#schema-specification-preview tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--text) 5%, var(--surface)); }
+
+#schema-specification-preview tbody tr:hover > td,
+#schema-specification-preview tbody tr:focus-within > td {
+  border-block-color: var(--accent);
+  box-shadow: inset 0.2rem 0 0 var(--accent);
+}
+
+#schema-specification-preview td:focus-visible,
+#schema-specification-preview th:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+#schema-specification-preview input {
+  min-inline-size: 14rem;
+  margin-block-start: 0.35rem;
+  padding: 0.45rem;
+  border: 2px solid var(--line);
+  background: var(--surface);
+}
+
+@media (forced-colors: active) {
+  #schema-specification-preview-region,
+  #schema-specification-preview :is(th, td) { border-color: CanvasText; }
+  #schema-specification-preview tbody tr:hover > td,
+  #schema-specification-preview tbody tr:focus-within > td { border-width: 2px; box-shadow: inset 0.2rem 0 0 Highlight; }
+}
 @media (min-width:700px) {
   #data-layer-panel-live[data-live-layout="feed-only"] {
     grid-template-columns:minmax(0,1fr);

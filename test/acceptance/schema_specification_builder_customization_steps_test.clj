@@ -1,0 +1,2 @@
+(ns acceptance.schema-specification-builder-customization-steps-test (:require [acceptance.feature-support :as feature-support] [acceptance.steps.all :as all] [acceptance.steps.schema-specification-builder-customization :as customization] [clojure.test :refer [deftest]]))
+(deftest verifies-schema-specification-builder-customization-features (feature-support/verify-feature-suite! customization/feature-files customization/handlers all/handlers))

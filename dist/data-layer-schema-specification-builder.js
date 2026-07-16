@@ -13,6 +13,9 @@ export const specificationColumnLabels = {
     allowedValues: "Allowed values",
     comments: "Comments",
 };
+export function retainedSpecificationPreviewScroll(previous, scrollWidth, clientWidth) {
+    return Math.max(0, Math.min(previous, Math.max(0, scrollWidth - clientWidth)));
+}
 function withoutWorkingState(schema) {
     const { workingDraft: _draft, revisionHistory: _history, ...surface } = structuredClone(schema);
     return surface;
@@ -96,14 +99,14 @@ function effectiveRules(schema, allSchemas) {
         for (const rule of parent.attachedRules ?? []) {
             if (rule.enabled === false || (rule.propertyPath && overrideDisabled(schema, rule.propertyPath)))
                 continue;
-            rules.set(ruleIdentity(rule), rule);
+            rules.set(ruleIdentity(rule), { ...rule, inherited: true });
         }
     }
     for (const rule of schema.attachedRules ?? []) {
         if (rule.enabled === false)
             rules.delete(ruleIdentity(rule));
         else
-            rules.set(ruleIdentity(rule), rule);
+            rules.set(ruleIdentity(rule), { ...rule });
     }
     return [...rules.values()];
 }
@@ -213,10 +216,45 @@ function allowedFor(path, rules) {
         ...(conflict ? ["Conflict: no values satisfy all effective rules"] : intersection.length ? [intersection.join(" | ")] : []),
         ...conditional.map((rule) => `${uniqueValues(rule.allowedValues).join(" | ")} when ${conditionText(rule.conditionGroup, path)}`),
     ];
+    const choices = [];
+    if (!conflict) {
+        for (const value of intersection) {
+            const inherited = unconditional.some((rule) => rule.inherited && rule.allowedValues.some((candidate) => Object.is(candidate, value)));
+            choices.push({ value, label: `Allowed value ${String(value)}${inherited ? " · inherited" : ""}` });
+        }
+        for (const rule of conditional)
+            for (const value of uniqueValues(rule.allowedValues)) {
+                if (choices.some((choice) => Object.is(choice.value, value)))
+                    continue;
+                choices.push({ value, label: `Allowed value ${String(value)} · when ${conditionText(rule.conditionGroup, path)}${rule.inherited ? " · inherited" : ""}` });
+            }
+    }
     return {
-        values: uniqueValues([...intersection, ...conditional.flatMap((rule) => rule.allowedValues)]),
+        values: choices.map(({ value }) => value),
         groups,
+        choices,
     };
+}
+export function specificationExampleChoices(row, selection) {
+    const documentationAvailable = row.example !== undefined;
+    const allowedAvailable = row.allowedValueChoices.length > 0;
+    return [
+        { id: "documentation", label: documentationAvailable ? `Documentation ${row.example}` : "Documentation", available: documentationAvailable, selected: selection.source === "documentation", ...(row.example !== undefined ? { value: row.example } : { explanation: "No documented example exists" }) },
+        ...(allowedAvailable
+            ? row.allowedValueChoices.map(({ value, label }) => ({ id: `allowed:${String(value)}`, label, value: String(value), available: true, selected: selection.source === "allowed" && selection.value === String(value) }))
+            : [{ id: "allowed", label: "Allowed value", available: false, selected: false, explanation: "No effective allowed values exist" }]),
+        { id: "custom", label: "Custom value", available: true, selected: selection.source === "custom", ...(selection.source === "custom" && selection.value !== undefined ? { value: selection.value } : {}) },
+        { id: "blank", label: "Blank", available: true, selected: selection.source === "blank" },
+    ];
+}
+export function typeSpecificationExampleSelection(row, choiceId, customValue = "") {
+    if (choiceId === "documentation")
+        return row.example === undefined ? { source: "blank" } : { source: "documentation", value: row.example };
+    if (choiceId.startsWith("allowed:"))
+        return { source: "allowed", value: choiceId.slice("allowed:".length) };
+    if (choiceId === "custom")
+        return { source: "custom", value: customValue };
+    return { source: "blank" };
 }
 export function specificationProperties(schema, allSchemas = [schema]) {
     const parents = parentChain(schema, allSchemas);
@@ -254,6 +292,7 @@ export function deriveSpecificationRows(schema, selectedPaths, allSchemas = [sch
             type: typeLabel(property),
             ...(example !== undefined ? { example: String(example) } : {}),
             allowedValues: allowed.values,
+            allowedValueChoices: allowed.choices,
             allowedValueGroups: allowed.groups,
             ...(allowed.groups.length ? { allowedValuesText: allowed.groups.join("; ") } : {}),
         };
@@ -273,6 +312,7 @@ export function renderSpecificationClipboard(rows, options = {}) {
     const richTableStyle = "table{border-collapse:collapse}th,td{border:1px solid #8a8a8a;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f2f2f2;font-weight:700}";
     const columns = options.columns ?? defaultSpecificationColumns;
     const includeHeadings = options.includeHeadings !== false;
+    const style = options.style;
     const value = (row, column) => column === "propertyName" ? row.propertyName
         : column === "description" ? row.description
             : column === "mandatory" ? row.mandatory
@@ -285,9 +325,13 @@ export function renderSpecificationClipboard(rows, options = {}) {
         : column === "comments"
             ? escapeHtml(row.comments).replaceAll("\n", "<br>")
             : escapeHtml(value(row, column));
-    const htmlRows = rows.map((row) => `<tr>${columns.map((column) => `<td>${htmlCell(row, column)}</td>`).join("")}</tr>`).join("");
-    const heading = includeHeadings ? `<thead><tr>${columns.map((column) => `<th>${escapeHtml(specificationColumnLabels[column])}</th>`).join("")}</tr></thead>` : "";
-    const html = `<table><style>${richTableStyle}</style>${heading}<tbody>${htmlRows}</tbody></table>`;
+    const tableStyle = style && style !== "plain" ? ' style="border-collapse:collapse"' : "";
+    const cellStyle = style && style !== "plain" ? ' style="border:1px solid #666;padding:4px"' : "";
+    const headingStyle = style === "highlighted" ? ' style="border:1px solid #666;padding:4px;font-weight:bold;background:#eee"' : cellStyle;
+    const htmlRows = rows.map((row) => `<tr>${columns.map((column) => `<td${cellStyle}>${htmlCell(row, column)}</td>`).join("")}</tr>`).join("");
+    const heading = includeHeadings ? `<thead><tr>${columns.map((column) => `<th${headingStyle}>${escapeHtml(specificationColumnLabels[column])}</th>`).join("")}</tr></thead>` : "";
+    const legacyStyle = style === undefined ? `<style>${richTableStyle}</style>` : "";
+    const html = `<table${tableStyle}>${legacyStyle}${heading}<tbody>${htmlRows}</tbody></table>`;
     const plainRows = rows.map((row) => columns.map((column) => value(row, column)));
     const plain = [...(includeHeadings ? [columns.map((column) => specificationColumnLabels[column])] : []), ...plainRows]
         .map((line) => line.map(plainCell).join("\t"))
