@@ -304,7 +304,14 @@ async function openPanel(port, width, height = 900) {
     }
     await wait(50);
   }
-  if (!loaded) throw new Error("Side panel DOM did not finish loading.");
+  if (!loaded) {
+    const diagnosis = await socket.call("Runtime.evaluate", {
+      expression: "import('./side-panel.js').then(() => null, (error) => String(error?.stack ?? error))",
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    throw new Error(`Side panel DOM did not finish loading. ${diagnosis.result.value ?? ""}`.trim());
+  }
   return socket;
 }
 
@@ -4745,6 +4752,11 @@ const workspacePanelContainmentRuntime = `(() => {
   const observation = {
     peers,
     nested,
+    storageOwnership:{
+      dataLayer:Boolean(localStorage.getItem("my-chrome-utilities.data-layer")),
+      shell:Boolean(localStorage.getItem("my-chrome-utilities.shell")),
+      legacyWorkspace:localStorage.getItem("my-chrome-utilities.workspace-tab.v1"),
+    },
     utilityDirectory:{
       ids:utilityItems.map(({dataset})=>dataset.utilityId),
       labels:utilityItems.map(({textContent})=>textContent),
@@ -5592,6 +5604,7 @@ try {
       assert.deepEqual(workspacePanelContainmentObservation, {
         peers:true,
         nested:false,
+        storageOwnership:{dataLayer:true,shell:true,legacyWorkspace:"hotkeys"},
         utilityDirectory:{
           ids:["command-palette","hotkeys","data-layer"],
           labels:["Command palette","Hotkeys","Data layer"],

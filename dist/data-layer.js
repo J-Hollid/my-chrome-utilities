@@ -28,12 +28,12 @@ export function pathStatus(pageObject, path) {
     }
     return Array.isArray(value) ? "ready" : "not an array";
 }
-export function getHistoryArrayPath() {
-    return localStorage.getItem(HISTORY_PATH_STORAGE_KEY) ?? DEFAULT_HISTORY_PATH;
+export function getHistoryArrayPath(storage = localStorage) {
+    return storage.getItem(HISTORY_PATH_STORAGE_KEY) ?? DEFAULT_HISTORY_PATH;
 }
-export function setHistoryArrayPath(path) {
+export function setHistoryArrayPath(path, storage = localStorage) {
     const normalizedPath = normalizeHistoryArrayPath(path);
-    localStorage.setItem(HISTORY_PATH_STORAGE_KEY, normalizedPath);
+    storage.setItem(HISTORY_PATH_STORAGE_KEY, normalizedPath);
     return normalizedPath;
 }
 export function samplePageObject() {
