@@ -73,6 +73,7 @@
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
+            [acceptance.steps.json-schema-export :as json-schema-export]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
             [acceptance.steps.sequence-replay :as sequence-replay]
@@ -87,6 +88,7 @@
 
 (def handlers
   (vec (concat schema-specification-preview-layout/handlers
+               json-schema-export/handlers
                schema-specification-builder-customization/handlers
                schema-specification-example-selection/handlers
                schema-specification-container-defaults/handlers

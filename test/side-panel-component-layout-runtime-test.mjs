@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import Ajv2020 from "ajv/dist/2020.js";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
@@ -70,6 +71,7 @@ let allowedValuesRuleMigrationObservation;
 let schemaPropertyCommentsObservation;
 let schemaCardinalityComparisonObservation;
 let schemaDeclaredPropertyExceptionsObservation;
+let jsonSchemaExportObservation;
 const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
 const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
@@ -77,6 +79,7 @@ const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_A
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+  : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER === "1" ? [720]
   : process.env.SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER === "1" ? [320]
@@ -3206,6 +3209,7 @@ const schemaLibraryTransferRuntime = `(async () => {
   URL.createObjectURL = function (blob) { exportedBlob = blob; return originalCreateObjectURL.call(this, blob); };
   HTMLAnchorElement.prototype.click = function () { downloadName = this.download; };
   q("#export-schema").click();
+  Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button) => button.textContent === "Extension backup").click();
   HTMLAnchorElement.prototype.click = originalClick;
   URL.createObjectURL = originalCreateObjectURL;
   const exported = JSON.parse(await exportedBlob.text());
@@ -4760,6 +4764,72 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1") {
+      await evaluate(socket, `(() => {
+        localStorage.clear();
+        const parent={id:"schema-generic",name:"Generic page view",version:3,published:true,assignments:[],document:{type:"object",additionalProperties:false,properties:{page_type:{type:"string"},debug:{type:"boolean"}}},attachedRules:[{id:"exact-page",name:"Exact page",version:1,propertyPath:"/page_type",operator:"exact-value",parameters:"product_detail"},{id:"forbid-debug",name:"No debug",version:1,propertyPath:"/debug",operator:"forbidden-property"}]};
+        const product={id:"schema-product-detail",name:"Product detail",version:4,published:true,parentSchemaId:parent.id,assignments:[{id:"product-events",sourceId:"history",eventName:"product_detail",target:"payload",enabled:true}],document:{type:"object",properties:{currency:{type:"string"},title:{type:"string"},metadata:{type:"object",properties:{}}}},attachedRules:[{id:"forbid-local-debug",name:"No root debug",version:1,propertyPath:"/debug",operator:"forbidden-property"},{id:"allowed-currency",name:"Currencies",version:1,propertyPath:"/currency",operator:"allowed-values",allowedValues:["EUR","USD"]},{id:"title-count",name:"Title length",version:1,propertyPath:"/title",operator:"text-length",comparison:"<=",limit:50,parameters:"50"},{id:"metadata-open",name:"Allow metadata",version:1,propertyPath:"/metadata",operator:"allow-undeclared-properties"},{id:"conditional-currency",name:"Conditional currency",version:1,propertyPath:"/currency",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/page_type",operator:"Equals",comparison:{type:"string",value:"product_detail"}}]}},{id:"partner-contract",name:"Partner contract",version:1,propertyPath:"/metadata",operator:"partner-contract"}],revisionHistory:[{id:"schema-product-detail",name:"Product detail",version:3,document:{type:"object",properties:{}},assignments:[]}],workingDraft:{baseVersion:4,sourceVersion:4,document:{type:"object",properties:{pending:{type:"string"}}},assignments:[],attachedRules:[],pendingChanges:["pending"]}};
+        product.document.forbidden=["debug"];
+        const checkout={id:"schema-checkout",name:"Checkout",version:2,published:true,assignments:[],document:{type:"object",properties:{}}};
+        const draft={id:"schema-draft",name:"Checkout draft",version:0,published:false,assignments:[],document:{type:"object"},workingDraft:{baseVersion:0,sourceVersion:0,document:{type:"object"},assignments:[],pendingChanges:[]}};
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([parent,product,checkout,draft]));
+        localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{id:"allowed-currency",name:"Currencies",kind:"Allowed values",version:1,attachments:[product.id]},{id:"unrelated",name:"Unrelated",kind:"Required",version:1}]));
+        return true;
+      })()`);
+      await reloadPanel(socket);
+      jsonSchemaExportObservation = await evaluate(socket, `(async () => {
+        const q=(selector)=>{const element=document.querySelector(selector);if(!element)throw new Error("Missing "+selector);return element;};
+        const clickText=(root,text)=>{const button=Array.from(root.querySelectorAll("button")).find((candidate)=>candidate.textContent===text);if(!button)throw new Error("Missing action "+text);button.click();return button;};
+        const row=(name)=>Array.from(q("#schema-list").querySelectorAll("li")).find((item)=>item.textContent.startsWith(name));
+        const verification=await import("/data-layer-schema-verification.js");
+        q("#data-layer-view-schemas").click();
+        const storedBefore={schemas:localStorage.getItem("my-chrome-utilities.schema-library.v1"),rules:localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")};
+        const originalClick=HTMLAnchorElement.prototype.click,originalCreate=URL.createObjectURL;
+        const downloads=[];let pendingBlob;
+        URL.createObjectURL=(blob)=>{pendingBlob=blob;return originalCreate.call(URL,blob);};
+        HTMLAnchorElement.prototype.click=function(){downloads.push({name:this.download,blob:pendingBlob});};
+        q("#export-schema").click();
+        const libraryChoices={open:q("#schema-export-choices").open,labels:Array.from(q("#schema-export-choices").querySelectorAll("button,p")).map((item)=>item.textContent),downloadCount:downloads.length};
+        clickText(q("#schema-export-choices"),"JSON Schema Draft 2020-12 bundle");
+        const libraryReview=q("#schema-export-compatibility-review").textContent;
+        clickText(q("#schema-export-compatibility-review"),"Export without unsupported rules");
+        const bundleDownload=downloads.at(-1);const bundle=JSON.parse(await bundleDownload.blob.text());
+        const productRow=row("Product detail");const productExport=Array.from(productRow.querySelectorAll("button")).find((button)=>button.textContent==="Export");
+        productExport.click();const productChoices=q("#schema-export-choices").textContent;clickText(q("#schema-export-choices"),"Extension schema package");
+        const packageDownload=downloads.at(-1);const extensionPackage=JSON.parse(await packageDownload.blob.text());
+        productExport.click();clickText(q("#schema-export-choices"),"JSON Schema Draft 2020-12");
+        const productReview=q("#schema-export-compatibility-review").textContent;const lossyActions=Array.from(q("#schema-export-compatibility-review").querySelectorAll("button")).map((button)=>button.textContent);
+        clickText(q("#schema-export-compatibility-review"),"Export without unsupported rules");
+        const standaloneDownload=downloads.at(-1);const standalone=JSON.parse(await standaloneDownload.blob.text());
+        const status=q("#schema-result").textContent;const focusReturned=document.activeElement===productExport;
+        const draftRow=row("Checkout draft");const draftExport=Array.from(draftRow.querySelectorAll("button")).find((button)=>button.textContent==="Export");draftExport.click();
+        const draftStandard=Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button)=>button.textContent==="JSON Schema Draft 2020-12");
+        const unpublished={extensionAvailable:!!Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button)=>button.textContent==="Extension schema package"),standardDisabled:draftStandard.disabled,reason:draftStandard.title||q("#schema-export-choices").textContent};
+        clickText(q("#schema-export-choices"),"Cancel");
+        q("#export-schema").click();clickText(q("#schema-export-choices"),"Extension backup");const backupDownload=downloads.at(-1);const backup=JSON.parse(await backupDownload.blob.text());
+        const standardFile=new File([JSON.stringify(standalone)],standaloneDownload.name,{type:"application/schema+json"});const input=q("#schema-library-import-file");Object.defineProperty(input,"files",{configurable:true,value:[standardFile]});input.dispatchEvent(new Event("change",{bubbles:true}));await new Promise((resolve)=>setTimeout(resolve,20));const standardImport={review:q("#schema-import-review").open,status:q("#schema-result").textContent};
+        const schemas=JSON.parse(storedBefore.schemas);const product=schemas.find(({id})=>id==="schema-product-detail");
+        const payloads={valid:{page_type:"product_detail",currency:"EUR",title:"x".repeat(50),metadata:{source:"feed"}},debug:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{},debug:true},long:{page_type:"product_detail",currency:"EUR",title:"x".repeat(51),metadata:{}},metadata:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{dynamic:true}},missing:{page_type:"product_detail",title:"x",metadata:{}}};
+        const extensionOutcomes=Object.fromEntries(Object.entries(payloads).map(([key,payload])=>[key,verification.validateWithSchema({sourceId:"history",eventName:"product_detail",rawInput:[],payload},product,schemas).issues.length===0]));
+        URL.createObjectURL=originalCreate;HTMLAnchorElement.prototype.click=originalClick;
+        return {width:innerWidth,libraryChoices,libraryReview,bundle:{name:bundleDownload.name,document:bundle},productChoices,productReview,lossyActions,standalone:{name:standaloneDownload.name,document:standalone},extensionPackage,backup:{name:backupDownload.name,document:backup},unpublished,status,focusReturned,standardImport,extensionOutcomes,storedUnchanged:storedBefore.schemas===localStorage.getItem("my-chrome-utilities.schema-library.v1")&&storedBefore.rules===localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")};
+      })()`);
+      const ajv=new Ajv2020({strict:false});
+      assert.equal(ajv.validateSchema(jsonSchemaExportObservation.bundle.document),true,JSON.stringify(ajv.errors));
+      for(const resource of Object.values(jsonSchemaExportObservation.bundle.document.$defs)){assert.equal(ajv.validateSchema(resource),true,JSON.stringify(ajv.errors));assert.equal(typeof resource.$id,"string");}
+      assert.equal(ajv.validateSchema(jsonSchemaExportObservation.standalone.document),true,JSON.stringify(ajv.errors));
+      const validate=ajv.compile(jsonSchemaExportObservation.standalone.document);
+      const payloads={valid:{page_type:"product_detail",currency:"EUR",title:"x".repeat(50),metadata:{source:"feed"}},debug:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{},debug:true},long:{page_type:"product_detail",currency:"EUR",title:"x".repeat(51),metadata:{}},metadata:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{dynamic:true}},missing:{page_type:"product_detail",title:"x",metadata:{}}};
+      const independent=Object.fromEntries(Object.entries(payloads).map(([key,payload])=>[key,validate(payload)]));
+      assert.deepEqual(independent,jsonSchemaExportObservation.extensionOutcomes);
+      assert.deepEqual(independent,{valid:true,debug:false,long:false,metadata:true,missing:false});
+      assert.equal(jsonSchemaExportObservation.libraryChoices.downloadCount,0);assert.equal(jsonSchemaExportObservation.width,320);assert.equal(jsonSchemaExportObservation.storedUnchanged,true);assert.equal(jsonSchemaExportObservation.focusReturned,true);
+      assert.deepEqual(jsonSchemaExportObservation.extensionPackage.schemas.map(({id})=>id),["schema-generic","schema-product-detail"]);assert.deepEqual(jsonSchemaExportObservation.extensionPackage.rules.map(({id})=>id),["allowed-currency"]);
+      assert.equal(jsonSchemaExportObservation.unpublished.standardDisabled,true);assert.match(jsonSchemaExportObservation.unpublished.reason,/Publish the schema before exporting a standard revision/);
+      assert.match(jsonSchemaExportObservation.status,/1 omitted rule/);assert.equal(jsonSchemaExportObservation.standardImport.review,false);
+      assert.equal(JSON.stringify(jsonSchemaExportObservation.standalone.document).includes("partner-contract"),false);
+      socket.close();continue;
+    }
     if (process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1") {
       const observations = await evaluate(socket, `(async () => {
         const picker=await import("/data-layer-schema-property-rule-picker.js");
@@ -6389,6 +6459,7 @@ try {
   if(process.env.SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaPropertyComments:schemaPropertyCommentsObservation}));
   if(process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaCardinalityComparison:schemaCardinalityComparisonObservation}));
   if(process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER==="1")console.log(JSON.stringify({schemaDeclaredPropertyExceptions:schemaDeclaredPropertyExceptionsObservation}));
+  if(process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER==="1")console.log(JSON.stringify({jsonSchemaExport:jsonSchemaExportObservation}));
   if (process.env.LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveSchemaPropertyDeclaration:liveSchemaPropertyDeclarationObservation }));
   }

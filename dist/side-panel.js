@@ -48,7 +48,8 @@ import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
 import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaLibraryExportIdentitySnapshot, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport } from "./data-layer-json-schema-export.js";
 import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./data-layer-allowed-value-expansion.js";
 import { allowedValueText, openAllowedValueExpansionDialog } from "./data-layer-allowed-value-expansion-ui.js";
@@ -543,6 +544,14 @@ restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton);
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
 const schemaResult = document.querySelector("#schema-result");
+const schemaExportChoices = document.createElement("dialog");
+schemaExportChoices.id = "schema-export-choices";
+document.body.append(schemaExportChoices);
+const schemaExportReview = document.createElement("dialog");
+schemaExportReview.id = "schema-export-compatibility-review";
+document.body.append(schemaExportReview);
+let schemaExportTrigger;
+let pendingStandardSchemaExport;
 const guidedValidationRoot = document.querySelector("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
 const allCommands = [...listCommands()];
@@ -1678,6 +1687,110 @@ function refreshLibraryDraftValidation() {
     setEventLibraryValidation(eventLibraryEditorElements, `Library draft validation: ${result.state} · ${schema.name} v${schema.version}.`);
 }
 refreshLibraryDraftValidationButton.addEventListener("click", refreshLibraryDraftValidation);
+function downloadSchemaJson(value, filename) {
+    const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: "application/schema+json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+function finishSchemaExport(status) {
+    if (schemaResult)
+        schemaResult.textContent = status;
+    if (schemaExportReview.open)
+        schemaExportReview.close();
+    if (schemaExportChoices.open)
+        schemaExportChoices.close();
+    pendingStandardSchemaExport = undefined;
+    schemaExportTrigger?.focus({ preventScroll: true });
+}
+function omittedRuleStatus(count) { return `${count} omitted ${count === 1 ? "rule" : "rules"}`; }
+function openStandardSchemaExportReview(scope, schema) {
+    const review = schema ? inspectJsonSchemaExport(schema, schemas) : exportJsonSchemaBundle(schemas).compatibility;
+    pendingStandardSchemaExport = { scope, ...(schema ? { schema } : {}), review };
+    const heading = document.createElement("h4");
+    heading.textContent = "JSON Schema Draft 2020-12 compatibility review";
+    const summary = document.createElement("p");
+    summary.textContent = scope === "library"
+        ? `3rd-party validation format · ${schemas.filter((item) => item.published !== false && item.version > 0).length} schema resources`
+        : `${schema?.name} · current published revision ${schema?.version}`;
+    const conversionList = document.createElement("ul");
+    conversionList.setAttribute("aria-label", "Standard export conversions");
+    conversionList.append(...review.conversions.map(({ ruleId, propertyPath, conversion }) => Object.assign(document.createElement("li"), { textContent: `${ruleId} at ${propertyPath}: ${conversion}` })));
+    if (!review.conversions.length)
+        conversionList.append(Object.assign(document.createElement("li"), { textContent: "No severity or issue-message conversions" }));
+    const omittedList = document.createElement("ul");
+    omittedList.setAttribute("aria-label", "Unsupported rules omitted from standard export");
+    omittedList.append(...review.omitted.map(({ ruleName, propertyPath, behavior }) => Object.assign(document.createElement("li"), { textContent: `${ruleName} at ${propertyPath}: unsupported ${behavior}; omitted` })));
+    if (!review.omitted.length)
+        omittedList.append(Object.assign(document.createElement("li"), { textContent: "No unsupported rules" }));
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.textContent = review.omitted.length ? "Export without unsupported rules" : "Export JSON Schema Draft 2020-12";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    confirm.addEventListener("click", () => {
+        if (!pendingStandardSchemaExport)
+            return;
+        if (pendingStandardSchemaExport.scope === "library") {
+            const bundle = exportJsonSchemaBundle(schemas);
+            downloadSchemaJson(bundle.document, bundle.filename);
+            finishSchemaExport(`Exported JSON Schema Draft 2020-12 bundle · ${bundle.resourceIds.length} schemas · ${omittedRuleStatus(bundle.compatibility.omitted.length)}.`);
+        }
+        else if (pendingStandardSchemaExport.schema) {
+            const exported = exportJsonSchemaResource(pendingStandardSchemaExport.schema, schemas);
+            downloadSchemaJson(exported.document, exported.filename);
+            finishSchemaExport(`Exported JSON Schema Draft 2020-12 · ${pendingStandardSchemaExport.schema.name} revision ${pendingStandardSchemaExport.schema.version} · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`);
+        }
+    });
+    cancel.addEventListener("click", () => { schemaExportReview.close(); pendingStandardSchemaExport = undefined; schemaExportTrigger?.focus({ preventScroll: true }); });
+    schemaExportReview.replaceChildren(heading, summary, conversionList, omittedList, confirm, cancel);
+    schemaExportReview.showModal();
+    confirm.focus({ preventScroll: true });
+}
+function openSchemaExportChoices(trigger, schema) {
+    schemaExportTrigger = trigger;
+    const heading = document.createElement("h4");
+    heading.textContent = schema ? `Export ${schema.name}` : "Export Schema Library";
+    const extension = document.createElement("button");
+    extension.type = "button";
+    extension.textContent = schema ? "Extension schema package" : "Extension backup";
+    const extensionDescription = document.createElement("p");
+    extensionDescription.textContent = schema ? "For restoring this schema and its extension dependencies." : "For complete extension backup and restore.";
+    const standard = document.createElement("button");
+    standard.type = "button";
+    standard.textContent = schema ? "JSON Schema Draft 2020-12" : "JSON Schema Draft 2020-12 bundle";
+    const standardDescription = document.createElement("p");
+    standardDescription.textContent = "For third-party standards-based validation; not extension configuration.";
+    if (schema?.published === false || schema?.version === 0) {
+        standard.disabled = true;
+        standard.title = "Publish the schema before exporting a standard revision";
+        standardDescription.textContent = "Publish the schema before exporting a standard revision";
+    }
+    extension.addEventListener("click", () => {
+        if (schema) {
+            const archive = createExtensionSchemaPackage(schema, schemas, reusableSchemaRules);
+            downloadSchemaJson(archive, `${schema.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-extension-package-v1.json`);
+            finishSchemaExport(`Exported Extension schema package · ${schema.name} revision ${schema.version}.`);
+        }
+        else {
+            const archive = createSchemaLibraryExport(schemas, reusableSchemaRules);
+            downloadSchemaJson(archive, "schema-library-v1.json");
+            finishSchemaExport(`Exported Extension backup · ${archive.schemas.length} schemas and ${archive.rules.length} rules.`);
+        }
+    });
+    standard.addEventListener("click", () => { schemaExportChoices.close(); openStandardSchemaExportReview(schema ? "schema" : "library", schema); });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", () => { schemaExportChoices.close(); schemaExportTrigger?.focus({ preventScroll: true }); });
+    schemaExportChoices.replaceChildren(heading, extension, extensionDescription, standard, standardDescription, cancel);
+    schemaExportChoices.showModal();
+    extension.focus({ preventScroll: true });
+}
 function renderSchemas() {
     const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
     if (schemaEmptyState)
@@ -1690,6 +1803,7 @@ function renderSchemas() {
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
             const build = document.createElement("button");
+            const exportCurrent = document.createElement("button");
             const reportMissing = document.createElement("button");
             const remove = document.createElement("button");
             const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
@@ -1698,10 +1812,11 @@ function renderSchemas() {
             item.textContent = schema.published === false
                 ? `${schema.name} · unpublished draft · ${pending} pending changes. `
                 : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = build.type = reportMissing.type = remove.type = "button";
+            revise.type = duplicate.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
             revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
             build.textContent = "Build specification";
+            exportCurrent.textContent = "Export";
             reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
@@ -1710,6 +1825,7 @@ function renderSchemas() {
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
             build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
+            exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
             reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
             remove.addEventListener("click", () => {
                 const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
@@ -1726,7 +1842,7 @@ function renderSchemas() {
                     schemaDeleteReview.showModal();
                 }
             });
-            item.append(revise, duplicate, build, reportMissing, remove);
+            item.append(revise, duplicate, build, exportCurrent, reportMissing, remove);
             return item;
         }));
 }
@@ -5237,8 +5353,7 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
     }
     schemaLibraryImportFile.value = "";
 });
-exportSchemaButton?.addEventListener("click", () => { const archive = createSchemaLibraryExport(schemas, reusableSchemaRules); const schemaIds = schemaLibraryExportIdentitySnapshot(archive.schemas); const ruleIds = schemaLibraryExportIdentitySnapshot(archive.rules); const blob = new Blob([`${JSON.stringify(archive, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-library-v1.json"; link.click(); URL.revokeObjectURL(url); if (schemaResult)
-    schemaResult.textContent = `Exported ${schemaIds.length} schemas and ${ruleIds.length} rules.`; });
+exportSchemaButton?.addEventListener("click", () => openSchemaExportChoices(exportSchemaButton));
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
 replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
     return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
