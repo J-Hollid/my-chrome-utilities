@@ -31,6 +31,15 @@ function removeExcludedElements(root: ParentNode, selectors: readonly string[]):
   for (const selector of selectors) root.querySelector(selector)?.remove();
 }
 
+function removePanelsOutsideScope(root: ParentNode, panelIds: readonly string[]): void {
+  const panels = root.querySelectorAll<HTMLElement>(
+    "#palette,[id^='workspace-panel-'],[id^='data-layer-panel-']",
+  );
+  for (const panel of Array.from(panels)) {
+    if (!panelIds.includes(panel.id)) panel.remove();
+  }
+}
+
 function removeElementsOutsideScope(root: ParentNode, scope: UtilityDomScope): void {
   for (const element of Array.from(root.querySelectorAll<HTMLElement>("[data-utility-owner]"))) {
     const ownedElement = { id: element.id, owner: element.dataset.utilityOwner };
@@ -71,6 +80,7 @@ function synchronizeTabs(root: ParentNode, panelIds: readonly string[]): void {
 
 export function isolateUtilityDom(root: ParentNode, scope: UtilityDomScope): void {
   removeExcludedElements(root, scope.removeSelectors ?? []);
+  removePanelsOutsideScope(root, scope.panelIds);
   removeElementsOutsideScope(root, scope);
   synchronizeTabs(root, scope.panelIds);
 }
