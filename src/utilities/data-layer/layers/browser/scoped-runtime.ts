@@ -1,6 +1,7 @@
 import type { UtilityMountHost } from "../../../../platform/utility-contract.js";
 import { createSchema, createSchemaLibraryExport, SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary, validateWithSchema } from "../../schemas.js";
 import { addDefect, createMissingEventDefect, DEFECT_LIBRARY_STORAGE_KEY, restoreDefectLibrary, serializeDefectLibrary } from "../../defect-reporting.js";
+import { createEditableTemplate, eventLibraryExport, eventLibraryImport, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, openPropertyEditor, replaceImportedTemplates, saveDraftRevision, serializeEventTemplateLibrary, updateDraftJson } from "../../event-library.js";
 
 async function copyText(text:string):Promise<boolean>{
   try{if(typeof navigator.clipboard?.writeText==="function"){await navigator.clipboard.writeText(text);return true;}}catch{}
@@ -10,7 +11,14 @@ async function copyText(text:string):Promise<boolean>{
 export function mountScopedDataLayerAdapter(root:UtilityMountHost,panelIds:readonly string[],storage?:Storage):()=>void {
   const cleanups:(()=>void)[]=[];
   const bind=(selector:string,listener:()=>void):void=>{const element=root.querySelector<HTMLElement>(selector);if(!element)return;element.addEventListener("click",listener);cleanups.push(()=>element.removeEventListener("click",listener));};
-  if(panelIds.includes("data-layer-panel-library"))bind("#add-new-event",()=>{const editor=root.querySelector<HTMLElement>("#event-property-editor");if(editor)editor.hidden=false;root.querySelector<HTMLInputElement>("#event-template-name")?.focus();});
+  if(panelIds.includes("data-layer-panel-library")){
+    bind("#add-new-event",()=>{const editor=root.querySelector<HTMLElement>("#event-property-editor");if(editor)editor.hidden=false;root.querySelector<HTMLInputElement>("#event-template-name")?.focus();});
+    const original=createEditableTemplate({id:"scoped-event",sessionId:"scoped-session",sourceId:"event-history",sourceKind:"array",name:"checkout",captureTime:new Date(0).toISOString(),pageUrl:"https://shop.example/checkout",payload:{event:"checkout",step:1},rawInput:{event:"checkout",step:1},validation:"Not checked",provenance:"scoped-runtime"},{name:"Checkout",destination:"dataLayer",sourceName:"Event history"});
+    let templates=[original];
+    const persist=():void=>storage?.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,serializeEventTemplateLibrary(templates));persist();
+    bind("#save-template-revision",()=>{const editor=updateDraftJson(openPropertyEditor(templates[0]??original),JSON.stringify({event:"checkout",step:2}));templates=[saveDraftRevision(editor).template];persist();const result=root.querySelector<HTMLElement>("#event-template-result");if(result)result.textContent=`Revision ${templates[0]?.version??0} saved`;});
+    bind("#export-event-library",()=>{const serialized=JSON.stringify(eventLibraryExport(templates)),imported=eventLibraryImport(serialized);templates=replaceImportedTemplates([],imported.templates);persist();const result=root.querySelector<HTMLElement>("#event-library-transfer-result");if(result){result.dataset.transferTemplates=String(templates.length);result.dataset.transferBytes=String(serialized.length);result.textContent=`${templates.length} template exported and imported with ${templates[0]?.revisionHistory?.length??0} revisions`;}});
+  }
   if(panelIds.includes("data-layer-panel-schemas"))bind("#create-schema",()=>{const editor=root.querySelector<HTMLElement>("#schema-editor");if(editor)editor.hidden=false;root.querySelector<HTMLInputElement>("#schema-editor-name")?.focus();});
   if(panelIds.includes("data-layer-panel-schemas")){
     const schema=createSchema("Scoped checkout",1,{type:"object",properties:{event:{type:"string"}},required:["event"]});
