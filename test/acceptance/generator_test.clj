@@ -24,6 +24,8 @@
       (is (= first-text (slurp (:generated-file second-result))))
       (is (str/includes? first-text "acceptance.runtime"))
       (is (str/includes? first-text "acceptance.pack-runtime"))
+      (is (str/includes? first-text "(defn run!"))
+      (is (str/includes? first-text "babashka.file"))
       (is (not (str/includes? first-text "acceptance.steps.all")))
       (is (not (str/includes? first-text "acceptance.steps.project-skeleton :as steps")))
       (is (= 1 (:schema_version metadata)))

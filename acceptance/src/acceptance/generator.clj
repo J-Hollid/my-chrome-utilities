@@ -32,8 +32,8 @@
 
 (defn- entrypoint-text [ir-path feature-path]
   (format
-   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.pack-runtime :as packs]\n            [aps.json :as aps-json]))\n\n(defn -main [& args]\n  (let [ir-path (or (first args) %s)\n        feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature (packs/handlers-for-feature %s))\n    (println \"acceptance passed\")))\n\n(apply -main *command-line-args*)\n"
-   (pr-str ir-path) (pr-str feature-path)))
+   "(ns generated.acceptance-test\n  (:require [acceptance.runtime :as runtime]\n            [acceptance.pack-runtime :as packs]\n            [aps.json :as aps-json]))\n\n(defn run! [ir-path]\n  (let [feature (aps-json/read-json-file ir-path)]\n    (runtime/run-feature! feature (packs/handlers-for-feature %s))))\n\n(defn -main [& args]\n  (run! (or (first args) %s))\n  (println \"acceptance passed\"))\n\n(when (= *file* (System/getProperty \"babashka.file\"))\n  (apply -main *command-line-args*))\n"
+   (pr-str feature-path) (pr-str ir-path)))
 
 (defn generate!
   ([ir-path output-dir] (generate! ir-path output-dir {}))

@@ -60,12 +60,16 @@ function acceptanceArtifacts(feature){
   const slug=feature.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-+|-+$)/g,"");
   return {ir:`build/acceptance/ir/${basename}.json`,generated:`build/acceptance/generated/${slug}_acceptance_test.clj`};
 }
-function acceptanceCommands(features){
+function acceptanceCommands(features,packs){
   const artifacts=features.map((feature)=>({feature,...acceptanceArtifacts(feature)}));
+  const sessions=packs.map((pack)=>({
+    packId:pack.id,
+    artifacts:artifacts.filter(({feature})=>pack.features.includes(feature)),
+  })).filter(({artifacts})=>artifacts.length);
   return [
     ...artifacts.map(({feature,ir})=>`bb gherkin-parser ${feature} ${ir}`),
     ...artifacts.map(({ir})=>`bb acceptance-entrypoint-generator ${ir} build/acceptance/generated`),
-    ...artifacts.map(({ir,generated})=>`bb ${generated} ${ir}`),
+    ...sessions.map(({packId,artifacts})=>`bb acceptance-pack-runner ${packId} ${artifacts.flatMap(({generated,ir})=>[generated,ir]).join(" ")}`),
   ];
 }
 export function planVerification(packs,{packIds=[],changedPaths=[],terminalFull=false}={}){
@@ -79,7 +83,7 @@ export function planVerification(packs,{packIds=[],changedPaths=[],terminalFull=
   const changedFeatures=changedPaths.filter((path)=>path.endsWith(".feature"));
   const acceptancePacks=terminalFull?packsForIds(packs,packs.map(({id})=>id)):changedFeatures.length?packsForIds(packs,[...new Set(changedFeatures.map((path)=>changedOwners.get(path)))]):packIds.length?packsForIds(packs,packIds):ordered;
   const features=(changedFeatures.length?changedFeatures:acceptancePacks.flatMap((pack)=>pack.features)).sort();
-  const plannedAcceptanceCommands=acceptanceCommands(features);
+  const plannedAcceptanceCommands=acceptanceCommands(features,acceptancePacks);
   commands.push(...plannedAcceptanceCommands);
   return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),acceptanceCommands:plannedAcceptanceCommands,commands:[...new Set(commands)]};
 }
