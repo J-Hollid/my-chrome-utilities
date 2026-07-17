@@ -52,15 +52,35 @@ export async function validateVerificationPacks(packs,{inventory}={}){
   }
   return packs;
 }
-function ownerOf(packs,path){return packs.find((pack)=>pack.source.some((prefix)=>path===prefix||path.startsWith(prefix)));}
+function ownerOf(packs,path){return packs.find((pack)=>pack.source.some((prefix)=>path===prefix||path.startsWith(prefix))||["unit","property","features","handlers","browserAdapters"].some((key)=>pack[key].includes(path)));}
 function expandDependencies(packs,ids){const selected=new Set(ids);let changed=true;while(changed){changed=false;for(const id of [...selected]){const pack=packs.find((item)=>item.id===id);if(!pack)throw new Error(`Register every direct dependency: ${id}`);for(const dependency of pack.dependencies)if(!selected.has(dependency)){selected.add(dependency);changed=true;}}}return selected;}
 function expandDependants(packs,ids){const selected=new Set(ids);let changed=true;while(changed){changed=false;for(const pack of packs)if(pack.dependencies.some((id)=>selected.has(id))&&!selected.has(pack.id)){selected.add(pack.id);changed=true;}}return selected;}
+function acceptanceArtifacts(feature){
+  const basename=feature.slice(feature.lastIndexOf("/")+1).replace(/\.feature$/,"");
+  const slug=feature.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-+|-+$)/g,"");
+  return {ir:`build/acceptance/ir/${basename}.json`,generated:`build/acceptance/generated/${slug}_acceptance_test.clj`};
+}
+function acceptanceCommands(features){
+  const artifacts=features.map((feature)=>({feature,...acceptanceArtifacts(feature)}));
+  return [
+    ...artifacts.map(({feature,ir})=>`bb gherkin-parser ${feature} ${ir}`),
+    ...artifacts.map(({ir})=>`bb acceptance-entrypoint-generator ${ir} build/acceptance/generated`),
+    ...artifacts.map(({ir,generated})=>`bb ${generated} ${ir}`),
+  ];
+}
 export function planVerification(packs,{packIds=[],changedPaths=[],terminalFull=false}={}){
   const known=new Set(packs.map(({id})=>id));for(const pack of packs)for(const dependency of pack.dependencies)if(!known.has(dependency))throw new Error(`Register every direct dependency: ${dependency}`);
   let selected=terminalFull?new Set(packs.map(({id})=>id)):new Set(packIds);
-  for(const path of changedPaths){const owner=ownerOf(packs,path);if(!owner)throw new Error(`Assign every source path to one pack: ${path}`);selected.add(owner.id);}
+  const changedOwners=new Map();
+  for(const path of changedPaths){const owner=ownerOf(packs,path);if(!owner)throw new Error(`Assign every source path to one pack: ${path}`);selected.add(owner.id);changedOwners.set(path,owner.id);}
   if(changedPaths.length)selected=expandDependants(packs,selected);selected=expandDependencies(packs,selected);
   const ordered=packs.filter(({id})=>selected.has(id));const commands=["npm run build"];
   for(const pack of ordered){for(const path of pack.unit)commands.push(`node ${path}`);for(const path of pack.property)commands.push(`node ${path}`);for(const path of pack.browserAdapters)commands.push(`node ${path}`);}
-  return {packIds:ordered.map(({id})=>id),features:ordered.flatMap(({features})=>features).sort(),handlers:ordered.flatMap(({handlers})=>handlers),commands:[...new Set(commands)]};
+  const changedFeatures=changedPaths.filter((path)=>path.endsWith(".feature"));
+  const acceptancePacks=terminalFull?packsForIds(packs,packs.map(({id})=>id)):changedFeatures.length?packsForIds(packs,[...new Set(changedFeatures.map((path)=>changedOwners.get(path)))]):packIds.length?packsForIds(packs,packIds):ordered;
+  const features=(changedFeatures.length?changedFeatures:acceptancePacks.flatMap((pack)=>pack.features)).sort();
+  commands.push(...acceptanceCommands(features));
+  return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),commands:[...new Set(commands)]};
 }
+
+function packsForIds(packs,ids){const selected=new Set(ids);return packs.filter(({id})=>selected.has(id));}

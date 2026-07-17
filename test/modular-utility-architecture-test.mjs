@@ -109,6 +109,16 @@ await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:pa
 await assert.rejects(()=>validateVerificationPacks([...packs,{...packs[0],id:"duplicate",features:packs[0].features}]),/exactly one pack/);
 assert.equal(packs.length>=6,true);for(const pack of packs)for(const key of ["source","unit","property","features","handlers","browserAdapters","dependencies"])assert.equal(Array.isArray(pack[key]),true,`${pack.id}.${key}`);
 const focused=planVerification(packs,{packIds:["schemas"]});assert.equal(focused.packIds.includes("schemas"),true);assert.equal(focused.packIds.includes("defects"),false);
+assert.deepEqual(focused.features,[...packs.find(({id})=>id==="schemas").features].sort());
+assert.deepEqual(focused.handlers,packs.find(({id})=>id==="schemas").handlers);
+const parseCommands=focused.commands.filter((command)=>command.startsWith("bb gherkin-parser "));
+const generateCommands=focused.commands.filter((command)=>command.startsWith("bb acceptance-entrypoint-generator "));
+const executeCommands=focused.commands.filter((command)=>command.includes("_acceptance_test.clj "));
+assert.equal(parseCommands.length,focused.features.length);assert.equal(generateCommands.length,focused.features.length);assert.equal(executeCommands.length,focused.features.length);
+assert.ok(focused.commands.indexOf(parseCommands.at(-1))<focused.commands.indexOf(generateCommands[0]));
+assert.ok(focused.commands.indexOf(generateCommands.at(-1))<focused.commands.indexOf(executeCommands[0]));
+const changedFeature=packs.find(({id})=>id==="schemas").features[0];
+const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});assert.deepEqual(changedAcceptance.features,[changedFeature]);
 const changed=planVerification(packs,{changedPaths:["src/data-layer-schema-verification.ts"]});assert.equal(changed.packIds.includes("schemas"),true);
 const full=planVerification(packs,{terminalFull:true});assert.deepEqual(full.packIds,packs.map(({id})=>id));
 assert.equal(new Set(full.commands).size,full.commands.length);assert.equal(full.commands.filter((command)=>command==="npm run build").length,1);
