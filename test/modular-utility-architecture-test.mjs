@@ -72,6 +72,8 @@ assert.deepEqual(architectureViolations(new Map([["src/side-panel.ts",'import ".
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/core/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/core/demo.ts",dependency:"../browser/demo.js",reason:"core may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/application/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/application/demo.ts",dependency:"../browser/demo.js",reason:"application may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/hotkeys/demo.ts",'import "../command-palette/index.js";']])),[{file:"src/utilities/hotkeys/demo.ts",dependency:"../command-palette/index.js",reason:"utilities may not import another utility"}]);
+assert.deepEqual(architectureViolations(new Map([["src/data-layer-unclassified.ts","export const value=1;"]])),[{file:"src/data-layer-unclassified.ts",dependency:"architecture/data-layer-boundaries.json",reason:"data-layer file must declare its module and layer"}]);
+assert.deepEqual(architectureViolations(new Map([["src/data-layer-schema-canonical-document.ts","export function typeOf(document){return document.type;}"]])),[]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const captureScope={utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"]};
 assert.equal(retainUtilityElement({id:"data-layer-panel-live",owner:"data-layer"},captureScope),true);

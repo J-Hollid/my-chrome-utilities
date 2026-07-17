@@ -11,10 +11,12 @@ const normalized=(file,dependency)=>path.posix.normalize(path.posix.join(path.po
 const utilityOf=(file)=>file.match(/^src\/utilities\/([^/]+)\//)?.[1];
 const layerOf=(file)=>file.match(/\/layers\/(core|application|browser)\//)?.[1]??declaredBoundaries[file]?.layer;
 const moduleOf=(file)=>declaredBoundaries[file]?.module??(file.match(/^src\/utilities\/data-layer\/layers\/(?:core|application|browser)\/([^/.]+)\.ts$/)?.[1]);
+const concreteBrowserRuntime=/(?:\bdocument\.(?:activeElement|addEventListener|body|createElement|documentElement|getElementById|querySelector|querySelectorAll)\b|\bwindow\.|\bchrome\.|\blocalStorage\b|\bsessionStorage\b)/;
 
 export function architectureViolations(files){
   const violations=[];
   for(const [file,source] of files){
+    if(/^src\/data-layer-[^/]+\.ts$/.test(file)&&!declaredBoundaries[file])violations.push({file,dependency:"architecture/data-layer-boundaries.json",reason:"data-layer file must declare its module and layer"});
     for(const dependency of importsOf(source)){
       if(shellFiles.has(file)&&internalUtilityImport.test(dependency)){
         violations.push({file,dependency,reason:"shell composition must use public utility entries"});continue;
@@ -26,8 +28,8 @@ export function architectureViolations(files){
       else if(layer==="browser"&&file.includes("/utilities/data-layer/layers/")&&moduleOf(file)&&moduleOf(target)&&moduleOf(file)!==moduleOf(target))violations.push({file,dependency,reason:"browser adapters may not import another data-layer module"});
     }
     const layer=layerOf(file);
-    if(layer==="core"&&/(?:\bdocument\b|\bwindow\b|\bchrome\.|\blocalStorage\b|\bsessionStorage\b)/.test(source))violations.push({file,dependency:"browser runtime",reason:"core may not use DOM, Chrome, or storage implementations"});
-    if(layer==="application"&&/(?:\bdocument\b|\bwindow\b|\bchrome\.|\blocalStorage\b|\bsessionStorage\b)/.test(source))violations.push({file,dependency:"browser runtime",reason:"application may not use concrete DOM, Chrome, or storage implementations"});
+    if(layer==="core"&&concreteBrowserRuntime.test(source))violations.push({file,dependency:"browser runtime",reason:"core may not use DOM, Chrome, or storage implementations"});
+    if(layer==="application"&&concreteBrowserRuntime.test(source))violations.push({file,dependency:"browser runtime",reason:"application may not use concrete DOM, Chrome, or storage implementations"});
   }
   return violations;
 }
