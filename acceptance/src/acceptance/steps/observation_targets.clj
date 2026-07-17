@@ -24,8 +24,6 @@
      "the project skeleton is inspected"
      "package metadata identifies the project as <project_name>"
      "the side panel is open at <side_panel_url>"
-     "the user searches for <query>"
-     "the search is cleared"
      "the user chooses <discovery_action>"
      "the Data Layer Live view is displayed"
      "the observation target picker is displayed"
@@ -59,6 +57,13 @@
            :target-state "Attached"
            :session {:target target :events [] :status "active"})))
 
+(defn- target-titles [text]
+  (support/split-list text #"\s*,\s*(?:and\s+)?|\s+and\s+"))
+
+(defn- matching-targets [targets query]
+  (let [normalized-query (str/lower-case query)]
+    (filterv #(str/includes? (str/lower-case %) normalized-query) targets)))
+
 (defn- transition [world example captures {:keys [keyword text]}]
   (let [capture-keys (support/capture-placeholder-keys captures)
         example-keys (map name (clojure.core/keys example))
@@ -84,6 +89,46 @@
 
       (str/includes? text "data layer testing session is attached to target")
       (attach-target world values)
+
+      (str/includes? text "target candidates include pages")
+      (let [candidates (target-titles (get values "page_titles"))]
+        (assoc world :observation-targets candidates
+               :visible-observation-targets candidates))
+
+      (= text "the user searches for <query>")
+      (let [query (get values "query")
+            matches (matching-targets (:observation-targets world) query)]
+        (assoc world :observation-target-search query
+               :visible-observation-targets matches
+               :observation-target-match-count (count matches)))
+
+      (str/includes? text "only candidates matching <query>")
+      (do (support/assert! (= (matching-targets (:observation-targets world)
+                                               (get values "query"))
+                              (:visible-observation-targets world))
+                           "Target picker search returned nonmatching candidates."
+                           {:query (get values "query")
+                            :visible (:visible-observation-targets world)})
+          world)
+
+      (= text "the picker reports the matching target count")
+      (do (support/assert! (= (count (:visible-observation-targets world))
+                              (:observation-target-match-count world))
+                           "Target picker match count is stale."
+                           {:world world})
+          world)
+
+      (= text "the search is cleared")
+      (assoc world :observation-target-search ""
+             :visible-observation-targets (:observation-targets world)
+             :observation-target-match-count (count (:observation-targets world)))
+
+      (str/includes? text "candidates <page_titles> are shown again")
+      (do (support/assert! (= (target-titles (get values "page_titles"))
+                              (:visible-observation-targets world))
+                           "Clearing target search did not restore the inventory."
+                           {:world world})
+          world)
 
       (= text "data layer testing starts")
       (if (:selected-target world)
@@ -160,16 +205,12 @@
         target-contract-background-texts))
 
 (def handlers
-  (conj (vec (concat
-              [{:pattern #"^the user chooses <([A-Za-z0-9_]+)>$"
-                :applies? target-contract?
-                :handler choose-handler}]
-              (map #(assoc % :applies? target-contract?)
-                   (support/semantic-handlers target-step-specs transition))))
-        {:pattern #"^the search is cleared$"
-         :applies? target-contract?
-         :handler (fn [world _ _]
-                    (assoc world :observation-target-search ""))}))
+  (vec (concat
+        [{:pattern #"^the user chooses <([A-Za-z0-9_]+)>$"
+          :applies? target-contract?
+          :handler choose-handler}]
+        (map #(assoc % :applies? target-contract?)
+             (support/semantic-handlers target-step-specs transition)))))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-10T19:12:23.823418523+02:00", :module-hash "363825768", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1360560598"} {:id "def/target-feature-files", :kind "def", :line 6, :end-line nil, :hash "1542423036"} {:id "def/target-contract-background-texts", :kind "def", :line 12, :end-line nil, :hash "-1025287600"} {:id "def/target-step-specs", :kind "def", :line 18, :end-line nil, :hash "-1027200353"} {:id "defn-/capture-values", :kind "defn-", :line 35, :end-line nil, :hash "1376456184"} {:id "defn-/remember-values", :kind "defn-", :line 40, :end-line nil, :hash "1146870671"} {:id "defn-/select-target", :kind "defn-", :line 43, :end-line nil, :hash "1943371839"} {:id "defn-/attach-target", :kind "defn-", :line 52, :end-line nil, :hash "-1981253617"} {:id "defn-/transition", :kind "defn-", :line 62, :end-line nil, :hash "591216956"} {:id "defn-/choose-handler", :kind "defn-", :line 136, :end-line nil, :hash "1520441741"} {:id "defn-/target-contract?", :kind "defn-", :line 149, :end-line nil, :hash "-701539795"} {:id "def/priority-handlers", :kind "def", :line 152, :end-line nil, :hash "735835913"} {:id "def/handlers", :kind "def", :line 162, :end-line nil, :hash "843790791"}]}
