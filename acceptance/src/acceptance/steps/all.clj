@@ -43,6 +43,7 @@
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
+            [acceptance.steps.non-applicable-property-visibility :as non-applicable-property-visibility]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
             [acceptance.steps.operator-interface :as operator-interface]
@@ -119,6 +120,7 @@
                local-rule-promotion-availability/handlers
                live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
+               non-applicable-property-visibility/handlers
                schema-publication-refresh/handlers
                defect-library/handlers
                validation-presence-semantics/handlers

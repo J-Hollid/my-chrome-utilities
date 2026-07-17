@@ -221,12 +221,14 @@
       "acceptance/src/acceptance/steps/live_observer_support.clj",
       "acceptance/src/acceptance/steps/live_observer_workspace.clj",
       "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
+      "acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",
       "acceptance/src/acceptance/steps/observability_library.clj",
       "acceptance/src/acceptance/steps/observation_targets.clj",
       "acceptance/src/acceptance/steps/observation_targets_support.clj",
       "acceptance/src/acceptance/steps/saved_event_feed_filters.clj",
       "acceptance/src/acceptance/steps/saved_session_live_feed.clj",
       "acceptance/src/acceptance/steps/saved_sessions.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh_support.clj",
       "acceptance/src/acceptance/steps/session_boundaries.clj"
     ],
     "browserAdapters": [
