@@ -1,4 +1,4 @@
-export function createDomUtilityLifecycle(id, panels) {
+export function createDomUtilityLifecycle(id, panels, options = {}) {
     let active = false;
     return {
         activate() { active = true; },
@@ -10,12 +10,13 @@ export function createDomUtilityLifecycle(id, panels) {
                     throw new Error(`Registered utility panel is missing: ${panelId}`);
                 panel.dataset.utilityOwner = id;
             }
+            const dispose = options.onMount?.(root);
             this.activate();
             root.dataset.registeredUtilities = id;
             root.dataset.activeUtilities = id;
             let mounted = true;
             const unmount = () => { if (!mounted)
-                return; mounted = false; this.deactivate(); root.dataset.activeUtilities = ""; };
+                return; mounted = false; dispose?.(); this.deactivate(); root.dataset.activeUtilities = ""; };
             pageLifecycle.addEventListener("pagehide", unmount, { once: true });
             return { unmount };
         },

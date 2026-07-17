@@ -1,9 +1,11 @@
 import { filterPaletteCommands, selectedPaletteIndexForKey, } from "./command-palette.js";
 export function createPaletteController({ root, sidePanelContent, commands, runCommand, }) {
-    const openButton = document.querySelector("#open-palette");
-    const palette = document.querySelector("#palette");
-    const filter = document.querySelector("#palette-filter");
-    const results = document.querySelector("#palette-results");
+    const scope = root ?? document;
+    const ownerDocument = root?.ownerDocument ?? document;
+    const openButton = scope.querySelector("#open-palette");
+    const palette = scope.querySelector("#palette");
+    const filter = scope.querySelector("#palette-filter");
+    const results = scope.querySelector("#palette-results");
     let visibleCommands = commands;
     let selectedIndex = 0;
     let lastPaletteFocus = null;
@@ -16,7 +18,7 @@ export function createPaletteController({ root, sidePanelContent, commands, runC
             : Math.min(Math.max(selection, 0), nextCommands.length - 1);
         results.replaceChildren();
         for (const [index, command] of nextCommands.entries()) {
-            const item = document.createElement("li");
+            const item = ownerDocument.createElement("li");
             item.id = `palette-result-${index}`;
             item.setAttribute("role", "option");
             item.textContent = command.title;
@@ -32,8 +34,8 @@ export function createPaletteController({ root, sidePanelContent, commands, runC
     function showPalette() {
         if (!palette)
             return;
-        lastPaletteFocus = document.activeElement instanceof HTMLElement
-            ? document.activeElement
+        lastPaletteFocus = ownerDocument.activeElement instanceof HTMLElement
+            ? ownerDocument.activeElement
             : null;
         sidePanelContent?.setAttribute("inert", "");
         palette.hidden = false;
