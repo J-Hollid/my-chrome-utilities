@@ -34,8 +34,8 @@
    function updateKeymapStatus(added, removed) { setKeymapStatus(`Keymap updated: added ${added.length}, removed ${removed.length}`); }
    function shouldIgnoreHotkeyTarget(target) { return target instanceof HTMLInputElement || target.id === 'history-path'; }
    function handleHotkeyKeydown(event) { advanceHotkeySequence(event); runCommandById('demo.say-hello', {}); }
-   localStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, '{}');
-   localStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
+   hotkeyStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, '{}');
+   hotkeyStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
    chrome.runtime.onMessage.addListener((message) => message.type === 'focus-app-hotkeys');
    if (event.key === 'Escape') clearPendingHotkeySequence();")
 

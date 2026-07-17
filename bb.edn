@@ -288,36 +288,12 @@
                                   (when (pos? (+ (:fail result) (:error result)))
                                     (System/exit 1)))}
   acceptance {:doc "Run the normal APS acceptance pipeline."
-              :requires ([acceptance.generator :as generator]
-                         [babashka.fs :as fs]
-                         [clojure.string :as str]
-                         [babashka.process :as process])
-              :task (let [features (->> (fs/list-dir "features")
-                                         (filter (fn [file]
-                                                   (and (fs/regular-file? file)
-                                                        (str/ends-with? (fs/file-name file) ".feature"))))
-                                         (sort-by (fn [file] (fs/file-name file))))
-                          generated-dir "build/acceptance/generated"
-                          slug (fn [path]
-                                 (-> (fs/file-name (fs/strip-ext path))
-                                     (str/replace (re-pattern "[^A-Za-z0-9_-]+") "-")))
-                          run! (fn [& args]
-                                 (let [result (apply process/shell
-                                                     {:out :inherit
-                                                      :err :inherit
-                                                      :continue true}
-                                                     args)]
-                                   (when-not (zero? (:exit result))
-                                     (System/exit (:exit result)))))]
-                      (run! "npm" "run" "build")
-                      (doseq [feature features
-                              :let [name (slug feature)
-                                    feature-path (str feature)
-                                    ir (str "build/acceptance/ir/" name ".json")]]
-                        (fs/create-dirs (fs/parent ir))
-                        (run! "bb" "gherkin-parser" feature-path ir)
-                        (let [{:keys [generated-file]} (generator/generate! ir generated-dir
-                                                                            {:feature-path feature-path})]
-                          (run! "bb" generated-file))))}
+              :requires ([babashka.process :as process])
+              :task (let [result (process/shell {:out :inherit
+                                                  :err :inherit
+                                                  :continue true}
+                                                 "node" "scripts/run-focused-acceptance.mjs" "--full")]
+                      (when-not (zero? (:exit result))
+                        (System/exit (:exit result))))}
   test {:doc "Run unit, property, and acceptance tests."
         :depends [test:unit test:property acceptance]}}}

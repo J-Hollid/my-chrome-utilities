@@ -39,11 +39,15 @@
          distinct
          vec)))
 
+(def shared-handler-namespaces
+  ['acceptance.steps.project-skeleton
+   'acceptance.steps.side-panel
+   'acceptance.steps.operator-interface])
+
 (defn handlers-for-feature [feature-path]
   (let [registered (seq (registered-handler-namespaces feature-path))
         namespaces (when registered
-                     (distinct (concat ['acceptance.steps.project-skeleton
-                                        'acceptance.steps.side-panel]
+                     (distinct (concat shared-handler-namespaces
                                        registered)))]
     (when-not namespaces
       (throw (ex-info "Feature is not assigned to a verification pack" {:feature feature-path})))

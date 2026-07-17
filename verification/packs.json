@@ -46,7 +46,8 @@
       "features/side-panel-hotkey-operator-layout.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/hotkey_keymap.clj"
+      "acceptance/src/acceptance/steps/hotkey_keymap.clj",
+      "acceptance/src/acceptance/steps/workspace_editor.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/hotkeys.mjs"
@@ -202,19 +203,21 @@
       "features/data-layer-workflow-focus-management.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
       "acceptance/src/acceptance/steps/data_layer.clj",
       "acceptance/src/acceptance/steps/data_layer_observer.clj",
       "acceptance/src/acceptance/steps/data_layer_page_context.clj",
       "acceptance/src/acceptance/steps/data_layer_recovery.clj",
       "acceptance/src/acceptance/steps/data_layer_session.clj",
+      "acceptance/src/acceptance/steps/live_observer_timeline.clj",
       "acceptance/src/acceptance/steps/data_layer_timeline.clj",
       "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/event_property_editor.clj",
       "acceptance/src/acceptance/steps/fresh_live_session.clj",
       "acceptance/src/acceptance/steps/live_event_presentation.clj",
       "acceptance/src/acceptance/steps/live_event_presentation_support.clj",
       "acceptance/src/acceptance/steps/live_observer.clj",
       "acceptance/src/acceptance/steps/live_observer_support.clj",
-      "acceptance/src/acceptance/steps/live_observer_timeline.clj",
       "acceptance/src/acceptance/steps/live_observer_workspace.clj",
       "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
       "acceptance/src/acceptance/steps/observation_targets.clj",
@@ -693,8 +696,6 @@
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/all.clj",
-      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
-      "acceptance/src/acceptance/steps/event_property_editor.clj",
       "acceptance/src/acceptance/steps/information_architecture.clj",
       "acceptance/src/acceptance/steps/modular_architecture.clj",
       "acceptance/src/acceptance/steps/observability_library.clj",
@@ -704,8 +705,7 @@
       "acceptance/src/acceptance/steps/project_skeleton.clj",
       "acceptance/src/acceptance/steps/side_panel.clj",
       "acceptance/src/acceptance/steps/support.clj",
-      "acceptance/src/acceptance/steps/timeline_presentations.clj",
-      "acceptance/src/acceptance/steps/workspace_editor.clj"
+      "acceptance/src/acceptance/steps/timeline_presentations.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs"

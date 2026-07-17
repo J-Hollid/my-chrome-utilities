@@ -138,5 +138,9 @@ assert.deepEqual(focusedCliPlan.features,[changedFeature]);assert.deepEqual(focu
 const changed=planVerification(packs,{changedPaths:["src/data-layer-schema-verification.ts"]});assert.equal(changed.packIds.includes("schemas"),true);
 const full=planVerification(packs,{terminalFull:true});assert.deepEqual(full.packIds,packs.map(({id})=>id));
 assert.equal(new Set(full.commands).size,full.commands.length);assert.equal(full.commands.filter((command)=>command==="npm run build").length,1);
+const fullCliExecutions=[];const fullCliPlan=await runFocusedAcceptance(["--full"],{commandRunner:async(command)=>fullCliExecutions.push(command)});
+assert.deepEqual(fullCliPlan.features,packs.flatMap(({features})=>features).sort());assert.deepEqual(fullCliExecutions,fullCliPlan.acceptanceCommands);
+const bbTasks=await readFile(new URL("../bb.edn",import.meta.url),"utf8");
+assert.ok(bbTasks.includes('"node" "scripts/run-focused-acceptance.mjs" "--full"'));
 assert.throws(()=>planVerification(packs,{changedPaths:["src/unowned-module.ts"]}),/Assign every source path to one pack/);
 console.log("modular utility architecture tests passed");

@@ -116,8 +116,8 @@
 (defn stored-keymap-wired? [source]
   (support/includes-all? source
                          ["HOTKEY_KEYMAP_STORAGE_KEY"
-                          "localStorage.setItem"
-                          "localStorage.getItem"]))
+                          "hotkeyStorage.setItem"
+                          "hotkeyStorage.getItem"]))
 
 (defn sequence-run-wired? [source]
   (support/includes-all? source
