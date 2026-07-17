@@ -1,26 +1,11 @@
-function registerUnmount(deactivate, root, pageLifecycle) {
-    let mounted = true;
-    const unmount = () => {
-        if (!mounted)
-            return;
-        mounted = false;
-        deactivate();
-        root.dataset.activeUtilities = "";
-    };
-    pageLifecycle.addEventListener("pagehide", unmount, { once: true });
-    return { unmount };
-}
+import { registerDomUtilityUnmount } from "./utility-lifecycle-dom.js";
 export function mountUtilityShell(shell, root, pageLifecycle) {
     root.dataset.registeredUtilities = shell.utilityIds.join(",");
     root.dataset.activeUtilities = shell.activate().join(",");
-    return registerUnmount(() => shell.deactivate(), root, pageLifecycle);
+    return registerDomUtilityUnmount(() => shell.deactivate(), root, pageLifecycle);
 }
 export function mountUtility(utility, root, pageLifecycle) {
-    bindUtilityPanels([utility], root);
-    utility.lifecycle.activate();
-    root.dataset.registeredUtilities = utility.id;
-    root.dataset.activeUtilities = utility.id;
-    return registerUnmount(() => utility.lifecycle.deactivate(), root, pageLifecycle);
+    return utility.lifecycle.mount(root, pageLifecycle);
 }
 export function renderUtilityDirectory(utilities, container, ownerDocument = document) {
     const items = utilities.map((utility) => {

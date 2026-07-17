@@ -4,6 +4,7 @@ import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
+import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 
 const closure = (packs, initial, direction) => {
@@ -119,15 +120,17 @@ for (let sample = 0; sample < 100; sample += 1) {
   const panels = new Map(panelIds.map((id) => [id, { dataset:{} }]));
   const calls = [];
   let pagehide;
+  const lifecycle = createDomUtilityLifecycle(`standalone-${sample}`, panelIds);
+  const activate = lifecycle.activate.bind(lifecycle);
+  const deactivate = lifecycle.deactivate.bind(lifecycle);
+  lifecycle.activate = () => { calls.push("activate"); activate(); };
+  lifecycle.deactivate = () => { calls.push("deactivate"); deactivate(); };
   const utility = {
     id:`standalone-${sample}`,
     identity:{ name:`Standalone ${sample}`, description:"Generated standalone utility" },
     commands:[],
     panels:panelIds,
-    lifecycle:{
-      activate(){ calls.push("activate"); },
-      deactivate(){ calls.push("deactivate"); },
-    },
+    lifecycle,
     storage:{ namespace:`standalone.${sample}`, version:1 },
   };
   const root = {
