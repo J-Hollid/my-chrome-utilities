@@ -29,11 +29,19 @@
   },
   "src/data-layer-defect-library.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts",
+      "src/data-layer-saved-sessions.ts"
+    ]
   },
   "src/data-layer-defect-report-browser.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts",
+      "src/data-layer-schema-documentation.ts"
+    ]
   },
   "src/data-layer-defect-report-export.ts": {
     "module": "defect-reporting",
@@ -41,11 +49,17 @@
   },
   "src/data-layer-defect-report-model.ts": {
     "module": "defect-reporting",
-    "layer": "application"
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-schema-documentation.ts"
+    ]
   },
   "src/data-layer-defect-report-ui.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts"
+    ]
   },
   "src/data-layer-event-feed-query-ui.ts": {
     "module": "live-inspection",
@@ -65,7 +79,10 @@
   },
   "src/data-layer-event-library-editor.ts": {
     "module": "event-library",
-    "layer": "application"
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-source.ts"
+    ]
   },
   "src/data-layer-event-library-transfer.ts": {
     "module": "event-library",
@@ -73,11 +90,18 @@
   },
   "src/data-layer-event-occurrence-defect-report-ui.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts",
+      "src/data-layer-schema-verification.ts"
+    ]
   },
   "src/data-layer-event-occurrence-defect-report.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-verification.ts"
+    ]
   },
   "src/data-layer-event-template-renaming.ts": {
     "module": "event-library",
@@ -85,7 +109,10 @@
   },
   "src/data-layer-fresh-session.ts": {
     "module": "capture",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts"
+    ]
   },
   "src/data-layer-guided-nested-property-merge.ts": {
     "module": "schemas",
@@ -125,7 +152,13 @@
   },
   "src/data-layer-live-inspector-actions.ts": {
     "module": "live-inspection",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-event-library-editor.ts",
+      "src/data-layer-event-occurrence-defect-report.ts",
+      "src/data-layer-source.ts",
+      "src/data-layer-validation-model.ts"
+    ]
   },
   "src/data-layer-live-inspector-presentation-ui.ts": {
     "module": "live-inspection",
@@ -149,11 +182,23 @@
   },
   "src/data-layer-live-observer-ui.ts": {
     "module": "live-inspection",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-allowed-value-expansion.ts",
+      "src/data-layer-live-validation-presentation.ts",
+      "src/data-layer-recursive-property-tree.ts",
+      "src/data-layer-schema-documentation.ts"
+    ]
   },
   "src/data-layer-live-observer.ts": {
     "module": "live-inspection",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-documentation.ts",
+      "src/data-layer-schema-verification.ts",
+      "src/data-layer-source.ts",
+      "src/data-layer-validation-model.ts"
+    ]
   },
   "src/data-layer-live-schema-property-declaration-ui.ts": {
     "module": "schemas",
@@ -193,11 +238,18 @@
   },
   "src/data-layer-missing-event-defect-report-ui.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-verification.ts"
+    ]
   },
   "src/data-layer-missing-event-defect-report.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-path-conditions.ts",
+      "src/data-layer-schema-verification.ts"
+    ]
   },
   "src/data-layer-observation-activation.ts": {
     "module": "capture",
@@ -225,7 +277,10 @@
   },
   "src/data-layer-push-draft-review.ts": {
     "module": "event-library",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-observation-targets.ts"
+    ]
   },
   "src/data-layer-recovery.ts": {
     "module": "capture",
@@ -237,11 +292,17 @@
   },
   "src/data-layer-saved-session-live-feed.ts": {
     "module": "live-inspection",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-source.ts"
+    ]
   },
   "src/data-layer-saved-sessions.ts": {
     "module": "live-inspection",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-source.ts"
+    ]
   },
   "src/data-layer-schema-assignment-data-conditions-ui.ts": {
     "module": "schemas",
@@ -301,7 +362,10 @@
   },
   "src/data-layer-schema-publication-refresh.ts": {
     "module": "schemas",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts"
+    ]
   },
   "src/data-layer-schema-rule-property-identity.ts": {
     "module": "schemas",
@@ -313,7 +377,10 @@
   },
   "src/data-layer-schema-verification.ts": {
     "module": "schemas",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-source.ts"
+    ]
   },
   "src/data-layer-selected-target-push-page.ts": {
     "module": "event-library",
@@ -321,7 +388,10 @@
   },
   "src/data-layer-selected-target-push.ts": {
     "module": "event-library",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-observation-targets.ts"
+    ]
   },
   "src/data-layer-sequence-replay-ui.ts": {
     "module": "replay",
@@ -329,11 +399,17 @@
   },
   "src/data-layer-sequence-replay.ts": {
     "module": "replay",
-    "layer": "application"
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-source.ts"
+    ]
   },
   "src/data-layer-session-start.ts": {
     "module": "capture",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts"
+    ]
   },
   "src/data-layer-session.ts": {
     "module": "capture",
@@ -359,33 +435,136 @@
     "module": "schemas",
     "layer": "application"
   },
-  "src/data-layer-defect-report-core.ts": { "module": "defect-reporting", "layer": "application" },
-  "src/data-layer-defect-report-issue-controls.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-defect-report-json.ts": { "module": "defect-reporting", "layer": "core" },
-  "src/data-layer-defect-report-reproduction-controls.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-defect-report-reproduction.ts": { "module": "defect-reporting", "layer": "application" },
-  "src/data-layer-defect-report-timeline-controls.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-defect-report-timeline.ts": { "module": "defect-reporting", "layer": "application" },
-  "src/data-layer-defect-report-ui-controls.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-defect-report.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-defect-schema-choices.ts": { "module": "defect-reporting", "layer": "application" },
-  "src/data-layer-event-feed-summaries.ts": { "module": "live-inspection", "layer": "core" },
-  "src/data-layer-event-presentation.ts": { "module": "live-inspection", "layer": "core" },
-  "src/data-layer-guided-schema-picker-ui.ts": { "module": "schemas", "layer": "browser" },
-  "src/data-layer-live-guided-conditional-rule-authoring.ts": { "module": "schemas", "layer": "browser" },
-  "src/data-layer-live-responsive-layout.ts": { "module": "live-inspection", "layer": "browser" },
-  "src/data-layer-live-session-controls.ts": { "module": "capture", "layer": "browser" },
-  "src/data-layer-live-validation-presentation.ts": { "module": "schemas", "layer": "browser" },
-  "src/data-layer-missing-event-expected-payload-ui.ts": { "module": "defect-reporting", "layer": "browser" },
-  "src/data-layer-observability.ts": { "module": "capture", "layer": "core" },
-  "src/data-layer-path-conditions.ts": { "module": "schemas", "layer": "core" },
-  "src/data-layer-recursive-property-tree.ts": { "module": "schemas", "layer": "core" },
-  "src/data-layer-schema-canonical-document.ts": { "module": "schemas", "layer": "core" },
-  "src/data-layer-schema-document.ts": { "module": "schemas", "layer": "core" },
-  "src/data-layer-schema-specification-builder.ts": { "module": "schemas", "layer": "browser" },
-  "src/data-layer-source.ts": { "module": "capture", "layer": "core" },
-  "src/data-layer-timeline.ts": { "module": "live-inspection", "layer": "browser" },
-  "src/data-layer-unified-defect-builder.ts": { "module": "defect-reporting", "layer": "browser" },
+  "src/data-layer-defect-report-core.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-issue-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-property-example-values.ts"
+    ]
+  },
+  "src/data-layer-defect-report-json.ts": {
+    "module": "defect-reporting",
+    "layer": "core"
+  },
+  "src/data-layer-defect-report-reproduction-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report-reproduction.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-timeline-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report-timeline.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-ui-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-schema-choices.ts": {
+    "module": "defect-reporting",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-validation-model.ts"
+    ]
+  },
+  "src/data-layer-event-feed-summaries.ts": {
+    "module": "live-inspection",
+    "layer": "core"
+  },
+  "src/data-layer-event-presentation.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-guided-schema-picker-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-guided-conditional-rule-authoring.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-responsive-layout.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-controls.ts": {
+    "module": "capture",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-live-observer.ts"
+    ]
+  },
+  "src/data-layer-live-validation-presentation.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-missing-event-expected-payload-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-document.ts",
+      "src/data-layer-schema-verification.ts"
+    ]
+  },
+  "src/data-layer-observability.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-path-conditions.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-recursive-property-tree.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-canonical-document.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-document.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-specification-builder.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-source.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-timeline.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-session.ts"
+    ]
+  },
+  "src/data-layer-unified-defect-builder.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-canonical-document.ts",
+      "src/data-layer-schema-document.ts",
+      "src/data-layer-schema-documentation.ts",
+      "src/data-layer-schema-verification.ts"
+    ]
+  },
   "src/data-layer-workflow-focus-ui.ts": {
     "module": "event-library",
     "layer": "browser"

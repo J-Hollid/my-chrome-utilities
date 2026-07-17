@@ -60,12 +60,23 @@ function dependencyViolation(file, dependency) {
   if (layer && targetLayer && layerRank[targetLayer] > layerRank[layer]) {
     return `${layer} may not depend on ${targetLayer}`;
   }
+
+  const sourceModule = moduleOf(file);
+  const targetModule = moduleOf(target);
+  if (
+    sourceModule &&
+    targetModule &&
+    sourceModule !== targetModule &&
+    !(declaredBoundaries[file]?.contracts ?? []).includes(target)
+  ) {
+    return "cross-module import requires a declared contract";
+  }
   if (
     layer === "browser" &&
     file.includes("/utilities/data-layer/layers/") &&
-    moduleOf(file) &&
-    moduleOf(target) &&
-    moduleOf(file) !== moduleOf(target)
+    sourceModule &&
+    targetModule &&
+    sourceModule !== targetModule
   ) {
     return "browser adapters may not import another data-layer module";
   }
