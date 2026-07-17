@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=27c432b4af0832c1ee24f51a5d516f920a48707118973339c5c762eabcb1b826
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-17T20:27:59.980173638Z","feature_name":"Data layer Required rule type independence","feature_path":"features/data-layer-required-rule-type-independence.feature","background_hash":"b74bfebd495c8f421e52a4ca8e4929bfe9f88d6722721c52ade343c21c3c1df1","implementation_hash":"sha256:b467f314a5f38b48ea0f1f6753d6b5a5bd701c1c81529c6fdd12aef396b77c51","scenarios":[{"index":1,"name":"Data layer Required rule type independence 002","scenario_hash":"288830898cfea255785b6401e1d82e6492831dede6e4268da2ea1814fac6b41e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-17T20:27:59.980173638Z"},{"index":3,"name":"Data layer Required rule type independence 004","scenario_hash":"95600545df0645bcbb3dd2d7be75ac1755714a1610b8dee3d0479ba181f37fbd","mutation_count":35,"result":{"Total":35,"Killed":35,"Survived":0,"Errors":0},"tested_at":"2026-07-17T20:27:59.980173638Z"},{"index":4,"name":"Data layer Required rule type independence 005","scenario_hash":"f4b2f3c708be81bb1c83296a598c5360bcdf5fc011f21cb4c6a2b42ab8180375","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-17T20:27:59.980173638Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Required rule type independence
 
   Background:
