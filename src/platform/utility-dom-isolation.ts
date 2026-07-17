@@ -13,6 +13,20 @@ export function retainUtilityElement(element: OwnedUtilityElement, scope: Utilit
   return element.owner === scope.utilityId && scope.panelIds.includes(element.id);
 }
 
+export function utilityDomScopeFromSearch(search: string): UtilityDomScope | undefined {
+  const parameters = new URLSearchParams(search);
+  const utilityId = parameters.get("utility");
+  const panelIds = parameters.getAll("panel");
+  if (!utilityId || panelIds.length === 0) return undefined;
+
+  const removeSelectors = parameters.getAll("remove");
+  return {
+    utilityId,
+    panelIds,
+    ...(removeSelectors.length > 0 ? { removeSelectors } : {}),
+  };
+}
+
 function removeExcludedElements(root: ParentNode, selectors: readonly string[]): void {
   for (const selector of selectors) root.querySelector(selector)?.remove();
 }
@@ -59,4 +73,17 @@ export function isolateUtilityDom(root: ParentNode, scope: UtilityDomScope): voi
   removeExcludedElements(root, scope.removeSelectors ?? []);
   removeElementsOutsideScope(root, scope);
   synchronizeTabs(root, scope.panelIds);
+}
+
+export function isolateUtilityDomFromSearch(
+  root: ParentNode,
+  search: string,
+): UtilityDomScope | undefined {
+  const scope = utilityDomScopeFromSearch(search);
+  if (!scope) return undefined;
+
+  isolateUtilityDom(root, scope);
+  const documentRoot = (root as Document).documentElement;
+  if (documentRoot) documentRoot.dataset.utilityIsolation = scope.utilityId;
+  return scope;
 }

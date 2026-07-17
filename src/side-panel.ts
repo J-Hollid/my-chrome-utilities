@@ -19,6 +19,7 @@ import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
 import { extensionShell, utilityRegistry } from "./utility-registry.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import { createUtilityStorage } from "./platform/utility-storage.js";
+import { isolateUtilityDomFromSearch } from "./platform/utility-dom-isolation.js";
 import type { WorkspaceTabId } from "./workspace-tabs.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
@@ -5505,6 +5506,7 @@ renderSchemaWorkflowRows();
 renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
+isolateUtilityDomFromSearch(document, globalThis.location.search);
 if (panelRoot) panelRoot.dataset.utilityShellReady = "true";
 
 export {
