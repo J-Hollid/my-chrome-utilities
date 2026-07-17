@@ -10,7 +10,7 @@ import {
   type LiveEvent,
   type LiveObserverState,
 } from "./data-layer-live-observer.js";
-import type { ValidationState } from "./data-layer-source.js";
+import type { ValidationState } from "./utilities/data-layer/capture.js";
 
 export const SAVED_SESSION_LIBRARY_STORAGE_KEY = "my-chrome-utilities.saved-session-library.v1";
 export const SAVED_SESSION_LIVE_FEED_STORAGE_KEY = "my-chrome-utilities.saved-session-live-feed.v1";
@@ -24,7 +24,6 @@ export interface SessionSaveDraft {
     validationSummary: string;
   };
 }
-
 export interface SavedSessionValidationResult {
   state: ValidationState;
   schema?: { name: string; version: number };

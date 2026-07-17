@@ -1,5 +1,5 @@
-import { urlConditionsMatch } from "./data-layer-path-conditions.js";
-import type { SchemaAssignment, SchemaDefinition, ValidationTarget } from "./data-layer-schema-verification.js";
+import { urlConditionsMatch } from "./utilities/data-layer/schemas.js";
+import type { SchemaAssignment, SchemaDefinition, ValidationTarget } from "./utilities/data-layer/schemas.js";
 import { expectedPayloadPresentation, missingEventActualPresentation, type ExpectedResponseProvenanceMap } from "./data-layer-unified-defect-builder.js";
 
 export interface MissingEventScopeEvent {
@@ -13,7 +13,6 @@ export interface MissingEventScopeEvent {
   payload?: unknown;
   rawInput?: unknown;
 }
-
 export interface MissingEventVisit {
   id: string;
   pageUrl: string;

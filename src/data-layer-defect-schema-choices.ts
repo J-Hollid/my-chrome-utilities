@@ -1,4 +1,4 @@
-import type { ValidationEvaluation } from "./data-layer-validation-model.js";
+import type { ValidationEvaluation } from "./utilities/data-layer/schemas.js";
 
 export type SchemaChoiceValue = string | number | boolean | null;
 
@@ -10,7 +10,6 @@ export interface SchemaChoiceRuleProvenance {
   schemaName: string;
   schemaVersion: number;
 }
-
 export interface SchemaChoiceProvenance {
   schema: { id:string; name:string; version:number };
   rules: SchemaChoiceRuleProvenance[];

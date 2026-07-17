@@ -15,6 +15,14 @@ const internalUtilityImport = /^\.\/(?:data-layer-|command-palette(?:-|\.)|hotke
 const topLevelDataLayerFile = /^src\/data-layer-[^/]+\.ts$/;
 const concreteBrowserRuntime = /(?:\bdocument\.(?:activeElement|addEventListener|body|createElement|documentElement|getElementById|querySelector|querySelectorAll)\b|\bwindow\.|\bchrome\.|\blocalStorage\b|\bsessionStorage\b)/;
 const layerRank = { core:0, application:1, browser:2 };
+const publicDataLayerModules = new Set([
+  "capture",
+  "live-inspection",
+  "event-library",
+  "schemas",
+  "defect-reporting",
+  "replay",
+]);
 
 function importsOf(source) {
   return [...source.matchAll(/(?:from\s+)?["']([^"']+)["']/g)]
@@ -38,9 +46,22 @@ function layerOf(file) {
     ?? declaredBoundaries[file]?.layer;
 }
 
+function publicModuleOf(file) {
+  const module = file.match(/^src\/utilities\/data-layer\/([^/]+)\.ts$/)?.[1];
+  return publicDataLayerModules.has(module) ? module : undefined;
+}
+
 function moduleOf(file) {
+  if (file.endsWith("/layers/browser/scoped-runtime.ts")) return;
   return declaredBoundaries[file]?.module
-    ?? file.match(/^src\/utilities\/data-layer\/layers\/(?:core|application|browser)\/([^/.]+)\.ts$/)?.[1];
+    ?? file.match(/^src\/utilities\/data-layer\/layers\/(?:core|application|browser)\/([^/.]+)\.ts$/)?.[1]
+    ?? publicModuleOf(file);
+}
+
+function publicEntryFor(module) {
+  return publicDataLayerModules.has(module)
+    ? `src/utilities/data-layer/${module}.ts`
+    : undefined;
 }
 
 function dependencyViolation(file, dependency) {
@@ -55,14 +76,16 @@ function dependencyViolation(file, dependency) {
     return "utilities may not import another utility";
   }
 
-  const layer = layerOf(file);
-  const targetLayer = layerOf(target);
-  if (layer && targetLayer && layerRank[targetLayer] > layerRank[layer]) {
-    return `${layer} may not depend on ${targetLayer}`;
-  }
-
   const sourceModule = moduleOf(file);
   const targetModule = moduleOf(target);
+  if (
+    sourceModule &&
+    targetModule &&
+    sourceModule !== targetModule &&
+    target !== publicEntryFor(targetModule)
+  ) {
+    return "cross-module import must use the module public API";
+  }
   if (
     sourceModule &&
     targetModule &&
@@ -70,6 +93,12 @@ function dependencyViolation(file, dependency) {
     !(declaredBoundaries[file]?.contracts ?? []).includes(target)
   ) {
     return "cross-module import requires a declared contract";
+  }
+
+  const layer = layerOf(file);
+  const targetLayer = layerOf(target);
+  if (layer && targetLayer && layerRank[targetLayer] > layerRank[layer]) {
+    return `${layer} may not depend on ${targetLayer}`;
   }
   if (
     layer === "browser" &&

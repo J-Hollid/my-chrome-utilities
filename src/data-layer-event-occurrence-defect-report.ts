@@ -1,4 +1,4 @@
-import type { SchemaDefinition } from "./data-layer-schema-verification.js";
+import type { SchemaDefinition } from "./utilities/data-layer/schemas.js";
 import type { ReproductionStep, SupportingTimelineEntry } from "./data-layer-defect-report.js";
 
 export type OccurrenceExpectationMode = "Unexpected event" | "Wrong event name";
@@ -18,7 +18,6 @@ export interface OccurrenceActualEvent {
   pathname: string;
   pageLoadGeneration?: string;
 }
-
 export interface OccurrenceAssignment {
   id: string;
   name?: string;

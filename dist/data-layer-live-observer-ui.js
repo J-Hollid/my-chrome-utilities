@@ -2,10 +2,10 @@ import { dataLayerViews, filteredLiveEvents, } from "./data-layer-live-observer.
 import { runLiveInspectorAction, } from "./data-layer-live-inspector-actions.js";
 import { eventPathname, pathnameVisits, resolveFeedSummaries, } from "./data-layer-event-feed-summaries.js";
 import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
-import { buildValidationPropertyTree, applyArrayValidationRollups, presentValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./data-layer-live-validation-presentation.js";
-import { buildRecursivePropertyTree, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
-import { resolvePropertyDocumentation, schemaDocumentationSearchText } from "./data-layer-schema-documentation.js";
-import { allowedValueExpansionAvailability } from "./data-layer-allowed-value-expansion.js";
+import { buildValidationPropertyTree, applyArrayValidationRollups, presentValidationPropertyTree, propertyValidationSummary, validationVisual, } from "./utilities/data-layer/schemas.js";
+import { buildRecursivePropertyTree, parseTargetExpression } from "./utilities/data-layer/schemas.js";
+import { resolvePropertyDocumentation, schemaDocumentationSearchText } from "./utilities/data-layer/schemas.js";
+import { allowedValueExpansionAvailability } from "./utilities/data-layer/schemas.js";
 export function findLiveObserverElements(root = document) {
     return {
         livePanel: root.querySelector("#data-layer-panel-live"),

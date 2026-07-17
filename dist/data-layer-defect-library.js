@@ -1,4 +1,4 @@
-import { saveCompletedSession, } from "./data-layer-saved-sessions.js";
+import { saveCompletedSession, } from "./utilities/data-layer/live-inspection.js";
 import { occurrenceDefectIdentity, occurrenceIdentityMatches, } from "./data-layer-event-occurrence-defect-report.js";
 export const DEFECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.defect-library.v1";
 function clone(value) { return structuredClone(value); }

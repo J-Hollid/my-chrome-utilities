@@ -1,4 +1,4 @@
-import type { DataLayerEventEntry } from "./data-layer-session.js";
+import type { DataLayerEventEntry } from "./utilities/data-layer/capture.js";
 
 export interface TimelineEntrySummary {
   name: string;
@@ -6,7 +6,6 @@ export interface TimelineEntrySummary {
   timestamp: string;
   observerPath: string;
 }
-
 export interface TimelineEntryDetails extends TimelineEntrySummary {
   payload: string;
   rawValue: string;
