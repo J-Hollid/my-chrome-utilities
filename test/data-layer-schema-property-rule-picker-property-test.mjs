@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 
 import {
+  applicablePropertyTypesForRule,
   builtInRulesForProperty,
   canonicalRulePropertyPath,
   configuredRuleDetails,
   createRuleConfiguration,
+  reusableRuleMetadata,
   reusableRulesForProperty,
   ruleConfigurationControls,
   ruleTypeAvailability,
@@ -107,6 +109,35 @@ assert.deepEqual(
   [defaultVersionRule.id],
   "rules without an explicit version must remain searchable as version 1",
 );
+
+const requiredPropertyTypes = ["string", "number", "boolean", "object", "array"];
+for (let sample = 0; sample < 200; sample += 1) {
+  const token = nextToken();
+  const required = {
+    id:`required-${token}`,
+    name:`Required ${token}`,
+    kind:sample % 2 === 0 ? `Legacy Required ${token}` : `Presence ${token}`,
+    ...(sample % 2 === 0 ? {} : { operator:"required" }),
+    applicableType:propertyTypes[sample % propertyTypes.length],
+    version:sample % 9 + 1,
+    enabled:true,
+  };
+  const snapshot = structuredClone(required);
+
+  assert.deepEqual(applicablePropertyTypesForRule(required), requiredPropertyTypes,
+    "Required compatibility must override a legacy stored applicable type");
+  for (const propertyType of requiredPropertyTypes) {
+    assert.deepEqual(
+      reusableRulesForProperty([required], propertyType, token, new Set()).map(({ id }) => id),
+      [required.id],
+      "Required rules must remain reusable for every property type",
+    );
+    assert.match(reusableRuleMetadata(required, propertyType), /type any/,
+      "Required metadata must disclose type-independent compatibility");
+  }
+  assert.deepEqual(required, snapshot,
+    "compatibility checks must not rewrite legacy Required rule records");
+}
 
 const validConfiguration = (ruleType, sample, token) => {
   const propertyType = ruleType === "Numeric range"

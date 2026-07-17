@@ -82,6 +82,7 @@
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
+            [acceptance.steps.required-rule-type-independence :as required-rule-type-independence]
             [acceptance.steps.reusable-rule-sync :as reusable-rule-sync]
             [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
@@ -122,6 +123,7 @@
                local-rule-promotion-availability/handlers
                local-rule-editing/handlers
                reusable-rule-sync/handlers
+               required-rule-type-independence/handlers
                live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
                non-applicable-property-visibility/handlers
