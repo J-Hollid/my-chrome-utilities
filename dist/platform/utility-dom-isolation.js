@@ -1,6 +1,10 @@
 export function retainUtilityElement(element, scope) {
     return element.owner === scope.utilityId && scope.panelIds.includes(element.id);
 }
+export function retainControlledElement(controlledIds, availableIds) {
+    return controlledIds === null
+        || controlledIds.trim().split(/\s+/).every((id) => availableIds.has(id));
+}
 export function utilityDomScopeFromSearch(search) {
     const parameters = new URLSearchParams(search);
     const utilityId = parameters.get("utility");
@@ -32,6 +36,13 @@ function removeElementsOutsideScope(root, scope) {
             element.remove();
     }
 }
+function removeControlsWithMissingTargets(root) {
+    const availableIds = new Set(Array.from(root.querySelectorAll("[id]"), (element) => element.id));
+    for (const control of Array.from(root.querySelectorAll("[aria-controls]"))) {
+        if (!retainControlledElement(control.getAttribute("aria-controls"), availableIds))
+            control.remove();
+    }
+}
 function synchronizeTabList(root, tabs, panelIds) {
     const selected = tabs.find((tab) => panelIds.includes(tab.getAttribute("aria-controls") ?? ""));
     if (!selected)
@@ -47,21 +58,16 @@ function synchronizeTabList(root, tabs, panelIds) {
 }
 function synchronizeTabs(root, panelIds) {
     const tabs = Array.from(root.querySelectorAll('[role="tab"][aria-controls]'));
-    for (const tab of tabs) {
-        const panelId = tab.getAttribute("aria-controls");
-        if (!panelId || !root.querySelector(`#${panelId}`))
-            tab.remove();
-    }
-    const connectedTabs = tabs.filter((tab) => tab.isConnected);
-    const tabLists = new Set(connectedTabs.map((tab) => tab.parentElement));
+    const tabLists = new Set(tabs.map((tab) => tab.parentElement));
     for (const tabList of tabLists) {
-        synchronizeTabList(root, connectedTabs.filter((tab) => tab.parentElement === tabList), panelIds);
+        synchronizeTabList(root, tabs.filter((tab) => tab.parentElement === tabList), panelIds);
     }
 }
 export function isolateUtilityDom(root, scope) {
     removeExcludedElements(root, scope.removeSelectors ?? []);
     removePanelsOutsideScope(root, scope.panelIds);
     removeElementsOutsideScope(root, scope);
+    removeControlsWithMissingTargets(root);
     synchronizeTabs(root, scope.panelIds);
 }
 export function isolateUtilityDomFromSearch(root, search) {

@@ -5,7 +5,11 @@ import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
-import { retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
+import {
+  retainControlledElement,
+  retainUtilityElement,
+  utilityDomScopeFromSearch,
+} from "../dist/platform/utility-dom-isolation.js";
 import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
@@ -24,6 +28,17 @@ const closure = (packs, initial, direction) => {
   }
   return selected;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const ids = Array.from({ length:1 + sample % 8 }, (_, index) => `controlled-${sample}-${index}`);
+  const availableIds = new Set(ids);
+  assert.equal(retainControlledElement(ids.join(" "), availableIds), true,
+    "controls must remain when every referenced target exists");
+  assert.equal(retainControlledElement(`${ids.join(" ")} missing-${sample}`, availableIds), false,
+    "controls must be removed when any referenced target is absent");
+  assert.equal(retainControlledElement(null, availableIds), true,
+    "elements without a control relationship must remain");
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const enabled = Array.from({ length:6 }, (_, bit) => Boolean(sample & (1 << bit)));
@@ -359,4 +374,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 shell capability models, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed");

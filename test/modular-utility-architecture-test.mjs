@@ -7,7 +7,7 @@ import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
-import { retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
+import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "../dist/platform/utility-bootstrap.js";
 import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 
@@ -77,6 +77,9 @@ const captureScope={utilityId:"data-layer",panelIds:["workspace-panel-data-layer
 assert.equal(retainUtilityElement({id:"data-layer-panel-live",owner:"data-layer"},captureScope),true);
 assert.equal(retainUtilityElement({id:"data-layer-panel-schemas",owner:"data-layer"},captureScope),false);
 assert.equal(retainUtilityElement({id:"workspace-panel-hotkeys",owner:"hotkeys"},captureScope),false);
+assert.equal(retainControlledElement("palette",new Set(["workspace-panel-data-layer"])),false);
+assert.equal(retainControlledElement("workspace-panel-data-layer",new Set(["workspace-panel-data-layer"])),true);
+assert.equal(retainControlledElement("workspace-panel-data-layer palette",new Set(["workspace-panel-data-layer"])),false);
 assert.deepEqual(utilityDomScopeFromSearch("?utility=data-layer&panel=workspace-panel-data-layer&panel=data-layer-panel-live&remove=%23palette"),{utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"],removeSelectors:["#palette"]});
 assert.equal(utilityDomScopeFromSearch(""),undefined);
 assert.equal(scopedUtilityModulePath(captureScope),"./utilities/data-layer/index.js");

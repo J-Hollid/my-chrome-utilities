@@ -5,7 +5,7 @@ function typedValue(value) {
 export function createLocalRulePromotionDialog() {
     const dialog = document.createElement("dialog");
     dialog.id = "local-rule-promotion-review";
-    dialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
+    dialog.setAttribute("aria-label", "Local rule promotion review");
     document.body.append(dialog);
     let current;
     const close = () => {
@@ -25,6 +25,8 @@ export function createLocalRulePromotionDialog() {
         close,
         open(input) {
             current = input;
+            dialog.removeAttribute("aria-label");
+            dialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
             let duplicateArmed = false;
             const { review } = input;
             const heading = document.createElement("h4");
