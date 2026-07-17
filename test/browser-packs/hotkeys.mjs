@@ -1,3 +1,2 @@
-import { hotkeysUtility } from "../../dist/utilities/hotkeys/index.js";
-import { inspectBrowserPack } from "./shared-harness.mjs";
-inspectBrowserPack("hotkeys",hotkeysUtility);
+import { runRenderedWorkflow, workflowPreamble } from "./shared-harness.mjs";
+await runRenderedWorkflow("hotkeys",`${workflowPreamble}q('#workspace-tab-hotkeys').click();q('#hotkey-editor-filter').focus();q('#hotkey-editor-filter').value='data';q('#hotkey-editor-filter').dispatchEvent(new Event('input',{bubbles:true}));return {passed:visible(q('#workspace-panel-hotkeys'))&&document.activeElement===q('#hotkey-editor-filter'),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};`);

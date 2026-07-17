@@ -1,3 +1,2 @@
-import { dataLayerUtility } from "../../dist/utilities/data-layer/index.js";
-import { inspectBrowserPack } from "./shared-harness.mjs";
-inspectBrowserPack("replay",dataLayerUtility);
+import { runRenderedWorkflow, workflowPreamble } from "./shared-harness.mjs";
+await runRenderedWorkflow("replay",`${workflowPreamble}q('#data-layer-view-library').click();return {passed:visible(q('#sequence-library'))&&visible(q('#sequence-empty-state')),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};`);

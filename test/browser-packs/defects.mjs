@@ -1,3 +1,2 @@
-import { dataLayerUtility } from "../../dist/utilities/data-layer/index.js";
-import { inspectBrowserPack } from "./shared-harness.mjs";
-inspectBrowserPack("defects",dataLayerUtility);
+import { runRenderedWorkflow, workflowPreamble } from "./shared-harness.mjs";
+await runRenderedWorkflow("defects",`${workflowPreamble}q('#data-layer-view-defects').click();q('#defect-library-search').value='checkout';q('#defect-library-search').dispatchEvent(new Event('input',{bubbles:true}));return {passed:visible(q('#defect-library-master'))&&document.activeElement!==null,width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};`);

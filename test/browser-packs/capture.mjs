@@ -1,3 +1,2 @@
-import { dataLayerUtility } from "../../dist/utilities/data-layer/index.js";
-import { inspectBrowserPack } from "./shared-harness.mjs";
-inspectBrowserPack("capture",dataLayerUtility);
+import { runRenderedWorkflow, workflowPreamble } from "./shared-harness.mjs";
+await runRenderedWorkflow("capture",`${workflowPreamble}q('#data-layer-view-live').click();q('#data-layer-settings').open=true;q('#history-path').value='analytics.events';q('#history-path').dispatchEvent(new Event('input',{bubbles:true}));return {passed:visible(q('#live-session-summary'))&&q('#history-path').value==='analytics.events',width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth};`);

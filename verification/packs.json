@@ -1,10 +1,534 @@
 [
-  {"id":"command-palette","source":["src/command-palette","src/commands.ts","src/utilities/command-palette"],"dependencies":[],"unit":["test/command-palette-test.mjs"],"property":["test/command-palette-property-test.mjs"],"features":["features/simple-command-palette.feature"],"handlers":["acceptance/src/acceptance/steps/palette.clj"],"browserAdapters":["test/browser-packs/command-palette.mjs"]},
-  {"id":"hotkeys","source":["src/hotkey","src/utilities/hotkeys"],"dependencies":["command-palette"],"unit":["test/hotkey-binding-property-test.mjs"],"property":[],"features":["features/side-panel-hotkey-keymap.feature"],"handlers":["acceptance/src/acceptance/steps/hotkey_keymap.clj"],"browserAdapters":["test/browser-packs/hotkeys.mjs"]},
-  {"id":"capture","source":["src/data-layer-observer","src/data-layer-session","src/data-layer-source","src/data-layer-observation"],"dependencies":[],"unit":["test/data-layer-session-test.mjs"],"property":["test/data-layer-observability-property-test.mjs"],"features":["features/data-layer-testing-session.feature"],"handlers":["acceptance/src/acceptance/steps/data_layer.clj","acceptance/src/acceptance/steps/data_layer_session.clj","acceptance/src/acceptance/steps/session_boundaries.clj"],"browserAdapters":["test/browser-packs/capture.mjs"]},
-  {"id":"event-library","source":["src/data-layer-event-library","src/data-layer-event-template","src/data-layer-template"],"dependencies":["capture"],"unit":["test/data-layer-event-library-editor-test.mjs"],"property":["test/data-layer-selected-target-push-property-test.mjs"],"features":["features/data-layer-event-template-library.feature"],"handlers":["acceptance/src/acceptance/steps/event_library_editor.clj"],"browserAdapters":["test/browser-packs/event-library.mjs"]},
-  {"id":"schemas","source":["src/data-layer-schema","src/data-layer-cardinality","src/data-layer-conditional","src/data-layer-json-schema","src/data-layer-validation","src/utilities/data-layer"],"dependencies":["capture"],"unit":["test/data-layer-schema-verification-test.mjs"],"property":["test/data-layer-schema-verification-property-test.mjs"],"features":["features/data-layer-schema-verification.feature"],"handlers":["acceptance/src/acceptance/steps/schema_verification.clj"],"browserAdapters":["test/browser-packs/schemas.mjs"]},
-  {"id":"defects","source":["src/data-layer-defect","src/data-layer-missing-event","src/data-layer-unified-defect"],"dependencies":["schemas","event-library"],"unit":["test/data-layer-defect-report-test.mjs"],"property":["test/data-layer-defect-report-property-test.mjs"],"features":["features/data-layer-defect-report-builder.feature"],"handlers":["acceptance/src/acceptance/steps/defect_report.clj"],"browserAdapters":["test/browser-packs/defects.mjs"]},
-  {"id":"replay","source":["src/data-layer-sequence-replay"],"dependencies":["event-library"],"unit":["test/data-layer-sequence-replay-test.mjs"],"property":[],"features":["features/data-layer-test-sequence-replay.feature"],"handlers":["acceptance/src/acceptance/steps/sequence_replay.clj"],"browserAdapters":["test/browser-packs/replay.mjs"]},
-  {"id":"shell","source":["src/side-panel","src/background","src/workspace","src/panel-","src/active-page","src/platform","src/utility-registry"],"dependencies":["command-palette","hotkeys","capture","event-library","schemas","defects","replay"],"unit":["test/modular-utility-architecture-test.mjs"],"property":[],"features":["features/modular-chrome-utility-architecture.feature","features/modular-verification-packs.feature","features/modular-acceptance-execution.feature","features/modular-browser-runtime-adapters.feature"],"handlers":["acceptance/src/acceptance/steps/modular_architecture.clj"],"browserAdapters":["test/browser-packs/shell.mjs"]}
+  {
+    "id": "command-palette",
+    "source": [
+      "src/command-palette",
+      "src/commands.ts",
+      "src/utilities/command-palette"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/command-palette-test.mjs"
+    ],
+    "property": [
+      "test/command-palette-property-test.mjs"
+    ],
+    "features": [
+      "features/command-registry-presentation-boundary.feature",
+      "features/side-panel-command-palette-dialog.feature",
+      "features/simple-command-palette.feature",
+      "features/typed-command-registry.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/command_registry.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/command-palette.mjs"
+    ]
+  },
+  {
+    "id": "hotkeys",
+    "source": [
+      "src/hotkey",
+      "src/utilities/hotkeys"
+    ],
+    "dependencies": [
+      "command-palette"
+    ],
+    "unit": [
+      "test/hotkey-binding-property-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/side-panel-hotkey-editor.feature",
+      "features/side-panel-hotkey-keymap.feature",
+      "features/side-panel-hotkey-operator-layout.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/hotkey_keymap.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/hotkeys.mjs"
+    ]
+  },
+  {
+    "id": "capture",
+    "source": [
+      "src/data-layer-observer",
+      "src/data-layer-session",
+      "src/data-layer-source",
+      "src/data-layer-observation"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-session-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-observability-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-active-page-read-result.feature",
+      "features/data-layer-active-tab-page-context.feature",
+      "features/data-layer-authoritative-live-state.feature",
+      "features/data-layer-captured-event-presentation-pipeline.feature",
+      "features/data-layer-configurable-history-path.feature",
+      "features/data-layer-cross-tab-reattachment-runtime.feature",
+      "features/data-layer-detail-view-headers.feature",
+      "features/data-layer-event-feed-query-builder.feature",
+      "features/data-layer-event-feed-summaries.feature",
+      "features/data-layer-event-property-editor.feature",
+      "features/data-layer-event-property-form-layout.feature",
+      "features/data-layer-event-timeline.feature",
+      "features/data-layer-fresh-session.feature",
+      "features/data-layer-history-array-observer.feature",
+      "features/data-layer-history-path-incremental-entry.feature",
+      "features/data-layer-history-path-text-entry.feature",
+      "features/data-layer-library-actions-runtime-recovery.feature",
+      "features/data-layer-library-editor-close-runtime.feature",
+      "features/data-layer-library-new-event-creation.feature",
+      "features/data-layer-library-operator-layout.feature",
+      "features/data-layer-live-history-push-capture.feature",
+      "features/data-layer-live-inspector-action-runtime.feature",
+      "features/data-layer-live-inspector-actions.feature",
+      "features/data-layer-live-inspector-layout-runtime.feature",
+      "features/data-layer-live-inspector-layout.feature",
+      "features/data-layer-live-inspector-navigation-runtime.feature",
+      "features/data-layer-live-inspector-navigation.feature",
+      "features/data-layer-live-operator-layout.feature",
+      "features/data-layer-live-pathname-header-runtime.feature",
+      "features/data-layer-live-pathname-visits.feature",
+      "features/data-layer-live-responsive-master-detail.feature",
+      "features/data-layer-live-session-end-status-runtime.feature",
+      "features/data-layer-live-session-summary.feature",
+      "features/data-layer-lossless-observation-activation-runtime.feature",
+      "features/data-layer-multiple-observation-sources.feature",
+      "features/data-layer-nested-event-timeline.feature",
+      "features/data-layer-non-applicable-property-visibility-runtime.feature",
+      "features/data-layer-non-applicable-property-visibility.feature",
+      "features/data-layer-observation-subscription-lifecycle.feature",
+      "features/data-layer-observation-target-access.feature",
+      "features/data-layer-observation-target-commands.feature",
+      "features/data-layer-observation-target-lifecycle.feature",
+      "features/data-layer-observation-target-picker-dialog.feature",
+      "features/data-layer-observation-target-selection.feature",
+      "features/data-layer-observer-workspace.feature",
+      "features/data-layer-page-window-observation.feature",
+      "features/data-layer-pageload-observation-refresh.feature",
+      "features/data-layer-push-confirmation-decision-data-runtime.feature",
+      "features/data-layer-push-destination-configuration.feature",
+      "features/data-layer-push-draft-review.feature",
+      "features/data-layer-recursive-property-tree.feature",
+      "features/data-layer-same-page-session-restart-runtime.feature",
+      "features/data-layer-saved-event-feed-filters-runtime.feature",
+      "features/data-layer-saved-event-feed-filters.feature",
+      "features/data-layer-saved-session-library.feature",
+      "features/data-layer-saved-session-live-feed-restore.feature",
+      "features/data-layer-secondary-view-separation.feature",
+      "features/data-layer-selected-target-push-runtime.feature",
+      "features/data-layer-session-recovery.feature",
+      "features/data-layer-session-save-snapshot.feature",
+      "features/data-layer-sessions-operator-layout.feature",
+      "features/data-layer-source-aware-event-model.feature",
+      "features/data-layer-state-aware-actions.feature",
+      "features/data-layer-target-path-status-runtime.feature",
+      "features/data-layer-template-change-review.feature",
+      "features/data-layer-testing-session.feature",
+      "features/data-layer-timeline-expanded-state.feature",
+      "features/data-layer-tuple-event-display.feature",
+      "features/data-layer-view-responsive-layouts.feature",
+      "features/data-layer-workflow-focus-management.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/data_layer.clj",
+      "acceptance/src/acceptance/steps/data_layer_observer.clj",
+      "acceptance/src/acceptance/steps/data_layer_page_context.clj",
+      "acceptance/src/acceptance/steps/data_layer_recovery.clj",
+      "acceptance/src/acceptance/steps/data_layer_session.clj",
+      "acceptance/src/acceptance/steps/data_layer_timeline.clj",
+      "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/fresh_live_session.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation_support.clj",
+      "acceptance/src/acceptance/steps/live_observer.clj",
+      "acceptance/src/acceptance/steps/live_observer_support.clj",
+      "acceptance/src/acceptance/steps/live_observer_timeline.clj",
+      "acceptance/src/acceptance/steps/live_observer_workspace.clj",
+      "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
+      "acceptance/src/acceptance/steps/observation_targets.clj",
+      "acceptance/src/acceptance/steps/observation_targets_support.clj",
+      "acceptance/src/acceptance/steps/saved_event_feed_filters.clj",
+      "acceptance/src/acceptance/steps/saved_session_live_feed.clj",
+      "acceptance/src/acceptance/steps/saved_sessions.clj",
+      "acceptance/src/acceptance/steps/session_boundaries.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/capture.mjs"
+    ]
+  },
+  {
+    "id": "event-library",
+    "source": [
+      "src/data-layer-event-library",
+      "src/data-layer-event-template",
+      "src/data-layer-template"
+    ],
+    "dependencies": [
+      "capture"
+    ],
+    "unit": [
+      "test/data-layer-event-library-editor-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-selected-target-push-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-captured-event-template-workflow.feature",
+      "features/data-layer-event-library-deletion.feature",
+      "features/data-layer-event-library-import-export.feature",
+      "features/data-layer-event-template-library.feature",
+      "features/data-layer-event-template-renaming.feature",
+      "features/data-layer-library-direct-template-push-runtime.feature",
+      "features/data-layer-library-direct-template-push.feature",
+      "features/data-layer-template-editor-progressive-disclosure.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/event_library_editor.clj",
+      "acceptance/src/acceptance/steps/event_library_editor_support.clj",
+      "acceptance/src/acceptance/steps/event_template_library.clj",
+      "acceptance/src/acceptance/steps/library_direct_template_push.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/event-library.mjs"
+    ]
+  },
+  {
+    "id": "schemas",
+    "source": [
+      "src/data-layer-schema",
+      "src/data-layer-cardinality",
+      "src/data-layer-conditional",
+      "src/data-layer-json-schema",
+      "src/data-layer-validation",
+      "src/utilities/data-layer"
+    ],
+    "dependencies": [
+      "capture"
+    ],
+    "unit": [
+      "test/data-layer-schema-verification-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-schema-verification-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-allowed-values-rule-migration-runtime.feature",
+      "features/data-layer-allowed-values-rule-migration.feature",
+      "features/data-layer-array-validation-issue-rollup-runtime.feature",
+      "features/data-layer-array-validation-issue-rollup.feature",
+      "features/data-layer-canonical-declared-property-validation-runtime.feature",
+      "features/data-layer-canonical-declared-property-validation.feature",
+      "features/data-layer-conditional-validation-rules-runtime.feature",
+      "features/data-layer-conditional-validation-rules.feature",
+      "features/data-layer-event-property-validation-entry.feature",
+      "features/data-layer-guided-assignment-coverage-runtime.feature",
+      "features/data-layer-guided-nested-property-merge-runtime.feature",
+      "features/data-layer-guided-nested-property-merge.feature",
+      "features/data-layer-guided-rule-parameter-integrity-runtime.feature",
+      "features/data-layer-guided-rule-parameter-integrity.feature",
+      "features/data-layer-guided-validation-constraint-authoring.feature",
+      "features/data-layer-guided-validation-creation.feature",
+      "features/data-layer-guided-validation-draft-continuation.feature",
+      "features/data-layer-guided-validation-form-assistance.feature",
+      "features/data-layer-guided-validation-path-scope.feature",
+      "features/data-layer-guided-validation-schema-destination.feature",
+      "features/data-layer-guided-validation-schema-picker-dialog.feature",
+      "features/data-layer-json-schema-2020-12-export-runtime.feature",
+      "features/data-layer-json-schema-2020-12-export.feature",
+      "features/data-layer-library-json-validation-recovery-runtime.feature",
+      "features/data-layer-live-allowed-value-expansion-runtime.feature",
+      "features/data-layer-live-allowed-value-expansion.feature",
+      "features/data-layer-live-guided-conditional-rule-authoring-runtime.feature",
+      "features/data-layer-live-guided-conditional-rule-authoring.feature",
+      "features/data-layer-live-guided-workflow.feature",
+      "features/data-layer-live-schema-property-declaration-runtime.feature",
+      "features/data-layer-live-schema-property-declaration.feature",
+      "features/data-layer-live-validation-feed-presentation.feature",
+      "features/data-layer-live-validation-interaction.feature",
+      "features/data-layer-live-validation-property-presentation.feature",
+      "features/data-layer-local-rule-promotion-availability-hardening-runtime.feature",
+      "features/data-layer-local-rule-promotion-availability-hardening.feature",
+      "features/data-layer-local-rule-promotion-runtime.feature",
+      "features/data-layer-local-rule-promotion.feature",
+      "features/data-layer-recursive-declared-property-validation-runtime.feature",
+      "features/data-layer-recursive-declared-property-validation.feature",
+      "features/data-layer-schema-assignment-data-conditions-runtime.feature",
+      "features/data-layer-schema-assignment-data-conditions.feature",
+      "features/data-layer-schema-assignment.feature",
+      "features/data-layer-schema-cardinality-comparison-rules.feature",
+      "features/data-layer-schema-container-child-authoring-runtime.feature",
+      "features/data-layer-schema-container-child-authoring.feature",
+      "features/data-layer-schema-declared-property-exceptions.feature",
+      "features/data-layer-schema-documentation-runtime.feature",
+      "features/data-layer-schema-documentation.feature",
+      "features/data-layer-schema-export-selection.feature",
+      "features/data-layer-schema-inheritance.feature",
+      "features/data-layer-schema-library.feature",
+      "features/data-layer-schema-manual-property-authoring.feature",
+      "features/data-layer-schema-nested-path-authoring.feature",
+      "features/data-layer-schema-nested-path-validation.feature",
+      "features/data-layer-schema-property-comments-runtime.feature",
+      "features/data-layer-schema-property-comments.feature",
+      "features/data-layer-schema-property-copy-runtime.feature",
+      "features/data-layer-schema-property-copy.feature",
+      "features/data-layer-schema-property-example-values-runtime.feature",
+      "features/data-layer-schema-property-example-values.feature",
+      "features/data-layer-schema-property-filtering-sorting-runtime.feature",
+      "features/data-layer-schema-property-filtering-sorting.feature",
+      "features/data-layer-schema-property-removal.feature",
+      "features/data-layer-schema-property-rule-picker.feature",
+      "features/data-layer-schema-property-type-editing-runtime.feature",
+      "features/data-layer-schema-property-type-editing.feature",
+      "features/data-layer-schema-publication-live-revalidation-runtime.feature",
+      "features/data-layer-schema-publication-live-revalidation.feature",
+      "features/data-layer-schema-renaming-runtime.feature",
+      "features/data-layer-schema-renaming.feature",
+      "features/data-layer-schema-revision-lifecycle.feature",
+      "features/data-layer-schema-rule-authoring.feature",
+      "features/data-layer-schema-rule-editor-visibility.feature",
+      "features/data-layer-schema-rule-property-identity-runtime.feature",
+      "features/data-layer-schema-rule-property-identity.feature",
+      "features/data-layer-schema-specification-builder-customization-runtime.feature",
+      "features/data-layer-schema-specification-builder-customization.feature",
+      "features/data-layer-schema-specification-builder-runtime.feature",
+      "features/data-layer-schema-specification-builder.feature",
+      "features/data-layer-schema-specification-container-defaults-runtime.feature",
+      "features/data-layer-schema-specification-container-defaults.feature",
+      "features/data-layer-schema-specification-example-selection-runtime.feature",
+      "features/data-layer-schema-specification-example-selection.feature",
+      "features/data-layer-schema-specification-preview-layout-runtime.feature",
+      "features/data-layer-schema-specification-preview-layout.feature",
+      "features/data-layer-schema-validation-workflow.feature",
+      "features/data-layer-schema-verification.feature",
+      "features/data-layer-schema-workspace-runtime-completion.feature",
+      "features/data-layer-schemas-operator-layout.feature",
+      "features/data-layer-validation-presence-semantics-runtime.feature",
+      "features/data-layer-validation-presence-semantics.feature",
+      "features/data-layer-validation-rule-library.feature",
+      "features/data-layer-validation-target-path-editor.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
+      "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
+      "acceptance/src/acceptance/steps/array_validation_issue_rollup.clj",
+      "acceptance/src/acceptance/steps/canonical_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/conditional_validation_rules.clj",
+      "acceptance/src/acceptance/steps/guided_assignment_coverage.clj",
+      "acceptance/src/acceptance/steps/guided_draft_continuation.clj",
+      "acceptance/src/acceptance/steps/guided_nested_property_merge.clj",
+      "acceptance/src/acceptance/steps/guided_rule_parameter_integrity.clj",
+      "acceptance/src/acceptance/steps/guided_validation.clj",
+      "acceptance/src/acceptance/steps/guided_validation_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_destination_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_path_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_picker_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_step_assertions.clj",
+      "acceptance/src/acceptance/steps/json_schema_export.clj",
+      "acceptance/src/acceptance/steps/live_guided_conditional_rules.clj",
+      "acceptance/src/acceptance/steps/live_schema_property_declaration.clj",
+      "acceptance/src/acceptance/steps/live_validation_visual_assertions.clj",
+      "acceptance/src/acceptance/steps/live_validation_visuals.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion_availability.clj",
+      "acceptance/src/acceptance/steps/recursive_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/recursive_property_validation.clj",
+      "acceptance/src/acceptance/steps/schema_assignment_data_conditions.clj",
+      "acceptance/src/acceptance/steps/schema_cardinality_comparison.clj",
+      "acceptance/src/acceptance/steps/schema_container_child_authoring.clj",
+      "acceptance/src/acceptance/steps/schema_declared_property_exceptions.clj",
+      "acceptance/src/acceptance/steps/schema_documentation.clj",
+      "acceptance/src/acceptance/steps/schema_manual_property.clj",
+      "acceptance/src/acceptance/steps/schema_nested_path.clj",
+      "acceptance/src/acceptance/steps/schema_property_comments.clj",
+      "acceptance/src/acceptance/steps/schema_property_copy.clj",
+      "acceptance/src/acceptance/steps/schema_property_example_values.clj",
+      "acceptance/src/acceptance/steps/schema_property_filter_sort.clj",
+      "acceptance/src/acceptance/steps/schema_property_removal.clj",
+      "acceptance/src/acceptance/steps/schema_property_rule_picker.clj",
+      "acceptance/src/acceptance/steps/schema_property_type_editing.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh.clj",
+      "acceptance/src/acceptance/steps/schema_renaming.clj",
+      "acceptance/src/acceptance/steps/schema_revision_lifecycle.clj",
+      "acceptance/src/acceptance/steps/schema_rule_property_identity.clj",
+      "acceptance/src/acceptance/steps/schema_specification_builder.clj",
+      "acceptance/src/acceptance/steps/schema_specification_builder_customization.clj",
+      "acceptance/src/acceptance/steps/schema_specification_container_defaults.clj",
+      "acceptance/src/acceptance/steps/schema_specification_example_selection.clj",
+      "acceptance/src/acceptance/steps/schema_specification_preview_layout.clj",
+      "acceptance/src/acceptance/steps/schema_verification.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_browser_assertions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_editor_transitions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_export_transitions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_support.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_validation_transitions.clj",
+      "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/schemas.mjs"
+    ]
+  },
+  {
+    "id": "defects",
+    "source": [
+      "src/data-layer-defect",
+      "src/data-layer-missing-event",
+      "src/data-layer-unified-defect"
+    ],
+    "dependencies": [
+      "schemas",
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-defect-report-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-defect-report-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-defect-library-runtime.feature",
+      "features/data-layer-defect-library.feature",
+      "features/data-layer-defect-report-builder.feature",
+      "features/data-layer-defect-report-component-options-runtime.feature",
+      "features/data-layer-defect-report-component-options.feature",
+      "features/data-layer-defect-report-jira-cloud-export.feature",
+      "features/data-layer-defect-report-provenance-presentation-runtime.feature",
+      "features/data-layer-defect-report-provenance-presentation.feature",
+      "features/data-layer-defect-report-reproduction-step-composer.feature",
+      "features/data-layer-defect-report-reproduction.feature",
+      "features/data-layer-defect-report-semantic-differences-runtime.feature",
+      "features/data-layer-defect-report-semantic-differences.feature",
+      "features/data-layer-defect-report-undeclared-property-removal-runtime.feature",
+      "features/data-layer-defect-report-undeclared-property-removal.feature",
+      "features/data-layer-event-occurrence-defect-report-runtime.feature",
+      "features/data-layer-event-occurrence-defect-report.feature",
+      "features/data-layer-missing-event-defect-report-runtime.feature",
+      "features/data-layer-missing-event-defect-report.feature",
+      "features/data-layer-missing-event-expected-payload-hardening-runtime.feature",
+      "features/data-layer-missing-event-expected-payload-hardening.feature",
+      "features/data-layer-missing-event-report-representation-fidelity-runtime.feature",
+      "features/data-layer-missing-event-report-representation-fidelity.feature",
+      "features/data-layer-required-property-defect-schema-choices-runtime.feature",
+      "features/data-layer-required-property-defect-schema-choices.feature",
+      "features/data-layer-unified-defect-report-builder-runtime.feature",
+      "features/data-layer-unified-defect-report-builder.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/defect_library.clj",
+      "acceptance/src/acceptance/steps/defect_report.clj",
+      "acceptance/src/acceptance/steps/defect_report_component_options.clj",
+      "acceptance/src/acceptance/steps/defect_report_delivery_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_expected_result_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_provenance_presentation.clj",
+      "acceptance/src/acceptance/steps/defect_report_reproduction_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_semantic_differences.clj",
+      "acceptance/src/acceptance/steps/defect_report_timeline_assertions.clj",
+      "acceptance/src/acceptance/steps/defect_report_undeclared_property_removal.clj",
+      "acceptance/src/acceptance/steps/event_occurrence_defect_report.clj",
+      "acceptance/src/acceptance/steps/missing_event_defect_report.clj",
+      "acceptance/src/acceptance/steps/missing_event_payload_hardening.clj",
+      "acceptance/src/acceptance/steps/missing_event_report_fidelity.clj",
+      "acceptance/src/acceptance/steps/required_property_defect_schema_choices.clj",
+      "acceptance/src/acceptance/steps/unified_defect_builder.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/defects.mjs"
+    ]
+  },
+  {
+    "id": "replay",
+    "source": [
+      "src/data-layer-sequence-replay"
+    ],
+    "dependencies": [
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-sequence-replay-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-test-sequence-replay.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/sequence_replay.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/replay.mjs"
+    ]
+  },
+  {
+    "id": "shell",
+    "source": [
+      "src/side-panel",
+      "src/background",
+      "src/workspace",
+      "src/panel-",
+      "src/active-page",
+      "src/platform",
+      "src/utility-registry"
+    ],
+    "dependencies": [
+      "command-palette",
+      "hotkeys",
+      "capture",
+      "event-library",
+      "schemas",
+      "defects",
+      "replay"
+    ],
+    "unit": [
+      "test/modular-utility-architecture-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/manifest-v3-side-panel-extension.feature",
+      "features/modular-acceptance-execution.feature",
+      "features/modular-browser-runtime-adapters.feature",
+      "features/modular-chrome-utility-architecture.feature",
+      "features/modular-verification-packs.feature",
+      "features/portable-build-package-flow.feature",
+      "features/project-skeleton.feature",
+      "features/side-panel-accessible-state-communication.feature",
+      "features/side-panel-action-feedback.feature",
+      "features/side-panel-action-hierarchy.feature",
+      "features/side-panel-authoritative-hidden-state.feature",
+      "features/side-panel-component-layout-runtime.feature",
+      "features/side-panel-inclusive-interaction.feature",
+      "features/side-panel-navigation-information-architecture.feature",
+      "features/side-panel-responsive-navigation-shell.feature",
+      "features/side-panel-visual-regression-coverage.feature",
+      "features/side-panel-visual-system.feature",
+      "features/side-panel-workspace-tabs.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/all.clj",
+      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
+      "acceptance/src/acceptance/steps/event_property_editor.clj",
+      "acceptance/src/acceptance/steps/information_architecture.clj",
+      "acceptance/src/acceptance/steps/modular_architecture.clj",
+      "acceptance/src/acceptance/steps/observability_library.clj",
+      "acceptance/src/acceptance/steps/operator_interface.clj",
+      "acceptance/src/acceptance/steps/operator_interface_support.clj",
+      "acceptance/src/acceptance/steps/package_flow.clj",
+      "acceptance/src/acceptance/steps/palette.clj",
+      "acceptance/src/acceptance/steps/project_skeleton.clj",
+      "acceptance/src/acceptance/steps/side_panel.clj",
+      "acceptance/src/acceptance/steps/support.clj",
+      "acceptance/src/acceptance/steps/timeline_presentations.clj",
+      "acceptance/src/acceptance/steps/workspace_editor.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/shell.mjs"
+    ]
+  }
 ]

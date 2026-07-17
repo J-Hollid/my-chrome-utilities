@@ -30,15 +30,18 @@
 
 (defn handlers-for-feature [feature-path]
   (let [registered (seq (registered-handler-namespaces feature-path))
-        namespaces (if registered
+        namespaces (when registered
                      (distinct (concat ['acceptance.steps.project-skeleton
                                         'acceptance.steps.side-panel]
-                                       registered))
-                     ['acceptance.steps.all])]
-    (vec
-     (mapcat (fn [namespace]
-               (require namespace)
-               (or (some-> (ns-resolve namespace 'handlers) deref)
-                   (throw (ex-info "Acceptance handler namespace has no handlers"
-                                   {:namespace namespace :feature feature-path}))))
-             namespaces))))
+                                       registered)))]
+    (when-not namespaces
+      (throw (ex-info "Feature is not assigned to a verification pack" {:feature feature-path})))
+    (let [handlers (vec
+                    (mapcat (fn [namespace]
+                              (require namespace)
+                              (concat (or (some-> (ns-resolve namespace 'priority-handlers) deref) [])
+                                      (or (some-> (ns-resolve namespace 'handlers) deref) [])))
+                            namespaces))]
+      (when (empty? handlers)
+        (throw (ex-info "Verification pack has no acceptance handlers" {:feature feature-path})))
+      handlers)))
