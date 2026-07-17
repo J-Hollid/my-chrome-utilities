@@ -78,31 +78,54 @@
    feature-files
    #{"a repository for project <project_name>"}))
 
+(def operator-feature-names
+  (set (map (fn [feature-file]
+              (second (re-find #"(?m)^Feature: (.+)$" (slurp feature-file))))
+            feature-files)))
+
 (defn- observe [world text example]
   (support/record-semantic-observation
    world :operator-action :operator-observations
    "shared operator action" text example))
+
+(defn- record-context [world text example]
+  (update world :operator-context (fnil conj [])
+          {:text text :example example}))
+
+(defn- record-action [world text example]
+  (assoc world :operator-action {:text text :example example}))
+
+(defn- record-observation [world text example]
+  (observe world text example))
+
+(defn- record-context-and-observation [world text example]
+  (observe (record-context world text example) text example))
+
+(def transitions-by-keyword
+  {"Given" record-context
+   "When" record-action
+   "Then" record-observation
+   "And" record-context-and-observation})
 
 (defn- transition [world example captures {:keys [keyword text]}]
   (let [example (operator-support/validate-example!
                  example
                  (support/capture-placeholder-keys captures))
         world (update world :operator-history (fnil conj []) text)]
-    (case keyword
-      "Given" (update world :operator-context (fnil conj []) {:text text :example example})
-      "When" (assoc world :operator-action {:text text :example example})
-      "Then" (observe world text example)
-      "And" (observe (update world :operator-context (fnil conj [])
-                             {:text text :example example})
-                     text
-                     example))))
+    ((get transitions-by-keyword keyword) world text example)))
 
 (def handlers
-  (support/semantic-handlers operator-step-specs transition))
+  (mapv #(assoc % :applies? (fn [world]
+                              (contains? operator-feature-names
+                                         (:acceptance/feature-name world))))
+        (support/semantic-handlers operator-step-specs transition)))
 
 (def priority-handler-texts #{"the command palette closes"})
 (def priority-handlers
-  (mapv #(assoc % :applies? (fn [world] (contains? world :operator-action)))
+  (mapv #(assoc % :applies? (fn [world]
+                              (and (contains? operator-feature-names
+                                              (:acceptance/feature-name world))
+                                   (contains? world :operator-action))))
         (filter (fn [{:keys [pattern]}]
                   (some #(re-matches pattern %) priority-handler-texts))
                 handlers)))

@@ -61,7 +61,7 @@
 
 (defn- history-path-input-persists? [source]
   (or (str/includes? source "setHistoryArrayPath(historyPathInput.value)")
-      (str/includes? source "setHistoryArrayPath(typedPath)")))
+      (str/includes? source "setHistoryArrayPath(typedPath")))
 
 (defn- history-path-input-listener? [source]
   (boolean (re-find #"addEventListener\((\"|')input" source)))
@@ -88,7 +88,7 @@
 (defn history-path-incremental-entry-wired? [source]
   (and (every? #(str/includes? source %)
                ["const typedPath = historyPathInput.value"
-                "setHistoryArrayPath(typedPath)"])
+                "setHistoryArrayPath(typedPath"])
        (or (str/includes? source "renderHistoryPath(path, typedPath)")
            (str/includes? source "targetPathStatusController.configure(path, typedPath)"))))
 

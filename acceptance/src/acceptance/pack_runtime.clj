@@ -50,11 +50,15 @@
       (throw (ex-info "Verification pack has no acceptance handlers" {:feature feature-path})))
     handlers))
 
+(def shared-handler-namespaces
+  ['acceptance.steps.project-skeleton
+   'acceptance.steps.side-panel
+   'acceptance.steps.operator-interface])
+
 (defn handlers-for-feature [feature-path]
   (let [registered (seq (registered-handler-namespaces feature-path))]
     (when-not registered
       (throw (ex-info "Feature is not assigned to a verification pack" {:feature feature-path})))
-    (load-handlers feature-path
-                   (distinct (concat ['acceptance.steps.project-skeleton
-                                      'acceptance.steps.side-panel]
-                                     registered)))))
+    (load-handlers
+     feature-path
+     (distinct (concat shared-handler-namespaces registered)))))

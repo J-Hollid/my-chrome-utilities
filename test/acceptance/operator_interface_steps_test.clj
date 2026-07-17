@@ -17,3 +17,21 @@
                     "accepted_value" "product"
                     "rejected_value" "internal"}]]
     (is (= example (operator-support/validate-example! example (keys example))))))
+
+(deftest keyword-transitions-preserve-operator-state-shapes
+  (let [example {"state" "value"}
+        transition (fn [keyword world]
+                     ((get operator/transitions-by-keyword keyword)
+                      world keyword example))
+        given (transition "Given" {})
+        when-state (transition "When" {})
+        then-state (transition "Then" when-state)
+        and-state (transition "And" when-state)]
+    (is (= [{:text "Given" :example example}]
+           (:operator-context given)))
+    (is (= {:text "When" :example example}
+           (:operator-action when-state)))
+    (is (= "Then" (-> then-state :operator-observations first :text)))
+    (is (= [{:text "And" :example example}]
+           (:operator-context and-state)))
+    (is (= "And" (-> and-state :operator-observations first :text)))))
