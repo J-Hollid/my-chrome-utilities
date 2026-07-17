@@ -46,6 +46,20 @@
 (defn includes-all? [source snippets]
   (every? #(str/includes? source %) snippets))
 
+(defn navigation-structure? [html css]
+  (let [header-index (.indexOf html "id=\"application-header\"")
+        primary-index (.indexOf html "id=\"workspace-tabs\"")
+        secondary-index (.indexOf html "id=\"data-layer-views\"")
+        live-index (.indexOf html "id=\"data-layer-panel-live\"")]
+    (and (every? #(not (neg? %))
+                 [header-index primary-index secondary-index live-index])
+         (< header-index primary-index secondary-index live-index)
+         (str/includes? html "role=\"tablist\" aria-label=\"Workspace\"")
+         (str/includes? html "role=\"tablist\" aria-label=\"Data Layer views\"")
+         (str/includes? css
+                        "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr)")
+         (str/includes? css "[role=tab] { background:transparent"))))
+
 (defn matches-all? [source patterns]
   (every? #(re-find % source) patterns))
 

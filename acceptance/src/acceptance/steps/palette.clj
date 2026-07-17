@@ -117,15 +117,6 @@
        (not (str/includes? source "commandList"))
        (not (str/includes? source "commandList.append"))))
 
-(defn- underlying-layout? [html css]
-  (let [header-index (.indexOf html "id=\"application-header\"")
-        primary-index (.indexOf html "id=\"workspace-tabs\"")
-        secondary-index (.indexOf html "id=\"data-layer-views\"")
-        live-index (.indexOf html "id=\"data-layer-panel-live\"")]
-    (and (every? #(not (neg? %)) [header-index primary-index secondary-index live-index])
-         (< header-index primary-index secondary-index live-index)
-         (str/includes? css "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr)"))))
-
 (defn- palette-scope [world]
   {:package (:package world)
    :manifest (:manifest world)
@@ -336,7 +327,7 @@
                world)}
    {:pattern #"^the command palette does not obscure or displace the header, navigation, or active view content$"
     :handler (fn [world _example _captures]
-               (support/assert! (underlying-layout? (:html world) (:css world))
+               (support/assert! (support/navigation-structure? (:html world) (:css world))
                                 "Closed palette does not preserve panel layout." {})
                world)}
    {:pattern #"^no registered command is rendered as a permanent global command button$"

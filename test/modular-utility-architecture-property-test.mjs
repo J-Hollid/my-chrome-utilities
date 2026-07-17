@@ -177,6 +177,9 @@ for (let sample = 0; sample < 100; sample += 1) {
 
   assert.deepEqual(plan.packIds, packs.filter(({ id }) => expected.has(id)).map(({ id }) => id),
     "generated impact plans must include transitive dependants and dependencies in registry order");
+  assert.deepEqual(plan.handlers,
+    packs.filter(({ id }) => expected.has(id)).flatMap(({ handlers }) => handlers),
+    "generated impact plans must preserve handler ownership across the selected closure");
   assert.equal(plan.commands[0], "npm run build");
   assert.equal(plan.commands.filter((command) => command === "npm run build").length, 1,
     "generated plans must compile exactly once");

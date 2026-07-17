@@ -6,10 +6,13 @@
   (is (= 'acceptance.steps.schema-verification
          (#'pack-runtime/handler-namespace
           "acceptance/src/acceptance/steps/schema_verification.clj")))
-  (is (= ['acceptance.steps.command-registry]
+  (is (= ['acceptance.steps.command-registry
+          'acceptance.steps.palette]
          (#'pack-runtime/registered-handler-namespaces
           "features/simple-command-palette.feature")))
-  (is (= ['acceptance.steps.command-registry 'acceptance.steps.hotkey-keymap]
+  (is (= ['acceptance.steps.command-registry
+          'acceptance.steps.palette
+          'acceptance.steps.hotkey-keymap]
          (#'pack-runtime/registered-handler-namespaces
           "features/side-panel-hotkey-keymap.feature"))))
 

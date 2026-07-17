@@ -16,17 +16,7 @@
 (defn- example-value [example key]
   (support/require-example example key))
 
-(defn navigation-structure? [html css]
-  (let [header-index (.indexOf html "id=\"application-header\"")
-        primary-index (.indexOf html "id=\"workspace-tabs\"")
-        secondary-index (.indexOf html "id=\"data-layer-views\"")
-        live-index (.indexOf html "id=\"data-layer-panel-live\"")]
-    (and (every? #(not (neg? %)) [header-index primary-index secondary-index live-index])
-         (< header-index primary-index secondary-index live-index)
-         (str/includes? html "role=\"tablist\" aria-label=\"Workspace\"")
-         (str/includes? html "role=\"tablist\" aria-label=\"Data Layer views\"")
-         (str/includes? css "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr)")
-         (str/includes? css "[role=tab] { background:transparent"))))
+(def navigation-structure? support/navigation-structure?)
 
 (defn contextual-actions? [html source]
   (and (str/includes? html "id=\"live-context-actions\"")
@@ -57,7 +47,7 @@
                 "console.log(`{:session-action ${JSON.stringify(controls.sessionAction)} :capture-action ${JSON.stringify(controls.captureAction)}}`);"
                 )
            (if (= session-state "Active") "true" "false")
-           (pr-str (if (= capture-state "Paused") "Paused" "Live")))))
+           (pr-str (get {"Paused" "Paused"} capture-state "Live")))))
 
 (defn- runtime-live-session-lifecycle []
   (run-production-module!
