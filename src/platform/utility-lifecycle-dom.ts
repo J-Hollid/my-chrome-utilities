@@ -10,7 +10,7 @@ export function createDomUtilityLifecycle(id:string,panels:readonly string[],opt
     mount(root:UtilityMountHost,pageLifecycle:UtilityPageLifecycle):{unmount():void} {
       for(const panelId of panels){
         const panel=root.querySelector<HTMLElement>(`#${panelId}`);
-        if(!panel)throw new Error(`Registered utility panel is missing: ${panelId}`);
+        if(!panel)continue;
         panel.dataset.utilityOwner=id;
       }
       const dispose=options.onMount?.(root);

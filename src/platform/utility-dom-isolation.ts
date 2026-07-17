@@ -14,6 +14,9 @@ export function utilityDomScopeFromSearch(search:string):UtilityDomScope|undefin
 
 export function isolateUtilityDom(root:ParentNode,scope:UtilityDomScope):void {
   for(const selector of scope.removeSelectors??[])root.querySelector(selector)?.remove();
+  for(const element of Array.from(root.querySelectorAll<HTMLElement>("#palette,[id^='workspace-panel-'],[id^='data-layer-panel-']"))){
+    if(!scope.panelIds.includes(element.id))element.remove();
+  }
   for(const element of Array.from(root.querySelectorAll<HTMLElement>("[data-utility-owner]"))){
     if(!retainUtilityElement({id:element.id,owner:element.dataset.utilityOwner},scope))element.remove();
   }

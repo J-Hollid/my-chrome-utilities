@@ -11,6 +11,10 @@ export function utilityDomScopeFromSearch(search) {
 export function isolateUtilityDom(root, scope) {
     for (const selector of scope.removeSelectors ?? [])
         root.querySelector(selector)?.remove();
+    for (const element of Array.from(root.querySelectorAll("#palette,[id^='workspace-panel-'],[id^='data-layer-panel-']"))) {
+        if (!scope.panelIds.includes(element.id))
+            element.remove();
+    }
     for (const element of Array.from(root.querySelectorAll("[data-utility-owner]"))) {
         if (!retainUtilityElement({ id: element.id, owner: element.dataset.utilityOwner }, scope))
             element.remove();

@@ -7,7 +7,7 @@ export function createDomUtilityLifecycle(id, panels, options = {}) {
             for (const panelId of panels) {
                 const panel = root.querySelector(`#${panelId}`);
                 if (!panel)
-                    throw new Error(`Registered utility panel is missing: ${panelId}`);
+                    continue;
                 panel.dataset.utilityOwner = id;
             }
             const dispose = options.onMount?.(root);
