@@ -5,7 +5,7 @@ import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
-import { retainUtilityElement } from "../dist/platform/utility-dom-isolation.js";
+import { retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
 
@@ -40,6 +40,18 @@ for (let sample = 0; sample < 100; sample += 1) {
     assert.equal(retainUtilityElement({ id, owner }, scope), expected,
       "DOM isolation must retain exactly the panels owned by its utility scope");
   }
+
+  const removeSelectors = Array.from(
+    { length:sample % 4 },
+    (_, index) => `#excluded-${sample}-${index} > [data-kind="${index}"]`,
+  );
+  const parameters = new URLSearchParams({ utility:scope.utilityId });
+  for (const panelId of scope.panelIds) parameters.append("panel", panelId);
+  for (const selector of removeSelectors) parameters.append("remove", selector);
+  assert.deepEqual(utilityDomScopeFromSearch(`?${parameters}`), {
+    ...scope,
+    ...(removeSelectors.length > 0 ? { removeSelectors } : {}),
+  }, "utility scopes must survive URL encoding and parsing");
 }
 
 for (let sample = 0; sample < 100; sample += 1) {

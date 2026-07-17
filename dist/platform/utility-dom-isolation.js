@@ -1,6 +1,19 @@
 export function retainUtilityElement(element, scope) {
     return element.owner === scope.utilityId && scope.panelIds.includes(element.id);
 }
+export function utilityDomScopeFromSearch(search) {
+    const parameters = new URLSearchParams(search);
+    const utilityId = parameters.get("utility");
+    const panelIds = parameters.getAll("panel");
+    if (!utilityId || panelIds.length === 0)
+        return undefined;
+    const removeSelectors = parameters.getAll("remove");
+    return {
+        utilityId,
+        panelIds,
+        ...(removeSelectors.length > 0 ? { removeSelectors } : {}),
+    };
+}
 function removeExcludedElements(root, selectors) {
     for (const selector of selectors)
         root.querySelector(selector)?.remove();
@@ -42,5 +55,15 @@ export function isolateUtilityDom(root, scope) {
     removeExcludedElements(root, scope.removeSelectors ?? []);
     removeElementsOutsideScope(root, scope);
     synchronizeTabs(root, scope.panelIds);
+}
+export function isolateUtilityDomFromSearch(root, search) {
+    const scope = utilityDomScopeFromSearch(search);
+    if (!scope)
+        return undefined;
+    isolateUtilityDom(root, scope);
+    const documentRoot = root.documentElement;
+    if (documentRoot)
+        documentRoot.dataset.utilityIsolation = scope.utilityId;
+    return scope;
 }
 //# sourceMappingURL=utility-dom-isolation.js.map
