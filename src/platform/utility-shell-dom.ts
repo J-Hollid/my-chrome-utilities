@@ -38,19 +38,7 @@ export function mountUtility(
   root: UtilityMountRoot,
   pageLifecycle: PageLifecycle,
 ): { unmount(): void } {
-  bindUtilityPanels([utility], root);
-  utility.lifecycle.activate();
-  root.dataset.registeredUtilities = utility.id;
-  root.dataset.activeUtilities = utility.id;
-  let mounted = true;
-  const unmount = (): void => {
-    if (!mounted) return;
-    mounted = false;
-    utility.lifecycle.deactivate();
-    root.dataset.activeUtilities = "";
-  };
-  pageLifecycle.addEventListener("pagehide", unmount, { once: true });
-  return { unmount };
+  return utility.lifecycle.mount(root, pageLifecycle);
 }
 
 export function renderUtilityDirectory(
