@@ -22,7 +22,7 @@
   (assert-export-preflight! observation)
   (support/assert! (= (get-in observation [:transfer :before]) (get-in observation [:transfer :reloaded]))
                    "Schema Library import did not persist every exported identity." {:observation observation})
-  (support/assert! (= ["Disable" "Remove"] (get-in observation [:rules :actions]))
+  (support/assert! (= ["Edit" "Disable" "Remove"] (get-in observation [:rules :actions]))
                    "Property rule menus did not expose production actions." {:observation observation})
   (support/assert! (every? true? (map #(get-in observation [:rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
                    "Property rule menu disclosure or focus return failed." {:observation observation})

@@ -39,6 +39,7 @@
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.local-rule-promotion-availability :as local-rule-promotion-availability]
+            [acceptance.steps.local-rule-editing :as local-rule-editing]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
@@ -81,6 +82,7 @@
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
+            [acceptance.steps.reusable-rule-sync :as reusable-rule-sync]
             [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
@@ -118,6 +120,8 @@
                unified-defect-builder/handlers
                local-rule-promotion/handlers
                local-rule-promotion-availability/handlers
+               local-rule-editing/handlers
+               reusable-rule-sync/handlers
                live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
                non-applicable-property-visibility/handlers
