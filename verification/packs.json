@@ -35,10 +35,10 @@
     "dependencies": [
       "command-palette"
     ],
-    "unit": [
+    "unit": [],
+    "property": [
       "test/hotkey-binding-property-test.mjs"
     ],
-    "property": [],
     "features": [
       "features/side-panel-hotkey-editor.feature",
       "features/side-panel-hotkey-keymap.feature",
@@ -54,17 +54,79 @@
   {
     "id": "capture",
     "source": [
+      "src/data-layer-event-feed-query-ui.ts",
+      "src/data-layer-event-feed-query.ts",
+      "src/data-layer-event-feed-summaries.ts",
+      "src/data-layer-event-presentation.ts",
+      "src/data-layer-fresh-session.ts",
+      "src/data-layer-live-inspector-actions.ts",
+      "src/data-layer-live-inspector-presentation-ui.ts",
+      "src/data-layer-live-inspector-return-ui.ts",
+      "src/data-layer-live-inspector-return.ts",
+      "src/data-layer-live-notifications.ts",
+      "src/data-layer-live-observation.ts",
+      "src/data-layer-live-observer-ui.ts",
+      "src/data-layer-live-observer.ts",
+      "src/data-layer-live-responsive-layout.ts",
+      "src/data-layer-live-session-controls-ui.ts",
+      "src/data-layer-live-session-controls.ts",
+      "src/data-layer-live-session-end.ts",
+      "src/data-layer-live-session-summary-actions.ts",
+      "src/data-layer-live-session-summary-ui.ts",
+      "src/data-layer-live-session-summary.ts",
+      "src/data-layer-observability.ts",
+      "src/data-layer-observation",
       "src/data-layer-observer",
+      "src/data-layer-recovery.ts",
+      "src/data-layer-recursive-property-tree.ts",
+      "src/data-layer-saved-event-feed-filters.ts",
+      "src/data-layer-saved-session-live-feed.ts",
+      "src/data-layer-saved-sessions.ts",
       "src/data-layer-session",
       "src/data-layer-source",
-      "src/data-layer-observation"
+      "src/data-layer-target-path-status.ts",
+      "src/data-layer-target-recovery.ts",
+      "src/data-layer-timeline.ts",
+      "src/data-layer-workflow-focus-ui.ts",
+      "src/data-layer.ts"
     ],
     "dependencies": [],
     "unit": [
-      "test/data-layer-session-test.mjs"
+      "test/data-layer-event-feed-query-test.mjs",
+      "test/data-layer-event-feed-query-ui-test.mjs",
+      "test/data-layer-event-feed-summaries-test.mjs",
+      "test/data-layer-event-presentation-test.mjs",
+      "test/data-layer-fresh-session-test.mjs",
+      "test/data-layer-live-inspector-actions-test.mjs",
+      "test/data-layer-live-inspector-return-test.mjs",
+      "test/data-layer-live-observer-test.mjs",
+      "test/data-layer-live-responsive-layout-test.mjs",
+      "test/data-layer-live-session-controls-test.mjs",
+      "test/data-layer-live-session-end-test.mjs",
+      "test/data-layer-live-session-summary-test.mjs",
+      "test/data-layer-live-session-target-release-test.mjs",
+      "test/data-layer-observation-targets-test.mjs",
+      "test/data-layer-recursive-property-tree-test.mjs",
+      "test/data-layer-saved-event-feed-filters-test.mjs",
+      "test/data-layer-saved-session-live-feed-test.mjs",
+      "test/data-layer-saved-sessions-test.mjs",
+      "test/data-layer-session-test.mjs",
+      "test/data-layer-source-foundation-test.mjs",
+      "test/data-layer-target-path-status-test.mjs"
     ],
     "property": [
-      "test/data-layer-observability-property-test.mjs"
+      "test/data-layer-event-feed-query-property-test.mjs",
+      "test/data-layer-event-presentation-property-test.mjs",
+      "test/data-layer-fresh-session-property-test.mjs",
+      "test/data-layer-live-inspector-actions-property-test.mjs",
+      "test/data-layer-live-observer-property-test.mjs",
+      "test/data-layer-observability-property-test.mjs",
+      "test/data-layer-observation-activation-property-test.mjs",
+      "test/data-layer-observation-targets-property-test.mjs",
+      "test/data-layer-recursive-property-tree-property-test.mjs",
+      "test/data-layer-saved-event-feed-filters-property-test.mjs",
+      "test/data-layer-saved-session-live-feed-property-test.mjs",
+      "test/data-layer-saved-sessions-property-test.mjs"
     ],
     "features": [
       "features/data-layer-active-page-read-result.feature",
@@ -170,13 +232,25 @@
     "source": [
       "src/data-layer-event-library",
       "src/data-layer-event-template",
+      "src/data-layer-push-draft-review-ui.ts",
+      "src/data-layer-push-draft-review.ts",
+      "src/data-layer-selected-target-push-page.ts",
+      "src/data-layer-selected-target-push.ts",
       "src/data-layer-template"
     ],
     "dependencies": [
       "capture"
     ],
     "unit": [
-      "test/data-layer-event-library-editor-test.mjs"
+      "test/data-layer-event-library-deletion-test.mjs",
+      "test/data-layer-event-library-editor-test.mjs",
+      "test/data-layer-event-library-transfer-test.mjs",
+      "test/data-layer-event-template-renaming-test.mjs",
+      "test/data-layer-library-direct-template-push-test.mjs",
+      "test/data-layer-library-new-event-test.mjs",
+      "test/data-layer-push-draft-review-test.mjs",
+      "test/data-layer-selected-target-push-test.mjs",
+      "test/data-layer-template-change-review-test.mjs"
     ],
     "property": [
       "test/data-layer-selected-target-push-property-test.mjs"
@@ -204,10 +278,29 @@
   {
     "id": "schemas",
     "source": [
-      "src/data-layer-schema",
+      "src/data-layer-allowed-value-expansion-ui.ts",
+      "src/data-layer-allowed-value-expansion.ts",
+      "src/data-layer-allowed-values-rule.ts",
       "src/data-layer-cardinality",
       "src/data-layer-conditional",
+      "src/data-layer-guided-nested-property-merge.ts",
+      "src/data-layer-guided-rule-parameter-integrity.ts",
+      "src/data-layer-guided-schema-picker-ui.ts",
+      "src/data-layer-guided-validation-continuation.ts",
+      "src/data-layer-guided-validation-types.ts",
+      "src/data-layer-guided-validation-ui.ts",
+      "src/data-layer-guided-validation.ts",
       "src/data-layer-json-schema",
+      "src/data-layer-live-guided-conditional-rule-authoring.ts",
+      "src/data-layer-live-guided-workflow-ui.ts",
+      "src/data-layer-live-guided-workflow.ts",
+      "src/data-layer-live-schema-property-declaration-ui.ts",
+      "src/data-layer-live-schema-property-declaration.ts",
+      "src/data-layer-live-validation-presentation.ts",
+      "src/data-layer-local-rule-promotion-ui.ts",
+      "src/data-layer-local-rule-promotion.ts",
+      "src/data-layer-path-conditions.ts",
+      "src/data-layer-schema",
       "src/data-layer-validation",
       "src/utilities/data-layer"
     ],
@@ -215,10 +308,70 @@
       "capture"
     ],
     "unit": [
-      "test/data-layer-schema-verification-test.mjs"
+      "test/data-layer-allowed-value-expansion-test.mjs",
+      "test/data-layer-allowed-values-rule-migration-test.mjs",
+      "test/data-layer-array-validation-issue-rollup-test.mjs",
+      "test/data-layer-canonical-declared-property-validation-test.mjs",
+      "test/data-layer-conditional-validation-rules-test.mjs",
+      "test/data-layer-guided-nested-property-merge-test.mjs",
+      "test/data-layer-guided-rule-parameter-integrity-test.mjs",
+      "test/data-layer-guided-validation-continuation-test.mjs",
+      "test/data-layer-guided-validation-test.mjs",
+      "test/data-layer-json-schema-export-test.mjs",
+      "test/data-layer-live-guided-conditional-rule-authoring-test.mjs",
+      "test/data-layer-live-guided-workflow-test.mjs",
+      "test/data-layer-live-schema-property-declaration-test.mjs",
+      "test/data-layer-live-validation-presentation-test.mjs",
+      "test/data-layer-local-rule-promotion-availability-hardening-test.mjs",
+      "test/data-layer-local-rule-promotion-test.mjs",
+      "test/data-layer-recursive-declared-property-validation-test.mjs",
+      "test/data-layer-schema-assignment-data-conditions-test.mjs",
+      "test/data-layer-schema-cardinality-comparison-rules-test.mjs",
+      "test/data-layer-schema-declared-property-exceptions-test.mjs",
+      "test/data-layer-schema-documentation-test.mjs",
+      "test/data-layer-schema-nested-path-test.mjs",
+      "test/data-layer-schema-property-comments-test.mjs",
+      "test/data-layer-schema-property-copy-test.mjs",
+      "test/data-layer-schema-property-example-values-test.mjs",
+      "test/data-layer-schema-property-removal-test.mjs",
+      "test/data-layer-schema-property-rule-picker-test.mjs",
+      "test/data-layer-schema-property-type-editing-test.mjs",
+      "test/data-layer-schema-publication-refresh-test.mjs",
+      "test/data-layer-schema-rule-property-identity-test.mjs",
+      "test/data-layer-schema-specification-builder-test.mjs",
+      "test/data-layer-schema-specification-container-defaults-test.mjs",
+      "test/data-layer-schema-specification-example-selection-test.mjs",
+      "test/data-layer-schema-specification-preview-layout-test.mjs",
+      "test/data-layer-schema-verification-test.mjs",
+      "test/data-layer-validation-presence-semantics-test.mjs"
     ],
     "property": [
-      "test/data-layer-schema-verification-property-test.mjs"
+      "test/data-layer-allowed-value-expansion-property-test.mjs",
+      "test/data-layer-canonical-declared-property-validation-property-test.mjs",
+      "test/data-layer-conditional-validation-rules-property-test.mjs",
+      "test/data-layer-guided-nested-property-merge-property-test.mjs",
+      "test/data-layer-guided-rule-parameter-integrity-property-test.mjs",
+      "test/data-layer-guided-validation-continuation-property-test.mjs",
+      "test/data-layer-guided-validation-property-test.mjs",
+      "test/data-layer-json-schema-export-property-test.mjs",
+      "test/data-layer-live-guided-conditional-rule-authoring-property-test.mjs",
+      "test/data-layer-live-schema-property-declaration-property-test.mjs",
+      "test/data-layer-live-validation-presentation-property-test.mjs",
+      "test/data-layer-local-rule-promotion-property-test.mjs",
+      "test/data-layer-schema-assignment-data-conditions-property-test.mjs",
+      "test/data-layer-schema-documentation-property-test.mjs",
+      "test/data-layer-schema-manual-property-property-test.mjs",
+      "test/data-layer-schema-manual-property-test.mjs",
+      "test/data-layer-schema-nested-path-property-test.mjs",
+      "test/data-layer-schema-property-copy-property-test.mjs",
+      "test/data-layer-schema-property-example-values-property-test.mjs",
+      "test/data-layer-schema-property-removal-property-test.mjs",
+      "test/data-layer-schema-property-rule-picker-property-test.mjs",
+      "test/data-layer-schema-publication-refresh-property-test.mjs",
+      "test/data-layer-schema-rule-property-identity-property-test.mjs",
+      "test/data-layer-schema-specification-builder-property-test.mjs",
+      "test/data-layer-schema-verification-property-test.mjs",
+      "test/data-layer-validation-presence-semantics-property-test.mjs"
     ],
     "features": [
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
@@ -381,6 +534,8 @@
     "id": "defects",
     "source": [
       "src/data-layer-defect",
+      "src/data-layer-event-occurrence-defect-report-ui.ts",
+      "src/data-layer-event-occurrence-defect-report.ts",
       "src/data-layer-missing-event",
       "src/data-layer-unified-defect"
     ],
@@ -389,10 +544,28 @@
       "event-library"
     ],
     "unit": [
-      "test/data-layer-defect-report-test.mjs"
+      "test/data-layer-defect-library-copy-test.mjs",
+      "test/data-layer-defect-library-test.mjs",
+      "test/data-layer-defect-report-provenance-presentation-test.mjs",
+      "test/data-layer-defect-report-reproduction-test.mjs",
+      "test/data-layer-defect-report-runtime-test.mjs",
+      "test/data-layer-defect-report-semantic-differences-test.mjs",
+      "test/data-layer-defect-report-test.mjs",
+      "test/data-layer-defect-report-ui-test.mjs",
+      "test/data-layer-defect-report-undeclared-property-removal-test.mjs",
+      "test/data-layer-event-occurrence-defect-report-test.mjs",
+      "test/data-layer-missing-event-defect-report-test.mjs",
+      "test/data-layer-missing-event-report-representation-fidelity-test.mjs",
+      "test/data-layer-required-property-defect-schema-choices-test.mjs",
+      "test/data-layer-unified-defect-builder-test.mjs"
     ],
     "property": [
-      "test/data-layer-defect-report-property-test.mjs"
+      "test/data-layer-defect-library-property-test.mjs",
+      "test/data-layer-defect-report-property-test.mjs",
+      "test/data-layer-event-occurrence-defect-report-property-test.mjs",
+      "test/data-layer-missing-event-defect-report-property-test.mjs",
+      "test/data-layer-required-property-defect-schema-choices-property-test.mjs",
+      "test/data-layer-unified-defect-builder-property-test.mjs"
     ],
     "features": [
       "features/data-layer-defect-library-runtime.feature",
@@ -469,13 +642,13 @@
   {
     "id": "shell",
     "source": [
-      "src/side-panel",
-      "src/background",
-      "src/workspace",
-      "src/panel-",
       "src/active-page",
+      "src/background",
+      "src/panel-",
       "src/platform",
-      "src/utility-registry"
+      "src/side-panel",
+      "src/utility-registry",
+      "src/workspace"
     ],
     "dependencies": [
       "command-palette",
@@ -487,9 +660,16 @@
       "replay"
     ],
     "unit": [
-      "test/modular-utility-architecture-test.mjs"
+      "test/modular-utility-architecture-test.mjs",
+      "test/panel-empty-states-test.mjs",
+      "test/panel-empty-states-ui-test.mjs",
+      "test/side-panel-action-hierarchy-test.mjs",
+      "test/side-panel-action-hierarchy-ui-test.mjs",
+      "test/side-panel-component-layout-runtime-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/workspace-tabs-property-test.mjs"
+    ],
     "features": [
       "features/manifest-v3-side-panel-extension.feature",
       "features/modular-acceptance-execution.feature",

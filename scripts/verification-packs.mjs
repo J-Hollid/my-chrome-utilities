@@ -10,7 +10,15 @@ async function repositoryPaths(directory,suffix){
   }
   return paths.sort();
 }
-export async function verificationInventory(){return {features:await repositoryPaths("features",".feature"),handlers:await repositoryPaths("acceptance/src/acceptance/steps",".clj")};}
+export async function verificationInventory(){
+  const testPaths=await repositoryPaths("test",".mjs");
+  return {
+    source:await repositoryPaths("src",".ts"),
+    tests:testPaths.filter((path)=>path.endsWith("-test.mjs")||(path.startsWith("test/browser-packs/")&&!path.endsWith("shared-harness.mjs"))),
+    features:await repositoryPaths("features",".feature"),
+    handlers:await repositoryPaths("acceptance/src/acceptance/steps",".clj"),
+  };
+}
 export async function validateVerificationPacks(packs,{inventory}={}){
   const ids=new Set(),owners=new Map();
   for(const pack of packs){
@@ -18,12 +26,25 @@ export async function validateVerificationPacks(packs,{inventory}={}){
     for(const key of ["unit","property","features","handlers","browserAdapters"])
       for(const path of pack[key]){
         if(owners.has(path))throw new Error(`Assign every ${key} path to exactly one pack: ${path}`);
-        owners.set(path,pack.id);await access(new URL(`../${path}`,import.meta.url));
+        owners.set(path,pack.id);
+        try{await access(new URL(`../${path}`,import.meta.url));}catch{throw new Error(`Correct the missing ${key} path: ${path}`);}
       }
   }
   for(const pack of packs)for(const dependency of pack.dependencies)
     if(!ids.has(dependency))throw new Error(`Register every direct dependency: ${dependency}`);
-  const repositoryInventory=inventory??await verificationInventory();
+  const repositoryInventory={...await verificationInventory(),...inventory};
+  for(const pack of packs)for(const prefix of pack.source)
+    if(!repositoryInventory.source.some((path)=>path===prefix||path.startsWith(prefix)))throw new Error(`Correct the missing source path: ${prefix}`);
+  for(const path of repositoryInventory.source){
+    const sourceOwners=packs.filter((pack)=>pack.source.some((prefix)=>path===prefix||path.startsWith(prefix)));
+    if(sourceOwners.length!==1)throw new Error(`Assign every source path to one pack: ${path}`);
+  }
+  const assignedTests=new Map();
+  for(const pack of packs)for(const key of ["unit","property","browserAdapters"])for(const path of pack[key]){
+    const pathOwners=assignedTests.get(path)??[];pathOwners.push(pack.id);assignedTests.set(path,pathOwners);
+  }
+  for(const path of repositoryInventory.tests)if((assignedTests.get(path)?.length??0)!==1)
+    throw new Error(`Assign every test path to exactly one pack: ${path}`);
   for(const key of ["features","handlers"]){
     const assigned=new Set(packs.flatMap((pack)=>pack[key]));
     for(const path of repositoryInventory[key])if(!assigned.has(path))throw new Error(`Unassigned ${key} path: ${path}`);

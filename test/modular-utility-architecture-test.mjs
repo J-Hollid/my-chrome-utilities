@@ -5,7 +5,7 @@ import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirect
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
-import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
+import { loadVerificationPacks, planVerification, validateVerificationPacks, verificationInventory } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "../dist/platform/utility-bootstrap.js";
@@ -96,6 +96,9 @@ for(const facade of ["capture","live-inspection","event-library","schemas","defe
 
 const packs=await loadVerificationPacks();
 await validateVerificationPacks(packs);
+const inventory=await verificationInventory();
+await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{source:[...inventory.source,"src/unassigned.ts"]}}),/Assign every source path to one pack: src\/unassigned\.ts/);
+await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{tests:[...inventory.tests,"test/unassigned-test.mjs"]}}),/Assign every test path to exactly one pack: test\/unassigned-test\.mjs/);
 await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:[...packs.flatMap(({features})=>features),"features/unassigned.feature"],handlers:packs.flatMap(({handlers})=>handlers)}}),/Unassigned features path: features\/unassigned\.feature/);
 await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:packs.flatMap(({features})=>features),handlers:[...packs.flatMap(({handlers})=>handlers),"acceptance/src/acceptance/steps/unassigned.clj"]}}),/Unassigned handlers path/);
 await assert.rejects(()=>validateVerificationPacks([...packs,{...packs[0],id:"duplicate",features:packs[0].features}]),/exactly one pack/);
