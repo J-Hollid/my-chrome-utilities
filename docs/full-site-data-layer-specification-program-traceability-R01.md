@@ -82,6 +82,22 @@ Status values in this first specification revision are:
 
 The previously approved Phase 0 rule slices are already committed in `1426e15` and `de5cfde`. They remain part of this program's implementation lineage and must pass coder, refactorer, architect, and terminal functional-delivery gates with the newly proposed slices.
 
+## Terminal correction cycle 1
+
+The first implementation lineage failed the architect's terminal functional-delivery gate. Its real browser boundary covered greenfield project creation, generic entity rows, global search, one bulk paste with Undo/Redo, basic preflight and release, bounded rendering, and reload. That subset is retained as a foundation, but the task is not complete until a subsequent production diff delivers and exercises every correction below.
+
+| Missing production outcome | Required scenario evidence |
+| --- | --- |
+| Documentation export and actual clipboard fidelity, including deliberate loss metadata | documentation export `001–005`, runtime `001–004`; interchange `006`, runtime `005` |
+| Truthful assignment and durable schema-draft integration with the project release lifecycle | durable drafts `001–008`, runtime `001–006`; truthful assignment lifecycle `001–007`, runtime `001–005` |
+| Persisted temporal flow instances, transitions, occurrence constraints, and markerless Retail/Trade selection from prior state | temporal flow `001–009`, runtime `001–006`; decisive workflow `002–003`, runtime `001` |
+| Structured whole-project release diff, recovery, restore-as-draft, and Publish versus Publish-and-close behavior | atomic release `001–007`, runtime `001–005` |
+| Staged full-graph collision resolution, rollback, and semantic full-fidelity round trip | project interchange `001–007`, runtime `001–006`; decisive workflow `007`, runtime `002` |
+| Coverage matrix, static ambiguity analysis, Where used, and issue deep links to exact fields | fixtures/preflight `001–008`, runtime `001–005`; workspace `002`, `004`, runtime `001`, `005` |
+| Decisive keyboard-only, 500-property/50-flow performance, and actual-extension R03 visual evidence at 360/520/720/full-page widths | decisive runtime `004–006` |
+
+Passing generic acceptance handlers or naming these concepts in a collection is not completion evidence. Each runtime scenario must drive the production extension boundary, or the same production callback through a deterministic adapter, and assert browser storage, clipboard, focus, scrolling, computed layout, download content, or temporal results as applicable.
+
 ## Documented assumptions and one material question
 
 1. **Flow-instance correlation — approval question.** The proposed default is one flow instance per browser-tab session, optionally correlated by an explicitly configured transaction/session variable. State survives same-tab navigation, extension reload, and crash recovery; explicit exit or configured timeout closes it; equal active instances block automatic selection. A different visitor-, cross-tab-, or transaction-only lifetime would materially change `Data layer temporal flow authoring 005` and runtime `004`.
