@@ -139,7 +139,7 @@
                    {:world world})
   world)
 
-(def transition-rules
+(def ^:private transition-rules
   [{:matches? #(= % "no observation target is selected")
     :apply (fn [world _values]
              (assoc world :selected-target nil :attached-target nil
