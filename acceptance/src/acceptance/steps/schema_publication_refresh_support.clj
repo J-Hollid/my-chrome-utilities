@@ -63,3 +63,9 @@
                       (:boundary observed))
                    "The publication/capture boundary duplicated, omitted, or mixed event revisions." observed)
   observed)
+
+(defn transition! [world example text entry-modes mode-key validate-example!]
+  (support/mode-transition
+   world example text entry-modes mode-key
+   verify-model! validate-example!
+   #(assert-runtime! (runtime-observation!))))

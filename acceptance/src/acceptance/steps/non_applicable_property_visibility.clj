@@ -24,10 +24,9 @@
    "Non-applicable property visibility example value was outside the specified contract."))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (support/mode-transition
+  (verification/transition!
    world example text entry-modes :non-applicable-property-visibility-mode
-   verification/verify-model! validate-example!
-   #(verification/assert-runtime! (verification/runtime-observation!))))
+   validate-example!))
 
 (def handlers
   (support/feature-mode-handlers

@@ -25,10 +25,8 @@
    "Schema publication refresh example value was outside the specified contract."))
 
 (defn- transition [world example _captures {:keys [text]}]
-  (support/mode-transition
-   world example text entry-modes :schema-publication-refresh-mode
-   verification/verify-model! validate-example!
-   #(verification/assert-runtime! (verification/runtime-observation!))))
+  (verification/transition!
+   world example text entry-modes :schema-publication-refresh-mode validate-example!))
 
 (def handlers
   (support/feature-mode-handlers
