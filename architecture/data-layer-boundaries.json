@@ -222,6 +222,10 @@
     "module": "capture",
     "layer": "browser"
   },
+  "src/data-layer-local-rule-editing.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
   "src/data-layer-local-rule-promotion-ui.ts": {
     "module": "schemas",
     "layer": "browser"
@@ -361,6 +365,10 @@
     ]
   },
   "src/data-layer-schema-rule-property-identity.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-reusable-rule-sync.ts": {
     "module": "schemas",
     "layer": "browser"
   },

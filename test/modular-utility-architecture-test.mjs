@@ -122,9 +122,11 @@ assert.ok(schemasPack.handlers.includes("acceptance/src/acceptance/steps/schema_
 assert.equal(schemasPack.handlers.includes("acceptance/src/acceptance/steps/recursive_property_validation.clj"),false);
 const publicationHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/schema_publication_refresh.clj",import.meta.url),"utf8");
 const visibilityHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",import.meta.url),"utf8");
+const aggregateHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/all.clj",import.meta.url),"utf8");
 assert.doesNotMatch(publicationHandlers,/data-layer-non-applicable-property-visibility/);
 assert.match(visibilityHandlers,/data-layer-non-applicable-property-visibility-runtime\.feature/);
 assert.doesNotMatch(visibilityHandlers,/data-layer-schema-publication-live-revalidation/);
+assert.match(aggregateHandlers,/non-applicable-property-visibility\/handlers/);
 const focused=planVerification(packs,{packIds:["schemas"]});assert.equal(focused.packIds.includes("schemas"),true);assert.equal(focused.packIds.includes("defects"),false);
 assert.deepEqual(focused.features,[...packs.find(({id})=>id==="schemas").features].sort());
 assert.deepEqual(focused.handlers,packs.find(({id})=>id==="schemas").handlers);

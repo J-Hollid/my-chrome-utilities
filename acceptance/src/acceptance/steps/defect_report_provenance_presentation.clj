@@ -120,20 +120,16 @@
     ["operator custom override" "add" "error_message response source: operator custom override"]
     ["exact-value rule revision metadata" "add" "error_action value-rule provenance: Exact value rule v1"]})
 
-(defn- validate-relation! [example keys allowed]
-  (when (every? #(support/example-value example %) keys)
-    (let [row (mapv #(support/example-value example %) keys)]
-      (support/assert! (contains? allowed row)
-                       "Provenance-presentation example row was outside the specified relationship."
-                       {:keys keys :row row :allowed allowed}))))
-
 (defn- validate-example! [mode example]
   (support/validate-mode-example-domain!
    mode runtime-example-values model-example-values example
    "Provenance-presentation example value was outside the specified contract.")
-  (validate-relation! example ["metadata" "forbidden_text"] model-provenance-relations)
-  (validate-relation! example ["operator_text" "prose_outcome"] operator-relations)
-  (validate-relation! example ["source_kind" "operation" "generated_line"] runtime-relations))
+  (support/validate-example-relations!
+   [{:keys ["metadata" "forbidden_text"] :rows model-provenance-relations}
+    {:keys ["operator_text" "prose_outcome"] :rows operator-relations}
+    {:keys ["source_kind" "operation" "generated_line"] :rows runtime-relations}]
+   example
+   "Provenance-presentation example row was outside the specified relationship."))
 
 (def handlers
   (support/verified-feature-mode-handlers
@@ -141,5 +137,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T10:25:24.790204364+02:00", :module-hash "-841842125", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-218813697"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-708140740"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1386558154"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1289951894"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-464715929"} {:id "def/generated-lines", :kind "def", :line 29, :end-line 34, :hash "-1500695546"} {:id "defn-/assert-runtime!", :kind "defn-", :line 36, :end-line 81, :hash "-1736577912"} {:id "def/model-example-values", :kind "def", :line 83, :end-line 92, :hash "-1090261672"} {:id "def/runtime-example-values", :kind "def", :line 94, :end-line 102, :hash "1157674472"} {:id "def/model-provenance-relations", :kind "def", :line 104, :end-line 109, :hash "-622510636"} {:id "def/operator-relations", :kind "def", :line 111, :end-line 114, :hash "-1241482875"} {:id "def/runtime-relations", :kind "def", :line 116, :end-line 121, :hash "-347488974"} {:id "defn-/validate-relation!", :kind "defn-", :line 123, :end-line 128, :hash "854533012"} {:id "defn-/validate-example!", :kind "defn-", :line 130, :end-line 136, :hash "-279533788"} {:id "def/handlers", :kind "def", :line 138, :end-line 141, :hash "-190219858"}]}
+;; {:version 1, :tested-at "2026-07-17T17:15:08.796800143+02:00", :module-hash "-596229941", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-218813697"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-708140740"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1386558154"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "1289951894"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-464715929"} {:id "def/generated-lines", :kind "def", :line 29, :end-line 34, :hash "-1500695546"} {:id "defn-/assert-runtime!", :kind "defn-", :line 36, :end-line 81, :hash "-1736577912"} {:id "def/model-example-values", :kind "def", :line 83, :end-line 92, :hash "-1090261672"} {:id "def/runtime-example-values", :kind "def", :line 94, :end-line 102, :hash "1157674472"} {:id "def/model-provenance-relations", :kind "def", :line 104, :end-line 109, :hash "-622510636"} {:id "def/operator-relations", :kind "def", :line 111, :end-line 114, :hash "-1241482875"} {:id "def/runtime-relations", :kind "def", :line 116, :end-line 121, :hash "-347488974"} {:id "defn-/validate-example!", :kind "defn-", :line 123, :end-line 132, :hash "1079377479"} {:id "def/handlers", :kind "def", :line 134, :end-line 137, :hash "-190219858"}]}
 ;; clj-mutate-manifest-end

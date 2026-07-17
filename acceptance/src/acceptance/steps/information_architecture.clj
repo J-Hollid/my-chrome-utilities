@@ -249,15 +249,6 @@
                                   "Wrong Data Layer panel is visible." {:view view})
                  world))}
 
-   {:pattern #"^the <([A-Za-z0-9_]+)> and <([A-Za-z0-9_]+)> panels are hidden$"
-    :handler (fn [world example [first-key second-key]]
-               (let [active (:active-data-layer-view world)
-                     hidden [(example-value example first-key) (example-value example second-key)]]
-                 (support/assert! (and (every? data-layer-secondary-views hidden)
-                                       (every? #(not= active %) hidden))
-                                  "An inactive Data Layer panel is visible." {:active active :hidden hidden})
-                 world))}
-
    {:pattern #"^the <([A-Za-z0-9_]+)>, <([A-Za-z0-9_]+)>, and <([A-Za-z0-9_]+)> panels are hidden$"
     :handler (fn [world example [first-key second-key third-key]]
                (let [active (:active-data-layer-view world)
@@ -342,7 +333,7 @@
                                        (not= view (:hidden-data-layer-view world)))
                                   "Browser selection does not hide the requested panel."
                                   {:selected view :hidden (:hidden-data-layer-view world)})
-                 (assoc world :active-data-layer-view view :browser-view? true :computed-panels? true)))}
+                 (assoc world :active-data-layer-view view :computed-panels? true)))}
 
    {:pattern #"^the <([A-Za-z0-9_]+)> panel has computed display none$"
     :handler (fn [world example [view-key]]
@@ -428,9 +419,7 @@
    {:pattern #"^the schema draft and editor values are restored unchanged$"
     :handler (fn [world _example _captures]
                (let [restored (:restored (require-schema-view-containment! world))]
-                 (support/assert! (= {:editorVisible true
-                                      :name "Unsaved checkout schema"
-                                      :closeReviewOpen false}
+                 (support/assert! (= {:editorVisible true :name "Unsaved checkout schema" :closeReviewOpen false}
                                      restored)
                                   "Schema draft was not restored unchanged."
                                   {:restored restored})
@@ -567,5 +556,5 @@
                world)}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-13T18:57:04.000711577+02:00", :module-hash "-1749717264", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1125669043"} {:id "defn-/inspect", :kind "defn-", :line 7, :end-line nil, :hash "1653053363"} {:id "defn-/example-value", :kind "defn-", :line 19, :end-line nil, :hash "-1416813660"} {:id "defn/palette-dialog?", :kind "defn", :line 22, :end-line nil, :hash "-1107160767"} {:id "defn/no-permanent-command-buttons?", :kind "defn", :line 31, :end-line nil, :hash "-963751556"} {:id "defn/navigation-structure?", :kind "defn", :line 36, :end-line nil, :hash "514241598"} {:id "defn/contextual-actions?", :kind "defn", :line 48, :end-line nil, :hash "1135250298"} {:id "defn-/run-production-module!", :kind "defn-", :line 62, :end-line nil, :hash "-1052184839"} {:id "defn-/runtime-live-session-controls", :kind "defn-", :line 70, :end-line nil, :hash "1205775888"} {:id "defn-/runtime-live-session-lifecycle", :kind "defn-", :line 79, :end-line nil, :hash "2083620538"} {:id "def/data-layer-secondary-views", :kind "def", :line 91, :end-line nil, :hash "-1480012677"} {:id "defn/data-layer-view-separation?", :kind "defn", :line 93, :end-line nil, :hash "-1906053387"} {:id "defn/distinct-hidden-data-layer-views?", :kind "defn", :line 100, :end-line nil, :hash "-672641782"} {:id "defn/hidden-panel-css-wins?", :kind "defn", :line 107, :end-line nil, :hash "-1823432900"} {:id "defn-/require-layout", :kind "defn-", :line 110, :end-line nil, :hash "-319387143"} {:id "def/expected-hidden-schema-presentation", :kind "def", :line 116, :end-line nil, :hash "286998898"} {:id "defn/schema-view-contained?", :kind "defn", :line 119, :end-line nil, :hash "572689398"} {:id "form/17/defonce", :kind "defonce", :line 135, :end-line nil, :hash "-661740018"} {:id "defn-/load-schema-view-containment!", :kind "defn-", :line 137, :end-line nil, :hash "1323435645"} {:id "defn-/observe-schema-view-containment", :kind "defn-", :line 150, :end-line nil, :hash "-1013975075"} {:id "defn-/require-schema-view-containment!", :kind "defn-", :line 153, :end-line nil, :hash "1803852679"} {:id "def/handlers", :kind "def", :line 160, :end-line nil, :hash "-1375149743"}]}
+;; {:version 1, :tested-at "2026-07-17T17:04:52.737039887+02:00", :module-hash "-189123691", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1125669043"} {:id "defn-/inspect", :kind "defn-", :line 7, :end-line 14, :hash "16173237"} {:id "defn-/example-value", :kind "defn-", :line 16, :end-line 17, :hash "-1416813660"} {:id "def/navigation-structure?", :kind "def", :line 19, :end-line 19, :hash "-1038435563"} {:id "defn/contextual-actions?", :kind "defn", :line 21, :end-line 33, :hash "478297384"} {:id "defn-/run-production-module!", :kind "defn-", :line 35, :end-line 41, :hash "-1052184839"} {:id "defn-/runtime-live-session-controls", :kind "defn-", :line 43, :end-line 50, :hash "1292895587"} {:id "defn-/runtime-live-session-lifecycle", :kind "defn-", :line 52, :end-line 62, :hash "2083620538"} {:id "def/data-layer-secondary-views", :kind "def", :line 64, :end-line 64, :hash "-1480012677"} {:id "defn/data-layer-view-separation?", :kind "defn", :line 66, :end-line 71, :hash "690393206"} {:id "defn/distinct-hidden-data-layer-views?", :kind "defn", :line 73, :end-line 78, :hash "-672641782"} {:id "defn/hidden-panel-css-wins?", :kind "defn", :line 80, :end-line 81, :hash "-1823432900"} {:id "defn-/require-layout", :kind "defn-", :line 83, :end-line 87, :hash "-319387143"} {:id "def/expected-hidden-schema-presentation", :kind "def", :line 89, :end-line 90, :hash "286998898"} {:id "defn/schema-view-contained?", :kind "defn", :line 92, :end-line 106, :hash "652808013"} {:id "form/15/defonce", :kind "defonce", :line 108, :end-line 108, :hash "-661740018"} {:id "defn-/load-schema-view-containment!", :kind "defn-", :line 110, :end-line 121, :hash "1323435645"} {:id "defn-/observe-schema-view-containment", :kind "defn-", :line 123, :end-line 124, :hash "-1013975075"} {:id "defn-/require-schema-view-containment!", :kind "defn-", :line 126, :end-line 131, :hash "1803852679"} {:id "def/handlers", :kind "def", :line 133, :end-line 556, :hash "-871534360"}]}
 ;; clj-mutate-manifest-end

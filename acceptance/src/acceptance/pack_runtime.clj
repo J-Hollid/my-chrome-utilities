@@ -62,3 +62,7 @@
     (load-handlers
      feature-path
      (distinct (concat shared-handler-namespaces registered)))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T16:54:33.889593767+02:00", :module-hash "-1807069731", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1162041876"} {:id "defn-/repository-root", :kind "defn-", :line 6, :end-line 6, :hash "-1385156089"} {:id "def/*runtime-cache*", :kind "def", :line 8, :end-line 8, :hash "-2018825370"} {:id "defn/cached-runtime!", :kind "defn", :line 10, :end-line 17, :hash "-1624468342"} {:id "defn-/handler-namespace", :kind "defn-", :line 19, :end-line 25, :hash "2043517374"} {:id "defn-/registered-handler-namespaces", :kind "defn-", :line 27, :end-line 40, :hash "1147614593"} {:id "defn-/namespace-handlers", :kind "defn-", :line 42, :end-line 45, :hash "791621491"} {:id "defn-/load-handlers", :kind "defn-", :line 47, :end-line 51, :hash "593457772"} {:id "def/shared-handler-namespaces", :kind "def", :line 53, :end-line 56, :hash "216436219"} {:id "defn/handlers-for-feature", :kind "defn", :line 58, :end-line 64, :hash "507782334"}]}
+;; clj-mutate-manifest-end

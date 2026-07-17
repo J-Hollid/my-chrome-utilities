@@ -15,7 +15,11 @@
           'acceptance.steps.hotkey-keymap
           'acceptance.steps.workspace-editor]
          (#'pack-runtime/registered-handler-namespaces
-          "features/side-panel-hotkey-keymap.feature"))))
+          "features/side-panel-hotkey-keymap.feature")))
+  (is (contains?
+       (set (#'pack-runtime/registered-handler-namespaces
+             "features/data-layer-multiple-observation-sources.feature"))
+       'acceptance.steps.observability-library)))
 
 (deftest loads-owned-handlers-and-rejects-unassigned-features
   (is (seq (pack-runtime/handlers-for-feature
@@ -24,3 +28,21 @@
        clojure.lang.ExceptionInfo
        #"Feature is not assigned to a verification pack"
        (pack-runtime/handlers-for-feature "features/unregistered.feature"))))
+
+(deftest caches-created-runtime-values-only-while-a-pack-cache-is-bound
+  (let [created (atom 0)
+        create! #(swap! created inc)]
+    (is (= [1 2]
+           [(pack-runtime/cached-runtime! :browser create!)
+            (pack-runtime/cached-runtime! :browser create!)]))
+    (is (= 2 @created)))
+  (let [cache (atom {:values {}})
+        created (atom 0)
+        create! #(swap! created inc)]
+    (binding [pack-runtime/*runtime-cache* cache]
+      (is (= [1 1 2]
+             [(pack-runtime/cached-runtime! :browser create!)
+              (pack-runtime/cached-runtime! :browser create!)
+              (pack-runtime/cached-runtime! :command create!)])))
+    (is (= 2 @created))
+    (is (= {:browser 1 :command 2} (:values @cache)))))

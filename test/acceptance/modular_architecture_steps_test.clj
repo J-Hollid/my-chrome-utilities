@@ -16,3 +16,11 @@
            (:status (runtime/run-feature! (gherkin/parse-file feature-file)
                                           modular/handlers)))
         feature-file)))
+
+(deftest modular-inspection-is-cached-after-validating-the-pack-boundary
+  (is (false? (#'modular/enough-verification-packs? (range 5))))
+  (is (true? (#'modular/enough-verification-packs? (range 6))))
+  (let [inspected (#'modular/inspect! {})]
+    (is (true? (:modular/inspected inspected)))
+    (is (seq (:modular/registry inspected)))
+    (is (identical? inspected (#'modular/inspect! inspected)))))

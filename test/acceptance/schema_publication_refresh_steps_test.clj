@@ -2,7 +2,11 @@
   (:require [acceptance.feature-support :as feature-support]
             [acceptance.steps.all :as all]
             [acceptance.steps.schema-publication-refresh :as publication]
-            [clojure.test :refer [deftest]]))
+            [acceptance.steps.schema-publication-refresh-support :as publication-support]
+            [clojure.test :refer [deftest is]]))
+
+(deftest model-verification-cache-starts-unverified
+  (is (false? @(#'publication-support/fresh-model-cache))))
 
 (deftest verifies-schema-publication-refresh-features
   (feature-support/verify-feature-suite!

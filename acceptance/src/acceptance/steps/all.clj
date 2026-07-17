@@ -39,10 +39,12 @@
             [acceptance.steps.lossless-observation-activation :as lossless-observation-activation]
             [acceptance.steps.local-rule-promotion :as local-rule-promotion]
             [acceptance.steps.local-rule-promotion-availability :as local-rule-promotion-availability]
+            [acceptance.steps.local-rule-editing :as local-rule-editing]
             [acceptance.steps.missing-event-defect-report :as missing-event-defect-report]
             [acceptance.steps.missing-event-payload-hardening :as missing-event-payload-hardening]
             [acceptance.steps.missing-event-report-fidelity :as missing-event-report-fidelity]
             [acceptance.steps.live-validation-visuals :as live-validation-visuals]
+            [acceptance.steps.non-applicable-property-visibility :as non-applicable-property-visibility]
             [acceptance.steps.observability-library :as observability-library]
             [acceptance.steps.observation-targets :as observation-targets]
             [acceptance.steps.operator-interface :as operator-interface]
@@ -74,13 +76,13 @@
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
-            [acceptance.steps.non-applicable-property-visibility :as non-applicable-property-visibility]
             [acceptance.steps.json-schema-export :as json-schema-export]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
+            [acceptance.steps.reusable-rule-sync :as reusable-rule-sync]
             [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
@@ -118,10 +120,12 @@
                unified-defect-builder/handlers
                local-rule-promotion/handlers
                local-rule-promotion-availability/handlers
+               local-rule-editing/handlers
+               reusable-rule-sync/handlers
                live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
-               schema-publication-refresh/handlers
                non-applicable-property-visibility/handlers
+               schema-publication-refresh/handlers
                defect-library/handlers
                validation-presence-semantics/handlers
                missing-event-defect-report/handlers

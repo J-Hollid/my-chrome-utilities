@@ -27,3 +27,19 @@
     (session/run-session! "schemas" "build-b" [{:generated "two" :ir "two"}] observe!)
     (session/run-session! "defects" "build-b" [{:generated "three" :ir "three"}] observe!)
     (is (= 3 @created))))
+
+(deftest rejects-incomplete-session-invocations
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"Provide a verification pack id"
+       (session/-main nil)))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"Provide generated-entrypoint/IR pairs"
+       (#'session/entries [])))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"Provide generated-entrypoint/IR pairs"
+       (#'session/entries ["generated-only"])))
+  (is (= [{:generated "generated-a" :ir "ir-a"}]
+         (#'session/entries ["generated-a" "ir-a"]))))

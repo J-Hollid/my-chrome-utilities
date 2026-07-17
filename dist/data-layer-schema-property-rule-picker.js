@@ -94,6 +94,7 @@ export function createRuleConfiguration(ruleType, propertyType) {
         limit: "",
         severity: "error",
         message: "",
+        enabled: true,
         saveReusable: false,
         reusableName: "",
         description: "",
@@ -187,10 +188,32 @@ export function configuredRuleDetails(configuration) {
 }
 export function createRuleConfigurationFromAttachedRule(ruleType, propertyType, rule) {
     const configuration = createRuleConfiguration(ruleType, propertyType);
-    return {
+    const configured = {
         ...configuration,
-        comparison: rule.comparison ?? (ruleType === "Text length" ? "==" : ">="),
-        limit: String(rule.limit ?? rule.parameters ?? ""),
+        severity: rule.severity ?? configuration.severity,
+        message: rule.message ?? "",
+        enabled: rule.enabled !== false,
+        ...(rule.conditionGroup ? {
+            applyOnlyWhen: true,
+            conditionGroupOperator: rule.conditionGroup.operator,
+            conditions: Array.from(structuredClone(rule.conditionGroup.predicates)),
+        } : {}),
     };
+    if (ruleType === "Exact value")
+        configured.exactValue = rule.parameters ?? "";
+    if (ruleType === "Allowed values")
+        configured.allowedValues = (rule.allowedValues ?? rule.parameters?.split(",") ?? []).map(String);
+    if (ruleType === "Regular expression")
+        configured.pattern = rule.parameters ?? "";
+    if (ruleType === "Numeric range") {
+        const [minimum = "", maximum = ""] = (rule.parameters ?? ",").split(",", 2);
+        configured.minimum = minimum;
+        configured.maximum = maximum;
+    }
+    if (ruleType === "Text length" || ruleType === "Item count") {
+        configured.comparison = rule.comparison ?? (ruleType === "Text length" ? "==" : ">=");
+        configured.limit = String(rule.limit ?? rule.parameters ?? "");
+    }
+    return configured;
 }
 //# sourceMappingURL=data-layer-schema-property-rule-picker.js.map

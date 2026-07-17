@@ -88,31 +88,19 @@
    world :operator-action :operator-observations
    "shared operator action" text example))
 
-(defn- record-context [world text example]
-  (update world :operator-context (fnil conj [])
-          {:text text :example example}))
-
-(defn- record-action [world text example]
-  (assoc world :operator-action {:text text :example example}))
-
-(defn- record-observation [world text example]
-  (observe world text example))
-
-(defn- record-context-and-observation [world text example]
-  (observe (record-context world text example) text example))
-
-(def transitions-by-keyword
-  {"Given" record-context
-   "When" record-action
-   "Then" record-observation
-   "And" record-context-and-observation})
-
 (defn- transition [world example captures {:keys [keyword text]}]
   (let [example (operator-support/validate-example!
                  example
                  (support/capture-placeholder-keys captures))
         world (update world :operator-history (fnil conj []) text)]
-    ((get transitions-by-keyword keyword) world text example)))
+    (case keyword
+      "Given" (update world :operator-context (fnil conj []) {:text text :example example})
+      "When" (assoc world :operator-action {:text text :example example})
+      "Then" (observe world text example)
+      "And" (observe (update world :operator-context (fnil conj [])
+                             {:text text :example example})
+                     text
+                     example))))
 
 (def handlers
   (mapv #(assoc % :applies? (fn [world]

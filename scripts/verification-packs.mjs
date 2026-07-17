@@ -216,7 +216,6 @@ function acceptanceCommands(features, packs) {
     ),
   ];
 }
-
 function acceptanceSelection(packs, ordered, packIds, changedFeatures, changedOwners, terminalFull) {
   if (terminalFull) return packs;
   if (changedFeatures.length) {
