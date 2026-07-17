@@ -162,7 +162,10 @@ for (let sample = 0; sample < 100; sample += 1) {
       .map((dependency) => `pack-${dependency}`),
     unit:[`test/unit-${sample}-${index}.mjs`],
     property:[`test/property-${sample}-${index}.mjs`],
-    features:[`features/feature-${sample}-${index}.feature`],
+    features:Array.from(
+      { length:1 + (sample + index) % 3 },
+      (_, featureIndex) => `features/feature-${sample}-${index}-${featureIndex}.feature`,
+    ),
     handlers:[`acceptance/handler-${sample}-${index}.clj`],
     browserAdapters:[`test/browser-${sample}-${index}.mjs`],
   }));
@@ -185,7 +188,13 @@ for (let sample = 0; sample < 100; sample += 1) {
   const executeCommands = plan.commands.filter((command) => command.includes("_acceptance_test.clj "));
   assert.equal(parseCommands.length, plan.features.length);
   assert.equal(generateCommands.length, plan.features.length);
-  assert.equal(executeCommands.length, plan.features.length);
+  assert.equal(executeCommands.length, expected.size,
+    "generated plans must schedule one acceptance session per selected pack");
+  for (const feature of plan.features) {
+    const generated = `${feature.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "")}_acceptance_test.clj`;
+    assert.equal(executeCommands.filter((command) => command.includes(generated)).length, 1,
+      "each generated entry point must belong to exactly one acceptance session");
+  }
   assert.ok(plan.commands.indexOf(parseCommands.at(-1)) < plan.commands.indexOf(generateCommands[0]));
   assert.ok(plan.commands.indexOf(generateCommands.at(-1)) < plan.commands.indexOf(executeCommands[0]));
 
