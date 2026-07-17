@@ -10,7 +10,8 @@
   #{"schema Page view working draft is open in the schema editor"
     "its property tree contains page_type, commerce.order.id, and products"
     "the built extension side panel is running with the production Schema Library, schema editor, property tree, rules, documentation, and persistence"})
-(def feature-names (set (map (comp :name gherkin/parse-file) feature-files)))
+(def ^:private feature-names
+  (set (map (comp :name gherkin/parse-file) feature-files)))
 (defonce ^:private observation (atom nil))
 
 (defn- browser-observation! []
