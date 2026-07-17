@@ -117,6 +117,20 @@
                       (transition world example captures spec))})
         step-specs))
 
+(defn feature-scoped-stateful-handlers
+  [feature-files entry-step? state-key transition]
+  (let [feature-names (set (map (comp :name gherkin/parse-file) feature-files))]
+    (mapv (fn [{:keys [applies?] :as handler}]
+            (assoc handler :applies? (fn [world]
+                                       (and (contains? feature-names
+                                                       (:acceptance/feature-name world))
+                                            (boolean (applies? world))))))
+          (stateful-semantic-handlers
+           (feature-step-specs feature-files #{})
+           entry-step?
+           state-key
+           transition))))
+
 (defn stateful-feature-handlers
   [feature-file entry-step state-key transition]
   (stateful-semantic-handlers
