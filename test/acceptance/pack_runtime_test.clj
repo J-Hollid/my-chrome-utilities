@@ -1,21 +1,22 @@
 (ns acceptance.pack-runtime-test
   (:require [acceptance.pack-runtime :as pack-runtime]
-            [acceptance.steps.all :as all]
             [clojure.test :refer [deftest is]]))
 
 (deftest resolves-handler-namespaces-from-pack-ownership
   (is (= 'acceptance.steps.schema-verification
          (#'pack-runtime/handler-namespace
           "acceptance/src/acceptance/steps/schema_verification.clj")))
-  (is (= ['acceptance.steps.palette]
+  (is (= ['acceptance.steps.command-registry]
          (#'pack-runtime/registered-handler-namespaces
           "features/simple-command-palette.feature")))
-  (is (= ['acceptance.steps.palette 'acceptance.steps.hotkey-keymap]
+  (is (= ['acceptance.steps.command-registry 'acceptance.steps.hotkey-keymap]
          (#'pack-runtime/registered-handler-namespaces
           "features/side-panel-hotkey-keymap.feature"))))
 
-(deftest loads-owned-and-fallback-handlers
+(deftest loads-owned-handlers-and-rejects-unassigned-features
   (is (seq (pack-runtime/handlers-for-feature
             "features/data-layer-schema-verification.feature")))
-  (is (= all/handlers
-         (pack-runtime/handlers-for-feature "features/unregistered.feature"))))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"Feature is not assigned to a verification pack"
+       (pack-runtime/handlers-for-feature "features/unregistered.feature"))))

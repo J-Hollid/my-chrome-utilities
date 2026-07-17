@@ -1,10 +1,2 @@
-export * from "../../data-layer-defect-report-ui.js";
-export * from "../../data-layer-event-occurrence-defect-report-ui.js";
-export * from "../../data-layer-event-occurrence-defect-report.js";
-export * from "../../data-layer-defect-report.js";
-export * from "../../data-layer-defect-report-browser.js";
-export * from "../../data-layer-missing-event-defect-report-ui.js";
-export * from "../../data-layer-missing-event-defect-report.js";
-export * from "../../data-layer-defect-library.js";
-export * from "../../data-layer-defect-library-ui.js";
-export * from "../../data-layer-defect-library-copy.js";
+export { GeneratedDefectReport, renderJiraReport } from "./layers/application/defect-reporting.js";
+export { DEFECT_LIBRARY_STORAGE_KEY, DefectLibrary, DefectStatus, MissingEventBuilderController, MissingEventReport, OccurrenceReport, ReportedDefect, addDefect, attachSavedSessionToDefect, browserDefectReportClipboard, cancelDefectDeletion, confirmDefectDeletion, copyStoredDefectForJira, createLiveDefectReportNavigation, createMissingEventDefect, createOccurrenceDefect, createValidationDefect, currentDefectIssues, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, findDefectLibraryElements, generateMissingEventRepresentations, missingEventVisits, presentedEventTriage, renderDefectLibrary, renderDefectReportBuilder, renderMissingEventDefectReportBuilder, renderOccurrenceDefectReportBuilder, renderOccurrenceReport, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus } from "./layers/browser/defect-reporting.js";
