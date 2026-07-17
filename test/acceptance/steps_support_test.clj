@@ -58,6 +58,22 @@
     (is ((:applies? handler) {:acceptance/feature-name "Data layer schema specification example selection"}))
     (is (not ((:applies? handler) {:acceptance/feature-name "Data layer schema specification builder customization"})))))
 
+(deftest stateful-handlers-are-scoped-to-their-own-feature
+  (let [feature-file "features/data-layer-schema-specification-example-selection.feature"
+        feature-name "Data layer schema specification example selection"
+        entry "the specification builder is open for Generic pageview revision 4"
+        handlers (support/feature-scoped-stateful-handlers
+                  [feature-file] #{entry} :example-state
+                  (fn [world _ _ _] world))
+        entry-handler (some #(when (re-matches (:pattern %) entry) %) handlers)
+        later-handler (first (remove #{entry-handler} handlers))]
+    (is ((:applies? entry-handler) {:acceptance/feature-name feature-name}))
+    (is (not ((:applies? entry-handler)
+              {:acceptance/feature-name "Data layer schema specification builder customization"})))
+    (is (not ((:applies? later-handler) {:acceptance/feature-name feature-name})))
+    (is ((:applies? later-handler)
+         {:acceptance/feature-name feature-name :example-state true}))))
+
 (deftest validates-mode-specific-example-domains-and-relations-together
   (let [runtime-values {"left" #{"runtime"} "right" #{"value"}}
         model-values {"left" #{"model"} "right" #{"value"}}
