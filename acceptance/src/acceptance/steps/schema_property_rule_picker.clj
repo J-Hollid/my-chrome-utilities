@@ -127,7 +127,7 @@
   (support/assert! (and (some #(str/includes? % "regular expression · no parameters · type string") (:metadata observed))
                         (some #(str/includes? % "homepage, checkout · type string · version 2") (:metadata observed)))
                    "Rule results omitted readable compatibility metadata." observed)
-  (support/assert! (str/includes? (:builtInConfiguration observed) "Configure Regular expression for page_type")
+  (support/assert! (str/includes? (:builtInConfiguration observed) "Configure Regular expression for /page_type")
                    "Built-in rule selection did not open local configuration." observed)
   (support/assert! (= {:pickerClosed true :focusReturned true :activeCount " (1 active rules)" :draftRules 1 :currentRules 0 :currentVersion 3} (:attached observed))
                    "Reusable rule attachment did not remain isolated in the working draft." observed)

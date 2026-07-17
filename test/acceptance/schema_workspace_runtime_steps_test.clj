@@ -20,7 +20,7 @@
               :reloaded {:schemas ["schema:checkout" "schema:order"]
                          :rules ["rule:page-type" "rule:channel"]}}
    :reload {:stored 2 :rendered 2}
-   :rules {:actions ["Disable" "Remove"]
+   :rules {:actions ["Edit" "Disable" "Remove"]
            :menuOpen true :returnFocus true :stateReturnFocus true
            :reenable "Re-enable" :revisionReview {:open true}}
    :assignment {:sourceId "event-history" :priority 120}

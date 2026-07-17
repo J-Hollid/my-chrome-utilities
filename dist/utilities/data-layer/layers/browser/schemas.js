@@ -3,6 +3,8 @@ export { renderAssignmentDataConditionEditor } from "../../../../data-layer-sche
 export { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport } from "../../../../data-layer-json-schema-export.js";
 export { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "../../../../data-layer-schema-manual-property.js";
 export { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion } from "../../../../data-layer-local-rule-promotion.js";
+export { inspectLocalRuleEdit, saveLocalRuleEdit } from "../../../../data-layer-local-rule-editing.js";
+export { publishReusableRuleSync, reviewReusableRuleSync } from "../../../../data-layer-reusable-rule-sync.js";
 export { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "../../../../data-layer-guided-validation.js";
 export { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "../../../../data-layer-allowed-value-expansion.js";
 export { SCHEMA_LIBRARY_STORAGE_KEY, assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchema, duplicateSchemaRevision, exportSchema, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaLibrary, restoreSchemaRevisionDraft, reviseSchema, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema } from "../../../../data-layer-schema-verification.js";

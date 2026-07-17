@@ -48,6 +48,8 @@ let schemaPublicationRefreshObservation;
 let allowedValueExpansionObservation;
 let localRulePromotionObservation;
 let localRulePromotionAvailabilityObservation;
+let localRuleEditingObservation;
+let reusableRuleSyncObservation;
 let liveGuidedConditionalRuleObservation;
 let savedEventFeedFiltersObservation;
 let defectReportUndeclaredRemovalObservation;
@@ -80,7 +82,8 @@ const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
+const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" ? [720]
+  : process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1" ? [320]
   : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
   : process.env.SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER === "1" || process.env.SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER === "1" ? [720]
@@ -1446,11 +1449,12 @@ const schemaAssignmentRuntime = `(() => {
   attachedSummary.click();
   const attachedRules = q("#schema-property-tree details[data-attached-rules]");
   const propertyRuleActions = Array.from(attachedRules.querySelectorAll("button")).map((button) => button.textContent);
-  attachedRules.querySelector("button").click();
+  Array.from(attachedRules.querySelectorAll("button")).find((button) => button.textContent === "Disable").click();
   const propertyStateReturnFocus = document.activeElement?.dataset.schemaPropertyPath === "example";
   Array.from(q("#schema-property-tree").querySelectorAll("summary")).find((summary) => summary.textContent === "View attached rules (1)").click();
-  const reenable = q("#schema-property-tree details[data-attached-rules] button").textContent;
-  q("#schema-property-tree details[data-attached-rules] button").click();
+  const reenableButton = Array.from(q("#schema-property-tree details[data-attached-rules]").querySelectorAll("button")).find((button) => button.textContent === "Re-enable");
+  const reenable = reenableButton.textContent;
+  reenableButton.click();
   q("#schema-subview-rules").click();
   Array.from(q("#schema-rule-list").querySelectorAll("button")).filter((button) => button.textContent === "Edit").at(-1).click();
   input("#schema-rule-parameters", "product,checkout,confirmation");
@@ -4497,6 +4501,47 @@ const localRulePromotionOpenRuntime = `(() => {
   return {localCount:row.querySelectorAll(".local-rule-promotion-action:enabled").length,reusableCount:0,inheritedCount:0,scroll:detail.scrollTop,focused:document.activeElement?.dataset.ruleId};
 })()`;
 
+const localRuleEditingSeedRuntime = `(() => {
+  localStorage.clear();
+  const document={type:"object",properties:{page_type:{type:"string"},page_name:{type:"string"},unrelated:{type:"string"}}};
+  const local40={id:"local-40",name:"Known page types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["page","product","checkout"],severity:"error",message:"First rule",enabled:true};
+  const local41={id:"local-41",name:"Known page types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["page","product"],severity:"warning",message:"Choose a known page type",enabled:true};
+  const localRegex={id:"local-regex",name:"Page name format",version:1,propertyPath:"/page_name",operator:"regular-expression",parameters:"^[a-z]+$",severity:"error",enabled:true};
+  const reusable={id:"reusable-51",name:"Approved page names",version:2,propertyPath:"/page_name",operator:"allowed-values",allowedValues:["home"],severity:"warning",enabled:true};
+  const page={id:"schema-page-view",name:"Page view",version:3,published:true,document,assignments:[],attachedRules:[local40,local41,localRegex,reusable],revisionHistory:[]};
+  const library=[{...reusable,kind:"Allowed values",attachments:[page.id],revisionHistory:[]}];
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([page]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify(library));return true;
+})()`;
+
+const localRuleEditingRuntime = `(async()=>{
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!value)throw new Error("Missing "+label);value.click();return value;};
+  q("#data-layer-view-schemas").click();click(q("#schema-list"),"Edit working draft");
+  const property=(path)=>q('li[data-schema-property-path="'+path+'"]');const disclosure=(path)=>q("details[data-attached-rules]",property(path));disclosure("page_type").open=true;
+  const edit=(id)=>click(q('.schema-attached-rule[data-rule-id="'+id+'"]'),"Edit");
+  edit("local-41");const dialog=q("#schema-property-rule-picker");
+  const opened={heading:q("#schema-property-rule-picker-heading",dialog).textContent,context:dialog.querySelector("p").textContent,values:Array.from(dialog.querySelectorAll("#schema-local-rule-allowed-values input"),({value})=>value),severity:q("#schema-local-rule-severity",dialog).value,message:q("#schema-local-rule-message",dialog).value,enabled:q("#schema-local-rule-enabled",dialog).checked,reusableMetadata:dialog.querySelector("#schema-local-rule-reusable")!==null,focused:dialog.contains(document.activeElement)};
+  const beforeCancel=localStorage.getItem("my-chrome-utilities.schema-library.v1");const cancelledInput=q("#schema-local-rule-allowed-value-1",dialog);cancelledInput.value="cancelled";cancelledInput.dispatchEvent(new Event("input",{bubbles:true}));click(dialog,"Cancel");edit("local-41");const cancelled={storageUnchanged:beforeCancel===localStorage.getItem("my-chrome-utilities.schema-library.v1"),reopened:Array.from(dialog.querySelectorAll("#schema-local-rule-allowed-values input"),({value})=>value)};click(dialog,"Add another value");const checkout=q("#schema-local-rule-allowed-value-3",dialog);checkout.value="checkout";checkout.dispatchEvent(new Event("input",{bubbles:true}));click(dialog,"Save changes");await pause();
+  const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0];const draftRule=stored.workingDraft.attachedRules.find(({id})=>id==="local-41");const saved={version:stored.version,published:stored.attachedRules.find(({id})=>id==="local-41").allowedValues,draft:draftRule.allowedValues,index:stored.workingDraft.attachedRules.findIndex(({id})=>id==="local-41"),first:stored.workingDraft.attachedRules.find(({id})=>id==="local-40").allowedValues,pending:stored.workingDraft.pendingChanges,open:disclosure("page_type").open,focused:document.activeElement?.dataset.schemaPropertyPath};
+  disclosure("page_name").open=true;const beforeInvalid=localStorage.getItem("my-chrome-utilities.schema-library.v1");edit("local-regex");const pattern=q("#schema-local-rule-pattern",dialog);pattern.value="[";pattern.dispatchEvent(new Event("input",{bubbles:true}));const invalid={assistance:q("#schema-local-rule-assistance",dialog).textContent,saveDisabled:click.bind(null),button:Array.from(dialog.querySelectorAll("button")).find(({textContent})=>textContent==="Save changes").disabled};click(dialog,"Cancel");invalid.storageUnchanged=beforeInvalid===localStorage.getItem("my-chrome-utilities.schema-library.v1");delete invalid.saveDisabled;
+  edit("reusable-51");const routed={ruleLibrary:q("#schema-subview-rules").getAttribute("aria-selected"),reusableEditor:!q("#schema-rule-editor").hidden,name:q("#schema-rule-name").value,localDialog:dialog.open};
+  const verification=await import("/data-layer-schema-verification.js");const active={...stored,document:stored.workingDraft.document,assignments:stored.workingDraft.assignments,attachedRules:stored.workingDraft.attachedRules};const preview=verification.validateWithSchema({sourceId:"history",eventName:"page_view",payload:{page_type:"checkout",page_name:"home"},rawInput:[]},active,[active]);
+  return{opened,cancelled,saved,invalid,routed,previewIssues:preview.issues.filter(({instancePath})=>instancePath==="/page_type").length};
+})()`;
+
+const reusableRuleSyncSeedRuntime = `(() => {
+  localStorage.clear();const document={type:"object",properties:{page_type:{type:"string"},page_name:{type:"string"}}};const attachment=(path)=>({id:"reusable-51",name:"Approved page types",version:1,propertyPath:path,operator:"allowed-values",allowedValues:["page","product"],severity:"warning"});
+  const schema=(id,name,version,rules)=>({id,name,version,published:true,document,assignments:[],attachedRules:rules,revisionHistory:[]});const page=schema("schema-page","Page view",3,[attachment("/page_type"),attachment("/page_name")]);const product=schema("schema-product","Product detail",5,[attachment("/page_type")]);const other=schema("schema-other","Other",7,[{id:"other",version:1,propertyPath:"/page_type",operator:"required"}]);
+  const rule={id:"reusable-51",name:"Approved page types",kind:"Allowed values",version:1,operator:"allowed-values",allowedValues:["page","product"],severity:"warning",enabled:true,attachments:[page.id,product.id],revisionHistory:[]};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([page,product,other]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([rule]));return true;
+})()`;
+
+const reusableRuleSyncRuntime = `(async()=>{
+  const pause=()=>new Promise((resolve)=>setTimeout(resolve,0));const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!value)throw new Error("Missing "+label);value.click();return value;};
+  q("#data-layer-view-schemas").click();q("#schema-subview-rules").click();const before=localStorage.getItem("my-chrome-utilities.schema-library.v1");let row=q('[data-rule-id="reusable-51"]');click(row,"Edit");const parameters=q("#schema-rule-parameters");parameters.value="page, product, checkout";parameters.dispatchEvent(new Event("input",{bubbles:true}));q("#save-schema-rule").click();q("#confirm-schema-rule-revision-review").click();await pause();const savedRule=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1"))[0];row=q('[data-rule-id="reusable-51"]');const sync=Array.from(row.querySelectorAll("button")).find(({textContent})=>textContent==="Sync attached schemas and publish revisions");if(!sync)throw new Error("Missing sync after save: "+JSON.stringify(savedRule)+" row="+row.textContent);const saved={schemasUnchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),version:savedRule.version,values:savedRule.allowedValues,action:Boolean(sync)};const action=()=>sync.click();action();const dialog=q("#schema-rule-sync-review");const review={summary:q("#schema-rule-sync-review-summary",dialog).textContent,confirmDisabled:q("#confirm-schema-rule-sync",dialog).disabled};click(dialog,"Cancel");review.cancelled=before===localStorage.getItem("my-chrome-utilities.schema-library.v1");
+  action();const original=Storage.prototype.setItem;let failed=false;Storage.prototype.setItem=function(key,value){if(!failed&&key==="my-chrome-utilities.schema-library.v1"){failed=true;throw new Error("publication fails");}return original.call(this,key,value);};try{q("#confirm-schema-rule-sync",dialog).click();}finally{Storage.prototype.setItem=original;}await pause();const failure={unchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),message:q("#schema-rule-sync-review-summary",dialog).textContent};click(dialog,"Cancel");action();q("#confirm-schema-rule-sync",dialog).click();await pause();const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));const page=stored.find(({id})=>id==="schema-page"),product=stored.find(({id})=>id==="schema-product"),other=stored.find(({id})=>id==="schema-other");return{saved,review,failure,published:{versions:[page.version,product.version,other.version],pageRules:page.attachedRules.map(({id,version})=>[id,version]),productRules:product.attachedRules.map(({id,version})=>[id,version]),historical:[page.revisionHistory.at(-1).attachedRules.map(({version})=>version),product.revisionHistory.at(-1).attachedRules.map(({version})=>version)],values:page.attachedRules[0].allowedValues,workingDrafts:stored.filter(({workingDraft})=>workingDraft).length}};
+})()`;
+
 const localRulePromotionReusableOriginRuntime = `(() => {
   const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const source=schemas[0].workingDraft.attachedRules.find(({id})=>id==="local-41");
   localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{...source,kind:"Allowed values",version:2,attachments:[schemas[0].id],revisionHistory:[]} ])); return true;
@@ -4785,6 +4830,23 @@ try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
     const socket = await openPanel(port, width);
+    if (process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,localRuleEditingSeedRuntime);await reloadPanel(socket);localRuleEditingObservation=await evaluate(socket,localRuleEditingRuntime);
+      assert.deepEqual(localRuleEditingObservation.opened.values,["page","product"]);assert.equal(localRuleEditingObservation.opened.severity,"warning");assert.equal(localRuleEditingObservation.opened.enabled,true);assert.equal(localRuleEditingObservation.opened.reusableMetadata,false);assert.match(localRuleEditingObservation.opened.context,/Local rule origin.*\/page_type/);assert.equal(localRuleEditingObservation.opened.focused,true);
+      assert.deepEqual(localRuleEditingObservation.cancelled,{storageUnchanged:true,reopened:["page","product"]});
+      assert.deepEqual(localRuleEditingObservation.saved.published,["page","product"]);assert.deepEqual(localRuleEditingObservation.saved.draft,["page","product","checkout"]);assert.deepEqual(localRuleEditingObservation.saved.first,["page","product","checkout"]);assert.equal(localRuleEditingObservation.saved.index,1);assert.equal(localRuleEditingObservation.saved.version,3);assert.match(localRuleEditingObservation.saved.pending.at(-1),/Edit Known page types at \/page_type/);assert.equal(localRuleEditingObservation.saved.open,true);assert.equal(localRuleEditingObservation.previewIssues,0);
+      assert.match(localRuleEditingObservation.invalid.assistance,/Correct the regular expression/);assert.equal(localRuleEditingObservation.invalid.button,true);assert.equal(localRuleEditingObservation.invalid.storageUnchanged,true);assert.deepEqual(localRuleEditingObservation.routed,{ruleLibrary:"true",reusableEditor:true,name:"Approved page names",localDialog:false});
+      socket.close();continue;
+    }
+    if (process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,reusableRuleSyncSeedRuntime);await reloadPanel(socket);reusableRuleSyncObservation=await evaluate(socket,reusableRuleSyncRuntime);
+      assert.deepEqual(reusableRuleSyncObservation.saved,{schemasUnchanged:true,version:2,values:["page","product","checkout"],action:true});
+      assert.match(reusableRuleSyncObservation.review.summary,/2 schemas and 3 attachments.*Page view revision 3 to 4.*Product detail revision 5 to 6/);assert.deepEqual({disabled:reusableRuleSyncObservation.review.confirmDisabled,cancelled:reusableRuleSyncObservation.review.cancelled},{disabled:false,cancelled:true});assert.equal(reusableRuleSyncObservation.failure.unchanged,true);assert.match(reusableRuleSyncObservation.failure.message,/No schema revision was published.*publication fails/);
+      assert.deepEqual(reusableRuleSyncObservation.published.versions,[4,6,7]);assert.deepEqual(reusableRuleSyncObservation.published.pageRules,[["reusable-51",2],["reusable-51",2]]);assert.deepEqual(reusableRuleSyncObservation.published.productRules,[["reusable-51",2]]);assert.deepEqual(reusableRuleSyncObservation.published.historical,[[1,1],[1]]);assert.deepEqual(reusableRuleSyncObservation.published.values,["page","product","checkout"]);assert.equal(reusableRuleSyncObservation.published.workingDrafts,0);
+      await evaluate(socket,reusableRuleSyncSeedRuntime);await evaluate(socket,`(()=>{const key="my-chrome-utilities.schema-library.v1",schemas=JSON.parse(localStorage.getItem(key)),product=schemas.find(({id})=>id==="schema-product");product.workingDraft={baseVersion:5,sourceVersion:5,document:product.document,assignments:[],attachedRules:product.attachedRules,pendingChanges:["Unrelated"]};localStorage.setItem(key,JSON.stringify(schemas));const ruleKey="my-chrome-utilities.schema-rule-library.v1",rules=JSON.parse(localStorage.getItem(ruleKey));rules[0]={...rules[0],version:2,allowedValues:["page","product","checkout"]};localStorage.setItem(ruleKey,JSON.stringify(rules));return true;})()`);await reloadPanel(socket);
+      reusableRuleSyncObservation.blocked=await evaluate(socket,`(()=>{document.querySelector("#data-layer-view-schemas").click();document.querySelector("#schema-subview-rules").click();const row=document.querySelector('[data-rule-id="reusable-51"]');Array.from(row.querySelectorAll("button")).find(({textContent})=>textContent==="Sync attached schemas and publish revisions").click();return{summary:document.querySelector("#schema-rule-sync-review-summary").textContent,disabled:document.querySelector("#confirm-schema-rule-sync").disabled,draft:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({id})=>id==="schema-product").workingDraft.pendingChanges};})()`);
+      assert.match(reusableRuleSyncObservation.blocked.summary,/Publish or discard the Product detail draft first/);assert.equal(reusableRuleSyncObservation.blocked.disabled,true);assert.deepEqual(reusableRuleSyncObservation.blocked.draft,["Unrelated"]);socket.close();continue;
+    }
     if (process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1") {
       arrayValidationRollupObservation=await evaluate(socket,`(async()=>{
         const verification=await import("/data-layer-schema-verification.js"),ui=await import("/data-layer-live-observer-ui.js");
@@ -6300,7 +6362,7 @@ try {
       closeReview:{ open:false, summary:"", result:"Working draft retained without publishing." },
       rows:["Checkout schema automatic · event-history/page_view · payload · No data conditions · anyany · priority 120 · pinned · disabled · Checkout schema", "Checkout schema automatic · event-history/page_view · raw input · No data conditions · shop.example/order-confirmation · priority 100 · follow latest · enabled · Checkout schema"],
       assignment:{ sourceId:"event-history", eventName:"page_view", target:"payload", id:"assignment:schema:checkout-schema:1:page_view", name:"Checkout schema automatic", priority:120, versionPolicy:"pinned", enabled:false, pathnameCondition:null },
-      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
+      propertyRule:{ menuOpen:true, returnFocus:true, stateReturnFocus:true, summary:"View attached rules (1)", actions:["Edit", "Disable", "Remove"], reenable:"Re-enable", revisionReview:{ open:true, summary:"Known page types v1 will become Known page types v2; parameters product,checkout → product,checkout,confirmation; examples product, checkout → product, checkout." }, ruleExportName:"known-page-types-v2.json" },
       storedPropertyRule:{ attached:true, version:1, enabled:true, propertyPath:"/example" },
       rule:{ initialSeverity:"warning", name:"Known page types", version:2, enabled:true, operator:"allowed-values", allowedValues:["product","checkout","confirmation"], severity:"error", message:"Use a known page type", examples:"product, checkout", attachments:[] },
     }, `Schema rule persistence and assignment editor fields failed their ${width}px browser contract`);
@@ -6528,6 +6590,12 @@ try {
   }
   if (process.env.LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ localRulePromotionAvailability:localRulePromotionAvailabilityObservation }));
+  }
+  if (process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ localRuleEditing:localRuleEditingObservation }));
+  }
+  if (process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ reusableRuleSync:reusableRuleSyncObservation }));
   }
   if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveGuidedConditionalRule:liveGuidedConditionalRuleObservation }));
