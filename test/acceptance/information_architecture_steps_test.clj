@@ -1,5 +1,7 @@
 (ns acceptance.information-architecture-steps-test
-  (:require [acceptance.steps.information-architecture :as information-architecture]
+  (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.information-architecture :as information-architecture]
+            [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest excludes-command-palette-handler-ownership
@@ -54,3 +56,28 @@
             (assoc contained-schema-observation :containedControls false))))
   (is (not (information-architecture/schema-view-contained?
             (assoc-in contained-schema-observation [:restored :name] "")))))
+
+(deftest navigation-information-architecture-features-exercise-owned-handlers
+  (reset! information-architecture/schema-view-containment-observation
+          contained-schema-observation)
+  (try
+    (doseq [feature-file ["features/side-panel-navigation-information-architecture.feature"
+                          "features/data-layer-secondary-view-separation.feature"]]
+      (is (= :passed
+             (:status
+              (runtime/run-feature! (gherkin/parse-file feature-file)
+                                    information-architecture/handlers)))
+          feature-file))
+    (finally
+      (reset! information-architecture/schema-view-containment-observation nil))))
+
+(deftest primary-navigation-order-requires-strictly-distinct-label-positions
+  (is (thrown?
+       clojure.lang.ExceptionInfo
+       (runtime/execute-step!
+        {:html (str "id=\"workspace-tabs\" role=\"tab\" role=\"tab\" "
+                    "id=\"workspace-panel-data-layer\"")}
+        {}
+        {:keyword "Then"
+         :text "the primary navigation strip contains only Data Layer then Hotkeys in stable order"}
+        information-architecture/handlers))))

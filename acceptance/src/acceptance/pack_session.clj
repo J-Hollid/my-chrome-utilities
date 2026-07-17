@@ -37,3 +37,7 @@
                 (entries paths)
                 run-entrypoint!)
   (println "acceptance passed"))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T16:55:27.14858271+02:00", :module-hash "-1882642103", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-57477308"} {:id "defn/run-entrypoint!", :kind "defn", :line 4, :end-line 9, :hash "1692666856"} {:id "defn/run-session!", :kind "defn", :line 11, :end-line 24, :hash "-1750034662"} {:id "defn-/entries", :kind "defn-", :line 26, :end-line 30, :hash "-710617747"} {:id "defn/-main", :kind "defn", :line 32, :end-line 39, :hash "-1636546623"}]}
+;; clj-mutate-manifest-end

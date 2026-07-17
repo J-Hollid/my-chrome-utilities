@@ -1,6 +1,8 @@
 (ns acceptance.palette-steps-test
-  (:require [acceptance.steps.palette :as palette]
+  (:require [acceptance.pack-runtime :as packs]
             [acceptance.runtime :as runtime]
+            [acceptance.steps.palette :as palette]
+            [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (def palette-html
@@ -94,3 +96,14 @@
            (vec (palette/forbidden-palette-scope-findings-of-kind
                  scope
                  :keybinding-editor))))))
+
+(deftest command-palette-features-exercise-owned-state-transitions
+  (doseq [feature-file ["features/command-registry-presentation-boundary.feature"
+                        "features/side-panel-command-palette-dialog.feature"
+                        "features/simple-command-palette.feature"
+                        "features/typed-command-registry.feature"]]
+    (is (= :passed
+           (:status
+            (runtime/run-feature! (gherkin/parse-file feature-file)
+                                  (packs/handlers-for-feature feature-file))))
+        feature-file)))

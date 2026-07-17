@@ -4,6 +4,9 @@
             [babashka.fs :as fs]
             [clojure.string :as str]))
 
+(defn- enough-verification-packs? [registry]
+  (>= (count registry) 6))
+
 (defn- inspect! [world]
   (if (:modular/inspected world)
     world
@@ -13,7 +16,7 @@
           side-panel (support/source-file root "src/side-panel.ts")
           generator (support/source-file root "acceptance/src/acceptance/generator.clj")
           adapters (mapcat :browserAdapters registry)]
-      (support/assert! (>= (count registry) 6) "Too few verification packs are registered." {})
+      (support/assert! (enough-verification-packs? registry) "Too few verification packs are registered." {})
       (doseq [pack registry
               key [:source :dependencies :unit :property :features :handlers :browserAdapters]]
         (support/assert! (vector? (get pack key)) "Verification pack field is not a vector."
@@ -37,3 +40,7 @@
 (def handlers
   [{:pattern #"^.*$"
     :handler (fn [world _example _captures] (inspect! world))}])
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T17:05:35.247263191+02:00", :module-hash "-571912471", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "defn-/inspect!", :kind "defn-", :line 10, :end-line 38, :hash "-295830725"} {:id "def/handlers", :kind "def", :line 40, :end-line 42, :hash "1432102857"}]}
+;; clj-mutate-manifest-end

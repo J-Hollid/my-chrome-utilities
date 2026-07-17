@@ -176,10 +176,8 @@
   (let [world (inspect-keymap world)
         open-count (:side-panel-open-count world 0)]
     (assert-global-shortcut! world shortcut)
-    (assoc world
-           :side-panel-open? true
-           :side-panel-open-count (if already-open? open-count (inc open-count))
-           :hotkey-focus-active? true)))
+    (assoc world :side-panel-open? true :hotkey-focus-active? true
+           :side-panel-open-count (if already-open? open-count (inc open-count)))))
 
 (defn- valid-command! [world command-id]
   (support/assert! (contains? (set (command-ids world)) command-id)
@@ -203,10 +201,7 @@
 (def handlers
   [{:pattern #"^the side panel is closed$"
     :handler (fn [world _example _captures]
-               (assoc (inspect-keymap world)
-                      :side-panel-open? false
-                      :side-panel-open-count 0
-                      :hotkey-focus-active? false))}
+               (assoc (inspect-keymap world) :side-panel-open? false :side-panel-open-count 0 :hotkey-focus-active? false))}
 
    {:pattern #"^global side panel shortcut <([A-Za-z0-9_]+)> is pressed$"
     :handler (fn [world example [shortcut-key]]
@@ -450,12 +445,11 @@
                      command-id (support/require-example example command-key)
                      sequence (support/require-example example sequence-key)]
                  (valid-command! world command-id)
-                 (assoc world
+                 (assoc world :hotkey-focus-active? true
                         :candidate-keymap {:schemaVersion schema-version
                                            :bindings {command-id sequence}}
                         :active-keymap {:schemaVersion schema-version
                                         :bindings {command-id sequence}}
-                        :hotkey-focus-active? true
                         :candidate-command-id command-id
                         :candidate-sequence sequence)))}
 
@@ -465,18 +459,15 @@
                      keymap (:candidate-keymap world)
                      duplicates (duplicate-sequences keymap)]
                  (if (seq duplicates)
-                   (assoc world
-                          :keymap-load-rejected? true
-                          :duplicate-sequences duplicates
-                          :hotkey-focus-active? false)
+                   (assoc world :keymap-load-rejected? true :hotkey-focus-active? false
+                          :duplicate-sequences duplicates)
                    (do
                      (support/assert! (stored-keymap-wired? (:side-panel-source world))
                                       "Loaded keymap is not stored locally."
                                       {})
-                     (assoc world
+                     (assoc world :hotkey-focus-active? true
                             :stored-keymap keymap
-                            :active-keymap keymap
-                            :hotkey-focus-active? true)))))}
+                            :active-keymap keymap)))))}
 
    {:pattern #"^the keymap is stored locally$"
     :handler (fn [world _example _captures]
@@ -667,5 +658,5 @@
                world)}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T11:58:17.15378245+02:00", :module-hash "-908374172", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-963858604"} {:id "def/schema-version", :kind "def", :line 6, :end-line nil, :hash "-1959597430"} {:id "def/canonical-start-command-id", :kind "def", :line 7, :end-line nil, :hash "1290574988"} {:id "def/canonical-start-sequence", :kind "def", :line 8, :end-line nil, :hash "-725694312"} {:id "def/canonical-duplicate-sequence", :kind "def", :line 9, :end-line nil, :hash "416286496"} {:id "def/canonical-obsolete-command-id", :kind "def", :line 10, :end-line nil, :hash "721215688"} {:id "def/canonical-history-input-name", :kind "def", :line 11, :end-line nil, :hash "291951577"} {:id "defn/registered-command-ids", :kind "defn", :line 13, :end-line nil, :hash "1550172765"} {:id "defn/blank-keymap", :kind "defn", :line 19, :end-line nil, :hash "653184577"} {:id "defn-/binding-keys", :kind "defn-", :line 23, :end-line nil, :hash "949071594"} {:id "defn-/binding-value", :kind "defn-", :line 26, :end-line nil, :hash "945355916"} {:id "defn/update-keymap", :kind "defn", :line 31, :end-line nil, :hash "1638645739"} {:id "defn/keymap-update-status", :kind "defn", :line 42, :end-line nil, :hash "1888509229"} {:id "defn/normalize-sequence", :kind "defn", :line 45, :end-line nil, :hash "2002355339"} {:id "defn/command-for-sequence", :kind "defn", :line 48, :end-line nil, :hash "85198646"} {:id "defn/runnable-command-for-sequence", :kind "defn", :line 55, :end-line nil, :hash "-1802533389"} {:id "defn/sequence-prefix?", :kind "defn", :line 59, :end-line nil, :hash "637233782"} {:id "defn/duplicate-sequences", :kind "defn", :line 66, :end-line nil, :hash "-1882546275"} {:id "defn/keymap-controls?", :kind "defn", :line 80, :end-line nil, :hash "-14484557"} {:id "defn/manifest-global-shortcut?", :kind "defn", :line 93, :end-line nil, :hash "-404469820"} {:id "defn/background-global-shortcut?", :kind "defn", :line 99, :end-line nil, :hash "946333082"} {:id "defn/app-hotkey-focus-wired?", :kind "defn", :line 108, :end-line nil, :hash "1610910639"} {:id "defn/stored-keymap-wired?", :kind "defn", :line 116, :end-line nil, :hash "-1985515043"} {:id "defn/sequence-run-wired?", :kind "defn", :line 122, :end-line nil, :hash "-1558929852"} {:id "defn/text-input-guard-wired?", :kind "defn", :line 128, :end-line nil, :hash "-1119993427"} {:id "defn/duplicate-rejection-wired?", :kind "defn", :line 134, :end-line nil, :hash "1612866327"} {:id "defn/cancel-pending-wired?", :kind "defn", :line 139, :end-line nil, :hash "-1060924113"} {:id "defn/keymap-update-status-wired?", :kind "defn", :line 145, :end-line nil, :hash "-1317180208"} {:id "defn-/inspect-keymap", :kind "defn-", :line 151, :end-line nil, :hash "1033446898"} {:id "defn-/command-ids", :kind "defn-", :line 161, :end-line nil, :hash "1500827782"} {:id "defn-/assert-global-shortcut!", :kind "defn-", :line 164, :end-line nil, :hash "1646684517"} {:id "defn-/press-global-shortcut", :kind "defn-", :line 175, :end-line nil, :hash "864535720"} {:id "defn-/valid-command!", :kind "defn-", :line 184, :end-line nil, :hash "-304628333"} {:id "defn-/press-key-sequence", :kind "defn-", :line 190, :end-line nil, :hash "1444360369"} {:id "def/handlers", :kind "def", :line 203, :end-line nil, :hash "-767055978"}]}
+;; {:version 1, :tested-at "2026-07-17T17:02:06.984682038+02:00", :module-hash "-1791104612", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-963858604"} {:id "def/schema-version", :kind "def", :line 6, :end-line 6, :hash "-1959597430"} {:id "def/canonical-start-command-id", :kind "def", :line 7, :end-line 7, :hash "1290574988"} {:id "def/canonical-start-sequence", :kind "def", :line 8, :end-line 8, :hash "-725694312"} {:id "def/canonical-duplicate-sequence", :kind "def", :line 9, :end-line 9, :hash "416286496"} {:id "def/canonical-obsolete-command-id", :kind "def", :line 10, :end-line 10, :hash "721215688"} {:id "def/canonical-history-input-name", :kind "def", :line 11, :end-line 11, :hash "291951577"} {:id "defn/registered-command-ids", :kind "defn", :line 13, :end-line 17, :hash "1550172765"} {:id "defn/blank-keymap", :kind "defn", :line 19, :end-line 21, :hash "653184577"} {:id "defn-/binding-keys", :kind "defn-", :line 23, :end-line 24, :hash "949071594"} {:id "defn-/binding-value", :kind "defn-", :line 26, :end-line 29, :hash "945355916"} {:id "defn/update-keymap", :kind "defn", :line 31, :end-line 40, :hash "1638645739"} {:id "defn/keymap-update-status", :kind "defn", :line 42, :end-line 43, :hash "1888509229"} {:id "defn/normalize-sequence", :kind "defn", :line 45, :end-line 46, :hash "2002355339"} {:id "defn/command-for-sequence", :kind "defn", :line 48, :end-line 53, :hash "85198646"} {:id "defn/runnable-command-for-sequence", :kind "defn", :line 55, :end-line 57, :hash "-1802533389"} {:id "defn/sequence-prefix?", :kind "defn", :line 59, :end-line 64, :hash "637233782"} {:id "defn/duplicate-sequences", :kind "defn", :line 66, :end-line 78, :hash "-1882546275"} {:id "defn/keymap-controls?", :kind "defn", :line 80, :end-line 91, :hash "-14484557"} {:id "defn/manifest-global-shortcut?", :kind "defn", :line 93, :end-line 97, :hash "-404469820"} {:id "defn/background-global-shortcut?", :kind "defn", :line 99, :end-line 106, :hash "946333082"} {:id "defn/app-hotkey-focus-wired?", :kind "defn", :line 108, :end-line 114, :hash "1610910639"} {:id "defn/stored-keymap-wired?", :kind "defn", :line 116, :end-line 120, :hash "-788422352"} {:id "defn/sequence-run-wired?", :kind "defn", :line 122, :end-line 126, :hash "-1558929852"} {:id "defn/text-input-guard-wired?", :kind "defn", :line 128, :end-line 132, :hash "-1119993427"} {:id "defn/duplicate-rejection-wired?", :kind "defn", :line 134, :end-line 137, :hash "1612866327"} {:id "defn/cancel-pending-wired?", :kind "defn", :line 139, :end-line 143, :hash "-1060924113"} {:id "defn/keymap-update-status-wired?", :kind "defn", :line 145, :end-line 149, :hash "-1317180208"} {:id "defn-/inspect-keymap", :kind "defn-", :line 151, :end-line 159, :hash "1033446898"} {:id "defn-/command-ids", :kind "defn-", :line 161, :end-line 162, :hash "1500827782"} {:id "defn-/assert-global-shortcut!", :kind "defn-", :line 164, :end-line 173, :hash "1646684517"} {:id "defn-/press-global-shortcut", :kind "defn-", :line 175, :end-line 180, :hash "1271518698"} {:id "defn-/valid-command!", :kind "defn-", :line 182, :end-line 186, :hash "-304628333"} {:id "defn-/press-key-sequence", :kind "defn-", :line 188, :end-line 199, :hash "1444360369"} {:id "def/handlers", :kind "def", :line 201, :end-line 658, :hash "656896201"}]}
 ;; clj-mutate-manifest-end

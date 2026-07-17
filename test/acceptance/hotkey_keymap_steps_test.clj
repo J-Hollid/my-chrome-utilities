@@ -138,6 +138,91 @@
   (is (hotkey-keymap/duplicate-rejection-wired? side-panel-source))
   (is (hotkey-keymap/cancel-pending-wired? side-panel-source)))
 
+(deftest global-shortcut-steps-preserve-one-panel-and-hotkey-focus
+  (let [example {"shortcut" "Ctrl+Shift+1"}
+        dispatch (fn [state text]
+                   (runtime/execute-step! state example {:keyword "And" :text text}
+                                          hotkey-keymap/handlers))
+        closed (dispatch {:root "."} "the side panel is closed")
+        opened (dispatch {:root "."} "global side panel shortcut <shortcut> is pressed")
+        refocused (dispatch (dissoc opened :side-panel-open-count)
+                            "global side panel shortcut <shortcut> is pressed while the side panel is open but unfocused")
+        still-focused (dispatch refocused
+                                "global side panel shortcut <shortcut> is pressed while app-level hotkey focus is already active")]
+    (is (= [false 0 false]
+           ((juxt :side-panel-open? :side-panel-open-count :hotkey-focus-active?) closed)))
+    (is (= [true 1 true]
+           ((juxt :side-panel-open? :side-panel-open-count :hotkey-focus-active?) opened)))
+    (is (= [1 1 true]
+           ((juxt :previous-side-panel-open-count
+                  :side-panel-open-count
+                  :hotkey-focus-active?) refocused)))
+    (is (= refocused (dispatch refocused "no duplicate side panel is opened")))
+    (is (= 1 (:side-panel-open-count still-focused)))
+    (is (true? (:hotkey-focus-active? still-focused)))))
+
+(deftest keymap-file-steps-assert-generated-updated-and-loaded-state
+  (let [example {"version" "1"
+                 "command" "data-layer.start-testing"
+                 "sequence" "C-c s"}
+        dispatch (fn [state text]
+                   (runtime/execute-step! state example {:keyword "And" :text text}
+                                          hotkey-keymap/handlers))
+        generated (dispatch {:root "."} "the user creates a hotkey keymap file")
+        existing (dispatch {:root "."}
+                           "an existing keymap binds command <command> to sequence <sequence>")
+        updated (dispatch existing "the user updates the hotkey keymap file")
+        candidate (dispatch {:root "."}
+                            "a valid keymap binds command <command> to sequence <sequence>")
+        loaded (dispatch candidate "the user loads the hotkey keymap file")]
+    (is (= generated (dispatch generated "the generated keymap uses schema version <version>")))
+    (is (= generated (dispatch generated "the generated keymap contains every registered command id")))
+    (is (= updated (dispatch updated "command <command> keeps sequence <sequence>")))
+    (is (true? (:hotkey-focus-active? candidate)))
+    (is (= (:candidate-keymap candidate) (:stored-keymap loaded)))
+    (is (= (:candidate-keymap candidate) (:active-keymap loaded)))
+    (is (true? (:hotkey-focus-active? loaded)))
+    (is (nil? (:keymap-load-rejected? loaded)))
+    (is (= loaded (dispatch loaded "the keymap is stored locally")))
+    (let [ran (assoc loaded :last-command-id "data-layer.start-testing")]
+      (is (= ran (dispatch ran "the stored keymap runs command <command>"))))))
+
+(deftest input-guard-and-duplicate-rejection-steps-assert-outcomes
+  (let [example {"command" "data-layer.start-testing"
+                 "sequence" "C-c s"
+                 "input" "history-path"
+                 "first" "data-layer.start-testing"
+                 "second" "data-layer.end-testing"
+                 "duplicate" "C-c d"}
+        dispatch (fn [state text]
+                   (runtime/execute-step! state example {:keyword "And" :text text}
+                                          hotkey-keymap/handlers))
+        input-state {:root "."
+                     :focused-input "history-path"
+                     :active-keymap {:schemaVersion 1
+                                     :bindings {"data-layer.start-testing" "C-c s"}}}
+        guarded (dispatch input-state
+                          "key sequence <sequence> is pressed inside text input <input>")
+        unfocused (dispatch guarded "focus leaves text input <input>")
+        active-keymap {:schemaVersion 1
+                       :bindings {"data-layer.start-testing" "C-c s"
+                                  "data-layer.end-testing" "C-c e"}}
+        duplicate-candidate (dispatch {:root "." :active-keymap active-keymap}
+                                      "a keymap binds command <first> and command <second> to sequence <duplicate>")
+        rejected (dispatch duplicate-candidate "the user loads the hotkey keymap file")]
+    (is (nil? (:last-command-id guarded)))
+    (is (= guarded (dispatch guarded "command <command> does not run")))
+    (is (= guarded (dispatch guarded "text input <input> remains focused")))
+    (is (nil? (:focused-input unfocused)))
+    (is (true? (:keymap-load-rejected? rejected)))
+    (is (false? (:hotkey-focus-active? rejected)))
+    (is (= active-keymap (:active-keymap rejected)))
+    (is (= rejected
+           (dispatch rejected
+                     "neither command <first> nor command <second> is rebound to sequence <duplicate>")))
+    (is (= rejected
+           (dispatch rejected "a visible keymap warning names sequence <duplicate>")))))
+
 (deftest canonical-hotkey-keymap-assertions-dispatch
   (let [dispatch (fn [state text]
                    (runtime/execute-step! state

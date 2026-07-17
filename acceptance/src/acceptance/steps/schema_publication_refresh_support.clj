@@ -2,7 +2,9 @@
   (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
-(defonce model-verified? (atom false))
+(defn- fresh-model-cache [] (atom false))
+
+(defonce model-verified? (fresh-model-cache))
 (defonce browser-observation (atom nil))
 
 (defn verify-model! []
@@ -20,9 +22,9 @@
     :missing-error "Schema publication refresh browser evidence is missing."}))
 
 (defn assert-runtime! [observed]
-  (support/assert! (= {:summary "Validation passed"
-                       :schema "Product listing version 3"
-                       :optionalHidden true}
+  (support/assert! (= {:optionalHidden true
+                       :summary "Validation passed"
+                       :schema "Product listing version 3"}
                       (:before observed))
                    "The pre-publication inspector did not use revision 3 evidence." observed)
   (support/assert! (= "1 of 2 events" (:queryBefore observed))
@@ -69,3 +71,7 @@
    world example text entry-modes mode-key
    verify-model! validate-example!
    #(assert-runtime! (runtime-observation!))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T17:10:08.028616048+02:00", :module-hash "-194968940", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1153825862"} {:id "defn-/fresh-model-cache", :kind "defn-", :line 5, :end-line 5, :hash "952154096"} {:id "form/2/defonce", :kind "defonce", :line 7, :end-line 7, :hash "-1970171764"} {:id "form/3/defonce", :kind "defonce", :line 8, :end-line 8, :hash "-1618529344"} {:id "defn/verify-model!", :kind "defn", :line 10, :end-line 14, :hash "-211511028"} {:id "defn/runtime-observation!", :kind "defn", :line 16, :end-line 22, :hash "815893559"} {:id "defn/assert-runtime!", :kind "defn", :line 24, :end-line 67, :hash "1632925945"} {:id "defn/transition!", :kind "defn", :line 69, :end-line 73, :hash "1963867828"}]}
+;; clj-mutate-manifest-end

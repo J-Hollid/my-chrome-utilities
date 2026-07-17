@@ -1,6 +1,8 @@
 (ns acceptance.observation-targets-steps-test
-  (:require [acceptance.runtime :as runtime]
+  (:require [acceptance.pack-runtime :as packs]
+            [acceptance.runtime :as runtime]
             [acceptance.steps.observation-targets :as targets]
+            [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (deftest explicit-target-start-needs-a-selection
@@ -54,3 +56,41 @@
     (is (= "Attached" (:target-state attached)))
     (is (= [:first] (:executed run-step)))
     (is (= [:first :second] (:executed run-all)))))
+
+(deftest observation-target-features-exercise-selection-and-lifecycle-transitions
+  (doseq [feature-file ["features/data-layer-observation-target-selection.feature"
+                        "features/data-layer-observation-target-lifecycle.feature"]]
+    (is (= :passed
+           (:status
+            (runtime/run-feature! (gherkin/parse-file feature-file)
+                                  (packs/handlers-for-feature feature-file))))
+        feature-file)))
+
+(deftest start-testing-and-when-transitions-preserve_selection_semantics
+  (let [target {:title "Checkout" :tab-id "42"}
+        started (#'targets/start-testing {:selected-target target} {})
+        blocked (#'targets/start-testing {} {})
+        transitioned (#'targets/transition
+                      {}
+                      {}
+                      []
+                      {:keyword "When" :text "data layer testing starts"})]
+    (is (= "active" (get-in started [:session :status])))
+    (is (= target (:attached-target started)))
+    (is (nil? (:session blocked)))
+    (is (= "Selection required" (:target-state blocked)))
+    (is (= "Selection required" (:target-state transitioned)))
+    (is (= "data layer testing starts"
+           (get-in transitioned [:observation-target-action :text])))))
+
+(deftest background-priority-only-activates-the-target-contract-with-context
+  (let [dispatch (fn [world example text]
+                   (runtime/execute-step! world example {:keyword "Given" :text text}
+                                          targets/priority-handlers))]
+    (is (nil? (:observation-target-contract
+               (dispatch {} {} "the Data Layer Live view is displayed"))))
+    (is (true? (:observation-target-contract
+                (dispatch {} {"history_path" "event.history"}
+                          "the Data Layer Live view is displayed"))))
+    (is (true? (:observation-target-contract
+                (dispatch {} {} "the observation target picker is displayed"))))))
