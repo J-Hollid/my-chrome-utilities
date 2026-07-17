@@ -1,6 +1,7 @@
 (ns acceptance.steps.support
   (:require [aps.gherkin :as gherkin]
             [aps.json :as aps-json]
+            [acceptance.pack-runtime :as packs]
             [babashka.fs :as fs]
             [babashka.process :as process]
             [cheshire.core :as json]
@@ -179,17 +180,23 @@
 
 (defn cached-browser-observation!
   [cache options]
-  (or @cache
-      (reset! cache (load-browser-observation! options))))
+  (if packs/*runtime-cache*
+    (packs/cached-runtime! [:browser (select-keys options [:adapter-env :observation-key])]
+                           #(load-browser-observation! options))
+    (or @cache
+        (reset! cache (load-browser-observation! options)))))
 
 (defn cached-command-verification!
   [cache error-message & command]
-  (when-not @cache
-    (let [result (apply process/shell build-shell-options command)]
-      (assert! (zero? (:exit result))
-               (str error-message (:err result))
-               {:out (:out result) :err (:err result)})
-      (reset! cache true))))
+  (let [verify! (fn []
+                  (let [result (apply process/shell build-shell-options command)]
+                    (assert! (zero? (:exit result))
+                             (str error-message (:err result))
+                             {:out (:out result) :err (:err result)})
+                    true))]
+    (if packs/*runtime-cache*
+      (packs/cached-runtime! [:command command] verify!)
+      (when-not @cache (reset! cache (verify!))))))
 
 (defn mode-transition
   [world example text entry-modes state-key verify! validate-example! runtime-boundary!]

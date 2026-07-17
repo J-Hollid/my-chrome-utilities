@@ -5,6 +5,17 @@
 
 (defn- repository-root [] (fs/cwd))
 
+(def ^:dynamic *runtime-cache* nil)
+
+(defn cached-runtime! [key create!]
+  (if-not *runtime-cache*
+    (create!)
+    (if (contains? (:values @*runtime-cache*) key)
+      (get-in @*runtime-cache* [:values key])
+      (let [value (create!)]
+        (swap! *runtime-cache* assoc-in [:values key] value)
+        value))))
+
 (defn- handler-namespace [path]
   (-> path
       (str/replace #"^acceptance/src/" "")

@@ -195,17 +195,25 @@ function acceptanceArtifacts(feature) {
   };
 }
 
-function acceptanceCommands(features) {
+function acceptanceCommands(features, packs) {
   const artifacts = features.map((feature) => ({
     feature,
     ...acceptanceArtifacts(feature),
   }));
+  const sessions = packs.map((pack) => ({
+    packId:pack.id,
+    artifacts:artifacts.filter(({ feature }) => pack.features.includes(feature)),
+  })).filter(({ artifacts:packArtifacts }) => packArtifacts.length);
   return [
     ...artifacts.map(({ feature, ir }) => `bb gherkin-parser ${feature} ${ir}`),
     ...artifacts.map(({ ir }) =>
       `bb acceptance-entrypoint-generator ${ir} build/acceptance/generated`
     ),
-    ...artifacts.map(({ ir, generated }) => `bb ${generated} ${ir}`),
+    ...sessions.map(({ packId, artifacts:packArtifacts }) =>
+      `bb acceptance-pack-runner ${packId} ${packArtifacts.flatMap(
+        ({ generated, ir }) => [generated, ir]
+      ).join(" ")}`
+    ),
   ];
 }
 
@@ -258,7 +266,7 @@ export function planVerification(
     ? changedFeatures
     : acceptancePacks.flatMap((pack) => pack.features)
   ).sort();
-  const plannedAcceptanceCommands = acceptanceCommands(features);
+  const plannedAcceptanceCommands = acceptanceCommands(features, acceptancePacks);
   commands.push(...plannedAcceptanceCommands);
 
   return {
