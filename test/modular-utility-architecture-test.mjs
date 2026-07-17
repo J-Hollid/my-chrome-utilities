@@ -9,6 +9,7 @@ import { loadVerificationPacks, planVerification, validateVerificationPacks } fr
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "../dist/platform/utility-bootstrap.js";
+import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 
 assert.deepEqual(utilityRegistry.map(({id})=>id),["command-palette","hotkeys","data-layer"]);
 for(const utility of utilityRegistry){
@@ -81,6 +82,7 @@ assert.equal(utilityDomScopeFromSearch(""),undefined);
 assert.equal(scopedUtilityModulePath(captureScope),"./utilities/data-layer/index.js");
 assert.equal(scopedUtilityModulePath({utilityId:"hotkeys",panelIds:["workspace-panel-hotkeys"]}),"./utilities/hotkeys/index.js");
 assert.throws(()=>scopedUtilityModulePath({utilityId:"unknown",panelIds:["unknown-panel"]}),/Unknown utility scope/);
+assert.deepEqual(shellRuntimeCapabilities({runtime:{onMessage:{addListener(){}}},tabs:{query(){},onUpdated:{addListener(){}},onRemoved:{addListener(){}}},permissions:{onRemoved:{addListener(){}}}}),["runtime.messaging","tabs.query","tabs.lifecycle","permissions.lifecycle"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
 assert.doesNotMatch(sidePanelSource,/from "\.\/command-palette/,"The shell must use the command-palette public entry");
