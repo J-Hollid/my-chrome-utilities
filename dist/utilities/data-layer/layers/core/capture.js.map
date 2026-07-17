@@ -1,0 +1,1 @@
+{"version":3,"file":"capture.js","sourceRoot":"","sources":["../../../../../src/utilities/data-layer/layers/core/capture.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,gCAAgC,EAAE,MAAM,8CAA8C,CAAC","sourcesContent":["export { createLiveNotificationController } from \"../../../../data-layer-live-notifications.js\";\n"]}

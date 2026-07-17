@@ -1,7 +1,17 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 const registryUrl=new URL("../verification/packs.json",import.meta.url);
 export async function loadVerificationPacks(){return JSON.parse(await readFile(registryUrl,"utf8"));}
-export async function validateVerificationPacks(packs){
+async function repositoryPaths(directory,suffix){
+  const paths=[];
+  for(const entry of await readdir(new URL(`../${directory}/`,import.meta.url),{withFileTypes:true})){
+    const path=`${directory}/${entry.name}`;
+    if(entry.isDirectory())paths.push(...await repositoryPaths(path,suffix));
+    else if(path.endsWith(suffix))paths.push(path);
+  }
+  return paths.sort();
+}
+export async function verificationInventory(){return {features:await repositoryPaths("features",".feature"),handlers:await repositoryPaths("acceptance/src/acceptance/steps",".clj")};}
+export async function validateVerificationPacks(packs,{inventory}={}){
   const ids=new Set(),owners=new Map();
   for(const pack of packs){
     if(ids.has(pack.id))throw new Error(`Verification pack ids must be unique: ${pack.id}`);ids.add(pack.id);
@@ -13,6 +23,12 @@ export async function validateVerificationPacks(packs){
   }
   for(const pack of packs)for(const dependency of pack.dependencies)
     if(!ids.has(dependency))throw new Error(`Register every direct dependency: ${dependency}`);
+  const repositoryInventory=inventory??await verificationInventory();
+  for(const key of ["features","handlers"]){
+    const assigned=new Set(packs.flatMap((pack)=>pack[key]));
+    for(const path of repositoryInventory[key])if(!assigned.has(path))throw new Error(`Unassigned ${key} path: ${path}`);
+    for(const path of assigned)if(!repositoryInventory[key].includes(path))throw new Error(`Assigned ${key} path is not in the repository: ${path}`);
+  }
   return packs;
 }
 function ownerOf(packs,path){return packs.find((pack)=>pack.source.some((prefix)=>path===prefix||path.startsWith(prefix)));}

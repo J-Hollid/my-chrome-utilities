@@ -53,13 +53,22 @@ bindUtilityPanels(utilityRegistry,{querySelector(selector){return panelElements.
 for(const utility of utilityRegistry)for(const panel of utility.panels)assert.equal(panelElements.get(panel).dataset.utilityOwner,utility.id);
 assert.throws(()=>bindUtilityPanels([{...utilityRegistry[0],panels:["missing-panel"]}],{querySelector(){return null;}}),/missing-panel/);
 assert.deepEqual(architectureViolations(new Map([["src/side-panel.ts",'import "./data-layer-session.js";']])),[{file:"src/side-panel.ts",dependency:"./data-layer-session.js",reason:"shell composition must use public utility entries"}]);
+assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/core/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/core/demo.ts",dependency:"../browser/demo.js",reason:"core may not depend on browser"}]);
+assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/application/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/application/demo.ts",dependency:"../browser/demo.js",reason:"application may not depend on browser"}]);
+assert.deepEqual(architectureViolations(new Map([["src/utilities/hotkeys/demo.ts",'import "../command-palette/index.js";']])),[{file:"src/utilities/hotkeys/demo.ts",dependency:"../command-palette/index.js",reason:"utilities may not import another utility"}]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
 assert.doesNotMatch(sidePanelSource,/from "\.\/command-palette/,"The shell must use the command-palette public entry");
+for(const facade of ["capture","live-inspection","event-library","schemas","defect-reporting","replay"]){
+  const source=await readFile(new URL(`../src/utilities/data-layer/${facade}.ts`,import.meta.url),"utf8");
+  assert.doesNotMatch(source,/export \* from/,`${facade} must expose a narrow explicit interface`);
+}
 
 const packs=await loadVerificationPacks();
 await validateVerificationPacks(packs);
+await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:[...packs.flatMap(({features})=>features),"features/unassigned.feature"],handlers:packs.flatMap(({handlers})=>handlers)}}),/Unassigned features path: features\/unassigned\.feature/);
+await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:packs.flatMap(({features})=>features),handlers:[...packs.flatMap(({handlers})=>handlers),"acceptance/src/acceptance/steps/unassigned.clj"]}}),/Unassigned handlers path/);
 await assert.rejects(()=>validateVerificationPacks([...packs,{...packs[0],id:"duplicate",features:packs[0].features}]),/exactly one pack/);
 assert.equal(packs.length>=6,true);for(const pack of packs)for(const key of ["source","unit","property","features","handlers","browserAdapters","dependencies"])assert.equal(Array.isArray(pack[key]),true,`${pack.id}.${key}`);
 const focused=planVerification(packs,{packIds:["schemas"]});assert.equal(focused.packIds.includes("schemas"),true);assert.equal(focused.packIds.includes("defects"),false);
