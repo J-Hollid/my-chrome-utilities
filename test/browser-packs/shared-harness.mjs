@@ -8,30 +8,17 @@ import path from "node:path";
 
 const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
 const dataLayerPanelByPack={capture:"data-layer-panel-live","event-library":"data-layer-panel-library",schemas:"data-layer-panel-schemas",defects:"data-layer-panel-defects",replay:"data-layer-panel-library"};
+function isolationScope(id){
+  if(id==="command-palette")return {utilityId:"command-palette",panelIds:["palette"],removeSelectors:["#utility-directory","#observation-target-picker","#workspace-tabs"]};
+  if(id==="hotkeys")return {utilityId:"hotkeys",panelIds:["workspace-panel-hotkeys"],removeSelectors:["#utility-directory","#observation-target-picker"]};
+  const removeSelectors=["#utility-directory","#observation-target-picker"];
+  if(id==="event-library")removeSelectors.push("#sequence-library");
+  if(id==="replay")removeSelectors.push("#event-template-master","#event-property-editor","#event-template-result");
+  return {utilityId:"data-layer",panelIds:["workspace-panel-data-layer",dataLayerPanelByPack[id]],removeSelectors};
+}
 function isolationExpression(id){
   if(id==="shell")return "true";
-  return `(()=>{
-    const remove=(selector)=>document.querySelector(selector)?.remove();
-    remove('#utility-directory');remove('#observation-target-picker');
-    if(${JSON.stringify(id)}==='command-palette'){
-      remove('#workspace-tabs');remove('#workspace-panel-data-layer');remove('#workspace-panel-hotkeys');
-    }else if(${JSON.stringify(id)}==='hotkeys'){
-      remove('#workspace-tab-data-layer');remove('#workspace-panel-data-layer');remove('#palette');
-      const panel=document.querySelector('#workspace-panel-hotkeys');if(panel)panel.hidden=false;
-      const tab=document.querySelector('#workspace-tab-hotkeys');if(tab){tab.hidden=false;tab.setAttribute('aria-selected','true');tab.tabIndex=0;}
-    }else{
-      remove('#workspace-tab-hotkeys');remove('#workspace-panel-hotkeys');remove('#palette');
-      const owned=${JSON.stringify(dataLayerPanelByPack[id])};
-      for(const panel of document.querySelectorAll('[id^="data-layer-panel-"]'))if(panel.id!==owned)panel.remove();
-      for(const tab of document.querySelectorAll('#data-layer-views [aria-controls^="data-layer-panel-"]'))if(tab.getAttribute('aria-controls')!==owned)tab.remove();
-      if(${JSON.stringify(id)}==='event-library')remove('#sequence-library');
-      if(${JSON.stringify(id)}==='replay'){
-        remove('#event-template-master');remove('#event-property-editor');remove('#event-template-result');
-      }
-    }
-    document.documentElement.dataset.browserPackIsolation=${JSON.stringify(id)};
-    return true;
-  })()`;
+  return `import('/platform/utility-dom-isolation.js').then(({isolateUtilityDom})=>{isolateUtilityDom(document,${JSON.stringify(isolationScope(id))});document.documentElement.dataset.browserPackIsolation=${JSON.stringify(id)};return true;})`;
 }
 function isolationAssertionExpression(id){
   if(id==="shell")return "true";
@@ -63,7 +50,7 @@ export async function runRenderedWorkflow(id,workflow){
     socket=new DevtoolsSocket(page.webSocketDebuggerUrl);await socket.connect();
     await socket.call("Emulation.setDeviceMetricsOverride",{width:320,height:900,deviceScaleFactor:1,mobile:false});await socket.call("Runtime.enable");
     let ready=false;for(let attempt=0;attempt<300;attempt++){const result=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true'",returnByValue:true});if(result.result.value){ready=true;break;}await wait(50);}assert.equal(ready,true,"Rendered side panel did not become ready");
-    const isolation=await socket.call("Runtime.evaluate",{expression:isolationExpression(id),returnByValue:true});if(isolation.exceptionDetails)throw new Error(isolation.exceptionDetails.exception?.description??isolation.exceptionDetails.text);
+    const isolation=await socket.call("Runtime.evaluate",{expression:isolationExpression(id),returnByValue:true,awaitPromise:true});if(isolation.exceptionDetails)throw new Error(isolation.exceptionDetails.exception?.description??isolation.exceptionDetails.text);
     const isolated=await socket.call("Runtime.evaluate",{expression:isolationAssertionExpression(id),returnByValue:true});assert.equal(isolated.result.value,true,`${id} browser fixture contains unrelated utility DOM`);
     const result=await socket.call("Runtime.evaluate",{expression:`(async()=>{${workflow}})()`,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);assert.equal(result.result.value?.passed,true,JSON.stringify(result.result.value));assert.equal(result.result.value?.width,320);assert.equal(result.result.value?.overflow,false,"workflow must fit the 320px viewport");
     console.log(`${id} rendered browser workflow passed`);
