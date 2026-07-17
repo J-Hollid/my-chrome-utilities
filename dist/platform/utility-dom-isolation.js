@@ -1,6 +1,13 @@
 export function retainUtilityElement(element, scope) {
     return element.owner === scope.utilityId && scope.panelIds.includes(element.id);
 }
+export function utilityDomScopeFromSearch(search) {
+    const parameters = new URLSearchParams(search), utilityId = parameters.get("utility"), panelIds = parameters.getAll("panel");
+    if (!utilityId || panelIds.length === 0)
+        return undefined;
+    const removeSelectors = parameters.getAll("remove");
+    return { utilityId, panelIds, ...(removeSelectors.length ? { removeSelectors } : {}) };
+}
 export function isolateUtilityDom(root, scope) {
     for (const selector of scope.removeSelectors ?? [])
         root.querySelector(selector)?.remove();
@@ -27,5 +34,15 @@ export function isolateUtilityDom(root, scope) {
                 panel.hidden = !active;
         }
     }
+}
+export function isolateUtilityDomFromSearch(root, search) {
+    const scope = utilityDomScopeFromSearch(search);
+    if (!scope)
+        return undefined;
+    isolateUtilityDom(root, scope);
+    const documentRoot = root.documentElement;
+    if (documentRoot)
+        documentRoot.dataset.utilityIsolation = scope.utilityId;
+    return scope;
 }
 //# sourceMappingURL=utility-dom-isolation.js.map
