@@ -51,6 +51,7 @@ let localRulePromotionAvailabilityObservation;
 let localRuleEditingObservation;
 let reusableRuleSyncObservation;
 let requiredRuleTypeIndependenceObservation;
+let specificationProjectObservation;
 let liveGuidedConditionalRuleObservation;
 let savedEventFeedFiltersObservation;
 let defectReportUndeclaredRemovalObservation;
@@ -83,7 +84,7 @@ const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" || process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1" ? [720]
+const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" || process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1" || process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1" ? [320]
   : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
@@ -312,6 +313,17 @@ async function openPanel(port, width, height = 900) {
   }
   return socket;
 }
+
+async function openSpecificationBuilder(port, width, height = 900) {
+  const pageUrl = `http://127.0.0.1:${assetPort}/specification-builder.html`;
+  const page = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pageUrl)}`, { method:"PUT" }).then((response)=>response.json());
+  const socket = new DevtoolsSocket(page.webSocketDebuggerUrl); await socket.connect();
+  await socket.call("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:false});await socket.call("Runtime.enable");
+  for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const ready=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#create-project-form') !== null",returnByValue:true});if(ready.result.value===true)return socket;await wait(50);}
+  throw new Error("Specification Builder DOM did not finish loading.");
+}
+
+async function reloadSpecificationBuilder(socket) { await socket.call("Page.enable");await socket.call("Page.reload",{ignoreCache:true});for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const ready=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#create-project-form') !== null",returnByValue:true});if(ready.result.value===true)return;await wait(50);}throw new Error("Specification Builder did not reload."); }
 
 async function evaluate(socket, expression) {
   const result = await socket.call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
@@ -4853,7 +4865,25 @@ const overlaps = (left, right) => left.x < right.right && left.right > right.x &
 try {
   const port = await debuggingPort();
   for (const width of componentWidths) {
-    const socket = await openPanel(port, width);
+    const socket = process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width) : await openPanel(port, width);
+    if (process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1") {
+      specificationProjectObservation=await evaluate(socket,`(async()=>{
+        const q=(selector)=>{const value=document.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;},set=(selector,value)=>{const input=q(selector);input.value=value;input.dispatchEvent(new Event("input",{bubbles:true}));};
+        localStorage.clear();
+        set("#project-name","Shop data specification");set("#project-description","Retail and Trade");set("#project-site","shop.example");q("#create-project-form").requestSubmit();
+        const created={empty:q("#project-empty").hidden,workspace:!q("#project-workspace").hidden,context:q("#project-context").textContent,status:q("#project-state").textContent,tree:Array.from(q("#project-tree").querySelectorAll("button"),({textContent})=>textContent)};
+        const add=async(kind,name)=>{q("#entity-kind").value=kind;set("#entity-name",name);q("#add-entity-form").requestSubmit();await new Promise((resolve)=>setTimeout(resolve,0));};
+        await add("profiles","Sitewide");await add("pages","Checkout confirmation");await add("events","Purchase");await add("applicabilitySets","Retail confirmation");await add("flows","Retail checkout");await add("fixtures","Retail passes");
+        set("#project-search","Purchase");const search={rows:Array.from(q("#workspace-content").querySelectorAll(".entity-row button"),({textContent})=>textContent),query:q("#project-search").value};set("#project-search","");
+        q('#project-tree button[data-kind="profiles"]').click();q("#workspace-content .entity-row button").click();set("#bulk-properties",Array.from({length:100},(_,index)=>"/property_"+(index+1)+",string").join("\\n"));q("#commit-bulk-properties").click();const bulk={message:q("#bulk-assistance").textContent,undoEnabled:!q("#undo-project").disabled,rowCount:JSON.parse(localStorage.getItem("my-chrome-utilities.specification-project.v1")).project.collections.profiles[0].requirements.length};q("#undo-project").click();const afterUndo=JSON.parse(localStorage.getItem("my-chrome-utilities.specification-project.v1")).project.collections.profiles[0].requirements.length;q("#redo-project").click();
+        q("#run-preflight").click();const preflight=q("#workspace-content").textContent;q("#publish-project").click();const release={open:q("#release-review").open,summary:q("#release-summary").textContent,confirmDisabled:q("#confirm-release").disabled};if(!release.confirmDisabled)q("#confirm-release").click();
+        const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.specification-project.v1"));const layout={width:innerWidth,columns:getComputedStyle(q("#project-workspace")).gridTemplateColumns,workspaceOverflow:getComputedStyle(q("#workspace-pane")).overflowY,renderedRows:q("#workspace-content").querySelectorAll(".entity-row").length,focusable:Boolean(q("#workspace-pane").tabIndex===-1)};
+        return{created,search,bulk,afterUndo,preflight,release,stored:{name:stored.project.name,collections:Object.fromEntries(Object.entries(stored.project.collections).map(([kind,items])=>[kind,items.length])),releases:stored.project.releases.length,draft:Boolean(stored.draft)},layout};
+      })()`);
+      assert.equal(specificationProjectObservation.created.empty,true);assert.equal(specificationProjectObservation.created.workspace,true);assert.match(specificationProjectObservation.created.context,/Shop data specification.*Production.*Draft/);assert.equal(specificationProjectObservation.created.status,"Saved");assert.equal(specificationProjectObservation.created.tree.length,8);
+      assert.deepEqual(specificationProjectObservation.search,{rows:["Purchase"],query:"Purchase"});assert.deepEqual(specificationProjectObservation.bulk,{message:"Committed 100 properties in one transaction.",undoEnabled:true,rowCount:100});assert.equal(specificationProjectObservation.afterUndo,0);assert.match(specificationProjectObservation.preflight,/Ready to publish/);assert.equal(specificationProjectObservation.release.open,true);assert.equal(specificationProjectObservation.release.confirmDisabled,false);assert.deepEqual(specificationProjectObservation.stored.collections,{profiles:1,pages:1,pageGroups:0,events:1,applicabilitySets:1,flows:1,fixtures:1});assert.equal(specificationProjectObservation.stored.releases,1);assert.equal(specificationProjectObservation.stored.draft,false);assert.ok(specificationProjectObservation.layout.renderedRows<=40);
+      const before=await evaluate(socket,`localStorage.getItem("my-chrome-utilities.specification-project.v1")`);await reloadSpecificationBuilder(socket);const after=await evaluate(socket,`localStorage.getItem("my-chrome-utilities.specification-project.v1")`);specificationProjectObservation.reloadPreserved=before===after;assert.equal(specificationProjectObservation.reloadPreserved,true);socket.close();continue;
+    }
     if (process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1") {
       await evaluate(socket,localRuleEditingSeedRuntime);await reloadPanel(socket);localRuleEditingObservation=await evaluate(socket,localRuleEditingRuntime);
       assert.deepEqual(localRuleEditingObservation.opened.values,["page","product"]);assert.equal(localRuleEditingObservation.opened.severity,"warning");assert.equal(localRuleEditingObservation.opened.enabled,true);assert.equal(localRuleEditingObservation.opened.reusableMetadata,false);assert.match(localRuleEditingObservation.opened.context,/Local rule origin.*\/page_type/);assert.equal(localRuleEditingObservation.opened.focused,true);
@@ -6633,6 +6663,9 @@ try {
   }
   if (process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ requiredRuleTypeIndependence:requiredRuleTypeIndependenceObservation }));
+  }
+  if (process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ specificationProject:specificationProjectObservation }));
   }
   if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveGuidedConditionalRule:liveGuidedConditionalRuleObservation }));
