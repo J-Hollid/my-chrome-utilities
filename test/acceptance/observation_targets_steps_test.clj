@@ -34,3 +34,23 @@
     (is (= 1 (:observation-target-match-count searched)))
     (is (= ["Home" "Checkout" "Purchase confirmation"]
            (:visible-observation-targets cleared)))))
+
+(deftest target-attachment-and-run-actions-cover-owned-branches
+  (let [selected (runtime/execute-step!
+                  {:observation-target-contract true}
+                  {"page_title" "Checkout" "tab_id" "42"
+                   "page_url" "https://shop.example.test/checkout"}
+                  {:keyword "Given" :text "selected target <page_title> has tab id <tab_id> and page URL <page_url>"}
+                  targets/handlers)
+        attached (#'targets/attach-target selected {"page_title" "Checkout" "tab_id" "42"})
+        run-step (#'targets/choose-handler
+                  {:sequence {:steps [:first :second]}}
+                  {"run_action" "Run step"}
+                  ["run_action"])
+        run-all (#'targets/choose-handler
+                 {:sequence {:steps [:first :second]}}
+                 {"run_action" "Run all"}
+                 ["run_action"])]
+    (is (= "Attached" (:target-state attached)))
+    (is (= [:first] (:executed run-step)))
+    (is (= [:first :second] (:executed run-all)))))
