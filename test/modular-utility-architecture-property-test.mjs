@@ -120,7 +120,12 @@ for (let sample = 0; sample < 100; sample += 1) {
   const panels = new Map(panelIds.map((id) => [id, { dataset:{} }]));
   const calls = [];
   let pagehide;
-  const lifecycle = createDomUtilityLifecycle(`standalone-${sample}`, panelIds);
+  const lifecycle = createDomUtilityLifecycle(`standalone-${sample}`, panelIds, {
+    onMount(){
+      calls.push("mount");
+      return () => calls.push("dispose");
+    },
+  });
   const activate = lifecycle.activate.bind(lifecycle);
   const deactivate = lifecycle.deactivate.bind(lifecycle);
   lifecycle.activate = () => { calls.push("activate"); activate(); };
@@ -149,13 +154,13 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(root.dataset.activeUtilities, utility.id);
   assert.deepEqual(panelIds.map((id) => panels.get(id).dataset.utilityOwner),
     Array(panelIds.length).fill(utility.id));
-  assert.deepEqual(calls, ["activate"]);
+  assert.deepEqual(calls, ["mount", "activate"]);
 
   if (sample % 2) pagehide(); else mounted.unmount();
   mounted.unmount();
   pagehide();
   assert.equal(root.dataset.activeUtilities, "");
-  assert.deepEqual(calls, ["activate", "deactivate"],
+  assert.deepEqual(calls, ["mount", "activate", "dispose", "deactivate"],
     "standalone utilities must deactivate exactly once regardless of unmount source");
 }
 

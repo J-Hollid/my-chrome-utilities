@@ -10,7 +10,7 @@ export function registerDomUtilityUnmount(deactivate, root, pageLifecycle) {
     pageLifecycle.addEventListener("pagehide", unmount, { once: true });
     return { unmount };
 }
-export function createDomUtilityLifecycle(id, panels) {
+export function createDomUtilityLifecycle(id, panels, options = {}) {
     let active = false;
     return {
         activate() { active = true; },
@@ -22,10 +22,14 @@ export function createDomUtilityLifecycle(id, panels) {
                     throw new Error(`Registered utility panel is missing: ${panelId}`);
                 panel.dataset.utilityOwner = id;
             }
+            const dispose = options.onMount?.(root);
             this.activate();
             root.dataset.registeredUtilities = id;
             root.dataset.activeUtilities = id;
-            return registerDomUtilityUnmount(() => this.deactivate(), root, pageLifecycle);
+            return registerDomUtilityUnmount(() => {
+                dispose?.();
+                this.deactivate();
+            }, root, pageLifecycle);
         },
     };
 }
