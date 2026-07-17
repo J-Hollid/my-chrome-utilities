@@ -64,3 +64,10 @@
            (vec (recovery/forbidden-recovery-capability-findings-of-kind
                  files
                  :automatic-every-tab-monitoring))))))
+
+(deftest ended-session-handler-only-applies-to-session-recovery
+  (let [handler (first (filter #(re-matches (:pattern %) "the ended session remains ended")
+                               recovery/handlers))
+        applies? (:applies? handler)]
+    (is (true? (applies? #:acceptance{:feature-name "Data layer session recovery"})))
+    (is (false? (applies? #:acceptance{:feature-name "Data layer observation target lifecycle"})))))
