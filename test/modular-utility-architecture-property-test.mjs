@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { planVerification } from "../scripts/verification-packs.mjs";
+import { headlessChromeArguments } from "./support/headless-chrome.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
@@ -30,6 +31,16 @@ const closure = (packs, initial, direction) => {
   }
   return selected;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const profile = `/tmp/generated Chrome profile ${sample}-${"x".repeat(sample % 17)}`;
+  const arguments_ = headlessChromeArguments(profile);
+  assert.deepEqual(arguments_.filter((argument) => argument.startsWith("--user-data-dir=")),
+    [`--user-data-dir=${profile}`],
+    "generated Chrome profiles must remain isolated in exactly one argument");
+  for (const flag of ["--disable-background-networking", "--disable-component-update", "--disable-sync"])
+    assert.ok(arguments_.includes(flag), "generated Chrome launches must retain hermetic flags");
+}
 
 const declaredBoundaries = JSON.parse(await readFile(
   new URL("../architecture/data-layer-boundaries.json", import.meta.url),
@@ -457,4 +468,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);

@@ -35,4 +35,9 @@ cooperativeChrome.kill = function kill(signal) {
 await stopHeadlessChrome(cooperativeChrome, 20);
 assert.deepEqual(cooperativeChrome.signals, ["SIGTERM"]);
 
+const exitedChrome = new FakeChrome();
+exitedChrome.exitCode = 0;
+await stopHeadlessChrome(exitedChrome, 1);
+assert.deepEqual(exitedChrome.signals, []);
+
 console.log("headless Chrome lifecycle tests passed");
