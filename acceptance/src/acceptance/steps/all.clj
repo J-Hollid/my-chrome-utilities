@@ -74,6 +74,7 @@
             [acceptance.steps.schema-property-example-values :as schema-property-example-values]
             [acceptance.steps.schema-assignment-data-conditions :as schema-assignment-data-conditions]
             [acceptance.steps.schema-publication-refresh :as schema-publication-refresh]
+            [acceptance.steps.non-applicable-property-visibility :as non-applicable-property-visibility]
             [acceptance.steps.json-schema-export :as json-schema-export]
             [acceptance.steps.schema-workspace-runtime :as schema-workspace-runtime]
             [acceptance.steps.session-boundaries :as session-boundaries]
@@ -120,6 +121,7 @@
                live-guided-conditional-rules/handlers
                allowed-value-expansion/handlers
                schema-publication-refresh/handlers
+               non-applicable-property-visibility/handlers
                defect-library/handlers
                validation-presence-semantics/handlers
                missing-event-defect-report/handlers
