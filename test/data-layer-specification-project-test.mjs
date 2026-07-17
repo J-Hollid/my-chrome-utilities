@@ -1,20 +1,34 @@
 import assert from "node:assert/strict";
 import {
   addProjectEntity,
+  addFlowStep,
   applyBulkRequirement,
+  advanceFlowInstance,
+  buildCoverageMatrix,
+  buildReleaseReview,
   commitBulkProperties,
+  commitStagedProjectImport,
   composeRequirementProfiles,
   createSpecificationProject,
+  createProjectSchemaDraft,
+  exportDocumentation,
+  exportSpecificationProjectState,
   exportSpecificationProject,
   importSpecificationProject,
   migrateLegacyLibrary,
   projectPreflight,
   publishProjectRelease,
   redoProjectTransaction,
+  reorderFlowStep,
   resolveApplicability,
   runProjectFixture,
+  saveProjectAssignment,
+  searchProjectAssignments,
+  stageProjectImport,
+  startFlowInstance,
   transactProject,
   undoProjectTransaction,
+  restoreReleaseAsDraft,
 } from "../dist/data-layer-specification-project.js";
 
 let sequence = 0;
@@ -29,7 +43,7 @@ let state = createSpecificationProject({
 assert.equal(state.project.name,"Shop data specification");
 assert.equal(state.project.currentRelease,undefined);
 assert.equal(state.draft.status,"Saved");
-assert.deepEqual(Object.keys(state.project.collections),["profiles","pages","pageGroups","events","applicabilitySets","flows","fixtures"]);
+assert.deepEqual(Object.keys(state.project.collections),["profiles","pages","pageGroups","events","applicabilitySets","flows","fixtures","schemaDrafts","assignments"]);
 
 const add = (kind, entity) => { state = addProjectEntity(state, kind, entity, id); return state.project.collections[kind].at(-1); };
 const sitewide = add("profiles",{name:"Sitewide",requirements:[{path:"/page_type",type:"string",required:true}]});
@@ -38,8 +52,8 @@ const retail = add("profiles",{name:"Retail confirmation",requirements:[{path:"/
 const trade = add("profiles",{name:"Trade account",requirements:[{path:"/account_id",type:"string",required:true}]});
 const purchase = add("events",{name:"Purchase",sourceId:"event-history",eventName:"purchase",target:"payload",profileIds:[commerce.id]});
 const confirmation = add("pages",{name:"Checkout confirmation",profileIds:[sitewide.id],applicabilityIds:[]});
-const retailMatcher = add("applicabilitySets",{name:"Retail confirmation",priority:10,condition:{kind:"all",conditions:[{kind:"predicate",field:"pathname",operator:"equals",value:"/checkout/confirmation"},{kind:"predicate",field:"eventName",operator:"equals",value:"purchase"},{kind:"predicate",field:"flowId",operator:"equals",value:"retail"}]}});
-const tradeMatcher = add("applicabilitySets",{name:"Trade confirmation",priority:10,condition:{kind:"all",conditions:[{kind:"predicate",field:"pathname",operator:"equals",value:"/checkout/confirmation"},{kind:"predicate",field:"eventName",operator:"equals",value:"purchase"},{kind:"predicate",field:"flowId",operator:"equals",value:"trade"}]}});
+const retailMatcher = add("applicabilitySets",{name:"Retail confirmation",priority:10,profileIds:[retail.id],condition:{kind:"all",conditions:[{kind:"predicate",field:"pathname",operator:"equals",value:"/checkout/confirmation"},{kind:"predicate",field:"eventName",operator:"equals",value:"purchase"},{kind:"predicate",field:"flowId",operator:"equals",value:"retail"}]}});
+const tradeMatcher = add("applicabilitySets",{name:"Trade confirmation",priority:10,profileIds:[trade.id],condition:{kind:"all",conditions:[{kind:"predicate",field:"pathname",operator:"equals",value:"/checkout/confirmation"},{kind:"predicate",field:"eventName",operator:"equals",value:"purchase"},{kind:"predicate",field:"flowId",operator:"equals",value:"trade"}]}});
 const retailFlow = add("flows",{name:"Retail",steps:[{id:"retail-product",name:"Product",eventId:purchase.id,minimum:1,maximum:10},{id:"retail-upsell",name:"Upsell",optional:true},{id:"retail-confirm",name:"Confirmation",eventId:purchase.id,profileIds:[retail.id],applicabilityId:retailMatcher.id}]});
 const tradeFlow = add("flows",{name:"Trade",steps:[{id:"trade-account",name:"Account",profileIds:[trade.id]},{id:"trade-confirm",name:"Confirmation",eventId:purchase.id,applicabilityId:tradeMatcher.id}]});
 assert.equal(new Set([sitewide.id,commerce.id,retail.id,trade.id,purchase.id,confirmation.id,retailFlow.id,tradeFlow.id]).size,8);
@@ -98,5 +112,77 @@ const migrated = migrateLegacyLibrary(legacy,{id});
 assert.equal(migrated.issues.length,0);
 assert.equal(migrated.project.compatibility.legacySnapshot,JSON.stringify(legacy));
 assert.equal(migrated.project.collections.events[0].eventName,"page_view");
+
+const documentation = exportDocumentation(state.project,{fields:["path","type","provenance","whereUsed"],include:{applicability:false,flows:false,fixtures:false,releases:true}});
+assert.match(documentation.preview,/\/page_type/);
+assert.equal(documentation.preview,documentation.clipboard);
+assert.deepEqual(documentation.lossyCategories,["applicability","flows","fixtures"]);
+assert.match(documentation.preview,/Full-fidelity Specification Project/);
+assert.equal(state.project.collections.profiles.find(({id:profileId})=>profileId===sitewide.id).requirements.length,101);
+
+let flowInstance = startFlowInstance(state.project,retailFlow.id,"tab-1");
+flowInstance = advanceFlowInstance(state.project,flowInstance,{eventId:purchase.id,pageId:confirmation.id});
+assert.equal(flowInstance.occurrences["retail-product"],1);
+assert.equal(flowInstance.currentStepId,"retail-product");
+flowInstance = advanceFlowInstance(state.project,flowInstance,{eventId:purchase.id,pageId:confirmation.id});
+assert.equal(flowInstance.occurrences["retail-product"],2);
+assert.equal(resolveApplicability(state.project,{pathname:"/checkout/confirmation",eventName:"purchase",flowId:flowInstance.selector}).winner.id,retailMatcher.id);
+
+const releaseOne = state.project.releases[0];
+let restored = restoreReleaseAsDraft(state,releaseOne.id,id);
+assert.equal(restored.project.currentRelease,releaseOne.id);
+assert.equal(restored.draft.restoredFromRelease,releaseOne.id);
+restored = transactProject(restored,"rename Purchase",(project)=>({...project,collections:{...project.collections,events:project.collections.events.map((event)=>event.id===purchase.id?{...event,name:"Order completed"}:event)}}));
+const review = buildReleaseReview(state.project,restored.project);
+assert.ok(review.sections.some(({kind})=>kind==="renamed"&&String(kind)));
+assert.ok(review.affectedConsumers.some(({id:consumerId})=>consumerId===purchase.id));
+
+const fullFidelity = exportSpecificationProjectState(restored);
+const stagedImport = stageProjectImport(fullFidelity,state);
+assert.equal(stagedImport.blockers.length,1);
+assert.equal(stagedImport.blockers[0].kind,"project-id-collision");
+assert.equal(JSON.stringify(state.project),JSON.stringify(JSON.parse(exportSpecificationProject(state.project)).project));
+const remapped = stageProjectImport(fullFidelity,state,{projectId:id("project")});
+assert.equal(remapped.blockers.length,0);
+const importedState = commitStagedProjectImport(state,remapped,{write:()=>{}});
+assert.notEqual(importedState.project.id,state.project.id);
+assert.deepEqual(importedState.project.collections,restored.project.collections);
+assert.throws(()=>commitStagedProjectImport(state,remapped,{write:()=>{throw new Error("quota");}}),/quota/);
+assert.equal(state.project.currentRelease,releaseOne.id);
+
+const coverage = buildCoverageMatrix(restored.project,{rowLimit:40});
+assert.ok(coverage.totalRows>=restored.project.collections.profiles.length);
+assert.ok(coverage.rows.length<=40);
+assert.ok(coverage.rows.every((row)=>row.issueLink.startsWith("?kind=")));
+
+let integrated = createSpecificationProject({name:"Integrated lifecycle",site:"shop.example",id});
+integrated = createProjectSchemaDraft(integrated,{schemaId:"schema-sitewide",name:"Sitewide page context",baseRevision:1,description:"Shared envelope"},id);
+const publishedBeforeAssignments = JSON.stringify(integrated.project.collections.schemaDrafts[0].publishedRevision);
+const nestedConditions = {kind:"all",conditions:[{kind:"predicate",field:"payload.funnel_id",operator:"equals",value:"retail"},{kind:"not",conditions:[{kind:"predicate",field:"payload.account_type",operator:"equals",value:"trade"}]}]};
+integrated = saveProjectAssignment(integrated,{name:"Retail",schemaId:"schema-sitewide",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:1,condition:nestedConditions},id);
+integrated = saveProjectAssignment(integrated,{name:"Trade",schemaId:"schema-sitewide",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,versionPolicy:"follow latest",condition:{kind:"all",conditions:[{kind:"predicate",field:"payload.account_type",operator:"equals",value:"trade"}]}},id);
+assert.equal(new Set(integrated.project.collections.assignments.map(({id:assignmentId})=>assignmentId)).size,2);
+assert.equal(integrated.project.collections.assignments[0].schemaRevision,1);
+assert.equal(JSON.stringify(integrated.project.collections.schemaDrafts[0].publishedRevision),publishedBeforeAssignments);
+const retailAssignment = integrated.project.collections.assignments[0];
+integrated = saveProjectAssignment(integrated,{...retailAssignment,priority:20},id);
+assert.equal(integrated.project.collections.assignments[0].id,retailAssignment.id);
+assert.deepEqual(integrated.project.collections.assignments[0].condition,nestedConditions);
+assert.throws(()=>saveProjectAssignment(integrated,{name:"Blank",schemaId:"",eventName:"",sourceId:"",target:"",priority:0,versionPolicy:"follow latest"},id),/routing fields/);
+assert.deepEqual(searchProjectAssignments(integrated.project,"retail"),{rows:[integrated.project.collections.assignments[0]],count:1,empty:false,conflicts:[]});
+
+let structured = createSpecificationProject({name:"Structured flows",site:"shop.example",id});
+structured = addProjectEntity(structured,"flows",{name:"Retail checkout",steps:[]},id);
+const structuredFlow = structured.project.collections.flows[0];
+structured = addFlowStep(structured,structuredFlow.id,{name:"Product",eventId:"purchase",pageId:"product",minimum:1,maximum:5,optional:false,branch:"checkout",transition:{from:"entry",to:"product"}},id);
+structured = addFlowStep(structured,structuredFlow.id,{name:"Confirmation",eventId:"purchase",pageId:"confirmation",minimum:1,maximum:1,optional:false,branch:"checkout",transition:{from:"product",to:"confirmation"}},id);
+structured = reorderFlowStep(structured,structuredFlow.id,1,0);
+assert.deepEqual(structured.project.collections.flows[0].steps.map(({name})=>name),["Confirmation","Product"]);
+assert.equal(structured.project.collections.flows[0].steps[1].maximum,5);
+
+let retailInstance=startFlowInstance(state.project,retailFlow.id,"retail-tab"),tradeInstance=startFlowInstance(state.project,tradeFlow.id,"trade-tab");
+retailInstance=advanceFlowInstance(state.project,retailInstance,{eventId:purchase.id,pageId:confirmation.id});tradeInstance=advanceFlowInstance(state.project,tradeInstance,{pageId:confirmation.id});
+const retailFinal=resolveApplicability(state.project,{pathname:"/checkout/confirmation",eventName:"purchase",flowId:retailInstance.selector}),tradeFinal=resolveApplicability(state.project,{pathname:"/checkout/confirmation",eventName:"purchase",flowId:tradeInstance.selector});
+assert.equal(retailFinal.winner.id,retailMatcher.id);assert.equal(tradeFinal.winner.id,tradeMatcher.id);assert.deepEqual(state.project.collections.applicabilitySets.find(({id:matcherId})=>matcherId===retailFinal.winner.id).profileIds,[retail.id]);assert.deepEqual(state.project.collections.applicabilitySets.find(({id:matcherId})=>matcherId===tradeFinal.winner.id).profileIds,[trade.id]);
 
 console.log("data-layer Specification Project tests passed");
