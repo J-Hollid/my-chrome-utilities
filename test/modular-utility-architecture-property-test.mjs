@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
-import { planVerification } from "../scripts/verification-packs.mjs";
+import { executeAcceptancePlan, planVerification } from "../scripts/verification-packs.mjs";
 import { headlessChromeArguments } from "./support/headless-chrome.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
@@ -192,6 +192,8 @@ for (let sample = 0; sample < 100; sample += 1) {
     packs.filter(({ id }) => expected.has(id)).flatMap(({ handlers }) => handlers),
     "generated impact plans must preserve handler ownership across the selected closure");
   assert.equal(plan.commands[0], "npm run build");
+  assert.deepEqual(plan.preparationCommands, ["npm run build"],
+    "generated acceptance plans must expose build preparation explicitly");
   assert.equal(plan.commands.filter((command) => command === "npm run build").length, 1,
     "generated plans must compile exactly once");
   assert.equal(new Set(plan.commands).size, plan.commands.length,
@@ -211,6 +213,10 @@ for (let sample = 0; sample < 100; sample += 1) {
   }
   assert.ok(plan.commands.indexOf(parseCommands.at(-1)) < plan.commands.indexOf(generateCommands[0]));
   assert.ok(plan.commands.indexOf(generateCommands.at(-1)) < plan.commands.indexOf(executeCommands[0]));
+  const executionOrder = [];
+  await executeAcceptancePlan(plan, { runCommand:async(command) => executionOrder.push(command) });
+  assert.deepEqual(executionOrder, [...plan.preparationCommands, ...plan.acceptanceCommands],
+    "generated acceptance execution must build before parsing and pack sessions");
 
   const changedFeature = packs[ownerIndex].features[0];
   const featurePlan = planVerification(packs, { changedPaths:[changedFeature] });
