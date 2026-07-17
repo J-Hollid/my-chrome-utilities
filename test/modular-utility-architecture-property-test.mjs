@@ -6,6 +6,7 @@ import { commandsForUtilityShell } from "../dist/utilities/command-palette/index
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
+import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -181,6 +182,48 @@ for (let sample = 0; sample < 100; sample += 1) {
 }
 
 for (let sample = 0; sample < 100; sample += 1) {
+  const count = 1 + sample % 8;
+  let clickListener;
+  const tabList = {
+    addEventListener(type, listener){ if (type === "click") clickListener = listener; },
+    removeEventListener(type, listener){
+      if (type === "click" && clickListener === listener) clickListener = undefined;
+    },
+  };
+  const panels = new Map();
+  const tabs = Array.from({ length:count }, (_, index) => {
+    const panelId = `data-layer-panel-property-${sample}-${index}`;
+    const attributes = new Map([
+      ["aria-controls", panelId],
+      ["aria-selected", String(index === sample % count)],
+    ]);
+    panels.set(panelId, { hidden:false });
+    return {
+      parentElement:tabList,
+      tabIndex:0,
+      getAttribute:name => attributes.get(name) ?? null,
+      setAttribute:(name, value) => attributes.set(name, String(value)),
+    };
+  });
+  const root = {
+    querySelectorAll(){ return tabs; },
+    querySelector(selector){ return panels.get(selector.slice(1)) ?? null; },
+  };
+  const selectedIndex = (sample * 7) % count;
+
+  const dispose = mountDataLayerNavigation(root);
+  clickListener({ target:{ closest:() => tabs[selectedIndex] } });
+  assert.deepEqual(tabs.map((tab) => tab.getAttribute("aria-selected")),
+    tabs.map((_, index) => String(index === selectedIndex)));
+  assert.deepEqual(tabs.map((tab) => panels.get(tab.getAttribute("aria-controls")).hidden),
+    tabs.map((_, index) => index !== selectedIndex));
+  assert.deepEqual(tabs.map(({ tabIndex }) => tabIndex),
+    tabs.map((_, index) => index === selectedIndex ? 0 : -1));
+  dispose();
+  assert.equal(clickListener, undefined, "data-layer navigation disposal must detach its click listener");
+}
+
+for (let sample = 0; sample < 100; sample += 1) {
   const count = sample % 15;
   const utilities = Array.from({ length:count }, (_, index) => ({
     id:`directory-${sample}-${index}`,
@@ -260,4 +303,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 utility directories, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 storage models, and 100 panel models passed");
