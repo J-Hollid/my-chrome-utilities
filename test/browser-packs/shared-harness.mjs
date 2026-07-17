@@ -51,6 +51,7 @@ export async function runRenderedWorkflow(id,workflow){
     const panelUrl=`http://127.0.0.1:${server.address().port}/side-panel.html${isolationQuery(id)}`;
     const page=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(panelUrl)}`,{method:"PUT"}).then((response)=>response.json());
     socket=new DevtoolsSocket(page.webSocketDebuggerUrl);await socket.connect();
+    await socket.call("Browser.grantPermissions",{origin:new URL(panelUrl).origin,permissions:["clipboardReadWrite","clipboardSanitizedWrite"]});
     await socket.call("Emulation.setDeviceMetricsOverride",{width:320,height:900,deviceScaleFactor:1,mobile:false});await socket.call("Runtime.enable");
     const expectedIsolation=id==="shell"?"":isolationScope(id).utilityId;
     let ready=false;for(let attempt=0;attempt<300;attempt++){const result=await socket.call("Runtime.evaluate",{expression:`document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true' && (document.documentElement.dataset.utilityIsolation ?? '') === ${JSON.stringify(expectedIsolation)}`,returnByValue:true});if(result.result.value){ready=true;break;}await wait(50);}assert.equal(ready,true,"Rendered side panel did not become ready in its requested utility scope");

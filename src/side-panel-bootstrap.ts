@@ -1,6 +1,7 @@
 import { isolateUtilityDomFromSearch, utilityDomScopeFromSearch } from "./platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "./platform/utility-bootstrap.js";
 import type { UtilityModuleEntry } from "./platform/utility-contract.js";
+import { createUtilityStorage } from "./platform/utility-storage.js";
 
 const scope=utilityDomScopeFromSearch(globalThis.location.search);
 if(!scope){
@@ -14,7 +15,7 @@ if(!scope){
   utility.lifecycle.mount(root,window);
   if(scope.utilityId==="data-layer"){
     const {mountScopedDataLayerAdapter}=await import("./utilities/data-layer/layers/browser/scoped-runtime.js");
-    mountScopedDataLayerAdapter(root,scope.panelIds);
+    mountScopedDataLayerAdapter(root,scope.panelIds,createUtilityStorage(localStorage,utility.storage));
   }
   root.dataset.utilityShellReady="true";
 }
