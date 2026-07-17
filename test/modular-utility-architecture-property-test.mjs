@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
-import { bindUtilityPanels, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
+import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 
 const closure = (packs, initial, direction) => {
@@ -115,6 +115,48 @@ for (let sample = 0; sample < 100; sample += 1) {
 }
 
 for (let sample = 0; sample < 100; sample += 1) {
+  const panelIds = Array.from({ length:1 + sample % 5 }, (_, index) => `standalone-${sample}-${index}`);
+  const panels = new Map(panelIds.map((id) => [id, { dataset:{} }]));
+  const calls = [];
+  let pagehide;
+  const utility = {
+    id:`standalone-${sample}`,
+    identity:{ name:`Standalone ${sample}`, description:"Generated standalone utility" },
+    commands:[],
+    panels:panelIds,
+    lifecycle:{
+      activate(){ calls.push("activate"); },
+      deactivate(){ calls.push("deactivate"); },
+    },
+    storage:{ namespace:`standalone.${sample}`, version:1 },
+  };
+  const root = {
+    dataset:{},
+    querySelector(selector){ return panels.get(selector.slice(1)) ?? null; },
+  };
+
+  const mounted = mountUtility(utility, root, {
+    addEventListener(type, listener, options){
+      assert.equal(type, "pagehide");
+      assert.deepEqual(options, { once:true });
+      pagehide = listener;
+    },
+  });
+  assert.equal(root.dataset.registeredUtilities, utility.id);
+  assert.equal(root.dataset.activeUtilities, utility.id);
+  assert.deepEqual(panelIds.map((id) => panels.get(id).dataset.utilityOwner),
+    Array(panelIds.length).fill(utility.id));
+  assert.deepEqual(calls, ["activate"]);
+
+  if (sample % 2) pagehide(); else mounted.unmount();
+  mounted.unmount();
+  pagehide();
+  assert.equal(root.dataset.activeUtilities, "");
+  assert.deepEqual(calls, ["activate", "deactivate"],
+    "standalone utilities must deactivate exactly once regardless of unmount source");
+}
+
+for (let sample = 0; sample < 100; sample += 1) {
   const count = 1 + sample % 20;
   const commands = Array.from({ length:count }, (_, index) => ({ id:`command-${sample}-${index}` }));
   const registeredIds = commands
@@ -210,4 +252,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 200 lifecycle cases, 100 command registries, 100 utility directories, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 utility directories, 100 storage models, and 100 panel models passed");
