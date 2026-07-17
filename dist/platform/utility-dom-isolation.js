@@ -18,6 +18,13 @@ function removeExcludedElements(root, selectors) {
     for (const selector of selectors)
         root.querySelector(selector)?.remove();
 }
+function removePanelsOutsideScope(root, panelIds) {
+    const panels = root.querySelectorAll("#palette,[id^='workspace-panel-'],[id^='data-layer-panel-']");
+    for (const panel of Array.from(panels)) {
+        if (!panelIds.includes(panel.id))
+            panel.remove();
+    }
+}
 function removeElementsOutsideScope(root, scope) {
     for (const element of Array.from(root.querySelectorAll("[data-utility-owner]"))) {
         const ownedElement = { id: element.id, owner: element.dataset.utilityOwner };
@@ -53,6 +60,7 @@ function synchronizeTabs(root, panelIds) {
 }
 export function isolateUtilityDom(root, scope) {
     removeExcludedElements(root, scope.removeSelectors ?? []);
+    removePanelsOutsideScope(root, scope.panelIds);
     removeElementsOutsideScope(root, scope);
     synchronizeTabs(root, scope.panelIds);
 }
