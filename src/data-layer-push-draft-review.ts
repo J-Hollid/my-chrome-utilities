@@ -1,5 +1,5 @@
 import type { PropertyEditorState } from "./data-layer-event-library-editor.js";
-import type { ObservationTarget } from "./data-layer-observation-targets.js";
+import type { ObservationTarget } from "./utilities/data-layer/capture.js";
 import type { JsonValue } from "./data-layer-event-library-editor.js";
 
 export interface PushDraftReviewChange {
@@ -8,7 +8,6 @@ export interface PushDraftReviewChange {
   pushed: string;
   change: "added" | "removed" | "changed";
 }
-
 export interface PushDraftReview {
   editor: PropertyEditorState;
   target: ObservationTarget;

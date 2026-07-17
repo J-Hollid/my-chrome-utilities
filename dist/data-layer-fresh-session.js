@@ -1,4 +1,4 @@
-import { resetLiveObserverForSession, } from "./data-layer-live-observer.js";
+import { resetLiveObserverForSession, } from "./utilities/data-layer/live-inspection.js";
 export function freshSessionAvailability(options) {
     const unsavedEventCount = Math.max(0, options.eventCount - options.savedThroughEventCount);
     if (options.savedSessionMode)

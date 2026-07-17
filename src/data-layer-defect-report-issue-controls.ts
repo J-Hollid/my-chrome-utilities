@@ -6,7 +6,7 @@ import {
   type ExpectedResultChoice,
 } from "./data-layer-defect-report.js";
 import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
-import { exampleValueFromInput, type SchemaPropertyExampleInputType } from "./data-layer-schema-property-example-values.js";
+import { exampleValueFromInput, type SchemaPropertyExampleInputType } from "./utilities/data-layer/schemas.js";
 
 export function appendIssueControls(
   issues: HTMLElement,

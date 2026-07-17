@@ -2,8 +2,8 @@ import {
   saveCompletedSession,
   type CompletedSession,
   type SavedSessionLibrary,
-} from "./data-layer-saved-sessions.js";
-import type { LiveEvent } from "./data-layer-live-observer.js";
+} from "./utilities/data-layer/live-inspection.js";
+import type { LiveEvent } from "./utilities/data-layer/live-inspection.js";
 import {
   occurrenceDefectIdentity,
   occurrenceIdentityMatches,
@@ -27,7 +27,6 @@ export interface IssueMatchIdentity {
   ruleId: string;
   ruleRevision: number;
 }
-
 export interface CurrentDefectIssue {
   sourceId: string;
   eventName: string;

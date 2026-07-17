@@ -43,7 +43,7 @@ for (const { file, target } of declaredContracts) {
   assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), []);
 }
 
-const undeclaredCrossModulePairs = Object.entries(declaredBoundaries).flatMap(([file, boundary]) =>
+const directCrossModulePairs = Object.entries(declaredBoundaries).flatMap(([file, boundary]) =>
   Object.entries(declaredBoundaries)
     .filter(([target, targetBoundary]) =>
       boundary.layer === targetBoundary.layer &&
@@ -52,8 +52,24 @@ const undeclaredCrossModulePairs = Object.entries(declaredBoundaries).flatMap(([
     )
     .map(([target]) => ({ file, target }))
 ).slice(0, 100);
-assert.equal(undeclaredCrossModulePairs.length, 100);
-for (const { file, target } of undeclaredCrossModulePairs) {
+assert.equal(directCrossModulePairs.length, 100);
+for (const { file, target } of directCrossModulePairs) {
+  assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), [{
+    file,
+    dependency:`./${target.slice("src/".length).replace(/\.ts$/, ".js")}`,
+    reason:"cross-module import must use the module public API",
+  }]);
+}
+
+const modules = ["capture", "live-inspection", "event-library", "schemas", "defect-reporting", "replay"];
+const undeclaredContractPairs = Object.entries(declaredBoundaries).flatMap(([file, boundary]) =>
+  modules
+    .filter((module) => module !== boundary.module)
+    .map((module) => ({ file, target:`src/utilities/data-layer/${module}.ts` }))
+    .filter(({ target }) => !(boundary.contracts ?? []).includes(target))
+).slice(0, 100);
+assert.equal(undeclaredContractPairs.length, 100);
+for (const { file, target } of undeclaredContractPairs) {
   assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), [{
     file,
     dependency:`./${target.slice("src/".length).replace(/\.ts$/, ".js")}`,
@@ -416,4 +432,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 undeclared contracts, 100 architecture boundaries, 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);

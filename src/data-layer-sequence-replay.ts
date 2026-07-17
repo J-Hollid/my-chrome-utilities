@@ -1,4 +1,4 @@
-import type { SourceAdapter } from "./data-layer-source.js";
+import type { SourceAdapter } from "./utilities/data-layer/capture.js";
 export interface ReplayTemplate { id:string; name:string; version:number; sourceId:string; destination:string; payload:unknown; }
 export interface ReplayStep { id:string; templateId:string; templateVersion:number; enabled:boolean; destination:string; delayMs:number; breakpoint:boolean; payloadOverride?:unknown; }
 export interface ReplaySequence { id:string; name:string; steps:readonly ReplayStep[]; originatingSessionId:string; }

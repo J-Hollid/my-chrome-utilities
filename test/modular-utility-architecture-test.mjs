@@ -74,8 +74,9 @@ assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/laye
 assert.deepEqual(architectureViolations(new Map([["src/utilities/hotkeys/demo.ts",'import "../command-palette/index.js";']])),[{file:"src/utilities/hotkeys/demo.ts",dependency:"../command-palette/index.js",reason:"utilities may not import another utility"}]);
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-unclassified.ts","export const value=1;"]])),[{file:"src/data-layer-unclassified.ts",dependency:"architecture/data-layer-boundaries.json",reason:"data-layer file must declare its module and layer"}]);
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-schema-canonical-document.ts","export function typeOf(document){return document.type;}"]])),[]);
-assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-schema-documentation.js";']])),[{file:"src/data-layer-event-library-editor.ts",dependency:"./data-layer-schema-documentation.js",reason:"cross-module import requires a declared contract"}]);
-assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-source.js";']])),[]);
+assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-schema-documentation.js";']])),[{file:"src/data-layer-event-library-editor.ts",dependency:"./data-layer-schema-documentation.js",reason:"cross-module import must use the module public API"}]);
+assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-source.js";']])),[{file:"src/data-layer-event-library-editor.ts",dependency:"./data-layer-source.js",reason:"cross-module import must use the module public API"}]);
+assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./utilities/data-layer/capture.js";']])),[]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
 const captureScope={utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"]};
 assert.equal(retainUtilityElement({id:"data-layer-panel-live",owner:"data-layer"},captureScope),true);

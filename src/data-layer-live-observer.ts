@@ -1,7 +1,7 @@
-import type { SourceEvent } from "./data-layer-source.js";
-import type { ValidationIssue } from "./data-layer-schema-verification.js";
-import type { ValidationEvaluation } from "./data-layer-validation-model.js";
-import type { ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
+import type { SourceEvent } from "./utilities/data-layer/capture.js";
+import type { ValidationIssue } from "./utilities/data-layer/schemas.js";
+import type { ValidationEvaluation } from "./utilities/data-layer/schemas.js";
+import type { ResolvedSchemaDocumentation } from "./utilities/data-layer/schemas.js";
 import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-feed-query.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
@@ -18,7 +18,6 @@ export interface LiveEventDefectTriage {
     defectLinks: readonly { id:string; label:string }[];
   }[];
 }
-
 export interface LiveSource {
   id: string;
   name: string;

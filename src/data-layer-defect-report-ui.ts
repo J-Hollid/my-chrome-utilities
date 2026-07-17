@@ -25,7 +25,7 @@ import {
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
-import type { LiveEvent } from "./data-layer-live-observer.js";
+import type { LiveEvent } from "./utilities/data-layer/live-inspection.js";
 
 export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
 export type { DefectReportContext, DefectReportNavigationEffects, LiveDefectReportNavigationEffects } from "./data-layer-defect-report-browser.js";
@@ -35,7 +35,6 @@ export interface DefectReportPersistence {
   openExisting(defectId: string): void;
   updateExisting(defectId: string, report: GeneratedDefectReport): void;
 }
-
 function heading(level: "h4" | "h5", text: string): HTMLHeadingElement {
   const element = document.createElement(level);
   element.textContent = text;

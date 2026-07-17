@@ -3,7 +3,7 @@ import type {
   JsonValue,
   PropertyEditorState,
 } from "./data-layer-event-library-editor.js";
-import type { ObservationTarget } from "./data-layer-observation-targets.js";
+import type { ObservationTarget } from "./utilities/data-layer/capture.js";
 
 export interface SelectedTargetPushRequest {
   tabId: number;
@@ -11,7 +11,6 @@ export interface SelectedTargetPushRequest {
   eventName: string;
   payload: JsonValue;
 }
-
 export interface SelectedTargetPushRecord {
   success: boolean;
   result: string;

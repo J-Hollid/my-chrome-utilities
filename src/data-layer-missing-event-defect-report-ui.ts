@@ -15,7 +15,7 @@ import {
   type MissingEventReport,
   type MissingEventVisit,
 } from "./data-layer-missing-event-defect-report.js";
-import type { SchemaDefinition, ValidationTarget } from "./data-layer-schema-verification.js";
+import type { SchemaDefinition, ValidationTarget } from "./utilities/data-layer/schemas.js";
 import { appendDetailControls, type DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
@@ -39,7 +39,6 @@ export interface MissingEventBuilderNavigation {
   openMatchingEvent?(eventId: string, restoreBuilder: () => void): void;
   focusReportMissingEvent?(): void;
 }
-
 export interface MissingEventBuilderOptions {
   entryPoint: string;
   initialSchemaId?: string;
