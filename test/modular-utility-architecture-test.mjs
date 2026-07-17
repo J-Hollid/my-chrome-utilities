@@ -7,6 +7,7 @@ import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
 import { loadVerificationPacks, planVerification, validateVerificationPacks } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
+import { retainUtilityElement } from "../dist/platform/utility-dom-isolation.js";
 
 assert.deepEqual(utilityRegistry.map(({id})=>id),["command-palette","hotkeys","data-layer"]);
 for(const utility of utilityRegistry){
@@ -70,6 +71,10 @@ assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/laye
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/application/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/application/demo.ts",dependency:"../browser/demo.js",reason:"application may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/hotkeys/demo.ts",'import "../command-palette/index.js";']])),[{file:"src/utilities/hotkeys/demo.ts",dependency:"../command-palette/index.js",reason:"utilities may not import another utility"}]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
+const captureScope={utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"]};
+assert.equal(retainUtilityElement({id:"data-layer-panel-live",owner:"data-layer"},captureScope),true);
+assert.equal(retainUtilityElement({id:"data-layer-panel-schemas",owner:"data-layer"},captureScope),false);
+assert.equal(retainUtilityElement({id:"workspace-panel-hotkeys",owner:"hotkeys"},captureScope),false);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
 assert.doesNotMatch(sidePanelSource,/from "\.\/command-palette/,"The shell must use the command-palette public entry");

@@ -5,6 +5,7 @@ import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
+import { retainUtilityElement } from "../dist/platform/utility-dom-isolation.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
 
@@ -22,6 +23,24 @@ const closure = (packs, initial, direction) => {
   }
   return selected;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const scope = {
+    utilityId:`isolation-owner-${sample % 7}`,
+    panelIds:Array.from({ length:1 + sample % 5 }, (_, index) => `isolation-panel-${sample}-${index}`),
+  };
+  const candidates = [
+    ...scope.panelIds.map((id) => ({ id, owner:scope.utilityId, expected:true })),
+    { id:scope.panelIds[0], owner:`other-owner-${sample}`, expected:false },
+    { id:`other-panel-${sample}`, owner:scope.utilityId, expected:false },
+    { id:scope.panelIds[0], owner:undefined, expected:false },
+  ];
+
+  for (const { id, owner, expected } of candidates) {
+    assert.equal(retainUtilityElement({ id, owner }, scope), expected,
+      "DOM isolation must retain exactly the panels owned by its utility scope");
+  }
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const count = 2 + sample % 9;
@@ -303,4 +322,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 storage models, and 100 panel models passed");
