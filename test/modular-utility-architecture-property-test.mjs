@@ -180,6 +180,19 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.equal(new Set(plan.commands).size, plan.commands.length,
     "generated plans must schedule each command once");
   assert.deepEqual(plan.features, packs.filter(({ id }) => expected.has(id)).flatMap(({ features }) => features).sort());
+  const parseCommands = plan.commands.filter((command) => command.startsWith("bb gherkin-parser "));
+  const generateCommands = plan.commands.filter((command) => command.startsWith("bb acceptance-entrypoint-generator "));
+  const executeCommands = plan.commands.filter((command) => command.includes("_acceptance_test.clj "));
+  assert.equal(parseCommands.length, plan.features.length);
+  assert.equal(generateCommands.length, plan.features.length);
+  assert.equal(executeCommands.length, plan.features.length);
+  assert.ok(plan.commands.indexOf(parseCommands.at(-1)) < plan.commands.indexOf(generateCommands[0]));
+  assert.ok(plan.commands.indexOf(generateCommands.at(-1)) < plan.commands.indexOf(executeCommands[0]));
+
+  const changedFeature = packs[ownerIndex].features[0];
+  const featurePlan = planVerification(packs, { changedPaths:[changedFeature] });
+  assert.deepEqual(featurePlan.features, [changedFeature]);
+  assert.deepEqual(featurePlan.handlers, packs[ownerIndex].handlers);
 
   const full = planVerification(packs, { terminalFull:true });
   assert.deepEqual(full.packIds, packs.map(({ id }) => id),

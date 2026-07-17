@@ -138,10 +138,10 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateInventoryPaths(packs, repositoryInventory);
   return packs;
 }
-
 function ownerOf(packs, path) {
   return packs.find((pack) =>
-    pack.source.some((prefix) => sourceMatches(prefix, path))
+    pack.source.some((prefix) => sourceMatches(prefix, path)) ||
+    ownedPathKeys.some((key) => pack[key].includes(path))
   );
 }
 
@@ -179,6 +179,45 @@ function expandDependants(packs, ids) {
   return selected;
 }
 
+function packsForIds(packs, ids) {
+  const selected = new Set(ids);
+  return packs.filter(({ id }) => selected.has(id));
+}
+
+function acceptanceArtifacts(feature) {
+  const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/, "");
+  const slug = feature.toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+  return {
+    ir:`build/acceptance/ir/${basename}.json`,
+    generated:`build/acceptance/generated/${slug}_acceptance_test.clj`,
+  };
+}
+
+function acceptanceCommands(features) {
+  const artifacts = features.map((feature) => ({
+    feature,
+    ...acceptanceArtifacts(feature),
+  }));
+  return [
+    ...artifacts.map(({ feature, ir }) => `bb gherkin-parser ${feature} ${ir}`),
+    ...artifacts.map(({ ir }) =>
+      `bb acceptance-entrypoint-generator ${ir} build/acceptance/generated`
+    ),
+    ...artifacts.map(({ ir, generated }) => `bb ${generated} ${ir}`),
+  ];
+}
+
+function acceptanceSelection(packs, ordered, packIds, changedFeatures, changedOwners, terminalFull) {
+  if (terminalFull) return packs;
+  if (changedFeatures.length) {
+    return packsForIds(packs, changedFeatures.map((path) => changedOwners.get(path)));
+  }
+  if (packIds.length) return packsForIds(packs, packIds);
+  return ordered;
+}
+
 export function planVerification(
   packs,
   { packIds = [], changedPaths = [], terminalFull = false } = {},
@@ -187,10 +226,12 @@ export function planVerification(
   validateDependencies(packs, known);
 
   let selected = terminalFull ? new Set(known) : new Set(packIds);
+  const changedOwners = new Map();
   for (const path of changedPaths) {
     const owner = ownerOf(packs, path);
     if (!owner) throw new Error(`Assign every source path to one pack: ${path}`);
     selected.add(owner.id);
+    changedOwners.set(path, owner.id);
   }
 
   if (changedPaths.length) selected = expandDependants(packs, selected);
@@ -204,10 +245,25 @@ export function planVerification(
     for (const path of pack.browserAdapters) commands.push(`node ${path}`);
   }
 
+  const changedFeatures = changedPaths.filter((path) => path.endsWith(".feature"));
+  const acceptancePacks = acceptanceSelection(
+    packs,
+    ordered,
+    packIds,
+    changedFeatures,
+    changedOwners,
+    terminalFull,
+  );
+  const features = (changedFeatures.length
+    ? changedFeatures
+    : acceptancePacks.flatMap((pack) => pack.features)
+  ).sort();
+  commands.push(...acceptanceCommands(features));
+
   return {
     packIds: ordered.map(({ id }) => id),
-    features: ordered.flatMap(({ features }) => features).sort(),
-    handlers: ordered.flatMap(({ handlers }) => handlers),
+    features,
+    handlers: acceptancePacks.flatMap(({ handlers }) => handlers),
     commands: [...new Set(commands)],
   };
 }
