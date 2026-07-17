@@ -1,11 +1,11 @@
 import type { UtilityShell } from "../utility-registry.js";
-import type { UtilityModuleEntry } from "./utility-contract.js";
+import type { UtilityModuleEntry, UtilityMountHost } from "./utility-contract.js";
 
 export interface UtilityShellRoot {
   dataset: Record<string, string | undefined>;
 }
 
-export interface UtilityMountRoot extends UtilityShellRoot, Pick<ParentNode, "querySelector"> {}
+export interface UtilityMountRoot extends UtilityShellRoot, UtilityMountHost {}
 
 export interface PageLifecycle {
   addEventListener(

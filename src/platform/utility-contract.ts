@@ -1,5 +1,5 @@
 export interface UtilityStorageContract { namespace:string; version:number; legacyKeys?:readonly string[]; }
-export interface UtilityMountHost { dataset:Record<string,string|undefined>; querySelector<E extends Element=Element>(selectors:string):E|null; }
+export interface UtilityMountHost { dataset:Record<string,string|undefined>; querySelector<E extends Element=Element>(selectors:string):E|null; querySelectorAll<E extends Element=Element>(selectors:string):NodeListOf<E>; }
 export interface UtilityPageLifecycle { addEventListener(type:string,listener:EventListenerOrEventListenerObject,options?:boolean|AddEventListenerOptions):void; }
 export interface UtilityLifecycle { activate():void; deactivate():void; mount(root:UtilityMountHost,pageLifecycle:UtilityPageLifecycle):{unmount():void}; }
 export interface UtilityModuleEntry {
