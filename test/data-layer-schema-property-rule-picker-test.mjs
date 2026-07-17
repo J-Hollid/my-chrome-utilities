@@ -86,6 +86,7 @@ assert.deepEqual(configuration, {
   limit:"",
   severity:"error",
   message:"",
+  enabled:true,
   saveReusable:false,
   reusableName:"",
   description:"",

@@ -45,6 +45,7 @@ export interface RuleConfiguration {
   limit: string;
   severity: string;
   message: string;
+  enabled: boolean;
   saveReusable: boolean;
   reusableName: string;
   description: string;
@@ -159,6 +160,7 @@ export function createRuleConfiguration(ruleType: SchemaRuleType, propertyType: 
     limit:"",
     severity:"error",
     message:"",
+    enabled:true,
     saveReusable:false,
     reusableName:"",
     description:"",
@@ -231,14 +233,36 @@ export function configuredRuleDetails(configuration: RuleConfiguration): { opera
 }
 
 export function createRuleConfigurationFromAttachedRule(
-  ruleType: "Text length" | "Item count",
-  propertyType: "string" | "array",
-  rule: Pick<PropertyRuleChoice, "parameters" | "comparison" | "limit">,
+  ruleType: SchemaRuleType,
+  propertyType: SchemaPropertyType,
+  rule: Pick<PropertyRuleChoice, "parameters" | "allowedValues" | "comparison" | "limit" | "enabled"> & {
+    severity?: string;
+    message?: string;
+    conditionGroup?: { operator: "All" | "Any"; predicates: readonly ConditionalRulePredicate[] };
+  },
 ): RuleConfiguration {
   const configuration = createRuleConfiguration(ruleType, propertyType);
-  return {
+  const configured: RuleConfiguration = {
     ...configuration,
-    comparison:rule.comparison ?? (ruleType === "Text length" ? "==" : ">="),
-    limit:String(rule.limit ?? rule.parameters ?? ""),
+    severity:rule.severity ?? configuration.severity,
+    message:rule.message ?? "",
+    enabled:rule.enabled !== false,
+    ...(rule.conditionGroup ? {
+      applyOnlyWhen:true,
+      conditionGroupOperator:rule.conditionGroup.operator,
+      conditions:Array.from(structuredClone(rule.conditionGroup.predicates)),
+    } : {}),
   };
+  if (ruleType === "Exact value") configured.exactValue = rule.parameters ?? "";
+  if (ruleType === "Allowed values") configured.allowedValues = (rule.allowedValues ?? rule.parameters?.split(",") ?? []).map(String);
+  if (ruleType === "Regular expression") configured.pattern = rule.parameters ?? "";
+  if (ruleType === "Numeric range") {
+    const [minimum = "", maximum = ""] = (rule.parameters ?? ",").split(",", 2);
+    configured.minimum = minimum; configured.maximum = maximum;
+  }
+  if (ruleType === "Text length" || ruleType === "Item count") {
+    configured.comparison = rule.comparison ?? (ruleType === "Text length" ? "==" : ">=");
+    configured.limit = String(rule.limit ?? rule.parameters ?? "");
+  }
+  return configured;
 }

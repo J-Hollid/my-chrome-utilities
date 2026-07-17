@@ -58,6 +58,7 @@ import { revalidateCurrentLiveSession } from "./utilities/data-layer/schemas.js"
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./utilities/data-layer/schemas.js";
 import { allowedValueText, openAllowedValueExpansionDialog } from "./utilities/data-layer/schemas.js";
 import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion } from "./utilities/data-layer/schemas.js";
+import { inspectLocalRuleEdit, saveLocalRuleEdit, publishReusableRuleSync, reviewReusableRuleSync } from "./utilities/data-layer/schemas.js";
 import { createLocalRulePromotionDialog } from "./utilities/data-layer/schemas.js";
 import { createGuidedValidationFlow } from "./utilities/data-layer/schemas.js";
 import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./utilities/data-layer/schemas.js";
@@ -434,7 +435,7 @@ let pendingManualPropertyContext;
 let schemaRulePickerPath;
 let schemaRulePickerTrigger;
 let schemaRuleConfiguration;
-let editingAttachedCardinalityRule;
+let editingAttachedLocalRule;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
 schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker");
@@ -474,6 +475,20 @@ cancelSchemaRuleRevisionButton.type = "button";
 cancelSchemaRuleRevisionButton.textContent = "Cancel";
 schemaRuleRevisionReview.append(Object.assign(document.createElement("h4"), { textContent: "Review rule revision" }), schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton);
 document.body.append(schemaRuleRevisionReview);
+const schemaRuleSyncReview = document.createElement("dialog");
+schemaRuleSyncReview.id = "schema-rule-sync-review";
+const schemaRuleSyncReviewSummary = document.createElement("output");
+schemaRuleSyncReviewSummary.id = "schema-rule-sync-review-summary";
+const confirmSchemaRuleSyncButton = document.createElement("button");
+confirmSchemaRuleSyncButton.id = "confirm-schema-rule-sync";
+confirmSchemaRuleSyncButton.type = "button";
+confirmSchemaRuleSyncButton.textContent = "Confirm sync and publish revisions";
+const cancelSchemaRuleSyncButton = document.createElement("button");
+cancelSchemaRuleSyncButton.type = "button";
+cancelSchemaRuleSyncButton.textContent = "Cancel";
+schemaRuleSyncReview.append(Object.assign(document.createElement("h4"), { textContent: "Sync attached schemas and publish revisions" }), schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton);
+document.body.append(schemaRuleSyncReview);
+let pendingSchemaRuleSync;
 const exportSchemaRulesButton = document.querySelector("#export-schema-rules");
 const schemaRuleDeleteReview = document.querySelector("#schema-rule-delete-review");
 const schemaRuleDeleteReviewSummary = document.querySelector("#schema-rule-delete-review-summary");
@@ -1411,7 +1426,7 @@ function storedReusableRule(rule) {
         } : {}),
     };
 }
-function persistAllowedValueExpansion(nextSchemas, nextRules) {
+function persistSchemaAndRuleLibraries(nextSchemas, nextRules) {
     const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
@@ -1452,7 +1467,7 @@ function openAllowedValueExpansionReview(event, evaluation, trigger) {
         confirm(destination) {
             const applied = applyAllowedValueExpansion({ ...input, destination });
             const nextRules = applied.reusableRules.map(storedReusableRule);
-            persistAllowedValueExpansion(applied.schemas, nextRules);
+            persistSchemaAndRuleLibraries(applied.schemas, nextRules);
             schemas = applied.schemas;
             reusableSchemaRules = nextRules;
             renderSchemas();
@@ -2349,24 +2364,12 @@ function renderSchemaDraft() {
                 promotion.dataset.propertyPath = persistedPath;
                 promotion.addEventListener("click", () => openLocalRulePromotionReview(persistedPath, rule.id, promotion));
             }
-            const normalizedOperator = rule.operator?.replaceAll("_", "-").toLowerCase();
-            const editCardinality = normalizedOperator === "text-length" || normalizedOperator === "item-count" ? document.createElement("button") : undefined;
-            if (editCardinality) {
-                editCardinality.type = "button";
-                editCardinality.textContent = "Edit";
-                editCardinality.addEventListener("click", () => {
-                    const ruleType = normalizedOperator === "text-length" ? "Text length" : "Item count";
-                    const propertyType = ruleType === "Text length" ? "string" : "array";
-                    selectedSchemaPropertyPath = schemaRulePickerPath = path;
-                    schemaRulePickerTrigger = editCardinality;
-                    editingAttachedCardinalityRule = rule;
-                    schemaRuleConfiguration = createRuleConfigurationFromAttachedRule(ruleType, propertyType, rule);
-                    renderSchemaPropertyRulePicker();
-                    schemaPropertyRulePicker.showModal();
-                    schemaPropertyRulePicker.querySelector("#schema-local-rule-comparison")?.focus({ preventScroll: true });
-                });
-            }
-            row.append(...(promotion ? [promotion] : []), ...(editCardinality ? [editCardinality] : []), toggle, remove);
+            const edit = document.createElement("button");
+            edit.type = "button";
+            edit.textContent = "Edit";
+            edit.className = "schema-attached-rule-edit";
+            edit.addEventListener("click", () => openAttachedSchemaRuleEditor(path, rule, edit));
+            row.append(...(promotion ? [promotion] : []), edit, toggle, remove);
             view.append(row);
         }
         item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view);
@@ -3180,7 +3183,7 @@ function closeSchemaPropertyRulePicker() {
     schemaRulePickerTrigger?.focus({ preventScroll: true });
     schemaRulePickerPath = undefined;
     schemaRuleConfiguration = undefined;
-    editingAttachedCardinalityRule = undefined;
+    editingAttachedLocalRule = undefined;
 }
 function configuredRuleInput(control, configuration, updateValidation) {
     const label = document.createElement("label");
@@ -3233,10 +3236,10 @@ function createConfiguredSchemaRule(path, configuration) {
     if (!schemaDraft || !validateRuleConfiguration(configuration).ready)
         return;
     const details = configuredRuleDetails(configuration);
-    const id = editingAttachedCardinalityRule?.id ?? (configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`);
-    const name = editingAttachedCardinalityRule?.name ?? (configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`);
+    const id = editingAttachedLocalRule?.id ?? (configuration.saveReusable ? `rule:${crypto.randomUUID()}` : `local-rule:${crypto.randomUUID()}`);
+    const name = editingAttachedLocalRule?.name ?? (configuration.saveReusable ? configuration.reusableName.trim() : `${configuration.ruleType} for ${path}`);
     const rule = {
-        id, name, kind: configuration.ruleType, version: editingAttachedCardinalityRule?.version ?? 1, enabled: editingAttachedCardinalityRule?.enabled !== false,
+        id, name, kind: configuration.ruleType, version: editingAttachedLocalRule?.version ?? 1, enabled: configuration.enabled,
         applicableType: configuration.propertyType,
         operator: details.operator,
         ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
@@ -3249,19 +3252,40 @@ function createConfiguredSchemaRule(path, configuration) {
         ...(configuration.saveReusable && configuration.description.trim() ? { description: configuration.description.trim() } : {}),
         ...(configuration.saveReusable && schemaDraft.id ? { attachments: [schemaDraft.id] } : {}),
     };
-    if (editingAttachedCardinalityRule) {
-        const editedId = editingAttachedCardinalityRule.id;
-        editingAttachedCardinalityRule = undefined;
-        closeSchemaPropertyRulePicker();
-        updateAttachedRule(path, editedId, (attached) => ({
-            ...attached,
-            ...(rule.operator ? { operator: rule.operator } : {}),
+    if (editingAttachedLocalRule) {
+        const edited = editingAttachedLocalRule;
+        editingAttachedLocalRule = undefined;
+        const stored = schemas.find((candidate) => candidate.id === schemaDraft?.id);
+        const nextRule = {
+            id: edited.id,
+            name: edited.name ?? rule.name,
+            version: edited.version,
+            propertyPath: canonicalRulePropertyPath(path),
+            operator: rule.operator,
             ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}),
-            ...(rule.comparison ? { comparison: rule.comparison } : {}),
+            ...(rule.allowedValues !== undefined ? { allowedValues: structuredClone(rule.allowedValues) } : {}),
+            ...(rule.comparison !== undefined ? { comparison: rule.comparison } : {}),
             ...(rule.limit !== undefined ? { limit: rule.limit } : {}),
-            ...(rule.severity ? { severity: rule.severity } : {}),
-            ...(rule.message ? { message: rule.message } : {}),
-        }));
+            ...(rule.applicableType !== undefined ? { applicableType: rule.applicableType } : {}),
+            ...(rule.severity !== undefined ? { severity: rule.severity } : {}),
+            ...(rule.message !== undefined ? { message: rule.message } : {}),
+            ...(rule.conditionGroup !== undefined ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}),
+            enabled: rule.enabled !== false,
+        };
+        if (stored) {
+            const updated = saveLocalRuleEdit(stored, { propertyPath: path, ruleId: edited.id, rule: nextRule });
+            schemas = schemas.map((candidate) => candidate.id === updated.id ? updated : candidate);
+            schemaDraft = schemaEditorDraft(updated);
+            persistSchemaLibrary();
+            closeSchemaPropertyRulePicker();
+            renderSchemas();
+            renderSchemaDraft();
+            focusSchemaPropertyRow(path);
+        }
+        else {
+            closeSchemaPropertyRulePicker();
+            updateAttachedRule(path, edited.id, () => nextRule);
+        }
         return;
     }
     if (configuration.saveReusable) {
@@ -3401,14 +3425,15 @@ function renderConditionalRuleConfiguration(path, configuration, refreshValidati
     return section;
 }
 function renderSchemaLocalRuleConfiguration(path, configuration) {
+    const editing = Boolean(editingAttachedLocalRule);
     const heading = document.createElement("h4");
     heading.id = "schema-property-rule-picker-heading";
-    heading.textContent = `Configure ${configuration.ruleType} for ${path}`;
+    heading.textContent = `${editing ? "Edit" : "Configure"} ${configuration.ruleType} for ${canonicalRulePropertyPath(path)}`;
     const context = document.createElement("p");
     const measuredValue = configuration.ruleType === "Text length" || configuration.ruleType === "Item count"
         ? ` · compares ${cardinalityMeasuredValue(configuration.propertyType)}`
         : "";
-    context.textContent = `Local ${configuration.ruleType.toLowerCase()} rule · type ${configuration.propertyType}${measuredValue}`;
+    context.textContent = `Local rule origin · ${canonicalRulePropertyPath(path)} · ${configuration.ruleType.toLowerCase()} operator · type ${configuration.propertyType}${measuredValue}`;
     const form = document.createElement("form");
     form.id = "schema-local-rule-configuration";
     const parameters = document.createElement("fieldset");
@@ -3422,7 +3447,7 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     status.setAttribute("role", "status");
     const create = document.createElement("button");
     create.type = "submit";
-    create.textContent = "Create rule";
+    create.textContent = editing ? "Save changes" : "Create rule";
     const refreshValidation = () => {
         const validation = validateRuleConfiguration(configuration);
         create.disabled = !validation.ready;
@@ -3493,6 +3518,13 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     messageLabel.textContent = "Issue message (optional)";
     message.value = configuration.message;
     message.addEventListener("input", () => { configuration.message = message.value; });
+    const enabledLabel = document.createElement("label");
+    const enabled = document.createElement("input");
+    enabled.id = "schema-local-rule-enabled";
+    enabled.type = "checkbox";
+    enabled.checked = configuration.enabled;
+    enabledLabel.append(enabled, " Enabled");
+    enabled.addEventListener("change", () => { configuration.enabled = enabled.checked; });
     const conditionalLabel = document.createElement("label");
     const conditional = document.createElement("input");
     conditional.id = "schema-local-rule-conditional";
@@ -3513,11 +3545,12 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     reusable.checked = configuration.saveReusable;
     reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
     reusable.addEventListener("change", () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector("#schema-local-rule-reusable")?.focus(); });
-    form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, conditionalLabel);
+    form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel, conditionalLabel);
     if (configuration.applyOnlyWhen)
         form.append(renderConditionalRuleConfiguration(path, configuration, refreshValidation));
-    form.append(reusableLabel);
-    if (configuration.saveReusable) {
+    if (!editing)
+        form.append(reusableLabel);
+    if (!editing && configuration.saveReusable) {
         const explanation = document.createElement("p");
         explanation.id = "schema-local-rule-reusable-explanation";
         explanation.textContent = "This reusable rule will be available to other schemas.";
@@ -3546,7 +3579,7 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     cancel.type = "button";
     cancel.textContent = "Cancel";
     cancel.addEventListener("click", closeSchemaPropertyRulePicker);
-    form.append(status, create, back, cancel);
+    form.append(status, create, ...(editing ? [] : [back]), cancel);
     form.addEventListener("submit", (event) => { event.preventDefault(); createConfiguredSchemaRule(path, configuration); });
     schemaPropertyRulePicker.replaceChildren(form);
     refreshValidation();
@@ -3629,7 +3662,7 @@ function openSchemaPropertyRulePicker(path, trigger) {
     selectedSchemaPropertyPath = schemaRulePickerPath = path;
     schemaRulePickerTrigger = trigger;
     schemaRuleConfiguration = undefined;
-    editingAttachedCardinalityRule = undefined;
+    editingAttachedLocalRule = undefined;
     renderSchemaPropertyRulePicker();
     schemaPropertyRulePicker.showModal();
     schemaPropertyRulePicker.querySelector("#schema-property-rule-search")?.focus({ preventScroll: true });
@@ -3709,6 +3742,67 @@ function updateAttachedRule(path, id, update) {
     renderSchemaDraft();
     focusSchemaPropertyRow(path);
 }
+function schemaRuleTypeForAttachment(rule) {
+    const operator = rule.operator?.replaceAll("_", "-").toLowerCase();
+    if (operator === "exact-value")
+        return "Exact value";
+    if (operator === "allowed-values")
+        return "Allowed values";
+    if (operator === "regular-expression" || operator === "regex")
+        return "Regular expression";
+    if (operator === "text-length")
+        return "Text length";
+    if (operator === "digits-only")
+        return "Digits only";
+    if (operator === "numeric-range")
+        return "Numeric range";
+    if (operator === "item-count")
+        return "Item count";
+    if (operator === "allow-undeclared-properties")
+        return "Allow undeclared properties";
+    return "Required";
+}
+function editReusableSchemaRule(rule) {
+    editingReusableSchemaRuleId = rule.id;
+    if (schemaRuleName)
+        schemaRuleName.value = rule.name;
+    if (schemaRuleTypes)
+        schemaRuleTypes.value = rule.applicableType ?? applicablePropertyTypesForRule(rule)[0] ?? "string";
+    if (schemaRuleOperator)
+        schemaRuleOperator.value = rule.operator ?? "required";
+    if (schemaRuleParameters)
+        schemaRuleParameters.value = rule.allowedValues?.map(String).join(", ") ?? rule.parameters ?? "";
+    if (schemaRuleSeverity)
+        schemaRuleSeverity.value = rule.severity ?? "error";
+    if (schemaRuleMessage)
+        schemaRuleMessage.value = rule.message ?? "";
+    if (schemaRuleExamples)
+        schemaRuleExamples.value = rule.examples ?? "";
+    if (schemaRuleAttachments)
+        schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}`, selected: rule.attachments?.includes(schema.id) ?? false })));
+    if (schemaRuleEditor)
+        schemaRuleEditor.hidden = false;
+    schemaRuleName?.focus({ preventScroll: true });
+}
+function openAttachedSchemaRuleEditor(path, attached, trigger) {
+    const reusable = reusableSchemaRules.find((rule) => rule.id === attached.id);
+    if (reusable) {
+        showSchemaSubview("schema-rule-library");
+        editReusableSchemaRule(reusable);
+        return;
+    }
+    const source = schemas.find((schema) => schema.id === schemaDraft?.id) ?? schemaDraft;
+    if (!source)
+        return;
+    const inspection = inspectLocalRuleEdit(source, path, attached.id, new Set(reusableSchemaRules.map(({ id }) => id)));
+    selectedSchemaPropertyPath = schemaRulePickerPath = path;
+    schemaRulePickerTrigger = trigger;
+    editingAttachedLocalRule = inspection.rule;
+    schemaRuleConfiguration = createRuleConfigurationFromAttachedRule(schemaRuleTypeForAttachment(inspection.rule), schemaPropertyType(path), inspection.rule);
+    renderSchemaPropertyRulePicker();
+    schemaPropertyRulePicker.showModal();
+    schemaPropertyRulePicker.querySelector("input, select, textarea, button")?.focus({ preventScroll: true });
+}
 function focusSchemaPropertyRow(path) {
     const canonicalPath = canonicalRulePropertyPath(path);
     Array.from(schemaPropertyTree.querySelectorAll("li[data-schema-property-path]"))
@@ -3742,6 +3836,43 @@ function renderSchemaAssignmentConditionEditor() {
         saveSchemaAssignmentButton.title = validation.ready ? "" : validation.assistance;
     }
 }
+function openReusableRuleSyncReview(rule, trigger) {
+    const versioned = { ...rule, version: rule.version ?? 1 };
+    const review = reviewReusableRuleSync(schemas, versioned);
+    pendingSchemaRuleSync = { rule, review, trigger };
+    const changes = review.schemas.map((schema) => `${schema.schemaName} revision ${schema.currentVersion} to ${schema.nextVersion} (${schema.attachmentCount} ${schema.attachmentCount === 1 ? "attachment" : "attachments"})`).join("; ");
+    schemaRuleSyncReviewSummary.textContent = review.blocked.length
+        ? `${review.schemaCount} schemas and ${review.attachmentCount} attachments. ${review.blocked.map(({ assistance }) => assistance).join(". ")}.`
+        : `${review.schemaCount} schemas and ${review.attachmentCount} attachments: ${changes}. No changes occur before confirmation.`;
+    confirmSchemaRuleSyncButton.disabled = !review.ready;
+    schemaRuleSyncReview.showModal();
+    (review.ready ? confirmSchemaRuleSyncButton : cancelSchemaRuleSyncButton).focus({ preventScroll: true });
+}
+confirmSchemaRuleSyncButton.addEventListener("click", () => {
+    const pending = pendingSchemaRuleSync;
+    if (!pending)
+        return;
+    try {
+        const nextSchemas = publishReusableRuleSync(schemas, { ...pending.rule, version: pending.rule.version ?? 1 }, pending.review);
+        persistSchemaAndRuleLibraries(nextSchemas, reusableSchemaRules);
+        schemas = nextSchemas;
+        renderSchemas();
+        renderSchemaWorkflowRows();
+        schemaRuleSyncReview.close();
+        pendingSchemaRuleSync = undefined;
+        if (schemaResult)
+            schemaResult.textContent = `Published ${pending.review.schemaCount} schema revisions with ${pending.rule.name} revision ${pending.rule.version ?? 1}.`;
+    }
+    catch (error) {
+        schemaRuleSyncReviewSummary.textContent = error instanceof Error ? `No schema revision was published. ${error.message}` : "No schema revision was published.";
+    }
+});
+cancelSchemaRuleSyncButton.addEventListener("click", () => {
+    const trigger = pendingSchemaRuleSync?.trigger;
+    pendingSchemaRuleSync = undefined;
+    schemaRuleSyncReview.close();
+    trigger?.focus({ preventScroll: true });
+});
 function renderSchemaWorkflowRows() {
     const choices = assignableSchemas(schemas);
     if (schemaAssignmentSchema)
@@ -3749,33 +3880,26 @@ function renderSchemaWorkflowRows() {
     const visibleRules = reusableSchemaRules.filter((rule) => `${rule.name} ${rule.kind} ${allowedValuesRuleLibrarySearchText(rule)}`.toLowerCase().includes(schemaRuleSearch?.value.toLowerCase() ?? ""));
     schemaRuleList?.replaceChildren(...visibleRules.map((rule) => {
         const item = document.createElement("li");
+        item.dataset.ruleId = rule.id;
         const summary = document.createElement("span");
         const allowedValuesMetadata = allowedValuesRuleLibraryMetadata(rule);
         summary.textContent = `${rule.name} v${rule.version ?? 1} · ${rule.kind}${allowedValuesMetadata ? ` · ${allowedValuesMetadata}` : ""}${rule.operator ? ` · ${rule.operator}` : ""}${rule.attachments?.length ? ` · ${rule.attachments.length} attachments` : ""}${rule.enabled === false ? " · disabled" : ""}${rule.revisionHistory?.length ? ` · ${rule.revisionHistory.length} prior versions` : ""}`;
         const edit = document.createElement("button");
+        const sync = document.createElement("button");
         const duplicate = document.createElement("button");
         const exportRule = document.createElement("button");
         const disable = document.createElement("button");
         const remove = document.createElement("button");
-        edit.type = duplicate.type = exportRule.type = disable.type = remove.type = "button";
+        edit.type = sync.type = duplicate.type = exportRule.type = disable.type = remove.type = "button";
         edit.textContent = "Edit";
+        sync.textContent = "Sync attached schemas and publish revisions";
         duplicate.textContent = "Duplicate";
         exportRule.textContent = "Export";
         disable.textContent = rule.enabled === false ? "Enable" : "Disable";
         remove.textContent = "Delete";
-        edit.addEventListener("click", () => { editingReusableSchemaRuleId = rule.id; if (schemaRuleName)
-            schemaRuleName.value = rule.name; if (schemaRuleTypes)
-            schemaRuleTypes.value = rule.applicableType ?? applicablePropertyTypesForRule(rule)[0] ?? "string"; if (schemaRuleOperator)
-            schemaRuleOperator.value = rule.operator ?? "required"; if (schemaRuleParameters)
-            schemaRuleParameters.value = rule.parameters ?? ""; if (schemaRuleSeverity)
-            schemaRuleSeverity.value = rule.severity ?? "error"; if (schemaRuleMessage)
-            schemaRuleMessage.value = rule.message ?? ""; if (schemaRuleExamples)
-            schemaRuleExamples.value = rule.examples ?? ""; if (schemaRuleAttachments) {
-            schemaRuleAttachments.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}`, selected: rule.attachments?.includes(schema.id) ?? false })));
-        } if (schemaRuleEditor)
-            schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll: true }); });
-        edit.addEventListener("click", () => { if (schemaRuleParameters && rule.allowedValues)
-            schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });
+        edit.addEventListener("click", () => editReusableSchemaRule(rule));
+        const syncReview = reviewReusableRuleSync(schemas, { ...rule, version: rule.version ?? 1 });
+        sync.addEventListener("click", () => openReusableRuleSyncReview(rule, sync));
         if (rule.migrationIssue)
             summary.textContent += ` · Migration issue: ${rule.migrationIssue}`;
         duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
@@ -3790,7 +3914,7 @@ function renderSchemaWorkflowRows() {
             schemaRuleDeleteReview.hidden = false;
             schemaRuleDeleteReview.showModal();
         } });
-        item.append(summary, edit, duplicate, exportRule, disable, remove);
+        item.append(summary, edit, ...(syncReview.schemaCount ? [sync] : []), duplicate, exportRule, disable, remove);
         return item;
     }));
     const assignments = schemas.flatMap((schema) => schema.assignments.map((assignment) => ({ schema, assignment })));
