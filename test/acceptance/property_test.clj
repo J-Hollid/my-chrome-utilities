@@ -11,6 +11,7 @@
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
+            [acceptance.steps.schema-property-filter-sort :as schema-property-filter-sort]
             [acceptance.steps.side-panel :as side-panel]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -86,6 +87,19 @@
                                  [(keyword package) "1.0.0"])
                                packages))
    :devDependencies {}})
+
+(deftest schema-property-filter-entry-handlers-reject-generated-foreign-features
+  (let [result
+        (check
+         (prop/for-all [suffix gen/string-alphanumeric]
+           (let [world {:acceptance/feature-name (str "Foreign feature " suffix)}]
+             (every?
+              (fn [entry-step]
+                (let [handler (some #(when (re-matches (:pattern %) entry-step) %)
+                                    schema-property-filter-sort/handlers)]
+                  (and handler (not ((:applies? handler) world)))))
+              schema-property-filter-sort/entry-steps))))]
+    (is (:pass? result) (pr-str result))))
 
 (defn- palette-scope-input [packages global-shortcut? keybinding-editor?]
   {:package (package-with-fuzzy-dependencies packages)
