@@ -5,6 +5,8 @@ export interface UtilityShellRoot {
   dataset: Record<string, string | undefined>;
 }
 
+export interface UtilityMountRoot extends UtilityShellRoot, Pick<ParentNode, "querySelector"> {}
+
 export interface PageLifecycle {
   addEventListener(
     type: string,
@@ -25,6 +27,26 @@ export function mountUtilityShell(
     if (!mounted) return;
     mounted = false;
     shell.deactivate();
+    root.dataset.activeUtilities = "";
+  };
+  pageLifecycle.addEventListener("pagehide", unmount, { once: true });
+  return { unmount };
+}
+
+export function mountUtility(
+  utility: UtilityModuleEntry,
+  root: UtilityMountRoot,
+  pageLifecycle: PageLifecycle,
+): { unmount(): void } {
+  bindUtilityPanels([utility], root);
+  utility.lifecycle.activate();
+  root.dataset.registeredUtilities = utility.id;
+  root.dataset.activeUtilities = utility.id;
+  let mounted = true;
+  const unmount = (): void => {
+    if (!mounted) return;
+    mounted = false;
+    utility.lifecycle.deactivate();
     root.dataset.activeUtilities = "";
   };
   pageLifecycle.addEventListener("pagehide", unmount, { once: true });

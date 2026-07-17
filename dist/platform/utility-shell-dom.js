@@ -12,6 +12,22 @@ export function mountUtilityShell(shell, root, pageLifecycle) {
     pageLifecycle.addEventListener("pagehide", unmount, { once: true });
     return { unmount };
 }
+export function mountUtility(utility, root, pageLifecycle) {
+    bindUtilityPanels([utility], root);
+    utility.lifecycle.activate();
+    root.dataset.registeredUtilities = utility.id;
+    root.dataset.activeUtilities = utility.id;
+    let mounted = true;
+    const unmount = () => {
+        if (!mounted)
+            return;
+        mounted = false;
+        utility.lifecycle.deactivate();
+        root.dataset.activeUtilities = "";
+    };
+    pageLifecycle.addEventListener("pagehide", unmount, { once: true });
+    return { unmount };
+}
 export function renderUtilityDirectory(utilities, container, ownerDocument = document) {
     const items = utilities.map((utility) => {
         const item = ownerDocument.createElement("li");
