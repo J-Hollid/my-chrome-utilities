@@ -5,12 +5,30 @@ export interface UtilityShellRoot {
   dataset: Record<string, string | undefined>;
 }
 
+export interface UtilityMountRoot extends UtilityShellRoot, Pick<ParentNode, "querySelector"> {}
+
 export interface PageLifecycle {
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions,
   ): void;
+}
+
+function registerUnmount(
+  deactivate: () => void,
+  root: UtilityShellRoot,
+  pageLifecycle: PageLifecycle,
+): { unmount(): void } {
+  let mounted = true;
+  const unmount = (): void => {
+    if (!mounted) return;
+    mounted = false;
+    deactivate();
+    root.dataset.activeUtilities = "";
+  };
+  pageLifecycle.addEventListener("pagehide", unmount, { once: true });
+  return { unmount };
 }
 
 export function mountUtilityShell(
@@ -20,15 +38,19 @@ export function mountUtilityShell(
 ): { unmount(): void } {
   root.dataset.registeredUtilities = shell.utilityIds.join(",");
   root.dataset.activeUtilities = shell.activate().join(",");
-  let mounted = true;
-  const unmount = (): void => {
-    if (!mounted) return;
-    mounted = false;
-    shell.deactivate();
-    root.dataset.activeUtilities = "";
-  };
-  pageLifecycle.addEventListener("pagehide", unmount, { once: true });
-  return { unmount };
+  return registerUnmount(() => shell.deactivate(), root, pageLifecycle);
+}
+
+export function mountUtility(
+  utility: UtilityModuleEntry,
+  root: UtilityMountRoot,
+  pageLifecycle: PageLifecycle,
+): { unmount(): void } {
+  bindUtilityPanels([utility], root);
+  utility.lifecycle.activate();
+  root.dataset.registeredUtilities = utility.id;
+  root.dataset.activeUtilities = utility.id;
+  return registerUnmount(() => utility.lifecycle.deactivate(), root, pageLifecycle);
 }
 
 export function renderUtilityDirectory(
