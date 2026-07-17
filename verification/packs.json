@@ -20,7 +20,8 @@
       "features/typed-command-registry.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/command_registry.clj"
+      "acceptance/src/acceptance/steps/command_registry.clj",
+      "acceptance/src/acceptance/steps/palette.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/command-palette.mjs"
@@ -701,7 +702,6 @@
       "acceptance/src/acceptance/steps/operator_interface.clj",
       "acceptance/src/acceptance/steps/operator_interface_support.clj",
       "acceptance/src/acceptance/steps/package_flow.clj",
-      "acceptance/src/acceptance/steps/palette.clj",
       "acceptance/src/acceptance/steps/project_skeleton.clj",
       "acceptance/src/acceptance/steps/side_panel.clj",
       "acceptance/src/acceptance/steps/support.clj",

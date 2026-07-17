@@ -109,6 +109,9 @@ await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:[.
 await assert.rejects(()=>validateVerificationPacks(packs,{inventory:{features:packs.flatMap(({features})=>features),handlers:[...packs.flatMap(({handlers})=>handlers),"acceptance/src/acceptance/steps/unassigned.clj"]}}),/Unassigned handlers path/);
 await assert.rejects(()=>validateVerificationPacks([...packs,{...packs[0],id:"duplicate",features:packs[0].features}]),/exactly one pack/);
 assert.equal(packs.length>=6,true);for(const pack of packs)for(const key of ["source","unit","property","features","handlers","browserAdapters","dependencies"])assert.equal(Array.isArray(pack[key]),true,`${pack.id}.${key}`);
+const commandPalettePack=packs.find(({id})=>id==="command-palette");const shellPack=packs.find(({id})=>id==="shell");
+assert.ok(commandPalettePack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"));
+assert.equal(shellPack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"),false);
 const focused=planVerification(packs,{packIds:["schemas"]});assert.equal(focused.packIds.includes("schemas"),true);assert.equal(focused.packIds.includes("defects"),false);
 assert.deepEqual(focused.features,[...packs.find(({id})=>id==="schemas").features].sort());
 assert.deepEqual(focused.handlers,packs.find(({id})=>id==="schemas").handlers);

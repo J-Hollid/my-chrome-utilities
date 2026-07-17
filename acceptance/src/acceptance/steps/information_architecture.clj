@@ -11,39 +11,12 @@
            :html (support/source-file root "side-panel.html")
            :css (support/source-file root "side-panel.css")
            :source (str/join "\n" [(support/source-file root "src/side-panel.ts")
-                                     (support/source-file root "src/command-palette-ui.ts")
-                                     (support/source-file root "src/data-layer-live-observer-ui.ts")])
-           :palette-source (support/source-file root "src/command-palette.ts")
-           :commands (support/source-file root "src/commands.ts"))))
+                                     (support/source-file root "src/data-layer-live-observer-ui.ts")]))))
 
 (defn- example-value [example key]
   (support/require-example example key))
 
-(defn palette-dialog? [html css source]
-  (and (str/includes? html "id=\"palette\" role=\"dialog\" aria-modal=\"true\"")
-       (str/includes? html "id=\"palette-filter\"")
-       (str/includes? html "id=\"palette-results\" role=\"listbox\"")
-       (str/includes? css "#palette { position:fixed")
-       (str/includes? css "#palette[hidden] { display:none")
-       (str/includes? source "sidePanelContent?.setAttribute(\"inert\", \"\")")
-       (str/includes? source "filter?.focus()")))
-
-(defn no-permanent-command-buttons? [html source]
-  (and (not (str/includes? html "id=\"commands\""))
-       (not (str/includes? source "commandList"))
-       (not (str/includes? source "commandList.append"))))
-
-(defn navigation-structure? [html css]
-  (let [header-index (.indexOf html "id=\"application-header\"")
-        primary-index (.indexOf html "id=\"workspace-tabs\"")
-        secondary-index (.indexOf html "id=\"data-layer-views\"")
-        live-index (.indexOf html "id=\"data-layer-panel-live\"")]
-    (and (every? #(not (neg? %)) [header-index primary-index secondary-index live-index])
-         (< header-index primary-index secondary-index live-index)
-         (str/includes? html "role=\"tablist\" aria-label=\"Workspace\"")
-         (str/includes? html "role=\"tablist\" aria-label=\"Data Layer views\"")
-         (str/includes? css "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr)")
-         (str/includes? css "[role=tab] { background:transparent"))))
+(def navigation-structure? support/navigation-structure?)
 
 (defn contextual-actions? [html source]
   (and (str/includes? html "id=\"live-context-actions\"")
@@ -74,7 +47,7 @@
                 "console.log(`{:session-action ${JSON.stringify(controls.sessionAction)} :capture-action ${JSON.stringify(controls.captureAction)}}`);"
                 )
            (if (= session-state "Active") "true" "false")
-           (pr-str (if (= capture-state "Paused") "Paused" "Live")))))
+           (pr-str (get {"Paused" "Paused"} capture-state "Live")))))
 
 (defn- runtime-live-session-lifecycle []
   (run-production-module!
@@ -158,145 +131,8 @@
     observation))
 
 (def handlers
-  [{:pattern #"^command <([A-Za-z0-9_]+)> named <([A-Za-z0-9_]+)> is registered$"
-    :handler (fn [world example [id-key title-key]]
-               (let [world (inspect world) id (example-value example id-key) title (example-value example title-key)]
-                 (support/assert! (and (str/includes? (:commands world) id)
-                                       (str/includes? (:commands world) title))
-                                  "Command registration is incomplete." {:id id :title title})
-                 (assoc world :registered-command id :registered-title title)))}
-
-   {:pattern #"^command <([A-Za-z0-9_]+)> is selected from the command palette$"
-    :handler (fn [world example [id-key]]
-               (assoc world :selected-command (example-value example id-key)))}
-
-   {:pattern #"^command <([A-Za-z0-9_]+)> remains executable through the command registry$"
-    :handler (fn [world example [id-key]]
-               (let [id (example-value example id-key)]
-                 (support/assert! (and (= id (:selected-command world))
-                                       (str/includes? (:commands world) "export function runCommandById"))
-                                  "Selected command is not executable through its registry id." {:id id})
-                 world))}
-
-   {:pattern #"^<([A-Za-z0-9_]+)> is searchable in the command palette$"
-    :handler (fn [world example [title-key]]
-               (let [title (example-value example title-key)]
-                 (support/assert! (and (= title (:registered-title world))
-                                       (str/includes? (:palette-source world) "filterPaletteCommands")
-                                       (str/includes? (:palette-source world) "command.title"))
-                                  "Registered title is not searchable in the palette." {:title title})
-                 world))}
-
-   {:pattern #"^registering command <([A-Za-z0-9_]+)> does not add a permanent global command button$"
-    :handler (fn [world _example _captures]
-               (support/assert! (no-permanent-command-buttons? (:html world) (:source world))
-                                "A permanent command button is still rendered." {})
-               world)}
-
-   {:pattern #"^the side panel is displayed at <([A-Za-z0-9_]+)> CSS px wide$"
-    :handler (fn [world example [width-key]]
-               (assoc (inspect world) :panel-width (example-value example width-key)))}
-
-   {:pattern #"^the side panel is displayed at ([0-9]+) CSS px wide$"
-    :handler (fn [world _example [width]]
-               (assoc (inspect world) :panel-width width))}
-
-   {:pattern #"^the command palette is closed$"
-    :handler (fn [world _example _captures]
-               (support/assert! (palette-dialog? (:html world) (:css world) (:source world))
-                                "Command palette dialog is not available." {})
-               (assoc world :palette-open? false))}
-
-   {:pattern #"^the closed layout is inspected$"
+  [{:pattern #"^the closed side panel layout is inspected$"
     :handler (fn [world _example _captures] world)}
-
-   {:pattern #"^the closed side panel layout is inspected$"
-    :handler (fn [world _example _captures] world)}
-
-   {:pattern #"^the command palette is not visibly rendered and is absent from normal document flow$"
-    :handler (fn [world _example _captures]
-               (support/assert! (and (false? (:palette-open? world))
-                                     (str/includes? (:html world) "aria-label=\"Command palette\" hidden")
-                                     (str/includes? (:css world) "#palette[hidden] { display:none"))
-                                "Closed palette affects normal layout." {})
-               world)}
-
-   {:pattern #"^the command palette does not obscure or displace the header, navigation, or active view content$"
-    :handler (fn [world _example _captures]
-               (support/assert! (navigation-structure? (:html world) (:css world))
-                                "Closed palette does not preserve panel layout." {})
-               world)}
-
-   {:pattern #"^no registered command is rendered as a permanent global command button$"
-    :handler (fn [world _example _captures]
-               (support/assert! (no-permanent-command-buttons? (:html world) (:source world))
-                                "Permanent command buttons are rendered." {})
-               world)}
-
-   {:pattern #"^the user opens the command palette with its launcher or hotkey$"
-    :handler (fn [world _example _captures]
-               (support/assert! (and (str/includes? (:html world) "id=\"open-palette\"")
-                                     (str/includes? (:source world) "function showPalette()")
-                                     (str/includes? (:source world) "event.ctrlKey"))
-                                "Palette has no launcher or hotkey." {})
-               (assoc world :palette-open? true))}
-
-   {:pattern #"^a focused command-palette dialog is displayed above the current side panel UI$"
-    :handler (fn [world _example _captures]
-               (support/assert! (and (:palette-open? world)
-                                     (palette-dialog? (:html world) (:css world) (:source world)))
-                                "Palette dialog is not focused above the panel." {})
-               world)}
-
-   {:pattern #"^the dialog contains a command search field and matching registered command results$"
-    :handler (fn [world _example _captures]
-               (support/assert! (and (str/includes? (:html world) "type=\"search\"")
-                                     (str/includes? (:source world) "renderPalette(filterCommands"))
-                                "Palette search results are not rendered." {})
-               world)}
-
-   {:pattern #"^background side panel content does not receive keyboard focus while the dialog is open$"
-    :handler (fn [world _example _captures]
-               (support/assert! (str/includes? (:source world) "sidePanelContent?.setAttribute(\"inert\", \"\")")
-                                "Modal palette does not make background content inert." {})
-               world)}
-
-   {:pattern #"^the command palette is open above Data Layer Live with matching commands and one selected result$"
-    :handler (fn [world _example _captures]
-               (assoc (inspect world) :palette-open? true :selected-result? true :active-section "Data Layer" :active-view "Live"))}
-
-   {:pattern #"^the user performs <([A-Za-z0-9_]+)>$"
-    :applies? #(contains? % :selected-result?)
-    :handler (fn [world example [input-key]]
-               (assoc world :palette-input (example-value example input-key)))}
-
-   {:pattern #"^<([A-Za-z0-9_]+)>$"
-    :applies? #(and (contains? % :selected-result?) (contains? % :palette-input))
-    :handler (fn [world example [outcome-key]]
-               (let [input (:palette-input world)
-                     outcome (example-value example outcome-key)
-                     expected-outcomes
-                     {"keyboard navigation to another result followed by Enter"
-                      "the selected command executes"
-                      "Escape" "no command executes"}]
-                 (support/assert! (= (get expected-outcomes input) outcome)
-                                  "Palette outcome does not match its close input."
-                                  {:input input :outcome outcome})
-                 (assoc world :execution-outcome outcome)))}
-
-   {:pattern #"^the command palette closes$"
-    :applies? #(and (contains? % :selected-result?) (contains? % :palette-input))
-    :handler (fn [world _example _captures]
-               (support/assert! (str/includes? (:source world) "function hidePalette()")
-                                "Palette has no close behavior." {})
-               (assoc world :palette-open? false))}
-
-   {:pattern #"^the underlying side panel layout is unchanged$"
-    :handler (fn [world _example _captures]
-               (support/assert! (and (= "Data Layer" (:active-section world))
-                                     (= "Live" (:active-view world)))
-                                "Closing the palette changed the active layout." {})
-               world)}
 
    {:pattern #"^the side panel is displayed at <([A-Za-z0-9_]+)> CSS px wide with Data Layer Live active$"
     :handler (fn [world example [width-key]]
