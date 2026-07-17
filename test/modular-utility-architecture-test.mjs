@@ -114,7 +114,9 @@ const capturePack=packs.find(({id})=>id==="capture");const schemasPack=packs.fin
 assert.ok(commandPalettePack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"));
 assert.equal(shellPack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"),false);
 assert.ok(capturePack.handlers.includes("acceptance/src/acceptance/steps/non_applicable_property_visibility.clj"));
+assert.ok(capturePack.handlers.includes("acceptance/src/acceptance/steps/recursive_property_validation.clj"));
 assert.ok(schemasPack.handlers.includes("acceptance/src/acceptance/steps/schema_publication_refresh.clj"));
+assert.equal(schemasPack.handlers.includes("acceptance/src/acceptance/steps/recursive_property_validation.clj"),false);
 const publicationHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/schema_publication_refresh.clj",import.meta.url),"utf8");
 const visibilityHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",import.meta.url),"utf8");
 const aggregateHandlers=await readFile(new URL("../acceptance/src/acceptance/steps/all.clj",import.meta.url),"utf8");
