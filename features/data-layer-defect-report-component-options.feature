@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=0671db95d72ad9bda805040ee39bba66d2d5423151b41f45c63a669ee1ebe5cf
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-15T17:14:09.138327743Z","feature_name":"Data layer defect report component options","feature_path":"features/data-layer-defect-report-component-options.feature","background_hash":"ec97ffb18ad92bb3e46f110e92c68cf67d9794b471824c29d56eb105f1415c9d","implementation_hash":"sha256:97f8556177a3d0b761f8a5240aa707f2d429d91ff0da018281f9232572288aab","scenarios":[{"index":1,"name":"Data layer defect report component options 002","scenario_hash":"aee31cbe2f0e26ee590e7423d878da2fd02bc399be111a1873da8ef59b916444","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T16:46:33.761234635Z"}]}
+# {"version":1,"tested_at":"2026-07-17T18:47:43.077395259Z","feature_name":"Data layer defect report component options","feature_path":"features/data-layer-defect-report-component-options.feature","background_hash":"ec97ffb18ad92bb3e46f110e92c68cf67d9794b471824c29d56eb105f1415c9d","implementation_hash":"sha256:db32032987456fe14fa74977b3ea532fe424c49e4eafce3960925fabccd395d2","scenarios":[{"index":1,"name":"Data layer defect report component options 002","scenario_hash":"aee31cbe2f0e26ee590e7423d878da2fd02bc399be111a1873da8ef59b916444","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-15T16:46:33.761234635Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer defect report component options
