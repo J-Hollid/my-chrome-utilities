@@ -79,8 +79,14 @@ export function planVerification(packs,{packIds=[],changedPaths=[],terminalFull=
   const changedFeatures=changedPaths.filter((path)=>path.endsWith(".feature"));
   const acceptancePacks=terminalFull?packsForIds(packs,packs.map(({id})=>id)):changedFeatures.length?packsForIds(packs,[...new Set(changedFeatures.map((path)=>changedOwners.get(path)))]):packIds.length?packsForIds(packs,packIds):ordered;
   const features=(changedFeatures.length?changedFeatures:acceptancePacks.flatMap((pack)=>pack.features)).sort();
-  commands.push(...acceptanceCommands(features));
-  return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),commands:[...new Set(commands)]};
+  const plannedAcceptanceCommands=acceptanceCommands(features);
+  commands.push(...plannedAcceptanceCommands);
+  return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),acceptanceCommands:plannedAcceptanceCommands,commands:[...new Set(commands)]};
 }
 
 function packsForIds(packs,ids){const selected=new Set(ids);return packs.filter(({id})=>selected.has(id));}
+
+export async function executeAcceptancePlan(plan,{runCommand}={}){
+  if(typeof runCommand!=="function")throw new Error("Provide an acceptance command runner");
+  for(const command of plan.acceptanceCommands)await runCommand(command);
+}

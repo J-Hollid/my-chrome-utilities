@@ -5,7 +5,8 @@ import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirect
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
-import { loadVerificationPacks, planVerification, validateVerificationPacks, verificationInventory } from "../scripts/verification-packs.mjs";
+import { runFocusedAcceptance } from "../scripts/run-focused-acceptance.mjs";
+import { executeAcceptancePlan, loadVerificationPacks, planVerification, validateVerificationPacks, verificationInventory } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "../dist/platform/utility-bootstrap.js";
@@ -117,8 +118,16 @@ const executeCommands=focused.commands.filter((command)=>command.includes("_acce
 assert.equal(parseCommands.length,focused.features.length);assert.equal(generateCommands.length,focused.features.length);assert.equal(executeCommands.length,focused.features.length);
 assert.ok(focused.commands.indexOf(parseCommands.at(-1))<focused.commands.indexOf(generateCommands[0]));
 assert.ok(focused.commands.indexOf(generateCommands.at(-1))<focused.commands.indexOf(executeCommands[0]));
+assert.deepEqual(focused.acceptanceCommands,[...parseCommands,...generateCommands,...executeCommands]);
+const focusedExecutions=[];await executeAcceptancePlan(focused,{runCommand:async(command)=>focusedExecutions.push(command)});
+assert.deepEqual(focusedExecutions,focused.acceptanceCommands);
+const stoppedExecutions=[];
+await assert.rejects(()=>executeAcceptancePlan({acceptanceCommands:["parse","generate","execute"]},{runCommand:async(command)=>{stoppedExecutions.push(command);if(command==="generate")throw new Error("generation failed");}}),/generation failed/);
+assert.deepEqual(stoppedExecutions,["parse","generate"]);
 const changedFeature=packs.find(({id})=>id==="schemas").features[0];
 const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});assert.deepEqual(changedAcceptance.features,[changedFeature]);
+const focusedCliExecutions=[];const focusedCliPlan=await runFocusedAcceptance(["--changed",changedFeature],{commandRunner:async(command)=>focusedCliExecutions.push(command)});
+assert.deepEqual(focusedCliPlan.features,[changedFeature]);assert.deepEqual(focusedCliExecutions,focusedCliPlan.acceptanceCommands);
 const changed=planVerification(packs,{changedPaths:["src/data-layer-schema-verification.ts"]});assert.equal(changed.packIds.includes("schemas"),true);
 const full=planVerification(packs,{terminalFull:true});assert.deepEqual(full.packIds,packs.map(({id})=>id));
 assert.equal(new Set(full.commands).size,full.commands.length);assert.equal(full.commands.filter((command)=>command==="npm run build").length,1);
