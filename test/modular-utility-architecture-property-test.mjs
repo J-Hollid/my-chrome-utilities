@@ -6,6 +6,7 @@ import { commandsForUtilityShell } from "../dist/utilities/command-palette/index
 import { bindUtilityPanels, mountUtility, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createDomUtilityLifecycle } from "../dist/platform/utility-lifecycle-dom.js";
 import { retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
+import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
 
@@ -23,6 +24,30 @@ const closure = (packs, initial, direction) => {
   }
   return selected;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const enabled = Array.from({ length:6 }, (_, bit) => Boolean(sample & (1 << bit)));
+  const listener = (available) => ({ addListener:available ? () => {} : undefined });
+  const runtime = {
+    runtime:{ onMessage:listener(enabled[0]) },
+    tabs:{
+      query:enabled[1] ? () => {} : undefined,
+      onUpdated:listener(enabled[2]),
+      onRemoved:listener(enabled[3]),
+    },
+    permissions:{ onRemoved:listener(enabled[4]) },
+    scripting:{ executeScript:enabled[5] ? () => {} : undefined },
+  };
+  const expected = [
+    enabled[0] && "runtime.messaging",
+    enabled[1] && "tabs.query",
+    enabled[2] && enabled[3] && "tabs.lifecycle",
+    enabled[4] && "permissions.lifecycle",
+    enabled[5] && "scripting.execute",
+  ].filter(Boolean);
+  assert.deepEqual(shellRuntimeCapabilities(runtime), expected,
+    "shell capabilities must include exactly the callable runtime APIs in stable order");
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const scope = {
@@ -334,4 +359,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 shell capability models, 100 storage models, and 100 panel models passed");

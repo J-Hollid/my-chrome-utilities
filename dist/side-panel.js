@@ -5,6 +5,7 @@ import { extensionShell, utilityRegistry } from "./utility-registry.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
 import { createUtilityStorage } from "./platform/utility-storage.js";
 import { isolateUtilityDomFromSearch } from "./platform/utility-dom-isolation.js";
+import { shellRuntimeCapabilities } from "./platform/shell-runtime-capabilities.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
 import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
 import { tabPageObservation, } from "./active-page-observation.js";
@@ -5795,7 +5796,11 @@ renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
 isolateUtilityDomFromSearch(document, globalThis.location.search);
-if (panelRoot)
+if (panelRoot) {
+    const chromeRuntime = typeof chrome === "undefined" ? undefined : chrome;
+    panelRoot.dataset.chromeApiCapabilities = shellRuntimeCapabilities(chromeRuntime).join(",");
+    panelRoot.dataset.storageNamespaces = utilityRegistry.map(({ storage }) => storage.namespace).join(",");
     panelRoot.dataset.utilityShellReady = "true";
+}
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };
 //# sourceMappingURL=side-panel.js.map
