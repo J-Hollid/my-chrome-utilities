@@ -1,8 +1,8 @@
 import type { ReproductionManualStep, ReproductionPathnameStep } from "./data-layer-defect-report.js";
-import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
-import type { JsonSchema } from "./data-layer-schema-document.js";
-import { validateWithSchema, type AttachedSchemaRule, type SchemaDefinition, type ValidationResult } from "./data-layer-schema-verification.js";
-import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation, type SchemaPropertyExample } from "./data-layer-schema-documentation.js";
+import { normalizeCanonicalSchemaDocument } from "./utilities/data-layer/schemas.js";
+import type { JsonSchema } from "./utilities/data-layer/schemas.js";
+import { validateWithSchema, type AttachedSchemaRule, type SchemaDefinition, type ValidationResult } from "./utilities/data-layer/schemas.js";
+import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation, type SchemaPropertyExample } from "./utilities/data-layer/schemas.js";
 
 export interface ExpectedPropertyChoice {
   property: string;
@@ -12,7 +12,6 @@ export interface ExpectedPropertyChoice {
   constraint: string;
   schemaValues: readonly (string | number | boolean | null)[];
 }
-
 export type ExpectedPropertyResponse =
   | { method:"generic" }
   | { method:"schema-value"; value:string | number | boolean | null }

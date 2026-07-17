@@ -78,6 +78,11 @@
    feature-files
    #{"a repository for project <project_name>"}))
 
+(def operator-feature-names
+  (set (map (fn [feature-file]
+              (second (re-find #"(?m)^Feature: (.+)$" (slurp feature-file))))
+            feature-files)))
+
 (defn- observe [world text example]
   (support/record-semantic-observation
    world :operator-action :operator-observations
@@ -98,11 +103,17 @@
                      example))))
 
 (def handlers
-  (support/semantic-handlers operator-step-specs transition))
+  (mapv #(assoc % :applies? (fn [world]
+                              (contains? operator-feature-names
+                                         (:acceptance/feature-name world))))
+        (support/semantic-handlers operator-step-specs transition)))
 
 (def priority-handler-texts #{"the command palette closes"})
 (def priority-handlers
-  (mapv #(assoc % :applies? (fn [world] (contains? world :operator-action)))
+  (mapv #(assoc % :applies? (fn [world]
+                              (and (contains? operator-feature-names
+                                              (:acceptance/feature-name world))
+                                   (contains? world :operator-action))))
         (filter (fn [{:keys [pattern]}]
                   (some #(re-matches pattern %) priority-handler-texts))
                 handlers)))

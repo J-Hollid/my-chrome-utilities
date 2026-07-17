@@ -1,5 +1,6 @@
 (ns acceptance.data-layer-recovery-steps-test
-  (:require [acceptance.steps.data-layer-recovery :as recovery]
+  (:require [acceptance.runtime :as runtime]
+            [acceptance.steps.data-layer-recovery :as recovery]
             [acceptance.steps.data-layer-session :as session]
             [clojure.test :refer [deftest is]]))
 
@@ -64,3 +65,39 @@
            (vec (recovery/forbidden-recovery-capability-findings-of-kind
                  files
                  :automatic-every-tab-monitoring))))))
+
+(deftest ended-session-handler-only-applies-to-session-recovery
+  (let [handler (first (filter #(re-matches (:pattern %) "the ended session remains ended")
+                               recovery/handlers))
+        applies? (:applies? handler)]
+    (is (true? (applies? #:acceptance{:feature-name "Data layer session recovery"})))
+    (is (false? (applies? #:acceptance{:feature-name "Data layer observation target lifecycle"})))))
+
+(deftest recovery-outcome-steps-assert-restored-session-state
+  (let [session-state (-> {}
+                          (session/start-session {:tab-id 7
+                                                  :url "https://example.test/"
+                                                  :history-path "queue.history"})
+                          (recovery/capture-observed-event
+                           {:event-name "signup"
+                            :page-url "https://example.test/page"
+                            :history-path "queue.history"}))
+        world {:acceptance/feature-name "Data layer session recovery"
+               :session-state session-state
+               :persisted-session {:status "ended"}
+               :observer-status "attached"
+               :recovery-html "observer-status restart-observation"
+               :recovery-source "restartObservation"}
+        example {"history" "queue.history"
+                 "page" "https://example.test/page"
+                 "status" "attached"}
+        dispatch #(runtime/execute-step! world
+                                         example
+                                         {:keyword "Then" :text %}
+                                         recovery/handlers)]
+    (doseq [text ["the configured history array path <history> is restored"
+                  "the event entry remains associated with page <page>"
+                  "observer attachment status <status> is shown"
+                  "the user can restart observation for the selected target tab"
+                  "the ended session remains ended"]]
+      (is (= world (dispatch text)) text))))

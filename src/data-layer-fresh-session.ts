@@ -3,7 +3,7 @@ import {
   resetLiveObserverForSession,
   type LiveEvent,
   type LiveObserverState,
-} from "./data-layer-live-observer.js";
+} from "./utilities/data-layer/live-inspection.js";
 import type {
   DataLayerEventEntry,
   DataLayerSessionState,
@@ -15,7 +15,6 @@ export interface FreshSessionAvailability {
   unsavedEventCount: number;
   action: "start" | "confirm" | "unavailable";
 }
-
 export function freshSessionAvailability(options: {
   eventCount: number;
   savedThroughEventCount: number;

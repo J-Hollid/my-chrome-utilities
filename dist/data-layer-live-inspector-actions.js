@@ -1,4 +1,4 @@
-import { createEditableTemplate, } from "./data-layer-event-library-editor.js";
+import { createEditableTemplate, } from "./utilities/data-layer/event-library.js";
 export function createLiveInspectorActions(effects) {
     return {
         async copyPayload(event) {

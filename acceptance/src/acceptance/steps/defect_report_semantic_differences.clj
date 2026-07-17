@@ -115,20 +115,16 @@
     ["/page_type" "replace" "was replaced in the expected payload"]
     ["/coupon" "none" "no Expected difference line is rendered"]})
 
-(defn- validate-relation! [example keys rows]
-  (when (every? #(support/example-value example %) keys)
-    (let [row (mapv #(support/example-value example %) keys)]
-      (support/assert! (contains? rows row)
-                       "Semantic-difference example row was outside the specified relationship."
-                       {:keys keys :row row :allowed rows}))))
-
 (defn- validate-example! [mode example]
   (support/validate-mode-example-domain!
    mode runtime-example-values model-example-values example
    "Semantic-difference example value was outside the specified contract.")
-  (validate-relation! example ["pointer" "violation" "description"] actual-relations)
-  (validate-relation! example ["pointer" "operation" "description"]
-                      (if (= mode :runtime) expected-runtime-relations expected-model-relations)))
+  (support/validate-example-relations!
+   [{:keys ["pointer" "violation" "description"] :rows actual-relations}
+    {:keys ["pointer" "operation" "description"]
+     :rows (if (= mode :runtime) expected-runtime-relations expected-model-relations)}]
+   example
+   "Semantic-difference example row was outside the specified relationship."))
 
 (def handlers
   (support/verified-feature-mode-handlers
@@ -136,5 +132,5 @@
    verify-model! validate-example! runtime-observation! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-15T09:57:18.538709063+02:00", :module-hash "-1786587718", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1186672438"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "575296350"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-36976987"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "841979124"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-510276829"} {:id "def/actual-descriptions", :kind "def", :line 29, :end-line 36, :hash "1778764651"} {:id "def/expected-descriptions", :kind "def", :line 38, :end-line 42, :hash "791080257"} {:id "defn-/assert-runtime!", :kind "defn-", :line 44, :end-line 83, :hash "1981590324"} {:id "def/shared-example-values", :kind "def", :line 85, :end-line 89, :hash "-1171569704"} {:id "def/model-example-values", :kind "def", :line 91, :end-line 93, :hash "-401963778"} {:id "def/runtime-example-values", :kind "def", :line 95, :end-line 97, :hash "1386472355"} {:id "def/actual-relations", :kind "def", :line 99, :end-line 104, :hash "1246596353"} {:id "def/expected-model-relations", :kind "def", :line 106, :end-line 110, :hash "-583477128"} {:id "def/expected-runtime-relations", :kind "def", :line 112, :end-line 116, :hash "-589756554"} {:id "defn-/validate-relation!", :kind "defn-", :line 118, :end-line 123, :hash "1867011884"} {:id "defn-/validate-example!", :kind "defn-", :line 125, :end-line 131, :hash "-1086338369"} {:id "def/handlers", :kind "def", :line 133, :end-line 136, :hash "-2067247089"}]}
+;; {:version 1, :tested-at "2026-07-17T17:15:33.867788499+02:00", :module-hash "-1018866924", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1186672438"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "575296350"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-36976987"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 19, :hash "841979124"} {:id "defn-/runtime-observation!", :kind "defn-", :line 21, :end-line 27, :hash "-510276829"} {:id "def/actual-descriptions", :kind "def", :line 29, :end-line 36, :hash "1778764651"} {:id "def/expected-descriptions", :kind "def", :line 38, :end-line 42, :hash "791080257"} {:id "defn-/assert-runtime!", :kind "defn-", :line 44, :end-line 83, :hash "1981590324"} {:id "def/shared-example-values", :kind "def", :line 85, :end-line 89, :hash "-1171569704"} {:id "def/model-example-values", :kind "def", :line 91, :end-line 93, :hash "-401963778"} {:id "def/runtime-example-values", :kind "def", :line 95, :end-line 97, :hash "1386472355"} {:id "def/actual-relations", :kind "def", :line 99, :end-line 104, :hash "1246596353"} {:id "def/expected-model-relations", :kind "def", :line 106, :end-line 110, :hash "-583477128"} {:id "def/expected-runtime-relations", :kind "def", :line 112, :end-line 116, :hash "-589756554"} {:id "defn-/validate-example!", :kind "defn-", :line 118, :end-line 127, :hash "-671739017"} {:id "def/handlers", :kind "def", :line 129, :end-line 132, :hash "-2067247089"}]}
 ;; clj-mutate-manifest-end

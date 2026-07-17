@@ -1,101 +1,126 @@
-import { listCommands, runCommandById, } from "./commands.js";
-import { createPaletteController } from "./command-palette-ui.js";
-import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./hotkey-keymap.js";
-import { createHotkeyEditor } from "./hotkey-editor.js";
+import { listCommands, commandsForUtilityShell, runCommandById, createPaletteController, } from "./utilities/command-palette/index.js";
+import { advanceHotkeySequence, blankHotkeyKeymap, duplicateSequences, HOTKEY_KEYMAP_STORAGE_KEY, keyTokenFromKeyboardEvent, updateHotkeyKeymap, validateHotkeyKeymap, } from "./utilities/hotkeys/index.js";
+import { createHotkeyEditor } from "./utilities/hotkeys/index.js";
+import { extensionShell, utilityRegistry } from "./utility-registry.js";
+import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "./platform/utility-shell-dom.js";
+import { createUtilityStorage } from "./platform/utility-storage.js";
+import { isolateUtilityDomFromSearch } from "./platform/utility-dom-isolation.js";
+import { shellRuntimeCapabilities } from "./platform/shell-runtime-capabilities.js";
 import { createWorkspaceTabsController } from "./workspace-tabs-ui.js";
-import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./data-layer-allowed-values-rule.js";
+import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, normalizeAllowedValuesRuleLibraryEntry } from "./utilities/data-layer/schemas.js";
 import { tabPageObservation, } from "./active-page-observation.js";
-import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./data-layer-observation-targets.js";
-import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./data-layer-observation-targets-ui.js";
-import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./data-layer.js";
-import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, stopHistoryArrayObserver, } from "./data-layer-observer.js";
-import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./data-layer-observation-refresh.js";
-import { initialObservationActivationState, nextObservationActivation, observationActivationIsCurrent, } from "./data-layer-observation-activation.js";
-import { startLiveHistoryPushCapture, } from "./data-layer-live-observation.js";
-import { observerAttachmentStatus, restartObservation, } from "./data-layer-recovery.js";
-import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./data-layer-session.js";
-import { beginDataLayerTestingSession } from "./data-layer-session-start.js";
-import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./data-layer-fresh-session.js";
-import { endLiveSession } from "./data-layer-live-session-end.js";
-import { attachedTargetRecoveryIsCurrent, captureAttachedTargetRecovery, completeAttachedTargetRecovery, } from "./data-layer-target-recovery.js";
-import { liveGuidedWorkflow } from "./data-layer-live-guided-workflow.js";
-import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./data-layer-live-guided-workflow-ui.js";
-import { renderLiveSessionControls } from "./data-layer-live-session-controls-ui.js";
-import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./data-layer-live-session-summary.js";
-import { createLiveNotificationController } from "./data-layer-live-notifications.js";
-import { createTargetPathStatusController, targetPathStatusForObservation, } from "./data-layer-target-path-status.js";
-import { copyLivePageUrl as copyLivePageUrlAction } from "./data-layer-live-session-summary-actions.js";
-import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./data-layer-live-session-summary-ui.js";
-import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./data-layer-live-observer.js";
-import { renderEventFeedQueryBuilder } from "./data-layer-event-feed-query-ui.js";
-import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./data-layer-saved-event-feed-filters.js";
-import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./data-layer-saved-sessions.js";
-import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./data-layer-saved-session-live-feed.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./data-layer-live-observer-ui.js";
-import { createLiveInspectorActions } from "./data-layer-live-inspector-actions.js";
-import { captureLiveInspectorPresentation, restoreLiveInspectorPresentation, } from "./data-layer-live-inspector-presentation-ui.js";
-import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./data-layer-defect-report-ui.js";
-import { renderOccurrenceDefectReportBuilder } from "./data-layer-event-occurrence-defect-report-ui.js";
-import { renderOccurrenceReport } from "./data-layer-event-occurrence-defect-report.js";
-import { renderJiraReport } from "./data-layer-defect-report.js";
-import { browserDefectReportClipboard } from "./data-layer-defect-report-browser.js";
-import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./data-layer-missing-event-defect-report-ui.js";
-import { addDefect, attachSavedSessionToDefect, cancelDefectDeletion, confirmDefectDeletion, createMissingEventDefect, createOccurrenceDefect, createValidationDefect, currentDefectIssues, DEFECT_LIBRARY_STORAGE_KEY, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, presentedEventTriage, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus, } from "./data-layer-defect-library.js";
-import { findDefectLibraryElements, renderDefectLibrary } from "./data-layer-defect-library-ui.js";
-import { copyStoredDefectForJira } from "./data-layer-defect-library-copy.js";
-import { captureInspectorReturn, restoreInspectorReturn, } from "./data-layer-live-inspector-return.js";
-import { restoreInspectorReturnUi } from "./data-layer-live-inspector-return-ui.js";
-import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./data-layer-event-library-editor.js";
-import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./data-layer-event-library-transfer.js";
-import { clearEventLibrary, deleteEventTemplate } from "./data-layer-event-library-deletion.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
-import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport } from "./data-layer-json-schema-export.js";
-import { revalidateCurrentLiveSession } from "./data-layer-schema-publication-refresh.js";
-import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./data-layer-allowed-value-expansion.js";
-import { allowedValueText, openAllowedValueExpansionDialog } from "./data-layer-allowed-value-expansion-ui.js";
-import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion } from "./data-layer-local-rule-promotion.js";
-import { createLocalRulePromotionDialog } from "./data-layer-local-rule-promotion-ui.js";
-import { createGuidedValidationFlow } from "./data-layer-guided-validation-ui.js";
-import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./data-layer-guided-validation.js";
-import { guidedAttachedRule } from "./data-layer-guided-rule-parameter-integrity.js";
-import { guidedPropertyDocument, mergeGuidedDocument } from "./data-layer-guided-nested-property-merge.js";
-import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./data-layer-live-schema-property-declaration.js";
-import { openLiveSchemaPropertyDeclarationDialog } from "./data-layer-live-schema-property-declaration-ui.js";
-import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./data-layer-guided-validation-continuation.js";
-import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./data-layer-schema-manual-property.js";
-import { inspectSpecificIndexRuleTarget } from "./data-layer-schema-nested-path.js";
-import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./data-layer-cardinality.js";
-import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./data-layer-schema-property-rule-picker.js";
-import { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
-import { renderSchemaSpecificationBuilder } from "./data-layer-schema-specification-builder-ui.js";
-import { renderSchemaPropertyTypeEditor } from "./data-layer-schema-property-type-editing-ui.js";
-import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./data-layer-schema-property-type-editing.js";
-import { attachRuleToSchemaProperty, schemaPropertyRows } from "./data-layer-schema-rule-property-identity.js";
-import { filterAndSortSchemaPropertyRows } from "./data-layer-schema-property-view.js";
-import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./data-layer-schema-property-removal.js";
-import { schemaPropertyCopySource, undoSchemaPropertyCopy } from "./data-layer-schema-property-copy.js";
-import { renderSchemaPropertyCopyReview } from "./data-layer-schema-property-copy-ui.js";
-import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions } from "./data-layer-schema-assignment-data-conditions.js";
-import { renderAssignmentDataConditionEditor } from "./data-layer-schema-assignment-data-conditions-ui.js";
-import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription } from "./data-layer-schema-documentation.js";
-import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "./data-layer-schema-property-example-values.js";
-import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./data-layer-conditional-validation-rules.js";
-import { createSequence, readiness, runSequence } from "./data-layer-sequence-replay.js";
-import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./data-layer-sequence-replay-ui.js";
-import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./data-layer-event-library-editor-ui.js";
-import { beginTemplateRename, renameValidation, saveTemplateRename, } from "./data-layer-event-template-renaming.js";
-import { closePushReview, handlePushReviewKeydown, openPushReview, } from "./data-layer-workflow-focus-ui.js";
-import { pushSavedTemplateToSelectedTarget, pushTemplateToSelectedTarget, } from "./data-layer-selected-target-push.js";
-import { createPushDraftReview, } from "./data-layer-push-draft-review.js";
-import { findPushDraftReviewElements, renderPushDraftReview, } from "./data-layer-push-draft-review-ui.js";
-import { createTemplateChangeReview } from "./data-layer-template-change-review.js";
-import { renderTemplateChangeReview } from "./data-layer-template-change-review-ui.js";
-import { pushPayloadInPage, } from "./data-layer-selected-target-push-page.js";
+import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./utilities/data-layer/capture.js";
+import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./utilities/data-layer/capture.js";
+import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./utilities/data-layer/capture.js";
+import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, stopHistoryArrayObserver, } from "./utilities/data-layer/capture.js";
+import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./utilities/data-layer/capture.js";
+import { initialObservationActivationState, nextObservationActivation, observationActivationIsCurrent, } from "./utilities/data-layer/capture.js";
+import { startLiveHistoryPushCapture, } from "./utilities/data-layer/capture.js";
+import { observerAttachmentStatus, restartObservation, } from "./utilities/data-layer/capture.js";
+import { captureEntry, DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, persistSession, restoreSession, sessionScope, } from "./utilities/data-layer/capture.js";
+import { beginDataLayerTestingSession } from "./utilities/data-layer/capture.js";
+import { freshSessionAvailability, restoreFreshSessionLiveObserver, startFreshLiveSession } from "./utilities/data-layer/capture.js";
+import { endLiveSession } from "./utilities/data-layer/capture.js";
+import { attachedTargetRecoveryIsCurrent, captureAttachedTargetRecovery, completeAttachedTargetRecovery, } from "./utilities/data-layer/capture.js";
+import { liveGuidedWorkflow } from "./utilities/data-layer/capture.js";
+import { findLiveGuidedWorkflowElements, renderLiveGuidedWorkflow, } from "./utilities/data-layer/capture.js";
+import { renderLiveSessionControls } from "./utilities/data-layer/capture.js";
+import { canonicalLiveObserverStatus, createLiveSessionSummary, } from "./utilities/data-layer/capture.js";
+import { createLiveNotificationController } from "./utilities/data-layer/capture.js";
+import { createTargetPathStatusController, targetPathStatusForObservation, } from "./utilities/data-layer/capture.js";
+import { copyLivePageUrl as copyLivePageUrlAction } from "./utilities/data-layer/capture.js";
+import { findLiveSessionSummaryElements, renderLiveSessionSummary, } from "./utilities/data-layer/capture.js";
+import { createLiveObserverState, closeLiveInspector, dataLayerViewForNavigationKey, dataLayerViews, pauseCapture, recordLiveEvent, resumeCapture, setLiveQuery, selectLiveEvent, } from "./utilities/data-layer/live-inspection.js";
+import { renderEventFeedQueryBuilder } from "./utilities/data-layer/live-inspection.js";
+import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./utilities/data-layer/live-inspection.js";
+import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./utilities/data-layer/live-inspection.js";
+import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./utilities/data-layer/live-inspection.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./utilities/data-layer/live-inspection.js";
+import { createLiveInspectorActions } from "./utilities/data-layer/live-inspection.js";
+import { captureLiveInspectorPresentation, restoreLiveInspectorPresentation, } from "./utilities/data-layer/live-inspection.js";
+import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
+import { renderOccurrenceDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
+import { renderOccurrenceReport } from "./utilities/data-layer/defect-reporting.js";
+import { renderJiraReport } from "./utilities/data-layer/defect-reporting.js";
+import { browserDefectReportClipboard } from "./utilities/data-layer/defect-reporting.js";
+import { missingEventVisits, renderMissingEventDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
+import { addDefect, attachSavedSessionToDefect, cancelDefectDeletion, confirmDefectDeletion, createMissingEventDefect, createOccurrenceDefect, createValidationDefect, currentDefectIssues, DEFECT_LIBRARY_STORAGE_KEY, editDefect, eventContainsDefectIssue, eventMatchesOccurrenceDefect, presentedEventTriage, requestDefectDeletion, restoreDefectLibrary, searchDefects, serializeDefectLibrary, updateDefectStatus, } from "./utilities/data-layer/defect-reporting.js";
+import { findDefectLibraryElements, renderDefectLibrary } from "./utilities/data-layer/defect-reporting.js";
+import { copyStoredDefectForJira } from "./utilities/data-layer/defect-reporting.js";
+import { captureInspectorReturn, restoreInspectorReturn, } from "./utilities/data-layer/live-inspection.js";
+import { restoreInspectorReturnUi } from "./utilities/data-layer/live-inspection.js";
+import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./utilities/data-layer/event-library.js";
+import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./utilities/data-layer/event-library.js";
+import { clearEventLibrary, deleteEventTemplate } from "./utilities/data-layer/event-library.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./utilities/data-layer/schemas.js";
+import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport } from "./utilities/data-layer/schemas.js";
+import { revalidateCurrentLiveSession } from "./utilities/data-layer/schemas.js";
+import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./utilities/data-layer/schemas.js";
+import { allowedValueText, openAllowedValueExpansionDialog } from "./utilities/data-layer/schemas.js";
+import { localRulePromotionAvailability, persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion } from "./utilities/data-layer/schemas.js";
+import { createLocalRulePromotionDialog } from "./utilities/data-layer/schemas.js";
+import { createGuidedValidationFlow } from "./utilities/data-layer/schemas.js";
+import { assignmentDraftAfterGuidedSave, guidedAssignmentsMatch } from "./utilities/data-layer/schemas.js";
+import { guidedAttachedRule } from "./utilities/data-layer/schemas.js";
+import { guidedPropertyDocument, mergeGuidedDocument } from "./utilities/data-layer/schemas.js";
+import { addLiveSchemaPropertyDeclaration, canonicalLivePropertyPath } from "./utilities/data-layer/schemas.js";
+import { openLiveSchemaPropertyDeclarationDialog } from "./utilities/data-layer/schemas.js";
+import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation } from "./utilities/data-layer/schemas.js";
+import { addManualProperty, contextualManualPropertyDefinition, inspectManualProperty, manualPropertyContainerAction, manualPropertyPreview } from "./utilities/data-layer/schemas.js";
+import { inspectSpecificIndexRuleTarget } from "./utilities/data-layer/schemas.js";
+import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utilities/data-layer/schemas.js";
+import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
+import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
+import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
+import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
+import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
+import { attachRuleToSchemaProperty, schemaPropertyRows } from "./utilities/data-layer/schemas.js";
+import { filterAndSortSchemaPropertyRows } from "./utilities/data-layer/schemas.js";
+import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval } from "./utilities/data-layer/schemas.js";
+import { schemaPropertyCopySource, undoSchemaPropertyCopy } from "./utilities/data-layer/schemas.js";
+import { renderSchemaPropertyCopyReview } from "./utilities/data-layer/schemas.js";
+import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions } from "./utilities/data-layer/schemas.js";
+import { renderAssignmentDataConditionEditor } from "./utilities/data-layer/schemas.js";
+import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription } from "./utilities/data-layer/schemas.js";
+import { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExampleConflicts, schemaPropertyExampleInputType } from "./utilities/data-layer/schemas.js";
+import { comparisonValueFromInput, conditionGroupAppliesToValue, conditionalRuleSummary, operatorsForConditionType, typedComparisonValue } from "./utilities/data-layer/schemas.js";
+import { createSequence, readiness, runSequence } from "./utilities/data-layer/replay.js";
+import { findSequenceReplayElements, renderSequenceReplay, setSequenceReplayResult, } from "./utilities/data-layer/replay.js";
+import { findEventLibraryEditorElements, focusTemplateEditAction, focusTemplateRenameAction, renderEventLibraryEditor, setEventLibraryResult, setEventLibraryValidation, setPushDestinationValidation, } from "./utilities/data-layer/event-library.js";
+import { beginTemplateRename, renameValidation, saveTemplateRename, } from "./utilities/data-layer/event-library.js";
+import { closePushReview, handlePushReviewKeydown, openPushReview, } from "./utilities/data-layer/event-library.js";
+import { pushSavedTemplateToSelectedTarget, pushTemplateToSelectedTarget, } from "./utilities/data-layer/event-library.js";
+import { createPushDraftReview, } from "./utilities/data-layer/event-library.js";
+import { findPushDraftReviewElements, renderPushDraftReview, } from "./utilities/data-layer/event-library.js";
+import { createTemplateChangeReview } from "./utilities/data-layer/event-library.js";
+import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
+import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
+const utilityDirectory = document.querySelector("#utility-directory");
+const utilityStorageContract = (id) => {
+    const contract = utilityRegistry.find((utility) => utility.id === id)?.storage;
+    if (!contract)
+        throw new Error(`Missing utility storage contract: ${id}`);
+    return contract;
+};
+const dataLayerStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("data-layer"));
+const hotkeyStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("hotkeys"));
+const shellStorage = createUtilityStorage(globalThis.localStorage, {
+    namespace: "my-chrome-utilities.shell",
+    version: 1,
+    legacyKeys: ["my-chrome-utilities.workspace-tab.v1"],
+});
+if (panelRoot) {
+    mountUtilityShell(extensionShell, panelRoot, window);
+}
+if (utilityDirectory) {
+    renderUtilityDirectory(utilityRegistry, utilityDirectory);
+}
+bindUtilityPanels(utilityRegistry, document);
 const sidePanelContent = document.querySelector("#side-panel-content");
 const commandLog = document.querySelector("#command-log");
 const startTestingButton = document.querySelector("#start-data-layer-testing");
@@ -412,7 +437,7 @@ let schemaRuleConfiguration;
 let editingAttachedCardinalityRule;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
-schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
+schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker");
 document.body.append(schemaPropertyRulePicker);
 const localRulePromotionDialog = createLocalRulePromotionDialog();
 let pendingLocalRulePromotion;
@@ -555,11 +580,11 @@ let schemaExportTrigger;
 let pendingStandardSchemaExport;
 const guidedValidationRoot = document.querySelector("#guided-validation-flow");
 const sequenceReplayElements = findSequenceReplayElements();
-const allCommands = [...listCommands()];
+const allCommands = [...commandsForUtilityShell(listCommands(), extensionShell.commands)];
 let activeHotkeyKeymap = loadStoredHotkeyKeymap() ?? blankHotkeyKeymap(allCommands);
 let pendingHotkeySequence = [];
-let dataLayerSessionState = restoreSession();
-let savedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(localStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
+let dataLayerSessionState = restoreSession(dataLayerStorage);
+let savedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
 let savedEventFeedFilterFeedback = "";
 let dataLayerObserverState = {
     pageObject: samplePageObject(),
@@ -577,7 +602,7 @@ let liveObserverState = createLiveObserverState({
 });
 liveObserverState = restoreFreshSessionLiveObserver(liveObserverState, dataLayerSessionState);
 let restoredSavedEventFeedWorkingView = false;
-const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(localStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY), dataLayerSessionState.session?.id, savedEventFeedFilterLibrary);
+const restoredSavedEventFeedView = restoreSavedEventFeedWorkingView(dataLayerStorage.getItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY), dataLayerSessionState.session?.id, savedEventFeedFilterLibrary);
 if (restoredSavedEventFeedView) {
     liveObserverState = {
         ...liveObserverState,
@@ -593,20 +618,20 @@ if (!restoredSavedEventFeedWorkingView && savedEventFeedFilterLibrary.defaultFil
 }
 let inspectorReturnSnapshot;
 const liveInspectorPresentation = new Map();
-let savedSessionLibrary = restoreSavedSessionLibrary(localStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
-let defectLibrary = restoreDefectLibrary(localStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
+let savedSessionLibrary = restoreSavedSessionLibrary(dataLayerStorage.getItem(SAVED_SESSION_LIBRARY_STORAGE_KEY));
+let defectLibrary = restoreDefectLibrary(dataLayerStorage.getItem(DEFECT_LIBRARY_STORAGE_KEY));
 let selectedDefectId;
 let defectReturn;
 let defectListScrollTop = 0;
-let savedSessionLiveFeed = restoreSavedSessionLiveFeed(localStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
+let savedSessionLiveFeed = restoreSavedSessionLiveFeed(dataLayerStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
 if (savedSessionLiveFeed)
     liveObserverState = savedSessionLiveFeed.savedView;
 let archivedSavedSession;
 let pendingSessionSaveDraft;
 let startFreshAfterSessionSave = false;
 const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
-let savedThroughEventCount = Math.max(0, Number(localStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
-let eventTemplates = restoreEventTemplateLibrary(localStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
+let savedThroughEventCount = Math.max(0, Number(dataLayerStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
+let eventTemplates = restoreEventTemplateLibrary(dataLayerStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
 let pendingPushDraftReview;
 let pendingRevisionChangeReview;
@@ -616,13 +641,13 @@ let replaceEventLibraryArmed = false;
 let pendingEventLibraryDeletion;
 let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
-const storedSchemaLibrary = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 const restoredSchemaLibrary = serializeSchemaLibrary(schemas);
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
-    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
+    dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
-let guidedContinuationSelections = restoreGuidedContinuationSelections(localStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+let guidedContinuationSelections = restoreGuidedContinuationSelections(dataLayerStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
 let guidedPropertyReturn;
 let schemaDraft;
 let pendingSchemaImport;
@@ -636,7 +661,7 @@ let approvedRuleRevisionId;
 let approvedRuleAttachmentUpdateId;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides = (() => { try {
-    const stored = JSON.parse(localStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
+    const stored = JSON.parse(dataLayerStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
     return stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
 }
 catch {
@@ -644,7 +669,7 @@ catch {
 } })();
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
 let schemaValidationRecords = (() => { try {
-    const stored = JSON.parse(localStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
+    const stored = JSON.parse(dataLayerStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
     return Array.isArray(stored) ? stored.filter((record) => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : [];
 }
 catch {
@@ -654,7 +679,7 @@ const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 function normalizeReusableSchemaRule(rule) {
     return normalizeAllowedValuesRuleLibraryEntry(rule);
 }
-const storedReusableSchemaRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+const storedReusableSchemaRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
 let reusableSchemaRules = (() => { try {
     const saved = JSON.parse(storedReusableSchemaRules ?? "[]");
     return Array.isArray(saved) ? saved.map(normalizeReusableSchemaRule) : [];
@@ -663,7 +688,7 @@ catch {
     return [];
 } })();
 if (storedReusableSchemaRules && JSON.stringify(reusableSchemaRules) !== storedReusableSchemaRules)
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
 const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
     schemaCandidates: guidedSchemaCandidates,
     publish: persistPublishedGuidedValidation,
@@ -913,14 +938,14 @@ async function attachSelectedTarget() {
         setObservationTargetResult("End current session before attaching selected target");
         return;
     }
-    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath(), observationPageLoadId(target.tabId));
+    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath(dataLayerStorage), observationPageLoadId(target.tabId));
     if (observation.pageAccessStatus !== "page access available") {
         observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
         setObservationTargetResult("Permission required");
         renderObservationTargetContext();
         return;
     }
-    currentTargetPathStatus = targetPathStatusForObservation(observation, getHistoryArrayPath());
+    currentTargetPathStatus = targetPathStatusForObservation(observation, getHistoryArrayPath(dataLayerStorage));
     observationTargetState = decision.state;
     const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
         id: newDataLayerSessionId(target.tabId),
@@ -929,7 +954,7 @@ async function attachSelectedTarget() {
         url: target.pageUrl,
         targetTitle: target.title,
         targetOrigin: target.origin,
-        historyPath: getHistoryArrayPath(),
+        historyPath: getHistoryArrayPath(dataLayerStorage),
     });
     dataLayerSessionState = started.sessionState;
     liveObserverState = started.liveObserverState;
@@ -945,7 +970,7 @@ async function attachSelectedTarget() {
     updateSessionFromObserverState();
     await startLiveHistoryCapture(observation);
     savedThroughEventCount = 0;
-    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+    dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
     persistAndRenderObservationState();
     setObservationTargetResult("");
     setLiveSessionMessage("Testing started");
@@ -985,7 +1010,7 @@ function showDataLayerView(view, focus = false) {
         savedSessionLiveFeed = { ...savedSessionLiveFeed, savedView: structuredClone(liveObserverState) };
         persistSavedSessionFeed();
     }
-    localStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
+    dataLayerStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
     if (view === "Live" && liveObserverState.inspectorEventId)
         restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
@@ -993,7 +1018,7 @@ function showDataLayerView(view, focus = false) {
         renderDefects();
 }
 function persistDefectLibrary() {
-    localStorage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
+    dataLayerStorage.setItem(DEFECT_LIBRARY_STORAGE_KEY, serializeDefectLibrary(defectLibrary));
 }
 function triagedEvent(event) {
     return { ...event, defectTriage: presentedEventTriage(event, defectLibrary) };
@@ -1147,10 +1172,10 @@ function persistSavedEventFeedWorkingView() {
     }
     const sessionId = dataLayerSessionState.session?.id;
     if (!sessionId) {
-        localStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY);
+        dataLayerStorage.removeItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY);
         return;
     }
-    localStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(sessionId, liveObserverState.query ?? { conditions: [] }, liveObserverState.savedFilterId));
+    dataLayerStorage.setItem(SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, serializeSavedEventFeedWorkingView(sessionId, liveObserverState.query ?? { conditions: [] }, liveObserverState.savedFilterId));
 }
 function installSavedEventFeedWorkingQuery(query, activeFilterId) {
     const { savedFilterId: _previous, ...state } = setLiveQuery(liveObserverState, query);
@@ -1162,7 +1187,7 @@ function installDefaultSavedEventFeedFilterForNewSession() {
     installSavedEventFeedWorkingQuery(filter ? applySavedEventFeedFilter({ conditions: [] }, filter) : { conditions: [] }, filter?.id);
 }
 function commitSavedEventFeedFilters(proposed, failureFeedback) {
-    const result = commitSavedEventFeedFilterLibrary(savedEventFeedFilterLibrary, proposed, (serialized) => localStorage.setItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY, serialized), failureFeedback);
+    const result = commitSavedEventFeedFilterLibrary(savedEventFeedFilterLibrary, proposed, (serialized) => dataLayerStorage.setItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY, serialized), failureFeedback);
     savedEventFeedFilterLibrary = result.library;
     savedEventFeedFilterFeedback = result.feedback;
     return result.committed;
@@ -1294,7 +1319,7 @@ function currentLiveSessionSummary() {
         observerStatus: canonicalLiveObserverStatus(observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)),
         targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
         pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
-        observerPath: session?.historyPath ?? getHistoryArrayPath(),
+        observerPath: session?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
         capturedEventCount: liveObserverState.events.length,
         connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
     });
@@ -1387,21 +1412,21 @@ function storedReusableRule(rule) {
     };
 }
 function persistAllowedValueExpansion(nextSchemas, nextRules) {
-    const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
-    const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+    const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
-        localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
-        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+        dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+        dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
     }
     catch (error) {
         if (previousSchemas === null)
-            localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+            dataLayerStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
         else
-            localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+            dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
         if (previousRules === null)
-            localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+            dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
         else
-            localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+            dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
         throw error;
     }
 }
@@ -1581,7 +1606,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 return manual ? validateWithSchema(event, manual, schemas).state : validateEvent(event, schemas).state;
             },
             manualSchemaChoices: () => assignableSchemas(schemas).map((schema) => ({ id: schema.id, label: `${schema.name} v${schema.version}` })),
-            selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]: schemaId } : remaining; localStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
+            selectManualSchema: (eventId, schemaId) => { const { [eventId]: _previous, ...remaining } = manualSchemaOverrides; manualSchemaOverrides = schemaId ? { ...remaining, [eventId]: schemaId } : remaining; dataLayerStorage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
             updateValidation: (selectedId, validation) => {
                 const selected = liveObserverState.events.find((candidate) => candidate.id === selectedId);
                 const event = selected && { sourceId: selected.sourceId, eventName: selected.name, payload: selected.payload, rawInput: selected.rawInput };
@@ -1939,7 +1964,7 @@ function openLocalRulePromotionReview(propertyPath, sourceRuleId, trigger) {
                 ? schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate)
                 : schemas;
             const nextRules = storedPromotionRules(result.reusableRules);
-            persistLocalRulePromotion(localStorage, {
+            persistLocalRulePromotion(dataLayerStorage, {
                 schemaKey: SCHEMA_LIBRARY_STORAGE_KEY,
                 schemaValue: serializeSchemaLibrary(nextSchemas),
                 ruleKey: SCHEMA_RULE_STORAGE_KEY,
@@ -2543,7 +2568,7 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+    dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
 }
 function schemaEditorDraft(schema) {
     const draft = schema.workingDraft;
@@ -2972,7 +2997,7 @@ function restoreGuidedPropertyReturn() {
 }
 function persistGuidedContinuation(event, schemaId) {
     guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
-    localStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
+    dataLayerStorage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
 }
 function openGuidedDraft(schema) {
     showDataLayerView("Schemas");
@@ -3107,22 +3132,22 @@ function persistPublishedGuidedValidation(result) {
             },
         ]
         : reusableSchemaRules;
-    const previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
-    const previousRules = localStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+    const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
+    const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
-        localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
-        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
+        dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
+        dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
     }
     catch (error) {
         try {
             if (previousSchemas === null)
-                localStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
+                dataLayerStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY);
             else
-                localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+                dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
             if (previousRules === null)
-                localStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+                dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
             else
-                localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
+                dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
         }
         catch { /* Preserve the original storage failure. */ }
         throw error;
@@ -3241,7 +3266,7 @@ function createConfiguredSchemaRule(path, configuration) {
     }
     if (configuration.saveReusable) {
         reusableSchemaRules = [...reusableSchemaRules.filter((candidate) => candidate.id !== id), rule];
-        localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+        dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
         renderSchemaWorkflowRows();
     }
     closeSchemaPropertyRulePicker();
@@ -3530,6 +3555,8 @@ function renderSchemaPropertyRulePicker() {
     const path = schemaRulePickerPath;
     if (!path)
         return;
+    schemaPropertyRulePicker.removeAttribute("aria-label");
+    schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
     const propertyType = schemaPropertyType(path);
     if (schemaRuleConfiguration) {
         renderSchemaLocalRuleConfiguration(path, schemaRuleConfiguration);
@@ -3751,9 +3778,9 @@ function renderSchemaWorkflowRows() {
             schemaRuleParameters.value = rule.allowedValues.map(String).join(","); });
         if (rule.migrationIssue)
             summary.textContent += ` · Migration issue: ${rule.migrationIssue}`;
-        duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        duplicate.addEventListener("click", () => { reusableSchemaRules = [...reusableSchemaRules, { ...rule, id: `rule:${crypto.randomUUID()}`, name: `${rule.name} copy`, version: 1, enabled: true }]; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         exportRule.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(rule, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version ?? 1}.json`; link.click(); URL.revokeObjectURL(url); });
-        disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
+        disable.addEventListener("click", () => { reusableSchemaRules = reusableSchemaRules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled: candidate.enabled === false } : candidate); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); });
         remove.addEventListener("click", () => { const attached = schemas.filter((schema) => rule.attachments?.includes(schema.id) || JSON.stringify(schema.document).includes(rule.id)); if (attached.length) {
             if (schemaResult)
                 schemaResult.textContent = `Cannot delete ${rule.name}: attached to ${attached.map((schema) => schema.name).join(", ")}.`;
@@ -3835,7 +3862,7 @@ function recheckCapturedSchemaValidation() {
     renderLiveObserver();
     schemaValidationIssues?.replaceChildren(...issueRows);
     schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50);
-    localStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
+    dataLayerStorage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
     renderSchemaValidationRecords();
     if (schemaResult)
         schemaResult.textContent = checked ? `Rechecked ${checked} captured ${checked === 1 ? "event" : "events"}.` : "No captured events matched a schema assignment.";
@@ -3859,7 +3886,7 @@ function renderSchemaValidationRecords() {
     schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent: `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}` })));
 }
 function persistEventTemplateLibrary() {
-    localStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
+    dataLayerStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
 }
 function downloadEventLibrary() {
     const blob = new Blob([`${JSON.stringify(eventLibraryExport(eventTemplates), null, 2)}\n`], { type: "application/json" });
@@ -4196,13 +4223,13 @@ function openPushDraftReview() {
     openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });
 }
 function persistSavedSessionLibrary() {
-    localStorage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
+    dataLayerStorage.setItem(SAVED_SESSION_LIBRARY_STORAGE_KEY, serializeSavedSessionLibrary(savedSessionLibrary));
 }
 function persistSavedSessionFeed() {
     if (savedSessionLiveFeed)
-        localStorage.setItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed(savedSessionLiveFeed));
+        dataLayerStorage.setItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed(savedSessionLiveFeed));
     else
-        localStorage.removeItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY);
+        dataLayerStorage.removeItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY);
 }
 function currentUnsavedEventCount() {
     const events = savedSessionLiveFeed?.currentView.events ?? liveObserverState.events;
@@ -4242,7 +4269,7 @@ function startLinkedCaptureFromSavedSession(session) {
     savedSessionLiveFeed = undefined;
     persistSavedSessionFeed();
     savedThroughEventCount = 0;
-    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+    dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
     liveObserverState = {
         ...currentView,
         view: "Live",
@@ -4257,7 +4284,7 @@ function startLinkedCaptureFromSavedSession(session) {
             status: "active",
             tabId: previousSession?.tabId ?? 0,
             ...(previousSession?.windowId === undefined ? {} : { windowId: previousSession.windowId }),
-            historyPath: previousSession?.historyPath ?? getHistoryArrayPath(),
+            historyPath: previousSession?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
             startUrl: resumed.activeSession.pageUrl,
             currentUrl: resumed.activeSession.pageUrl,
             targetTitle: previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
@@ -4266,7 +4293,7 @@ function startLinkedCaptureFromSavedSession(session) {
         },
     };
     installDefaultSavedEventFeedFilterForNewSession();
-    persistSession(dataLayerSessionState);
+    persistSession(dataLayerSessionState, dataLayerStorage);
     setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
     renderLiveObserver();
     showDataLayerView("Live");
@@ -4421,7 +4448,7 @@ function syncCapturedEventsToLive() {
     }
 }
 function persistAndRenderSessionState() {
-    persistSession(dataLayerSessionState);
+    persistSession(dataLayerSessionState, dataLayerStorage);
     renderSessionState();
 }
 function persistAndRenderObservationState() {
@@ -4613,7 +4640,7 @@ function setKeymapWarning(message) {
         keymapWarning.textContent = message;
     }
 }
-const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, localStorage);
+const workspaceTabsController = createWorkspaceTabsController(workspaceTabList, shellStorage);
 const hotkeyEditor = createHotkeyEditor({
     commands: allCommands,
     container: hotkeyEditorCommands,
@@ -4669,10 +4696,10 @@ function shouldIgnoreHotkeyTarget(target) {
         (target instanceof HTMLElement && target.isContentEditable));
 }
 function storeHotkeyKeymap(keymap) {
-    localStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
+    hotkeyStorage.setItem(HOTKEY_KEYMAP_STORAGE_KEY, JSON.stringify(keymap));
 }
 function loadStoredHotkeyKeymap() {
-    const stored = localStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
+    const stored = hotkeyStorage.getItem(HOTKEY_KEYMAP_STORAGE_KEY);
     if (!stored) {
         return undefined;
     }
@@ -4869,7 +4896,7 @@ function startFreshSession() {
     dataLayerObserverState = fresh.observerState;
     presentedSourceEventCount = 0;
     savedThroughEventCount = 0;
-    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
+    dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, "0");
     inspectorReturnSnapshot = undefined;
     savedInspectorTemplateId = undefined;
     if (guidedValidationFlow.currentDraft())
@@ -4911,7 +4938,7 @@ saveLiveSessionForm?.addEventListener("submit", (event) => {
         return;
     savedSessionLibrary = confirmSessionSave(savedSessionLibrary, pendingSessionSaveDraft, name);
     savedThroughEventCount = pendingSessionSaveDraft.completed.events.length;
-    localStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));
+    dataLayerStorage.setItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY, String(savedThroughEventCount));
     pendingSessionSaveDraft = undefined;
     persistSavedSessionLibrary();
     saveLiveSessionDialog?.close();
@@ -5110,7 +5137,7 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
         reusableSchemaRules = [...reusableSchemaRules, { id: rule.id, name: rule.name ?? rule.id, kind: rule.operator ?? "required", version: rule.version, enabled: rule.enabled !== false, ...(rule.operator ? { operator: rule.operator } : {}), ...(rule.parameters ? { parameters: rule.parameters } : {}), ...(rule.severity ? { severity: rule.severity } : {}), ...(rule.message ? { message: rule.message } : {}), attachments: [saved.id] }];
     }
     persistSchemaLibrary();
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
     const refreshedEventCount = refreshCurrentLiveAfterSchemaPublication();
     schemaDraft = undefined;
     renderSchemaDraft();
@@ -5209,17 +5236,17 @@ schemaRuleEditor?.addEventListener("click", (event) => { if (event.target.id ===
 } });
 saveSchemaRuleButton?.addEventListener("click", () => { const name = schemaRuleName?.value.trim(); if (!name)
     return; const parameters = schemaRuleParameters?.value.trim(); const applicableType = schemaRuleTypes?.value; const operator = schemaRuleOperator?.value; const severity = schemaRuleSeverity?.value; const message = schemaRuleMessage?.value.trim(); const examples = schemaRuleExamples?.value.trim(); const metadata = [applicableType, operator, severity, message, examples].filter(Boolean).join(" · "); const previous = reusableSchemaRules.find((candidate) => candidate.id === editingReusableSchemaRuleId); const rule = { id: editingReusableSchemaRuleId ?? `rule:${crypto.randomUUID()}`, name, kind: `${document.querySelector("#schema-rule-kind")?.value ?? "Required"}${parameters ? ` (${parameters})` : ""}${metadata ? ` · ${metadata}` : ""}`, version: (previous?.version ?? 0) + 1, enabled: previous?.enabled ?? true, ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), ...(previous?.conditionGroup ? { conditionGroup: structuredClone(previous.conditionGroup) } : {}), attachments: Array.from(schemaRuleAttachments?.selectedOptions ?? []).map((option) => option.value), ...(previous ? { revisionHistory: [...(previous.revisionHistory ?? []), { name: previous.name, kind: previous.kind, version: previous.version ?? 1, ...(previous.enabled === false ? { enabled: false } : {}), ...(previous.conditionGroup ? { conditionGroup: structuredClone(previous.conditionGroup) } : {}) }] } : {}) }; reusableSchemaRules = editingReusableSchemaRuleId ? reusableSchemaRules.map((candidate) => candidate.id === editingReusableSchemaRuleId ? rule : candidate) : [...reusableSchemaRules, rule]; if (!previous || updateSchemaRuleAttachments?.checked)
-    schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id: rule.id, name: rule.name, version: rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}), enabled: rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules: attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult)
+    schemas = schemas.map((schema) => { const { attachedRules: _attachedRules, ...withoutAttachments } = schema; const attached = [...(schema.attachedRules ?? []).filter((item) => item.id !== rule.id), ...(rule.attachments?.includes(schema.id) ? [{ id: rule.id, name: rule.name, version: rule.version ?? 1, ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}), enabled: rule.enabled !== false }] : [])]; return attached.length ? { ...withoutAttachments, attachedRules: attached } : withoutAttachments; }); editingReusableSchemaRuleId = undefined; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); persistSchemaLibrary(); renderSchemaWorkflowRows(); if (schemaResult)
     schemaResult.textContent = `Saved reusable rule ${name}.`; if (schemaRuleEditor)
     schemaRuleEditor.hidden = true; });
 saveSchemaRuleButton?.addEventListener("click", () => {
     reusableSchemaRules = reusableSchemaRules.map(normalizeReusableSchemaRule);
     schemas = restoreSchemaLibrary(serializeSchemaLibrary(schemas));
-    localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
+    dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
     persistSchemaLibrary();
 });
 saveSchemaRuleButton?.addEventListener("click", () => { if (!pendingRuleSnapshotMetadata)
-    return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory: rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity: pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message: pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
+    return; reusableSchemaRules = reusableSchemaRules.map((rule) => rule.id === pendingRuleSnapshotMetadata?.id && rule.revisionHistory?.length ? { ...rule, revisionHistory: rule.revisionHistory.map((snapshot, index) => index === rule.revisionHistory.length - 1 ? { ...snapshot, ...(pendingRuleSnapshotMetadata?.severity ? { severity: pendingRuleSnapshotMetadata.severity } : {}), ...(pendingRuleSnapshotMetadata?.message ? { message: pendingRuleSnapshotMetadata.message } : {}) } : snapshot) } : rule); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); pendingRuleSnapshotMetadata = undefined; });
 saveSchemaRuleButton?.addEventListener("click", (event) => {
     const previous = reusableSchemaRules.find((rule) => rule.id === editingReusableSchemaRuleId);
     if (!previous)
@@ -5271,7 +5298,7 @@ cancelSchemaRuleUpgradeButton?.addEventListener("click", () => { if (updateSchem
     schemaRuleUpgradeReview.hidden = true; });
 exportSchemaRulesButton?.addEventListener("click", () => { const blob = new Blob([`${JSON.stringify(reusableSchemaRules, null, 2)}\n`], { type: "application/json" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "schema-rules.json"; link.click(); URL.revokeObjectURL(url); });
 confirmSchemaRuleDeleteButton?.addEventListener("click", () => { if (!pendingReusableSchemaRuleDeletionId)
-    return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open)
+    return; reusableSchemaRules = reusableSchemaRules.filter((rule) => rule.id !== pendingReusableSchemaRuleDeletionId); pendingReusableSchemaRuleDeletionId = undefined; dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemaWorkflowRows(); if (schemaRuleDeleteReview?.open)
     schemaRuleDeleteReview.close(); if (schemaRuleDeleteReview)
     schemaRuleDeleteReview.hidden = true; });
 cancelSchemaRuleDeleteButton?.addEventListener("click", () => { pendingReusableSchemaRuleDeletionId = undefined; if (schemaRuleDeleteReview?.open)
@@ -5356,12 +5383,12 @@ schemaLibraryImportFile?.addEventListener("change", async () => {
 exportSchemaButton?.addEventListener("click", () => openSchemaExportChoices(exportSchemaButton));
 recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidation);
 replaceSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
-    return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
+    return; schemas = pendingSchemaImport.schemas; reusableSchemaRules = pendingSchemaImport.rules; pendingSchemaImport = undefined; persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
     schemaImportReview.close(); if (schemaImportReview)
     schemaImportReview.hidden = true; if (schemaResult)
     schemaResult.textContent = "Schema Library replaced."; });
 appendSchemaLibraryButton?.addEventListener("click", () => { if (!pendingSchemaImport)
-    return; schemas = [...schemas.filter((schema) => !pendingSchemaImport.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); localStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
+    return; schemas = [...schemas.filter((schema) => !pendingSchemaImport.schemas.some((item) => item.id === schema.id)), ...pendingSchemaImport.schemas]; reusableSchemaRules = [...reusableSchemaRules.filter((rule) => !pendingSchemaImport.rules.some((item) => item.id === rule.id)), ...pendingSchemaImport.rules]; pendingSchemaImport = undefined; persistSchemaLibrary(); dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules)); renderSchemas(); renderSchemaWorkflowRows(); if (schemaImportReview?.open)
     schemaImportReview.close(); if (schemaImportReview)
     schemaImportReview.hidden = true; if (schemaResult)
     schemaResult.textContent = "Schema Library appended."; });
@@ -5633,16 +5660,16 @@ const targetPathStatusController = createTargetPathStatusController({
     },
 });
 function refreshSelectedTargetPathStatus() {
-    const path = getHistoryArrayPath();
+    const path = getHistoryArrayPath(dataLayerStorage);
     void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
 }
 historyPathInput?.addEventListener("input", () => {
     const typedPath = historyPathInput.value;
-    const path = setHistoryArrayPath(typedPath);
+    const path = setHistoryArrayPath(typedPath, dataLayerStorage);
     void targetPathStatusController.configure(path, typedPath);
 });
 restartObservationButton?.addEventListener("click", () => {
-    void currentTargetObservation(getHistoryArrayPath()).then((observation) => {
+    void currentTargetObservation(getHistoryArrayPath(dataLayerStorage)).then((observation) => {
         if (!observation)
             return;
         dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, observation);
@@ -5748,7 +5775,7 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
         revokeObservationTargetOrigins(permissions.origins ?? []);
     });
 }
-renderHistoryPath(getHistoryArrayPath());
+renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed)
     void recoverAttachedObservationTarget();
@@ -5770,5 +5797,12 @@ renderSchemaWorkflowRows();
 renderSchemaValidationRecords();
 renderSequences();
 activateHotkeyFocus();
+isolateUtilityDomFromSearch(document, globalThis.location.search);
+if (panelRoot) {
+    const chromeRuntime = typeof chrome === "undefined" ? undefined : chrome;
+    panelRoot.dataset.chromeApiCapabilities = shellRuntimeCapabilities(chromeRuntime).join(",");
+    panelRoot.dataset.storageNamespaces = utilityRegistry.map(({ storage }) => storage.namespace).join(",");
+    panelRoot.dataset.utilityShellReady = "true";
+}
 export { DATA_LAYER_SESSION_STORAGE_KEY, HOTKEY_KEYMAP_STORAGE_KEY, navigateSession, sessionScope, };
 //# sourceMappingURL=side-panel.js.map

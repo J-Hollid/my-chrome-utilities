@@ -4,8 +4,8 @@ import { browserDefectReportClipboard, defectReportContext } from "./data-layer-
 import { appendReproductionControls } from "./data-layer-defect-report-reproduction-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import { appendDetailControls, type DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
-import type { LiveEvent } from "./data-layer-live-observer.js";
-import type { SchemaDefinition } from "./data-layer-schema-verification.js";
+import type { LiveEvent } from "./utilities/data-layer/live-inspection.js";
+import type { SchemaDefinition } from "./utilities/data-layer/schemas.js";
 import {
   confirmOccurrenceExpectation,
   createOccurrenceDefectDraft,
@@ -26,7 +26,6 @@ export interface OccurrenceDefectReportPersistence {
   openExisting(defectId: string): void;
   updateExisting(defectId: string, report: OccurrenceReport): void;
 }
-
 function pathname(pageUrl: string | undefined): string {
   try { return new URL(pageUrl ?? "https://local.invalid/").pathname; }
   catch { return "/"; }

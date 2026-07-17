@@ -1,6 +1,8 @@
 (ns acceptance.palette-steps-test
-  (:require [acceptance.steps.palette :as palette]
+  (:require [acceptance.pack-runtime :as packs]
             [acceptance.runtime :as runtime]
+            [acceptance.steps.palette :as palette]
+            [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
 (def palette-html
@@ -30,6 +32,15 @@
 (deftest recognizes-visible-palette-controls
   (is (palette/visible-open-button? palette-html palette-source))
   (is (palette/palette-markup? palette-html)))
+
+(deftest recognizes-modal-command-palette-boundary
+  (is (palette/palette-dialog?
+       "<section id=\"palette\" role=\"dialog\" aria-modal=\"true\"><input id=\"palette-filter\" /><ul id=\"palette-results\" role=\"listbox\"></ul></section>"
+       "#palette { position:fixed } #palette[hidden] { display:none }"
+       "sidePanelContent?.setAttribute(\"inert\", \"\"); filter?.focus()"))
+  (is (palette/no-permanent-command-buttons?
+       "<button id=\"open-palette\">Commands</button>"
+       "function showPalette() {}")))
 
 (deftest recognizes-local-shortcut-and-key-actions
   (is (palette/opens-on-shortcut? palette-source "Ctrl+K"))
@@ -85,3 +96,14 @@
            (vec (palette/forbidden-palette-scope-findings-of-kind
                  scope
                  :keybinding-editor))))))
+
+(deftest command-palette-features-exercise-owned-state-transitions
+  (doseq [feature-file ["features/command-registry-presentation-boundary.feature"
+                        "features/side-panel-command-palette-dialog.feature"
+                        "features/simple-command-palette.feature"
+                        "features/typed-command-registry.feature"]]
+    (is (= :passed
+           (:status
+            (runtime/run-feature! (gherkin/parse-file feature-file)
+                                  (packs/handlers-for-feature feature-file))))
+        feature-file)))

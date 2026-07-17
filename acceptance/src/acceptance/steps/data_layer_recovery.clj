@@ -5,6 +5,10 @@
             [clojure.string :as str]))
 
 (def recovery-timestamp "2026-07-08T00:00:00Z")
+(def ^:private session-recovery-feature-name "Data layer session recovery")
+
+(defn- session-recovery-feature? [world]
+  (= session-recovery-feature-name (:acceptance/feature-name world)))
 
 (defn capture-observed-event [state {:keys [event-name page-url history-path]}]
   (session/capture-entry state
@@ -160,6 +164,7 @@
                (assoc world :session-state (session/end-session (:session-state world))))}
 
    {:pattern #"^the ended session remains ended$"
+    :applies? session-recovery-feature?
     :handler (fn [world _example _captures]
                (let [ended-session (or (:persisted-session world)
                                        (get-in world [:session-state :session]))]
@@ -204,5 +209,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T19:22:51.080478138+02:00", :module-hash "-366222747", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1256953708"} {:id "def/recovery-timestamp", :kind "def", :line 7, :end-line nil, :hash "-829136013"} {:id "defn/capture-observed-event", :kind "defn", :line 9, :end-line nil, :hash "2002826544"} {:id "defn/reopen-after-navigation", :kind "defn", :line 19, :end-line nil, :hash "1175227345"} {:id "defn/timeline-entry", :kind "defn", :line 24, :end-line nil, :hash "-1808051897"} {:id "defn/restored-history-path", :kind "defn", :line 28, :end-line nil, :hash "1405355457"} {:id "defn-/observed-event-urls", :kind "defn-", :line 32, :end-line nil, :hash "-1284049393"} {:id "defn-/restart-observation-available?", :kind "defn-", :line 37, :end-line nil, :hash "1280026819"} {:id "defn/refresh-active-session", :kind "defn", :line 40, :end-line nil, :hash "193455126"} {:id "defn/restart-observation", :kind "defn", :line 45, :end-line nil, :hash "-1184222671"} {:id "defn/reopen-side-panel", :kind "defn", :line 48, :end-line nil, :hash "693468688"} {:id "def/forbidden-recovery-capability-patterns", :kind "def", :line 53, :end-line nil, :hash "1231321701"} {:id "defn/forbidden-recovery-capability-findings", :kind "defn", :line 59, :end-line nil, :hash "1181618589"} {:id "defn/forbidden-recovery-capability-findings-of-kind", :kind "defn", :line 62, :end-line nil, :hash "1965889639"} {:id "defn-/inspect-recovery-implementation", :kind "defn-", :line 65, :end-line nil, :hash "1472227023"} {:id "def/handlers", :kind "def", :line 71, :end-line nil, :hash "1225887256"}]}
+;; {:version 1, :tested-at "2026-07-17T16:57:08.789604662+02:00", :module-hash "27510988", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-1256953708"} {:id "def/recovery-timestamp", :kind "def", :line 7, :end-line 7, :hash "-829136013"} {:id "def/session-recovery-feature-name", :kind "def", :line 8, :end-line 8, :hash "2068976086"} {:id "defn-/session-recovery-feature?", :kind "defn-", :line 10, :end-line 11, :hash "1014752934"} {:id "defn/capture-observed-event", :kind "defn", :line 13, :end-line 21, :hash "2002826544"} {:id "defn/reopen-after-navigation", :kind "defn", :line 23, :end-line 26, :hash "1175227345"} {:id "defn/timeline-entry", :kind "defn", :line 28, :end-line 30, :hash "2116646764"} {:id "defn/restored-history-path", :kind "defn", :line 32, :end-line 34, :hash "1405355457"} {:id "defn-/observed-event-urls", :kind "defn-", :line 36, :end-line 39, :hash "-70236737"} {:id "defn-/restart-observation-available?", :kind "defn-", :line 41, :end-line 42, :hash "1280026819"} {:id "defn/refresh-active-session", :kind "defn", :line 44, :end-line 47, :hash "193455126"} {:id "defn/restart-observation", :kind "defn", :line 49, :end-line 50, :hash "-1184222671"} {:id "defn/reopen-side-panel", :kind "defn", :line 52, :end-line 55, :hash "693468688"} {:id "def/forbidden-recovery-capability-patterns", :kind "def", :line 57, :end-line 61, :hash "1231321701"} {:id "defn/forbidden-recovery-capability-findings", :kind "defn", :line 63, :end-line 64, :hash "1181618589"} {:id "defn/forbidden-recovery-capability-findings-of-kind", :kind "defn", :line 66, :end-line 67, :hash "-1025006209"} {:id "defn-/inspect-recovery-implementation", :kind "defn-", :line 69, :end-line 73, :hash "1472227023"} {:id "def/handlers", :kind "def", :line 75, :end-line 209, :hash "1095827709"}]}
 ;; clj-mutate-manifest-end

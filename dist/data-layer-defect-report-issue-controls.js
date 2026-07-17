@@ -1,5 +1,5 @@
 import { expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
-import { exampleValueFromInput } from "./data-layer-schema-property-example-values.js";
+import { exampleValueFromInput } from "./utilities/data-layer/schemas.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     for (const reportIssue of state.report().issues) {
         let hideCustomResponse = () => { };

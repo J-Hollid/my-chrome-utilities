@@ -1,0 +1,565 @@
+{
+  "src/data-layer-allowed-value-expansion-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-allowed-value-expansion.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-allowed-values-rule.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-cardinality.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-conditional-validation-rules.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-defect-library-copy.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-library-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-library.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-defect-report-browser.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-defect-report-export.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-model.ts": {
+    "module": "defect-reporting",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-defect-report-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-event-feed-query-ui.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
+  "src/data-layer-event-feed-query.ts": {
+    "module": "live-inspection",
+    "layer": "core"
+  },
+  "src/data-layer-event-library-deletion.ts": {
+    "module": "event-library",
+    "layer": "application"
+  },
+  "src/data-layer-event-library-editor-ui.ts": {
+    "module": "event-library",
+    "layer": "browser"
+  },
+  "src/data-layer-event-library-editor.ts": {
+    "module": "event-library",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-event-library-transfer.ts": {
+    "module": "event-library",
+    "layer": "application"
+  },
+  "src/data-layer-event-occurrence-defect-report-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-event-occurrence-defect-report.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-event-template-renaming.ts": {
+    "module": "event-library",
+    "layer": "application"
+  },
+  "src/data-layer-fresh-session.ts": {
+    "module": "capture",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-guided-nested-property-merge.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-guided-rule-parameter-integrity.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-guided-validation-continuation.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-guided-validation-types.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-guided-validation-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-guided-validation.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-json-schema-export.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-guided-workflow-ui.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-guided-workflow.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-inspector-actions.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts",
+      "src/utilities/data-layer/defect-reporting.ts",
+      "src/utilities/data-layer/event-library.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-live-inspector-presentation-ui.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
+  "src/data-layer-live-inspector-return-ui.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
+  "src/data-layer-live-inspector-return.ts": {
+    "module": "live-inspection",
+    "layer": "core"
+  },
+  "src/data-layer-live-notifications.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-live-observation.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-observer-ui.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-live-observer.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-live-schema-property-declaration-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-schema-property-declaration.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-controls-ui.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-end.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-summary-actions.ts": {
+    "module": "capture",
+    "layer": "application"
+  },
+  "src/data-layer-live-session-summary-ui.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-summary.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-local-rule-promotion-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-local-rule-promotion.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-missing-event-defect-report-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-missing-event-defect-report.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-observation-activation.ts": {
+    "module": "capture",
+    "layer": "application"
+  },
+  "src/data-layer-observation-refresh.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-observation-targets-ui.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-observation-targets.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-observer.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-push-draft-review-ui.ts": {
+    "module": "event-library",
+    "layer": "browser"
+  },
+  "src/data-layer-push-draft-review.ts": {
+    "module": "event-library",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-recovery.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-saved-event-feed-filters.ts": {
+    "module": "live-inspection",
+    "layer": "core"
+  },
+  "src/data-layer-saved-session-live-feed.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-saved-sessions.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-schema-assignment-data-conditions-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-assignment-data-conditions.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-schema-documentation.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-manual-property.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-nested-path.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-copy-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-copy.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-example-values.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-path.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-property-removal.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-rule-picker.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-schema-property-type-editing-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-type-editing.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-property-view.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-publication-refresh.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-schema-rule-property-identity.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-specification-builder-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-schema-verification.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-selected-target-push-page.ts": {
+    "module": "event-library",
+    "layer": "core"
+  },
+  "src/data-layer-selected-target-push.ts": {
+    "module": "event-library",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-sequence-replay-ui.ts": {
+    "module": "replay",
+    "layer": "browser"
+  },
+  "src/data-layer-sequence-replay.ts": {
+    "module": "replay",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-session-start.ts": {
+    "module": "capture",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-session.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-target-path-status.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-target-recovery.ts": {
+    "module": "capture",
+    "layer": "browser"
+  },
+  "src/data-layer-template-change-review-ui.ts": {
+    "module": "event-library",
+    "layer": "browser"
+  },
+  "src/data-layer-template-change-review.ts": {
+    "module": "event-library",
+    "layer": "browser"
+  },
+  "src/data-layer-validation-model.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-core.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-issue-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-defect-report-json.ts": {
+    "module": "defect-reporting",
+    "layer": "core"
+  },
+  "src/data-layer-defect-report-reproduction-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report-reproduction.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-timeline-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report-timeline.ts": {
+    "module": "defect-reporting",
+    "layer": "application"
+  },
+  "src/data-layer-defect-report-ui-controls.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-report.ts": {
+    "module": "defect-reporting",
+    "layer": "browser"
+  },
+  "src/data-layer-defect-schema-choices.ts": {
+    "module": "defect-reporting",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-event-feed-summaries.ts": {
+    "module": "live-inspection",
+    "layer": "core"
+  },
+  "src/data-layer-event-presentation.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-guided-schema-picker-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-guided-conditional-rule-authoring.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-live-responsive-layout.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
+  "src/data-layer-live-session-controls.ts": {
+    "module": "capture",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/live-inspection.ts"
+    ]
+  },
+  "src/data-layer-live-validation-presentation.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-missing-event-expected-payload-ui.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-observability.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-path-conditions.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-recursive-property-tree.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-canonical-document.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-document.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-schema-specification-builder.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/data-layer-source.ts": {
+    "module": "capture",
+    "layer": "core"
+  },
+  "src/data-layer-timeline.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/capture.ts"
+    ]
+  },
+  "src/data-layer-unified-defect-builder.ts": {
+    "module": "defect-reporting",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-workflow-focus-ui.ts": {
+    "module": "event-library",
+    "layer": "browser"
+  },
+  "src/data-layer.ts": {
+    "module": "capture",
+    "layer": "browser"
+  }
+}

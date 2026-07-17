@@ -1,10 +1,9 @@
-import type { LiveStatus } from "./data-layer-live-observer.js";
+import type { LiveStatus } from "./utilities/data-layer/live-inspection.js";
 
 export interface LiveSessionControlState {
   activeSession: boolean;
   captureStatus: LiveStatus;
 }
-
 export interface LiveSessionControls {
   sessionAction: "Start testing" | "End testing";
   captureAction: "none" | "Pause capture" | "Resume capture";

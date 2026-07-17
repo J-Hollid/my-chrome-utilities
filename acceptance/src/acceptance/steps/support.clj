@@ -1,6 +1,7 @@
 (ns acceptance.steps.support
   (:require [aps.gherkin :as gherkin]
             [aps.json :as aps-json]
+            [acceptance.pack-runtime :as packs]
             [babashka.fs :as fs]
             [babashka.process :as process]
             [cheshire.core :as json]
@@ -44,6 +45,23 @@
 
 (defn includes-all? [source snippets]
   (every? #(str/includes? source %) snippets))
+
+(defn- strictly-increasing? [values]
+  (every? neg? (map compare values (rest values))))
+
+(defn navigation-structure? [html css]
+  (let [header-index (.indexOf html "id=\"application-header\"")
+        primary-index (.indexOf html "id=\"workspace-tabs\"")
+        secondary-index (.indexOf html "id=\"data-layer-views\"")
+        live-index (.indexOf html "id=\"data-layer-panel-live\"")]
+    (and (every? #(not (neg? %))
+                 [header-index primary-index secondary-index live-index])
+         (strictly-increasing? [header-index primary-index secondary-index live-index])
+         (str/includes? html "role=\"tablist\" aria-label=\"Workspace\"")
+         (str/includes? html "role=\"tablist\" aria-label=\"Data Layer views\"")
+         (str/includes? css
+                        "#side-panel-content { display:grid; grid-template-rows:auto auto minmax(0,1fr)")
+         (str/includes? css "[role=tab] { background:transparent"))))
 
 (defn matches-all? [source patterns]
   (every? #(re-find % source) patterns))
@@ -101,6 +119,20 @@
            :handler (fn [world example captures]
                       (transition world example captures spec))})
         step-specs))
+
+(defn feature-scoped-stateful-handlers
+  [feature-files entry-step? state-key transition]
+  (let [feature-names (set (map (comp :name gherkin/parse-file) feature-files))]
+    (mapv (fn [{:keys [applies?] :as handler}]
+            (assoc handler :applies? (fn [world]
+                                       (and (contains? feature-names
+                                                       (:acceptance/feature-name world))
+                                            (boolean (applies? world))))))
+          (stateful-semantic-handlers
+           (feature-step-specs feature-files #{})
+           entry-step?
+           state-key
+           transition))))
 
 (defn stateful-feature-handlers
   [feature-file entry-step state-key transition]
@@ -179,17 +211,23 @@
 
 (defn cached-browser-observation!
   [cache options]
-  (or @cache
-      (reset! cache (load-browser-observation! options))))
+  (if packs/*runtime-cache*
+    (packs/cached-runtime! [:browser (select-keys options [:adapter-env :observation-key])]
+                           #(load-browser-observation! options))
+    (or @cache
+        (reset! cache (load-browser-observation! options)))))
 
 (defn cached-command-verification!
   [cache error-message & command]
-  (when-not @cache
-    (let [result (apply process/shell build-shell-options command)]
-      (assert! (zero? (:exit result))
-               (str error-message (:err result))
-               {:out (:out result) :err (:err result)})
-      (reset! cache true))))
+  (let [verify! (fn []
+                  (let [result (apply process/shell build-shell-options command)]
+                    (assert! (zero? (:exit result))
+                             (str error-message (:err result))
+                             {:out (:out result) :err (:err result)})
+                    (zero? (:exit result))))]
+    (if packs/*runtime-cache*
+      (packs/cached-runtime! [:command command] verify!)
+      (when-not @cache (reset! cache (verify!))))))
 
 (defn mode-transition
   [world example text entry-modes state-key verify! validate-example! runtime-boundary!]
@@ -211,11 +249,9 @@
 
 (defn validate-observation-example!
   [example observation validators validate-row!]
-  (some (fn [[key validation]]
-          (when (example-value example key)
-            (validate-row! example observation validation)
-            true))
-        validators)
+  (doseq [[key validation] validators
+          :when (example-value example key)]
+    (validate-row! example observation validation))
   observation)
 
 (defn validated-observation-transition
@@ -275,5 +311,5 @@
     (assoc world :build-result result)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-16T20:40:44.937898827+02:00", :module-hash "-73937646", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 7, :hash "-1956739868"} {:id "def/build-shell-options", :kind "def", :line 9, :end-line 9, :hash "-930688589"} {:id "defn/example-value", :kind "defn", :line 11, :end-line 13, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 15, :end-line 17, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 19, :end-line 22, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 24, :end-line 27, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 29, :end-line 30, :hash "-1939833971"} {:id "defn/source-file-map", :kind "defn", :line 32, :end-line 36, :hash "-254262717"} {:id "defn/source-files", :kind "defn", :line 38, :end-line 43, :hash "-888013632"} {:id "defn/includes-all?", :kind "defn", :line 45, :end-line 46, :hash "-280066464"} {:id "defn/matches-all?", :kind "defn", :line 48, :end-line 49, :hash "1057399970"} {:id "defn/split-list", :kind "defn", :line 51, :end-line 55, :hash "-1368248159"} {:id "defn/template-pattern", :kind "defn", :line 57, :end-line 65, :hash "-1377922721"} {:id "defn/feature-step-specs", :kind "defn", :line 67, :end-line 79, :hash "1281948553"} {:id "defn/capture-placeholder-keys", :kind "defn", :line 81, :end-line 85, :hash "-1096824432"} {:id "defn/semantic-handlers", :kind "defn", :line 87, :end-line 92, :hash "1419994062"} {:id "defn/stateful-semantic-handlers", :kind "defn", :line 94, :end-line 103, :hash "-1312329710"} {:id "defn/stateful-feature-handlers", :kind "defn", :line 105, :end-line 111, :hash "-1720293067"} {:id "defn/feature-mode-handlers", :kind "defn", :line 113, :end-line 124, :hash "860506238"} {:id "defn/record-semantic-observation", :kind "defn", :line 126, :end-line 131, :hash "913946176"} {:id "defn/pattern-findings", :kind "defn", :line 133, :end-line 138, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 140, :end-line 141, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 143, :end-line 145, :hash "866058476"} {:id "defn/stateful-observation", :kind "defn", :line 147, :end-line 154, :hash "2038859766"} {:id "defn/stateful-transition", :kind "defn", :line 156, :end-line 162, :hash "-1459105983"} {:id "defn/load-browser-observation-with-environment!", :kind "defn", :line 164, :end-line 173, :hash "-984393520"} {:id "defn/load-browser-observation!", :kind "defn", :line 175, :end-line 178, :hash "-1416186719"} {:id "defn/cached-browser-observation!", :kind "defn", :line 180, :end-line 183, :hash "1951769240"} {:id "defn/cached-command-verification!", :kind "defn", :line 185, :end-line 192, :hash "-1738870113"} {:id "defn/mode-transition", :kind "defn", :line 194, :end-line 201, :hash "-212214197"} {:id "defn/verified-feature-mode-handlers", :kind "defn", :line 203, :end-line 210, :hash "-1989417952"} {:id "defn/validate-observation-example!", :kind "defn", :line 212, :end-line 219, :hash "-753516880"} {:id "defn/validated-observation-transition", :kind "defn", :line 221, :end-line 225, :hash "1162907360"} {:id "defn/validate-example-domain!", :kind "defn", :line 227, :end-line 235, :hash "1835395419"} {:id "defn/validate-mode-example-domain!", :kind "defn", :line 237, :end-line 243, :hash "1966660584"} {:id "defn/validate-example-relations!", :kind "defn", :line 245, :end-line 253, :hash "-357138992"} {:id "defn/validate-mode-example!", :kind "defn", :line 255, :end-line 262, :hash "-36916542"} {:id "defn/ensure-build-passed!", :kind "defn", :line 264, :end-line 271, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 273, :end-line 275, :hash "378996986"}]}
+;; {:version 1, :tested-at "2026-07-17T17:13:06.946367063+02:00", :module-hash "-403416543", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 8, :hash "-1782816969"} {:id "def/build-shell-options", :kind "def", :line 10, :end-line 10, :hash "-930688589"} {:id "defn/example-value", :kind "defn", :line 12, :end-line 14, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 16, :end-line 18, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 20, :end-line 23, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 25, :end-line 28, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 30, :end-line 31, :hash "-1939833971"} {:id "defn/source-file-map", :kind "defn", :line 33, :end-line 37, :hash "-254262717"} {:id "defn/source-files", :kind "defn", :line 39, :end-line 44, :hash "-888013632"} {:id "defn/includes-all?", :kind "defn", :line 46, :end-line 47, :hash "-280066464"} {:id "defn-/strictly-increasing?", :kind "defn-", :line 49, :end-line 50, :hash "397463999"} {:id "defn/navigation-structure?", :kind "defn", :line 52, :end-line 64, :hash "1586471099"} {:id "defn/matches-all?", :kind "defn", :line 66, :end-line 67, :hash "-623138115"} {:id "defn/split-list", :kind "defn", :line 69, :end-line 73, :hash "-1368248159"} {:id "defn/template-pattern", :kind "defn", :line 75, :end-line 83, :hash "-1377922721"} {:id "defn/feature-step-specs", :kind "defn", :line 85, :end-line 97, :hash "-1076030599"} {:id "defn/capture-placeholder-keys", :kind "defn", :line 99, :end-line 103, :hash "794044306"} {:id "defn/semantic-handlers", :kind "defn", :line 105, :end-line 110, :hash "1419994062"} {:id "defn/stateful-semantic-handlers", :kind "defn", :line 112, :end-line 121, :hash "-1312329710"} {:id "defn/feature-scoped-stateful-handlers", :kind "defn", :line 123, :end-line 135, :hash "1287639268"} {:id "defn/stateful-feature-handlers", :kind "defn", :line 137, :end-line 143, :hash "-1720293067"} {:id "defn/feature-mode-handlers", :kind "defn", :line 145, :end-line 156, :hash "860506238"} {:id "defn/record-semantic-observation", :kind "defn", :line 158, :end-line 163, :hash "913946176"} {:id "defn/pattern-findings", :kind "defn", :line 165, :end-line 170, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 172, :end-line 173, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 175, :end-line 177, :hash "866058476"} {:id "defn/stateful-observation", :kind "defn", :line 179, :end-line 186, :hash "2038859766"} {:id "defn/stateful-transition", :kind "defn", :line 188, :end-line 194, :hash "-1459105983"} {:id "defn/load-browser-observation-with-environment!", :kind "defn", :line 196, :end-line 205, :hash "-41201157"} {:id "defn/load-browser-observation!", :kind "defn", :line 207, :end-line 210, :hash "-1416186719"} {:id "defn/cached-browser-observation!", :kind "defn", :line 212, :end-line 218, :hash "-1963526695"} {:id "defn/cached-command-verification!", :kind "defn", :line 220, :end-line 230, :hash "1036339390"} {:id "defn/mode-transition", :kind "defn", :line 232, :end-line 239, :hash "-212214197"} {:id "defn/verified-feature-mode-handlers", :kind "defn", :line 241, :end-line 248, :hash "-1989417952"} {:id "defn/validate-observation-example!", :kind "defn", :line 250, :end-line 255, :hash "38475456"} {:id "defn/validated-observation-transition", :kind "defn", :line 257, :end-line 261, :hash "1162907360"} {:id "defn/validate-example-domain!", :kind "defn", :line 263, :end-line 271, :hash "1835395419"} {:id "defn/validate-mode-example-domain!", :kind "defn", :line 273, :end-line 279, :hash "-642266968"} {:id "defn/validate-example-relations!", :kind "defn", :line 281, :end-line 289, :hash "1404555231"} {:id "defn/validate-mode-example!", :kind "defn", :line 291, :end-line 298, :hash "-36916542"} {:id "defn/ensure-build-passed!", :kind "defn", :line 300, :end-line 307, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 309, :end-line 311, :hash "378996986"}]}
 ;; clj-mutate-manifest-end

@@ -41,13 +41,13 @@ export function pathStatus(pageObject: unknown, path: string): HistoryPathStatus
   return Array.isArray(value) ? "ready" : "not an array";
 }
 
-export function getHistoryArrayPath(): string {
-  return localStorage.getItem(HISTORY_PATH_STORAGE_KEY) ?? DEFAULT_HISTORY_PATH;
+export function getHistoryArrayPath(storage: Pick<Storage, "getItem"> = localStorage): string {
+  return storage.getItem(HISTORY_PATH_STORAGE_KEY) ?? DEFAULT_HISTORY_PATH;
 }
 
-export function setHistoryArrayPath(path: string): string {
+export function setHistoryArrayPath(path: string, storage: Pick<Storage, "setItem"> = localStorage): string {
   const normalizedPath = normalizeHistoryArrayPath(path);
-  localStorage.setItem(HISTORY_PATH_STORAGE_KEY, normalizedPath);
+  storage.setItem(HISTORY_PATH_STORAGE_KEY, normalizedPath);
   return normalizedPath;
 }
 

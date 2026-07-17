@@ -11,10 +11,9 @@ export interface SavedSessionEvent {
   captureTime?: string;
   sourceKind?: string;
   destination?: string;
-  validation?: import("./data-layer-source.js").ValidationState;
+  validation?: import("./utilities/data-layer/capture.js").ValidationState;
   validationDetails?: import("./data-layer-live-observer.js").LiveEvent["validationDetails"];
 }
-
 export interface CompletedSession {
   id: string;
   pageScope: string;

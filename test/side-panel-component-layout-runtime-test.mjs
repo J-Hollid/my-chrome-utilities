@@ -6,6 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
+import { headlessChromeArguments, stopHeadlessChrome } from "./support/headless-chrome.mjs";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
@@ -153,15 +154,8 @@ const assetServer = createServer(async (request, response) => {
 });
 await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
 const assetPort = assetServer.address().port;
-const chrome = spawn("google-chrome", [
-  "--headless=new",
-  "--disable-gpu",
-  "--no-first-run",
-  "--no-default-browser-check",
-  "--remote-debugging-port=0",
-  `--user-data-dir=${chromeProfile}`,
-  "about:blank",
-], { stdio: ["ignore", "ignore", "pipe"] });
+const chrome = spawn("google-chrome", headlessChromeArguments(chromeProfile),
+  { stdio: ["ignore", "ignore", "pipe"] });
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -295,7 +289,7 @@ async function openPanel(port, width, height = 900) {
   let loaded = false;
   for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
     const ready = await socket.call("Runtime.evaluate", {
-      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root') !== null && document.querySelector('#save-and-close-schema') !== null",
+      expression: "document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true' && document.querySelector('#save-and-close-schema') !== null",
       returnByValue: true,
     });
     if (ready.result.value === true) {
@@ -304,7 +298,14 @@ async function openPanel(port, width, height = 900) {
     }
     await wait(50);
   }
-  if (!loaded) throw new Error("Side panel DOM did not finish loading.");
+  if (!loaded) {
+    const diagnosis = await socket.call("Runtime.evaluate", {
+      expression: "import('./side-panel.js').then(() => null, (error) => String(error?.stack ?? error))",
+      returnByValue: true,
+      awaitPromise: true,
+    });
+    throw new Error(`Side panel DOM did not finish loading. ${diagnosis.result.value ?? ""}`.trim());
+  }
   return socket;
 }
 
@@ -324,7 +325,7 @@ async function reloadPanel(socket) {
     for (let attempt = 0; attempt < panelReadyAttempts; attempt += 1) {
       const ready = await evaluate(socket, `(() => {
         if (document.readyState !== "complete" || !document.querySelector("#side-panel-root") || document.documentElement.dataset.componentReloadToken === ${JSON.stringify(reloadToken)}) return false;
-        return document.querySelector("#schema-count")?.textContent !== "";
+        return document.querySelector("#side-panel-root")?.dataset.utilityShellReady === "true" && document.querySelector("#schema-count")?.textContent !== "";
       })()`);
       if (ready) return;
       await wait(50);
@@ -4735,6 +4736,8 @@ const workspacePanelContainmentRuntime = `(() => {
   const dataLayerPanel = document.querySelector("#workspace-panel-data-layer");
   const hotkeysPanel = document.querySelector("#workspace-panel-hotkeys");
   const hotkeysTab = document.querySelector("#workspace-tab-hotkeys");
+  const utilityItems = [...document.querySelectorAll("#utility-directory > li")];
+  const ownedPanels = [...document.querySelectorAll("[data-utility-owner]")];
   const peers = dataLayerPanel.parentElement === hotkeysPanel.parentElement;
   const nested = dataLayerPanel.contains(hotkeysPanel) || hotkeysPanel.contains(dataLayerPanel);
   hotkeysTab.click();
@@ -4744,6 +4747,22 @@ const workspacePanelContainmentRuntime = `(() => {
   const observation = {
     peers,
     nested,
+    storageOwnership:{
+      dataLayer:Boolean(localStorage.getItem("my-chrome-utilities.data-layer")),
+      shell:Boolean(localStorage.getItem("my-chrome-utilities.shell")),
+      legacyWorkspace:localStorage.getItem("my-chrome-utilities.workspace-tab.v1"),
+    },
+    utilityDirectory:{
+      ids:utilityItems.map(({dataset})=>dataset.utilityId),
+      labels:utilityItems.map(({textContent})=>textContent),
+      visible:utilityItems.every((item)=>item.checkVisibility()),
+    },
+    panelOwnership:{
+      count:ownedPanels.length,
+      commandPalette:document.querySelector("#palette")?.dataset.utilityOwner,
+      hotkeys:hotkeysPanel.dataset.utilityOwner,
+      dataLayer:dataLayerPanel.dataset.utilityOwner,
+    },
     afterActivation:{
       dataLayerHidden:dataLayerPanel.hidden,
       hotkeysHidden:hotkeysPanel.hidden,
@@ -5586,6 +5605,13 @@ try {
       assert.deepEqual(workspacePanelContainmentObservation, {
         peers:true,
         nested:false,
+        storageOwnership:{dataLayer:true,shell:true,legacyWorkspace:"hotkeys"},
+        utilityDirectory:{
+          ids:["command-palette","hotkeys","data-layer"],
+          labels:["Command palette","Hotkeys","Data layer"],
+          visible:true,
+        },
+        panelOwnership:{count:8,commandPalette:"command-palette",hotkeys:"hotkeys",dataLayer:"data-layer"},
         afterActivation:{
           dataLayerHidden:true,
           hotkeysHidden:false,
@@ -6597,12 +6623,7 @@ try {
     console.log(JSON.stringify({ recursivePropertyValidation:recursivePropertyValidationObservation }));
   }
 } finally {
-  if (chrome.exitCode === null && !chrome.killed) {
-    await Promise.race([new Promise((resolve) => {
-      chrome.once("exit", resolve);
-      chrome.kill("SIGTERM");
-    }), wait(1000)]);
-  }
+  await stopHeadlessChrome(chrome);
   await new Promise((resolve) => assetServer.close(resolve));
   await rm(chromeProfile, { recursive:true, force:true, maxRetries:5, retryDelay:50 });
 }

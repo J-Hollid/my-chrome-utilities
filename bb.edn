@@ -6,6 +6,7 @@
   gherkin-ir-dry-checker aps.cli.gherkin-ir-dry-checker/-main
   gherkin-mutator aps.cli.gherkin-mutator/-main
   acceptance-entrypoint-generator acceptance.generator/-main
+  acceptance-pack-runner acceptance.pack-session/-main
   test:unit {:doc "Run focused unit tests."
              :requires ([clojure.test :as test]
                         [acceptance.canonical-declared-property-validation-steps-test]
@@ -13,6 +14,7 @@
                         [acceptance.library-direct-template-push-steps-test]
                         [acceptance.live-schema-property-declaration-steps-test]
                         [babashka.process :as process]
+                        [acceptance.pack-session-test]
                         [acceptance.runtime-test]
                         [acceptance.generator-test]
                         [acceptance.steps-support-test]
@@ -77,6 +79,8 @@
                         [acceptance.schema-declared-property-exceptions-steps-test]
                         [acceptance.json-schema-export-steps-test]
                         [acceptance.array-validation-issue-rollup-steps-test]
+                        [acceptance.pack-runtime-test]
+                        [acceptance.modular-architecture-steps-test]
                         [acceptance.schema-rule-property-identity-steps-test]
                         [acceptance.schema-container-child-authoring-steps-test]
                         [acceptance.schema-renaming-steps-test]
@@ -89,7 +93,8 @@
                         [acceptance.schema-workspace-runtime-steps-test]
                         [acceptance.saved-sessions-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
-             :task (let [result (test/run-tests 'acceptance.runtime-test
+             :task (let [result (test/run-tests 'acceptance.pack-session-test
+                                                'acceptance.runtime-test
                                                 'acceptance.canonical-declared-property-validation-steps-test
                                                 'acceptance.recursive-declared-property-validation-steps-test
                                                 'acceptance.library-direct-template-push-steps-test
@@ -157,6 +162,8 @@
                                                 'acceptance.schema-declared-property-exceptions-steps-test
                                                 'acceptance.json-schema-export-steps-test
                                                 'acceptance.array-validation-issue-rollup-steps-test
+                                                'acceptance.pack-runtime-test
+                                                'acceptance.modular-architecture-steps-test
                                                 'acceptance.schema-rule-property-identity-steps-test
                                                 'acceptance.schema-container-child-authoring-steps-test
                                                 'acceptance.schema-renaming-steps-test
@@ -285,36 +292,12 @@
                                   (when (pos? (+ (:fail result) (:error result)))
                                     (System/exit 1)))}
   acceptance {:doc "Run the normal APS acceptance pipeline."
-              :requires ([acceptance.generator :as generator]
-                         [babashka.fs :as fs]
-                         [clojure.string :as str]
-                         [babashka.process :as process])
-              :task (let [features (->> (fs/list-dir "features")
-                                         (filter (fn [file]
-                                                   (and (fs/regular-file? file)
-                                                        (str/ends-with? (fs/file-name file) ".feature"))))
-                                         (sort-by (fn [file] (fs/file-name file))))
-                          generated-dir "build/acceptance/generated"
-                          slug (fn [path]
-                                 (-> (fs/file-name (fs/strip-ext path))
-                                     (str/replace (re-pattern "[^A-Za-z0-9_-]+") "-")))
-                          run! (fn [& args]
-                                 (let [result (apply process/shell
-                                                     {:out :inherit
-                                                      :err :inherit
-                                                      :continue true}
-                                                     args)]
-                                   (when-not (zero? (:exit result))
-                                     (System/exit (:exit result)))))]
-                      (run! "npm" "run" "build")
-                      (doseq [feature features
-                              :let [name (slug feature)
-                                    feature-path (str feature)
-                                    ir (str "build/acceptance/ir/" name ".json")]]
-                        (fs/create-dirs (fs/parent ir))
-                        (run! "bb" "gherkin-parser" feature-path ir)
-                        (let [{:keys [generated-file]} (generator/generate! ir generated-dir
-                                                                            {:feature-path feature-path})]
-                          (run! "bb" generated-file))))}
+              :requires ([babashka.process :as process])
+              :task (let [result (process/shell {:out :inherit
+                                                  :err :inherit
+                                                  :continue true}
+                                                 "node" "scripts/run-focused-acceptance.mjs" "--full")]
+                      (when-not (zero? (:exit result))
+                        (System/exit (:exit result))))}
   test {:doc "Run unit, property, and acceptance tests."
         :depends [test:unit test:property acceptance]}}}

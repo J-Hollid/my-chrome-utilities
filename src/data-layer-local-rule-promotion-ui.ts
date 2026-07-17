@@ -22,7 +22,7 @@ function typedValue(value: string | number | boolean | null): string {
 export function createLocalRulePromotionDialog(): LocalRulePromotionDialogController {
   const dialog = document.createElement("dialog");
   dialog.id = "local-rule-promotion-review";
-  dialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
+  dialog.setAttribute("aria-label", "Local rule promotion review");
   document.body.append(dialog);
   let current: LocalRulePromotionDialogInput | undefined;
 
@@ -42,6 +42,8 @@ export function createLocalRulePromotionDialog(): LocalRulePromotionDialogContro
     close,
     open(input) {
       current = input;
+      dialog.removeAttribute("aria-label");
+      dialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
       let duplicateArmed = false;
       const { review } = input;
       const heading = document.createElement("h4");

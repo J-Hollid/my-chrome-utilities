@@ -1,4 +1,4 @@
-import type { LiveEvent, LiveObserverState } from "./data-layer-live-observer.js";
+import type { LiveEvent, LiveObserverState } from "./utilities/data-layer/live-inspection.js";
 import {
   validateEvent,
   validateWithSchema,
@@ -11,7 +11,6 @@ export interface SchemaPublicationRefresh {
   state: LiveObserverState;
   revalidatedEventIds: readonly string[];
 }
-
 function validatableEvent(event: LiveEvent): ValidatableEvent {
   return {
     sourceId:event.sourceId,

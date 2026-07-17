@@ -89,6 +89,24 @@
                (dispatch "the path field preserves the canonical intermediate text")
                (dispatch "the completed path field and configured history array path use the canonical history path"))))))
 
+(deftest history-path-outcome-steps-assert-observed-state
+  (let [world {:root "."
+               :history-path "event.history"
+               :history-path-field-value "event.history"
+               :path-status "ready"}
+        example {"history" "event.history" "status" "ready"}
+        dispatch #(runtime/execute-step! world
+                                         example
+                                         {:keyword "Then" :text %}
+                                         data-layer/handlers)]
+    (doseq [text ["the path field value is <history>"
+                  "the configured history array path is <history>"
+                  "path status <status> is shown in the side panel"
+                  "Settings displays value <history>"
+                  "value <history> survives a side panel reload"
+                  "no page script error is caused by the path check"]]
+      (is (= world (dispatch text)) text))))
+
 (deftest reports-disallowed-data-layer-scope
   (is (empty?
        (data-layer/forbidden-data-layer-scope-findings

@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>my-chrome-utilities</title>
     <link rel="stylesheet" href="side-panel.css" />
-    <script type="module" src="side-panel.js"></script>
+    <script type="module" src="side-panel-bootstrap.js"></script>
   </head>
   <body>
     <main id="side-panel-root" tabindex="-1">
       <div id="side-panel-content">
       <header id="application-header">
         <h1 id="app">my-chrome-utilities</h1>
+        <ul id="utility-directory" aria-label="Available utilities"></ul>
         <button id="open-palette" type="button" aria-haspopup="dialog" aria-controls="palette">Commands</button>
       </header>
       <div id="workspace-tabs" role="tablist" aria-label="Workspace">
@@ -105,7 +106,7 @@
           <section id="live-source-error-state" class="panel-empty-state" aria-live="assertive" hidden><h5>Source connection failed</h5><p>Restart observation to reconnect the source.</p></section>
         </section>
         <aside id="live-event-inspector" aria-label="Event inspector" hidden><button id="back-to-events" type="button" hidden>Back to events</button></aside>
-        <section id="guided-validation-flow" aria-labelledby="guided-validation-heading" hidden></section>
+        <section id="guided-validation-flow" aria-label="Guided validation" hidden></section>
         <details id="data-layer-settings" aria-label="Data layer testing settings">
           <summary>Settings</summary>
           <section id="observation-target-controls" aria-label="Observation target controls">

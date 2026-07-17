@@ -1,5 +1,6 @@
 (ns acceptance.property-test
-  (:require [acceptance.runtime :as runtime]
+  (:require [acceptance.pack-runtime :as packs]
+            [acceptance.runtime :as runtime]
             [acceptance.steps.command-registry :as command-registry]
             [acceptance.steps.data-layer :as data-layer]
             [acceptance.steps.data-layer-observer :as data-layer-observer]
@@ -127,6 +128,21 @@
                             (count executions))
                          (every? #(execution-shape-valid? background scenarios %)
                                  executions)))))]
+    (is (:pass? result) (pr-str result))))
+
+(deftest pack-runtime-cache-initializes-each-generated-key-once
+  (let [result (check
+                (prop/for-all [keys (gen/vector gen/small-integer 0 40)]
+                  (let [created (atom 0)
+                        cache (atom {:values {}})
+                        values (binding [packs/*runtime-cache* cache]
+                                 (mapv #(packs/cached-runtime! %
+                                                              (fn []
+                                                                (swap! created inc)
+                                                                %))
+                                       keys))]
+                    (and (= keys values)
+                         (= (count (set keys)) @created)))))]
     (is (:pass? result) (pr-str result))))
 
 (deftest manifest-contract-normalizes-side-panel-shape

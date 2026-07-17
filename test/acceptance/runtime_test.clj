@@ -66,3 +66,20 @@
                               world)}]]
     (runtime/run-feature! feature handlers)
     (is (= "Feature identity" @seen))))
+
+(deftest gives-each-scenario-fresh-state
+  (let [initial-states (atom [])
+        feature {:name "Fresh scenarios"
+                 :background []
+                 :scenarios [{:name "First"
+                              :steps [{:keyword "Then" :text "state is fresh"}]
+                              :examples []}
+                             {:name "Second"
+                              :steps [{:keyword "Then" :text "state is fresh"}]
+                              :examples []}]}
+        handlers [{:pattern #"^state is fresh$"
+                   :handler (fn [world _ _]
+                              (swap! initial-states conj (:scenario-value world))
+                              (assoc world :scenario-value :set))}]]
+    (runtime/run-feature! feature handlers)
+    (is (= [nil nil] @initial-states))))
