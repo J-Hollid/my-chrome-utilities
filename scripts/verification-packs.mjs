@@ -258,12 +258,21 @@ export function planVerification(
     ? changedFeatures
     : acceptancePacks.flatMap((pack) => pack.features)
   ).sort();
-  commands.push(...acceptanceCommands(features));
+  const plannedAcceptanceCommands = acceptanceCommands(features);
+  commands.push(...plannedAcceptanceCommands);
 
   return {
     packIds: ordered.map(({ id }) => id),
     features,
     handlers: acceptancePacks.flatMap(({ handlers }) => handlers),
+    acceptanceCommands: plannedAcceptanceCommands,
     commands: [...new Set(commands)],
   };
+}
+
+export async function executeAcceptancePlan(plan, { runCommand } = {}) {
+  if (typeof runCommand !== "function") {
+    throw new Error("Provide an acceptance command runner");
+  }
+  for (const command of plan.acceptanceCommands) await runCommand(command);
 }
