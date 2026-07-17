@@ -6,6 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
+import { headlessChromeArguments, stopHeadlessChrome } from "./support/headless-chrome.mjs";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
@@ -153,15 +154,8 @@ const assetServer = createServer(async (request, response) => {
 });
 await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
 const assetPort = assetServer.address().port;
-const chrome = spawn("google-chrome", [
-  "--headless=new",
-  "--disable-gpu",
-  "--no-first-run",
-  "--no-default-browser-check",
-  "--remote-debugging-port=0",
-  `--user-data-dir=${chromeProfile}`,
-  "about:blank",
-], { stdio: ["ignore", "ignore", "pipe"] });
+const chrome = spawn("google-chrome", headlessChromeArguments(chromeProfile),
+  { stdio: ["ignore", "ignore", "pipe"] });
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -6629,12 +6623,7 @@ try {
     console.log(JSON.stringify({ recursivePropertyValidation:recursivePropertyValidationObservation }));
   }
 } finally {
-  if (chrome.exitCode === null && !chrome.killed) {
-    await Promise.race([new Promise((resolve) => {
-      chrome.once("exit", resolve);
-      chrome.kill("SIGTERM");
-    }), wait(1000)]);
-  }
+  await stopHeadlessChrome(chrome);
   await new Promise((resolve) => assetServer.close(resolve));
   await rm(chromeProfile, { recursive:true, force:true, maxRetries:5, retryDelay:50 });
 }

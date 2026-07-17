@@ -216,7 +216,6 @@ function acceptanceCommands(features, packs) {
     ),
   ];
 }
-
 function acceptanceSelection(packs, ordered, packIds, changedFeatures, changedOwners, terminalFull) {
   if (terminalFull) return packs;
   if (changedFeatures.length) {
@@ -246,7 +245,8 @@ export function planVerification(
   selected = expandDependencies(packs, selected);
 
   const ordered = packs.filter(({ id }) => selected.has(id));
-  const commands = ["npm run build"];
+  const preparationCommands = ["npm run build"];
+  const commands = [...preparationCommands];
   for (const pack of ordered) {
     for (const path of pack.unit) commands.push(`node ${path}`);
     for (const path of pack.property) commands.push(`node ${path}`);
@@ -273,6 +273,7 @@ export function planVerification(
     packIds: ordered.map(({ id }) => id),
     features,
     handlers: acceptancePacks.flatMap(({ handlers }) => handlers),
+    preparationCommands,
     acceptanceCommands: plannedAcceptanceCommands,
     commands: [...new Set(commands)],
   };
@@ -282,5 +283,8 @@ export async function executeAcceptancePlan(plan, { runCommand } = {}) {
   if (typeof runCommand !== "function") {
     throw new Error("Provide an acceptance command runner");
   }
-  for (const command of plan.acceptanceCommands) await runCommand(command);
+  for (const command of [
+    ...(plan.preparationCommands ?? ["npm run build"]),
+    ...plan.acceptanceCommands,
+  ]) await runCommand(command);
 }
