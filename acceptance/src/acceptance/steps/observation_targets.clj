@@ -24,8 +24,6 @@
      "the project skeleton is inspected"
      "package metadata identifies the project as <project_name>"
      "the side panel is open at <side_panel_url>"
-     "the user searches for <query>"
-     "the search is cleared"
      "the user chooses <discovery_action>"
      "the Data Layer Live view is displayed"
      "the observation target picker is displayed"
@@ -59,6 +57,123 @@
            :target-state "Attached"
            :session {:target target :events [] :status "active"})))
 
+(defn- target-titles [text]
+  (support/split-list text #"\s*,\s*(?:and\s+)?|\s+and\s+"))
+
+(defn- matching-targets [targets query]
+  (let [normalized-query (str/lower-case query)]
+    (filterv #(str/includes? (str/lower-case %) normalized-query) targets)))
+
+(defn- record-candidates [world values]
+  (let [candidates (target-titles (get values "page_titles"))]
+    (assoc world :observation-targets candidates
+           :visible-observation-targets candidates)))
+
+(defn- search-targets [world values]
+  (let [query (get values "query")
+        matches (matching-targets (:observation-targets world) query)]
+    (assoc world :observation-target-search query
+           :visible-observation-targets matches
+           :observation-target-match-count (count matches))))
+
+(defn- assert-matching-targets [world values]
+  (support/assert! (= (matching-targets (:observation-targets world) (get values "query"))
+                      (:visible-observation-targets world))
+                   "Target picker search returned nonmatching candidates."
+                   {:query (get values "query")
+                    :visible (:visible-observation-targets world)})
+  world)
+
+(defn- assert-target-count [world _values]
+  (support/assert! (= (count (:visible-observation-targets world))
+                      (:observation-target-match-count world))
+                   "Target picker match count is stale."
+                   {:world world})
+  world)
+
+(defn- clear-target-search [world _values]
+  (assoc world :observation-target-search ""
+         :visible-observation-targets (:observation-targets world)
+         :observation-target-match-count (count (:observation-targets world))))
+
+(defn- assert-restored-targets [world values]
+  (support/assert! (= (target-titles (get values "page_titles"))
+                      (:visible-observation-targets world))
+                   "Clearing target search did not restore the inventory."
+                   {:world world})
+  world)
+
+(defn- start-testing [world values]
+  (if (:selected-target world)
+    (attach-target world values)
+    (assoc world :session nil :target-state "Selection required")))
+
+(defn- end-testing [world _values]
+  (assoc world :recent-target (:attached-target world)
+         :attached-target nil
+         :target-state "Detached"
+         :session (assoc (:session world) :status "ended")))
+
+(defn- assert-ended-session [world _values]
+  (support/assert! (= "ended" (get-in world [:session :status]))
+                   "Ended target session did not remain ended."
+                   {:session (:session world)})
+  world)
+
+(defn- require-target-selection [world _values]
+  (support/assert! (nil? (:selected-target world))
+                   "Start testing must require an explicit target."
+                   {:world world})
+  (assoc world :target-state "Selection required"))
+
+(defn- assert-no-fabricated-session [world _values]
+  (support/assert! (nil? (:session world))
+                   "Target failure created a fabricated session."
+                   {:world world})
+  world)
+
+(defn- assert-single-attachment [world _values]
+  (support/assert! (or (nil? (:attached-target world))
+                       (map? (:attached-target world)))
+                   "More than one target is attached."
+                   {:world world})
+  world)
+
+(def transition-rules
+  [{:matches? #(= % "no observation target is selected")
+    :apply (fn [world _values]
+             (assoc world :selected-target nil :attached-target nil
+                    :target-state "Detached" :session nil))}
+   {:matches? #(some (fn [prefix] (str/starts-with? % prefix))
+                     ["selected target " "eligible page " "candidate page "])
+    :apply select-target}
+   {:matches? #(str/includes? % "data layer testing session is attached to target")
+    :apply attach-target}
+   {:matches? #(str/includes? % "target candidates include pages") :apply record-candidates}
+   {:matches? #(= % "the user searches for <query>") :apply search-targets}
+   {:matches? #(str/includes? % "only candidates matching <query>") :apply assert-matching-targets}
+   {:matches? #(= % "the picker reports the matching target count") :apply assert-target-count}
+   {:matches? #(= % "the search is cleared") :apply clear-target-search}
+   {:matches? #(str/includes? % "candidates <page_titles> are shown again") :apply assert-restored-targets}
+   {:matches? #(= % "data layer testing starts") :apply start-testing}
+   {:matches? #(str/includes? % "intentionally ends the session") :apply end-testing}
+   {:matches? #(= % "the ended session remains ended") :apply assert-ended-session}
+   {:matches? #(str/includes? % "target tab <tab_id> is closed")
+    :apply (fn [world _values]
+             (assoc world :target-state "Target unavailable" :attached-target nil))}
+   {:matches? #(str/includes? % "access to target origin <origin> is revoked")
+    :apply (fn [world _values]
+             (assoc world :target-state "Permission required" :attached-target nil))}
+   {:matches? #(str/includes? % "Start testing identifies that a target page must be selected")
+    :apply require-target-selection}
+   {:matches? #(str/includes? % "no testing session is created with a fabricated tab id")
+    :apply assert-no-fabricated-session}
+   {:matches? #(str/includes? % "only one observation target can be attached")
+    :apply assert-single-attachment}])
+
+(defn- transition-rule [text]
+  (some #(when ((:matches? %) text) %) transition-rules))
+
 (defn- transition [world example captures {:keys [keyword text]}]
   (let [capture-keys (support/capture-placeholder-keys captures)
         example-keys (map name (clojure.core/keys example))
@@ -72,63 +187,8 @@
                 (assoc world :observation-target-action
                        {:text text :example example})
                 world)]
-    (cond
-      (= text "no observation target is selected")
-      (assoc world :selected-target nil :attached-target nil
-             :target-state "Detached" :session nil)
-
-      (or (str/starts-with? text "selected target ")
-          (str/starts-with? text "eligible page ")
-          (str/starts-with? text "candidate page "))
-      (select-target world values)
-
-      (str/includes? text "data layer testing session is attached to target")
-      (attach-target world values)
-
-      (= text "data layer testing starts")
-      (if (:selected-target world)
-        (attach-target world values)
-        (assoc world :session nil :target-state "Selection required"))
-
-      (str/includes? text "intentionally ends the session")
-      (assoc world
-             :recent-target (:attached-target world)
-             :attached-target nil
-             :target-state "Detached"
-             :session (assoc (:session world) :status "ended"))
-
-      (= text "the ended session remains ended")
-      (do (support/assert! (= "ended" (get-in world [:session :status]))
-                           "Ended target session did not remain ended."
-                           {:session (:session world)})
-          world)
-
-      (str/includes? text "target tab <tab_id> is closed")
-      (assoc world :target-state "Target unavailable" :attached-target nil)
-
-      (str/includes? text "access to target origin <origin> is revoked")
-      (assoc world :target-state "Permission required" :attached-target nil)
-
-      (str/includes? text "Start testing identifies that a target page must be selected")
-      (do (support/assert! (nil? (:selected-target world))
-                           "Start testing must require an explicit target."
-                           {:world world})
-          (assoc world :target-state "Selection required"))
-
-      (str/includes? text "no testing session is created with a fabricated tab id")
-      (do (support/assert! (nil? (:session world))
-                           "Target failure created a fabricated session."
-                           {:world world})
-          world)
-
-      (str/includes? text "only one observation target can be attached")
-      (do (support/assert! (or (nil? (:attached-target world))
-                               (map? (:attached-target world)))
-                           "More than one target is attached."
-                           {:world world})
-          world)
-
-      :else
+    (if-let [rule (transition-rule text)]
+      ((:apply rule) world values)
       (support/record-semantic-observation
        world :observation-target-action :observation-target-observations
        text text example))))
@@ -160,16 +220,12 @@
         target-contract-background-texts))
 
 (def handlers
-  (conj (vec (concat
-              [{:pattern #"^the user chooses <([A-Za-z0-9_]+)>$"
-                :applies? target-contract?
-                :handler choose-handler}]
-              (map #(assoc % :applies? target-contract?)
-                   (support/semantic-handlers target-step-specs transition))))
-        {:pattern #"^the search is cleared$"
-         :applies? target-contract?
-         :handler (fn [world _ _]
-                    (assoc world :observation-target-search ""))}))
+  (vec (concat
+        [{:pattern #"^the user chooses <([A-Za-z0-9_]+)>$"
+          :applies? target-contract?
+          :handler choose-handler}]
+        (map #(assoc % :applies? target-contract?)
+             (support/semantic-handlers target-step-specs transition)))))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-10T19:12:23.823418523+02:00", :module-hash "363825768", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1360560598"} {:id "def/target-feature-files", :kind "def", :line 6, :end-line nil, :hash "1542423036"} {:id "def/target-contract-background-texts", :kind "def", :line 12, :end-line nil, :hash "-1025287600"} {:id "def/target-step-specs", :kind "def", :line 18, :end-line nil, :hash "-1027200353"} {:id "defn-/capture-values", :kind "defn-", :line 35, :end-line nil, :hash "1376456184"} {:id "defn-/remember-values", :kind "defn-", :line 40, :end-line nil, :hash "1146870671"} {:id "defn-/select-target", :kind "defn-", :line 43, :end-line nil, :hash "1943371839"} {:id "defn-/attach-target", :kind "defn-", :line 52, :end-line nil, :hash "-1981253617"} {:id "defn-/transition", :kind "defn-", :line 62, :end-line nil, :hash "591216956"} {:id "defn-/choose-handler", :kind "defn-", :line 136, :end-line nil, :hash "1520441741"} {:id "defn-/target-contract?", :kind "defn-", :line 149, :end-line nil, :hash "-701539795"} {:id "def/priority-handlers", :kind "def", :line 152, :end-line nil, :hash "735835913"} {:id "def/handlers", :kind "def", :line 162, :end-line nil, :hash "843790791"}]}
