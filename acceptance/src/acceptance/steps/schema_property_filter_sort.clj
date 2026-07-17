@@ -1,5 +1,6 @@
 (ns acceptance.steps.schema-property-filter-sort
-  (:require [acceptance.steps.support :as support]
+  (:require [aps.gherkin :as gherkin]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (def feature-files
@@ -9,6 +10,7 @@
   #{"schema Page view working draft is open in the schema editor"
     "its property tree contains page_type, commerce.order.id, and products"
     "the built extension side panel is running with the production Schema Library, schema editor, property tree, rules, documentation, and persistence"})
+(def feature-names (set (map (comp :name gherkin/parse-file) feature-files)))
 (defonce ^:private observation (atom nil))
 
 (defn- browser-observation! []
@@ -89,11 +91,16 @@
    assert-observation!))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{})
-   entry-steps
-   :schema-property-filter-sort
-   transition))
+  (mapv (fn [{:keys [applies?] :as handler}]
+          (assoc handler :applies? (fn [world]
+                                     (and (contains? feature-names
+                                                     (:acceptance/feature-name world))
+                                          (boolean (applies? world))))))
+        (support/stateful-semantic-handlers
+         (support/feature-step-specs feature-files #{})
+         entry-steps
+         :schema-property-filter-sort
+         transition)))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-15T17:57:12.124000646+02:00", :module-hash "-283732875", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1084286674"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-715635428"} {:id "def/entry-steps", :kind "def", :line 8, :end-line 11, :hash "-648812964"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-1819867165"} {:id "defn-/browser-observation!", :kind "defn-", :line 14, :end-line 20, :hash "1106172071"} {:id "defn-/comma-values", :kind "defn-", :line 22, :end-line 23, :hash "-1075159739"} {:id "defn-/assert-filter-example!", :kind "defn-", :line 25, :end-line 37, :hash "790258531"} {:id "defn-/canonical-roots", :kind "defn-", :line 39, :end-line 40, :hash "46854778"} {:id "defn-/canonical-items", :kind "defn-", :line 42, :end-line 43, :hash "-2006770380"} {:id "defn-/assert-sort-example!", :kind "defn-", :line 45, :end-line 54, :hash "629466541"} {:id "defn-/assert-observation!", :kind "defn-", :line 56, :end-line 83, :hash "737699622"} {:id "defn-/transition", :kind "defn-", :line 85, :end-line 89, :hash "-1020513698"} {:id "def/handlers", :kind "def", :line 91, :end-line 96, :hash "-891744499"}]}
