@@ -437,7 +437,7 @@ let schemaRuleConfiguration;
 let editingAttachedCardinalityRule;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
-schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
+schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker");
 document.body.append(schemaPropertyRulePicker);
 const localRulePromotionDialog = createLocalRulePromotionDialog();
 let pendingLocalRulePromotion;
@@ -3555,6 +3555,8 @@ function renderSchemaPropertyRulePicker() {
     const path = schemaRulePickerPath;
     if (!path)
         return;
+    schemaPropertyRulePicker.removeAttribute("aria-label");
+    schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
     const propertyType = schemaPropertyType(path);
     if (schemaRuleConfiguration) {
         renderSchemaLocalRuleConfiguration(path, schemaRuleConfiguration);

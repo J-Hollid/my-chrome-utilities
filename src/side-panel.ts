@@ -653,7 +653,7 @@ let schemaRuleConfiguration: RuleConfiguration | undefined;
 let editingAttachedCardinalityRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
 const schemaPropertyRulePicker = document.createElement("dialog");
 schemaPropertyRulePicker.id = "schema-property-rule-picker";
-schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
+schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker");
 document.body.append(schemaPropertyRulePicker);
 const localRulePromotionDialog = createLocalRulePromotionDialog();
 let pendingLocalRulePromotion: { trigger:HTMLButtonElement; propertyPath:string; sourceRuleId:string; scrollTop:number } | undefined;
@@ -3371,6 +3371,8 @@ function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleCon
 function renderSchemaPropertyRulePicker(): void {
   const path = schemaRulePickerPath;
   if (!path) return;
+  schemaPropertyRulePicker.removeAttribute("aria-label");
+  schemaPropertyRulePicker.setAttribute("aria-labelledby", "schema-property-rule-picker-heading");
   const propertyType = schemaPropertyType(path);
   if (schemaRuleConfiguration) { renderSchemaLocalRuleConfiguration(path, schemaRuleConfiguration); return; }
   const previousQuery = schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.value ?? "";

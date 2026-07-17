@@ -1,6 +1,9 @@
 export function retainUtilityElement(element, scope) {
     return element.owner === scope.utilityId && scope.panelIds.includes(element.id);
 }
+export function retainControlledElement(controlledId, availableIds) {
+    return controlledId === null || controlledId.trim().split(/\s+/).every((id) => availableIds.has(id));
+}
 export function utilityDomScopeFromSearch(search) {
     const parameters = new URLSearchParams(search), utilityId = parameters.get("utility"), panelIds = parameters.getAll("panel");
     if (!utilityId || panelIds.length === 0)
@@ -18,6 +21,11 @@ export function isolateUtilityDom(root, scope) {
     for (const element of Array.from(root.querySelectorAll("[data-utility-owner]"))) {
         if (!retainUtilityElement({ id: element.id, owner: element.dataset.utilityOwner }, scope))
             element.remove();
+    }
+    const availableIds = new Set(Array.from(root.querySelectorAll("[id]"), element => element.id));
+    for (const control of Array.from(root.querySelectorAll("[aria-controls]"))) {
+        if (!retainControlledElement(control.getAttribute("aria-controls"), availableIds))
+            control.remove();
     }
     const tabs = Array.from(root.querySelectorAll('[role="tab"][aria-controls]'));
     for (const tab of tabs)

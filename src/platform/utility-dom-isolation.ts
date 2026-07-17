@@ -5,6 +5,10 @@ export function retainUtilityElement(element:OwnedUtilityElement,scope:UtilityDo
   return element.owner===scope.utilityId&&scope.panelIds.includes(element.id);
 }
 
+export function retainControlledElement(controlledId:string|null,availableIds:ReadonlySet<string>):boolean {
+  return controlledId===null||controlledId.trim().split(/\s+/).every((id)=>availableIds.has(id));
+}
+
 export function utilityDomScopeFromSearch(search:string):UtilityDomScope|undefined {
   const parameters=new URLSearchParams(search),utilityId=parameters.get("utility"),panelIds=parameters.getAll("panel");
   if(!utilityId||panelIds.length===0)return undefined;
@@ -19,6 +23,10 @@ export function isolateUtilityDom(root:ParentNode,scope:UtilityDomScope):void {
   }
   for(const element of Array.from(root.querySelectorAll<HTMLElement>("[data-utility-owner]"))){
     if(!retainUtilityElement({id:element.id,owner:element.dataset.utilityOwner},scope))element.remove();
+  }
+  const availableIds=new Set(Array.from(root.querySelectorAll<HTMLElement>("[id]"),element=>element.id));
+  for(const control of Array.from(root.querySelectorAll<HTMLElement>("[aria-controls]"))){
+    if(!retainControlledElement(control.getAttribute("aria-controls"),availableIds))control.remove();
   }
   const tabs=Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"][aria-controls]'));
   for(const tab of tabs)if(!root.querySelector(`#${tab.getAttribute("aria-controls")}`))tab.remove();
