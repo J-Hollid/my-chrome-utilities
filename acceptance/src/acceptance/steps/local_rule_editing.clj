@@ -66,9 +66,45 @@
    observed)
   observed)
 
-(defn- validate-example! [_mode _example] true)
+(def model-example-values
+  {"configuration" #{"page, product, and checkout" "malformed regular expression ["}
+   "completion" #{"cancelling" "saving the changes"}
+   "edit_outcome" #{"the local rule configuration closes"
+                    "saving is blocked with Correct the regular expression"}})
+
+(def runtime-example-values
+  {"configuration" #{"page, product, and checkout" "malformed regular expression ["}
+   "completion" #{"Cancel" "Save"}
+   "stored_outcome" #{"the original local-41 bytes"}
+   "editor_outcome" #{"the original local-41 values after reopen"
+                      "an inline configuration error"}})
+
+(def model-example-relations
+  [{:keys ["configuration" "completion" "edit_outcome"]
+    :rows #{["page, product, and checkout" "cancelling"
+             "the local rule configuration closes"]
+            ["malformed regular expression [" "saving the changes"
+             "saving is blocked with Correct the regular expression"]}}])
+
+(def runtime-example-relations
+  [{:keys ["configuration" "completion" "stored_outcome" "editor_outcome"]
+    :rows #{["page, product, and checkout" "Cancel" "the original local-41 bytes"
+             "the original local-41 values after reopen"]
+            ["malformed regular expression [" "Save" "the original local-41 bytes"
+             "an inline configuration error"]}}])
+
+(defn- validate-example! [mode example]
+  (support/validate-mode-example!
+   mode runtime-example-values model-example-values
+   runtime-example-relations model-example-relations example
+   "Local-rule editing example value is outside the approved domain."
+   "Local-rule editing example columns describe an invalid outcome."))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :local-rule-editing-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T22:11:32.767430692+02:00", :module-hash "1723984566", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1650328402"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "2140370331"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1371427864"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-1281546331"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "48590523"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 67, :hash "-1907042657"} {:id "def/model-example-values", :kind "def", :line 69, :end-line 73, :hash "1300271512"} {:id "def/runtime-example-values", :kind "def", :line 75, :end-line 80, :hash "2028988887"} {:id "def/model-example-relations", :kind "def", :line 82, :end-line 87, :hash "-296906662"} {:id "def/runtime-example-relations", :kind "def", :line 89, :end-line 94, :hash "-1189179539"} {:id "defn-/validate-example!", :kind "defn-", :line 96, :end-line 101, :hash "-179203150"} {:id "def/handlers", :kind "def", :line 103, :end-line 106, :hash "-699662843"}]}
+;; clj-mutate-manifest-end

@@ -55,7 +55,8 @@
         (= [["reusable-51" 2]] (get-in observed [:published :productRules]))
         (= [[1 1] [1]] (get-in observed [:published :historical]))
         (= ["page" "product" "checkout"] (get-in observed [:published :values]))
-        (zero? (get-in observed [:published :workingDrafts])))
+        (zero? (get-in observed [:published :workingDrafts]))
+        (get-in observed [:published :actionRemoved]))
    "Atomic sync did not publish exactly one revision per affected schema or retain history."
    observed)
   (support/assert!
@@ -66,9 +67,48 @@
    observed)
   observed)
 
-(defn- validate-example! [_mode _example] true)
+(def model-example-values
+  {"completion_event" #{"the operator cancels" "publication fails" "confirmation succeeds"}
+   "schema_outcome" #{"all attached schemas remain at their current revisions"
+                      "no attached schema receives a partial new revision"
+                      "all reviewed schema revisions are published"}})
+
+(def runtime-example-values
+  {"sync_condition" #{"Product detail has an existing working draft"
+                      "Product detail revision publication fails"
+                      "the operator cancels"}
+   "storage_outcome" #{"its complete pre-sync snapshot" "every schema pre-sync snapshot"}
+   "operator_outcome" #{"Publish or discard the Product detail draft first"
+                        "no schema revision was published"
+                        "sync review closed without publication"}})
+
+(def model-example-relations
+  [{:keys ["completion_event" "schema_outcome"]
+    :rows #{["the operator cancels" "all attached schemas remain at their current revisions"]
+            ["publication fails" "no attached schema receives a partial new revision"]
+            ["confirmation succeeds" "all reviewed schema revisions are published"]}}])
+
+(def runtime-example-relations
+  [{:keys ["sync_condition" "storage_outcome" "operator_outcome"]
+    :rows #{["Product detail has an existing working draft" "its complete pre-sync snapshot"
+             "Publish or discard the Product detail draft first"]
+            ["Product detail revision publication fails" "every schema pre-sync snapshot"
+             "no schema revision was published"]
+            ["the operator cancels" "every schema pre-sync snapshot"
+             "sync review closed without publication"]}}])
+
+(defn- validate-example! [mode example]
+  (support/validate-mode-example!
+   mode runtime-example-values model-example-values
+   runtime-example-relations model-example-relations example
+   "Reusable-rule sync example value is outside the approved domain."
+   "Reusable-rule sync example columns describe an invalid outcome."))
 
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :reusable-rule-sync-mode
    verify-model! validate-example! runtime-observation! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-17T22:11:44.917276047+02:00", :module-hash "-1123328942", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1025312596"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "267609753"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "1707599729"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 16, :end-line 20, :hash "-140620088"} {:id "defn-/runtime-observation!", :kind "defn-", :line 22, :end-line 28, :hash "363678761"} {:id "defn-/assert-runtime!", :kind "defn-", :line 30, :end-line 68, :hash "1075710315"} {:id "def/model-example-values", :kind "def", :line 70, :end-line 74, :hash "-205344117"} {:id "def/runtime-example-values", :kind "def", :line 76, :end-line 83, :hash "-106933932"} {:id "def/model-example-relations", :kind "def", :line 85, :end-line 89, :hash "-119031623"} {:id "def/runtime-example-relations", :kind "def", :line 91, :end-line 98, :hash "1349924925"} {:id "defn-/validate-example!", :kind "defn-", :line 100, :end-line 105, :hash "1099846745"} {:id "def/handlers", :kind "def", :line 107, :end-line 110, :hash "864598032"}]}
+;; clj-mutate-manifest-end

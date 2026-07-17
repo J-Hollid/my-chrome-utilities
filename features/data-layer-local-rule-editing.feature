@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d655f7541e83ac700afa60208e4622b9d52d5fad2382e8160ee49b6148096468
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-17T20:12:07.973065337Z","feature_name":"Data layer local rule editing","feature_path":"features/data-layer-local-rule-editing.feature","background_hash":"83864b9c91579fceb5b01493f8da326b6bac21e538ffe4ab297a727faf7b76a0","implementation_hash":"sha256:e9528bd306ab986785ef56d8539b3dbc9231c37cd1108f51252b96cfa80e5d42","scenarios":[{"index":3,"name":"Data layer local rule editing 004","scenario_hash":"b12e5378f473c640c060fdb185d7cd71b4f3e19b34d44d8c91a9af9f786eeb5c","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-17T20:12:07.973065337Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer local rule editing
 
   Background:

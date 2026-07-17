@@ -3,8 +3,8 @@
             [acceptance.steps.reusable-rule-sync]
             [clojure.test :refer [deftest is]]))
 
-(defn- runtime-assertion [namespace]
-  (deref (ns-resolve namespace 'assert-runtime!)))
+(defn- private-function [namespace function-name]
+  (deref (ns-resolve namespace function-name)))
 
 (deftest validates-local-rule-editing-runtime-observation
   (let [observed
@@ -31,7 +31,7 @@
                   :name "Approved page names"
                   :localDialog false}}]
     (is (= observed
-           ((runtime-assertion 'acceptance.steps.local-rule-editing) observed)))))
+           ((private-function 'acceptance.steps.local-rule-editing 'assert-runtime!) observed)))))
 
 (deftest validates-reusable-rule-sync-runtime-observation
   (let [observed
@@ -51,9 +51,30 @@
                      :productRules [["reusable-51" 2]]
                      :historical [[1 1] [1]]
                      :values ["page" "product" "checkout"]
-                     :workingDrafts 0}
+                     :workingDrafts 0
+                     :actionRemoved true}
          :blocked {:summary "Publish or discard the Product detail draft first"
                    :disabled true
                    :draft ["Unrelated"]}}]
     (is (= observed
-           ((runtime-assertion 'acceptance.steps.reusable-rule-sync) observed)))))
+           ((private-function 'acceptance.steps.reusable-rule-sync 'assert-runtime!) observed)))))
+
+(deftest validates-rule-edit-and-sync-example-relations
+  (let [validate-local
+        (private-function 'acceptance.steps.local-rule-editing 'validate-example!)
+        local-example
+        {"configuration" "page, product, and checkout"
+         "completion" "cancelling"
+         "edit_outcome" "the local rule configuration closes"}
+        validate-sync
+        (private-function 'acceptance.steps.reusable-rule-sync 'validate-example!)
+        sync-example
+        {"completion_event" "publication fails"
+         "schema_outcome" "no attached schema receives a partial new revision"}]
+    (is (= local-example (validate-local :model local-example)))
+    (is (thrown? Exception
+                 (validate-local :model (assoc local-example "completion" "saving the changes"))))
+    (is (= sync-example (validate-sync :model sync-example)))
+    (is (thrown? Exception
+                 (validate-sync :model (assoc sync-example "schema_outcome"
+                                              "all reviewed schema revisions are published"))))))

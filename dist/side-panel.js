@@ -1426,7 +1426,7 @@ function storedReusableRule(rule) {
         } : {}),
     };
 }
-function persistAllowedValueExpansion(nextSchemas, nextRules) {
+function persistSchemaAndRuleLibraries(nextSchemas, nextRules) {
     const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
     const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
@@ -1467,7 +1467,7 @@ function openAllowedValueExpansionReview(event, evaluation, trigger) {
         confirm(destination) {
             const applied = applyAllowedValueExpansion({ ...input, destination });
             const nextRules = applied.reusableRules.map(storedReusableRule);
-            persistAllowedValueExpansion(applied.schemas, nextRules);
+            persistSchemaAndRuleLibraries(applied.schemas, nextRules);
             schemas = applied.schemas;
             reusableSchemaRules = nextRules;
             renderSchemas();
@@ -3854,7 +3854,10 @@ confirmSchemaRuleSyncButton.addEventListener("click", () => {
         return;
     try {
         const nextSchemas = publishReusableRuleSync(schemas, { ...pending.rule, version: pending.rule.version ?? 1 }, pending.review);
-        persistAllowedValueExpansion(nextSchemas, reusableSchemaRules);
+        persistSchemaAndRuleLibraries(nextSchemas, reusableSchemaRules);
+        schemas = nextSchemas;
+        renderSchemas();
+        renderSchemaWorkflowRows();
         schemaRuleSyncReview.close();
         pendingSchemaRuleSync = undefined;
         if (schemaResult)
