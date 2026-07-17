@@ -5,6 +5,7 @@ import {
 } from "./platform/utility-dom-isolation.js";
 import { scopedUtilityModulePath } from "./platform/utility-bootstrap.js";
 import type { UtilityModuleEntry } from "./platform/utility-contract.js";
+import { createUtilityStorage } from "./platform/utility-storage.js";
 
 function scopedUtility(
   scope: UtilityDomScope,
@@ -36,7 +37,8 @@ if (!scope) {
     const { mountScopedDataLayerAdapter } = await import(
       "./utilities/data-layer/layers/browser/scoped-runtime.js"
     );
-    mountScopedDataLayerAdapter(root, scope.panelIds);
+    const storage = createUtilityStorage(localStorage, utility.storage);
+    mountScopedDataLayerAdapter(root, scope.panelIds, storage);
   }
   root.dataset.utilityShellReady = "true";
 }
