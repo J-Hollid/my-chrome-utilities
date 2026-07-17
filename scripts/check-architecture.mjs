@@ -25,6 +25,7 @@ export function architectureViolations(files){
       if(owner&&targetOwner&&owner!==targetOwner){violations.push({file,dependency,reason:"utilities may not import another utility"});continue;}
       const layer=layerOf(file),targetLayer=layerOf(target);
       if(layer&&targetLayer&&layerRank[targetLayer]>layerRank[layer])violations.push({file,dependency,reason:`${layer} may not depend on ${targetLayer}`});
+      else if(moduleOf(file)&&moduleOf(target)&&moduleOf(file)!==moduleOf(target)&&!(declaredBoundaries[file]?.contracts??[]).includes(target))violations.push({file,dependency,reason:"cross-module import requires a declared contract"});
       else if(layer==="browser"&&file.includes("/utilities/data-layer/layers/")&&moduleOf(file)&&moduleOf(target)&&moduleOf(file)!==moduleOf(target))violations.push({file,dependency,reason:"browser adapters may not import another data-layer module"});
     }
     const layer=layerOf(file);
