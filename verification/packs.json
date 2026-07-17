@@ -187,7 +187,6 @@
       "features/data-layer-saved-event-feed-filters.feature",
       "features/data-layer-saved-session-library.feature",
       "features/data-layer-saved-session-live-feed-restore.feature",
-      "features/data-layer-secondary-view-separation.feature",
       "features/data-layer-selected-target-push-runtime.feature",
       "features/data-layer-session-recovery.feature",
       "features/data-layer-session-save-snapshot.feature",
@@ -678,6 +677,7 @@
       "test/workspace-tabs-property-test.mjs"
     ],
     "features": [
+      "features/data-layer-secondary-view-separation.feature",
       "features/manifest-v3-side-panel-extension.feature",
       "features/modular-acceptance-execution.feature",
       "features/modular-browser-runtime-adapters.feature",

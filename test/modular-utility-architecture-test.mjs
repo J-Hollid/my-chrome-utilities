@@ -113,6 +113,9 @@ const commandPalettePack=packs.find(({id})=>id==="command-palette");const shellP
 const capturePack=packs.find(({id})=>id==="capture");const schemasPack=packs.find(({id})=>id==="schemas");
 assert.ok(commandPalettePack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"));
 assert.equal(shellPack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"),false);
+assert.ok(shellPack.features.includes("features/data-layer-secondary-view-separation.feature"));
+assert.ok(shellPack.handlers.includes("acceptance/src/acceptance/steps/information_architecture.clj"));
+assert.equal(capturePack.features.includes("features/data-layer-secondary-view-separation.feature"),false);
 assert.ok(capturePack.handlers.includes("acceptance/src/acceptance/steps/non_applicable_property_visibility.clj"));
 assert.ok(capturePack.handlers.includes("acceptance/src/acceptance/steps/recursive_property_validation.clj"));
 assert.ok(schemasPack.handlers.includes("acceptance/src/acceptance/steps/schema_publication_refresh.clj"));
