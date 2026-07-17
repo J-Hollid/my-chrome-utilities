@@ -12,7 +12,8 @@
           "features/simple-command-palette.feature")))
   (is (= ['acceptance.steps.command-registry
           'acceptance.steps.palette
-          'acceptance.steps.hotkey-keymap]
+          'acceptance.steps.hotkey-keymap
+          'acceptance.steps.workspace-editor]
          (#'pack-runtime/registered-handler-namespaces
           "features/side-panel-hotkey-keymap.feature"))))
 
