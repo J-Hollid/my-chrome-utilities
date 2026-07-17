@@ -15,7 +15,11 @@
           'acceptance.steps.hotkey-keymap
           'acceptance.steps.workspace-editor]
          (#'pack-runtime/registered-handler-namespaces
-          "features/side-panel-hotkey-keymap.feature"))))
+          "features/side-panel-hotkey-keymap.feature")))
+  (is (contains?
+       (set (#'pack-runtime/registered-handler-namespaces
+             "features/data-layer-multiple-observation-sources.feature"))
+       'acceptance.steps.observability-library)))
 
 (deftest loads-owned-handlers-and-rejects-unassigned-features
   (is (seq (pack-runtime/handlers-for-feature
