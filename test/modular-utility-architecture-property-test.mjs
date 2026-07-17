@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { planVerification } from "../scripts/verification-packs.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
 import { commandsForUtilityShell } from "../dist/utilities/command-palette/index.js";
@@ -28,6 +29,16 @@ const closure = (packs, initial, direction) => {
   }
   return selected;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const file = `src/data-layer-unclassified-${sample}.ts`;
+  const source = "export function typeOf(document){ return document.type; }";
+  assert.deepEqual(architectureViolations(new Map([[file, source]])), [{
+    file,
+    dependency:"architecture/data-layer-boundaries.json",
+    reason:"data-layer file must declare its module and layer",
+  }]);
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const ids = Array.from({ length:1 + sample % 8 }, (_, index) => `controlled-${sample}-${index}`);
@@ -374,4 +385,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log("modular properties: 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed");
+console.log("modular properties: 100 architecture boundaries, 100 verification graphs, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed");
