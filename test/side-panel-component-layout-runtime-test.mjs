@@ -50,6 +50,7 @@ let localRulePromotionObservation;
 let localRulePromotionAvailabilityObservation;
 let localRuleEditingObservation;
 let reusableRuleSyncObservation;
+let requiredRuleTypeIndependenceObservation;
 let liveGuidedConditionalRuleObservation;
 let savedEventFeedFiltersObservation;
 let defectReportUndeclaredRemovalObservation;
@@ -82,7 +83,7 @@ const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_
 const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
 const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
 const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" ? [720]
+const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" || process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1" ? [320]
   : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
@@ -4542,6 +4543,29 @@ const reusableRuleSyncRuntime = `(async()=>{
   action();const original=Storage.prototype.setItem;let failed=false;Storage.prototype.setItem=function(key,value){if(!failed&&key==="my-chrome-utilities.schema-library.v1"){failed=true;throw new Error("publication fails");}return original.call(this,key,value);};try{q("#confirm-schema-rule-sync",dialog).click();}finally{Storage.prototype.setItem=original;}await pause();const failure={unchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),message:q("#schema-rule-sync-review-summary",dialog).textContent};click(dialog,"Cancel");action();q("#confirm-schema-rule-sync",dialog).click();await pause();const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));const page=stored.find(({id})=>id==="schema-page"),product=stored.find(({id})=>id==="schema-product"),other=stored.find(({id})=>id==="schema-other");return{saved,review,failure,published:{versions:[page.version,product.version,other.version],pageRules:page.attachedRules.map(({id,version})=>[id,version]),productRules:product.attachedRules.map(({id,version})=>[id,version]),historical:[page.revisionHistory.at(-1).attachedRules.map(({version})=>version),product.revisionHistory.at(-1).attachedRules.map(({version})=>version)],values:page.attachedRules[0].allowedValues,workingDrafts:stored.filter(({workingDraft})=>workingDraft).length}};
 })()`;
 
+const requiredRuleTypeIndependenceSeedRuntime = `(() => {
+  localStorage.clear();
+  const document={type:"object",properties:{page_type:{type:"string"},title:{type:"string"},quantity:{type:"number"},consented:{type:"boolean"},customer:{type:"object",properties:{}},products:{type:"array",items:{type:"string"}}}};
+  const schema={id:"schema-page",name:"Page view",version:4,published:true,document,assignments:[],attachedRules:[],revisionHistory:[]};
+  const rule={id:"reusable-required-7",name:"Product-detail requirement",kind:"Required · string",version:3,operator:"required",applicableType:"string",enabled:true,severity:"error",message:"Product detail requires this property",conditionGroup:{operator:"All",predicates:[{propertyPath:"/page_type",operator:"Equals",comparison:{type:"string",value:"product_detail"},detectedType:"string"}]},attachments:["existing-schema"],revisionHistory:[{name:"Product-detail requirement",kind:"Required · string",version:2,operator:"required",applicableType:"string"}]};
+  localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify([schema]));localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([rule]));return true;
+})()`;
+
+const requiredRuleTypeIndependenceRuntime = `(async()=>{
+  const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
+  const click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!value)throw new Error("Missing "+label+" in "+root.textContent);value.click();return value;};
+  const paths=["/title","/quantity","/consented","/customer","/products"],types=["string","number","boolean","object","array"];
+  const ruleKey="my-chrome-utilities.schema-rule-library.v1",beforeRule=localStorage.getItem(ruleKey);
+  q("#data-layer-view-schemas").click();click(q("#schema-list"),"Edit working draft");
+  const offered=[];
+  for(const path of paths){const row=q('[data-schema-property-canonical-path="'+path+'"]');q('button[aria-label="Add rule for '+path.slice(1)+'"]',row).click();const action=Array.from(q("#schema-property-rule-picker").querySelectorAll("button")).find(({textContent})=>textContent==="Product-detail requirement version 3");offered.push({path,enabled:Boolean(action&&!action.disabled),metadata:action?.parentElement?.textContent??""});if(!action)throw new Error("Required rule absent for "+path);action.click();}
+  const stored=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"))[0],attachments=stored.workingDraft.attachedRules.filter(({id})=>id==="reusable-required-7");
+  const verification=await import("/data-layer-schema-verification.js"),active={...stored,document:stored.workingDraft.document,assignments:stored.workingDraft.assignments,attachedRules:stored.workingDraft.attachedRules};
+  const validate=(payload)=>verification.validateWithSchema({sourceId:"history",eventName:"page_view",payload,rawInput:[]},active,[active]);
+  const missing=validate({page_type:"product_detail"}),present=validate({page_type:"product_detail",title:"x",quantity:0,consented:false,customer:{},products:[]}),notApplicable=validate({page_type:"category"});
+  return{offered,attachments:attachments.map(({id,version,propertyPath})=>({id,version,propertyPath})),libraryCount:JSON.parse(localStorage.getItem(ruleKey)).length,ruleUnchanged:beforeRule===localStorage.getItem(ruleKey),validation:{missingIssues:missing.issues.filter(({rule})=>rule?.startsWith("Product-detail requirement")).map(({instancePath})=>instancePath),missingStatuses:missing.evaluations.filter(({rule})=>rule==="Product-detail requirement").map(({status})=>status),presentIssues:present.issues.length,presentStatuses:present.evaluations.filter(({rule})=>rule==="Product-detail requirement").map(({status})=>status),notApplicableIssues:notApplicable.issues.length,notApplicableStatuses:notApplicable.evaluations.filter(({rule})=>rule==="Product-detail requirement").map(({status})=>status)},types};
+})()`;
+
 const localRulePromotionReusableOriginRuntime = `(() => {
   const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")); const source=schemas[0].workingDraft.attachedRules.find(({id})=>id==="local-41");
   localStorage.setItem("my-chrome-utilities.schema-rule-library.v1",JSON.stringify([{...source,kind:"Allowed values",version:2,attachments:[schemas[0].id],revisionHistory:[]} ])); return true;
@@ -4846,6 +4870,16 @@ try {
       await evaluate(socket,reusableRuleSyncSeedRuntime);await evaluate(socket,`(()=>{const key="my-chrome-utilities.schema-library.v1",schemas=JSON.parse(localStorage.getItem(key)),product=schemas.find(({id})=>id==="schema-product");product.workingDraft={baseVersion:5,sourceVersion:5,document:product.document,assignments:[],attachedRules:product.attachedRules,pendingChanges:["Unrelated"]};localStorage.setItem(key,JSON.stringify(schemas));const ruleKey="my-chrome-utilities.schema-rule-library.v1",rules=JSON.parse(localStorage.getItem(ruleKey));rules[0]={...rules[0],version:2,allowedValues:["page","product","checkout"]};localStorage.setItem(ruleKey,JSON.stringify(rules));return true;})()`);await reloadPanel(socket);
       reusableRuleSyncObservation.blocked=await evaluate(socket,`(()=>{document.querySelector("#data-layer-view-schemas").click();document.querySelector("#schema-subview-rules").click();const row=document.querySelector('[data-rule-id="reusable-51"]');Array.from(row.querySelectorAll("button")).find(({textContent})=>textContent==="Sync attached schemas and publish revisions").click();return{summary:document.querySelector("#schema-rule-sync-review-summary").textContent,disabled:document.querySelector("#confirm-schema-rule-sync").disabled,draft:JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")).find(({id})=>id==="schema-product").workingDraft.pendingChanges};})()`);
       assert.match(reusableRuleSyncObservation.blocked.summary,/Publish or discard the Product detail draft first/);assert.equal(reusableRuleSyncObservation.blocked.disabled,true);assert.deepEqual(reusableRuleSyncObservation.blocked.draft,["Unrelated"]);socket.close();continue;
+    }
+    if (process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1") {
+      await evaluate(socket,requiredRuleTypeIndependenceSeedRuntime);await reloadPanel(socket);requiredRuleTypeIndependenceObservation=await evaluate(socket,requiredRuleTypeIndependenceRuntime);
+      assert.deepEqual(requiredRuleTypeIndependenceObservation.offered.map(({path,enabled})=>({path,enabled})),["/title","/quantity","/consented","/customer","/products"].map((path)=>({path,enabled:true})));
+      assert.equal(requiredRuleTypeIndependenceObservation.offered.every(({metadata})=>metadata.includes("type any")),true);
+      assert.deepEqual(requiredRuleTypeIndependenceObservation.attachments,["/title","/quantity","/consented","/customer","/products"].map((propertyPath)=>({id:"reusable-required-7",version:3,propertyPath})));
+      assert.equal(requiredRuleTypeIndependenceObservation.libraryCount,1);assert.equal(requiredRuleTypeIndependenceObservation.ruleUnchanged,true);
+      assert.deepEqual(requiredRuleTypeIndependenceObservation.validation.missingIssues,["/title","/quantity","/consented","/customer","/products"]);assert.deepEqual(requiredRuleTypeIndependenceObservation.validation.missingStatuses,["error","error","error","error","error"]);
+      assert.equal(requiredRuleTypeIndependenceObservation.validation.presentIssues,0);assert.deepEqual(requiredRuleTypeIndependenceObservation.validation.presentStatuses,["pass","pass","pass","pass","pass"]);assert.equal(requiredRuleTypeIndependenceObservation.validation.notApplicableIssues,0);assert.deepEqual(requiredRuleTypeIndependenceObservation.validation.notApplicableStatuses,["not-applicable","not-applicable","not-applicable","not-applicable","not-applicable"]);
+      const beforeReload=await evaluate(socket,`[localStorage.getItem("my-chrome-utilities.schema-library.v1"),localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")]`);await reloadPanel(socket);const afterReload=await evaluate(socket,`[localStorage.getItem("my-chrome-utilities.schema-library.v1"),localStorage.getItem("my-chrome-utilities.schema-rule-library.v1")]`);requiredRuleTypeIndependenceObservation.reloadPreserved=JSON.stringify(beforeReload)===JSON.stringify(afterReload);assert.equal(requiredRuleTypeIndependenceObservation.reloadPreserved,true);socket.close();continue;
     }
     if (process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1") {
       arrayValidationRollupObservation=await evaluate(socket,`(async()=>{
@@ -6596,6 +6630,9 @@ try {
   }
   if (process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ reusableRuleSync:reusableRuleSyncObservation }));
+  }
+  if (process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1") {
+    console.log(JSON.stringify({ requiredRuleTypeIndependence:requiredRuleTypeIndependenceObservation }));
   }
   if (process.env.LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ liveGuidedConditionalRule:liveGuidedConditionalRuleObservation }));

@@ -66,7 +66,7 @@ export interface RuleConfigurationControl {
 }
 
 const compatibility: Record<SchemaRuleType, readonly SchemaPropertyType[]> = {
-  "Required":["string", "number", "array", "object", "boolean"],
+  "Required":["string", "number", "boolean", "object", "array"],
   "Exact value":["string", "number", "boolean"],
   "Allowed values":["string", "number", "boolean"],
   "Regular expression":["string"],
@@ -95,8 +95,9 @@ export function builtInRulesForProperty(propertyType: SchemaPropertyType): reado
 }
 
 export function applicablePropertyTypesForRule(rule: PropertyRuleChoice): readonly SchemaPropertyType[] {
-  if (rule.applicableType) return [rule.applicableType];
   const metadata = `${rule.kind} ${rule.operator ?? ""}`.toLowerCase();
+  if (rule.operator?.toLowerCase() === "required" || /(^|\W)required(\W|$)/.test(rule.kind.toLowerCase())) return compatibility.Required;
+  if (rule.applicableType) return [rule.applicableType];
   if (metadata.includes("string")) return ["string"];
   if (metadata.includes("number")) return ["number"];
   if (metadata.includes("array")) return ["array"];
@@ -123,7 +124,8 @@ export function reusableRulesForProperty<T extends PropertyRuleChoice>(
 
 export function reusableRuleMetadata(rule: PropertyRuleChoice, propertyType: SchemaPropertyType): string {
   const values = allowedValuesRuleLibraryMetadata(rule);
-  return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`;
+  const applicableType = applicablePropertyTypesForRule(rule).length === compatibility.Required.length ? "any" : rule.applicableType ?? propertyType;
+  return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${applicableType} · version ${rule.version ?? 1}`;
 }
 
 function valueInputType(propertyType: SchemaPropertyType): RuleConfigurationControl["inputType"] {

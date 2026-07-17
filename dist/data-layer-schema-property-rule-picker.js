@@ -3,7 +3,7 @@ import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, t
 import { cardinalityComparisons } from "./data-layer-cardinality.js";
 export { canonicalRulePropertyPath } from "./data-layer-schema-property-path.js";
 const compatibility = {
-    "Required": ["string", "number", "array", "object", "boolean"],
+    "Required": ["string", "number", "boolean", "object", "array"],
     "Exact value": ["string", "number", "boolean"],
     "Allowed values": ["string", "number", "boolean"],
     "Regular expression": ["string"],
@@ -28,9 +28,11 @@ export function builtInRulesForProperty(propertyType) {
         .map((rule) => ({ ...rule, applicableType: propertyType }));
 }
 export function applicablePropertyTypesForRule(rule) {
+    const metadata = `${rule.kind} ${rule.operator ?? ""}`.toLowerCase();
+    if (rule.operator?.toLowerCase() === "required" || /(^|\W)required(\W|$)/.test(rule.kind.toLowerCase()))
+        return compatibility.Required;
     if (rule.applicableType)
         return [rule.applicableType];
-    const metadata = `${rule.kind} ${rule.operator ?? ""}`.toLowerCase();
     if (metadata.includes("string"))
         return ["string"];
     if (metadata.includes("number"))
@@ -55,7 +57,8 @@ export function reusableRulesForProperty(rules, propertyType, query, attachedIds
 }
 export function reusableRuleMetadata(rule, propertyType) {
     const values = allowedValuesRuleLibraryMetadata(rule);
-    return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${rule.applicableType ?? propertyType} · version ${rule.version ?? 1}`;
+    const applicableType = applicablePropertyTypesForRule(rule).length === compatibility.Required.length ? "any" : rule.applicableType ?? propertyType;
+    return `${rule.operator ?? rule.kind}${values ? ` · ${values}` : rule.parameters ? ` · ${rule.parameters}` : " · no parameters"} · type ${applicableType} · version ${rule.version ?? 1}`;
 }
 function valueInputType(propertyType) {
     return propertyType === "number" ? "number" : propertyType === "boolean" ? "select" : "text";
