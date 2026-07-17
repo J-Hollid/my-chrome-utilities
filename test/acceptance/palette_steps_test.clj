@@ -31,6 +31,15 @@
   (is (palette/visible-open-button? palette-html palette-source))
   (is (palette/palette-markup? palette-html)))
 
+(deftest recognizes-modal-command-palette-boundary
+  (is (palette/palette-dialog?
+       "<section id=\"palette\" role=\"dialog\" aria-modal=\"true\"><input id=\"palette-filter\" /><ul id=\"palette-results\" role=\"listbox\"></ul></section>"
+       "#palette { position:fixed } #palette[hidden] { display:none }"
+       "sidePanelContent?.setAttribute(\"inert\", \"\"); filter?.focus()"))
+  (is (palette/no-permanent-command-buttons?
+       "<button id=\"open-palette\">Commands</button>"
+       "function showPalette() {}")))
+
 (deftest recognizes-local-shortcut-and-key-actions
   (is (palette/opens-on-shortcut? palette-source "Ctrl+K"))
   (is (palette/runs-selected-command-on-key? palette-source "Enter"))

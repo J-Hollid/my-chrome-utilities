@@ -2,14 +2,9 @@
   (:require [acceptance.steps.information-architecture :as information-architecture]
             [clojure.test :refer [deftest is]]))
 
-(deftest recognizes-modal-command-palette-boundary
-  (is (information-architecture/palette-dialog?
-       "<section id=\"palette\" role=\"dialog\" aria-modal=\"true\"><input id=\"palette-filter\" /><ul id=\"palette-results\" role=\"listbox\"></ul></section>"
-       "#palette { position:fixed } #palette[hidden] { display:none }"
-       "sidePanelContent?.setAttribute(\"inert\", \"\"); filter?.focus()"))
-  (is (information-architecture/no-permanent-command-buttons?
-       "<button id=\"open-palette\">Commands</button>"
-       "function showPalette() {}")))
+(deftest excludes-command-palette-handler-ownership
+  (is (empty? (filter #(re-find #"command palette|registered command" (str (:pattern %)))
+                      information-architecture/handlers))))
 
 (deftest recognizes-separated-information-architecture
   (is (information-architecture/navigation-structure?
