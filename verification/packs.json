@@ -665,6 +665,7 @@
     ],
     "unit": [
       "test/modular-utility-architecture-test.mjs",
+      "test/headless-chrome-lifecycle-test.mjs",
       "test/panel-empty-states-test.mjs",
       "test/panel-empty-states-ui-test.mjs",
       "test/side-panel-action-hierarchy-test.mjs",

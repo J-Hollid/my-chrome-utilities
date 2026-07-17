@@ -78,19 +78,19 @@ export function planVerification(packs,{packIds=[],changedPaths=[],terminalFull=
   const changedOwners=new Map();
   for(const path of changedPaths){const owner=ownerOf(packs,path);if(!owner)throw new Error(`Assign every source path to one pack: ${path}`);selected.add(owner.id);changedOwners.set(path,owner.id);}
   if(changedPaths.length)selected=expandDependants(packs,selected);selected=expandDependencies(packs,selected);
-  const ordered=packs.filter(({id})=>selected.has(id));const commands=["npm run build"];
+  const ordered=packs.filter(({id})=>selected.has(id));const preparationCommands=["npm run build"];const commands=[...preparationCommands];
   for(const pack of ordered){for(const path of pack.unit)commands.push(`node ${path}`);for(const path of pack.property)commands.push(`node ${path}`);for(const path of pack.browserAdapters)commands.push(`node ${path}`);}
   const changedFeatures=changedPaths.filter((path)=>path.endsWith(".feature"));
   const acceptancePacks=terminalFull?packsForIds(packs,packs.map(({id})=>id)):changedFeatures.length?packsForIds(packs,[...new Set(changedFeatures.map((path)=>changedOwners.get(path)))]):packIds.length?packsForIds(packs,packIds):ordered;
   const features=(changedFeatures.length?changedFeatures:acceptancePacks.flatMap((pack)=>pack.features)).sort();
   const plannedAcceptanceCommands=acceptanceCommands(features,acceptancePacks);
   commands.push(...plannedAcceptanceCommands);
-  return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),acceptanceCommands:plannedAcceptanceCommands,commands:[...new Set(commands)]};
+  return {packIds:ordered.map(({id})=>id),features,handlers:acceptancePacks.flatMap(({handlers})=>handlers),preparationCommands,acceptanceCommands:plannedAcceptanceCommands,commands:[...new Set(commands)]};
 }
 
 function packsForIds(packs,ids){const selected=new Set(ids);return packs.filter(({id})=>selected.has(id));}
 
 export async function executeAcceptancePlan(plan,{runCommand}={}){
   if(typeof runCommand!=="function")throw new Error("Provide an acceptance command runner");
-  for(const command of plan.acceptanceCommands)await runCommand(command);
+  for(const command of [...(plan.preparationCommands??["npm run build"]),...plan.acceptanceCommands])await runCommand(command);
 }
