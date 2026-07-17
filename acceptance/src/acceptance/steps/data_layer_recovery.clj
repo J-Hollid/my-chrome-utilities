@@ -5,6 +5,10 @@
             [clojure.string :as str]))
 
 (def recovery-timestamp "2026-07-08T00:00:00Z")
+(def session-recovery-feature-name "Data layer session recovery")
+
+(defn session-recovery-feature? [world]
+  (= session-recovery-feature-name (:acceptance/feature-name world)))
 
 (defn capture-observed-event [state {:keys [event-name page-url history-path]}]
   (session/capture-entry state
@@ -160,6 +164,7 @@
                (assoc world :session-state (session/end-session (:session-state world))))}
 
    {:pattern #"^the ended session remains ended$"
+    :applies? session-recovery-feature?
     :handler (fn [world _example _captures]
                (let [ended-session (or (:persisted-session world)
                                        (get-in world [:session-state :session]))]
