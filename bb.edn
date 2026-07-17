@@ -22,6 +22,7 @@
                         [acceptance.allowed-value-expansion-steps-test]
                         [acceptance.local-rule-promotion-steps-test]
                         [acceptance.local-rule-promotion-availability-steps-test]
+                        [acceptance.rule-edit-sync-steps-test]
                         [acceptance.live-guided-conditional-rules-steps-test]
                         [acceptance.saved-event-feed-filters-steps-test]
                         [acceptance.defect-report-undeclared-property-removal-steps-test]
@@ -105,6 +106,7 @@
                                                 'acceptance.allowed-value-expansion-steps-test
                                                 'acceptance.local-rule-promotion-steps-test
                                                 'acceptance.local-rule-promotion-availability-steps-test
+                                                'acceptance.rule-edit-sync-steps-test
                                                 'acceptance.live-guided-conditional-rules-steps-test
                                                 'acceptance.saved-event-feed-filters-steps-test
                                                 'acceptance.defect-report-undeclared-property-removal-steps-test

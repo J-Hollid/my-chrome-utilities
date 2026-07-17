@@ -371,6 +371,7 @@
       "test/data-layer-live-schema-property-declaration-property-test.mjs",
       "test/data-layer-live-validation-presentation-property-test.mjs",
       "test/data-layer-local-rule-promotion-property-test.mjs",
+      "test/data-layer-rule-edit-sync-property-test.mjs",
       "test/data-layer-schema-assignment-data-conditions-property-test.mjs",
       "test/data-layer-schema-documentation-property-test.mjs",
       "test/data-layer-schema-manual-property-property-test.mjs",

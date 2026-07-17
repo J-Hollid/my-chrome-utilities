@@ -1667,7 +1667,7 @@ function storedReusableRule(rule: ReusableAllowedValueRule): ReusableSchemaRule 
   };
 }
 
-function persistAllowedValueExpansion(nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): void {
+function persistSchemaAndRuleLibraries(nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): void {
   const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
   const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
   try {
@@ -1701,7 +1701,7 @@ function openAllowedValueExpansionReview(event: LiveEvent, evaluation: Validatio
     confirm(destination) {
       const applied = applyAllowedValueExpansion({ ...input, destination });
       const nextRules = applied.reusableRules.map(storedReusableRule);
-      persistAllowedValueExpansion(applied.schemas, nextRules);
+      persistSchemaAndRuleLibraries(applied.schemas, nextRules);
       schemas = applied.schemas; reusableSchemaRules = nextRules;
       renderSchemas(); renderSchemaWorkflowRows();
       return () => {
@@ -3606,7 +3606,10 @@ confirmSchemaRuleSyncButton.addEventListener("click", () => {
   if (!pending) return;
   try {
     const nextSchemas = publishReusableRuleSync(schemas, { ...pending.rule, version:pending.rule.version ?? 1 }, pending.review);
-    persistAllowedValueExpansion(nextSchemas, reusableSchemaRules);
+    persistSchemaAndRuleLibraries(nextSchemas, reusableSchemaRules);
+    schemas = nextSchemas;
+    renderSchemas();
+    renderSchemaWorkflowRows();
     schemaRuleSyncReview.close(); pendingSchemaRuleSync = undefined;
     if (schemaResult) schemaResult.textContent = `Published ${pending.review.schemaCount} schema revisions with ${pending.rule.name} revision ${pending.rule.version ?? 1}.`;
   } catch (error) {

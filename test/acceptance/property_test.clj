@@ -8,9 +8,11 @@
             [acceptance.steps.data-layer-recovery :as data-layer-recovery]
             [acceptance.steps.data-layer-session :as data-layer-session]
             [acceptance.steps.data-layer-timeline :as data-layer-timeline]
+            [acceptance.steps.defect-report-component-options :as defect-report-component-options]
             [acceptance.steps.hotkey-keymap :as hotkey-keymap]
             [acceptance.steps.package-flow :as package-flow]
             [acceptance.steps.palette :as palette]
+            [acceptance.steps.schema-property-filter-sort :as schema-property-filter-sort]
             [acceptance.steps.side-panel :as side-panel]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -86,6 +88,25 @@
                                  [(keyword package) "1.0.0"])
                                packages))
    :devDependencies {}})
+
+(deftest feature-scoped-entry-handlers-reject-generated-foreign-features
+  (let [result
+        (check
+         (prop/for-all [suffix gen/string-alphanumeric]
+           (let [world {:acceptance/feature-name (str "Foreign feature " suffix)}]
+             (every?
+              (fn [[entry-steps handlers]]
+                (every?
+                 (fn [entry-step]
+                   (let [handler (some #(when (re-matches (:pattern %) entry-step) %)
+                                       handlers)]
+                     (and handler (not ((:applies? handler) world)))))
+                 entry-steps))
+              [[schema-property-filter-sort/entry-steps
+                schema-property-filter-sort/handlers]
+               [defect-report-component-options/entry-steps
+                defect-report-component-options/handlers]]))))]
+    (is (:pass? result) (pr-str result))))
 
 (defn- palette-scope-input [packages global-shortcut? keybinding-editor?]
   {:package (package-with-fuzzy-dependencies packages)

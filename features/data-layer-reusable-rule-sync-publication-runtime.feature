@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=e0404aa8496ba67261e98864d0e2c6c298697b53350756e99035f8990d6b150f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-17T20:12:41.314270864Z","feature_name":"Data layer reusable rule sync publication runtime","feature_path":"features/data-layer-reusable-rule-sync-publication-runtime.feature","background_hash":"75e58a9d7065a3ebdfa844a94ece390a9f93e58804f1cd0148bdb80c1a618bcb","implementation_hash":"sha256:660e0d50b1f6b08327341ec7be0fa8bbb79793b9bdf46dc13eed19d23b1a0f67","scenarios":[{"index":3,"name":"Data layer reusable rule sync publication runtime 004","scenario_hash":"2cfe95770c99ec0550a772218fc9a25cb90ee422e4f18ed48c5b490238c9cd27","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-17T20:12:41.314270864Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer reusable rule sync publication runtime
 
   Background:
