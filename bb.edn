@@ -73,7 +73,6 @@
                         [acceptance.missing-event-report-fidelity-steps-test]
                         [acceptance.validation-presence-semantics-steps-test]
                         [acceptance.schema-property-removal-steps-test]
-                        [acceptance.non-applicable-property-visibility-steps-test]
                         [acceptance.schema-publication-refresh-steps-test]
                         [acceptance.schema-property-rule-picker-steps-test]
                         [acceptance.schema-cardinality-comparison-steps-test]
@@ -157,7 +156,6 @@
                                                 'acceptance.missing-event-report-fidelity-steps-test
                                                 'acceptance.validation-presence-semantics-steps-test
                                                 'acceptance.schema-property-removal-steps-test
-                                                'acceptance.non-applicable-property-visibility-steps-test
                                                 'acceptance.schema-publication-refresh-steps-test
                                                 'acceptance.schema-property-rule-picker-steps-test
                                                 'acceptance.schema-cardinality-comparison-steps-test
