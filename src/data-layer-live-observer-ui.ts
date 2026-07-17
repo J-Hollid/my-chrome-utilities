@@ -23,10 +23,10 @@ import {
   validationVisual,
   type ValidationEvaluation,
   type ValidationPropertyNode,
-} from "./data-layer-live-validation-presentation.js";
-import { buildRecursivePropertyTree, parseTargetExpression, type RecursivePropertyNode } from "./data-layer-recursive-property-tree.js";
-import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./data-layer-schema-documentation.js";
-import { allowedValueExpansionAvailability } from "./data-layer-allowed-value-expansion.js";
+} from "./utilities/data-layer/schemas.js";
+import { buildRecursivePropertyTree, parseTargetExpression, type RecursivePropertyNode } from "./utilities/data-layer/schemas.js";
+import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./utilities/data-layer/schemas.js";
+import { allowedValueExpansionAvailability } from "./utilities/data-layer/schemas.js";
 
 export interface LiveObserverElements {
   livePanel: HTMLElement | null;
@@ -40,7 +40,6 @@ export interface LiveObserverElements {
   pauseCaptureButton: HTMLButtonElement | null;
   resumeCaptureButton: HTMLButtonElement | null;
 }
-
 export interface LiveInspectorPresentationOptions {
   showNonApplicableProperties?: boolean;
 }

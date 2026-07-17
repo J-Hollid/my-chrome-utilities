@@ -1,5 +1,5 @@
-import type { JsonSchema } from "./data-layer-schema-document.js";
-import type { SchemaDefinition } from "./data-layer-schema-verification.js";
+import type { JsonSchema } from "./utilities/data-layer/schemas.js";
+import type { SchemaDefinition } from "./utilities/data-layer/schemas.js";
 import {
   addExpectedArrayItem,
   duplicateExpectedArrayItem,
@@ -18,7 +18,6 @@ export interface ExpectedPayloadEditorState {
   refresh(): void;
   issues?(): readonly { instancePath:string; message:string }[];
 }
-
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
   const result = document.createElement(tag);
   if (text !== undefined) result.textContent = text;

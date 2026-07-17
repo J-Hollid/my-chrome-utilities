@@ -1,11 +1,11 @@
 import {
   createEditableTemplate,
   type EditableEventTemplate,
-} from "./data-layer-event-library-editor.js";
+} from "./utilities/data-layer/event-library.js";
 import type { LiveEvent } from "./data-layer-live-observer.js";
-import type { ValidationState } from "./data-layer-source.js";
-import type { ValidationEvaluation } from "./data-layer-validation-model.js";
-import type { OccurrenceExpectationMode } from "./data-layer-event-occurrence-defect-report.js";
+import type { ValidationState } from "./utilities/data-layer/capture.js";
+import type { ValidationEvaluation } from "./utilities/data-layer/schemas.js";
+import type { OccurrenceExpectationMode } from "./utilities/data-layer/defect-reporting.js";
 
 export interface LiveInspectorActions {
   copyPayload(event: LiveEvent): Promise<void>;
@@ -25,7 +25,6 @@ export interface LiveInspectorActions {
   manualSchemaChoices(event: LiveEvent): readonly { id: string; label: string }[];
   selectManualSchema(eventId: string, schemaId: string | undefined): void;
 }
-
 export interface LiveDraftContinuation {
   schemaId: string;
   schemaName: string;

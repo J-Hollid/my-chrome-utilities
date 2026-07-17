@@ -5,17 +5,16 @@ import type {
   PathnameVisit,
   TimelineEvent,
 } from "./data-layer-defect-report.js";
-import type { LiveEvent } from "./data-layer-live-observer.js";
+import type { LiveEvent } from "./utilities/data-layer/live-inspection.js";
 import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
 import { isRequiredPropertyViolation } from "./data-layer-defect-report.js";
-import { resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
+import { resolvePropertyDocumentation } from "./utilities/data-layer/schemas.js";
 
 export interface DefectReportNavigationEffects {
   showCapturedEvent(): void;
   focusCreateDefectReport(): void;
   closeToLiveFeed(): void;
 }
-
 export function createDefectReportNavigation(
   effects: DefectReportNavigationEffects,
 ): DefectReportBuilderNavigation {

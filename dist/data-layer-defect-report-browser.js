@@ -1,6 +1,6 @@
 import { resolveRequiredPropertySchemaChoices } from "./data-layer-defect-schema-choices.js";
 import { isRequiredPropertyViolation } from "./data-layer-defect-report.js";
-import { resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
+import { resolvePropertyDocumentation } from "./utilities/data-layer/schemas.js";
 export function createDefectReportNavigation(effects) {
     return {
         backToCapturedEvent() {

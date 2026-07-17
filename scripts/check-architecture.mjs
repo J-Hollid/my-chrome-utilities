@@ -10,7 +10,10 @@ const importsOf=(source)=>[...source.matchAll(/(?:from\s+)?["']([^"']+)["']/g)].
 const normalized=(file,dependency)=>path.posix.normalize(path.posix.join(path.posix.dirname(file),dependency.replace(/\.js$/,".ts")));
 const utilityOf=(file)=>file.match(/^src\/utilities\/([^/]+)\//)?.[1];
 const layerOf=(file)=>file.match(/\/layers\/(core|application|browser)\//)?.[1]??declaredBoundaries[file]?.layer;
-const moduleOf=(file)=>declaredBoundaries[file]?.module??(file.match(/^src\/utilities\/data-layer\/layers\/(?:core|application|browser)\/([^/.]+)\.ts$/)?.[1]);
+const publicDataLayerModules=new Map([["capture","capture"],["live-inspection","live-inspection"],["event-library","event-library"],["schemas","schemas"],["defect-reporting","defect-reporting"],["replay","replay"]]);
+const publicModuleOf=(file)=>file.match(/^src\/utilities\/data-layer\/(capture|live-inspection|event-library|schemas|defect-reporting|replay)\.ts$/)?.[1];
+const moduleOf=(file)=>file.endsWith("/layers/browser/scoped-runtime.ts")?undefined:declaredBoundaries[file]?.module??(file.match(/^src\/utilities\/data-layer\/layers\/(?:core|application|browser)\/([^/.]+)\.ts$/)?.[1])??publicModuleOf(file);
+const publicEntryFor=(module)=>publicDataLayerModules.has(module)?`src/utilities/data-layer/${publicDataLayerModules.get(module)}.ts`:undefined;
 const concreteBrowserRuntime=/(?:\bdocument\.(?:activeElement|addEventListener|body|createElement|documentElement|getElementById|querySelector|querySelectorAll)\b|\bwindow\.|\bchrome\.|\blocalStorage\b|\bsessionStorage\b)/;
 
 export function architectureViolations(files){
@@ -23,9 +26,10 @@ export function architectureViolations(files){
       }
       const target=normalized(file,dependency),owner=utilityOf(file),targetOwner=utilityOf(target);
       if(owner&&targetOwner&&owner!==targetOwner){violations.push({file,dependency,reason:"utilities may not import another utility"});continue;}
-      const layer=layerOf(file),targetLayer=layerOf(target);
-      if(layer&&targetLayer&&layerRank[targetLayer]>layerRank[layer])violations.push({file,dependency,reason:`${layer} may not depend on ${targetLayer}`});
-      else if(moduleOf(file)&&moduleOf(target)&&moduleOf(file)!==moduleOf(target)&&!(declaredBoundaries[file]?.contracts??[]).includes(target))violations.push({file,dependency,reason:"cross-module import requires a declared contract"});
+      const layer=layerOf(file),targetLayer=layerOf(target),module=moduleOf(file),targetModule=moduleOf(target);
+      if(module&&targetModule&&module!==targetModule&&target!==publicEntryFor(targetModule))violations.push({file,dependency,reason:"cross-module import must use the module public API"});
+      else if(module&&targetModule&&module!==targetModule&&!(declaredBoundaries[file]?.contracts??[]).includes(target))violations.push({file,dependency,reason:"cross-module import requires a declared contract"});
+      else if(layer&&targetLayer&&layerRank[targetLayer]>layerRank[layer])violations.push({file,dependency,reason:`${layer} may not depend on ${targetLayer}`});
       else if(layer==="browser"&&file.includes("/utilities/data-layer/layers/")&&moduleOf(file)&&moduleOf(target)&&moduleOf(file)!==moduleOf(target))violations.push({file,dependency,reason:"browser adapters may not import another data-layer module"});
     }
     const layer=layerOf(file);

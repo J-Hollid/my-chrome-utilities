@@ -1,4 +1,4 @@
-import { resetLiveObserverForSession, } from "./data-layer-live-observer.js";
+import { resetLiveObserverForSession, } from "./utilities/data-layer/live-inspection.js";
 import { startDataLayerTestingSession, } from "./data-layer-session.js";
 export function beginDataLayerTestingSession(sessionState, liveObserverState, options) {
     const nextSessionState = startDataLayerTestingSession(sessionState, options);

@@ -1,4 +1,4 @@
-import type { ValidationState } from "./data-layer-source.js";
+import type { ValidationState } from "./utilities/data-layer/capture.js";
 import type { JsonSchema } from "./data-layer-schema-document.js";
 import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 import { urlConditionsMatch, type PathCondition } from "./data-layer-path-conditions.js";
@@ -95,7 +95,6 @@ function stableSchemaId(name: string): string { return `schema-${schemaSlug(name
 function canonicalAttachedRulePath(path: string): string {
   return canonicalNestedPath(path);
 }
-
 function documentContainsPath(document: JsonSchema, path: string): boolean {
   let current: JsonSchema | undefined = normalizeCanonicalSchemaDocument(document);
   for (const segment of canonicalAttachedRulePath(path).split("/").filter(Boolean)) {

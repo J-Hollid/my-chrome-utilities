@@ -1,7 +1,7 @@
 import {
   resetLiveObserverForSession,
   type LiveObserverState,
-} from "./data-layer-live-observer.js";
+} from "./utilities/data-layer/live-inspection.js";
 import {
   startDataLayerTestingSession,
   type DataLayerSessionState,
@@ -12,7 +12,6 @@ export interface DataLayerSessionStartResult {
   liveObserverState: LiveObserverState;
   started: boolean;
 }
-
 export function beginDataLayerTestingSession(
   sessionState: DataLayerSessionState,
   liveObserverState: LiveObserverState,

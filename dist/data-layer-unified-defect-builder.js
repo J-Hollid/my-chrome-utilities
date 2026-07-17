@@ -1,6 +1,6 @@
-import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
-import { validateWithSchema } from "./data-layer-schema-verification.js";
-import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./data-layer-schema-documentation.js";
+import { normalizeCanonicalSchemaDocument } from "./utilities/data-layer/schemas.js";
+import { validateWithSchema } from "./utilities/data-layer/schemas.js";
+import { resolveEffectiveSchemaDocumentation, resolvePropertyDocumentation } from "./utilities/data-layer/schemas.js";
 function normalizedOperator(value) {
     return value?.replaceAll("_", "-").replaceAll(" ", "-").toLocaleLowerCase() ?? "";
 }

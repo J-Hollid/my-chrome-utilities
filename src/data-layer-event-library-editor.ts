@@ -1,4 +1,4 @@
-import type { SourceAdapter, SourceEvent, ValidationState } from "./data-layer-source.js";
+import type { SourceAdapter, SourceEvent, ValidationState } from "./utilities/data-layer/capture.js";
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
@@ -19,7 +19,6 @@ export interface EditableEventTemplate {
   provenance: string;
   revisionHistory?: readonly EditableEventTemplate[];
 }
-
 export interface PropertyEditorState {
   template: EditableEventTemplate;
   savedTemplate?: EditableEventTemplate;
