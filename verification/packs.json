@@ -549,6 +549,7 @@
       "acceptance/src/acceptance/steps/recursive_declared_property_validation.clj",
       "acceptance/src/acceptance/steps/reusable_rule_sync.clj",
       "acceptance/src/acceptance/steps/specification_project_program.clj",
+      "acceptance/src/acceptance/steps/specification_project_program_assertions.clj",
       "acceptance/src/acceptance/steps/schema_assignment_data_conditions.clj",
       "acceptance/src/acceptance/steps/schema_cardinality_comparison.clj",
       "acceptance/src/acceptance/steps/schema_container_child_authoring.clj",

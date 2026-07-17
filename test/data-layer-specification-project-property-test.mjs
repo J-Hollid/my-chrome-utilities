@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
 
 import {
+  addFlowStep,
   addProjectEntity,
+  buildCoverageMatrix,
+  commitStagedProjectImport,
   conditionMatches,
   createSpecificationProject,
   exportSpecificationProject,
+  exportSpecificationProjectState,
   importSpecificationProject,
   redoProjectTransaction,
+  reorderFlowStep,
+  saveProjectAssignment,
+  searchProjectAssignments,
+  stageProjectImport,
   transactProject,
   undoProjectTransaction,
 } from "../dist/data-layer-specification-project.js";
@@ -77,6 +85,73 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(conditionMatches({ kind:"any", conditions:[first, second] }, context),
     firstMatches || secondMatches);
   assert.equal(conditionMatches({ kind:"not", conditions:[second] }, context), !secondMatches);
+
+  const assignmentInput = {
+    name:`Assignment ${sample}`,
+    schemaId:`schema-${sample}`,
+    eventName:`Event ${sample}`,
+    sourceId:`source-${sample}`,
+    target:`target-${sample}`,
+    priority:sample % 5,
+    versionPolicy:"pinned",
+    schemaRevision:(sample % 3) + 1,
+    condition:first,
+  };
+  const assignmentState = saveProjectAssignment(initial, assignmentInput, id);
+  const savedAssignment = assignmentState.project.collections.assignments[0];
+  const editedAssignmentState = saveProjectAssignment(assignmentState, {
+    ...assignmentInput,
+    id:savedAssignment.id,
+    name:`Edited assignment ${sample}`,
+  }, id);
+  assert.equal(editedAssignmentState.project.collections.assignments[0].id, savedAssignment.id,
+    "assignment edits must preserve stable identity");
+  assert.deepEqual(editedAssignmentState.project.collections.assignments[0].condition, first,
+    "assignment edits must preserve structured conditions");
+  assert.equal(searchProjectAssignments(editedAssignmentState.project, `edited assignment ${sample}`).count, 1);
+  const beforeInvalidAssignment = structuredClone(editedAssignmentState);
+  assert.throws(() => saveProjectAssignment(editedAssignmentState, {
+    ...assignmentInput,
+    target:"",
+  }, id), /routing fields/);
+  assert.deepEqual(editedAssignmentState, beforeInvalidAssignment,
+    "rejected assignment saves must conserve the caller state");
+
+  const flowState = addProjectEntity(initial, "flows", { name:`Flow ${sample}`, steps:[] }, id);
+  const flowId = flowState.project.collections.flows[0].id;
+  const withFirstStep = addFlowStep(flowState, flowId, {
+    name:`First ${sample}`, eventId:`event-${sample}`, minimum:0, maximum:(sample % 4) + 1, optional:true,
+  }, id);
+  const withTwoSteps = addFlowStep(withFirstStep, flowId, {
+    name:`Second ${sample}`, minimum:1, maximum:1, optional:false,
+  }, id);
+  const reordered = reorderFlowStep(withTwoSteps, flowId, 1, 0);
+  assert.deepEqual(reordered.project.collections.flows[0].steps.map(({ name }) => name),
+    [`Second ${sample}`, `First ${sample}`], "flow reordering must move exactly one structured step");
+  assert.deepEqual(flowState.project.collections.flows[0].steps, [],
+    "flow authoring must not mutate the prior project snapshot");
+
+  const fullFidelity = exportSpecificationProjectState(editedAssignmentState);
+  const collision = stageProjectImport(fullFidelity, editedAssignmentState);
+  assert.equal(collision.blockers.length, 1, "staging must expose project identity collisions");
+  const remapped = stageProjectImport(fullFidelity, editedAssignmentState, {
+    projectId:`imported-${sample}`,
+  });
+  assert.equal(remapped.blockers.length, 0, "explicit remapping must resolve identity collisions");
+  let writes = 0;
+  const committed = commitStagedProjectImport(editedAssignmentState, remapped, {
+    write:() => { writes += 1; },
+  });
+  assert.equal(writes, 1, "a staged import must commit atomically once");
+  assert.equal(committed.project.id, `imported-${sample}`);
+  assert.equal(editedAssignmentState.project.id, initial.project.id,
+    "import staging and commit must conserve the current project snapshot");
+
+  const coverage = buildCoverageMatrix(editedAssignmentState.project, { rowLimit:(sample % 7) + 1 });
+  assert.ok(coverage.rows.length <= (sample % 7) + 1, "coverage rendering must honor its row bound");
+  assert.equal(coverage.totalRows,
+    Object.values(editedAssignmentState.project.collections).flat().length,
+    "bounded coverage must retain the exact total row count");
 }
 
 console.log("Specification Project properties: 200 generated cases passed");
