@@ -1,5 +1,6 @@
 (ns acceptance.steps.defect-report-component-options
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [aps.gherkin :as gherkin]))
 
 (def feature-files
   ["features/data-layer-defect-report-component-options.feature"
@@ -8,6 +9,7 @@
   #{"captured purchase has selected validation issues for /commerce/currency and /order_id"
     "production purchase has selected validation issues, corrected expected values, semantic differences, validation evidence, and capture metadata"
     "the built extension side panel is running with production validation, captured-event defect reporting, Jira export, and Defect Library persistence"})
+(def feature-names (set (map (comp :name gherkin/parse-file) feature-files)))
 (defonce ^:private observation (atom nil))
 (def ^:private example-values
   {"rules_state" #{"cleared" "selected"}
@@ -108,11 +110,16 @@
    assert-observation!))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{})
-   entry-steps
-   :defect-report-component-options
-   transition))
+  (mapv (fn [{:keys [applies?] :as handler}]
+          (assoc handler :applies? (fn [world]
+                                     (and (contains? feature-names
+                                                     (:acceptance/feature-name world))
+                                          (boolean (applies? world))))))
+        (support/stateful-semantic-handlers
+         (support/feature-step-specs feature-files #{})
+         entry-steps
+         :defect-report-component-options
+         transition)))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-15T19:13:09.869030389+02:00", :module-hash "471699054", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "980283895"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "360754286"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 10, :hash "991335764"} {:id "form/3/defonce", :kind "defonce", :line 11, :end-line 11, :hash "-1819867165"} {:id "def/example-values", :kind "def", :line 12, :end-line 14, :hash "421858561"} {:id "defn-/browser-observation!", :kind "defn-", :line 16, :end-line 22, :hash "-1698678917"} {:id "defn-/selected?", :kind "defn-", :line 24, :end-line 24, :hash "-194408770"} {:id "defn-/matching-combination", :kind "defn-", :line 26, :end-line 29, :hash "547928693"} {:id "defn-/optional-headings", :kind "defn-", :line 31, :end-line 35, :hash "-1768401348"} {:id "defn-/consistent-renderings?", :kind "defn-", :line 37, :end-line 42, :hash "1123517147"} {:id "defn-/assert-example!", :kind "defn-", :line 44, :end-line 57, :hash "-1142440208"} {:id "defn-/assert-observation!", :kind "defn-", :line 59, :end-line 102, :hash "725967798"} {:id "defn-/transition", :kind "defn-", :line 104, :end-line 108, :hash "12532909"} {:id "def/handlers", :kind "def", :line 110, :end-line 115, :hash "-1961762933"}]}
