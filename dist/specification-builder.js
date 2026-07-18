@@ -1,8 +1,9 @@
-import { addProjectEntity, addFlowStep, buildReleaseReview, commitStagedProjectImport, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveFlowStep, saveFlowTransition, saveProjectAssignment, searchProjectAssignments, stageProjectImport, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, addFlowStep, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveFlowStep, saveFlowTransition, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
+import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1";
@@ -19,7 +20,8 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state, lastCommittedState;
-let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight;
+let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema;
+const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
@@ -373,7 +375,7 @@ function renderFlowSteps() {
 }
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
-    return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Any page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Any event"); const flow = selectedKind === "flows" ? state.project.collections.flows.find(({ id }) => id === selectedId) : undefined, steps = flow?.steps ?? []; replaceOptions(q("#flow-step-from"), steps, "Choose step"); replaceOptions(q("#flow-step-to"), steps, "Choose step"); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
+    return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Any page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Any event"); const flow = selectedKind === "flows" ? state.project.collections.flows.find(({ id }) => id === selectedId) : undefined, steps = flow?.steps ?? []; replaceOptions(q("#flow-step-from"), steps, "Choose step"); replaceOptions(q("#flow-step-to"), steps, "Choose step"); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
     const eventName = String(event.eventName ?? "");
     if (eventName && eventName !== event.id) {
         const alias = document.createElement("option");
@@ -444,6 +446,37 @@ catch (error) {
 } });
 q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
+const savedSchemaDialog = q("#saved-schema-review"), savedSchemaChanges = q("#saved-schema-review-changes");
+q("#review-saved-schema").addEventListener("click", () => { if (!state)
+    return; const source = savedSchemas().find(({ id: schemaId }) => schemaId === q("#saved-schema-picker").value); if (!source) {
+    q("#schema-draft-result").textContent = "Choose a published saved schema first.";
+    return;
+} savedSchemaChanges.replaceChildren(); const adopted = state.project.collections.schemaDrafts.find(({ id }) => id === source.id); try {
+    if (adopted) {
+        const review = stageSavedSchemaSynchronization(state, source);
+        pendingSavedSchema = { kind: "synchronize", review };
+        q("#saved-schema-review-summary").textContent = `Synchronize ${source.name} from library revision ${review.fromRevision} to ${review.toRevision}; ${review.localOverrides.length} project-local fields remain unchanged.`;
+        for (const change of review.changes) {
+            const item = document.createElement("li");
+            item.textContent = `${change.path}: ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
+            savedSchemaChanges.append(item);
+        }
+        q("#confirm-saved-schema").textContent = "Commit reviewed synchronization";
+    }
+    else {
+        pendingSavedSchema = { kind: "adopt", source };
+        q("#saved-schema-review-summary").textContent = `Adopt ${source.name} revision ${source.version} as one project-owned working draft with source lineage. The saved library remains unchanged.`;
+        q("#confirm-saved-schema").textContent = "Commit reviewed adoption";
+    }
+    savedSchemaDialog.showModal();
+    savedSchemaDialog.querySelector("h2")?.focus();
+}
+catch (error) {
+    q("#schema-draft-result").textContent = error instanceof Error ? error.message : String(error);
+} });
+q("#confirm-saved-schema").addEventListener("click", () => { if (!state || !pendingSavedSchema)
+    return; const completed = pendingSavedSchema; persist(completed.kind === "adopt" ? adoptSavedSchema(state, completed.source) : commitSavedSchemaSynchronization(state, completed.review)); selectedKind = "schemaDrafts"; selectedId = completed.kind === "adopt" ? completed.source.id : completed.review.schemaId; pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#schema-draft-result").textContent = completed.kind === "adopt" ? "Saved schema adopted into the canonical project with revision lineage." : "Reviewed saved-schema revision synchronized; local overrides were preserved and affected evidence was marked stale."; render(); });
+q("#cancel-saved-schema").addEventListener("click", () => { pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#review-saved-schema").focus(); });
 q("#save-project-assignment").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const assignmentId = q("#project-assignment-id").value || undefined, eventValue = q("#project-assignment-event").value, eventEntity = state.project.collections.events.find((candidate) => candidate.id === eventValue || candidate.eventName === eventValue), applicabilitySetId = q("#project-assignment-applicability").value, compatibilityPath = q("#project-assignment-path").value.trim(), condition = !applicabilitySetId && compatibilityPath ? { kind: "predicate", field: compatibilityPath, operator: "equals", value: q("#project-assignment-value").value } : undefined; try {
     persist(saveProjectAssignment(state, { ...(assignmentId ? { id: assignmentId } : {}), name: q("#project-assignment-name").value.trim(), schemaId: q("#project-assignment-schema").value, ...(eventEntity ? { eventId: eventEntity.id } : {}), eventName: String(eventEntity?.eventName ?? eventEntity?.name ?? ""), ...(applicabilitySetId ? { applicabilitySetId } : {}), ...(condition ? { condition } : {}), sourceId: q("#project-assignment-source").value.trim(), target: q("#project-assignment-target").value, priority: Number(q("#project-assignment-priority").value), versionPolicy: q("#project-assignment-version-policy").value, schemaRevision: Number(q("#project-assignment-revision").value) }, id));
