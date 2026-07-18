@@ -52,7 +52,11 @@
   (let [executions (expand-executions feature)]
     (doseq [execution executions]
       (try
-        (run-execution! execution handlers {:acceptance/feature-name (:name feature)})
+        (run-execution! execution handlers
+                        {:acceptance/feature-name (:name feature)
+                         :acceptance/scenario-name (get-in execution [:scenario :name])
+                         :acceptance/scenario-index (:scenario-index execution)
+                         :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))})
         (catch Throwable t
           (throw (ex-info (format "Acceptance execution failed: %s: %s"
                                   (:name execution)

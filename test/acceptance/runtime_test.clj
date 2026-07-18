@@ -53,7 +53,7 @@
                                  :text "an unsupported step appears"}
                                 [])))))
 
-(deftest exposes-feature-identity-to-step-handlers
+(deftest exposes-feature-and-scenario-identity-to-step-handlers
   (let [seen (atom nil)
         feature {:name "Feature identity"
                  :background []
@@ -62,10 +62,18 @@
                               :examples []}]}
         handlers [{:pattern #"^identity is visible$"
                    :handler (fn [world _ _]
-                              (reset! seen (:acceptance/feature-name world))
+                              (reset! seen (select-keys world
+                                                        [:acceptance/feature-name
+                                                         :acceptance/scenario-name
+                                                         :acceptance/scenario-index
+                                                         :acceptance/scenario-steps]))
                               world)}]]
     (runtime/run-feature! feature handlers)
-    (is (= "Feature identity" @seen))))
+    (is (= {:acceptance/feature-name "Feature identity"
+            :acceptance/scenario-name "Scenario"
+            :acceptance/scenario-index 0
+            :acceptance/scenario-steps ["identity is visible"]}
+           @seen))))
 
 (deftest gives-each-scenario-fresh-state
   (let [initial-states (atom [])

@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { recordSpecificationCapture, recordSpecificationNavigation, } from "./utilities/data-layer/schemas.js";
+import { applyProjectOwnedSchemaEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -659,7 +659,10 @@ let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
-const restoredSchemaLibrary = serializeSchemaLibrary(schemas);
+const canonicalProjectAtStartup = restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+if (canonicalProjectAtStartup)
+    schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
+const startupProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !startupProjectSchemaIds.has(id)));
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
     dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -2572,7 +2575,25 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(schemas));
+    const previousProject = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyProjectOwnedSchemaEdits(project, schemas) : undefined;
+    const restore = (key, value) => { if (value === null)
+        dataLayerStorage.removeItem(key);
+    else
+        dataLayerStorage.setItem(key, value); };
+    try {
+        if (schemaValue !== previousSchemas)
+            dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, schemaValue);
+        if (nextProject) {
+            const result = commitCanonicalProjectState(dataLayerStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit" });
+            if (result.status === "conflict")
+                throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);
+        }
+    }
+    catch (error) {
+        if (schemaValue !== previousSchemas)
+            restore(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+        throw error;
+    }
 }
 function schemaEditorDraft(schema) {
     const draft = schema.workingDraft;

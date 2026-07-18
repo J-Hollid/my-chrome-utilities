@@ -7,6 +7,10 @@
   (deref (ns-resolve 'acceptance.steps.specification-project-program-assertions
                      'assert-runtime!)))
 
+(defn- scenario-runtime-assertion []
+  (deref (ns-resolve 'acceptance.steps.specification-project-program-assertions
+                     'assert-runtime-scenario!)))
+
 (defn- example-validator []
   (deref (ns-resolve 'acceptance.steps.specification-project-program
                      'validate-example!)))
@@ -30,7 +34,7 @@
   (let [observed {:created {:empty true
                             :workspace true
                             :status "Saved"
-                            :context "Shop data specification · Production · Draft"
+                            :context "Shop data specification · Production · Preview draft"
                             :tree (vec (range 10))}
                   :search {:rows ["Purchase"] :query "Purchase"}
                   :bulk {:rowCount 100 :undoEnabled true}
@@ -97,4 +101,12 @@
                    :layouts (mapv (fn [width]
                                     {:width width :pageOverflow 0 :rendered 40})
                                   [360 520 720 1280])}}]
-    (is (= observed ((runtime-assertion) observed)))))
+    (is (= observed ((runtime-assertion) observed)))
+    (is (= [:assignment]
+           (:scenarioAssertions
+            ((scenario-runtime-assertion)
+             observed
+             ["When two same-schema same-event assignments are created through rendered controls"
+              "Then production storage contains two unequal stable IDs"]))))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 ((scenario-runtime-assertion) observed ["Then unrelated behavior happens"])))))

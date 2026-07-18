@@ -26,3 +26,5 @@ export { renderSchemaPropertyTypeEditor } from "../../../../data-layer-schema-pr
 export { renderSchemaSpecificationBuilder } from "../../../../data-layer-schema-specification-builder-ui.js";
 export { revalidateCurrentLiveSession } from "../../../../data-layer-schema-publication-refresh.js";
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation, type SpecificationRuntimeObservation, type SpecificationRuntimeResult, type SpecificationRuntimeStorage } from "../../../../data-layer-specification-runtime.js";
+export { applyProjectOwnedSchemaEdits } from "../../../../data-layer-specification-engine.js";
+export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState } from "../../../../data-layer-specification-repository.js";

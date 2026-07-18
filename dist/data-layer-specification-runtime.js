@@ -1,4 +1,4 @@
-import { advanceFlowInstance, resolveApplicability, startFlowInstance, } from "./data-layer-specification-project.js";
+import { compileSpecificationProject, createCanonicalProjectEnvelope, evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
 export const SPECIFICATION_PROJECT_STORAGE_KEY = "my-chrome-utilities.specification-project.v1";
 export const FLOW_INSTANCES_STORAGE_KEY = "my-chrome-utilities.flow-instances.v1";
 export const FLOW_ROUTING_STORAGE_KEY = "my-chrome-utilities.flow-routing.v1";
@@ -31,24 +31,17 @@ function pageId(project, pageUrl) { if (!pageUrl)
 catch {
     return undefined;
 } return project.collections.pages.find((page) => page.url === pageUrl || page.pathname === url.pathname || page.path === url.pathname)?.id; }
-function firstStepMatches(flow, input) { const step = (flow.steps ?? [])[0]; return Boolean(step && (!step.eventId || step.eventId === input.eventId) && (!step.pageId || step.pageId === input.pageId)); }
 export function recordSpecificationRuntimeObservation(storage, observation) {
     const project = restoreProject(storage);
     if (!project)
         return { instances: restoreInstances(storage) };
     const observedEventId = eventId(project, observation), observedPageId = pageId(project, observation.pageUrl);
-    const input = { ...(observedEventId ? { eventId: observedEventId } : {}), ...(observedPageId ? { pageId: observedPageId } : {}) };
-    const prior = restoreInstances(storage), others = prior.filter((instance) => instance.sessionId !== observation.sessionId), session = prior.filter((instance) => instance.sessionId === observation.sessionId && instance.status === "active"), existingFlowIds = new Set(session.map(({ flowId }) => flowId));
-    const started = project.collections.flows.filter((flow) => !existingFlowIds.has(flow.id) && firstStepMatches(flow, input)).map((flow) => startFlowInstance(project, flow.id, observation.sessionId));
-    const advanced = [...session, ...started].map((instance) => advanceFlowInstance(project, instance, input));
-    const changed = advanced.filter((instance, index) => instance.history.length > ([...session, ...started][index]?.history.length ?? 0));
-    const instances = [...others, ...advanced.filter((instance) => instance.history.length > 0)];
+    const prior = restoreInstances(storage), payload = observation.payload && typeof observation.payload === "object" ? observation.payload : {}, url = observation.pageUrl ? new URL(observation.pageUrl, globalThis.location?.href) : undefined, compiled = compileSpecificationProject(createCanonicalProjectEnvelope(project, "runtime"));
+    if (compiled.status === "blocked")
+        return { instances: prior };
+    const evaluation = evaluateSpecificationObservation(compiled.plan, { ...observation, ...payload, payload: observation.payload ?? {}, pathname: url?.pathname ?? "", ...(observedEventId ? { eventId: observedEventId } : {}), ...(observedPageId ? { pageId: observedPageId } : {}) }, prior), transition = evaluation.stateTransition, instances = transition.instances;
     storage.setItem(FLOW_INSTANCES_STORAGE_KEY, JSON.stringify(instances));
-    const active = changed.length === 1 ? changed[0] : undefined;
-    if (!active)
-        return { instances };
-    const url = observation.pageUrl ? new URL(observation.pageUrl, globalThis.location?.href) : undefined;
-    const applicability = resolveApplicability(project, { pathname: url?.pathname ?? "", eventName: observation.eventName ?? "", flowId: active.selector, payload: observation.payload ?? {} }), priorRouting = storage.getItem(FLOW_ROUTING_STORAGE_KEY);
+    const active = transition.active, ambiguity = transition.ambiguity, applicability = { candidates: evaluation.candidates.map((candidate) => ({ id: candidate.assignmentId, name: candidate.assignmentId, matched: candidate.rejectionReasons.length === 0, priority: candidate.priority, evidence: candidate.rejectionReasons.join("; ") || "All configured predicates matched" })), ...(evaluation.winner ? { winner: { id: evaluation.winner.assignmentId, name: evaluation.winner.assignmentId } } : {}), ties: evaluation.ties.map((id) => ({ id, name: id })) }, priorRouting = storage.getItem(FLOW_ROUTING_STORAGE_KEY);
     let routing = [];
     try {
         const parsed = JSON.parse(priorRouting ?? "[]");
@@ -56,9 +49,9 @@ export function recordSpecificationRuntimeObservation(storage, observation) {
             routing = parsed;
     }
     catch { /* replace invalid evidence */ }
-    routing.push({ sessionId: observation.sessionId, instanceId: active.id, flowId: active.selector, pageUrl: observation.pageUrl, eventName: observation.eventName, winner: applicability.winner, ties: applicability.ties });
+    routing.push({ sessionId: observation.sessionId, sourceId: observation.sourceId, eventId: observedEventId, ...(active ? { instanceId: active.id, flowId: active.flowId, stepId: active.currentStepId } : {}), pageUrl: observation.pageUrl, eventName: observation.eventName, winner: evaluation.winner, ties: evaluation.ties, candidates: evaluation.candidates, ...(ambiguity ? { ambiguity } : {}) });
     storage.setItem(FLOW_ROUTING_STORAGE_KEY, JSON.stringify(routing));
-    return { instances, active, applicability };
+    return { instances, ...(active ? { active } : {}), applicability, evaluation, ...(ambiguity ? { ambiguity } : {}) };
 }
 export function recordSpecificationCapture(storage, input) { const raw = input.rawValue && typeof input.rawValue === "object" ? input.rawValue : {}; const eventName = typeof raw.event === "string" ? raw.event : typeof raw.eventName === "string" ? raw.eventName : undefined; return recordSpecificationRuntimeObservation(storage, { ...input, ...(eventName ? { eventName } : {}), payload: raw }); }
 export function recordSpecificationNavigation(storage, input) { return recordSpecificationRuntimeObservation(storage, input); }

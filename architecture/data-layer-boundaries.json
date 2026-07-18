@@ -548,6 +548,22 @@
     "module": "schemas",
     "layer": "application"
   },
+  "src/data-layer-specification-engine.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-specification-bulk.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-specification-assurance.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-specification-repository.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
   "src/data-layer-specification-runtime.ts": {
     "module": "schemas",
     "layer": "browser"

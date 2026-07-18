@@ -3,7 +3,7 @@
             [clojure.string :as str]))
 
 (defn- assert-created! [observed]
-  (support/assert! (and (get-in observed [:created :empty]) (get-in observed [:created :workspace]) (= "Saved" (get-in observed [:created :status])) (str/includes? (get-in observed [:created :context]) "Production") (= 10 (count (get-in observed [:created :tree])))) "The actual project workspace did not create and render a durable blank project." observed))
+  (support/assert! (and (get-in observed [:created :empty]) (get-in observed [:created :workspace]) (str/starts-with? (get-in observed [:created :status]) "Saved") (str/includes? (get-in observed [:created :context]) "Production") (str/includes? (get-in observed [:created :context]) "Preview draft") (= 10 (count (get-in observed [:created :tree])))) "The actual project workspace did not create and render a durable blank project." observed))
 (defn- assert-search! [observed]
   (support/assert! (= {:rows ["Purchase"] :query "Purchase"} (:search observed)) "Production global search did not return the stored event." observed))
 (defn- assert-bulk! [observed]
@@ -25,9 +25,17 @@
 (defn- assert-coverage! [corrections]
   (support/assert! (and (<= (get-in corrections [:coverage :rendered]) 40) (< (get-in corrections [:coverage :duration]) 100) (str/includes? (get-in corrections [:coverage :deepLink]) "kind=") (get-in corrections [:coverage :focused])) "Coverage virtualization, benchmark, or exact-field deep linking changed." corrections))
 (defn- assert-save-failure! [corrections]
-  (support/assert! (= {:status "Save failed" :retryVisible true :valuePresent true :retried "Saved" :count 1} (:failed corrections)) "Recoverable autosave did not retain and retry one draft transaction." corrections))
+  (support/assert! (and (str/starts-with? (get-in corrections [:failed :status]) "Save failed")
+                        (get-in corrections [:failed :retryVisible])
+                        (get-in corrections [:failed :valuePresent])
+                        (str/starts-with? (get-in corrections [:failed :retried]) "Saved")
+                        (= 1 (get-in corrections [:failed :count])))
+                   "Recoverable autosave did not retain and retry one draft transaction." corrections))
 (defn- assert-atomic-rollback! [corrections]
-  (support/assert! (= {:projectBytesUnchanged true :schemaBytesUnchanged true :status "Save failed"} (:atomicRollback corrections)) "A failed second storage write did not restore both prior byte strings." corrections))
+  (support/assert! (and (get-in corrections [:atomicRollback :projectBytesUnchanged])
+                        (get-in corrections [:atomicRollback :schemaBytesUnchanged])
+                        (str/starts-with? (get-in corrections [:atomicRollback :status]) "Save failed"))
+                   "A failed canonical-envelope write mutated persisted project or compatibility bytes." corrections))
 (defn- assert-review! [corrections]
   (support/assert! (and (str/includes? (get-in corrections [:releaseReview :summary]) "structured changes") (= 1 (get-in corrections [:releaseReview :publishedBefore])) (get-in corrections [:releaseReview :focusRestored]) (get-in corrections [:releaseReview :legacyPreserved]) (get-in corrections [:releaseReview :projectAuthoritative]) (:restoreAvailable corrections)) "Structured release review, immutable prior release, unrelated-schema preservation, project-schema authority, restore, or focus behavior changed." corrections))
 (defn- assert-import! [corrections]
@@ -54,6 +62,69 @@
     (assert-import! corrections)
     (assert-responsive! corrections))
   observed)
+
+(defn assert-runtime-scenario! [observed scenario-steps]
+  (let [text (str/lower-case (str/join " " scenario-steps))
+        corrections (:corrections observed)
+        asserted (transient [])
+        check! (fn [label predicate assertion]
+                 (when predicate
+                   (assertion)
+                   (conj! asserted label)))]
+    (check! :created (or (str/includes? text "blank project")
+                         (str/includes? text "contextual editor"))
+            #(assert-created! observed))
+    (check! :search (str/includes? text "search") #(assert-search! observed))
+    (check! :bulk (or (str/includes? text "bulk")
+                      (str/includes? text "100 valid"))
+            #(assert-bulk! observed))
+    (check! :release (or (str/includes? text "release dialog")
+                         (str/includes? text "publish"))
+            #(assert-release! observed))
+    (check! :documentation (or (str/includes? text "documentation")
+                               (str/includes? text "clipboard"))
+            #(assert-documentation! corrections))
+    (check! :flow (or (str/includes? text "flow")
+                      (str/includes? text "journey"))
+            #(assert-flow! corrections))
+    (check! :assignment (or (str/includes? text "assignment")
+                            (str/includes? text "pinned revision"))
+            #(assert-assignment! corrections))
+    (check! :decisive (or (str/includes? text "markerless")
+                          (and (str/includes? text "retail")
+                               (str/includes? text "trade")))
+            #(assert-decisive! corrections))
+    (check! :editor (or (str/includes? text "flow editor")
+                        (str/includes? text "structured")
+                        (str/includes? text "optional"))
+            #(assert-editor! corrections))
+    (check! :coverage (or (str/includes? text "coverage")
+                          (str/includes? text "500 properties")
+                          (str/includes? text "50 flows"))
+            #(assert-coverage! corrections))
+    (check! :save-failure (or (str/includes? text "save failed")
+                              (str/includes? text "retry")
+                              (str/includes? text "storage adapter"))
+            #(assert-save-failure! corrections))
+    (check! :atomic-rollback (or (str/includes? text "persisted bytes")
+                                 (str/includes? text "prior persisted bytes")
+                                 (str/includes? text "write fails"))
+            #(assert-atomic-rollback! corrections))
+    (check! :review (or (str/includes? text "release review")
+                        (str/includes? text "historical revision"))
+            #(assert-review! corrections))
+    (check! :import (or (str/includes? text "file chooser")
+                        (str/includes? text "import"))
+            #(assert-import! corrections))
+    (check! :responsive (or (str/includes? text "360")
+                            (str/includes? text "narrow pane")
+                            (str/includes? text "primary scroll"))
+            #(assert-responsive! corrections))
+    (let [labels (persistent! asserted)]
+      (support/assert! (seq labels)
+                       "The focused browser adapter does not execute an assertion owned by this scenario."
+                       {:steps scenario-steps})
+      {:scenarioAssertions labels :observation observed})))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-18T03:01:27.735809883+02:00", :module-hash "-1403671508", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-38261127"} {:id "defn-/assert-created!", :kind "defn-", :line 5, :end-line 6, :hash "338786058"} {:id "defn-/assert-search!", :kind "defn-", :line 7, :end-line 8, :hash "356890520"} {:id "defn-/assert-bulk!", :kind "defn-", :line 9, :end-line 10, :hash "660199247"} {:id "defn-/assert-release!", :kind "defn-", :line 11, :end-line 12, :hash "1754877658"} {:id "defn-/assert-layout!", :kind "defn-", :line 13, :end-line 14, :hash "-2069501695"} {:id "defn-/assert-documentation!", :kind "defn-", :line 15, :end-line 16, :hash "1820971250"} {:id "defn-/assert-flow!", :kind "defn-", :line 17, :end-line 18, :hash "1232678231"} {:id "defn-/assert-assignment!", :kind "defn-", :line 19, :end-line 20, :hash "1523199377"} {:id "defn-/assert-decisive!", :kind "defn-", :line 21, :end-line 22, :hash "1149966125"} {:id "defn-/assert-editor!", :kind "defn-", :line 23, :end-line 24, :hash "-1766293860"} {:id "defn-/assert-coverage!", :kind "defn-", :line 25, :end-line 26, :hash "1684807517"} {:id "defn-/assert-save-failure!", :kind "defn-", :line 27, :end-line 28, :hash "2000473343"} {:id "defn-/assert-atomic-rollback!", :kind "defn-", :line 29, :end-line 30, :hash "65901895"} {:id "defn-/assert-review!", :kind "defn-", :line 31, :end-line 32, :hash "-2125047744"} {:id "defn-/assert-import!", :kind "defn-", :line 33, :end-line 34, :hash "1071268371"} {:id "defn-/assert-responsive!", :kind "defn-", :line 35, :end-line 36, :hash "-1345004481"} {:id "defn/assert-runtime!", :kind "defn", :line 38, :end-line 56, :hash "17239381"}]}

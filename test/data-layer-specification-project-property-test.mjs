@@ -119,8 +119,10 @@ for (let sample = 0; sample < 200; sample += 1) {
   const editedAssignment = searchProjectAssignments(editedAssignmentState.project, "").rows[0];
   assert.equal(editedAssignment.id, savedAssignment.id,
     "assignment edits must preserve stable identity");
-  assert.deepEqual(editedAssignment.condition, first,
-    "assignment edits must preserve structured conditions");
+  assert.equal(editedAssignment.condition, undefined,
+    "assignment entities must not retain an embedded matcher language");
+  assert.deepEqual(editedAssignmentState.project.collections.applicabilitySets.find(({id})=>id===editedAssignment.applicabilitySetId).condition, first,
+    "assignment edits must preserve their named applicability set");
   assert.equal(searchProjectAssignments(editedAssignmentState.project, `edited assignment ${sample}`).count, 1);
   const beforeInvalidAssignment = structuredClone(editedAssignmentState);
   assert.throws(() => saveProjectAssignment(editedAssignmentState, {
@@ -145,6 +147,8 @@ for (let sample = 0; sample < 200; sample += 1) {
     "flow authoring must not mutate the prior project snapshot");
 
   const fullFidelity = exportSpecificationProjectState(editedAssignmentState);
+  assert.equal(JSON.parse(fullFidelity).version, 2,
+    "generated full-fidelity packages must use the canonical version-2 envelope");
   const collision = stageProjectImport(fullFidelity, editedAssignmentState);
   assert.equal(collision.blockers.length, 1, "staging must expose project identity collisions");
   const remapped = stageProjectImport(fullFidelity, editedAssignmentState, {
