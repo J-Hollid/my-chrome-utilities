@@ -185,6 +185,8 @@ async function debuggingPort() {
 
 async function loadedExtensionId(port){for(let attempt=0;attempt<100;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),target=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(target)return new URL(target.url).hostname;await wait(20);}throw new Error("Chrome did not load the unpacked extension.");}
 
+async function commandSidePanelSocket(port,extensionId){const browser=await fetch(`http://127.0.0.1:${port}/json/version`).then((response)=>response.json()),socket=new DevtoolsSocket(browser.webSocketDebuggerUrl);await socket.connect();for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const {targetInfos}=await socket.call("Target.getTargets"),target=targetInfos.find(({url})=>url===`chrome-extension://${extensionId}/side-panel.html`);if(target){const attached=await socket.call("Target.attachToTarget",{targetId:target.targetId,flatten:true});socket.sessionId=attached.sessionId;return socket;}await wait(50);}socket.close();throw new Error("Keyboard command did not open the real extension side panel target");}
+
 class DevtoolsSocket {
   constructor(url) {
     this.url = new URL(url);
@@ -279,7 +281,7 @@ class DevtoolsSocket {
 
   call(method, params = {}) {
     const id = this.nextId++;
-    this.send({ id, method, params });
+    this.send({ id, method, params, ...(this.sessionId ? { sessionId:this.sessionId } : {}) });
     return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
   }
 
@@ -4876,22 +4878,19 @@ try {
   const extensionId=await loadedExtensionId(port);
   for (const width of componentWidths) {
     const specificationScenarioId=process.env.SPECIFICATION_PROJECT_SCENARIO_ID??"",capturedContinuationScenario=process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER==="1"&&specificationScenarioId.includes("canonical project schema drafts runtime 021");
-    const socket = process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width,900,capturedContinuationScenario?`chrome-extension://${extensionId}/specification-builder.html`:undefined) : await openPanel(port, width);
+    let socket = process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width,900,capturedContinuationScenario?`chrome-extension://${extensionId}/specification-builder.html`:undefined) : await openPanel(port, width);
     if (process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1") {
       if(capturedContinuationScenario){
         const observedPage=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(`http://127.0.0.1:${assetPort}/observation-target.html`)}`,{method:"PUT"}).then((response)=>response.json()),observedSocket=new DevtoolsSocket(observedPage.webSocketDebuggerUrl);await observedSocket.connect();await observedSocket.call("Runtime.enable");
         await evaluate(socket,`(async()=>{const q=(selector)=>{const value=document.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;},set=(selector,value)=>{const input=q(selector);input.value=value;input.dispatchEvent(new Event("input",{bubbles:true}));},pause=()=>new Promise((resolve)=>setTimeout(resolve,0)),add=async(kind,name)=>{q("#entity-kind").value=kind;set("#entity-name",name);q("#add-entity-form").requestSubmit();await pause();};set("#project-name","Retail and Trade");set("#project-site","shop.example");q("#create-project-form").requestSubmit();await pause();await add("profiles","Retail");q('[aria-label="Bulk input format"]').value="json";set("#bulk-properties",JSON.stringify([{path:"/currency",type:"string",allowedValues:["EUR"]},{path:"/order_id",type:"string",required:true}]));q("#commit-bulk-properties").click();q("#confirm-bulk-properties").click();await pause();await add("pages","Checkout confirmation");await add("events","Purchase");await add("applicabilitySets","Retail purchase context");q('#project-tree button[data-kind="schemaDrafts"]').click();set("#project-schema-name","Purchase");set("#project-schema-revision",4);q("#create-project-schema-draft").requestSubmit();await pause();q("#workspace-content .entity-row button").click();const profileIds=q('.contextual-editor select[name="profileIds"]');profileIds.options[0].selected=true;q(".contextual-editor form").requestSubmit();await pause();q('#project-tree button[data-kind="assignments"]').click();const project=JSON.parse(localStorage.getItem("my-chrome-utilities.specification-project.v1")).project;set("#project-assignment-name","Retail purchase");q("#project-assignment-schema").value=project.collections.schemaDrafts[0].id;q("#project-assignment-event").value=project.collections.events[0].id;q("#project-assignment-applicability").value=project.collections.applicabilitySets[0].id;set("#project-assignment-source","event-history");set("#project-assignment-priority",10);set("#project-assignment-revision",4);q("#save-project-assignment").requestSubmit();await pause();return true;})()`);
-        await socket.call("Page.enable");
-        await socket.call("Page.navigate",{url:`chrome-extension://${extensionId}/side-panel.html`});
-        for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const ready=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true'",returnByValue:true});if(ready.result.value===true)break;await wait(50);}
         await socket.call("Target.activateTarget",{targetId:observedPage.id});
         await observedSocket.call("Input.dispatchKeyEvent",{type:"rawKeyDown",modifiers:10,key:"!",code:"Digit1",windowsVirtualKeyCode:49,nativeVirtualKeyCode:49});
         await observedSocket.call("Input.dispatchKeyEvent",{type:"keyUp",modifiers:10,key:"!",code:"Digit1",windowsVirtualKeyCode:49,nativeVirtualKeyCode:49});
+        socket.close();socket=await commandSidePanelSocket(port,extensionId);await socket.call("Runtime.enable");
+        for(let attempt=0;attempt<panelReadyAttempts;attempt+=1){const ready=await socket.call("Runtime.evaluate",{expression:"document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true'",returnByValue:true});if(ready.result.value===true)break;await wait(50);}
         const targetAction=await evaluate(socket,`(async()=>{const q=(selector)=>{const value=document.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;},wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));q("#choose-observation-target").click();await wait(100);const row=Array.from(q("#observation-target-list").children).find(({textContent})=>textContent.includes("Retail confirmation"));if(!row)throw new Error("Loaded extension did not discover the real Retail tab: "+q("#observation-target-list").textContent);return row.querySelector("button")?.textContent;})()`);
         assert.equal(targetAction,"Select","Keyboard invocation must grant activeTab");
         await evaluate(socket,`(()=>{const row=Array.from(document.querySelector("#observation-target-list").children).find(({textContent})=>textContent.includes("Retail confirmation"));row.querySelector("button").click();return true;})()`);
-        const activeExtensionTarget=(await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json())).find(({url})=>url===`chrome-extension://${extensionId}/side-panel.html`);
-        await socket.call("Target.activateTarget",{targetId:activeExtensionTarget.id});
         await evaluate(socket,`(()=>{const input=document.querySelector("#history-path");input.value="dataLayer";input.dispatchEvent(new Event("input",{bubbles:true}));return true;})()`);
         await wait(100);
         for(let attempt=0;attempt<100&&await evaluate(socket,`document.querySelector("#start-data-layer-testing").disabled`);attempt+=1)await wait(20);
