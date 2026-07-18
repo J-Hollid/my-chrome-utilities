@@ -28,5 +28,6 @@ export { revalidateCurrentLiveSession } from "../../../../data-layer-schema-publ
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "../../../../data-layer-specification-runtime.js";
 export { applyCanonicalSchemaDraftEdits } from "../../../../data-layer-specification-model.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "../../../../data-layer-specification-repository.js";
-export { adoptSavedSchema, capturedValidationDestinationChoices, createFixtureFromCapturedValidation } from "../../../../data-layer-specification-project.js";
+export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, createFixtureFromCapturedValidation } from "../../../../data-layer-specification-project.js";
+export { compileSpecificationProject, evaluateSpecificationObservation } from "../../../../data-layer-specification-engine.js";
 //# sourceMappingURL=schemas.js.map

@@ -199,11 +199,12 @@ export function importSpecificationProject(serialized, options) { const parsed =
     throw new Error("Unsupported Specification Project format."); const collisions = options.existingProjects.some(({ id }) => id === parsed.project.id) ? [parsed.project.id] : []; return { project: clone(parsed.project), collisions }; }
 export function migrateLegacyLibrary(legacy, options) { const state = createSpecificationProject({ name: "Legacy Schema Library", site: "compatibility.local", id: options.id }); const issues = []; const events = (legacy.schemas ?? []).flatMap((schema) => (schema.assignments ?? []).flatMap((assignment) => { if (!assignment.id || !assignment.eventName)
     return issues.push({ sourceId: String(assignment.id ?? schema.id ?? "unknown"), message: "Assignment identity or event name is unresolved" }), []; return [{ id: String(assignment.id), name: String(assignment.eventName), eventName: assignment.eventName, sourceId: assignment.sourceId, target: assignment.target, legacySchemaId: schema.id }]; })); const profiles = (legacy.schemas ?? []).map((schema) => ({ id: String(schema.id), name: String(schema.name ?? schema.id), requirements: [], legacyVersion: schema.version })); return { project: { ...state.project, collections: { ...state.project.collections, profiles, events }, compatibility: { legacySnapshot: JSON.stringify(legacy) } }, issues }; }
-export function createProjectSchemaDraft(state, input, _id) {
+export function createProjectSchemaDraft(state, input, id) {
     return transactProject(state, `Create ${input.name} schema draft`, (project) => {
-        if (project.collections.schemaDrafts.some(({ id }) => id === input.schemaId))
-            throw new Error(`Schema ${input.schemaId} already exists.`);
-        const published = { ...createSchema(input.name, input.baseRevision, { type: "object", properties: {} }), id: input.schemaId, published: true, documentation: { description: input.description } };
+        const schemaId = input.schemaId?.trim() || id("schema");
+        if (project.collections.schemaDrafts.some(({ id }) => id === schemaId))
+            throw new Error(`Schema ${schemaId} already exists.`);
+        const published = { ...createSchema(input.name, input.baseRevision, { type: "object", properties: {} }), id: schemaId, published: true, documentation: { description: input.description } };
         const schema = createSchemaWorkingDraft(published);
         return { ...project, collections: { ...project.collections, schemaDrafts: [...project.collections.schemaDrafts, schema] } };
     });
@@ -261,11 +262,43 @@ export function capturedValidationDestinationChoices(project, capture) {
     const flowSteps = project.collections.flows.flatMap((flow) => (flow.steps ?? []).map((step) => ({ id: step.id, name: `${flow.name} / ${step.name}` })));
     return { events, pages: named(project.collections.pages), flowSteps, profiles: named(project.collections.profiles), suggestedFixtureName: `${capture.eventName.replace(/(^|[_-])(\w)/g, (_match, _prefix, letter) => letter.toUpperCase())} captured validation` };
 }
+function assertedEvaluation(input) {
+    if (input.evaluated.winner?.schemaId !== input.schemaId)
+        throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove schema ${input.schemaId}.`);
+    const issueCodes = [...new Set(input.evaluated.issueDetails.map(({ code }) => code))];
+    return { status: input.evaluated.issueDetails.length ? "fail" : "pass", issueCodes };
+}
 export function createFixtureFromCapturedValidation(state, input, id) {
     if (!state.project.collections.schemaDrafts.some(({ id: schemaId }) => schemaId === input.schemaId))
         throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
-    const fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), ...(input.profileId ? { profileIds: [input.profileId] } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected: clone(input.expected), assertions: [{ field: "status", equals: input.expected.status }, { field: "issueCodes", equals: clone(input.expected.issueCodes) }], provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
+    const expected = assertedEvaluation(input), fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), ...(input.profileId ? { profileIds: [input.profileId] } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected, assertions: [{ field: "status", equals: expected.status }, { field: "issueCodes", equals: clone(expected.issueCodes) }], evaluationResultIdentity: input.evaluated.resultIdentity, provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
     return transactProject(state, `Create Fixture from capture ${input.captureId}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: [...project.collections.fixtures, fixture] } }));
+}
+function requirementsFromSchema(document, prefix = "") {
+    const properties = document.properties && typeof document.properties === "object" ? document.properties : {};
+    const required = new Set(Array.isArray(document.required) ? document.required.map(String) : []);
+    return Object.entries(properties).flatMap(([name, definition]) => {
+        const path = `${prefix}/${name}`, own = { path, ...(typeof definition.type === "string" ? { type: definition.type } : {}), ...(required.has(name) ? { required: true } : {}), ...(Array.isArray(definition.enum) ? { allowedValues: clone(definition.enum) } : {}) };
+        return [own, ...(definition.type === "object" ? requirementsFromSchema(definition, path) : [])];
+    });
+}
+export function capturedValidationProfileRequirements(project, input) {
+    assertedEvaluation(input);
+    const schema = project.collections.schemaDrafts.find(({ id }) => id === input.schemaId);
+    if (!schema)
+        throw new Error(`Adopt schema ${input.schemaId} before creating Profile requirements.`);
+    const working = schema.workingDraft, profileIds = working?.profileIds ?? schema.profileIds, profiles = (profileIds ?? []).map((profileId) => project.collections.profiles.find(({ id }) => id === profileId)).filter((profile) => Boolean(profile)), document = working?.document ?? schema.document;
+    if (!profiles.length && !document)
+        throw new Error(`Schema ${input.schemaId} has no evaluated document.`);
+    const requirements = profiles.length ? composeRequirementProfiles(profiles).requirements : requirementsFromSchema(document);
+    return requirements.map((requirement) => ({ ...clone(requirement), origin: `captured-validation:${input.captureId}`, evaluationResultIdentity: input.evaluated.resultIdentity }));
+}
+export function applyCapturedValidationToProfile(state, input) {
+    const profile = state.project.collections.profiles.find(({ id }) => id === input.profileId);
+    if (!profile)
+        throw new Error(`Unknown Profile ${input.profileId}.`);
+    const proposed = capturedValidationProfileRequirements(state.project, input);
+    return transactProject(state, `Add evaluated capture ${input.captureId} requirements to ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id !== profile.id ? candidate : { ...candidate, requirements: [...candidate.requirements.filter(({ path }) => !proposed.some((item) => item.path === path)), ...proposed] }) } }));
 }
 function canonicalAssignmentCondition(project, condition) { if (!condition)
     return undefined; if (condition.kind !== "predicate")

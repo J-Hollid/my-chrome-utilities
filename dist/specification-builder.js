@@ -17,6 +17,8 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
     q("#save-project-assignment").append(input);
 }
 q("#project-assignment-applicability").required = false;
+q("#project-schema-id").required = false;
+q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state, lastCommittedState;
@@ -183,6 +185,8 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
         update[field.key] = editorValue(field, form.elements.namedItem(field.key));
     if (selectedKind === "profiles")
         update.requirements = profileRequirements(form);
+    if (selectedKind === "schemaDrafts")
+        update.workingDraft = { ...entity.workingDraft, profileIds: update.profileIds };
     persist(transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => candidate.id === entity.id ? { ...candidate, ...update } : candidate) } })));
 }
 catch (error) {
