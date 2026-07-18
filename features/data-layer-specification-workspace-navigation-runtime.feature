@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=b83e05743b9f7d535c1aca9e313f11e9c2eb66b442212d1ae93f14afd66c96b1
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:46.483975157Z","feature_name":"Data layer Specification workspace navigation runtime","feature_path":"features/data-layer-specification-workspace-navigation-runtime.feature","background_hash":"f849ac55fc8318d39bbab0d24d66723bedb83fb3d567af42fb1308f2bd050814","implementation_hash":"sha256:fc74d9fd84afa92c2c79f114cdf885a46bf07299d375c91fae34b2688b628c5b","scenarios":[{"index":3,"name":"Data layer Specification workspace navigation runtime 004","scenario_hash":"15511546199bf04625868bf230737471bdbf4eca233cf3cdad1d6dddef9ebe85","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:46.483975157Z"},{"index":4,"name":"Data layer Specification workspace navigation runtime 005","scenario_hash":"820aac1d75a534b14b84114456f8f915dc77bca95959e8fa86d3d4011a190459","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:46.483975157Z"},{"index":5,"name":"Data layer Specification workspace navigation runtime 006","scenario_hash":"1c816de266708c14d3180b9a1f7749cf0d19fefa5b110ce1eea65e4b42acb56a","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:46.483975157Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Specification workspace navigation runtime
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=43c0e98e65002a5ae3e8940b866aab3938436171c1688b1b5501667a351c393d
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:29.277562010Z","feature_name":"Data layer bulk requirement authoring runtime","feature_path":"features/data-layer-bulk-requirement-authoring-runtime.feature","background_hash":"2cd0d35aaf9ae70a68339b792e6d0b3d477d8e75e819d647a75e654b36ca1ebc","implementation_hash":"sha256:f15ff354ee75d4e8d7ae6a500867dcdee0732f1e2d34c9ce3b83a60f7ff514a8","scenarios":[{"index":0,"name":"Data layer bulk requirement authoring runtime 001","scenario_hash":"cb0d819c7504cd0976ed8d6a5f50c3921ee5a775eeb509634c6568cb7fa538b5","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:29.277562010Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer bulk requirement authoring runtime
 
   Background:

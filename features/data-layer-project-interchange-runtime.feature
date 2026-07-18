@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=a973b99837093ca431ee7dff2dea84e3846f8b0e67ab55276ad65e120f06cbc3
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:37.070694763Z","feature_name":"Data layer project interchange runtime","feature_path":"features/data-layer-project-interchange-runtime.feature","background_hash":"accc78e1eb34a7dfeea21d8790b49741f2f9e757967626cba25b2422ed0ba38a","implementation_hash":"sha256:d81f43f3f1c5872182d4f48eb5fa340e13a8a203b0aef3c074e7c542e04638b4","scenarios":[{"index":3,"name":"Data layer project interchange runtime 004","scenario_hash":"81a0b81d091a487b1cd3afec2f614c3f2ace0a3a1944fe54c19339869d1a71f5","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:37.070694763Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project interchange runtime
 
   Background:

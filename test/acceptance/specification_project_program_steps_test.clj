@@ -7,6 +7,25 @@
   (deref (ns-resolve 'acceptance.steps.specification-project-program-assertions
                      'assert-runtime!)))
 
+(defn- example-validator []
+  (deref (ns-resolve 'acceptance.steps.specification-project-program
+                     'validate-example!)))
+
+(deftest validates-complete-specification-project-example-rows
+  (let [validate! (example-validator)
+        model-row {"review_state" "unresolved matcher tie"
+                   "confirmation_state" "blocked"
+                   "guidance" "Resolve applicability ambiguity"}
+        runtime-row {"gate_state" "unresolved ambiguity"
+                     "outcome" "blocked at its linked matcher"}]
+    (is (= {} (validate! :model {})))
+    (is (= model-row (validate! :model model-row)))
+    (is (= runtime-row (validate! :runtime runtime-row)))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (validate! :runtime (assoc runtime-row "outcome" "published"))))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (validate! :model runtime-row)))))
+
 (deftest validates-specification-project-runtime-observation
   (let [observed {:created {:empty true
                             :workspace true

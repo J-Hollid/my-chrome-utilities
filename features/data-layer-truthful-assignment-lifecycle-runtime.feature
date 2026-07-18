@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d71c82a590e66467394bda6a5b638140fe576a7fbf02a760f632eb38b3226495
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:53.697276115Z","feature_name":"Data layer truthful assignment lifecycle runtime","feature_path":"features/data-layer-truthful-assignment-lifecycle-runtime.feature","background_hash":"42250919095f3104bd74fb76493367fe068744e376ce26c44c4a94994492ab02","implementation_hash":"sha256:9b1c7a7c3fa85a0fb0f217ebf663a7f40a50d4f8882edc7234ede6366d5d15f4","scenarios":[{"index":0,"name":"Data layer truthful assignment lifecycle runtime 001","scenario_hash":"79d6d021667243f78fe44ceb1b46a1d0d815dbec85dd4bd90882629010f34af4","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:53.697276115Z"},{"index":3,"name":"Data layer truthful assignment lifecycle runtime 004","scenario_hash":"4734495beb7c05e179794716306077f777ff6ef32755da254ca4f460fea191c5","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:53.697276115Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer truthful assignment lifecycle runtime
 
   Background:

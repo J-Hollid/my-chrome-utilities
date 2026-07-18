@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=2c7c366761966241ff048e71e890f3a815b8955cfb7c6ce79c963ed2a42796f0
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:02.208449455Z","feature_name":"Data layer named applicability","feature_path":"features/data-layer-named-applicability.feature","background_hash":"befba8efefdd72ed67aa9bd73bc5ff36e720d8019a2e5cf6ba41df55561bfe54","implementation_hash":"sha256:2fd7714f2aa3c7161a4e1c38bb1455cf7a1ba71a23cac2babedf2e22ffa830c2","scenarios":[{"index":2,"name":"Data layer named applicability 003","scenario_hash":"2f96670f96ba54c6cd578427fb76e27d8434cf03d9dff93999c0e9e1bcb1ae24","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":3,"name":"Data layer named applicability 004","scenario_hash":"381af7e1dfe2d96586f13b776c15740ff5cc4c48cef36cc1817aacbd43822cc1","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":5,"name":"Data layer named applicability 006","scenario_hash":"935d87e5993cbd2221f5e124a659d3ee6a5dd0271085dfef7a9b53d31b223e19","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":7,"name":"Data layer named applicability 008","scenario_hash":"881469cef232ef4fc6a8e8172728668e84713e2f2a55fad85e3cf1d93d51aee2","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer named applicability
 
   Background:

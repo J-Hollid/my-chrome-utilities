@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3bf487b216b1fb8c6144bc214dbd46c7e2c505d30a3b7b9c14e1a35992f20d5e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:02:59.762546929Z","feature_name":"Data layer durable authoring drafts","feature_path":"features/data-layer-durable-authoring-drafts.feature","background_hash":"69278b88f2556901a245613bcdd943b428e491f5e7f4566b251651da0fb9b975","implementation_hash":"sha256:7e12aa18a777551d0ef319c24018f0a4ecc474c55afe1098150c9800485794b8","scenarios":[{"index":1,"name":"Data layer durable authoring drafts 002","scenario_hash":"d8b53185f5d1ec3f2777244560f5d932674835fa46ab7c613ab032d5011cf048","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:02:59.762546929Z"},{"index":3,"name":"Data layer durable authoring drafts 004","scenario_hash":"15dea2ec96beea21dfeeacc59c185b6e08a7fe3c8ccfeed46007df56d6a71daa","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:02:59.762546929Z"},{"index":6,"name":"Data layer durable authoring drafts 007","scenario_hash":"29556f3505b6030f230204687173388f13ceb015f89bc1afdc589c9394665f76","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:02:59.762546929Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer durable authoring drafts
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=729734a70d2bcb2529db0686efb6591fd5e5de24bf095786956fb5a59596f7f6
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:01:54.584745365Z","feature_name":"Data layer atomic project release","feature_path":"features/data-layer-atomic-project-release.feature","background_hash":"fd25aafe737cc543d90c71baf498f56c7f89ec9825736b61541b5516427d81be","implementation_hash":"sha256:2690cb139a01c5292c7b5f0c40e63cabb25dcb9891c06bd5daca33df1db04e89","scenarios":[{"index":1,"name":"Data layer atomic project release 002","scenario_hash":"325ea850d0cb68830d0b14e63a27702ba442e2866dae8f8645f5b897bcdcd9f3","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:01:54.584745365Z"},{"index":3,"name":"Data layer atomic project release 004","scenario_hash":"a6a1e849b765a2ac6c2d459f7b4a28eba8631678fba7334e7ef67fefd708adc8","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:01:54.584745365Z"},{"index":4,"name":"Data layer atomic project release 005","scenario_hash":"03828ba18d8fe98f6cc12486f7043b0f8b9779ea8fb071b93877982fa89e3b7a","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:01:54.584745365Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer atomic project release
 
   Background:
