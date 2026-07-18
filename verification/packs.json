@@ -755,6 +755,7 @@
       "replay"
     ],
     "unit": [
+      "test/background-command-test.mjs",
       "test/modular-utility-architecture-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
       "test/panel-empty-states-test.mjs",
