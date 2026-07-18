@@ -6,6 +6,7 @@ import {
   buildCoverageMatrix,
   commitStagedProjectImport,
   conditionMatches,
+  createProjectSchemaDraft,
   createSpecificationProject,
   exportSpecificationProject,
   exportSpecificationProjectState,
@@ -18,6 +19,11 @@ import {
   transactProject,
   undoProjectTransaction,
 } from "../dist/data-layer-specification-project.js";
+import {
+  FLOW_INSTANCES_STORAGE_KEY,
+  SPECIFICATION_PROJECT_STORAGE_KEY,
+  recordSpecificationCapture,
+} from "../dist/data-layer-specification-runtime.js";
 
 let seed = 0x70726f6a;
 
@@ -97,16 +103,23 @@ for (let sample = 0; sample < 200; sample += 1) {
     schemaRevision:(sample % 3) + 1,
     condition:first,
   };
-  const assignmentState = saveProjectAssignment(initial, assignmentInput, id);
-  const savedAssignment = assignmentState.project.collections.assignments[0];
+  const schemaState = createProjectSchemaDraft(initial, {
+    schemaId:assignmentInput.schemaId,
+    name:`Schema ${sample}`,
+    baseRevision:assignmentInput.schemaRevision,
+    description:`Generated schema ${sample}`,
+  }, id);
+  const assignmentState = saveProjectAssignment(schemaState, assignmentInput, id);
+  const savedAssignment = searchProjectAssignments(assignmentState.project, "").rows[0];
   const editedAssignmentState = saveProjectAssignment(assignmentState, {
     ...assignmentInput,
     id:savedAssignment.id,
     name:`Edited assignment ${sample}`,
   }, id);
-  assert.equal(editedAssignmentState.project.collections.assignments[0].id, savedAssignment.id,
+  const editedAssignment = searchProjectAssignments(editedAssignmentState.project, "").rows[0];
+  assert.equal(editedAssignment.id, savedAssignment.id,
     "assignment edits must preserve stable identity");
-  assert.deepEqual(editedAssignmentState.project.collections.assignments[0].condition, first,
+  assert.deepEqual(editedAssignment.condition, first,
     "assignment edits must preserve structured conditions");
   assert.equal(searchProjectAssignments(editedAssignmentState.project, `edited assignment ${sample}`).count, 1);
   const beforeInvalidAssignment = structuredClone(editedAssignmentState);
@@ -152,6 +165,58 @@ for (let sample = 0; sample < 200; sample += 1) {
   assert.equal(coverage.totalRows,
     Object.values(editedAssignmentState.project.collections).flat().length,
     "bounded coverage must retain the exact total row count");
+
+  const runtimeEventState = addProjectEntity(initial, "events", {
+    name:`Runtime event ${sample}`,
+    eventName:`runtime_${sample}`,
+  }, id);
+  const runtimeEvent = runtimeEventState.project.collections.events[0];
+  const runtimeFlowState = addProjectEntity(runtimeEventState, "flows", {
+    name:`Runtime flow ${sample}`,
+    steps:[{
+      id:`runtime-step-${sample}`,
+      name:`Runtime step ${sample}`,
+      eventId:runtimeEvent.id,
+      minimum:1,
+      maximum:1,
+    }],
+  }, id);
+  const runtimeValues = new Map([[SPECIFICATION_PROJECT_STORAGE_KEY, JSON.stringify(runtimeFlowState)]]);
+  const runtimeStorage = {
+    getItem:(key) => runtimeValues.get(key) ?? null,
+    setItem:(key, value) => runtimeValues.set(key, value),
+  };
+  const firstRuntime = recordSpecificationCapture(runtimeStorage, {
+    sessionId:`session-${sample}-a`,
+    pageUrl:`https://site-${sample}.example/path`,
+    sourceId:`source-${sample}`,
+    rawValue:{ event:`RUNTIME_${sample}` },
+  });
+  assert.equal(firstRuntime.instances.length, 1,
+    "a matching production capture must create exactly one flow instance");
+  assert.equal(firstRuntime.active.status, "complete",
+    "a generated one-step flow must complete after its matching capture");
+  assert.deepEqual(JSON.parse(runtimeValues.get(FLOW_INSTANCES_STORAGE_KEY)), firstRuntime.instances,
+    "runtime persistence must exactly match the returned instances");
+
+  const secondRuntime = recordSpecificationCapture(runtimeStorage, {
+    sessionId:`session-${sample}-b`,
+    pageUrl:`https://site-${sample}.example/path`,
+    sourceId:`source-${sample}`,
+    rawValue:{ event:`runtime_${sample}` },
+  });
+  assert.deepEqual(secondRuntime.instances.map(({ sessionId }) => sessionId).sort(),
+    [`session-${sample}-a`, `session-${sample}-b`],
+    "runtime observations must conserve independent session instances");
+  const beforeUnknownCapture = structuredClone(secondRuntime.instances);
+  const unknownRuntime = recordSpecificationCapture(runtimeStorage, {
+    sessionId:`session-${sample}-c`,
+    pageUrl:`https://site-${sample}.example/path`,
+    sourceId:`source-${sample}`,
+    rawValue:{ event:`unknown_${sample}` },
+  });
+  assert.deepEqual(unknownRuntime.instances, beforeUnknownCapture,
+    "an unrelated capture must not create or alter flow instances");
 }
 
 console.log("Specification Project properties: 200 generated cases passed");
