@@ -1,7 +1,13 @@
-import { createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
+import { createCanonicalProjectEnvelope } from "./data-layer-specification-model.js";
 export const CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY = "my-chrome-utilities.specification-project.v1";
 const clone = (value) => structuredClone(value);
-function entityRevisions(state, previous) { const prior = previous?.entityRevisions ?? {}; return Object.fromEntries(Object.values(state.project.collections).flat().map(({ id }) => [id, prior[id] ?? 1])); }
+function entityRevisions(state, previous) {
+    const priorRevisions = previous?.entityRevisions ?? {}, priorEntities = new Map((Object.values(previous?.project.collections ?? {}).flat()).map((entity) => [entity.id, entity]));
+    return Object.fromEntries(Object.values(state.project.collections).flat().map((entity) => {
+        const prior = priorEntities.get(entity.id), revision = priorRevisions[entity.id] ?? 0;
+        return [entity.id, !prior || JSON.stringify(prior) !== JSON.stringify(entity) ? revision + 1 : Math.max(1, revision)];
+    }));
+}
 function envelopeFor(state, revision, previous) { const base = createCanonicalProjectEnvelope(state.project, state.draft?.id ?? `release:${state.project.currentRelease ?? "unpublished"}`); return { ...base, revision, entityRevisions: entityRevisions(state, previous), draft: clone(state.draft), history: clone(state.history) }; }
 export function restoreCanonicalProjectEnvelope(serialized) { if (!serialized)
     return undefined; const parsed = JSON.parse(serialized); if ("format" in parsed && parsed.format === "my-chrome-utilities.canonical-specification-project")

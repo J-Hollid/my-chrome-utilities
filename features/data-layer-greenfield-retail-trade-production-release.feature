@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=64e8b905ee6c6de830b1f5bf064ff801c4b13fd4e0acf19d46a3eadc38aecccf
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:33:55.808550856Z","feature_name":"Data layer greenfield Retail Trade production release","feature_path":"features/data-layer-greenfield-retail-trade-production-release.feature","background_hash":"a1cb1144dd235fc8a7a3e0816749c2799ca3cc39e2ae9c7dac0a89fdf249bf54","implementation_hash":"sha256:e0766a9bb521144d38ab3f11b5278e3d77fe62735254bd9d32c1b8c502ded66c","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer greenfield Retail Trade production release
 
   Background:

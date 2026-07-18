@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=035512d0eb0c7bf7ff80b3088ca94dc89e9492326ff1221c64aa7089fca99d01
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:34.802771783Z","feature_name":"Data layer effective schema compilation runtime","feature_path":"features/data-layer-effective-schema-compilation-runtime.feature","background_hash":"fa35579bfbedfa51a585c915ff38e2af0cbe782300b4e5fe2ab36f6139d23243","implementation_hash":"sha256:03bbe08c8ba8c89e29f823fcf9b0b5b974f0e975840808bc8ec34ab01eb6fb41","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer effective schema compilation runtime
 
   Background:

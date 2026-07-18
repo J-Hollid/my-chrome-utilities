@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=dcca98b6d82f7ba91b68d18cb80c7253b153e065bb5efc92bff4df3af530d82c
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:25.128847783Z","feature_name":"Data layer canonical project schema drafts runtime","feature_path":"features/data-layer-canonical-project-schema-drafts-runtime.feature","background_hash":"09a943a0763d3b71e2e8978940adbd4082293833182f317c13b4fb12f5d74514","implementation_hash":"sha256:5464c2706d5b6afc23434a504b1950ee50e7e10be7f04805d485ae1674c6d199","scenarios":[{"index":14,"name":"Data layer canonical project schema drafts runtime 015","scenario_hash":"b2f997ae9b287efc8e3cc840fe6676e9782dd308ef43f134cc94cd9eb2133d15","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:25.128847783Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer canonical project schema drafts runtime
 
   Background:

@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=8422f0ae0bc8431f455003564666bf2e4e99c23e4fcf9b02a1441bb1bd00fcb3
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-18T01:03:02.800445388Z","feature_name":"Data layer page and event catalog","feature_path":"features/data-layer-page-event-catalog.feature","background_hash":"7ce39bb71bb0f7c8b4d284c7f739b25cc9995473cc7c1522a91f784d6e1e9c74","implementation_hash":"sha256:f7b8385ca9bd99ed3b48b5e33f3d757809da4f248113bb0b533ca029a73db50c","scenarios":[{"index":0,"name":"Data layer page and event catalog 001","scenario_hash":"e1eb79fbb012f0d6d9cc19a60837716fc91c9921dec411ac8c0c5b4aaf4677d6","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.800445388Z"}]}
+# {"version":1,"tested_at":"2026-07-18T12:33:43.359703088Z","feature_name":"Data layer page and event catalog","feature_path":"features/data-layer-page-event-catalog.feature","background_hash":"7ce39bb71bb0f7c8b4d284c7f739b25cc9995473cc7c1522a91f784d6e1e9c74","implementation_hash":"sha256:f7b8385ca9bd99ed3b48b5e33f3d757809da4f248113bb0b533ca029a73db50c","scenarios":[{"index":0,"name":"Data layer page and event catalog 001","scenario_hash":"e1eb79fbb012f0d6d9cc19a60837716fc91c9921dec411ac8c0c5b4aaf4677d6","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.800445388Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer page and event catalog

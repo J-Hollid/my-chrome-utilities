@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=54df895597b232aaf54118e3ec676c74ccbd3a31cbc2ede9b5ab2353dc98a113
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-18T01:03:32.816995417Z","feature_name":"Data layer durable authoring drafts runtime","feature_path":"features/data-layer-durable-authoring-drafts-runtime.feature","background_hash":"acde5ea7a338571a667b2d3262d4a4404aa005dc89c8d91570a152d0ae834e62","implementation_hash":"sha256:b8694e9b2809ec563b5557176f50f7eef106d0e58c8f7670521d86dc957ef0d3","scenarios":[{"index":4,"name":"Data layer durable authoring drafts runtime 005","scenario_hash":"3e81e92e98c407ef4e5a699bddd1e7e95d5fc73b6162fc80cc48697e385158a7","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:32.816995417Z"}]}
+# {"version":1,"tested_at":"2026-07-18T12:34:22.759423116Z","feature_name":"Data layer durable authoring drafts runtime","feature_path":"features/data-layer-durable-authoring-drafts-runtime.feature","background_hash":"acde5ea7a338571a667b2d3262d4a4404aa005dc89c8d91570a152d0ae834e62","implementation_hash":"sha256:b8694e9b2809ec563b5557176f50f7eef106d0e58c8f7670521d86dc957ef0d3","scenarios":[{"index":4,"name":"Data layer durable authoring drafts runtime 005","scenario_hash":"3e81e92e98c407ef4e5a699bddd1e7e95d5fc73b6162fc80cc48697e385158a7","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:32.816995417Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer durable authoring drafts runtime

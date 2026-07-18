@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {
   applyCanonicalCommand,
-  applyProjectOwnedSchemaEdits,
+  applyCanonicalSchemaDraftEdits,
   compileSpecificationProject,
   createCanonicalProjectEnvelope,
   evaluateSpecificationObservation,
@@ -50,7 +50,7 @@ const migration=migrateCanonicalProject({projectEnvelope:envelope,schemaLibrary:
 assert.equal(migration.status,"review-required");assert.equal(migration.conflicts[0].schemaId,"schema:retail");assert.equal(migration.sourceProject.collections.schemaDrafts[0].version,3);assert.equal(migration.sourceLibrary[0].version,5);
 const projectState={project:structuredClone(project),draft:{id:"draft:1",status:"Saved",updatedAt:"2026-07-18T00:00:00.000Z"},history:{undo:[],redo:[]}},editedRetail=structuredClone(project.collections.schemaDrafts[0]);
 editedRetail.workingDraft.document={type:"object",properties:{ecommerce:{type:"object",properties:{transaction_id:{type:"string"}}}}};
-const unrelatedSchema={...legacySchema,id:"schema:legacy"},synchronized=applyProjectOwnedSchemaEdits(projectState,[editedRetail,unrelatedSchema]);
+const unrelatedSchema={...legacySchema,id:"schema:legacy"},synchronized=applyCanonicalSchemaDraftEdits(projectState,[editedRetail,unrelatedSchema]);
 assert.deepEqual(synchronized.project.collections.schemaDrafts[0].workingDraft.document,editedRetail.workingDraft.document);assert.equal(synchronized.project.collections.schemaDrafts.some(({id})=>id==="schema:legacy"),false);assert.deepEqual(synchronized.project.collections.schemaDrafts[0].document,{type:"object"},"published project schema must remain immutable");
 
 const compiled=compileSpecificationProject(envelope);

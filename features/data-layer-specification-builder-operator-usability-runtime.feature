@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7ea1733d734a4aaeeb30c258f1324753e6dc77e9516a47676de14b68be80648c
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:35:09.257667136Z","feature_name":"Data layer Specification Builder operator usability runtime","feature_path":"features/data-layer-specification-builder-operator-usability-runtime.feature","background_hash":"e094d728ff710bb33112844fec0c6be4326e1b4cdb2d3999b90224a758d8bdd9","implementation_hash":"sha256:bedb0a50cbb7bc8a473ddb24fbbb4c0200c0eabcb993d8b9c2b40537acf0985d","scenarios":[{"index":6,"name":"Data layer Specification Builder operator usability runtime 007","scenario_hash":"9c0caf1d4f53909e3e0b949e2baf8ee97c355321b0f32fe089f0aef59cca8e16","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:35:09.257667136Z"},{"index":11,"name":"Data layer Specification Builder operator usability runtime 012","scenario_hash":"ded945f15515608560d0b9c44ffc246d3f751215f830e68e3ae4a55e97f91aaf","mutation_count":14,"result":{"Total":14,"Killed":14,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:35:09.257667136Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Specification Builder operator usability runtime
 
   Background:

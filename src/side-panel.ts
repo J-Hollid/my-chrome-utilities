@@ -359,7 +359,7 @@ import {
   renderPanelEmptyState,
 } from "./panel-empty-states-ui.js";
 import {
-  applyProjectOwnedSchemaEdits,
+  applyCanonicalSchemaDraftEdits,
   commitCanonicalProjectState,
   recordSpecificationCapture,
   recordSpecificationNavigation,
@@ -2569,7 +2569,7 @@ function openNewSchemaEditor(): void {
 }
 
 function persistSchemaLibrary(): void {
-  const previousProject=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),previousSchemas=dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(previousProject),project=restoreCanonicalProjectState(previousProject),ownedIds=new Set(project?.project.collections.schemaDrafts.map(({id})=>id)??[]),schemaValue=serializeSchemaLibrary(schemas.filter(({id})=>!ownedIds.has(id))),nextProject=project?applyProjectOwnedSchemaEdits(project,schemas):undefined;
+  const previousProject=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),previousSchemas=dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(previousProject),project=restoreCanonicalProjectState(previousProject),ownedIds=new Set(project?.project.collections.schemaDrafts.map(({id})=>id)??[]),schemaValue=serializeSchemaLibrary(schemas.filter(({id})=>!ownedIds.has(id))),nextProject=project?applyCanonicalSchemaDraftEdits(project,schemas):undefined;
   const restore=(key:string,value:string|null):void=>{if(value===null)dataLayerStorage.removeItem(key);else dataLayerStorage.setItem(key,value);};
   try{if(schemaValue!==previousSchemas)dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY,schemaValue);if(nextProject){const result=commitCanonicalProjectState(dataLayerStorage,nextProject,{expectedRevision:envelope?.revision??0,pendingLabel:"Side-panel schema edit"});if(result.status==="conflict")throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);}}
   catch(error){if(schemaValue!==previousSchemas)restore(SCHEMA_LIBRARY_STORAGE_KEY,previousSchemas);throw error;}

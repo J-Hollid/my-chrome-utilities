@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=68d838afb98f80a092f180d77d3f4035ee50649f85b41a9c260e8511fc576c61
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:35:23.773502865Z","feature_name":"Data layer truthful preflight release correction runtime","feature_path":"features/data-layer-truthful-preflight-release-correction-runtime.feature","background_hash":"df13e7287e287f6eda5b60d853d94b496cbd36b499a85f9e2110a990187f5809","implementation_hash":"sha256:2d90b9d8974a035c5966649d08df6988e9c81a8d8690975096b279afa301af5f","scenarios":[{"index":13,"name":"Data layer truthful preflight release correction runtime 014","scenario_hash":"d4848025181a0ceb541323c985a8017028fc5e7cd9a9d9677e93f363fef58d79","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:35:23.773502865Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer truthful preflight release correction runtime
 
   Background:

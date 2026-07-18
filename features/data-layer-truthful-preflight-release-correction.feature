@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7f5f74fd111671285a1c24c47314e64ee5a8e2b039ff2c32c1c8a233c9fd5922
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:10.639685438Z","feature_name":"Data layer truthful preflight release correction","feature_path":"features/data-layer-truthful-preflight-release-correction.feature","background_hash":"0ccc48b73cab55c2d3cea2a56a8cf8ce62eac336f8a088c7d8759df50226f684","implementation_hash":"sha256:52be0de0c06ece4d560c82877438f8905c7e683567037a90e23625b94a0d1d19","scenarios":[{"index":0,"name":"Data layer truthful preflight release correction 001","scenario_hash":"93396021fde0d6dba00f4318fd8d7d48574cf3a5dfd17cb63195c171f694de45","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:10.639685438Z"},{"index":12,"name":"Data layer truthful preflight release correction 013","scenario_hash":"25bee3018ad9cdf4a6f26d5fbe3ceaa1a0daa4d104f4a2443940bc472f87808a","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:10.639685438Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer truthful preflight release correction
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=47d29261b683ccc94280c5ae0d1ea34a32e81b42bc0b1c994a2cefa5f7b9eb34
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:06.398909911Z","feature_name":"Data layer temporal flow execution correction","feature_path":"features/data-layer-temporal-flow-execution-correction.feature","background_hash":"2c210564f3086597aa9fa1ad2431e314a4ba8841048a4a0531b37d4ff0596e1b","implementation_hash":"sha256:53f2d69db9072511cbe88611a51406e7b78dd323851c2109bd099d00eb1b8fd9","scenarios":[{"index":1,"name":"Data layer temporal flow execution correction 002","scenario_hash":"7212d376a9b5a4ba3c1cf801197c8ab91b64ee68e4088668b4a0ceafa3c3af92","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:06.398909911Z"},{"index":2,"name":"Data layer temporal flow execution correction 003","scenario_hash":"7f5554c62b58669a1ad568a071045890743775962cbaa5dfd2fb21d02b848f50","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:06.398909911Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer temporal flow execution correction
 
   Background:

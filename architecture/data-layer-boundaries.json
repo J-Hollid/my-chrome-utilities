@@ -548,6 +548,10 @@
     "module": "schemas",
     "layer": "application"
   },
+  "src/data-layer-specification-model.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
   "src/data-layer-specification-engine.ts": {
     "module": "schemas",
     "layer": "application"

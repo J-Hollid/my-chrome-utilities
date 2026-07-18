@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=98e70b411ae9c8a8c5488e58b49ed72820aacca35f8573daef9b16dce9caa596
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:33:54.605365871Z","feature_name":"Data layer contextual specification editors","feature_path":"features/data-layer-contextual-specification-editors.feature","background_hash":"1f42a10ae2b349d44e411ff2abefb0f569f1c14fdbd4023366822e8d38af5ef7","implementation_hash":"sha256:3479c8ee683b41229ad4ac5dfd5f98f0c6861f2ce17b989902992369eda4d7e8","scenarios":[{"index":8,"name":"Data layer contextual specification editors 009","scenario_hash":"10b10a6310673ed6fa72f4b48e4b8b73960152a3c40295bb7783438cc507b305","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:54.605365871Z"},{"index":12,"name":"Data layer contextual specification editors 013","scenario_hash":"2c67360bae9bc5e9b7fe057645454bed9aed44f97dfce715d08b765d9f068d08","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:54.605365871Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer contextual specification editors
 
   Background:

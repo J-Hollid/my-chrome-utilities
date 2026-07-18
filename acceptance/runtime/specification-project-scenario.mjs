@@ -12,7 +12,7 @@ import {
 } from "../../dist/data-layer-specification-project.js";
 import {
   applyCanonicalCommand,
-  applyProjectOwnedSchemaEdits,
+  applyCanonicalSchemaDraftEdits,
   compileSpecificationProject,
   createCanonicalProjectEnvelope,
   evaluateSpecificationObservation,
@@ -125,7 +125,7 @@ const probes = {
     const state={project:structuredClone(assuranceProject),draft:{id:"draft:sync",status:"Saved",updatedAt:new Date(0).toISOString()},history:{undo:[],redo:[]}};
     const schema=structuredClone(state.project.collections.schemaDrafts[0]);
     schema.workingDraft={...(schema.workingDraft??{name:schema.name,assignments:[],profileIds:[],changes:[]}),document:{type:"object",properties:{account_id:{type:"string"}}}};
-    const next=applyProjectOwnedSchemaEdits(state,[schema,{id:"schema:unrelated",name:"Unrelated",document:{type:"object"}}]);
+    const next=applyCanonicalSchemaDraftEdits(state,[schema,{id:"schema:unrelated",name:"Unrelated",document:{type:"object"}}]);
     assert.deepEqual(next.project.collections.schemaDrafts[0].workingDraft.document,schema.workingDraft.document);
     assert.equal(next.project.collections.schemaDrafts.some(({id})=>id==="schema:unrelated"),false);
     return {schemaId:schema.id,unrelatedAdopted:false};

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=74ac97311bbbb2d44fcb6ad22886a9305ebf77b445a6eb95a327c37dfb8cef9f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:50.558081081Z","feature_name":"Data layer production fixture execution runtime","feature_path":"features/data-layer-production-fixture-execution-runtime.feature","background_hash":"155f8477ed27ecdebf89b6772bb4863c58e5e949d43603f8494bcd9a0c532489","implementation_hash":"sha256:5dace47c60b90a6d76176a22a03d68b296d2e439992eda8acbeb5e8a74e9ebfc","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer production fixture execution runtime
 
   Background:

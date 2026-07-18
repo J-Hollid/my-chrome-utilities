@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4df484078d1fd476bf8c66e7502c9923ebef63d36990ec09343ebeef257ccd79
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:33:47.109670676Z","feature_name":"Data layer canonical project schema drafts","feature_path":"features/data-layer-canonical-project-schema-drafts.feature","background_hash":"6a98b15e74255d5c7eeb277598388b622a1893dc9728ad987dbc99e06715e6ab","implementation_hash":"sha256:429099d9358d0b7e1b6731597018ed01d4cd1278d9dd135c85f1aa16ea449a08","scenarios":[{"index":0,"name":"Data layer canonical project schema drafts 001","scenario_hash":"35159f124d02e945c0d64f11624e693585e7361226984b5844b60471916d255f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"},{"index":4,"name":"Data layer canonical project schema drafts 005","scenario_hash":"95df86859f0511f8a430adec0bf2f7f7eefa5b195f6ef43601acb61c22bc68c9","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"},{"index":14,"name":"Data layer canonical project schema drafts 015","scenario_hash":"18a583a9e9fb97ea5655c35642831e19b8a6964ece7a8a10fb4fb265e4198378","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer canonical project schema drafts
 
   Background:

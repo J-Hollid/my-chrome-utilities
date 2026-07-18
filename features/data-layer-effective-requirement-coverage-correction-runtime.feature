@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=1779bf45ce3c7ebfbb3461c4fc1b4936e524b542381ee5ab09714bcd5618980c
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:34.737810464Z","feature_name":"Data layer effective requirement coverage correction runtime","feature_path":"features/data-layer-effective-requirement-coverage-correction-runtime.feature","background_hash":"80ebddc58467358dacbaef5dd62fddcf9ff07a45071da667e3f53df29303c7c4","implementation_hash":"sha256:5b71936fb9cbcb8de5add9dfff635c66f4e0858a96f9ad0b7882ce5591a28678","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer effective requirement coverage correction runtime
 
   Background:

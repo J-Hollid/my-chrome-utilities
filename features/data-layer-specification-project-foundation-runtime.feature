@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=00681e47326000197ea8ca62a608c739dc0034b0096c3af388c7f063b32f479a
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-18T01:03:39.591917813Z","feature_name":"Data layer Specification Project foundation runtime","feature_path":"features/data-layer-specification-project-foundation-runtime.feature","background_hash":"36c8dea4cb101740b002a209cf1757610b22375a3f314ac2998cb66be918266c","implementation_hash":"sha256:1865636a48974af3e95b13422b055a81fb5483ab5ee6a0829c95fa151d3312a4","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-18T12:34:23.237118257Z","feature_name":"Data layer Specification Project foundation runtime","feature_path":"features/data-layer-specification-project-foundation-runtime.feature","background_hash":"36c8dea4cb101740b002a209cf1757610b22375a3f314ac2998cb66be918266c","implementation_hash":"sha256:1865636a48974af3e95b13422b055a81fb5483ab5ee6a0829c95fa151d3312a4","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer Specification Project foundation runtime

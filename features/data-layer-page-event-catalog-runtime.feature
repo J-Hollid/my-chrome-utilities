@@ -1,6 +1,6 @@
 # mutation-stamp: sha256=6ddaa229cf4d45b7bfcbecea0ddf50f6f2d60eab43dfc848dcd13e73bb818484
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-18T01:03:35.231337915Z","feature_name":"Data layer page and event catalog runtime","feature_path":"features/data-layer-page-event-catalog-runtime.feature","background_hash":"07b076d2b94455e37f031fffb933b4b853dec260d62fbb00c143a35db8a489f2","implementation_hash":"sha256:ffd88d9f99876031b53c45312471930af735d49e37af2d1434f0eac4547a9d9a","scenarios":[]}
+# {"version":1,"tested_at":"2026-07-18T12:34:22.897886918Z","feature_name":"Data layer page and event catalog runtime","feature_path":"features/data-layer-page-event-catalog-runtime.feature","background_hash":"07b076d2b94455e37f031fffb933b4b853dec260d62fbb00c143a35db8a489f2","implementation_hash":"sha256:ffd88d9f99876031b53c45312471930af735d49e37af2d1434f0eac4547a9d9a","scenarios":[]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer page and event catalog runtime

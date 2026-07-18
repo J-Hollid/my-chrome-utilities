@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=1bcd58160a75fcc666d54928b686c0b7a8454f564fb0846c4ef8f40067666cdd
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:33:57.533525033Z","feature_name":"Data layer production fixture execution","feature_path":"features/data-layer-production-fixture-execution.feature","background_hash":"eb6fdfe9e62b4b23550ba34b28724325235909470a6836db9ef6cc3b3ceb45f1","implementation_hash":"sha256:7db14f584b58e12b64ad9900b808e55a505e2445544b8d9608a5bb7a123588fa","scenarios":[{"index":2,"name":"Data layer production fixture execution 003","scenario_hash":"7647cf571c553e41c5f59df434fd126e21ef7e529bc3ef40ebb1903996ff730f","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:57.533525033Z"},{"index":3,"name":"Data layer production fixture execution 004","scenario_hash":"5529e931079f86117f630db8a1a85b4d76c4743dd376db7032fe6aba3ad22031","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:57.533525033Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer production fixture execution
 
   Background:

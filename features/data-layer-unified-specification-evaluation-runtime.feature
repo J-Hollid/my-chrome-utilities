@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=7c90a7746633522eff5a2e447c39375cc74b3e96d68540bf8a08f5f7df09e7b3
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:35:23.843257957Z","feature_name":"Data layer unified specification evaluation runtime","feature_path":"features/data-layer-unified-specification-evaluation-runtime.feature","background_hash":"7613249d9524f1f62ef432192d7d4e41b76d5a73b1c954f4ba116580898ead0d","implementation_hash":"sha256:65e6a23d2af61956c716921ae851f01926e5b3c0a1f9ddf66ffe123ee4b9758d","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer unified specification evaluation runtime
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=512ec505934b1094c7b2985ad77e9753da4405a5fce1c9982f10eb66b74991f2
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:35:12.155196045Z","feature_name":"Data layer staged multiformat bulk authoring runtime","feature_path":"features/data-layer-staged-multiformat-bulk-authoring-runtime.feature","background_hash":"bdf7a1bfd38e2c8afe7888508cf111f069e90bafe859ec63c4f1498af413876b","implementation_hash":"sha256:be8b88d297f3620e751cb6d822a5e5f1444ed546f3ea72f2b13513e097f10280","scenarios":[{"index":0,"name":"Data layer staged multiformat bulk authoring runtime 001","scenario_hash":"0fad7e3db63a8c1363d1c8d31610609374bf405f68c8a74d96ebe57e98956208","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:35:12.155196045Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer staged multiformat bulk authoring runtime
 
   Background:

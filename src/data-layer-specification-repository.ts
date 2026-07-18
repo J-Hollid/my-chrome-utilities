@@ -1,4 +1,4 @@
-import {createCanonicalProjectEnvelope,type CanonicalProjectEnvelope} from "./data-layer-specification-engine.js";
+import {createCanonicalProjectEnvelope,type CanonicalProjectEnvelope} from "./data-layer-specification-model.js";
 import type {ProjectState} from "./data-layer-specification-project.js";
 
 export const CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY="my-chrome-utilities.specification-project.v1";
@@ -6,7 +6,13 @@ export interface PersistedCanonicalProject extends CanonicalProjectEnvelope{draf
 export interface ProjectStorage{getItem(key:string):string|null;setItem(key:string,value:string):void}
 
 const clone=<T>(value:T):T=>structuredClone(value);
-function entityRevisions(state:ProjectState,previous?:PersistedCanonicalProject):Record<string,number>{const prior=previous?.entityRevisions??{};return Object.fromEntries((Object.values(state.project.collections) as {id:string}[][]).flat().map(({id})=>[id,prior[id]??1]));}
+function entityRevisions(state:ProjectState,previous?:PersistedCanonicalProject):Record<string,number>{
+  const priorRevisions=previous?.entityRevisions??{},priorEntities=new Map(((Object.values(previous?.project.collections??{}) as {id:string}[][]).flat()).map((entity)=>[entity.id,entity]));
+  return Object.fromEntries((Object.values(state.project.collections) as {id:string}[][]).flat().map((entity)=>{
+    const prior=priorEntities.get(entity.id),revision=priorRevisions[entity.id]??0;
+    return[entity.id,!prior||JSON.stringify(prior)!==JSON.stringify(entity)?revision+1:Math.max(1,revision)];
+  }));
+}
 function envelopeFor(state:ProjectState,revision:number,previous?:PersistedCanonicalProject):PersistedCanonicalProject{const base=createCanonicalProjectEnvelope(state.project,state.draft?.id??`release:${state.project.currentRelease??"unpublished"}`);return{...base,revision,entityRevisions:entityRevisions(state,previous),draft:clone(state.draft),history:clone(state.history)};}
 export function restoreCanonicalProjectEnvelope(serialized:string|null):PersistedCanonicalProject|undefined{if(!serialized)return undefined;const parsed=JSON.parse(serialized) as PersistedCanonicalProject|ProjectState;if("format"in parsed&&parsed.format==="my-chrome-utilities.canonical-specification-project")return clone(parsed);if("project"in parsed)return envelopeFor(parsed as ProjectState,0);throw new Error("Unsupported Specification Project storage format.");}
 export function restoreCanonicalProjectState(serialized:string|null):ProjectState|undefined{const envelope=restoreCanonicalProjectEnvelope(serialized);return envelope?{project:clone(envelope.project),...(envelope.draft?{draft:clone(envelope.draft)}:{}),history:clone(envelope.history??{undo:[],redo:[]})}:undefined;}

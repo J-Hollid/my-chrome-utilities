@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=710f8593825f367fc76326ece3c54a9c17a44d376cba55d01f41150decd24799
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:34:34.668940068Z","feature_name":"Data layer contextual specification editors runtime","feature_path":"features/data-layer-contextual-specification-editors-runtime.feature","background_hash":"91ca42472f5e0458db0f2382fe0c6f1c3e434acd12da289b76de0ddb4f107e6e","implementation_hash":"sha256:da03f8cf338cfc92aa96fb36b712ac26b1373f1a10d16b30902527d5d9879b5c","scenarios":[{"index":12,"name":"Data layer contextual specification editors runtime 013","scenario_hash":"351d568d16371ac4742aeb9a92243be41bf78060468416e42da74d363ce19b95","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:34.668940068Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer contextual specification editors runtime
 
   Background:

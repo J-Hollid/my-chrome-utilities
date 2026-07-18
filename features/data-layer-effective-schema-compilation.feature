@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=6bf83d02918070f63912e40b691b4557ffcf6aacaeebc81dd4764dd2f7ede17a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T12:33:55.725138602Z","feature_name":"Data layer effective schema compilation","feature_path":"features/data-layer-effective-schema-compilation.feature","background_hash":"5d913d12016759e598b234a9f9cdda26961fbf898c2ae2325db60a98ad425775","implementation_hash":"sha256:86707518c39384facf5b4b78bc9cc8524349be124ad7f4b91d2a1db2a3062fe1","scenarios":[{"index":3,"name":"Data layer effective schema compilation 004","scenario_hash":"f06e66974b9fad993855ed5b5888557ec2dadbadf7ca758e7286c91e5cff3780","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:55.725138602Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer effective schema compilation
 
   Background:

@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyProjectOwnedSchemaEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -2575,7 +2575,7 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    const previousProject = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyProjectOwnedSchemaEdits(project, schemas) : undefined;
+    const previousProject = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
     const restore = (key, value) => { if (value === null)
         dataLayerStorage.removeItem(key);
     else
