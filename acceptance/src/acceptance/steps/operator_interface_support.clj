@@ -95,6 +95,8 @@
    "second_push_path" #{"analytics.queue"}
    "invalid_push_path" #{"analytics["}
    "item_name" #{"Purchase confirmation" "Purchase journey"}
+   "initial_item" #{"Pages" "Page groups" "Flows"}
+   "key" #{"ArrowDown" "ArrowUp" "Home" "End"}
    "motion_preference" #{"no preference" "reduce"}
    "navigation_key" #{"ArrowDown" "ArrowLeft" "ArrowRight" "Home" "End"}
    "navigation_action" #{"Close editor" "Back to captured event"}
@@ -104,6 +106,7 @@
    "tab_set" #{"Workspace" "Data Layer"}
    "initial_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Sessions" "Schemas"}
    "target_tab" #{"Data Layer" "Hotkeys" "Live" "Library" "Schemas"}
+   "target_item" #{"Page groups" "Pages" "Shared profiles" "Releases"}
    "return_action" #{"Back to events" "Escape"}
    "navigation_level" #{"Data Layer" "workspace"}
    "notification" #{"Pause failed" "Testing started"}

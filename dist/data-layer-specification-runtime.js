@@ -1,4 +1,4 @@
-import { compileSpecificationProject, createCanonicalProjectEnvelope, evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
+import { evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
 export const SPECIFICATION_PROJECT_STORAGE_KEY = "my-chrome-utilities.specification-project.v1";
 export const FLOW_INSTANCES_STORAGE_KEY = "my-chrome-utilities.flow-instances.v1";
 export const FLOW_ROUTING_STORAGE_KEY = "my-chrome-utilities.flow-routing.v1";
@@ -14,6 +14,8 @@ function restoreProject(storage) {
         return undefined;
     }
 }
+function publishedPlan(project) { if (!project.currentRelease)
+    return undefined; const release = project.releases.find(({ id }) => id === project.currentRelease); return release?.executablePlan; }
 function restoreInstances(storage) { const serialized = storage.getItem(FLOW_INSTANCES_STORAGE_KEY); if (!serialized)
     return []; try {
     const value = JSON.parse(serialized);
@@ -36,10 +38,10 @@ export function recordSpecificationRuntimeObservation(storage, observation) {
     if (!project)
         return { instances: restoreInstances(storage) };
     const observedEventId = eventId(project, observation), observedPageId = pageId(project, observation.pageUrl);
-    const prior = restoreInstances(storage), payload = observation.payload && typeof observation.payload === "object" ? observation.payload : {}, url = observation.pageUrl ? new URL(observation.pageUrl, globalThis.location?.href) : undefined, compiled = compileSpecificationProject(createCanonicalProjectEnvelope(project, "runtime"));
-    if (compiled.status === "blocked")
+    const prior = restoreInstances(storage), payload = observation.payload && typeof observation.payload === "object" ? observation.payload : {}, url = observation.pageUrl ? new URL(observation.pageUrl, globalThis.location?.href) : undefined, plan = publishedPlan(project);
+    if (!plan)
         return { instances: prior };
-    const evaluation = evaluateSpecificationObservation(compiled.plan, { ...observation, ...payload, payload: observation.payload ?? {}, pathname: url?.pathname ?? "", ...(observedEventId ? { eventId: observedEventId } : {}), ...(observedPageId ? { pageId: observedPageId } : {}) }, prior), transition = evaluation.stateTransition, instances = transition.instances;
+    const evaluation = evaluateSpecificationObservation(plan, { ...observation, ...payload, payload: observation.payload ?? {}, pathname: url?.pathname ?? "", ...(observedEventId ? { eventId: observedEventId } : {}), ...(observedPageId ? { pageId: observedPageId } : {}) }, prior), transition = evaluation.stateTransition, instances = transition.instances;
     storage.setItem(FLOW_INSTANCES_STORAGE_KEY, JSON.stringify(instances));
     const active = transition.active, ambiguity = transition.ambiguity, applicability = { candidates: evaluation.candidates.map((candidate) => ({ id: candidate.assignmentId, name: candidate.assignmentId, matched: candidate.rejectionReasons.length === 0, priority: candidate.priority, evidence: candidate.rejectionReasons.join("; ") || "All configured predicates matched" })), ...(evaluation.winner ? { winner: { id: evaluation.winner.assignmentId, name: evaluation.winner.assignmentId } } : {}), ties: evaluation.ties.map((id) => ({ id, name: id })) }, priorRouting = storage.getItem(FLOW_ROUTING_STORAGE_KEY);
     let routing = [];

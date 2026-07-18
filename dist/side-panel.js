@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyCanonicalSchemaDraftEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -662,7 +662,8 @@ let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 const canonicalProjectAtStartup = restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if (canonicalProjectAtStartup)
     schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
-const startupProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !startupProjectSchemaIds.has(id)));
+let canonicalProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []);
+const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id)));
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
     dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -2584,7 +2585,7 @@ function persistSchemaLibrary() {
         if (schemaValue !== previousSchemas)
             dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, schemaValue);
         if (nextProject) {
-            const result = commitCanonicalProjectState(dataLayerStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit" });
+            const result = commitCanonicalProjectState(dataLayerStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit", ...(project ? { base: project } : {}) });
             if (result.status === "conflict")
                 throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);
         }
@@ -5931,6 +5932,20 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
         revokeObservationTargetOrigins(permissions.origins ?? []);
     });
 }
+subscribeCanonicalProjectChanges(globalThis, ({ state: next }) => {
+    const projectSchemas = next.project.collections.schemaDrafts, nextIds = new Set(projectSchemas.map(({ id }) => id));
+    schemas = [...schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id) && !nextIds.has(id)), ...projectSchemas];
+    canonicalProjectSchemaIds = nextIds;
+    if (schemaDraft && nextIds.has(schemaDraft.id)) {
+        const current = projectSchemas.find(({ id }) => id === schemaDraft?.id);
+        if (current)
+            schemaDraft = schemaEditorDraft(current);
+    }
+    renderSchemas();
+    renderSchemaWorkflowRows();
+    if (schemaDraft)
+        renderSchemaDraft();
+});
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed)

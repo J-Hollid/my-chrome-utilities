@@ -8,12 +8,23 @@ function entityRevisions(state, previous) {
         return [entity.id, !prior || JSON.stringify(prior) !== JSON.stringify(entity) ? revision + 1 : Math.max(1, revision)];
     }));
 }
-function envelopeFor(state, revision, previous) { const base = createCanonicalProjectEnvelope(state.project, state.draft?.id ?? `release:${state.project.currentRelease ?? "unpublished"}`); return { ...base, revision, entityRevisions: entityRevisions(state, previous), draft: clone(state.draft), history: clone(state.history) }; }
+function envelopeFor(state, revision, previous, command) { const base = createCanonicalProjectEnvelope(state.project, state.draft?.id ?? `release:${state.project.currentRelease ?? "unpublished"}`); return { ...base, revision, entityRevisions: entityRevisions(state, previous), draft: clone(state.draft), history: clone(state.history), commands: [...(previous?.commands ?? []), ...(command ? [clone(command)] : [])] }; }
 export function restoreCanonicalProjectEnvelope(serialized) { if (!serialized)
     return undefined; const parsed = JSON.parse(serialized); if ("format" in parsed && parsed.format === "my-chrome-utilities.canonical-specification-project")
     return clone(parsed); if ("project" in parsed)
     return envelopeFor(parsed, 0); throw new Error("Unsupported Specification Project storage format."); }
 export function restoreCanonicalProjectState(serialized) { const envelope = restoreCanonicalProjectEnvelope(serialized); return envelope ? { project: clone(envelope.project), ...(envelope.draft ? { draft: clone(envelope.draft) } : {}), history: clone(envelope.history ?? { undo: [], redo: [] }) } : undefined; }
+export function subscribeCanonicalProjectChanges(target, notify) {
+    const listener = (event) => {
+        if (event.key !== CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY || !event.newValue)
+            return;
+        const envelope = restoreCanonicalProjectEnvelope(event.newValue), state = restoreCanonicalProjectState(event.newValue);
+        if (envelope && state)
+            notify({ revision: envelope.revision, state });
+    };
+    target.addEventListener("storage", listener);
+    return () => target.removeEventListener("storage", listener);
+}
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const record = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const entityArray = (value) => Array.isArray(value) && value.every((item) => record(item) && typeof item.id === "string");
@@ -55,10 +66,21 @@ export function resolveCanonicalProjectConflict(conflict, choice) {
     const draft = conflict.current.draft ? { ...conflict.current.draft, status: "Saved", updatedAt: new Date().toISOString() } : conflict.pending.draft;
     return { ...clone(conflict.current), project: mergeValue(conflict.base.project, conflict.current.project, conflict.pending.project, "project", pendingField), ...(draft ? { draft } : {}), history: clone(conflict.pending.history) };
 }
-export function commitCanonicalProjectState(storage, next, options) { const key = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, previous = restoreCanonicalProjectEnvelope(storage.getItem(key)), revision = previous?.revision ?? 0; if (options?.expectedRevision !== undefined && options.expectedRevision !== revision) {
-    const current = restoreCanonicalProjectState(storage.getItem(key));
-    if (!current)
-        throw new Error("The canonical project disappeared while resolving a stale command.");
-    return { status: "conflict", key, revision, base: clone(options.base ?? next), current, pending: clone(next), pendingLabel: options.pendingLabel ?? "Unsaved edit" };
-} const envelope = envelopeFor(next, revision + 1, previous); storage.setItem(key, JSON.stringify(envelope)); return { status: "committed", key, revision: envelope.revision, envelope }; }
+export function commitCanonicalProjectState(storage, next, options) {
+    const key = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, previous = restoreCanonicalProjectEnvelope(storage.getItem(key)), revision = previous?.revision ?? 0, baseRevision = options?.expectedRevision ?? revision, label = options?.pendingLabel ?? "Project edit";
+    let committed = next;
+    if (options?.expectedRevision !== undefined && options.expectedRevision !== revision) {
+        const current = restoreCanonicalProjectState(storage.getItem(key));
+        if (!current)
+            throw new Error("The canonical project disappeared while resolving a stale command.");
+        const conflict = { status: "conflict", key, revision, base: clone(options.base ?? next), current, pending: clone(next), pendingLabel: label };
+        if (!options.base || inspectCanonicalProjectConflict(conflict).conflictingFields.length)
+            return conflict;
+        committed = resolveCanonicalProjectConflict(conflict, { strategy: "reapply" });
+    }
+    const fields = options?.base ? changedFields(options.base.project, next.project, "project") : changedFields(previous?.project, committed.project, "project"), committedRevision = revision + 1;
+    const envelope = envelopeFor(committed, committedRevision, previous, { label, baseRevision, committedRevision, fields });
+    storage.setItem(key, JSON.stringify(envelope));
+    return { status: "committed", key, revision: envelope.revision, envelope };
+}
 //# sourceMappingURL=data-layer-specification-repository.js.map

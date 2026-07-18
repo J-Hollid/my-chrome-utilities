@@ -1,0 +1,68 @@
+#project-empty {
+  padding: 1rem;
+}
+.start-screen {
+  width: min(70rem, 100%);
+}
+.start-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .7rem;
+  margin-block: 1rem;
+}
+.start-paths button {
+  display: grid;
+  gap: .35rem;
+  text-align: start;
+}
+.start-paths span {
+  color: #40566c;
+  font-weight: 400;
+}
+.start-screen form {
+  max-width: 34rem;
+}
+.project-guidance {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid #8db9df;
+  border-radius: .5rem;
+  background: #eaf3fc;
+}
+.task-entry-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.specification-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: .5rem;
+  padding: 0;
+  list-style-position: inside;
+}
+.primary-continue {
+  border-color: #063d73;
+  background: var(--accent);
+  color: white;
+}
+.actions > [role="group"] {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+@media (max-width: 760px) {
+  #project-workspace:not([hidden]) {
+    display: block;
+    height: calc(100vh - 3rem);
+  }
+  #project-workspace > nav,
+  #project-inspector {
+    display: none;
+  }
+  #workspace-pane {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
