@@ -556,6 +556,10 @@
     "module": "schemas",
     "layer": "application"
   },
+  "src/data-layer-specification-guidance.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
   "src/data-layer-specification-bulk.ts": {
     "module": "schemas",
     "layer": "application"

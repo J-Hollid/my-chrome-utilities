@@ -360,12 +360,20 @@ import {
 } from "./panel-empty-states-ui.js";
 import {
   applyCanonicalSchemaDraftEdits,
+  adoptSavedSchema,
+  applyCapturedValidationToProfile,
+  capturedValidationDestinationChoices,
+  capturedValidationProfileRequirements,
+  compileSpecificationProject,
   commitCanonicalProjectState,
+  createFixtureFromCapturedValidation,
+  evaluateSpecificationObservation,
   recordSpecificationCapture,
   recordSpecificationNavigation,
   SPECIFICATION_PROJECT_STORAGE_KEY,
   restoreCanonicalProjectEnvelope,
   restoreCanonicalProjectState,
+  subscribeCanonicalProjectChanges,
 } from "./utilities/data-layer/schemas.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
@@ -866,7 +874,7 @@ const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 const canonicalProjectAtStartup=restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if(canonicalProjectAtStartup)schemas=[...schemas.filter((schema)=>!canonicalProjectAtStartup.project.collections.schemaDrafts.some(({id})=>id===schema.id)),...canonicalProjectAtStartup.project.collections.schemaDrafts as unknown as SchemaDefinition[]];
-const startupProjectSchemaIds=new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({id})=>id)??[]),restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({id})=>!startupProjectSchemaIds.has(id)));
+let canonicalProjectSchemaIds=new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({id})=>id)??[]);const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)));
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
   dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -885,7 +893,7 @@ let approvedRuleAttachmentUpdateId: string | undefined;
 const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 let manualSchemaOverrides: Record<string, string> = (() => { try { const stored = JSON.parse(dataLayerStorage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}"); return stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, string> : {}; } catch { return {}; } })();
 const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
-interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaName?: string; schemaVersion?: number; target?: string; assignmentId?: string; assignmentName?: string; assignmentEvidence?: string; }
+interface SchemaValidationRecord { eventId: string; eventName: string; state: string; checkedAt: string; schemaId?:string; schemaName?: string; schemaVersion?: number; target?: string; issueCodes?:string[]; assignmentId?: string; assignmentName?: string; assignmentEvidence?: string; evaluated?:{resultIdentity:string;winner?:{schemaId:string;schemaRevision:number};issueDetails:{code:string;path?:string}[]}; }
 let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const stored = JSON.parse(dataLayerStorage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]"); return Array.isArray(stored) ? stored.filter((record): record is SchemaValidationRecord => !!record && typeof record.eventId === "string" && typeof record.eventName === "string" && typeof record.state === "string" && typeof record.checkedAt === "string") : []; } catch { return []; } })();
 const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 interface ReusableSchemaRule { id: string; name: string; kind: string; version?: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; description?: string; applicableType?: SchemaPropertyType; severity?: string; message?: string; examples?: string; attachments?: readonly string[]; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup; revisionHistory?: readonly { name: string; kind: string; version: number; enabled?: boolean; propertyPath?: string; operator?: string; parameters?: string; allowedValues?: readonly (string | number | boolean | null)[]; comparison?: import("./data-layer-schema-property-rule-picker.js").CardinalityComparison; limit?: number; migrationIssue?: string; severity?: string; message?: string; conditionGroup?: import("./data-layer-conditional-validation-rules.js").ConditionalRuleConditionGroup }[]; }
@@ -2038,24 +2046,35 @@ function openSchemaExportChoices(trigger: HTMLButtonElement, schema?: SchemaDefi
   schemaExportChoices.replaceChildren(heading, extension, extensionDescription, standard, standardDescription, cancel); schemaExportChoices.showModal(); extension.focus({ preventScroll:true });
 }
 
+function reviewSavedSchemaAdoption(schema:SchemaDefinition,trigger:HTMLButtonElement):void{
+  const serialized=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),project=restoreCanonicalProjectState(serialized);
+  if(!project||!envelope){if(schemaResult)schemaResult.textContent="Create or open a Specification Project before adopting a saved schema.";return;}
+  if(project.project.collections.schemaDrafts.some(({id})=>id===schema.id)){if(schemaResult)schemaResult.textContent=`${schema.name} is already used by ${project.project.name}; open Builder to review synchronization.`;return;}
+  const dialog=document.createElement("dialog"),heading=document.createElement("h4"),summary=document.createElement("p"),confirm=document.createElement("button"),cancel=document.createElement("button"),profiles=project.project.collections.profiles.map(({name})=>name).join(", ")||"no destination Profile selected";
+  heading.textContent="Review saved-schema adoption";summary.textContent=`${schema.name} revision ${schema.version} → project ${project.project.name}; destination Profiles: ${profiles}; source lineage will be recorded; conflicts: none detected; affected consumers: compilation, coverage, release, and Live.`;confirm.type=cancel.type="button";confirm.textContent="Add saved schema to project";cancel.textContent="Cancel";
+  confirm.addEventListener("click",()=>{try{const next=adoptSavedSchema(project,schema as unknown as Parameters<typeof adoptSavedSchema>[1]),result=commitCanonicalProjectState(dataLayerStorage,next,{expectedRevision:envelope.revision,pendingLabel:`Adopt saved schema ${schema.name}`,base:project});if(result.status==="conflict")throw new Error(`Project changed at revision ${result.revision}; review adoption again.`);dialog.close();dialog.remove();if(schemaResult)schemaResult.textContent=`Adopted ${schema.name} revision ${schema.version} into ${project.project.name} with source lineage.`;renderSchemas();}catch(error){summary.textContent=error instanceof Error?error.message:String(error);}});
+  cancel.addEventListener("click",()=>{dialog.close();dialog.remove();trigger.focus({preventScroll:true});});dialog.append(heading,summary,confirm,cancel);document.body.append(dialog);dialog.showModal();confirm.focus({preventScroll:true});
+}
+
 function renderSchemas(): void {
   const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
   if (schemaEmptyState) schemaEmptyState.hidden = visible.length > 0;
   if (schemaCount) schemaCount.textContent = `${visible.length} schemas`;
   if (schemaList) schemaList.replaceChildren(...visible.map((schema) => {
-    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const build = document.createElement("button"); const exportCurrent = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
+    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const adopt = document.createElement("button"); const build = document.createElement("button"); const exportCurrent = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
     const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
     const pending = schema.workingDraft?.pendingChanges.length ?? 0;
     const history = schemaRevisionChoices(schema).length;
     item.textContent = schema.published === false
       ? `${schema.name} · unpublished draft · ${pending} pending changes. `
       : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-    revise.type = duplicate.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; build.textContent = "Build specification"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
+    revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; adopt.textContent = "Add saved schema to project"; build.textContent = "Build specification"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
     revise.addEventListener("click", () => {
       schemaDraft = schemaEditorDraft(schema);
       renderSchemaDraft();
     });
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+    adopt.addEventListener("click",()=>reviewSavedSchemaAdoption(schema,adopt));
     build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
     exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
     reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
@@ -2065,7 +2084,7 @@ function renderSchemas(): void {
       pendingSchemaDeletion = schema;
       if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
       if (schemaDeleteReview) { schemaDeleteReview.hidden = false; schemaDeleteReview.showModal(); }
-    }); item.append(revise, duplicate, build, exportCurrent, reportMissing, remove); return item;
+    }); item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove); return item;
   }));
 }
 
@@ -2571,7 +2590,7 @@ function openNewSchemaEditor(): void {
 function persistSchemaLibrary(): void {
   const previousProject=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),previousSchemas=dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(previousProject),project=restoreCanonicalProjectState(previousProject),ownedIds=new Set(project?.project.collections.schemaDrafts.map(({id})=>id)??[]),schemaValue=serializeSchemaLibrary(schemas.filter(({id})=>!ownedIds.has(id))),nextProject=project?applyCanonicalSchemaDraftEdits(project,schemas):undefined;
   const restore=(key:string,value:string|null):void=>{if(value===null)dataLayerStorage.removeItem(key);else dataLayerStorage.setItem(key,value);};
-  try{if(schemaValue!==previousSchemas)dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY,schemaValue);if(nextProject){const result=commitCanonicalProjectState(dataLayerStorage,nextProject,{expectedRevision:envelope?.revision??0,pendingLabel:"Side-panel schema edit"});if(result.status==="conflict")throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);}}
+  try{if(schemaValue!==previousSchemas)dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY,schemaValue);if(nextProject){const result=commitCanonicalProjectState(dataLayerStorage,nextProject,{expectedRevision:envelope?.revision??0,pendingLabel:"Side-panel schema edit",...(project?{base:project}:{})});if(result.status==="conflict")throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);}}
   catch(error){if(schemaValue!==previousSchemas)restore(SCHEMA_LIBRARY_STORAGE_KEY,previousSchemas);throw error;}
 }
 
@@ -3678,6 +3697,7 @@ function renderSchemaWorkflowRows(): void {
 function recheckCapturedSchemaValidation(): void {
   const events = liveObserverState.events;
   if (!events.length) { if (schemaResult) schemaResult.textContent = "No captured events are available to recheck."; return; }
+  const canonical=restoreCanonicalProjectEnvelope(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),compiled=canonical?compileSpecificationProject(canonical):undefined;
   let checked = 0;
   const issueRows: HTMLLIElement[] = [];
   const checkedAt = new Date().toISOString();
@@ -3685,12 +3705,19 @@ function recheckCapturedSchemaValidation(): void {
   liveObserverState = {
     ...liveObserverState,
     events: events.map((event) => {
+      const evaluated=compiled?.status==="compiled"?evaluateSpecificationObservation(compiled.plan,{sourceId:event.sourceId,eventName:event.name,payload:event.payload,pageUrl:event.pageUrl}):undefined;
+      if(evaluated?.winner){
+        checked+=1;const schema=canonical!.project.collections.schemaDrafts.find(({id})=>id===evaluated.winner!.schemaId),state=evaluated.issueDetails.length?`${evaluated.issueDetails.length} issues` as const:"Valid" as const;
+        issueRows.push(...evaluated.issueDetails.map((issue)=>Object.assign(document.createElement("li"),{textContent:`${event.name} · ${issue.path||"root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · evaluated result ${evaluated.resultIdentity}`})));
+        records.push({eventId:event.id,eventName:event.name,state,checkedAt,schemaId:evaluated.winner.schemaId,schemaName:schema?.name??evaluated.winner.schemaId,schemaVersion:evaluated.winner.schemaRevision,target:"payload",issueCodes:evaluated.issueDetails.map(({code})=>code),assignmentId:evaluated.winner.assignmentId,assignmentName:String(canonical!.project.collections.assignments.find(({id})=>id===evaluated.winner!.assignmentId)?.name??evaluated.winner.assignmentId),assignmentEvidence:`Evaluated result ${evaluated.resultIdentity}`,evaluated:{resultIdentity:evaluated.resultIdentity,winner:evaluated.winner,issueDetails:evaluated.issueDetails.map(({code,path})=>({code,path}))}});
+        return{...event,validation:state};
+      }
       const validation = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, schemas, event.pageUrl);
       if (validation.state !== "Not checked") checked += 1;
       const assignment = validation.assignment;
       const assignmentDetails = assignment ? `assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId} · event ${assignment.eventName} · target ${assignment.target} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : `assignment ${validation.target ?? "automatic"}`;
       issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent:`${event.name} · ${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual}${issue.conditionSummary ? ` · condition ${issue.conditionSummary}` : ""} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
-      records.push({ eventId:event.id, eventName:event.name, state:validation.state, checkedAt, ...(validation.schema ? { schemaName:validation.schema.name, schemaVersion:validation.schema.version } : {}), ...(validation.target ? { target:validation.target } : {}), ...(validation.assignment?.id ? { assignmentId:validation.assignment.id } : {}), ...(validation.assignment?.name ? { assignmentName:validation.assignment.name } : {}), ...(validation.assignmentEvidence ? { assignmentEvidence:validation.assignmentEvidence.summary } : {}) });
+      records.push({ eventId:event.id, eventName:event.name, state:validation.state, checkedAt, ...(validation.schema ? { schemaId:validation.schema.id, schemaName:validation.schema.name, schemaVersion:validation.schema.version } : {}),issueCodes:validation.issues.map((issue)=>issue.rule??issue.schemaLocation), ...(validation.target ? { target:validation.target } : {}), ...(validation.assignment?.id ? { assignmentId:validation.assignment.id } : {}), ...(validation.assignment?.name ? { assignmentName:validation.assignment.name } : {}), ...(validation.assignmentEvidence ? { assignmentEvidence:validation.assignmentEvidence.summary } : {}) });
       if (validation.state === "Assignment error" && schemaAssignmentConflicts) schemaAssignmentConflicts.textContent = validation.assignmentEvidence?.summary ?? "Assignment error";
       return { ...event, validation:validation.state };
     }),
@@ -3717,8 +3744,23 @@ function refreshCurrentLiveAfterSchemaPublication(): number {
   return refreshed.revalidatedEventIds.length;
 }
 
+function reviewCapturedValidationContinuation(record:SchemaValidationRecord,trigger:HTMLButtonElement):void{
+  const serialized=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),project=restoreCanonicalProjectState(serialized),captured=liveObserverState.events.find(({id})=>id===record.eventId);
+  if(!project||!envelope){if(schemaResult)schemaResult.textContent="Create or open a Specification Project before continuing captured validation.";return;}
+  if(!captured||!record.schemaId||!record.evaluated){if(schemaResult)schemaResult.textContent="Recheck the captured event with the project evaluator before continuing.";return;}
+  if(!project.project.collections.schemaDrafts.some(({id})=>id===record.schemaId)){if(schemaResult)schemaResult.textContent=`Add ${record.schemaName??"the validated schema"} to ${project.project.name} before creating its Fixture.`;return;}
+  const choices=capturedValidationDestinationChoices(project.project,{eventName:record.eventName,sourceId:captured.sourceId});
+  const proposedRequirements=capturedValidationProfileRequirements(project.project,{captureId:record.eventId,schemaId:record.schemaId,evaluated:record.evaluated});
+  if(!choices.events.length){if(schemaResult)schemaResult.textContent=`Add the ${record.eventName} Event to ${project.project.name} before continuing.`;return;}
+  const dialog=document.createElement("dialog"),heading=document.createElement("h4"),summary=document.createElement("p"),review=document.createElement("p"),name=document.createElement("input"),select=(labelText:string,values:readonly {id:string;name:string}[],optional=false)=>{const label=document.createElement("label"),control=document.createElement("select");label.textContent=labelText;if(optional)control.append(new Option(`No ${labelText.toLowerCase()}`,""));control.append(...values.map(({id,name:optionName})=>new Option(optionName,id)));label.append(control);dialog.append(label);return control;},confirm=document.createElement("button"),cancel=document.createElement("button");
+  heading.textContent="Continue captured validation in project";summary.textContent=`${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.project.name}.`;review.textContent=`Evaluated result ${record.evaluated.resultIdentity}. Proposed assertions: status ${record.evaluated.issueDetails.length?"fail":"pass"}; issue codes ${record.evaluated.issueDetails.map(({code})=>code).join(", ")||"none"}. Proposed Profile requirements: ${proposedRequirements.map(({path,type,required})=>`${path} (${type??"value"}${required?", required":""})`).join(", ")||"none"}. Each requirement retains this evidence identity.`;name.value=choices.suggestedFixtureName;name.setAttribute("aria-label","Fixture name");dialog.append(heading,summary,review,name);const destination=select("Destination",[{id:"fixture",name:"Guided Fixture"},{id:"profile",name:"Profile requirements"}]),event=select("Event",choices.events),page=select("Page",choices.pages,true),step=select("Flow step",choices.flowSteps,true),profile=select("Profile",choices.profiles,true);confirm.type=cancel.type="button";confirm.textContent="Save Fixture and open in Builder";cancel.textContent="Cancel";
+  destination.addEventListener("change",()=>{const toProfile=destination.value==="profile";name.hidden=event.parentElement!.hidden=page.parentElement!.hidden=step.parentElement!.hidden=toProfile;confirm.textContent=toProfile?"Add requirements and open Profile":"Save Fixture and open in Builder";});
+  confirm.addEventListener("click",()=>{try{const toProfile=destination.value==="profile";if(toProfile&&!profile.value)throw new Error("Choose a Profile for the evaluated requirements.");const next=toProfile?applyCapturedValidationToProfile(project,{captureId:record.eventId,profileId:profile.value,schemaId:record.schemaId!,evaluated:record.evaluated!}):createFixtureFromCapturedValidation(project,{name:name.value.trim(),captureId:record.eventId,sourceId:captured.sourceId,eventName:record.eventName,payload:captured.payload,schemaId:record.schemaId!,eventId:event.value,...(page.value?{pageId:page.value}:{}),...(step.value?{flowStepId:step.value}:{}),...(profile.value?{profileId:profile.value}:{}),evaluated:record.evaluated!},(kind)=>`${kind}:${crypto.randomUUID()}`),entity=toProfile?next.project.collections.profiles.find(({id})=>id===profile.value)!:next.project.collections.fixtures.at(-1)!,kind=toProfile?"profiles":"fixtures",result=commitCanonicalProjectState(dataLayerStorage,next,{expectedRevision:envelope.revision,pendingLabel:`Continue evaluated capture ${record.eventId} as ${toProfile?"Profile requirements":"Fixture"}`,base:project});if(result.status==="conflict")throw new Error(`Project changed at revision ${result.revision}; review the continuation again.`);globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1",JSON.stringify({kind,id:entity.id,source:"side-panel",revision:result.revision,returnEventId:record.eventId,evaluationResultIdentity:record.evaluated!.resultIdentity}));dialog.close();dialog.remove();if(schemaResult)schemaResult.textContent=`Saved evaluated capture evidence in ${entity.name}; opening it in Builder.`;globalThis.open(`specification-builder.html?kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel&revision=${result.revision}`,"_blank");}catch(error){summary.textContent=error instanceof Error?error.message:String(error);}});
+  cancel.addEventListener("click",()=>{dialog.close();dialog.remove();trigger.focus({preventScroll:true});});dialog.append(confirm,cancel);document.body.append(dialog);dialog.showModal();name.focus({preventScroll:true});
+}
+
 function renderSchemaValidationRecords(): void {
-  schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent:`${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}` })));
+  schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => {const item=document.createElement("li"),summary=document.createElement("span"),continueButton=document.createElement("button");summary.textContent=`${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`;continueButton.type="button";continueButton.textContent="Continue in project";continueButton.disabled=!record.schemaId||!record.evaluated;continueButton.addEventListener("click",()=>reviewCapturedValidationContinuation(record,continueButton));item.append(summary,continueButton);return item;}));
 }
 
 function persistEventTemplateLibrary(): void {
@@ -5621,6 +5663,13 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
   });
 }
 
+subscribeCanonicalProjectChanges(globalThis as unknown as Parameters<typeof subscribeCanonicalProjectChanges>[0],({state:next})=>{
+  const projectSchemas=next.project.collections.schemaDrafts as unknown as SchemaDefinition[],nextIds=new Set(projectSchemas.map(({id})=>id));
+  schemas=[...schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)&&!nextIds.has(id)),...projectSchemas];
+  canonicalProjectSchemaIds=nextIds;
+  if(schemaDraft&&nextIds.has(schemaDraft.id)){const current=projectSchemas.find(({id})=>id===schemaDraft?.id);if(current)schemaDraft=schemaEditorDraft(current);}
+  renderSchemas();renderSchemaWorkflowRows();if(schemaDraft)renderSchemaDraft();
+});
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed) void recoverAttachedObservationTarget();

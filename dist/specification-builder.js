@@ -1,10 +1,12 @@
-import { addProjectEntity, addFlowStep, buildReleaseReview, commitStagedProjectImport, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, addFlowStep, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveFlowStep, saveFlowTransition, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
-const projectPreflight = (project) => specificationPreflight(createCanonicalProjectEnvelope(project, "release-review"));
-import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
-const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1";
+import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
+import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
+const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
+import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
+const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1";
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 for (const fieldId of ["project-assignment-path", "project-assignment-value", "project-assignment-not-path", "project-assignment-not-value"]) {
@@ -15,17 +17,20 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
     q("#save-project-assignment").append(input);
 }
 q("#project-assignment-applicability").required = false;
+q("#project-schema-id").required = false;
+q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state, lastCommittedState;
-let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl;
+let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema;
+const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
     lastCommittedState = structuredClone(result.current);
     canonicalRevision = result.revision;
     throw new Error(`Revision conflict: current ${result.revision}; pending ${result.pendingLabel}`);
-} canonicalRevision = result.revision; pendingConflict = undefined; lastCommittedState = structuredClone(next); }
+} canonicalRevision = result.revision; pendingConflict = undefined; releasePreflight = undefined; lastCommittedState = structuredClone(next); }
 function showConflictReview() { if (!pendingConflict)
     return; const inspection = inspectCanonicalProjectConflict(pendingConflict), dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"); q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`; fields.querySelectorAll("label").forEach((label) => label.remove()); for (const field of inspection.conflictingFields) {
     const label = document.createElement("label"), input = document.createElement("input");
@@ -106,12 +111,12 @@ function fieldControl(field, entity) { if (field.collection && state) {
         operator.append(option);
     }
     operator.value = condition && condition.kind !== "predicate" ? condition.kind : "all";
-    const appendPredicate = (predicate, negated = false) => { const row = document.createElement("div"), not = document.createElement("input"), path = document.createElement("input"), comparison = document.createElement("select"), value = document.createElement("input"); row.dataset.predicate = "true"; not.type = "checkbox"; not.checked = negated; not.setAttribute("aria-label", "Negate predicate"); path.value = predicate?.field ?? ""; path.placeholder = "Context field"; path.setAttribute("aria-label", "Predicate field"); for (const name of ["equals", "not equals", "exists", "contains", "glob", "regex"]) {
+    const appendPredicate = (predicate, negated = false) => { const row = document.createElement("div"), not = document.createElement("input"), path = document.createElement("input"), comparison = document.createElement("select"), value = document.createElement("input"); row.dataset.predicate = "true"; not.type = "checkbox"; not.checked = negated; not.setAttribute("aria-label", "Negate predicate"); path.value = predicate?.field ?? ""; path.placeholder = "Context field"; path.setAttribute("aria-label", "Predicate field"); for (const name of ["exists", "does not exist", "equals", "does not equal", "is one of", "matches pattern", "greater than", "at least", "less than", "at most", "contains", "glob", "regex"]) {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         comparison.append(option);
-    } comparison.value = predicate?.operator ?? "equals"; comparison.setAttribute("aria-label", "Predicate operator"); value.value = String(predicate?.value ?? ""); value.setAttribute("aria-label", "Predicate value"); row.append(not, path, comparison, value); rows.append(row); };
+    } comparison.value = predicate?.operator ?? "equals"; comparison.setAttribute("aria-label", "Predicate operator"); value.value = predicate?.values?.join(", ") ?? predicate?.pattern ?? String(predicate?.value ?? ""); value.setAttribute("aria-label", "Predicate value"); row.append(not, path, comparison, value); rows.append(row); };
     const visit = (node, negated = false) => { if (!node)
         return; if (node.kind === "predicate")
         appendPredicate(node, negated);
@@ -137,7 +142,7 @@ function fieldControl(field, entity) { if (field.collection && state) {
 else
     input.value = String(entity[field.key] ?? ""); return input; }
 function editorValue(field, control) { if (control instanceof HTMLFieldSetElement && field.type === "condition") {
-    const kind = control.querySelector("[data-group-operator]").value, conditions = Array.from(control.querySelectorAll("[data-predicate]"), (row) => { const inputs = row.querySelectorAll("input"), operator = row.querySelector("select").value, predicate = { kind: "predicate", field: inputs[1].value.trim(), operator, ...(operator !== "exists" ? { value: inputs[2].value } : {}) }; return inputs[0].checked ? { kind: "not", conditions: [predicate] } : predicate; }).filter((condition) => condition.kind !== "predicate" || Boolean(condition.field));
+    const kind = control.querySelector("[data-group-operator]").value, conditions = Array.from(control.querySelectorAll("[data-predicate]"), (row) => { const inputs = row.querySelectorAll("input"), operator = row.querySelector("select").value, text = inputs[2].value.trim(), predicate = { kind: "predicate", field: inputs[1].value.trim(), operator, ...(operator === "is one of" ? { values: text.split(",").map((entry) => entry.trim()).filter(Boolean) } : operator === "matches pattern" ? { pattern: text } : !["exists", "does not exist"].includes(operator) ? { value: ["greater than", "at least", "less than", "at most"].includes(operator) ? Number(text) : text } : {}) }; return inputs[0].checked ? { kind: "not", conditions: [predicate] } : predicate; }).filter((condition) => condition.kind !== "predicate" || Boolean(condition.field));
     return { kind, conditions };
 } if (control instanceof HTMLSelectElement)
     return field.multiple ? Array.from(control.selectedOptions, ({ value }) => value) : control.value; if (control instanceof HTMLInputElement && field.type === "checkbox")
@@ -161,6 +166,11 @@ function renderProfileGrid(form, profile) { const heading = document.createEleme
     body.append(row);
 } table.append(head, body); add.type = "button"; add.textContent = "Add requirement row"; add.addEventListener("click", () => { const row = document.createElement("tr"); row.dataset.requirement = "true"; row.innerHTML = '<td><input name="path" placeholder="/path"></td><td><input name="type" value="string"></td><td><input name="required" type="checkbox"></td><td><input name="forbidden" type="checkbox"></td><td><input name="allowedValues" placeholder="[&quot;EUR&quot;]"></td><td><input name="rules" placeholder="[]"></td><td><input name="description"></td><td><input name="examples" placeholder="[]"></td>'; body.append(row); row.querySelector('input[name="path"]')?.focus(); }); form.append(heading, table, add); }
 function profileRequirements(form) { return Array.from(form.querySelectorAll('tr[data-requirement]'), (row) => { const value = (name) => row.querySelector(`[name="${name}"]`); const parse = (name) => { const text = value(name).value.trim(); return text ? JSON.parse(text) : undefined; }; return { path: value("path").value.trim(), type: value("type").value.trim(), required: value("required").checked, forbidden: value("forbidden").checked, ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}), ...(value("description").value ? { description: value("description").value } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}) }; }).filter(({ path }) => path); }
+function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
+    return; const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
+    result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
+    return;
+} const execution = runProductionFixture(compiled.plan, fixture), last = execution.steps.at(-1), capturedIdentity = String(fixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
 function renderSelectedEntityEditor(content, entity) { if (!state)
     return; const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), nameLabel = document.createElement("label"), name = document.createElement("input"), actions = document.createElement("div"), save = document.createElement("button"), duplicate = document.createElement("button"), remove = document.createElement("button"), usage = document.createElement("p"); section.className = "contextual-editor"; heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`; name.name = "name"; name.required = true; name.value = entity.name; nameLabel.textContent = "Name"; nameLabel.append(name); form.append(nameLabel); for (const field of editorFields[selectedKind]) {
     const label = document.createElement("label"), control = fieldControl(field, entity);
@@ -168,7 +178,8 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     label.append(control);
     form.append(label);
 } if (selectedKind === "profiles")
-    renderProfileGrid(form, entity); if (selectedKind === "schemaDrafts") {
+    renderProfileGrid(form, entity); if (selectedKind === "fixtures")
+    renderFixtureExecution(form, entity); if (selectedKind === "schemaDrafts") {
     const preview = document.createElement("pre"), working = entity.workingDraft;
     preview.textContent = JSON.stringify(working?.document ?? entity.document ?? {}, null, 2);
     preview.setAttribute("aria-label", "Compiled effective schema document");
@@ -180,6 +191,8 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
         update[field.key] = editorValue(field, form.elements.namedItem(field.key));
     if (selectedKind === "profiles")
         update.requirements = profileRequirements(form);
+    if (selectedKind === "schemaDrafts")
+        update.workingDraft = { ...entity.workingDraft, profileIds: update.profileIds };
     persist(transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => candidate.id === entity.id ? { ...candidate, ...update } : candidate) } })));
 }
 catch (error) {
@@ -201,6 +214,42 @@ function renderTree() { const tree = q("#project-tree"); tree.replaceChildren();
     item.append(button);
     tree.append(item);
 } const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
+function renderCollectionGuidance(content) { if (!state)
+    return; const entityName = { profiles: "Profile", applicabilitySets: "Applicability Set", pages: "Page", pageGroups: "Page", events: "Event", flows: "Flow", assignments: "Assignment", fixtures: "Fixture", schemaDrafts: "Schema" }, name = entityName[selectedKind], section = document.createElement("section"); section.className = "project-guidance"; if (name) {
+    const guidance = entityPurposeGuidance(name), heading = document.createElement("h2"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), distinction = document.createElement("p");
+    heading.textContent = `About ${name}`;
+    purpose.textContent = guidance.purpose;
+    example.textContent = `Example: ${guidance.example}`;
+    prerequisites.textContent = `Prerequisites: ${guidance.prerequisites.join(", ")}`;
+    usedBy.textContent = guidance.usedBy;
+    distinction.textContent = `Unlike ${guidance.distinguishesFrom}, this entity ${guidance.purpose.toLowerCase()}`;
+    section.append(heading, purpose, example, prerequisites, usedBy, distinction);
+} if (Object.values(state.project.collections).every((entities) => entities.length === 0)) {
+    const guidance = projectAuthoringGuidance(state.project), heading = document.createElement("h2"), tasks = document.createElement("div"), map = document.createElement("ol"), next = document.createElement("button"), reason = document.createElement("p"), worked = document.createElement("details"), workedSummary = document.createElement("summary"), workedBody = document.createElement("p");
+    heading.textContent = "Build Retail and Trade by task";
+    tasks.className = "task-entry-points";
+    for (const task of guidance.tasks) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = task.label;
+        tasks.append(button);
+    }
+    map.className = "specification-map";
+    for (const stage of guidance.map) {
+        const item = document.createElement("li");
+        item.textContent = `${stage.name}: ${stage.complete ? "Complete" : `Blocked — ${stage.blocker}`}`;
+        map.append(item);
+    }
+    next.type = "button";
+    next.className = "primary-continue";
+    next.textContent = guidance.continue.label;
+    reason.textContent = `${guidance.continue.reason} Unlocks: ${guidance.continue.unlocks}.`;
+    workedSummary.textContent = "Retail and Trade worked example";
+    workedBody.textContent = "One shared Checkout confirmation Page and Purchase Event combine with Sitewide, Retail, and Trade Profiles; two Flows route Assignments into positive and negative Fixtures, Coverage, Release, and published-plan Live.";
+    worked.append(workedSummary, workedBody);
+    section.append(heading, tasks, map, next, reason, worked);
+} if (section.childElementCount)
+    content.append(section); }
 function renderWorkspace() { const content = q("#workspace-content"); content.replaceChildren(); if (!state)
     return; const search = q("#project-search").value.trim().toLowerCase(); if (search) {
     const matches = Object.keys(labels).flatMap((kind) => entitiesForKind(kind).filter((entity) => entitySearchText(entity).includes(search)).map((entity) => ({ kind, entity }))).slice(0, 40);
@@ -220,7 +269,7 @@ function renderWorkspace() { const content = q("#workspace-content"); content.re
         select.addEventListener("click", () => { selectedKind = kind; selectedId = entity.id; persistNavigation(); q("#project-search").value = ""; render(); });
         const location = document.createElement("span");
         location.className = "search-location";
-        location.textContent = `${labels[kind]} · ${entity.id}`;
+        location.textContent = labels[kind];
         const used = document.createElement("span");
         used.textContent = `Used ${whereUsed(entity.id).length} times`;
         row.append(select, location, used);
@@ -229,7 +278,7 @@ function renderWorkspace() { const content = q("#workspace-content"); content.re
     content.append(heading, count, list);
     q("#project-breadcrumb").textContent = `${state.project.name} / Search / ${search}`;
     return;
-} const all = entitiesForKind(selectedKind), visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul"); heading.textContent = labels[selectedKind]; count.className = "status-text"; count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}`; list.className = "entity-grid"; list.setAttribute("role", "listbox"); for (const entity of visible) {
+} renderCollectionGuidance(content); const all = entitiesForKind(selectedKind), visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul"); heading.textContent = labels[selectedKind]; count.className = "status-text"; count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}`; list.className = "entity-grid"; list.setAttribute("role", "listbox"); for (const entity of visible) {
     const row = document.createElement("li"), select = document.createElement("button"), kindText = document.createElement("span"), usage = document.createElement("span");
     row.className = "entity-row";
     row.dataset.entityId = entity.id;
@@ -243,7 +292,7 @@ function renderWorkspace() { const content = q("#workspace-content"); content.re
     usage.textContent = `Used ${whereUsed(entity.id).length} times`;
     row.append(select, kindText, usage);
     list.append(row);
-} content.append(heading, count, list); q("#project-breadcrumb").textContent = `${state.project.name} / ${labels[selectedKind]}${selectedId ? ` / ${all.find(({ id }) => id === selectedId)?.name ?? selectedId}` : ""}`; const selected = all.find(({ id }) => id === selectedId); q("#inspector-context").textContent = selected ? `${selected.name} · stable identity ${selected.id} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity."; if (selected)
+} content.append(heading, count, list); q("#project-breadcrumb").textContent = `${state.project.name} / ${labels[selectedKind]}${selectedId ? ` / ${all.find(({ id }) => id === selectedId)?.name ?? selectedId}` : ""}`; const selected = all.find(({ id }) => id === selectedId); q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity."; if (selected)
     renderSelectedEntityEditor(content, selected); }
 function whereUsed(identity) { if (!state)
     return []; const result = []; for (const [kind, entities] of Object.entries(state.project.collections))
@@ -263,7 +312,7 @@ function renderCoverage(offset = 0) { if (!state)
     open.type = "button";
     open.textContent = `${row.requirementPath} · ${row.stepId}`;
     open.setAttribute("aria-label", `Open ${row.requirementPath} ${row.state} coverage issue`);
-    open.addEventListener("click", () => { selectedKind = "flows"; selectedId = row.flowId; history.replaceState(null, "", `?kind=flows&entity=${encodeURIComponent(row.flowId)}&field=${encodeURIComponent(row.stepId)}`); persistNavigation(); render(); q("#project-inspector").focus(); });
+    open.addEventListener("click", () => { selectedKind = "flows"; selectedId = row.flowId; history.replaceState(null, "", `?kind=flows&entity=${encodeURIComponent(row.flowId)}&field=${encodeURIComponent(row.stepId)}`); persistNavigation(); render(); const workspace = q("#workspace-pane"); queueMicrotask(() => workspace.focus({ preventScroll: true })); });
     origin.textContent = `schema r${row.schemaRevision} · ${row.profileIds.join(", ")} · ${row.fixtureId ?? "no proving fixture"}`;
     status.textContent = row.state;
     item.append(open, origin, status);
@@ -273,14 +322,70 @@ function documentationResult() { if (!state)
     throw new Error("No project"); const fields = ["path", "type", ...Array.from(document.querySelectorAll(".documentation-field:checked"), ({ value }) => value)]; return exportDocumentation(state.project, { fields, include: { applicability: q("#documentation-applicability").checked, flows: q("#documentation-flows").checked, fixtures: q("#documentation-fixtures").checked, releases: q("#documentation-releases").checked } }); }
 function refreshDocumentation() { q("#documentation-preview").textContent = documentationResult().preview; }
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
-function renderFlowSteps() { const list = q("#flow-step-list"); list.replaceChildren(); if (!state || selectedKind !== "flows" || !selectedId)
-    return; const flow = state.project.collections.flows.find(({ id: flowId }) => flowId === selectedId), steps = flow?.steps ?? []; steps.forEach((step, index) => { const item = document.createElement("li"), summary = document.createElement("span"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"); summary.textContent = `${index + 1}. ${step.name} · ${step.minimum}–${step.maximum} occurrences${step.optional ? " · optional" : ""}${step.branch ? ` · branch ${step.branch}` : ""}${step.transition ? ` · transition ${JSON.stringify(step.transition)}` : ""}`; up.type = down.type = remove.type = "button"; up.textContent = "Move up"; down.textContent = "Move down"; remove.textContent = "Remove"; up.disabled = index === 0; down.disabled = index === steps.length - 1; up.addEventListener("click", () => { if (state)
-    persist(reorderFlowStep(state, selectedId, index, index - 1)); renderFlowSteps(); }); down.addEventListener("click", () => { if (state)
-    persist(reorderFlowStep(state, selectedId, index, index + 1)); renderFlowSteps(); }); remove.addEventListener("click", () => { if (!state)
-    return; persist(transactProject(state, `Remove ${step.name} flow step`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => candidate.id === selectedId ? { ...candidate, steps: steps.filter(({ id }) => id !== step.id) } : candidate) } }))); renderFlowSteps(); }); item.append(summary, up, down, remove); list.append(item); }); }
+function renderFlowSteps() {
+    const list = q("#flow-step-list");
+    list.replaceChildren();
+    if (!state || selectedKind !== "flows" || !selectedId)
+        return;
+    const renderedFlowId = selectedId, flow = state.project.collections.flows.find(({ id }) => id === renderedFlowId), steps = flow?.steps ?? [];
+    const stillSelected = () => selectedKind === "flows" && selectedId === renderedFlowId;
+    steps.forEach((step, index) => {
+        const item = document.createElement("li"), form = document.createElement("form"), heading = document.createElement("h3"), name = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), optional = document.createElement("input"), branch = document.createElement("input"), page = document.createElement("select"), event = document.createElement("select"), save = document.createElement("button"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"), transitions = document.createElement("div");
+        heading.textContent = `${index + 1}. ${step.name}`;
+        name.value = step.name;
+        name.setAttribute("aria-label", "Step name");
+        minimum.type = maximum.type = "number";
+        minimum.min = "0";
+        maximum.min = "1";
+        minimum.value = String(step.minimum ?? 1);
+        maximum.value = String(step.maximum ?? 1);
+        minimum.setAttribute("aria-label", "Minimum occurrences");
+        maximum.setAttribute("aria-label", "Maximum occurrences");
+        optional.type = "checkbox";
+        optional.checked = Boolean(step.optional);
+        optional.setAttribute("aria-label", "Optional step");
+        branch.value = String(step.branch ?? "");
+        branch.setAttribute("aria-label", "Branch or join name");
+        replaceOptions(page, state.project.collections.pages, "Any page");
+        replaceOptions(event, state.project.collections.events, "Any event");
+        page.value = String(step.pageId ?? "");
+        event.value = String(step.eventId ?? "");
+        page.setAttribute("aria-label", "Page");
+        event.setAttribute("aria-label", "Event");
+        save.type = "submit";
+        save.textContent = "Save step";
+        up.type = down.type = remove.type = "button";
+        up.textContent = "Move up";
+        down.textContent = "Move down";
+        remove.textContent = "Remove";
+        up.disabled = index === 0;
+        down.disabled = index === steps.length - 1;
+        form.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); if (!state || !stillSelected())
+            return; persist(saveFlowStep(state, renderedFlowId, step.id, { name: name.value.trim(), pageId: page.value, eventId: event.value, minimum: Number(minimum.value), maximum: Number(maximum.value), optional: optional.checked, branch: branch.value.trim() })); });
+        up.addEventListener("click", () => { if (state && stillSelected())
+            persist(reorderFlowStep(state, renderedFlowId, index, index - 1)); });
+        down.addEventListener("click", () => { if (state && stillSelected())
+            persist(reorderFlowStep(state, renderedFlowId, index, index + 1)); });
+        remove.addEventListener("click", () => { if (!state || !stillSelected())
+            return; persist(transactProject(state, `Remove ${step.name} flow step`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => candidate.id === renderedFlowId ? { ...candidate, steps: (candidate.steps ?? []).filter(({ id }) => id !== step.id).map((candidateStep) => ({ ...candidateStep, transitions: (candidateStep.transitions ?? []).filter(({ toStepId }) => toStepId !== step.id) })) } : candidate) } }))); });
+        form.append(heading, name, page, event, minimum, maximum, optional, branch, save, up, down, remove);
+        const appendTransitionEditor = (transition) => { const row = document.createElement("form"), target = document.createElement("select"), condition = document.createElement("textarea"), commit = document.createElement("button"); replaceOptions(target, steps.filter(({ id }) => id !== step.id), "Choose next step"); target.value = transition?.toStepId ?? ""; target.setAttribute("aria-label", `Next step from ${step.name}`); condition.value = transition?.condition ? JSON.stringify(transition.condition) : ""; condition.placeholder = 'Optional condition JSON'; condition.setAttribute("aria-label", `Transition condition from ${step.name}`); commit.type = "submit"; commit.textContent = transition ? "Save transition" : "Add transition"; row.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); if (!state || !stillSelected() || !target.value)
+            return; try {
+            persist(saveFlowTransition(state, renderedFlowId, step.id, { id: transition?.id ?? id("flow-transition"), toStepId: target.value, ...(condition.value.trim() ? { condition: JSON.parse(condition.value) } : {}) }));
+        }
+        catch (error) {
+            q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
+        } }); row.append(target, condition, commit); transitions.append(row); };
+        for (const transition of step.transitions ?? [])
+            appendTransitionEditor(transition);
+        appendTransitionEditor();
+        item.append(form, transitions);
+        list.append(item);
+    });
+}
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
-    return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Any page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Any event"); const flow = selectedKind === "flows" ? state.project.collections.flows.find(({ id }) => id === selectedId) : undefined, steps = flow?.steps ?? []; replaceOptions(q("#flow-step-from"), steps, "Choose step"); replaceOptions(q("#flow-step-to"), steps, "Choose step"); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
+    return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Any page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Any event"); const flow = selectedKind === "flows" ? state.project.collections.flows.find(({ id }) => id === selectedId) : undefined, steps = flow?.steps ?? []; replaceOptions(q("#flow-step-from"), steps, "Choose step"); replaceOptions(q("#flow-step-to"), steps, "Choose step"); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
     const eventName = String(event.eventName ?? "");
     if (eventName && eventName !== event.id) {
         const alias = document.createElement("option");
@@ -323,8 +428,9 @@ function renderAssignments() {
 function render() { const empty = q("#project-empty"), workspace = q("#project-workspace"); empty.hidden = Boolean(state); workspace.hidden = !state; if (!state) {
     q("#project-context").textContent = "No project";
     return;
-} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview draft ${state.draft.id}` : `Live release ${state.project.currentRelease}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; renderTree(); renderWorkspace(); renderReferenceSelectors(); }
+} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts"; q("#assignment-editor").hidden = selectedKind !== "assignments"; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId; renderTree(); renderWorkspace(); renderReferenceSelectors(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); persist(createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id })); q("#workspace-pane").focus(); });
+document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
     return; const defaults = kind === "profiles" ? { requirements: [] } : kind === "events" ? { eventName: name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), sourceId: "event-history", target: "payload" } : kind === "flows" ? { steps: [] } : kind === "fixtures" ? { mode: "event", observations: [], expected: {}, releasePolicy: "required" } : kind === "applicabilitySets" ? { priority: 0, condition: { kind: "all", conditions: [] } } : {}; persist(addProjectEntity(state, kind, { name, ...defaults }, id)); selectedKind = kind; selectedId = state?.project.collections[kind].at(-1)?.id; q("#entity-name").value = ""; persistNavigation(); render(); });
@@ -337,9 +443,8 @@ q("#add-flow-step-form").addEventListener("submit", (event) => { event.preventDe
     q("#flow-step-result").textContent = "Select a flow before adding a structured step.";
     return;
 } try {
-    const transitionFrom = q("#flow-step-from").value, transitionTo = q("#flow-step-to").value;
-    persist(addFlowStep(state, selectedId, { name: q("#flow-step-name").value.trim(), pageId: q("#flow-step-page").value, eventId: q("#flow-step-event").value, minimum: Number(q("#flow-step-minimum").value), maximum: Number(q("#flow-step-maximum").value), optional: q("#flow-step-optional").checked, branch: q("#flow-step-branch").value.trim(), ...(transitionFrom && transitionTo ? { transition: { from: transitionFrom, to: transitionTo } } : {}) }, id));
-    q("#flow-step-result").textContent = "Structured step saved in the flow draft.";
+    persist(addFlowStep(state, selectedId, { name: q("#flow-step-name").value.trim(), pageId: q("#flow-step-page").value, eventId: q("#flow-step-event").value, minimum: Number(q("#flow-step-minimum").value), maximum: Number(q("#flow-step-maximum").value), optional: q("#flow-step-optional").checked, branch: q("#flow-step-branch").value.trim() }, id));
+    q("#flow-step-result").textContent = "Structured step saved in the flow draft. Add its canonical transitions in place.";
     q("#add-flow-step-form").reset();
     q("#flow-step-minimum").value = "1";
     q("#flow-step-maximum").value = "1";
@@ -351,6 +456,37 @@ catch (error) {
 } });
 q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
+const savedSchemaDialog = q("#saved-schema-review"), savedSchemaChanges = q("#saved-schema-review-changes");
+q("#review-saved-schema").addEventListener("click", () => { if (!state)
+    return; const source = savedSchemas().find(({ id: schemaId }) => schemaId === q("#saved-schema-picker").value); if (!source) {
+    q("#schema-draft-result").textContent = "Choose a published saved schema first.";
+    return;
+} savedSchemaChanges.replaceChildren(); const adopted = state.project.collections.schemaDrafts.find(({ id }) => id === source.id); try {
+    if (adopted) {
+        const review = stageSavedSchemaSynchronization(state, source);
+        pendingSavedSchema = { kind: "synchronize", review };
+        q("#saved-schema-review-summary").textContent = `Synchronize ${source.name} from library revision ${review.fromRevision} to ${review.toRevision}; ${review.localOverrides.length} project-local fields remain unchanged.`;
+        for (const change of review.changes) {
+            const item = document.createElement("li");
+            item.textContent = `${change.path}: ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
+            savedSchemaChanges.append(item);
+        }
+        q("#confirm-saved-schema").textContent = "Commit reviewed synchronization";
+    }
+    else {
+        pendingSavedSchema = { kind: "adopt", source };
+        q("#saved-schema-review-summary").textContent = `Adopt ${source.name} revision ${source.version} as one project-owned working draft with source lineage. The saved library remains unchanged.`;
+        q("#confirm-saved-schema").textContent = "Commit reviewed adoption";
+    }
+    savedSchemaDialog.showModal();
+    savedSchemaDialog.querySelector("h2")?.focus();
+}
+catch (error) {
+    q("#schema-draft-result").textContent = error instanceof Error ? error.message : String(error);
+} });
+q("#confirm-saved-schema").addEventListener("click", () => { if (!state || !pendingSavedSchema)
+    return; const completed = pendingSavedSchema; persist(completed.kind === "adopt" ? adoptSavedSchema(state, completed.source) : commitSavedSchemaSynchronization(state, completed.review)); selectedKind = "schemaDrafts"; selectedId = completed.kind === "adopt" ? completed.source.id : completed.review.schemaId; pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#schema-draft-result").textContent = completed.kind === "adopt" ? "Saved schema adopted into the canonical project with revision lineage." : "Reviewed saved-schema revision synchronized; local overrides were preserved and affected evidence was marked stale."; render(); });
+q("#cancel-saved-schema").addEventListener("click", () => { pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#review-saved-schema").focus(); });
 q("#save-project-assignment").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const assignmentId = q("#project-assignment-id").value || undefined, eventValue = q("#project-assignment-event").value, eventEntity = state.project.collections.events.find((candidate) => candidate.id === eventValue || candidate.eventName === eventValue), applicabilitySetId = q("#project-assignment-applicability").value, compatibilityPath = q("#project-assignment-path").value.trim(), condition = !applicabilitySetId && compatibilityPath ? { kind: "predicate", field: compatibilityPath, operator: "equals", value: q("#project-assignment-value").value } : undefined; try {
     persist(saveProjectAssignment(state, { ...(assignmentId ? { id: assignmentId } : {}), name: q("#project-assignment-name").value.trim(), schemaId: q("#project-assignment-schema").value, ...(eventEntity ? { eventId: eventEntity.id } : {}), eventName: String(eventEntity?.eventName ?? eventEntity?.name ?? ""), ...(applicabilitySetId ? { applicabilitySetId } : {}), ...(condition ? { condition } : {}), sourceId: q("#project-assignment-source").value.trim(), target: q("#project-assignment-target").value, priority: Number(q("#project-assignment-priority").value), versionPolicy: q("#project-assignment-version-policy").value, schemaRevision: Number(q("#project-assignment-revision").value) }, id));
@@ -414,7 +550,7 @@ bulkRequire.addEventListener("click", () => { if (!stagedBulk)
 bulkConfirm.addEventListener("click", () => { if (!state || !selectedId || !stagedBulk)
     return; persist(commitStagedBulkRequirements(state, selectedId, stagedBulk)); q("#bulk-assistance").textContent = `Committed ${stagedBulk.rows.length} requirements in one revision and one Undo transaction.`; stagedBulk = undefined; renderBulkStage(); });
 q("#run-preflight").addEventListener("click", () => { if (!state)
-    return; const result = specificationPreflight(createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published")), content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), list = document.createElement("ul"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.blockers.length} blockers · ${result.fixtures.length} fixtures evaluated` : "Ready to publish from the compiled production plan"; list.className = "preflight-list"; for (const blocker of result.blockers) {
+    return; releasePreflight = projectPreflight(state, canonicalRevision); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), list = document.createElement("ul"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.blockers.length} blockers · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan`; list.className = "preflight-list"; for (const blocker of result.blockers) {
     const item = document.createElement("li"), open = document.createElement("button");
     item.className = "error";
     open.type = "button";
@@ -435,21 +571,21 @@ else
 q("#close-documentation").addEventListener("click", () => { documentationDialog.close(); lastInvokingControl?.focus(); });
 const releaseDialog = q("#release-review");
 q("#publish-project").addEventListener("click", (event) => { if (!state)
-    return; lastInvokingControl = event.currentTarget; const preflight = projectPreflight(state.project), prior = state.project.releases.at(-1), review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : state.project, state.project), diff = q("#release-diff"); diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; })); q("#release-summary").textContent = preflight.blockers.length ? `Publication blocked by ${preflight.blockers.length} issues.` : `Release ${state.project.releases.length + 1}: ${review.sections.length} structured changes; coverage, ambiguity, affected consumers, and breaking changes reviewed.`; q("#confirm-release").disabled = Boolean(preflight.blockers.length); q("#confirm-release-close").disabled = Boolean(preflight.blockers.length); q("#restore-release").disabled = !prior; releaseDialog.showModal(); releaseDialog.querySelector("h2")?.focus(); });
+    return; lastInvokingControl = event.currentTarget; releasePreflight = projectPreflight(state, canonicalRevision); const preflight = releasePreflight, prior = state.project.releases.at(-1), emptyProject = { ...state.project, collections: Object.fromEntries(Object.keys(state.project.collections).map((kind) => [kind, []])), releases: [] }, review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : emptyProject, state.project), diff = q("#release-diff"); diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; })); q("#release-summary").textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${state.project.releases.length + 1} has ${review.sections.length} structured changes and one reviewed executable plan.`; q("#confirm-release").disabled = Boolean(preflight.blockers.length || !review.sections.length); q("#confirm-release-close").disabled = Boolean(preflight.blockers.length || !review.sections.length); q("#restore-release").disabled = !prior; releaseDialog.showModal(); releaseDialog.querySelector("h2")?.focus(); });
 q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
-const confirmRelease = (close) => { if (!state)
+const confirmRelease = (close) => { if (!state || !releasePreflight)
     return; let next; try {
-    next = publishProjectRelease(state, { id, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) });
+    next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) });
 }
-catch {
+catch (error) {
     q("#project-state").textContent = "Save failed";
-    q("#release-summary").textContent = "Publication failed; the prior canonical project bytes remain authoritative.";
+    q("#release-summary").textContent = error instanceof Error ? error.message : "Publication failed; the prior canonical project bytes remain authoritative.";
     q("#retry-save").hidden = false;
     return;
 } state = next; releaseDialog.close(); render(); if (close)
     q("#project-workspace").hidden = true;
 else {
-    q("#release-summary").textContent = `Release ${next.project.releases.length} published.`;
+    q("#release-summary").textContent = `Release ${next.project.releases.length} published from ${next.project.releases.at(-1)?.preflightContentIdentity}. Undo by restoring this release as a new Draft.`;
     q("#workspace-pane").focus();
 } };
 q("#confirm-release").addEventListener("click", () => confirmRelease(false));
@@ -493,6 +629,25 @@ q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
 } if (state)
     persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
 restore();
+if (!state) {
+    const stagedStart = localStorage.getItem(START_PATH_KEY);
+    if (stagedStart)
+        try {
+            q("#start-path-status").textContent = JSON.parse(stagedStart).message ?? "Starting path staged.";
+        }
+        catch { /* ignore invalid start-path recovery */ }
+}
+subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
+    if (pendingConflict)
+        return;
+    state = structuredClone(next);
+    lastCommittedState = structuredClone(next);
+    canonicalRevision = revision;
+    render();
+    renderFlowSteps();
+    renderAssignments();
+    q("#project-state").textContent = `Updated from canonical revision ${revision}`;
+});
 render();
 renderFlowSteps();
 renderAssignments();

@@ -3,8 +3,11 @@ import {
   addProjectEntity,
   createProjectSchemaDraft,
   createSpecificationProject,
+  restoreReleaseAsDraft,
   saveProjectAssignment,
+  transactProject,
 } from "../dist/data-layer-specification-project.js";
+import {publishCompiledRelease} from "../dist/data-layer-specification-assurance.js";
 import {
   FLOW_INSTANCES_STORAGE_KEY,
   FLOW_ROUTING_STORAGE_KEY,
@@ -29,6 +32,7 @@ state=createProjectSchemaDraft(state,{schemaId:"schema-retail",name:"Retail requ
 state=createProjectSchemaDraft(state,{schemaId:"schema-trade",name:"Trade requirements",baseRevision:4,description:"Trade"},id);
 state=saveProjectAssignment(state,{name:"Retail route",schemaId:"schema-retail",eventId:purchase.id,eventName:"purchase",applicabilitySetId:retailApplicability.id,sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:3},id);
 state=saveProjectAssignment(state,{name:"Trade route",schemaId:"schema-trade",eventId:purchase.id,eventName:"purchase",applicabilitySetId:tradeApplicability.id,sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:4},id);
+state={...state,project:{...state.project,publicationPolicy:{...state.project.publicationPolicy,fixturesRequired:false}}};state=publishCompiledRelease(state,{id,write:()=>{}});
 storage.setItem(SPECIFICATION_PROJECT_STORAGE_KEY,JSON.stringify(state));
 
 recordSpecificationCapture(storage,{sessionId:"tab:retail",pageUrl:"https://shop.example/products/1",sourceId:"event-history",rawValue:{event:"retail_entry"}});
@@ -54,4 +58,8 @@ assert.notEqual(retail.evaluation.winner.assignmentId,trade.evaluation.winner.as
 assert.equal(retail.evaluation.ties.length,1);assert.equal(trade.evaluation.ties.length,1);
 const correlatedValues=new Map([[SPECIFICATION_PROJECT_STORAGE_KEY,JSON.stringify(state)]]),correlatedStorage={getItem:(key)=>correlatedValues.get(key)??null,setItem:(key,value)=>correlatedValues.set(key,value)};
 recordSpecificationCapture(correlatedStorage,{sessionId:"tab:shared",correlationKey:"retail-order",pageUrl:"https://shop.example/products/1",sourceId:"event-history",rawValue:{event:"retail_entry"}});recordSpecificationCapture(correlatedStorage,{sessionId:"tab:shared",correlationKey:"trade-order",pageUrl:"https://shop.example/account",sourceId:"event-history",rawValue:{event:"trade_entry"}});const beforeAmbiguous=correlatedStorage.getItem(FLOW_INSTANCES_STORAGE_KEY),ambiguous=recordSpecificationCapture(correlatedStorage,{sessionId:"tab:shared",pageUrl:"https://shop.example/checkout/confirmation",sourceId:"event-history",rawValue:{event:"purchase"}});assert.equal(ambiguous.ambiguity.instanceIds.length,2);assert.equal(correlatedStorage.getItem(FLOW_INSTANCES_STORAGE_KEY),beforeAmbiguous,"ambiguous observations must not advance either correlated instance");
+const released=state,release=released.project.releases.at(-1);let changedDraft=restoreReleaseAsDraft(released,release.id,id);changedDraft=transactProject(changedDraft,"Change unpublished Retail matcher",(project)=>({...project,collections:{...project.collections,applicabilitySets:project.collections.applicabilitySets.map((entry)=>entry.id===retailApplicability.id?{...entry,condition:{kind:"predicate",field:"flowId",operator:"equals",value:"flow:unpublished"}}:entry)}}));
+const releaseValues=new Map([[SPECIFICATION_PROJECT_STORAGE_KEY,JSON.stringify(changedDraft)]]),releaseStorage={getItem:(key)=>releaseValues.get(key)??null,setItem:(key,value)=>releaseValues.set(key,value)};
+recordSpecificationCapture(releaseStorage,{sessionId:"tab:published",pageUrl:"https://shop.example/products/1",sourceId:"event-history",rawValue:{event:"retail_entry"}});const publishedResult=recordSpecificationCapture(releaseStorage,{sessionId:"tab:published",pageUrl:"https://shop.example/checkout/confirmation",sourceId:"event-history",rawValue:{event:"purchase"}});
+assert.equal(publishedResult.evaluation.winner.assignmentId,state.project.collections.assignments[0].id,"Live must ignore an unpublished matcher change");assert.equal(publishedResult.evaluation.releaseIdentity,release.id);assert.equal(publishedResult.evaluation.planContentIdentity,release.executablePlan.contentIdentity);
 console.log("production Specification Project callback runtime tests passed");

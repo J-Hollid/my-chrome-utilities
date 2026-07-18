@@ -256,10 +256,15 @@
                                project-result (process/shell {:out :inherit
                                                              :err :inherit
                                                              :continue true}
-                                                            "npm" "run" "test:property:specification-project")]
+                                                            "npm" "run" "test:property:specification-project")
+                               correction-result (process/shell {:out :inherit
+                                                                :err :inherit
+                                                                :continue true}
+                                                               "npm" "run" "test:property:specification-correction")]
                            (when (or (pos? (+ (:fail result) (:error result)))
                                      (not (zero? (:exit property-result)))
-                                     (not (zero? (:exit project-result))))
+                                     (not (zero? (:exit project-result)))
+                                     (not (zero? (:exit correction-result))))
                              (System/exit 1))))}
   test:hardening {:doc "Run mutation hardening tests."
                   :requires ([clojure.test :as test]

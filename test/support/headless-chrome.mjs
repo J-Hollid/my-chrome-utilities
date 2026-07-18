@@ -1,4 +1,4 @@
-export function headlessChromeArguments(profile) {
+export function headlessChromeArguments(profile, extensionRoot) {
   return [
     "--headless=new",
     "--disable-gpu",
@@ -10,6 +10,11 @@ export function headlessChromeArguments(profile) {
     "--no-default-browser-check",
     "--remote-debugging-port=0",
     `--user-data-dir=${profile}`,
+    ...(extensionRoot ? [
+      "--enable-extensions",
+      "--disable-features=DisableDisableExtensionsExceptCommandLineSwitch",
+      `--disable-extensions-except=${extensionRoot}`,
+    ] : []),
     "about:blank",
   ];
 }

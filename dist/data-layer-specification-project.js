@@ -53,27 +53,45 @@ export function composeRequirementProfiles(profiles) {
     return { requirements: [...requirements.values()], conflicts };
 }
 function fieldValue(context, field) {
+    if (field.startsWith("/"))
+        return field.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context.payload ?? context);
     if (field.startsWith("payload."))
         return field.slice(8).split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context.payload);
-    return context[field];
+    return field.split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context);
 }
 function predicateMatches(predicate, context) {
-    const actual = fieldValue(context, predicate.field), expected = predicate.value;
-    if (predicate.operator === "exists")
+    const actual = fieldValue(context, predicate.field), expected = predicate.valuePath ? fieldValue(context, predicate.valuePath) : predicate.value, operator = predicate.operator.toLowerCase().replaceAll("_", "-");
+    if (operator === "exists")
         return actual !== undefined;
-    if (predicate.operator === "equals")
-        return String(actual) === String(expected);
-    if (predicate.operator === "contains")
+    if (operator === "does not exist")
+        return actual === undefined;
+    if (operator === "equals")
+        return Object.is(actual, expected);
+    if (operator === "does not equal" || operator === "not equals")
+        return !Object.is(actual, expected);
+    if (operator === "is one of")
+        return (predicate.values ?? (Array.isArray(expected) ? expected : [])).some((candidate) => Object.is(candidate, actual));
+    if (operator === "contains")
         return String(actual).includes(String(expected));
-    if (predicate.operator === "glob")
+    if (operator === "glob")
         return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`).test(String(actual));
-    if (predicate.operator === "regex") {
+    if (operator === "regex" || operator === "matches pattern") {
         try {
-            return new RegExp(String(expected)).test(String(actual));
+            return new RegExp(predicate.pattern ?? String(expected)).test(String(actual));
         }
         catch {
             return false;
         }
+    }
+    if (typeof actual === "number" && typeof expected === "number") {
+        if (operator === "is greater than")
+            return actual > expected;
+        if (operator === "is at least")
+            return actual >= expected;
+        if (operator === "is less than")
+            return actual < expected;
+        if (operator === "is at most")
+            return actual <= expected;
     }
     return false;
 }
@@ -181,14 +199,106 @@ export function importSpecificationProject(serialized, options) { const parsed =
     throw new Error("Unsupported Specification Project format."); const collisions = options.existingProjects.some(({ id }) => id === parsed.project.id) ? [parsed.project.id] : []; return { project: clone(parsed.project), collisions }; }
 export function migrateLegacyLibrary(legacy, options) { const state = createSpecificationProject({ name: "Legacy Schema Library", site: "compatibility.local", id: options.id }); const issues = []; const events = (legacy.schemas ?? []).flatMap((schema) => (schema.assignments ?? []).flatMap((assignment) => { if (!assignment.id || !assignment.eventName)
     return issues.push({ sourceId: String(assignment.id ?? schema.id ?? "unknown"), message: "Assignment identity or event name is unresolved" }), []; return [{ id: String(assignment.id), name: String(assignment.eventName), eventName: assignment.eventName, sourceId: assignment.sourceId, target: assignment.target, legacySchemaId: schema.id }]; })); const profiles = (legacy.schemas ?? []).map((schema) => ({ id: String(schema.id), name: String(schema.name ?? schema.id), requirements: [], legacyVersion: schema.version })); return { project: { ...state.project, collections: { ...state.project.collections, profiles, events }, compatibility: { legacySnapshot: JSON.stringify(legacy) } }, issues }; }
-export function createProjectSchemaDraft(state, input, _id) {
+export function createProjectSchemaDraft(state, input, id) {
     return transactProject(state, `Create ${input.name} schema draft`, (project) => {
-        if (project.collections.schemaDrafts.some(({ id }) => id === input.schemaId))
-            throw new Error(`Schema ${input.schemaId} already exists.`);
-        const published = { ...createSchema(input.name, input.baseRevision, { type: "object", properties: {} }), id: input.schemaId, published: true, documentation: { description: input.description } };
+        const schemaId = input.schemaId?.trim() || id("schema");
+        if (project.collections.schemaDrafts.some(({ id }) => id === schemaId))
+            throw new Error(`Schema ${schemaId} already exists.`);
+        const published = { ...createSchema(input.name, input.baseRevision, { type: "object", properties: {} }), id: schemaId, published: true, documentation: { description: input.description } };
         const schema = createSchemaWorkingDraft(published);
         return { ...project, collections: { ...project.collections, schemaDrafts: [...project.collections.schemaDrafts, schema] } };
     });
+}
+const equalJson = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const recordValue = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+function documentChanges(before, after, path = "") { if (equalJson(before, after))
+    return []; if (recordValue(before) && recordValue(after)) {
+    return [...new Set([...Object.keys(before), ...Object.keys(after)])].flatMap((key) => documentChanges(before[key], after[key], `${path}/${key}`));
+} return [{ path: path || "/", before: clone(before), after: clone(after) }]; }
+function synchronizeDocument(base, current, next) { if (equalJson(current, base))
+    return clone(next); if (recordValue(base) && recordValue(current) && recordValue(next)) {
+    const merged = {};
+    for (const key of new Set([...Object.keys(base), ...Object.keys(current), ...Object.keys(next)])) {
+        const value = synchronizeDocument(base[key], current[key], next[key]);
+        if (value !== undefined)
+            merged[key] = value;
+    }
+    return merged;
+} return clone(current); }
+export function adoptSavedSchema(state, source) {
+    if (!source.published)
+        throw new Error("Only a published saved schema can be adopted.");
+    return transactProject(state, `Adopt saved schema ${source.name}`, (project) => {
+        if (project.collections.schemaDrafts.some(({ id }) => id === source.id))
+            throw new Error(`Saved schema ${source.name} is already adopted.`);
+        const schema = createSchemaWorkingDraft({ ...clone(source), assignments: clone(source.assignments ?? []) });
+        const adopted = { ...schema, sourceLineage: { librarySchemaId: source.id, adoptedRevision: source.version, synchronizedRevision: source.version }, sourceDocument: clone(source.document) };
+        return { ...project, collections: { ...project.collections, schemaDrafts: [...project.collections.schemaDrafts, adopted] } };
+    });
+}
+export function stageSavedSchemaSynchronization(state, source) {
+    const adopted = state.project.collections.schemaDrafts.find(({ id }) => id === source.id), lineage = adopted?.sourceLineage;
+    if (!adopted || lineage?.librarySchemaId !== source.id)
+        throw new Error(`Saved schema ${source.name} has not been adopted.`);
+    const fromRevision = Number(lineage.synchronizedRevision), base = adopted.sourceDocument, current = adopted.workingDraft?.document ?? adopted.document;
+    if (source.version <= fromRevision)
+        throw new Error(`Saved schema ${source.name} has no newer revision.`);
+    const changes = documentChanges(base, source.document), localOverrides = documentChanges(base, current).map(({ path }) => path);
+    return { schemaId: source.id, fromRevision, toRevision: source.version, changes, localOverrides, source: clone(source) };
+}
+export function commitSavedSchemaSynchronization(state, review) {
+    return transactProject(state, `Synchronize saved schema ${review.schemaId} to revision ${review.toRevision}`, (project) => {
+        const adopted = project.collections.schemaDrafts.find(({ id }) => id === review.schemaId), lineage = adopted?.sourceLineage;
+        if (!adopted || lineage?.synchronizedRevision !== review.fromRevision)
+            throw new Error("Saved-schema synchronization review is stale.");
+        const working = adopted.workingDraft, document = synchronizeDocument(adopted.sourceDocument, working?.document ?? adopted.document, review.source.document);
+        const schemaDrafts = project.collections.schemaDrafts.map((schema) => schema.id === review.schemaId ? { ...schema, sourceDocument: clone(review.source.document), sourceLineage: { ...schema.sourceLineage, synchronizedRevision: review.toRevision }, workingDraft: { ...working, document, pendingChanges: [...(working.pendingChanges ?? []), `Synchronized saved schema revision ${review.toRevision}`] } } : schema);
+        const fixtures = project.collections.fixtures.map((fixture) => JSON.stringify(fixture).includes(review.schemaId) ? { ...fixture, evidenceStatus: "stale", staleReason: `Schema ${review.schemaId} synchronized to revision ${review.toRevision}` } : fixture);
+        return { ...project, collections: { ...project.collections, schemaDrafts, fixtures } };
+    });
+}
+export function capturedValidationDestinationChoices(project, capture) {
+    const named = (entities) => entities.map(({ id, name }) => ({ id, name })), events = named(project.collections.events.filter((event) => event.eventName === capture.eventName && event.sourceId === capture.sourceId));
+    const flowSteps = project.collections.flows.flatMap((flow) => (flow.steps ?? []).map((step) => ({ id: step.id, name: `${flow.name} / ${step.name}` })));
+    return { events, pages: named(project.collections.pages), flowSteps, profiles: named(project.collections.profiles), suggestedFixtureName: `${capture.eventName.replace(/(^|[_-])(\w)/g, (_match, _prefix, letter) => letter.toUpperCase())} captured validation` };
+}
+function assertedEvaluation(input) {
+    if (input.evaluated.winner?.schemaId !== input.schemaId)
+        throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove schema ${input.schemaId}.`);
+    const issueCodes = [...new Set(input.evaluated.issueDetails.map(({ code }) => code))];
+    return { status: input.evaluated.issueDetails.length ? "fail" : "pass", issueCodes };
+}
+export function createFixtureFromCapturedValidation(state, input, id) {
+    if (!state.project.collections.schemaDrafts.some(({ id: schemaId }) => schemaId === input.schemaId))
+        throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
+    const expected = assertedEvaluation(input), fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), ...(input.profileId ? { profileIds: [input.profileId] } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected, assertions: [{ field: "status", equals: expected.status }, { field: "issueCodes", equals: clone(expected.issueCodes) }], evaluationResultIdentity: input.evaluated.resultIdentity, provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
+    return transactProject(state, `Create Fixture from capture ${input.captureId}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: [...project.collections.fixtures, fixture] } }));
+}
+function requirementsFromSchema(document, prefix = "") {
+    const properties = document.properties && typeof document.properties === "object" ? document.properties : {};
+    const required = new Set(Array.isArray(document.required) ? document.required.map(String) : []);
+    return Object.entries(properties).flatMap(([name, definition]) => {
+        const path = `${prefix}/${name}`, own = { path, ...(typeof definition.type === "string" ? { type: definition.type } : {}), ...(required.has(name) ? { required: true } : {}), ...(Array.isArray(definition.enum) ? { allowedValues: clone(definition.enum) } : {}) };
+        return [own, ...(definition.type === "object" ? requirementsFromSchema(definition, path) : [])];
+    });
+}
+export function capturedValidationProfileRequirements(project, input) {
+    assertedEvaluation(input);
+    const schema = project.collections.schemaDrafts.find(({ id }) => id === input.schemaId);
+    if (!schema)
+        throw new Error(`Adopt schema ${input.schemaId} before creating Profile requirements.`);
+    const working = schema.workingDraft, profileIds = working?.profileIds ?? schema.profileIds, profiles = (profileIds ?? []).map((profileId) => project.collections.profiles.find(({ id }) => id === profileId)).filter((profile) => Boolean(profile)), document = working?.document ?? schema.document;
+    if (!profiles.length && !document)
+        throw new Error(`Schema ${input.schemaId} has no evaluated document.`);
+    const requirements = profiles.length ? composeRequirementProfiles(profiles).requirements : requirementsFromSchema(document);
+    return requirements.map((requirement) => ({ ...clone(requirement), origin: `captured-validation:${input.captureId}`, evaluationResultIdentity: input.evaluated.resultIdentity }));
+}
+export function applyCapturedValidationToProfile(state, input) {
+    const profile = state.project.collections.profiles.find(({ id }) => id === input.profileId);
+    if (!profile)
+        throw new Error(`Unknown Profile ${input.profileId}.`);
+    const proposed = capturedValidationProfileRequirements(state.project, input);
+    return transactProject(state, `Add evaluated capture ${input.captureId} requirements to ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id !== profile.id ? candidate : { ...candidate, requirements: [...candidate.requirements.filter(({ path }) => !proposed.some((item) => item.path === path)), ...proposed] }) } }));
 }
 function canonicalAssignmentCondition(project, condition) { if (!condition)
     return undefined; if (condition.kind !== "predicate")
@@ -221,6 +331,18 @@ export function addFlowStep(state, flowId, input, id) { if (input.minimum < 0 ||
     throw new Error("Flow occurrence bounds are invalid."); const normalized = { ...clone(input), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.eventId ? { eventId: input.eventId } : {}) }; if (!input.pageId)
     delete normalized.pageId; if (!input.eventId)
     delete normalized.eventId; return transactProject(state, `Add ${input.name} flow step`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => flow.id === flowId ? { ...flow, steps: [...(flow.steps ?? []), { ...normalized, id: id("flow-step") }] } : flow) } })); }
+export function saveFlowStep(state, flowId, stepId, input) { if (input.minimum < 0 || input.maximum < input.minimum)
+    throw new Error("Flow occurrence bounds are invalid."); return transactProject(state, `Save flow step ${stepId}`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
+            return flow; const steps = flow.steps ?? []; if (!steps.some(({ id }) => id === stepId))
+            throw new Error(`Unknown flow step ${stepId}.`); return { ...flow, steps: steps.map((step) => { if (step.id !== stepId)
+                return step; const updated = { ...step, ...clone(input) }; if (!input.pageId)
+                delete updated.pageId; if (!input.eventId)
+                delete updated.eventId; return updated; }) }; }) } })); }
+export function saveFlowTransition(state, flowId, fromStepId, transition) { return transactProject(state, `Save flow transition ${transition.id}`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
+            return flow; const steps = flow.steps ?? []; if (!steps.some(({ id }) => id === fromStepId))
+            throw new Error(`Unknown source step ${fromStepId}.`); if (!steps.some(({ id }) => id === transition.toStepId))
+            throw new Error(`Unknown target step ${transition.toStepId}.`); return { ...flow, steps: steps.map((step) => { if (step.id !== fromStepId)
+                return step; const transitions = step.transitions ?? [], existing = transitions.some(({ id }) => id === transition.id); return { ...step, transitions: existing ? transitions.map((candidate) => candidate.id === transition.id ? clone(transition) : candidate) : [...transitions, clone(transition)] }; }) }; }) } })); }
 export function reorderFlowStep(state, flowId, from, to) { return transactProject(state, "Reorder flow step", (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
             return flow; const steps = [...(flow.steps ?? [])], moved = steps.splice(from, 1)[0]; if (!moved)
             return flow; steps.splice(Math.max(0, Math.min(to, steps.length)), 0, moved); return { ...flow, steps }; }) } })); }
