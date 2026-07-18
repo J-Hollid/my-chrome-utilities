@@ -4,14 +4,13 @@
 
 This matrix traces the proposed behavior program to `DLSP-01` through `DLSP-12` and the decisive acceptance criteria in `full-site-data-layer-specification-workflow-recommendations-R01.md`. The R01 report and every file under `artifacts/schema-editor-walkthrough/R01/` are immutable source evidence.
 
-Status values in this first specification revision are:
+Terminal status values are:
 
-- **Specified — pending approval:** deterministic behavior and production-runtime Gherkin exist; no handoff has occurred.
-- **Observed blocker:** R01 proves current production behavior contradicts the target.
-- **New capability:** the production model or surface does not yet exist.
-- **Existing primitive:** a narrower schema/rule/capture capability exists but does not satisfy the program outcome.
+- **Implemented and verified:** production behavior is present in the built extension and its stable model/runtime scenarios passed the coder, refactorer, and architect gates.
+- **Compatibility preserved:** an existing primitive remains available while the Specification Project provides the new authoring/release boundary.
+- **Release blocker repaired:** an R01 trust defect is covered by production-boundary regression evidence.
 
-## Proposed vertical delivery order
+## Delivered vertical behavior order
 
 | Order | Phase | Vertical behavior slice | Behavior / runtime feature | Depends on | Slice exit evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -36,55 +35,57 @@ Status values in this first specification revision are:
 
 | Recommendation | Phase | Feature and stable scenarios | Dependency | Implementation status |
 | --- | --- | --- | --- | --- |
-| DLSP-01 — State integrity and truthful UI | 0 | `Data layer durable authoring drafts 001–008`; runtime `001–006`; `Data layer truthful assignment lifecycle 001–007`; runtime `001–005` | Existing schema/assignment storage; gate for all later slices | **Specified — pending approval; Observed blocker** in R01 descriptions, assignment state, pins, edits, and Publish behavior |
-| DLSP-02 — Full-page Specification Project workspace | 1 | `Data layer Specification Project foundation 006`; runtime `004`; `Data layer Specification workspace navigation 001–007`; runtime `001–005` | DLSP-01, project aggregate | **Specified — pending approval; New capability**; side-panel navigation is an existing primitive |
-| DLSP-03 — First-class pages, applicability, flows, steps, releases | 1–3 | `Data layer Specification Project foundation 002`, runtime `001`; page/event catalog `001–006`, runtime `001–005`; named applicability `001–009`, runtime `001–006`; temporal flow authoring `001–009`, runtime `001–006`; atomic release `003`, runtime `003` | Project graph → catalogs → applicability/profiles → flows → release | **Specified — pending approval; New capability**; schema assignments/replay are narrower existing primitives |
-| DLSP-04 — Ordered profile composition | 2 | `Data layer requirement profile composition 001–007`; runtime `001–005`; decisive workflow `001`, `004` | First-class project contexts and stable profile IDs | **Specified — pending approval; New capability**; single-parent inheritance is an existing primitive and migration source |
-| DLSP-05 — Durable drafts and atomic releases | 0–3 | durable drafts `001–005`, `008`, runtime `001–004`, `006`; foundation `003`, runtime `003`; bulk `002–006`, runtime `002–005`; applicability `009`, runtime `006`; temporal flow `006`, runtime `005`; atomic release `001–007`, runtime `001–005` | Trust repair → project transactions → preflight | **Specified — pending approval; Observed blocker** for new drafts and schema-local publication; project release is new |
-| DLSP-06 — Bulk-first authoring | 1 | `Data layer bulk requirement authoring 001–007`; runtime `001–005`; decisive workflow `009` | Durable project transactions, full-page virtual grid | **Specified — pending approval; New capability**; property copy is an existing primitive |
-| DLSP-07 — Guided matcher builder and routing analysis | 2 | `Data layer named applicability 001–008`; runtime `001–005`; decisive workflow `005` | Page/event identities and project draft | **Specified — pending approval; New capability**; flat assignment predicates/candidate evidence are existing primitives |
-| DLSP-08 — Fixtures, coverage, and preflight | 3 | `Data layer project fixtures and preflight 001–008`; runtime `001–005`; decisive workflow `004–006` | Pages/events/applicability/profiles/flows | **Specified — pending approval; New capability**; captured-event validation is an accelerator only |
-| DLSP-09 — Navigation, global search, provenance, and impact | 1–3 | workspace navigation `001–009`, runtime `001–007`; profile composition `002`, `004–005`, runtime `001`, `003`; page/event catalog `003–006`, runtime `002–005`; preflight `004`, `008`, runtime `004–005` | Stable graph and project index | **Specified — pending approval; New capability** with narrower filter/origin primitives |
-| DLSP-10 — Full-fidelity interchange and staged diff/merge | 3 | `Data layer project interchange 001–007`; runtime `001–006`; atomic release `003`, `006`; decisive workflow `007` | Complete graph, migration registry, releases | **Specified — pending approval; New capability**; library backup and event import review are existing primitives |
-| DLSP-11 — Rename and rescope Build specification | 1–3 | `Data layer documentation export 001–005`; runtime `001–004`; project interchange `006`; runtime `005` | Full-page Specification Builder ownership and final export metadata | **Specified — pending approval; Observed naming/layout blocker**; current table exporter is retained as an existing primitive |
-| DLSP-12 — Responsive and accessible interaction system | Every phase | durable drafts `006–007`, runtime `005`; workspace `005–009`, runtime `003–007`; bulk `007`, runtime `005`; documentation export `003`, `005`, runtime `003–004`; page/event `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, `008`, runtime `004–005`; release `007`, runtime `005`; interchange `007`, runtime `006`; decisive `010`, runtime `004–006` | Delivered alongside each functional slice | **Specified — pending approval; Observed blocker** for nested scroll, density, focus/context, and narrow export; shared accessibility primitives exist |
+| DLSP-01 — State integrity and truthful UI | 0 | `Data layer durable authoring drafts 001–008`; runtime `001–006`; `Data layer truthful assignment lifecycle 001–007`; runtime `001–005` | Existing schema/assignment storage; gate for all later slices | **Implemented and verified; release blocker repaired.** Working-draft assignments, stable pins/IDs, lossless edits, truthful list/search state, and distinct Publish actions passed production-browser verification. |
+| DLSP-02 — Full-page Specification Project workspace | 1 | `Data layer Specification Project foundation 006`; runtime `004`; `Data layer Specification workspace navigation 001–007`; runtime `001–005` | DLSP-01, project aggregate | **Implemented and verified.** The built full-page workspace and side-panel companion expose bounded navigation, search, inspector context, restoration, and deep links. |
+| DLSP-03 — First-class pages, applicability, flows, steps, releases | 1–3 | `Data layer Specification Project foundation 002`, runtime `001`; page/event catalog `001–006`, runtime `001–005`; named applicability `001–009`, runtime `001–006`; temporal flow authoring `001–009`, runtime `001–006`; atomic release `003`, runtime `003` | Project graph → catalogs → applicability/profiles → flows → release | **Implemented and verified; compatibility preserved.** First-class project entities coexist with schema assignments and replay compatibility paths. |
+| DLSP-04 — Ordered profile composition | 2 | `Data layer requirement profile composition 001–007`; runtime `001–005`; decisive workflow `001`, `004` | First-class project contexts and stable profile IDs | **Implemented and verified; compatibility preserved.** Ordered composition, provenance, conflicts, and deterministic legacy parent-chain migration are covered. |
+| DLSP-05 — Durable drafts and atomic releases | 0–3 | durable drafts `001–005`, `008`, runtime `001–004`, `006`; foundation `003`, runtime `003`; bulk `002–006`, runtime `002–005`; applicability `009`, runtime `006`; temporal flow `006`, runtime `005`; atomic release `001–007`, runtime `001–005` | Trust repair → project transactions → preflight | **Implemented and verified; release blocker repaired.** Project/schema writes roll back both exact prior byte strings on failure, and release publishes schema working drafts through the revision lifecycle. |
+| DLSP-06 — Bulk-first authoring | 1 | `Data layer bulk requirement authoring 001–007`; runtime `001–005`; decisive workflow `009` | Durable project transactions, full-page virtual grid | **Implemented and verified.** Staging, 100-row commit, multi-selection, reusable subtrees, and one-transaction Undo passed. |
+| DLSP-07 — Guided matcher builder and routing analysis | 2 | `Data layer named applicability 001–008`; runtime `001–005`; decisive workflow `005` | Page/event identities and project draft | **Implemented and verified.** Nested matching, actionable errors, fixture/current-context evidence, overlap, candidate, winner, tie, shadow, and fallback behavior are covered. |
+| DLSP-08 — Fixtures, coverage, and preflight | 3 | `Data layer project fixtures and preflight 001–008`; runtime `001–005`; decisive workflow `004–006` | Pages/events/applicability/profiles/flows | **Implemented and verified.** Greenfield fixtures, bounded coverage, exact-field deep links, ambiguity analysis, and release blockers passed. |
+| DLSP-09 — Navigation, global search, provenance, and impact | 1–3 | workspace navigation `001–009`, runtime `001–007`; profile composition `002`, `004–005`, runtime `001`, `003`; page/event catalog `003–006`, runtime `002–005`; preflight `004`, `008`, runtime `004–005` | Stable graph and project index | **Implemented and verified.** Project-wide search, Where used, origin/provenance, release consumers, and focused issue navigation passed. |
+| DLSP-10 — Full-fidelity interchange and staged diff/merge | 3 | `Data layer project interchange 001–007`; runtime `001–006`; atomic release `003`, `006`; decisive workflow `007` | Complete graph, migration registry, releases | **Implemented and verified; compatibility preserved.** Full graph round-trip, collision review, rollback, and deliberately lossy JSON Schema plus companion manifest passed. |
+| DLSP-11 — Rename and rescope Build specification | 1–3 | `Data layer documentation export 001–005`; runtime `001–004`; project interchange `006`; runtime `005` | Full-page Specification Builder ownership and final export metadata | **Implemented and verified; release blocker repaired.** Specification Builder names the project workspace; documentation export retains the table workflow with explicit loss metadata and clipboard fidelity. |
+| DLSP-12 — Responsive and accessible interaction system | Every phase | durable drafts `006–007`, runtime `005`; workspace `005–009`, runtime `003–007`; bulk `007`, runtime `005`; documentation export `003`, `005`, runtime `003–004`; page/event `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, `008`, runtime `004–005`; release `007`, runtime `005`; interchange `007`, runtime `006`; decisive `010`, runtime `004–006` | Delivered alongside each functional slice | **Implemented and verified; release blocker repaired.** Keyboard/focus behavior, bounded rendering, and 360/520/720/1280 layouts passed actual-Chrome verification. |
 
 ## Decisive acceptance traceability
 
 | Criterion | Phase | Feature and stable scenario | Dependency | Implementation status |
 | --- | --- | --- | --- | --- |
-| DA-01 — Define shared sitewide page/event envelope | 1–2 | `Data layer Retail and Trade decisive workflow 001`; runtime `001` | Project foundation, profiles, catalog | Specified — pending approval |
-| DA-02 — Define Retail and Trade flows sharing Purchase and confirmation URL | 2 | decisive workflow `002`; temporal flow `003`; runtime temporal `002` | Pages/events, applicability, profiles, temporal evaluator | Specified — pending approval |
-| DA-03 — Retail requires transaction_id, value, currency | 2 | decisive workflow `001` | Ordered profiles | Specified — pending approval |
-| DA-04 — Trade additionally requires account_id and purchase_order_number | 2 | decisive workflow `001` | Ordered profiles | Specified — pending approval |
-| DA-05 — Prior flow state distinguishes markerless final events | 2 | decisive workflow `002`; runtime decisive `001`; temporal runtime `002–004` | Flow-instance correlation and persistence | Specified — pending approval; material assumption below |
-| DA-06 — Optional Retail upsell and repeatable product step | 2 | decisive workflow `003`; temporal flow `001–002`; runtime temporal `001` | Structured flow model | Specified — pending approval |
-| DA-07 — Effective requirement, origin, winner, and coverage visible | 2–3 | decisive workflow `004`; profile `002`; applicability `005`; preflight `004` | Profiles, applicability, coverage index | Specified — pending approval |
-| DA-08 — Deliberately ambiguous matcher detected before release | 3 | decisive workflow `005`; preflight `006`; runtime preflight `003` | Applicability analyzer and release gate | Specified — pending approval |
-| DA-09 — Passing and failing event/journey fixtures | 3 | decisive workflow `006`; fixtures/preflight `001–002`; runtime `001`, `003` | Temporal and validation evaluators | Specified — pending approval |
-| DA-10 — Publish, export, reload with complete stable semantics | 3 | decisive workflow `007`; runtime decisive `001–002`; interchange runtime `001–002` | Atomic release and full-fidelity format | Specified — pending approval |
-| DA-S1 — Draft name/description/properties survive navigation/reload | 0 | decisive workflow `008`; durable drafts `001–002`; runtime `001–002` | Draft persistence | Specified — pending approval |
-| DA-S2 — Paste at least 100 properties, review errors, commit/undo once | 1 | decisive workflow `009`; bulk `002`; runtime bulk `002` | Bulk staging and transactions | Specified — pending approval |
-| DA-S3 — Apply Required to multi-selection once | 1 | decisive workflow `009`; bulk `003`; runtime bulk `003` | Bulk grid | Specified — pending approval |
-| DA-S4 — Preflight issue reaches field within two actions | 1–3 | decisive workflow `010`; workspace `002`, runtime `001`; preflight `004`, runtime `004` | Deep-link index | Specified — pending approval |
-| DA-S5 — Property-path search shows all users and releases | 1–3 | decisive workflow `010`; workspace `004`; runtime workspace `005` | Global project index | Specified — pending approval |
-| DA-S6 — Core workflow completes keyboard-only | Every phase | decisive workflow `010`, runtime `005`; durable drafts `007`, runtime `005`; workspace `007–009`, runtime `004`, `006–007`; bulk `007`, runtime `005`; catalog `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, runtime `004`; release `007`, runtime `005`; interchange `007`, runtime `006` | Accessible components in each slice | Specified — pending approval |
+| DA-01 — Define shared sitewide page/event envelope | 1–2 | `Data layer Retail and Trade decisive workflow 001`; runtime `001` | Project foundation, profiles, catalog | **Implemented and verified.** |
+| DA-02 — Define Retail and Trade flows sharing Purchase and confirmation URL | 2 | decisive workflow `002`; temporal flow `003`; runtime temporal `002` | Pages/events, applicability, profiles, temporal evaluator | **Implemented and verified.** |
+| DA-03 — Retail requires transaction_id, value, currency | 2 | decisive workflow `001` | Ordered profiles | **Implemented and verified.** |
+| DA-04 — Trade additionally requires account_id and purchase_order_number | 2 | decisive workflow `001` | Ordered profiles | **Implemented and verified.** |
+| DA-05 — Prior flow state distinguishes markerless final events | 2 | decisive workflow `002`; runtime decisive `001`; temporal runtime `002–004` | Flow-instance correlation and persistence | **Implemented and verified in actual Chrome.** Registered production callbacks resolved different Retail and Trade winners from prior flow state. |
+| DA-06 — Optional Retail upsell and repeatable product step | 2 | decisive workflow `003`; temporal flow `001–002`; runtime temporal `001` | Structured flow model | **Implemented and verified.** |
+| DA-07 — Effective requirement, origin, winner, and coverage visible | 2–3 | decisive workflow `004`; profile `002`; applicability `005`; preflight `004` | Profiles, applicability, coverage index | **Implemented and verified.** |
+| DA-08 — Deliberately ambiguous matcher detected before release | 3 | decisive workflow `005`; preflight `006`; runtime preflight `003` | Applicability analyzer and release gate | **Implemented and verified.** |
+| DA-09 — Passing and failing event/journey fixtures | 3 | decisive workflow `006`; fixtures/preflight `001–002`; runtime `001`, `003` | Temporal and validation evaluators | **Implemented and verified.** |
+| DA-10 — Publish, export, reload with complete stable semantics | 3 | decisive workflow `007`; runtime decisive `001–002`; interchange runtime `001–002` | Atomic release and full-fidelity format | **Implemented and verified.** Stable identities and complete semantics survived release, export/import, and reload. |
+| DA-S1 — Draft name/description/properties survive navigation/reload | 0 | decisive workflow `008`; durable drafts `001–002`; runtime `001–002` | Draft persistence | **Implemented and verified.** |
+| DA-S2 — Paste at least 100 properties, review errors, commit/undo once | 1 | decisive workflow `009`; bulk `002`; runtime bulk `002` | Bulk staging and transactions | **Implemented and verified.** |
+| DA-S3 — Apply Required to multi-selection once | 1 | decisive workflow `009`; bulk `003`; runtime bulk `003` | Bulk grid | **Implemented and verified.** |
+| DA-S4 — Preflight issue reaches field within two actions | 1–3 | decisive workflow `010`; workspace `002`, runtime `001`; preflight `004`, runtime `004` | Deep-link index | **Implemented and verified.** |
+| DA-S5 — Property-path search shows all users and releases | 1–3 | decisive workflow `010`; workspace `004`; runtime workspace `005` | Global project index | **Implemented and verified.** |
+| DA-S6 — Core workflow completes keyboard-only | Every phase | decisive workflow `010`, runtime `005`; durable drafts `007`, runtime `005`; workspace `007–009`, runtime `004`, `006–007`; bulk `007`, runtime `005`; catalog `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, runtime `004`; release `007`, runtime `005`; interchange `007`, runtime `006` | Accessible components in each slice | **Implemented and verified in actual Chrome.** Focus return and keyboard-only operation passed the R03 walkthrough. |
 
 ## Terminal program gates
 
 | Gate | Stable scenario evidence | Status |
 | --- | --- | --- |
-| Existing-user migration or explicit compatibility | foundation `004–005`; catalog `005`; profile `006`; decisive runtime `003` | Specified — pending approval |
-| Representative 500-property, 50-flow benchmark | workspace `006`; preflight `008`; decisive runtime `004` | Specified — pending approval |
-| Actual browser boundaries for storage, focus, layout, clipboard, download, and reload | Runtime scenario IDs enumerated in each DLSP row; documentation export runtime `002–004`; interchange runtime `001–006`; decisive runtime `001–006` | Specified — pending approval |
-| Real-Chrome 360/520/720/full-page walkthrough and keyboard pass | `Data layer Retail and Trade decisive workflow runtime 005–006` | Specified — pending approval; new evidence round required |
-| Immutable R01 brief and evidence delivered downstream | First approved specification commit includes the authoritative report and exact `artifacts/schema-editor-walkthrough/R01/` tree | Awaiting approval |
+| Existing-user migration or explicit compatibility | foundation `004–005`; catalog `005`; profile `006`; decisive runtime `003` | **Passed.** Migration and compatibility scenarios preserve supported identities and semantic behavior. |
+| Representative 500-property, 50-flow benchmark | workspace `006`; preflight `008`; decisive runtime `004` | **Passed in actual Chrome.** Rendering remained bounded and the recorded interaction task stayed within the 100 ms limit. |
+| Actual browser boundaries for storage, focus, layout, clipboard, download, and reload | Runtime scenario IDs enumerated in each DLSP row; documentation export runtime `002–004`; interchange runtime `001–006`; decisive runtime `001–006` | **Passed.** Runtime evidence used production callbacks or deterministic adapters at the extension/browser boundary. |
+| Real-Chrome 360/520/720/full-page walkthrough and keyboard pass | `Data layer Retail and Trade decisive workflow runtime 005–006` | **Passed.** R03 records native side-panel widths plus 1280px full-page workspace evidence and keyboard focus restoration. |
+| Immutable R01 brief and evidence delivered downstream | First approved specification commit includes the authoritative report and exact `artifacts/schema-editor-walkthrough/R01/` tree | **Passed.** Delivered unchanged in specification commit `a58c9d1415`. |
 
-The previously approved Phase 0 rule slices are already committed in `1426e15` and `de5cfde`. They remain part of this program's implementation lineage and must pass coder, refactorer, architect, and terminal functional-delivery gates with the newly proposed slices.
+The previously approved Phase 0 rule slices are committed in `1426e15` and `de5cfde`. They remain part of this program's implementation lineage and passed the coder, refactorer, architect, and terminal functional-delivery gates with the later slices.
 
 ## Terminal correction cycle 1
 
-The first implementation lineage failed the architect's terminal functional-delivery gate. Its real browser boundary covered greenfield project creation, generic entity rows, global search, one bulk paste with Undo/Redo, basic preflight and release, bounded rendering, and reload. That subset is retained as a foundation, but the task is not complete until a subsequent production diff delivers and exercises every correction below.
+The first implementation lineage failed the architect's terminal functional-delivery gate. Its real browser boundary covered greenfield project creation, generic entity rows, global search, one bulk paste with Undo/Redo, basic preflight and release, bounded rendering, and reload. That subset was retained as a foundation while the subsequent production correction delivered and exercised every requirement below.
+
+**Closed.** Coder correction `9035d428303f7be59ae988807be2625131a24fff`, refactor/property handoff `1f1cd3f839`, and architect terminal hardening `60207d292b` delivered and verified every outcome in this table.
 
 | Missing production outcome | Required scenario evidence |
 | --- | --- |
@@ -98,9 +99,9 @@ The first implementation lineage failed the architect's terminal functional-deli
 
 Passing generic acceptance handlers or naming these concepts in a collection is not completion evidence. Each runtime scenario must drive the production extension boundary, or the same production callback through a deterministic adapter, and assert browser storage, clipboard, focus, scrolling, computed layout, download content, or temporal results as applicable.
 
-## Documented assumptions and one material question
+## Approved product assumptions
 
-1. **Flow-instance correlation — approval question.** The proposed default is one flow instance per browser-tab session, optionally correlated by an explicitly configured transaction/session variable. State survives same-tab navigation, extension reload, and crash recovery; explicit exit or configured timeout closes it; equal active instances block automatic selection. A different visitor-, cross-tab-, or transaction-only lifetime would materially change `Data layer temporal flow authoring 005` and runtime `004`.
+1. **Flow-instance correlation.** The approved default is one flow instance per browser-tab session, optionally correlated by an explicitly configured transaction/session variable. State survives same-tab navigation, extension reload, and crash recovery; explicit exit or configured timeout closes it; equal active instances block automatic selection.
 2. **Release numbering.** Project releases use monotonically increasing immutable revisions; restoring an old release creates a new draft.
 3. **Default preflight policy.** Semantic errors, unresolved ties, unreachable required branches, missing references/pins, and failing required fixtures block. Completeness warnings do not block unless project policy enables that gate.
 4. **Legacy compatibility.** Migration creates or exposes a compatibility project preserving supported identities and behavior. Blank/colliding/unpinned records are reviewed or quarantined rather than silently repaired; historical snapshots remain immutable.
@@ -108,3 +109,15 @@ Passing generic acceptance handlers or naming these concepts in a collection is 
 6. **Profile conflicts.** Ordered precedence resolves compatible overlays. Incompatible types, required/forbidden combinations, and empty allowed-value intersections remain explicit blockers rather than silent overwrite.
 7. **Performance acceptance.** The fixed QA benchmark uses 500 properties and 50 flows, bounded virtualized DOM, a 100 ms maximum interaction task, and a 2 second workspace-interactive budget. Benchmark environment and measurements must be recorded with verification evidence.
 8. **Visual evidence round.** An unrelated R02 evidence round already exists in the workspace and remains untouched. Post-implementation verification uses the next unused round, R03, under `artifacts/side-panel-walkthrough/R03/` with `docs/side-panel-visual-walkthrough-recommendations-R03.md`; R01 and R02 are never overwritten.
+
+## Terminal verification record
+
+- Specification lineage: `a58c9d1415` followed by correction specification `a144c4963e`.
+- Production lineage: coder `9035d428303f7be59ae988807be2625131a24fff`, refactorer `1f1cd3f839`, architect `60207d292b`.
+- Generated Gherkin soft mutation: 392 of 392 mutants killed across 28 feature files; zero survivors or errors.
+- Property verification: 200 generated cases passed. Refactor verification: 241 tests and 1,282 assertions passed; maximum CRAP was 3.0.
+- Direct acceptance packs: command palette, hotkeys, capture, event library, schemas, defects, replay, and shell all exited successfully.
+- Actual-extension evidence: `artifacts/side-panel-walkthrough/R03/` and `docs/side-panel-visual-walkthrough-recommendations-R03.md`.
+- Release status: every DLSP-01 through DLSP-12 recommendation and decisive criterion is implemented and verified. No program item is blocked.
+
+The only recorded follow-up is `VW-R03-01`, a P1 reproducibility improvement to add the documented `npm run demo` fixture. It is not a production regression or a blocker for the delivered Specification Project behavior.
