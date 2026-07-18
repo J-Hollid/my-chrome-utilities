@@ -311,6 +311,7 @@
       "src/data-layer-path-conditions.ts",
       "src/data-layer-reusable-rule-sync.ts",
       "src/data-layer-specification-project.ts",
+      "src/data-layer-specification-model.ts",
       "src/data-layer-specification-engine.ts",
       "src/data-layer-specification-bulk.ts",
       "src/data-layer-specification-assurance.ts",
