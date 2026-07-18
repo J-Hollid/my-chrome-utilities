@@ -14,6 +14,7 @@ import {
   projectImpactPreview,
 } from "../dist/data-layer-specification-guidance.js";
 import {
+  applyCapturedValidationToProfile,
   capturedValidationDestinationChoices,
   createFixtureFromCapturedValidation,
 } from "../dist/data-layer-specification-project.js";
@@ -88,6 +89,8 @@ for (let sample=0; sample<200; sample+=1) {
     project.collections.flows.flatMap(({steps=[]})=>steps).length,
     "continuation choices must conserve all named Flow steps");
   const payload={sample,nested:{currency:"EUR"}};
+  const evaluated={resultIdentity:`result:property-${sample}`,
+    winner:{schemaId:"schema:retail",schemaRevision:3},issueDetails:[]};
   const fixtureState=createFixtureFromCapturedValidation(
     {project,draft:{id:`draft:${sample}`,status:"Saved",updatedAt:"2026-07-18T00:00:00Z"},history:{undo:[],redo:[]}},
     {name:destinations.suggestedFixtureName,captureId:`capture:${sample}`,
@@ -95,7 +98,7 @@ for (let sample=0; sample<200; sample+=1) {
       schemaId:"schema:retail",eventId:capturedEvent.id,
       pageId:destinations.pages[0]?.id,flowStepId:destinations.flowSteps[0]?.id,
       profileId:destinations.profiles[0]?.id,
-      expected:{status:"pass",issueCodes:[]}},
+      evaluated},
     (kind)=>`${kind}:property-${sample}`,
   );
   payload.nested.currency="mutated";
@@ -104,12 +107,23 @@ for (let sample=0; sample<200; sample+=1) {
     "captured continuation must not mutate the prior project revision");
   assert.equal(continuedFixture.observations[0].payload.nested.currency,"EUR",
     "captured continuation must own an independent observation payload");
+  assert.equal(continuedFixture.evaluationResultIdentity,evaluated.resultIdentity,
+    "captured Fixtures must retain the production evaluator result identity");
   assert.deepEqual(
     {eventId:continuedFixture.eventId,pageId:continuedFixture.pageId,
       flowStepId:continuedFixture.flowStepId,profileIds:continuedFixture.profileIds},
     {eventId:capturedEvent.id,pageId:destinations.pages[0]?.id,
       flowStepId:destinations.flowSteps[0]?.id,profileIds:[destinations.profiles[0]?.id]},
     "captured Fixtures must conserve the reviewed canonical destination identities");
+  const profiledState=applyCapturedValidationToProfile(
+    {project,draft:{id:`draft:${sample}`,status:"Saved",updatedAt:"2026-07-18T00:00:00Z"},history:{undo:[],redo:[]}},
+    {captureId:`capture:${sample}`,profileId:"profile:retail",schemaId:"schema:retail",evaluated},
+  );
+  assert.equal(project.collections.profiles[0].requirements.some(({evaluationResultIdentity})=>evaluationResultIdentity),false,
+    "Profile continuation must not mutate the prior project revision");
+  assert.equal(profiledState.project.collections.profiles[0].requirements.every(
+    ({origin,evaluationResultIdentity})=>origin===`captured-validation:capture:${sample}`&&evaluationResultIdentity===evaluated.resultIdentity),true,
+    "continued Profile requirements must retain capture and evaluator provenance");
 
   let listener;
   let notifications=0;
