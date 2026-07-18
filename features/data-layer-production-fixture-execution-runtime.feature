@@ -1,0 +1,52 @@
+Feature: Data layer production fixture execution runtime
+
+  Background:
+    Given the built unpacked extension has fixtures authored through rendered controls
+    And the actual production evaluator is instrumented by scenario identity
+    And every Live comparison uses demo-page emission, the extension observer, Chrome messaging, and rendered results without direct callback invocation or a replaced Chrome API
+
+  # Data layer production fixture execution runtime 001
+  Scenario: Data layer production fixture execution runtime 001
+    When the operator runs a passing Retail event fixture from its editor
+    Then the rendered result shows its actual applicability winner, confirmation step, Retail schema revision, zero issues, and Pass
+    And persisted fixture evidence names the compiled revision used
+
+  # Data layer production fixture execution runtime 002
+  Scenario: Data layer production fixture execution runtime 002
+    When the operator runs a Trade event fixture missing account_id and purchase_order_number
+    Then the rendered result shows exactly those 2 Required issues and Fail
+    And changing the fixture's declared expectation to Pass does not change the actual result
+
+  # Data layer production fixture execution runtime 003
+  Scenario: Data layer production fixture execution runtime 003
+    When the operator runs a Retail journey with Product, optional Upsell, Checkout, and markerless Purchase observations
+    Then the rendered timeline shows each production automaton transition and the Retail schema winner
+    And an invalid-transition copy fails at the exact observation and transition
+
+  # Data layer production fixture execution runtime 004
+  Scenario: Data layer production fixture execution runtime 004
+    Given the real demo page emits one authored fixture observation through the extension observer and Chrome messaging
+    When both visible results are opened
+    Then candidate IDs, winner, flow step, effective schema revision, provenance, issues, and next state match exactly
+    And the fixture runner did not call a simplified validation path
+
+  # Data layer production fixture execution runtime 005
+  Scenario: Data layer production fixture execution runtime 005
+    Given a passing fixture result belongs to compiled revision 8
+    When the operator changes a contributing Profile and simulates a failed recompile
+    Then the result is visibly Stale and cannot satisfy release policy
+    And the prior evidence remains inspectable without being labelled current
+
+  # Data layer production fixture execution runtime 006
+  Scenario: Data layer production fixture execution runtime 006
+    Given a required failing fixture unexpectedly passes under a deliberately permissive evaluator mutation
+    When the fixture corpus and release gate run
+    Then the exact fixture scenario fails and publication remains blocked
+    And the mutation cannot be hidden by trusting the declared expected result
+
+  # Data layer production fixture execution runtime 007
+  Scenario: Data layer production fixture execution runtime 007
+    Given the fixture editor contains an unsaved observation repair
+    When a rerender, navigation, reload, and one failed save occur
+    Then the repair and its field-level status survive
+    And rerunning after Retry records one current result for the new canonical revision
