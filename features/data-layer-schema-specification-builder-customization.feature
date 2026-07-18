@@ -129,3 +129,15 @@ Feature: Data layer schema specification builder customization
     When all clipboard writing fails
     Then the configured preview remains available for manual selection and copy
     And no builder configuration is lost
+
+  # Data layer schema specification builder customization 011
+  Scenario Outline: Data layer schema specification builder customization 011
+    Given the operator configured property selection, column order, heading inclusion, table style, and example overrides on <origin_surface>
+    When Continue on <destination_surface> is selected
+    Then the same canonical schema revision and complete open-builder configuration appear on <destination_surface>
+    And the operator can refine every configuration choice and create Spreadsheet or Rich table output there
+    And Back restores the origin configuration and focus without changing schema or project semantics
+    Examples:
+      | origin_surface | destination_surface |
+      | side panel | standalone Builder |
+      | standalone Builder | side panel |

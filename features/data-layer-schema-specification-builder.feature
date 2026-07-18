@@ -97,3 +97,15 @@ Feature: Data layer schema specification builder
     And HTML markup, tabs, line breaks, and vertical bars inside property content cannot corrupt table boundaries
     And a plain-text fallback remains available with visible feedback when rich clipboard writing fails
     And copying does not change the schema or builder selection
+
+  # Data layer schema specification builder 008
+  Scenario Outline: Data layer schema specification builder 008
+    Given the same canonical effective schema revision is opened on <surface>
+    When the operator activates Build specification
+    Then the full hierarchical property selector, effective origins, container selection, sorting, completeness summary, and seven rich columns are available
+    And derived rows, conditions, documentation, examples, allowed values, conflicts, and provenance equal the other surface
+    And Spreadsheet and Rich table output use the same production derivation rather than a reduced standalone table model
+    Examples:
+      | surface |
+      | side panel |
+      | standalone Specification Builder |

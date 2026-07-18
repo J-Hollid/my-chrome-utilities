@@ -93,14 +93,14 @@ Feature: Data layer greenfield Retail Trade production release runtime
   # Data layer greenfield Retail Trade production release runtime 012
   Scenario: Data layer greenfield Retail Trade production release runtime 012
     Given implementation is complete and hashes were recorded for every existing schema-editor and side-panel report and evidence file
-    When the actual greenfield Builder workflow is repeated for schema-editor correction round R03
+    When the actual greenfield Builder workflow is repeated for schema-editor correction round R05
     Then screenshots capture blank creation, every contextual editor, staging, ambiguity and repair, fixtures, coverage, release, side-panel Live results, and round-trip reload
-    And desktop plus 360, 520, and 720 CSS px keyboard states are captured under artifacts/schema-editor-walkthrough/R03
-    And docs/full-site-data-layer-specification-workflow-assessment-R03.md records scenario IDs, build identity, extension URL, clean-profile provenance, actions, visible results, persisted-state observations, regressions, and release status
-    When the required side-panel commerce walkthrough and report template are completed as side-panel round R04
-    Then real 360, 520, and 720 CSS px Live, inspector, Library, payload editor, push, and keyboard states are stored under artifacts/side-panel-walkthrough/R04
-    And docs/side-panel-visual-walkthrough-recommendations-R04.md plus the decision register record the required results
-    And after hashes prove every prior R01, R02, and R03 report and evidence file remained unchanged
+    And desktop plus 360, 520, and 720 CSS px keyboard states are captured under artifacts/schema-editor-walkthrough/R05
+    And docs/full-site-data-layer-specification-workflow-assessment-R05.md records scenario IDs, build identity, extension URL, clean-profile provenance, actions, visible results, persisted-state observations, regressions, and release status
+    When the required side-panel commerce walkthrough and report template are completed as side-panel round R05
+    Then real 360, 520, and 720 CSS px Live, inspector, Library, payload editor, push, and keyboard states are stored under artifacts/side-panel-walkthrough/R05
+    And docs/side-panel-visual-walkthrough-recommendations-R05.md plus the decision register record the required results
+    And after hashes prove every prior R01 through R04 report and evidence file remained unchanged
 
   # Data layer greenfield Retail Trade production release runtime 013
   Scenario: Data layer greenfield Retail Trade production release runtime 013
@@ -145,3 +145,20 @@ Feature: Data layer greenfield Retail Trade production release runtime
       | Fixture |
       | Schema draft |
       | Assignment |
+
+  # Data layer greenfield Retail Trade production release runtime 017
+  Scenario: Data layer greenfield Retail Trade production release runtime 017
+    Given release 1 is active and the installed Builder changes a matcher and validation rule without publication
+    When the real page repeats an identical Retail observation
+    Then Live remains on release 1 with the prior unified result
+    When release 2 is published through the same preflight identity and the observation repeats
+    Then Live identifies release 2 and returns the newly published result
+
+  # Data layer greenfield Retail Trade production release runtime 018
+  Scenario: Data layer greenfield Retail Trade production release runtime 018
+    Given installed side panel contains Purchase revision 4 and one real validated Retail observation
+    When source-aware integration acceptance adopts Purchase into the active project and continues the observation into a guided Fixture through rendered controls
+    Then standalone Builder opens the canonical schema and Fixture with complete lineage, assertions, names, provenance, and base revision
+    When the production rich specification builder is customized and copied on side panel and standalone
+    Then both installed surfaces expose equivalent controls and structurally identical Spreadsheet and Rich table outputs
+    And Open, Continue, Back, and explicit schema synchronization preserve exact context without clipboard transfer, raw IDs, duplicate authoring, or parallel executable state

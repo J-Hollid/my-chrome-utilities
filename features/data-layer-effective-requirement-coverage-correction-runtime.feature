@@ -56,3 +56,17 @@ Feature: Data layer effective requirement coverage correction runtime
     When coverage rerenders and the extension reloads
     Then only affected cells are visibly Stale
     And rerunning their production fixtures refreshes those cells without changing unrelated evidence
+
+  # Data layer effective requirement coverage correction runtime 008
+  Scenario: Data layer effective requirement coverage correction runtime 008
+    Given the installed project renders Profiles, Schemas, Flows, 2 legacy assignments, and empty Fixtures but has zero canonical assignments
+    When the operator opens Coverage
+    Then a blocking explanation identifies missing canonical assignments and proving Fixture assertions
+    And the view cannot present an empty 0-of-0 matrix as complete or release-ready
+
+  # Data layer effective requirement coverage correction runtime 009
+  Scenario: Data layer effective requirement coverage correction runtime 009
+    Given canonical Retail and Trade assignments and guided proving Fixtures exist
+    When the installed coverage matrix opens
+    Then its nonzero Page, Event, Flow step, and effective requirement cells use human names
+    And opening a cell reaches its exact Fixture assertion and provenance source

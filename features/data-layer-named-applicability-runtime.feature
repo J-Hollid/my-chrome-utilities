@@ -62,3 +62,24 @@ Feature: Data layer named applicability runtime
     Then production storage, rendered summary, and candidate evidence return to the exact prior matcher after Undo
     And they return to the complete edited matcher after Redo
     And no partial condition group is persisted between transactions
+
+  # Data layer named applicability runtime 007
+  Scenario: Data layer named applicability runtime 007
+    Given the installed matcher editor lists Retail checkout by name
+    When the operator selects it and saves without reading its stable ID
+    Then canonical storage contains the selected Flow reference
+    And the production evaluator matches a Retail observation and rejects a Trade observation with exact predicate reasons
+
+  # Data layer named applicability runtime 008
+  Scenario: Data layer named applicability runtime 008
+    Given shared Checkout confirmation and Purchase editors show no Applicability selection
+    When the operator saves and reloads both installed surfaces
+    Then neither entity acquires a default Retail scope
+    And both remain selectable in Retail and Trade Flows and Assignments
+
+  # Data layer named applicability runtime 009
+  Scenario: Data layer named applicability runtime 009
+    Given 2 equal-priority applicability sets overlap at Checkout confirmation Purchase
+    When the operator runs matcher testing from the installed editor
+    Then the same production matcher shows matching predicates, rejected predicates, both candidates, and no winner
+    And the exact overlapping predicate receives the release-blocking deep link

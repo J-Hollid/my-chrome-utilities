@@ -66,3 +66,25 @@ Feature: Data layer unified specification evaluation runtime
     Then Preview and the parity failure are visible and every production Publish control is disabled
     When the operator repairs the project and the scenario-specific parity check passes
     Then Preview clears and release eligibility derives from the unified evaluator result
+
+  # Data layer unified specification evaluation runtime 009
+  Scenario: Data layer unified specification evaluation runtime 009
+    Given the real observer captures a published-plan Purchase from a permitted target
+    When the operator opens its installed Live result
+    Then winner, rejected candidates, Flow and step, effective Profiles, schema revision, issues, provenance, release identity, and result identity are visible
+    And the displayed object is the exact capture evaluation result rather than legacy validation output
+
+  # Data layer unified specification evaluation runtime 010
+  Scenario: Data layer unified specification evaluation runtime 010
+    Given release 1 is active and the installed Builder saves an unpublished matcher and schema change
+    When the real page emits the same Retail Purchase before and after that draft save
+    Then both Live results identify release 1 and are structurally identical
+    When the operator publishes release 2 through the shared gate and emits again
+    Then the new Live result identifies and executes release 2
+
+  # Data layer unified specification evaluation runtime 011
+  Scenario: Data layer unified specification evaluation runtime 011
+    Given a controlled migration case makes unified and legacy Live validation disagree
+    When the real observer produces a Live row
+    Then status and issues equal the unified published-plan evaluation
+    And legacy output cannot replace, merge into, or suppress any authoritative result field

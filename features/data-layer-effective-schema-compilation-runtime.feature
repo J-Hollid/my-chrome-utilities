@@ -55,3 +55,69 @@ Feature: Data layer effective schema compilation runtime
     When the operator compiles and inspects the effective contract
     Then the rendered allowed values contain only EUR with both origins
     And a page-emitted USD event fails and a page-emitted EUR event passes that compiled rule in Live
+
+  # Data layer effective schema compilation runtime 008
+  Scenario Outline: Data layer effective schema compilation runtime 008
+    Given the operator authors <parent_path> and <child_path> through rendered Profile controls in <authoring_order>
+    When the installed Builder compiles and renders the effective schema
+    Then no silent crash occurs and both paths are visible with their effective types and origins
+    And preflight consumes the same successfully compiled document
+    Examples:
+      | parent_path | child_path | authoring_order |
+      | /ecommerce | /ecommerce/transaction_id | parent then child |
+      | /ecommerce | /ecommerce/transaction_id | child then parent |
+      | /page | /page/type | parent then child |
+
+  # Data layer effective schema compilation runtime 009
+  Scenario Outline: Data layer effective schema compilation runtime 009
+    Given the published Retail schema declares <constraint>
+    When the real page emits <invalid_value>
+    Then visible Live contains path <path>, code <code>, severity error, expected <expected>, actual <invalid_value>, and provenance
+    And the corresponding negative Fixture returns the structurally identical issue
+    Examples:
+      | constraint | invalid_value | path | code | expected |
+      | transaction_id is string | 42 | /ecommerce/transaction_id | type | string |
+      | currency is EUR or GBP | USD | /ecommerce/currency | enum | EUR or GBP |
+      | coupon is forbidden | SUMMER | /ecommerce/coupon | forbidden | absent |
+
+  # Data layer effective schema compilation runtime 010
+  Scenario: Data layer effective schema compilation runtime 010
+    Given the installed editor authors an items cardinality rule and a trade conditional requirement
+    When positive and negative Fixtures and page observations run
+    Then valid values pass and each invalid cardinality or conditional case returns one exact issue
+    And Fixture, preflight, release review, and Live use the same validation outcome
+
+  # Data layer effective schema compilation runtime 011
+  Scenario Outline: Data layer effective schema compilation runtime 011
+    Given the installed side panel authors <rule_type> for a <property_type> property through rendered controls
+    When the operator adopts it into a canonical Profile, publishes it, and emits proving observations
+    Then the installed Builder retains the rule type and typed parameters without a compatibility downgrade
+    And Fixture and visible Live return the same positive and negative outcomes from the published plan
+    Examples:
+      | rule_type | property_type |
+      | Required | boolean |
+      | Exact value | string |
+      | Allowed values | number |
+      | Regular expression | string |
+      | Text length | string |
+      | Digits only | string |
+      | Numeric range | number |
+      | Item count | array |
+      | Allow undeclared properties | object |
+
+  # Data layer effective schema compilation runtime 012
+  Scenario: Data layer effective schema compilation runtime 012
+    Given the installed query builder authors a nested All group containing an Any group and a Not group
+    And its leaves collectively exercise every supported typed predicate operator
+    And one predicate compares a typed property reference with another compatible property reference
+    When the operator saves, reloads, compiles, and runs branch-covering positive and negative Fixtures
+    Then the rendered readable query and canonical condition tree remain structurally identical
+    And Applicability, Flow transitions, conditional rules, and Live consume that same condition-tree representation
+    And the same published query produces identical branch outcomes and provenance for real Live observations
+
+  # Data layer effective schema compilation runtime 013
+  Scenario: Data layer effective schema compilation runtime 013
+    Given an installed reusable rule has custom severity, issue message, enabled state, version, and conditional parameters
+    When the operator adopts it, edits it, attaches it to another property, explicitly synchronizes it, toggles it, exports it, imports it, and reloads
+    Then every rendered lifecycle state retains the same canonical identity and reviewed version policy
+    And the published release remains unchanged until synchronization passes preflight and is published

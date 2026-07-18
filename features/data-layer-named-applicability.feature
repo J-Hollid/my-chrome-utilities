@@ -102,3 +102,39 @@ Feature: Data layer named applicability
     Then one Undo restores the prior route and complete condition tree
     And one Redo reapplies the route and complete condition tree
     And candidate analysis always reflects the currently rendered transaction state
+
+  # Data layer named applicability 010
+  Scenario: Data layer named applicability 010
+    Given Checkout confirmation Page and Purchase Event are shared by Retail and Trade
+    When the operator saves either entity without contextual Applicability
+    Then no Applicability Set is selected or invented
+    And both entities remain available to every Flow and Assignment until explicitly scoped
+
+  # Data layer named applicability 011
+  Scenario Outline: Data layer named applicability 011
+    Given a predicate requires a <reference_kind> reference
+    When the operator selects <human_name>
+    Then the selector continues to display <human_name> after Save and reload
+    And the matcher persists and evaluates the selected stable reference
+    Examples:
+      | reference_kind | human_name |
+      | Flow | Retail checkout |
+      | Flow step | Retail confirmation |
+      | Page | Checkout confirmation |
+      | Event | Purchase |
+      | Profile | Retail confirmation requirements |
+
+  # Data layer named applicability 012
+  Scenario Outline: Data layer named applicability 012
+    Given the matcher editor offers <operator>
+    When the operator tests the matcher before Save
+    Then the production matcher returns predicate evidence for <matching_value>
+    And static overlap analysis reports every equal-priority intersecting Applicability Set
+    Examples:
+      | operator | matching_value |
+      | equals | purchase |
+      | not equals | product_view |
+      | exists | /ecommerce |
+      | contains | checkout |
+      | glob | /checkout/* |
+      | regular expression | ^/checkout/confirmation$ |

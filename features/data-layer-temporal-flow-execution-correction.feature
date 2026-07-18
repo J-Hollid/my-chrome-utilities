@@ -85,3 +85,19 @@ Feature: Data layer temporal flow execution correction
     When the Flow is recompiled and reopened
     Then execution semantics and reference identity are unchanged
     And deleting the reference is blocked until the step is repaired
+
+  # Data layer temporal flow execution correction 011
+  Scenario: Data layer temporal flow execution correction 011
+    Given Retail checkout has Product, optional Upsell, Checkout, and Confirmation steps
+    When the Flow editor opens
+    Then every step, occurrence bound, branch, join, and transition is editable in place
+    And the editor, compiler, fixture runner, and runtime consume one transition representation
+    And its sequence summary identifies entry, optional paths, joins, and exit
+
+  # Data layer temporal flow execution correction 012
+  Scenario: Data layer temporal flow execution correction 012
+    Given Retail checkout steps are rendered and actionable
+    When the operator switches directly to Trade checkout
+    Then only Trade checkout steps and actions remain rendered
+    And no stale Retail control can submit a command against Trade checkout
+    And returning to Retail restores its current canonical steps rather than a cached list

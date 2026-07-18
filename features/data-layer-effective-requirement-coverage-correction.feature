@@ -55,3 +55,24 @@ Feature: Data layer effective requirement coverage correction
     When the operator pivots, filters, and scrolls beyond the first 40 rows
     Then every matching cell remains reachable through real windowing
     And bounded rendering does not omit off-screen coverage data
+
+  # Data layer effective requirement coverage correction 008
+  Scenario Outline: Data layer effective requirement coverage correction 008
+    Given an apparently complete project has <defect>
+    When coverage is computed
+    Then coverage is blocked with a direct repair action instead of reporting 0 of 0 as complete
+    And no requirement cell is Covered without a matching proving Fixture assertion
+    Examples:
+      | defect |
+      | zero canonical assignments |
+      | zero effective requirements |
+      | zero proving Fixtures |
+      | an ambiguous applicability winner |
+      | a compiler failure |
+
+  # Data layer effective requirement coverage correction 009
+  Scenario: Data layer effective requirement coverage correction 009
+    Given Retail and Trade confirmation contexts are executable and have proving Fixtures
+    When coverage opens
+    Then human-readable Page by Event by Flow step rows contain every effective requirement
+    And each cell links to its proving Fixture assertions and compiled provenance
