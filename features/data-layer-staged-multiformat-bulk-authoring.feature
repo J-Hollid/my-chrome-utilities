@@ -78,3 +78,10 @@ Feature: Data layer staged multiformat bulk authoring
     Then the complete visible workflow finishes within 2 minutes
     And timing does not exclude parsing, staging, repair, exclusion, multi-actions, review, commit, rendered verification, or Undo
     And Undo restores the exact pre-import revision
+
+  # Data layer staged multiformat bulk authoring 010
+  Scenario: Data layer staged multiformat bulk authoring 010
+    Given a bulk stage is locked to Retail confirmation requirements at base revision 20
+    When the operator selects Trade confirmation requirements or revision 21 arrives
+    Then the staged rows remain labelled Retail confirmation requirements revision 20 and cannot commit elsewhere
+    And the operator can return, discard, or rebase without losing repairs, exclusions, paging position, or source provenance

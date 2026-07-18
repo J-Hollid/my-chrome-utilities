@@ -81,3 +81,19 @@ Feature: Data layer truthful assignment lifecycle
     Then placeholders with no operator-authored routing data are excluded from active assignments
     And valid assignments retain stable references and behavior
     And cleanup review distinguishes removed placeholders from retained assignments
+
+  # Data layer truthful assignment lifecycle 008
+  Scenario: Data layer truthful assignment lifecycle 008
+    Given two named assignment rows are visible and schema-owned legacy assignment rows also exist
+    When assignment compilation runs
+    Then the 2 visible rows are the same 2 canonical records supplied to the compiler
+    And each rendered field equals its compiled schema, event, applicability, priority, and version policy
+    And no legacy row contributes a count, candidate, or Save target
+
+  # Data layer truthful assignment lifecycle 009
+  Scenario: Data layer truthful assignment lifecycle 009
+    Given the operator selects Retail confirmation schema, Purchase, and Retail purchase context by name
+    When the assignment is saved and reopened
+    Then the same names are displayed and stable references are persisted
+    And candidate preview explains the winning and rejected assignments before Save
+    And the impact summary names the Production behavior and evidence made stale

@@ -73,3 +73,10 @@ Feature: Data layer staged multiformat bulk authoring runtime
     Then recorded monotonic time for the complete workflow is under 2 minutes
     And the timing record includes parsing, staging, repair, exclusion, multi-actions, review, commit, rendered verification, and Undo
     And visible and persisted state equal the exact pre-import revision
+
+  # Data layer staged multiformat bulk authoring runtime 009
+  Scenario: Data layer staged multiformat bulk authoring runtime 009
+    Given a staged spreadsheet is visibly locked to Retail confirmation requirements at base revision 20
+    When another installed page creates revision 21 and the operator selects Trade confirmation requirements
+    Then Commit remains blocked outside the locked Retail context
+    And returning and rebasing retains every staged row, repair, exclusion, page, selection, and source location

@@ -115,3 +115,50 @@ Feature: Data layer Specification Builder operator usability runtime
     Then Staging remains selected in the rendered project, matcher preview, schema preview, and validation context
     When the operator switches back to Production
     Then its independent host and compiled context return without changing Staging
+
+  # Data layer Specification Builder operator usability runtime 014
+  Scenario: Data layer Specification Builder operator usability runtime 014
+    Given a clean installed-extension profile contains no project
+    When the operator creates a blank project through visible controls
+    Then the rendered specification map identifies one recommended next action with its reason and unlocked result
+    And task entry points and entity guidance require no collection-name or source knowledge
+
+  # Data layer Specification Builder operator usability runtime 015
+  Scenario Outline: Data layer Specification Builder operator usability runtime 015
+    Given the installed Builder is showing <state>
+    When the operator follows its repair action
+    Then focus reaches the exact named entity field and the URL contains no unexplained raw identity
+    And Back restores the prior view and scroll position
+    Examples:
+      | state |
+      | empty Fixture |
+      | zero-cell Coverage |
+      | compiler failure |
+      | applicability overlap |
+
+  # Data layer Specification Builder operator usability runtime 016
+  Scenario: Data layer Specification Builder operator usability runtime 016
+    Given the operator changes a relationship and then publishes through actual controls
+    When before-action and after-action messages are inspected
+    Then they name affected entities, draft or published scope, runtime consequence, stale evidence, revision, and Undo availability
+    And the messages agree with canonical storage and the compiled plan
+
+  # Data layer Specification Builder operator usability runtime 017
+  Scenario Outline: Data layer Specification Builder operator usability runtime 017
+    Given the installed Builder viewport is <width>
+    When the complete requirement editor is operated by keyboard
+    Then exactly one active pane and one primary vertical scroll owner are rendered at narrow widths
+    And every requirement field, error, and primary action remains reachable with deterministic focus restoration
+    Examples:
+      | width |
+      | 360 CSS px |
+      | 720 CSS px |
+      | full-page desktop |
+
+  # Data layer Specification Builder operator usability runtime 018
+  Scenario: Data layer Specification Builder operator usability runtime 018
+    Given installed side panel and standalone Builder display a saved schema, captured validation, and active project
+    When the operator follows each rendered cross-surface Continue action
+    Then schema adoption, captured-observation continuation, rich table building, and return navigation open the named destination with complete context
+    And each surface states its complementary role and the canonical consequence before and after the action
+    And no action exposes a raw ID or requires clipboard, export/import, duplicate authoring, or a reduced standalone model

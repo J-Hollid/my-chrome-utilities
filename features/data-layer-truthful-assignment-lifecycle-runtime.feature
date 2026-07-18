@@ -56,3 +56,17 @@ Feature: Data layer truthful assignment lifecycle runtime
     When resolution, search, conflict repair, and reload run through production callbacks
     Then the actual DOM derives count, rows, empty state, and conflict from one filtered collection
     And no blank placeholder assignment is rendered or resolved
+
+  # Data layer truthful assignment lifecycle runtime 006
+  Scenario: Data layer truthful assignment lifecycle runtime 006
+    Given the installed Builder renders 2 assignment rows from a migrated project
+    When the actual production compiler resolves assignments
+    Then its input and output contain those same 2 stable assignment identities
+    And schema-owned compatibility rows contribute neither rendered counts nor runtime candidates
+
+  # Data layer truthful assignment lifecycle runtime 007
+  Scenario: Data layer truthful assignment lifecycle runtime 007
+    Given the operator has no source, storage, or raw-ID access
+    When Retail and Trade assignments are authored with visible entity selectors
+    Then persisted references resolve to the selected human names after reload
+    And distinct Retail and Trade observations produce the previewed candidates and winners

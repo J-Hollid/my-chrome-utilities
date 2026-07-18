@@ -62,3 +62,38 @@ Feature: Data layer production fixture execution
     When the project changes to revision 9
     Then its result is visibly Stale until rerun
     And a compilation or storage failure retains the previous result and editable fixture without presenting it as current
+
+  # Data layer production fixture execution 008
+  Scenario Outline: Data layer production fixture execution 008
+    Given a release-gating Fixture contains <missing_proof>
+    When the operator attempts to run or accept it
+    Then the Fixture is Blocked rather than Pass
+    And guidance opens the first missing observation or assertion control
+    Examples:
+      | missing_proof |
+      | zero observations |
+      | zero assertions |
+      | an empty payload and empty expected result |
+
+  # Data layer production fixture execution 009
+  Scenario: Data layer production fixture execution 009
+    Given the operator creates a Fixture from guided Page, Event, Flow step, timestamp, correlation, payload, and expectation controls
+    When the Fixture runs from its editor
+    Then actual candidates, rejected candidates, winner, Flow and step, schema revision, issues, provenance, and differences are shown inline
+    And positive and negative expectations are independently asserted
+
+  # Data layer production fixture execution 010
+  Scenario Outline: Data layer production fixture execution 010
+    Given a negative Fixture is intended to prove <behavior>
+    When the Fixture runs
+    Then the exact expected issue or flow result is present and the Fixture passes
+    And removing the corresponding production behavior makes this Fixture fail
+    Examples:
+      | behavior |
+      | scalar type |
+      | allowed value |
+      | forbidden field |
+      | required field |
+      | conditional rule |
+      | invalid transition |
+      | occurrence maximum |

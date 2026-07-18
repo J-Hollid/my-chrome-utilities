@@ -35,6 +35,7 @@ Feature: Data layer canonical project schema drafts
     Then revision 15 is not overwritten
     And the property edit is retained as a pending conflict
     And Reload latest, Reapply edit, and Merge fields name the conflicting revision and fields
+    And no stale command can replace the complete schema collection
 
   # Data layer canonical project schema drafts 004
   Scenario: Data layer canonical project schema drafts 004
@@ -135,3 +136,78 @@ Feature: Data layer canonical project schema drafts
       | property and rule |
       | nested matcher group |
       | flow step and transition |
+
+  # Data layer canonical project schema drafts 016
+  Scenario Outline: Data layer canonical project schema drafts 016
+    Given Builder and side panel display canonical revision 22 with 2 assignments, 2 schema compositions, and 3 Profiles
+    When the <surface> submits <command> based on revision 22
+    Then only the command-scoped fields change in revision 23
+    And rendered counts, compiled-plan counts, and canonical collection counts are identical
+    And both surfaces subscribe to and display revision 23 without reload
+    Examples:
+      | surface | command |
+      | Builder | link Sitewide and Retail Profiles to Retail confirmation schema |
+      | side panel | add /r04_side_marker to Retail confirmation schema |
+
+  # Data layer canonical project schema drafts 017
+  Scenario Outline: Data layer canonical project schema drafts 017
+    Given one surface committed a newer change while the other surface retained an editor based on revision 22
+    When the stale surface saves <stale_edit>
+    Then the newer <newer_edit> remains canonical
+    And the stale edit is either safely merged or held in a visible field-level conflict before commit
+    And resolving the conflict produces one revision containing both intended edits without duplicates
+    Examples:
+      | stale_edit | newer_edit |
+      | side-panel property change | Builder Profile composition |
+      | Builder Profile composition | side-panel property change |
+
+  # Data layer canonical project schema drafts 018
+  Scenario: Data layer canonical project schema drafts 018
+    Given legacy schema-owned assignments and canonical assignments are present during migration
+    When canonical migration completes
+    Then each valid legacy assignment appears once in the canonical assignment collection
+    And operator-facing counts, editors, compiler input, coverage, releases, and Live read only that collection
+    And legacy parallel rows are removed from Save paths and labelled read-only until safely removed
+
+  # Data layer canonical project schema drafts 019
+  Scenario Outline: Data layer canonical project schema drafts 019
+    Given saved library schema Purchase revision 4 is not part of project Retail and Trade
+    When the operator selects Add saved schema to project from <entry_surface>
+    Then adoption review names Purchase revision 4, project Retail and Trade, destination Profile, source lineage, conflicts, and downstream consumers
+    And no manual property, rule, documentation, example, or raw-ID re-entry is required
+    When the operator confirms adoption
+    Then one command creates a project-owned canonical schema draft with Purchase revision 4 lineage and equivalent rich semantics
+    And only that canonical project draft contributes to compilation, coverage, release, and Live
+    And the library schema shows project Retail and Trade in Used by without becoming a parallel executable source
+    Examples:
+      | entry_surface |
+      | side-panel Schema Library |
+      | standalone project schema chooser |
+
+  # Data layer canonical project schema drafts 020
+  Scenario: Data layer canonical project schema drafts 020
+    Given project Retail and Trade adopted Purchase revision 4 and the library now contains Purchase revision 5
+    When either surface displays the relationship
+    Then the project remains pinned to its adopted revision and shows revision 5 available with a readable semantic diff
+    When the operator stages and confirms synchronization
+    Then one canonical project command applies only the reviewed changes, preserves project-local overrides and source lineage, and marks affected evidence stale
+    And cancelling or a failed write leaves the project and library revisions unchanged
+
+  # Data layer canonical project schema drafts 021
+  Scenario: Data layer canonical project schema drafts 021
+    Given the side panel has captured and validated a Retail Purchase observation
+    When the operator selects Continue in project Retail and Trade
+    Then destination choices use human names for Event, Page, Flow step, Profile, and Fixture
+    And the operator can stage the observation as a guided Fixture or stage its validated constraints as Profile requirements
+    And the review names every canonical entity, assertion, requirement, and evidence consequence before Save
+    When the operator confirms the Fixture continuation
+    Then the standalone project opens the new Fixture at the same base revision with the observation and proposed assertions visible
+    And no raw payload copying, storage export, duplicate schema, or legacy assignment is required
+
+  # Data layer canonical project schema drafts 022
+  Scenario: Data layer canonical project schema drafts 022
+    Given one canonical schema, Fixture, or validation issue is open on either surface
+    When the operator selects Open in Builder or Open in side panel
+    Then the destination opens the same project, environment, entity, field, draft or release, and base revision
+    And Back returns to the originating surface and selection
+    And unsaved commands are preserved, committed, or explicitly discarded before handoff rather than silently lost

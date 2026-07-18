@@ -113,3 +113,30 @@ Feature: Data layer truthful preflight release correction runtime
       | 520 CSS px | selected-column cards |
       | 720 CSS px | responsive selected columns |
       | 1280 CSS px | complete table preview |
+
+  # Data layer truthful preflight release correction runtime 015
+  Scenario Outline: Data layer truthful preflight release correction runtime 015
+    Given the installed draft has <blocking_state>
+    When the operator runs preflight, opens release review, and attempts confirmation
+    Then all 3 surfaces render the same blocker identities and disable publication
+    And the repair link focuses the exact named field
+    Examples:
+      | blocking_state |
+      | empty Fixtures |
+      | zero-cell Coverage |
+      | applicability tie |
+      | parent-child compiler failure |
+
+  # Data layer truthful preflight release correction runtime 016
+  Scenario: Data layer truthful preflight release correction runtime 016
+    Given current preflight result preflight-23 is Ready
+    When the installed release dialog opens and Publish is activated
+    Then review and publication consume preflight-23 and one immutable executable plan is stored
+    And no second gate can reject unchanged input after review enabled Publish
+
+  # Data layer truthful preflight release correction runtime 017
+  Scenario: Data layer truthful preflight release correction runtime 017
+    Given the installed greenfield project has no prior release
+    When release review opens
+    Then every introduced semantic entity is listed in a nonzero structured diff
+    And Publish remains blocked if that first-release diff is empty

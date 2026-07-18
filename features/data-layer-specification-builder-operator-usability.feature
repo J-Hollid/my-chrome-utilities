@@ -113,3 +113,79 @@ Feature: Data layer Specification Builder operator usability
     When the operator creates Staging, configures its host, and switches environments
     Then project context, applicability preview, compiled schema, and validation state identify Staging
     And reload restores Staging while Production remains independently selectable
+
+  # Data layer Specification Builder operator usability 014
+  Scenario Outline: Data layer Specification Builder operator usability 014
+    Given the operator opens the <entity> collection without prior product knowledge
+    When its purpose guidance is displayed
+    Then the guidance includes a plain-language purpose, a Retail or Trade example, prerequisites, and Used by relationships
+    And the guidance distinguishes the entity from <confusable_entity>
+    Examples:
+      | entity | confusable_entity |
+      | Profile | Schema |
+      | Applicability Set | Assignment |
+      | Page | Flow step |
+      | Fixture | Live observation |
+      | Draft | Published release |
+
+  # Data layer Specification Builder operator usability 015
+  Scenario: Data layer Specification Builder operator usability 015
+    Given a fresh project has no authored entities
+    When the operator opens the project overview
+    Then task entry points offer Create a shared Purchase event, Add a funnel, Add flow-specific requirements, and Prove checkout confirmation
+    And the specification map shows Foundation, Shared entities, Requirements, Flows, Routing, Proof, and Release with completion and blockers
+    And one Continue action identifies what to do next, why, and what it unlocks
+
+  # Data layer Specification Builder operator usability 016
+  Scenario Outline: Data layer Specification Builder operator usability 016
+    Given the operator is about to <action>
+    When the impact preview opens
+    Then it names affected entities, draft or published scope, runtime consequence, and evidence that will become stale
+    When the operator confirms the action
+    Then one completion message states exactly what changed, the resulting revision, stale evidence, and the Undo path
+    Examples:
+      | action |
+      | change Profile composition |
+      | change Applicability |
+      | change an Assignment |
+      | remove a Flow step |
+      | publish a release |
+
+  # Data layer Specification Builder operator usability 017
+  Scenario Outline: Data layer Specification Builder operator usability 017
+    Given <assurance_view> has <state>
+    When the operator opens it
+    Then the empty, blocked, or failed reason is explained in human language
+    And one repair action opens the exact named entity and field without exposing a raw ID
+    Examples:
+      | assurance_view | state |
+      | Fixtures | zero observations |
+      | Coverage | zero effective cells |
+      | Preflight | compiler failure |
+      | Release review | unresolved ambiguity |
+      | Live | no permitted target |
+
+  # Data layer Specification Builder operator usability 018
+  Scenario: Data layer Specification Builder operator usability 018
+    Given any contextual entity editor is open
+    When the workspace toolbar and inspector render
+    Then toolbar actions are grouped as Validate, Release, and More with one contextual primary action
+    And unrelated Add Entity, Flow Steps, Schema Draft, Assignment, and Bulk forms are absent from the inspector
+    And the preserved desktop three-pane hierarchy and 44 CSS px control targets remain available
+
+  # Data layer Specification Builder operator usability 020
+  Scenario: Data layer Specification Builder operator usability 020
+    Given the fresh-project empty state offers the Retail and Trade worked example
+    When the operator opens it
+    Then it demonstrates one shared Page and Event, Sitewide and flow-specific Profiles, 2 Flows, Assignments, positive and negative Fixtures, Coverage, and Live explanation
+    And dismissing the example returns to the unchanged project and the same recommended next action
+
+  # Data layer Specification Builder operator usability 021
+  Scenario: Data layer Specification Builder operator usability 021
+    Given saved schemas, captured validation, and an active project exist across side panel and standalone Builder
+    When either surface presents a relevant next action
+    Then the side panel explains its in-page capture, validation, and quick-edit role
+    And the standalone Builder explains its project composition, rich specification, assurance, and release role
+    And contextual Continue actions connect saved schema to project adoption, captured validation to Fixture or Profile authoring, and project schema to the rich table builder
+    And each action names the destination, transferred context, draft or release scope, and effect before navigation
+    And no workflow requires export/import, clipboard transfer, raw IDs, or recreation merely to move between surfaces

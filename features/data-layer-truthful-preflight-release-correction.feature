@@ -117,3 +117,32 @@ Feature: Data layer truthful preflight release correction
       | 520 CSS px | selected-column cards |
       | 720 CSS px | responsive selected columns |
       | full-page desktop | complete table preview |
+
+  # Data layer truthful preflight release correction 014
+  Scenario Outline: Data layer truthful preflight release correction 014
+    Given the draft contains <blocking_state>
+    When preflight runs
+    Then publication is blocked with a human-readable cause and exact repair action
+    And review, confirmation, and publication expose the same blocker set
+    Examples:
+      | blocking_state |
+      | zero canonical assignments |
+      | zero proving evidence |
+      | zero effective coverage cells |
+      | applicability ambiguity |
+      | compiler failure |
+      | validation failure |
+
+  # Data layer truthful preflight release correction 015
+  Scenario: Data layer truthful preflight release correction 015
+    Given one current preflight result has content identity preflight-23
+    When release review opens and publication is confirmed
+    Then review displays preflight-23 and publication consumes preflight-23 without recomputation under a different gate
+    And any canonical change marks preflight-23 stale and disables confirmation until preflight reruns
+
+  # Data layer truthful preflight release correction 016
+  Scenario: Data layer truthful preflight release correction 016
+    Given a complete greenfield project has no prior release
+    When first release review opens
+    Then the structured diff compares against an empty project and lists every introduced Page, Event, Profile, requirement, Flow, transition, Applicability Set, Assignment, Fixture, coverage policy, and schema
+    And a zero-change first release cannot be published

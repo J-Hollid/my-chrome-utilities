@@ -132,3 +132,59 @@ Feature: Data layer canonical project schema drafts runtime
     When the actual extension page process is terminated before canonical commit and reopened
     Then the rendered recovery view restores every pending field and base revision
     And accepting recovery commits once while discarding recovery restores exact prior bytes
+
+  # Data layer canonical project schema drafts runtime 017
+  Scenario Outline: Data layer canonical project schema drafts runtime 017
+    Given Builder and side panel show the same canonical base revision in two installed extension pages
+    When the operator saves <edit_order> through rendered controls
+    Then storage records command-scoped patches with their declared base revisions
+    And both installed pages update through canonical change subscriptions
+    And the final visible schema composition and property set contain every intended edit exactly once
+    Examples:
+      | edit_order |
+      | Builder composition then stale side-panel property |
+      | side-panel property then stale Builder composition |
+
+  # Data layer canonical project schema drafts runtime 018
+  Scenario: Data layer canonical project schema drafts runtime 018
+    Given the installed project contains 2 rendered legacy assignment rows and zero production assignments
+    When the operator completes the visible canonical migration
+    Then the Assignment view and compiled executable plan each contain the same 2 named assignments
+    And coverage, release review, and Live consume those 2 canonical records
+    And no production assertion reads schema-owned assignment clones
+
+  # Data layer canonical project schema drafts runtime 019
+  Scenario Outline: Data layer canonical project schema drafts runtime 019
+    Given installed Schema Library contains Purchase revision 4 outside the active Retail and Trade project
+    When the operator adopts it from <entry_surface> through rendered controls
+    Then review shows the named source revision, project, destination Profile, lineage, conflicts, and affected consumers
+    And one command creates an equivalent project-owned canonical draft without manual rule or property recreation
+    And compiled input contains the canonical project draft once while the library renders Retail and Trade under Used by
+    Examples:
+      | entry_surface |
+      | side panel |
+      | standalone Builder |
+
+  # Data layer canonical project schema drafts runtime 020
+  Scenario: Data layer canonical project schema drafts runtime 020
+    Given Purchase revision 4 was adopted and the installed library publishes revision 5
+    When the operator opens the relationship from Builder and side panel
+    Then both render the project pin, available revision, and identical semantic diff
+    When synchronization is reviewed and committed from either surface
+    Then one persisted project revision contains only reviewed changes and preserved local overrides and lineage
+    And affected Fixture, coverage, preflight, and release evidence becomes visibly stale
+
+  # Data layer canonical project schema drafts runtime 021
+  Scenario: Data layer canonical project schema drafts runtime 021
+    Given installed Live has captured and validated one real Retail Purchase observation
+    When the operator chooses Continue in project and creates a guided Fixture through rendered human-name selectors
+    Then the standalone Builder opens that canonical Fixture with the captured observation and proposed assertions
+    And running it uses the same evaluator result previously shown in Live
+    And no clipboard, project import, raw ID, direct storage write, or duplicate legacy schema participates
+
+  # Data layer canonical project schema drafts runtime 022
+  Scenario: Data layer canonical project schema drafts runtime 022
+    Given Builder and side panel subscribe to one canonical project revision
+    When Open in Builder, Open in side panel, and Back are used for a schema field, Fixture, and validation issue
+    Then each installed destination restores the same named context, exact field, source surface, and base revision
+    And every pending command is visibly committed, retained, or discarded before navigation

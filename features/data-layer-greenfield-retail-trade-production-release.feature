@@ -81,3 +81,35 @@ Feature: Data layer greenfield Retail Trade production release
     When the entire authoring, ambiguity repair, fixture, coverage, release, export, and import workflow is completed with the keyboard
     Then focus, status, field errors, navigation, scrolling, and context remain understandable at every step
     And no required action depends on pointer input or color
+
+  # Data layer greenfield Retail Trade production release 012
+  Scenario: Data layer greenfield Retail Trade production release 012
+    When source-aware integration acceptance creates a fresh project through visible actions and follows its recommendations
+    Then one shared Checkout confirmation Page and Purchase Event remain independent of a funnel
+    When Sitewide, Retail, and Trade Profiles, executable optional-branch Flows, named Applicability Sets, and canonical Assignments are authored
+    Then visible relationships, compiled references, and effective schemas agree and show provenance
+    When guided positive and negative Fixtures prove type, enum, forbidden, required, conditional, transition, and occurrence behavior
+    Then nonzero Flow-scoped coverage links every covered requirement to proving assertions
+    When one preflight result is reviewed and the first release is published through the same gate
+    Then every introduced semantic change is listed and one immutable executable plan becomes Live authority
+    When real Retail and Trade journeys emit markerless Purchase observations
+    Then Live shows distinct winners with rejected candidates, active Flow and step, Profiles, schema revision, exact issues, and provenance
+    When Builder and side panel continue editing in both orders at desktop and 360 CSS px using only the keyboard
+    Then no update is lost, stale writes are resolved visibly, focus is deterministic, and one active narrow pane has one scroll owner
+
+  # Data layer greenfield Retail Trade production release 013
+  Scenario: Data layer greenfield Retail Trade production release 013
+    Given release 1 is active in Live
+    When the operator changes an unpublished Retail matcher and validation rule
+    Then Live remains byte-for-byte equivalent for the same observation and identifies release 1
+    When the repaired draft passes the same gate and is published as release 2
+    Then subsequent Live results identify release 2 and use its new matcher and rule
+
+  # Data layer greenfield Retail Trade production release 014
+  Scenario: Data layer greenfield Retail Trade production release 014
+    Given Purchase revision 4 and a validated Retail observation exist in the side panel before project authoring continues
+    When Purchase is adopted into the Retail and Trade project and the observation continues into a guided Fixture
+    Then the standalone Builder opens canonical project entities with source lineage, named destinations, and no recreated or parallel records
+    When the operator builds and customizes the Purchase specification table on both surfaces
+    Then hierarchical selection, rich columns, examples, conditions, ordering, table style, Spreadsheet output, and Rich table output are equivalent
+    And cross-surface Open, Continue, Back, synchronization, and stale-evidence behavior preserve exact context and canonical revisions
