@@ -3,6 +3,7 @@
 # {"version":1,"tested_at":"2026-07-18T12:33:55.725138602Z","feature_name":"Data layer effective schema compilation","feature_path":"features/data-layer-effective-schema-compilation.feature","background_hash":"5d913d12016759e598b234a9f9cdda26961fbf898c2ae2325db60a98ad425775","implementation_hash":"sha256:86707518c39384facf5b4b78bc9cc8524349be124ad7f4b91d2a1db2a3062fe1","scenarios":[{"index":3,"name":"Data layer effective schema compilation 004","scenario_hash":"f06e66974b9fad993855ed5b5888557ec2dadbadf7ca758e7286c91e5cff3780","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:55.725138602Z"}]}
 # acceptance-mutation-manifest-end
 
+# MVP scope notice: effective schemas execute through independent Event validation cases and Live; documentary Flow relationships never select or advance validation.
 Feature: Data layer effective schema compilation
 
   Background:
@@ -69,7 +70,7 @@ Feature: Data layer effective schema compilation
     Given one Profile declares container <parent_path> as object and child <child_path> as string
     When requirements are compiled in <authoring_order>
     Then the effective schema contains the object container and child without a compiler exception
-    And the rendered effective schema and executable plan contain the same paths, types, and provenance
+    And the rendered effective schema and per-event validation plan contain the same paths, types, and provenance
     Examples:
       | parent_path | child_path | authoring_order |
       | /ecommerce | /ecommerce/transaction_id | parent then child |
@@ -95,7 +96,7 @@ Feature: Data layer effective schema compilation
     Given an effective schema contains <rule>
     When the operator validates <observation>
     Then validation returns <outcome> at <issue_path>
-    And the same outcome appears in Fixture and Live evaluation
+    And the same outcome appears in the Event validation case and Live evaluation
     Examples:
       | rule | observation | outcome | issue_path |
       | items cardinality 1 through 10 | zero items | cardinality error | /ecommerce/items |
@@ -108,7 +109,7 @@ Feature: Data layer effective schema compilation
     Given the side panel can author <rule_type> for a <property_type> property
     When that capability is adopted into a canonical Profile and compiled
     Then <rule_type> remains available through a typed guided editor with no loss of parameters
-    And positive and negative observations execute the same constraint in Preview, Fixture, preflight, release, and Live
+    And positive and negative observations execute the same constraint in Preview, Event validation cases, preflight, release, and Live
     Examples:
       | rule_type | property_type |
       | Required | boolean |
@@ -128,7 +129,8 @@ Feature: Data layer effective schema compilation
     And comparison operands can be typed literals, typed sets, patterns, or compatible property references
     When the operator saves and compiles the query through guided controls
     Then the canonical rule stores one recursively typed condition tree and one typed consequence
-    And the same condition-tree representation is reusable for Applicability, Flow entry, exit, and transition conditions, and conditional validation rules
+    And the same condition-tree representation is reusable for Applicability used by Assignment resolution and conditional validation rules
+    And documentary Flow relationship notes never become executable condition-tree input
     And a plain-language preview explains the complete Boolean expression, referenced paths, and consequence
     And positive and negative observations prove every branch through the same production evaluator
     And no free-form JavaScript or inert expression is accepted

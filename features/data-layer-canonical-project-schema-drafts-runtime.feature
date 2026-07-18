@@ -3,6 +3,7 @@
 # {"version":1,"tested_at":"2026-07-18T20:30:20.970470757Z","feature_name":"Data layer canonical project schema drafts runtime","feature_path":"features/data-layer-canonical-project-schema-drafts-runtime.feature","background_hash":"09a943a0763d3b71e2e8978940adbd4082293833182f317c13b4fb12f5d74514","implementation_hash":"sha256:5464c2706d5b6afc23434a504b1950ee50e7e10be7f04805d485ae1674c6d199","scenarios":[{"index":16,"name":"Data layer canonical project schema drafts runtime 017","scenario_hash":"b01fe7ff31eb082f40f42f7ac0413102412f58d40433fa3a9b3b8391c596880e","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-18T20:14:32.708740479Z"},{"index":18,"name":"Data layer canonical project schema drafts runtime 019","scenario_hash":"ff12cfd2b48ca017381bad0b0a16d66f4d514ea395625820e97228b4fca631e8","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-18T20:14:32.708740479Z"},{"index":14,"name":"Data layer canonical project schema drafts runtime 015","scenario_hash":"b2f997ae9b287efc8e3cc840fe6676e9782dd308ef43f134cc94cd9eb2133d15","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:25.128847783Z"}]}
 # acceptance-mutation-manifest-end
 
+# MVP scope notice: production revision and concurrency guarantees remain; Flow commands target nodes and documentary relationships rather than temporal state.
 Feature: Data layer canonical project schema drafts runtime
 
   Background:
@@ -69,6 +70,7 @@ Feature: Data layer canonical project schema drafts runtime
     Given a version 1 project file is selected through the actual migration file chooser
     When the operator stages it
     Then rendered review lists every entity kind, reference mapping, compatibility path, and blocker before mutation
+    And legacy journey records are visibly post-MVP and absent from production per-event validation input
     And browser persistence still equals the captured canonical and legacy bytes
 
   # Data layer canonical project schema drafts runtime 009
@@ -124,7 +126,7 @@ Feature: Data layer canonical project schema drafts runtime
       | edit |
       | property and rule |
       | nested matcher group |
-      | flow step and transition |
+      | Event-occurrence node and documented relationship |
 
   # Data layer canonical project schema drafts runtime 016
   Scenario: Data layer canonical project schema drafts runtime 016
@@ -150,7 +152,7 @@ Feature: Data layer canonical project schema drafts runtime
     Given the installed project contains 2 rendered legacy assignment rows and zero production assignments
     When the operator completes the visible canonical migration
     Then the Assignment view and compiled executable plan each contain the same 2 named assignments
-    And coverage, release review, and Live consume those 2 canonical records
+    And documentation, release review, and Live consume those 2 canonical records
     And no production assertion reads schema-owned assignment clones
 
   # Data layer canonical project schema drafts runtime 019
@@ -172,19 +174,19 @@ Feature: Data layer canonical project schema drafts runtime
     Then both render the project pin, available revision, and identical semantic diff
     When synchronization is reviewed and committed from either surface
     Then one persisted project revision contains only reviewed changes and preserved local overrides and lineage
-    And affected Fixture, coverage, preflight, and release evidence becomes visibly stale
+    And affected Event cases, Assignment readiness, preflight, and release evidence becomes visibly stale
 
   # Data layer canonical project schema drafts runtime 021
   Scenario: Data layer canonical project schema drafts runtime 021
     Given installed Live has captured and validated one real Retail Purchase observation
-    When the operator chooses Continue in project and creates a guided Fixture through rendered human-name selectors
-    Then the standalone Builder opens that canonical Fixture with the captured observation and proposed assertions
+    When the operator chooses Continue in project and creates a guided Event validation case through rendered human-name selectors
+    Then the standalone Builder opens that canonical Event validation case with the captured observation and proposed assertions
     And running it uses the same evaluator result previously shown in Live
     And no clipboard, project import, raw ID, direct storage write, or duplicate legacy schema participates
 
   # Data layer canonical project schema drafts runtime 022
   Scenario: Data layer canonical project schema drafts runtime 022
     Given Builder and side panel subscribe to one canonical project revision
-    When Open in Builder, Open in side panel, and Back are used for a schema field, Fixture, and validation issue
+    When Open in Builder, Open in side panel, and Back are used for a schema field, Event validation case, and validation issue
     Then each installed destination restores the same named context, exact field, source surface, and base revision
     And every pending command is visibly committed, retained, or discarded before navigation

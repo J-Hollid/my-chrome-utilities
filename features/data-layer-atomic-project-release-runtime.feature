@@ -7,12 +7,12 @@ Feature: Data layer atomic project release runtime
 
   Background:
     Given the built extension is running with production project draft, preflight, diff, release, persistence, and validation systems
-    And Shop data specification release 3 has a connected draft
+    And Shop data specification has a connected draft
 
   # Data layer atomic project release runtime 001
   Scenario: Data layer atomic project release runtime 001
     When actual release review opens
-    Then the production DOM renders requirement, applicability, flow, fixture, coverage, ambiguity, impact, and breaking-change differences
+    Then the production DOM renders requirement, Applicability, Assignment, Flow graph, node expectation, documented relationship, Event-case, documentation, ambiguity, impact, and breaking-change differences
     And rendered counts and identities equal production diff output
     And published storage remains byte-for-byte unchanged
 
@@ -25,7 +25,8 @@ Feature: Data layer atomic project release runtime
     Examples:
       | gate_state               | outcome                              |
       | unresolved ambiguity     | blocked at its linked matcher         |
-      | failing required fixture | blocked at its linked fixture         |
+      | failing required Event case | blocked at its linked Event case     |
+      | compiler failure         | blocked at its linked compiler issue  |
       | completeness warning     | available after acknowledgement       |
       | clean required checks    | available for confirmation            |
 
@@ -54,3 +55,28 @@ Feature: Data layer atomic project release runtime
     When Publish, Publish and close, cancel, and Restore as draft are completed using actual keyboard controls
     Then actual workspace visibility, focus containment, focus restoration, announcements, and release history match each action
     And browser reload never exposes a partial release
+
+  # Data layer atomic project release runtime 006
+  Scenario Outline: Data layer atomic project release runtime 006
+    Given production preflight created compile:7K3M for project revision 24
+    When actual review approves compile:7K3M
+    And production controls <command>
+    Then production reports compile:7K3M as <compile_freshness>
+    And required Event-case evidence is <evidence_freshness>
+    And actual publication <publication_outcome>
+
+    Examples:
+      | command                                      | compile_freshness | evidence_freshness | publication_outcome                                     |
+      | make no project command                      | current           | current            | persists compile:7K3M unchanged                         |
+      | change a shared Purchase Event requirement   | stale             | stale              | rejects it and focuses new evidence before preflight     |
+      | move a node on the exported canvas           | stale             | current            | rejects it and focuses the new preflight action          |
+      | align non-semantic reference artwork         | stale             | current            | rejects it and focuses the new preflight action          |
+      | record a separate ChecklistRun observation   | current           | current            | persists compile:7K3M unchanged                         |
+
+  # Data layer atomic project release runtime 007
+  Scenario: Data layer atomic project release runtime 007
+    Given the production project has no release and preflight created compile:7K3M
+    When actual first-release review opens
+    Then the production diff uses an empty baseline and renders every introduced semantic entity class from compile:7K3M
+    And its introduced counts equal canonical project and compilation-result counts rather than zero
+    And first publication persists compile:7K3M as its unchanged source identity

@@ -17,8 +17,8 @@ Feature: Data layer Specification Project foundation
   Scenario: Data layer Specification Project foundation 002
     Given Shop data specification is open
     When the project contents are inspected
-    Then reusable data requirements, applicability, and journeys are separate linked collections
-    And pages, page groups, events, applicability sets, flows, steps, fixtures, and releases have stable identities
+    Then reusable data requirements, observable Applicability, and documentary Specification Flows are separate linked collections
+    And Pages, Page groups, Events, Profiles, Applicability Sets, Flows, Event-occurrence nodes, documented relationships, Assignments, Event validation cases, checklist templates, and releases have stable identities
     And a schema does not own applicability assignments
     And the project is the authoring and release boundary
 

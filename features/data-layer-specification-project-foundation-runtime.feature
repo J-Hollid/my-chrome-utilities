@@ -44,3 +44,10 @@ Feature: Data layer Specification Project foundation runtime
     When the operator defers migration through rendered review controls
     Then production storage remains byte-for-byte equal to its pre-migration snapshot
     And the compatibility view remains operable after reload
+
+  # Data layer Specification Project foundation runtime 006
+  Scenario: Data layer Specification Project foundation runtime 006
+    Given a project was populated through rendered Page, Event, Profile, Applicability, Flow graph, Assignment, Event-case, and checklist-template controls
+    When production repository, documentation projection, and per-event validation projection are compared
+    Then each stable entity appears exactly once in its canonical collection and intended projections
+    And no Flow step, runtime transition, journey Fixture, or Flow-state collection enters the per-event validation projection

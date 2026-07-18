@@ -24,7 +24,7 @@ Feature: Data layer page and event catalog runtime
 
   # Data layer page and event catalog runtime 003
   Scenario: Data layer page and event catalog runtime 003
-    Given Purchase has flow, fixture, and release dependants
+    Given Purchase has Event-occurrence node, Event validation case, and release dependants
     When delete and replacement reviews are exercised through the actual DOM
     Then deletion is blocked with rendered deep links to every dependant
     And confirmed replacement changes all selected draft references in one production transaction

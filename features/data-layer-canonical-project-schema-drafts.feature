@@ -3,6 +3,7 @@
 # {"version":1,"tested_at":"2026-07-18T20:30:20.821863726Z","feature_name":"Data layer canonical project schema drafts","feature_path":"features/data-layer-canonical-project-schema-drafts.feature","background_hash":"6a98b15e74255d5c7eeb277598388b622a1893dc9728ad987dbc99e06715e6ab","implementation_hash":"sha256:429099d9358d0b7e1b6731597018ed01d4cd1278d9dd135c85f1aa16ea449a08","scenarios":[{"index":15,"name":"Data layer canonical project schema drafts 016","scenario_hash":"ceb33ab0ae2308f875804df5b3384ed200644dd61d80f9db30d057276465f98b","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T20:13:52.227651336Z"},{"index":16,"name":"Data layer canonical project schema drafts 017","scenario_hash":"9e70f46f712b96f7b86c166e6f2dbd725c47a70cfdf0fb847670a5f9447e49a8","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T20:13:52.227651336Z"},{"index":18,"name":"Data layer canonical project schema drafts 019","scenario_hash":"2d40bdeb3e64bdfa78f781cb908ad22947c4869c74d6ca453ae55e94e8b4492d","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-18T20:13:52.227651336Z"},{"index":0,"name":"Data layer canonical project schema drafts 001","scenario_hash":"35159f124d02e945c0d64f11624e693585e7361226984b5844b60471916d255f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"},{"index":4,"name":"Data layer canonical project schema drafts 005","scenario_hash":"95df86859f0511f8a430adec0bf2f7f7eefa5b195f6ef43601acb61c22bc68c9","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"},{"index":14,"name":"Data layer canonical project schema drafts 015","scenario_hash":"18a583a9e9fb97ea5655c35642831e19b8a6964ece7a8a10fb4fb265e4198378","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:47.109670676Z"}]}
 # acceptance-mutation-manifest-end
 
+# MVP scope notice: canonical Flow records are Event-occurrence nodes and documented relationships; temporal transition state is post-MVP.
 Feature: Data layer canonical project schema drafts
 
   Background:
@@ -77,9 +78,10 @@ Feature: Data layer canonical project schema drafts
 
   # Data layer canonical project schema drafts 008
   Scenario: Data layer canonical project schema drafts 008
-    Given a version 1 full project contains profiles, pages, events, flows, fixtures, schemas, assignments, and releases
+    Given a version 1 full project contains Profiles, Pages, Events, Flows, legacy journey Fixtures, schemas, Assignments, and releases
     When migration is staged
     Then graph-wide changes, reference mappings, compatibility paths, and blockers are visible before commit
+    And legacy journey records are classified as post-MVP and cannot enter the per-event validation plan
     And no canonical or legacy byte changes before explicit confirmation
 
   # Data layer canonical project schema drafts 009
@@ -135,7 +137,7 @@ Feature: Data layer canonical project schema drafts
       | edit |
       | property and rule |
       | nested matcher group |
-      | flow step and transition |
+      | Event-occurrence node and documented relationship |
 
   # Data layer canonical project schema drafts 016
   Scenario Outline: Data layer canonical project schema drafts 016
@@ -166,7 +168,7 @@ Feature: Data layer canonical project schema drafts
     Given legacy schema-owned assignments and canonical assignments are present during migration
     When canonical migration completes
     Then each valid legacy assignment appears once in the canonical assignment collection
-    And operator-facing counts, editors, compiler input, coverage, releases, and Live read only that collection
+    And operator-facing counts, editors, compiler input, documentation, releases, and Live read only that collection
     And legacy parallel rows are removed from Save paths and labelled read-only until safely removed
 
   # Data layer canonical project schema drafts 019
@@ -177,7 +179,7 @@ Feature: Data layer canonical project schema drafts
     And no manual property, rule, documentation, example, or raw-ID re-entry is required
     When the operator confirms adoption
     Then one command creates a project-owned canonical schema draft with Purchase revision 4 lineage and equivalent rich semantics
-    And only that canonical project draft contributes to compilation, coverage, release, and Live
+    And only that canonical project draft contributes to compilation, documentation, release, and Live
     And the library schema shows project Retail and Trade in Used by without becoming a parallel executable source
     Examples:
       | entry_surface |
@@ -197,16 +199,16 @@ Feature: Data layer canonical project schema drafts
   Scenario: Data layer canonical project schema drafts 021
     Given the side panel has captured and validated a Retail Purchase observation
     When the operator selects Continue in project Retail and Trade
-    Then destination choices use human names for Event, Page, Flow step, Profile, and Fixture
-    And the operator can stage the observation as a guided Fixture or stage its validated constraints as Profile requirements
+    Then destination choices use human names for Event, Page, Event-occurrence node, Profile, and Event validation case
+    And the operator can stage the observation as a guided Event validation case, attach it to a manual occurrence, or stage its validated constraints as Profile requirements
     And the review names every canonical entity, assertion, requirement, and evidence consequence before Save
-    When the operator confirms the Fixture continuation
-    Then the standalone project opens the new Fixture at the same base revision with the observation and proposed assertions visible
+    When the operator confirms the Event validation case continuation
+    Then the standalone project opens the new Event validation case at the same base revision with the observation and proposed assertions visible
     And no raw payload copying, storage export, duplicate schema, or legacy assignment is required
 
   # Data layer canonical project schema drafts 022
   Scenario: Data layer canonical project schema drafts 022
-    Given one canonical schema, Fixture, or validation issue is open on either surface
+    Given one canonical schema, Event validation case, or validation issue is open on either surface
     When the operator selects Open in Builder or Open in side panel
     Then the destination opens the same project, environment, entity, field, draft or release, and base revision
     And Back returns to the originating surface and selection

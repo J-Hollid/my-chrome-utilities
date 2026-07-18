@@ -108,7 +108,8 @@ Feature: Data layer guided validation schema destination
       | assignment_state                                            | configuration_visibility | assignment_action                              | continuation_result                 |
       | no assignments                                               | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
       | one enabled assignment covers source, event, target, and URL | not displayed            | reuse the covering assignment                  | allowed without assignment review   |
-      | two enabled assignments cover the captured event             | not displayed            | reuse existing schema coverage                 | allowed without assignment selection |
+      | two enabled assignments cover with one higher-priority winner | not displayed            | reuse the deterministic winning assignment     | allowed without assignment selection |
+      | two equal-priority assignments cover the captured event       | conflict summary displayed | open the named overlap repair                 | allowed as draft while publication is blocked |
       | source, event, and target match but URL conditions do not     | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
       | only a disabled assignment covers the captured event          | displayed                | add a reviewed pending assignment              | allowed after assignment review     |
 

@@ -6,6 +6,10 @@ This program is governed by `full-site-data-layer-specification-workflow-assessm
 
 Status is **Specified — awaiting approval**. No scenario is implemented merely because an older feature, component test, model adapter, or mutation record passed. No commit or coder handoff occurs before explicit user approval.
 
+> **Flow-scope supersession — 2026-07-18:** [Full-Site Data-Layer Specification Flow Graph MVP R01](full-site-data-layer-specification-flow-graph-MVP-R01.md) supersedes this program only where R04 requires temporal Flow execution, prior-Flow routing, journey Fixtures, runtime occurrence/transition/branch/join behavior, Flow coverage, or active Flow/step Live output. R04 installed-product findings and all canonical schema, Assignment, validation, persistence, release-isolation, cross-surface, guidance, rich-authoring, responsive, and accessibility corrections remain authoritative.
+
+> **Current implementation rule:** the replacement document's complete R04 reconciliation and active features govern the combined program. Later references in this historical R04 document to Flow steps, transitions, journey Fixtures, Flow coverage, or active Flow/step results describe the superseded remedy only. Their feature files are archived under `docs/post-mvp-features/` and must not enter MVP verification packs, generated acceptance, release gates, or runtime plans.
+
 ## Program outcome
 
 The correction is complete only when an operator can create, prove, publish, and operate a full Retail and Trade data-layer specification without source, persisted-state, stable-ID, or runtime-module access. The standalone Builder and side panel are complementary entrances to the same workflow rather than separate tools: saved schemas, captured validation, rich specification tables, authoring, compilation, Fixtures, coverage, release, and Live must expose one canonical executable truth.

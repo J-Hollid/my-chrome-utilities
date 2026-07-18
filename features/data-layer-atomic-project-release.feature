@@ -6,15 +6,15 @@
 Feature: Data layer atomic project release
 
   Background:
-    Given Shop data specification release 3 has a durable working draft
+    Given Shop data specification has a durable working draft
     And project preflight has completed
 
   # Data layer atomic project release 001
   Scenario: Data layer atomic project release 001
     When the operator requests Publish release 4
     Then structured review identifies added, removed, renamed, and changed requirements
-    And it identifies profile order, applicability, priority, page, event, flow, transition, occurrence, fixture, and policy changes
-    And it shows fixture results, coverage delta, ambiguity analysis, affected consumers, and breaking-change classification
+    And it identifies Profile order, Applicability, Assignment priority, Page, Event, Flow graph, node obligation and multiplicity, documented relationship, Event case, and policy changes
+    And it shows required Event-case results, Assignment readiness and ambiguity, documentation delta, affected consumers, and breaking-change classification
     And no published project state changes before confirmation
 
   # Data layer atomic project release 002
@@ -27,8 +27,9 @@ Feature: Data layer atomic project release
     Examples:
       | review_state                         | confirmation_state | guidance                                      |
       | unresolved matcher tie               | blocked            | Resolve applicability ambiguity               |
-      | unreachable required branch          | blocked            | Repair or remove the unreachable branch       |
-      | failing required fixture             | blocked            | Correct specification or fixture expectation  |
+      | required node without a resolved Page | blocked            | Repair the named Event occurrence              |
+      | failing required Event case          | blocked            | Correct specification or case assertions       |
+      | effective-schema compiler failure    | blocked            | Repair the named compiler issue                 |
       | unresolved stable reference          | blocked            | Repair the missing reference                  |
       | completeness warnings only           | available          | Acknowledge warnings or change project policy |
       | clean required checks                | available          | Review and publish release 4                  |
@@ -37,7 +38,7 @@ Feature: Data layer atomic project release
   Scenario: Data layer atomic project release 003
     Given release review is publishable
     When the operator confirms Publish release 4
-    Then one immutable release snapshot atomically contains profiles, pages, events, applicability, flows, fixtures, policies, and stable references
+    Then one immutable release snapshot atomically contains Profiles, Pages, Events, Applicability, Flow nodes and relationships, Assignments, Event cases, checklist templates, policies, documentation, validation plan, and stable references
     And all linked current revisions advance together
     And the working draft is cleared only after the complete snapshot succeeds
     And no individual schema publication can expose a mixed project release
@@ -59,7 +60,7 @@ Feature: Data layer atomic project release
 
   # Data layer atomic project release 005
   Scenario Outline: Data layer atomic project release 005
-    Given release review is publishable
+    Given release 4 confirmation is available after a publishable review
     When the operator completes <publication_action>
     Then release 4 is current
     And the workspace is <workspace_state>
@@ -73,6 +74,7 @@ Feature: Data layer atomic project release
   # Data layer atomic project release 006
   Scenario: Data layer atomic project release 006
     Given release 2 is selected from immutable release history
+    And release 3 is current
     When the operator requests Restore as draft
     Then review identifies differences from current release 3
     And confirmation creates a new draft based on release 2
@@ -86,3 +88,28 @@ Feature: Data layer atomic project release
     Then each diff section, blocker, warning, acknowledgement, and consumer link is reachable in visible order
     And focus is trapped in confirmation and restored after cancel or publication
     And status and severity do not depend on color alone
+
+  # Data layer atomic project release 008
+  Scenario Outline: Data layer atomic project release 008
+    Given preflight produced compile:7K3M for project revision 24
+    When review approves compile:7K3M
+    And <command> follows review
+    Then compile:7K3M is <compile_freshness>
+    And required Event-case evidence is <evidence_freshness>
+    And Publish release 4 <publication_outcome>
+
+    Examples:
+      | command                                      | compile_freshness | evidence_freshness | publication_outcome                                  |
+      | no project command                           | current           | current            | consumes compile:7K3M unchanged                      |
+      | change shared Purchase Event requirement     | stale             | stale              | requires a new preflight and new required evidence   |
+      | move a node on the exported canvas           | stale             | current            | requires a new preflight                             |
+      | align non-semantic reference artwork         | stale             | current            | requires a new preflight                             |
+      | record a separate ChecklistRun observation   | current           | current            | consumes compile:7K3M unchanged                      |
+
+  # Data layer atomic project release 009
+  Scenario: Data layer atomic project release 009
+    Given Shop has no published release and first preflight produced compile:7K3M
+    When the operator reviews the first release
+    Then its structured diff uses an empty baseline
+    And identifies every introduced Profile, Page, Event, Flow node, node obligation and multiplicity, documented relationship, requirement, Applicability Set, Assignment, Event case, checklist template, documentation record, and validation-plan record
+    And publication consumes compile:7K3M rather than reporting zero semantic changes

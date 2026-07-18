@@ -6,22 +6,22 @@
 Feature: Data layer Specification workspace navigation
 
   Background:
-    Given Shop data specification contains profiles, pages, events, applicability sets, flows, fixtures, and releases
+    Given Shop data specification contains Profiles, Pages, Events, Applicability Sets, Specification Flows, Event validation cases, and releases
     And its full-page Specification Builder is open
 
   # Data layer Specification workspace navigation 001
   Scenario: Data layer Specification workspace navigation 001
     When the workspace shell is displayed
-    Then a persistent project tree exposes Overview, Shared profiles, Pages, Events, Flows, Fixtures, and Releases
+    Then a persistent project tree exposes Overview, Shared profiles, Pages, Events, Flows, Event validation cases, and Releases
     And the selected item opens in the central workspace and contextual inspector
-    And a sticky breadcrumb identifies Project, Flow, Step, Event, Profile, and Property when applicable
+    And a sticky breadcrumb identifies Project, Flow, Event-occurrence node, Event, Profile, and Property when applicable
     And project, environment, draft, release, and autosave state remain visible
 
   # Data layer Specification workspace navigation 002
   Scenario: Data layer Specification workspace navigation 002
     Given the side panel shows a validation issue for /ecommerce/value
     When the operator opens the issue in Specification Builder
-    Then the workspace selects the owning project, flow step, profile, and property
+    Then the workspace selects the owning project, Event-occurrence node, Profile, and property
     And the exact failing field is reachable in no more than 2 actions
     And returning to the side panel restores its selected event and scroll position
 
@@ -53,7 +53,7 @@ Feature: Data layer Specification workspace navigation
       | documentation stating Final order total  | Final order total              | documentation source  |
       | rule named ISO 4217 currency             | ISO 4217 currency              | validation rule       |
       | matcher term /checkout/confirmation      | /checkout/confirmation         | applicability source  |
-      | fixture named Trade missing account      | Trade missing account          | fixture               |
+      | Event case named Trade missing account   | Trade missing account          | Event validation case |
 
   # Data layer Specification workspace navigation 005
   Scenario: Data layer Specification workspace navigation 005
@@ -68,7 +68,7 @@ Feature: Data layer Specification workspace navigation
   Scenario: Data layer Specification workspace navigation 006
     Given a representative project contains 500 properties and 50 flows
     When the operator searches, filters, selects, and scrolls the project
-    Then rendered property and step rows are limited to visible rows plus bounded overscan
+    Then rendered property and Event-occurrence rows are limited to visible rows plus bounded overscan
     And no operation permanently renders every editor control
     And the fixed benchmark records no interaction task longer than 100 milliseconds
     And the workspace becomes interactive within 2 seconds

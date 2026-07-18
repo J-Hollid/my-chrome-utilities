@@ -3,6 +3,7 @@
 # {"version":1,"tested_at":"2026-07-18T12:34:34.802771783Z","feature_name":"Data layer effective schema compilation runtime","feature_path":"features/data-layer-effective-schema-compilation-runtime.feature","background_hash":"fa35579bfbedfa51a585c915ff38e2af0cbe782300b4e5fe2ab36f6139d23243","implementation_hash":"sha256:03bbe08c8ba8c89e29f823fcf9b0b5b974f0e975840808bc8ec34ab01eb6fb41","scenarios":[]}
 # acceptance-mutation-manifest-end
 
+# MVP scope notice: production schema compilation and per-event validation remain active; documentary Flow relationships never select or advance validation.
 Feature: Data layer effective schema compilation runtime
 
   Background:
@@ -13,20 +14,24 @@ Feature: Data layer effective schema compilation runtime
   Scenario: Data layer effective schema compilation runtime 001
     When the operator orders Sitewide, Commerce, Purchase, and Retail confirmation profiles
     Then the rendered effective schema marks transaction_id, value, and currency Required
-    And Live validates a missing currency against that exact compiled schema revision
+    When the Retail confirmation contract revision passes preflight, review, and publication
+    And a permitted Retail confirmation page emits a payload with missing currency
+    Then Live validates it against that exact published schema revision
 
   # Data layer effective schema compilation runtime 002
   Scenario: Data layer effective schema compilation runtime 002
     When the operator orders Sitewide, Commerce, Purchase, Trade account, and Purchase order profiles
     Then the rendered effective schema additionally marks account_id and purchase_order_number Required
-    And Live reports those exact missing fields for a Trade confirmation
+    When the Trade confirmation contract revision passes preflight, review, and publication
+    And a permitted Trade confirmation page emits a payload missing account_id and purchase_order_number
+    Then Live reports those exact missing fields
 
   # Data layer effective schema compilation runtime 003
   Scenario: Data layer effective schema compilation runtime 003
     Given /ecommerce/value is contributed by three visible profiles
     When the operator switches among Effective, Local only, and Provenance views
     Then origin, precedence, rule, documentation, and release data remain consistent
-    And Where used opens each actual page, event, flow step, fixture, and release consumer
+    And Where used opens each actual Page, Event, Event-occurrence node, Event validation case, and release consumer
 
   # Data layer effective schema compilation runtime 004
   Scenario: Data layer effective schema compilation runtime 004
@@ -54,7 +59,9 @@ Feature: Data layer effective schema compilation runtime
     Given one profile allows EUR and USD and a later profile allows only EUR
     When the operator compiles and inspects the effective contract
     Then the rendered allowed values contain only EUR with both origins
-    And a page-emitted USD event fails and a page-emitted EUR event passes that compiled rule in Live
+    When the allowed-value narrowing contract passes preflight, review, and publication
+    And a permitted page emits one USD event and one EUR event
+    Then USD fails and EUR passes that published rule in Live
 
   # Data layer effective schema compilation runtime 008
   Scenario Outline: Data layer effective schema compilation runtime 008
@@ -73,7 +80,7 @@ Feature: Data layer effective schema compilation runtime
     Given the published Retail schema declares <constraint>
     When the real page emits <invalid_value>
     Then visible Live contains path <path>, code <code>, severity error, expected <expected>, actual <invalid_value>, and provenance
-    And the corresponding negative Fixture returns the structurally identical issue
+    And the corresponding negative Event validation case returns the structurally identical issue
     Examples:
       | constraint | invalid_value | path | code | expected |
       | transaction_id is string | 42 | /ecommerce/transaction_id | type | string |
@@ -83,16 +90,18 @@ Feature: Data layer effective schema compilation runtime
   # Data layer effective schema compilation runtime 010
   Scenario: Data layer effective schema compilation runtime 010
     Given the installed editor authors an items cardinality rule and a trade conditional requirement
-    When positive and negative Fixtures and page observations run
+    When positive and negative Event validation cases run against the draft plan
     Then valid values pass and each invalid cardinality or conditional case returns one exact issue
-    And Fixture, preflight, release review, and Live use the same validation outcome
+    When that plan and its required evidence pass preflight, review, and publication
+    And equivalent permitted-page observations run against the published plan
+    Then Event validation cases, release review, and Live use the same validation outcome
 
   # Data layer effective schema compilation runtime 011
   Scenario Outline: Data layer effective schema compilation runtime 011
     Given the installed side panel authors <rule_type> for a <property_type> property through rendered controls
     When the operator adopts it into a canonical Profile, publishes it, and emits proving observations
     Then the installed Builder retains the rule type and typed parameters without a compatibility downgrade
-    And Fixture and visible Live return the same positive and negative outcomes from the published plan
+    And Event validation cases and visible Live return the same positive and negative outcomes from the published plan
     Examples:
       | rule_type | property_type |
       | Required | boolean |
@@ -110,10 +119,13 @@ Feature: Data layer effective schema compilation runtime
     Given the installed query builder authors a nested All group containing an Any group and a Not group
     And its leaves collectively exercise every supported typed predicate operator
     And one predicate compares a typed property reference with another compatible property reference
-    When the operator saves, reloads, compiles, and runs branch-covering positive and negative Fixtures
+    When the operator saves, reloads, compiles, and runs branch-covering positive and negative Event validation cases
     Then the rendered readable query and canonical condition tree remain structurally identical
-    And Applicability, Flow transitions, conditional rules, and Live consume that same condition-tree representation
-    And the same published query produces identical branch outcomes and provenance for real Live observations
+    And Assignment resolution and conditional rules consume that same condition-tree representation in the selected compiled plan
+    And documentary Flow relationships do not consume the executable condition tree
+    When the operator preflights, reviews, and publishes that same query
+    And real permitted-target observations exercise every branch in Live
+    Then the published query produces identical branch outcomes and provenance
 
   # Data layer effective schema compilation runtime 013
   Scenario: Data layer effective schema compilation runtime 013
