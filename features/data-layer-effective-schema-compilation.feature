@@ -63,3 +63,79 @@ Feature: Data layer effective schema compilation
     Then effective validation remains behavior-equivalent
     And historical revisions remain immutable with parent-to-profile provenance
     And cycles or missing parents block migration without replacing source data
+
+  # Data layer effective schema compilation 008
+  Scenario Outline: Data layer effective schema compilation 008
+    Given one Profile declares container <parent_path> as object and child <child_path> as string
+    When requirements are compiled in <authoring_order>
+    Then the effective schema contains the object container and child without a compiler exception
+    And the rendered effective schema and executable plan contain the same paths, types, and provenance
+    Examples:
+      | parent_path | child_path | authoring_order |
+      | /ecommerce | /ecommerce/transaction_id | parent then child |
+      | /ecommerce | /ecommerce/transaction_id | child then parent |
+      | /page | /page/type | parent then child |
+      | /page | /page/type | child then parent |
+
+  # Data layer effective schema compilation 009
+  Scenario Outline: Data layer effective schema compilation 009
+    Given an effective requirement at <path> declares <constraint>
+    When payload value <actual_value> is validated
+    Then one error issue contains <path>, <code>, <expected_value>, <actual_value>, and complete requirement provenance
+    And the issue deep-links to the exact contributing field
+    Examples:
+      | path | constraint | actual_value | code | expected_value |
+      | /ecommerce/transaction_id | string type | 42 | type | string |
+      | /ecommerce/currency | allowed values EUR and GBP | USD | enum | EUR or GBP |
+      | /ecommerce/coupon | forbidden | SUMMER | forbidden | absent |
+      | /ecommerce/value | required | absent | required | present |
+
+  # Data layer effective schema compilation 010
+  Scenario Outline: Data layer effective schema compilation 010
+    Given an effective schema contains <rule>
+    When the operator validates <observation>
+    Then validation returns <outcome> at <issue_path>
+    And the same outcome appears in Fixture and Live evaluation
+    Examples:
+      | rule | observation | outcome | issue_path |
+      | items cardinality 1 through 10 | zero items | cardinality error | /ecommerce/items |
+      | items cardinality 1 through 10 | 11 items | cardinality error | /ecommerce/items |
+      | purchase_order_number required when account_type is trade | trade without purchase_order_number | conditional rule error | /ecommerce/purchase_order_number |
+      | coupon forbidden when discount_code is absent | coupon without discount_code | conditional rule error | /ecommerce/coupon |
+
+  # Data layer effective schema compilation 011
+  Scenario Outline: Data layer effective schema compilation 011
+    Given the side panel can author <rule_type> for a <property_type> property
+    When that capability is adopted into a canonical Profile and compiled
+    Then <rule_type> remains available through a typed guided editor with no loss of parameters
+    And positive and negative observations execute the same constraint in Preview, Fixture, preflight, release, and Live
+    Examples:
+      | rule_type | property_type |
+      | Required | boolean |
+      | Exact value | string |
+      | Allowed values | number |
+      | Regular expression | string |
+      | Text length | string |
+      | Digits only | string |
+      | Numeric range | number |
+      | Item count | array |
+      | Allow undeclared properties | object |
+
+  # Data layer effective schema compilation 012
+  Scenario: Data layer effective schema compilation 012
+    Given a conditional rule query nests All, Any, and Not groups
+    And its typed leaves use Exists, Does not exist, Equals, Does not equal, Is one of, Matches pattern, Is greater than, Is at least, Is less than, and Is at most
+    And comparison operands can be typed literals, typed sets, patterns, or compatible property references
+    When the operator saves and compiles the query through guided controls
+    Then the canonical rule stores one recursively typed condition tree and one typed consequence
+    And the same condition-tree representation is reusable for Applicability, Flow entry, exit, and transition conditions, and conditional validation rules
+    And a plain-language preview explains the complete Boolean expression, referenced paths, and consequence
+    And positive and negative observations prove every branch through the same production evaluator
+    And no free-form JavaScript or inert expression is accepted
+
+  # Data layer effective schema compilation 013
+  Scenario: Data layer effective schema compilation 013
+    Given an enabled side-panel rule has a custom severity, issue message, reusable identity, version, and property attachment
+    When it is adopted, edited, promoted, attached elsewhere, explicitly synchronized, disabled, re-enabled, exported, imported, and reloaded
+    Then every lifecycle operation preserves its canonical identity, typed parameters, condition tree, consequence, metadata, version policy, and provenance
+    And published consumers remain pinned until an explicit reviewed synchronization and release

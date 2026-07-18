@@ -12,4 +12,4 @@ export { allowedValueExpansionAvailability } from "../../data-layer-allowed-valu
 export { type AttachedSchemaRule, type ValidationIssue, type ValidationResult, type ValidationTarget } from "../../data-layer-schema-verification.js";
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation, type SpecificationRuntimeObservation, type SpecificationRuntimeResult, type SpecificationRuntimeStorage } from "./layers/browser/schemas.js";
 export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
-export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState } from "./layers/browser/schemas.js";
+export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";

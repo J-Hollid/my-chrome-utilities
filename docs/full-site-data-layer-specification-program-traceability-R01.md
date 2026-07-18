@@ -6,7 +6,7 @@ This matrix traces the proposed behavior program to `DLSP-01` through `DLSP-12` 
 
 Terminal status values are:
 
-- **Implemented and verified:** production behavior is present in the built extension and its stable model/runtime scenarios passed the coder, refactorer, and architect gates.
+- **Implemented and verified:** production behavior is present in the built extension and its stable model/runtime scenarios passed the coder, refactorer, and architect automated gates. This status does not imply completion of the separately prepared paired-Windows operator walkthrough.
 - **Compatibility preserved:** an existing primitive remains available while the Specification Project provides the new authoring/release boundary.
 - **Release blocker repaired:** an R01 trust defect is covered by production-boundary regression evidence.
 
@@ -46,7 +46,7 @@ Terminal status values are:
 | DLSP-09 — Navigation, global search, provenance, and impact | 1–3 | workspace navigation `001–009`, runtime `001–007`; profile composition `002`, `004–005`, runtime `001`, `003`; page/event catalog `003–006`, runtime `002–005`; preflight `004`, `008`, runtime `004–005` | Stable graph and project index | **Implemented and verified.** Project-wide search, Where used, origin/provenance, release consumers, and focused issue navigation passed. |
 | DLSP-10 — Full-fidelity interchange and staged diff/merge | 3 | `Data layer project interchange 001–007`; runtime `001–006`; atomic release `003`, `006`; decisive workflow `007` | Complete graph, migration registry, releases | **Implemented and verified; compatibility preserved.** Full graph round-trip, collision review, rollback, and deliberately lossy JSON Schema plus companion manifest passed. |
 | DLSP-11 — Rename and rescope Build specification | 1–3 | `Data layer documentation export 001–005`; runtime `001–004`; project interchange `006`; runtime `005` | Full-page Specification Builder ownership and final export metadata | **Implemented and verified; release blocker repaired.** Specification Builder names the project workspace; documentation export retains the table workflow with explicit loss metadata and clipboard fidelity. |
-| DLSP-12 — Responsive and accessible interaction system | Every phase | durable drafts `006–007`, runtime `005`; workspace `005–009`, runtime `003–007`; bulk `007`, runtime `005`; documentation export `003`, `005`, runtime `003–004`; page/event `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, `008`, runtime `004–005`; release `007`, runtime `005`; interchange `007`, runtime `006`; decisive `010`, runtime `004–006` | Delivered alongside each functional slice | **Implemented and verified; release blocker repaired.** Keyboard/focus behavior, bounded rendering, and 360/520/720/1280 layouts passed actual-Chrome verification. |
+| DLSP-12 — Responsive and accessible interaction system | Every phase | durable drafts `006–007`, runtime `005`; workspace `005–009`, runtime `003–007`; bulk `007`, runtime `005`; documentation export `003`, `005`, runtime `003–004`; page/event `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, `008`, runtime `004–005`; release `007`, runtime `005`; interchange `007`, runtime `006`; decisive `010`, runtime `004–006` | Delivered alongside each functional slice | **Implemented and verified at automated production/component boundaries; external walkthrough pending.** Keyboard/focus behavior, bounded rendering, and 360/520/720/1280 layouts passed deterministic browser-component verification. The paired-Windows actual-extension walkthrough remains incomplete in R04. |
 
 ## Decisive acceptance traceability
 
@@ -56,7 +56,7 @@ Terminal status values are:
 | DA-02 — Define Retail and Trade flows sharing Purchase and confirmation URL | 2 | decisive workflow `002`; temporal flow `003`; runtime temporal `002` | Pages/events, applicability, profiles, temporal evaluator | **Implemented and verified.** |
 | DA-03 — Retail requires transaction_id, value, currency | 2 | decisive workflow `001` | Ordered profiles | **Implemented and verified.** |
 | DA-04 — Trade additionally requires account_id and purchase_order_number | 2 | decisive workflow `001` | Ordered profiles | **Implemented and verified.** |
-| DA-05 — Prior flow state distinguishes markerless final events | 2 | decisive workflow `002`; runtime decisive `001`; temporal runtime `002–004` | Flow-instance correlation and persistence | **Implemented and verified in actual Chrome.** Registered production callbacks resolved different Retail and Trade winners from prior flow state. |
+| DA-05 — Prior flow state distinguishes markerless final events | 2 | decisive workflow `002`; runtime decisive `001`; temporal runtime `002–004` | Flow-instance correlation and persistence | **Implemented and verified through the production callback adapter.** Registered production callbacks resolved different Retail and Trade winners from prior flow state; this is not relabelled as paired-Windows actual-extension evidence. |
 | DA-06 — Optional Retail upsell and repeatable product step | 2 | decisive workflow `003`; temporal flow `001–002`; runtime temporal `001` | Structured flow model | **Implemented and verified.** |
 | DA-07 — Effective requirement, origin, winner, and coverage visible | 2–3 | decisive workflow `004`; profile `002`; applicability `005`; preflight `004` | Profiles, applicability, coverage index | **Implemented and verified.** |
 | DA-08 — Deliberately ambiguous matcher detected before release | 3 | decisive workflow `005`; preflight `006`; runtime preflight `003` | Applicability analyzer and release gate | **Implemented and verified.** |
@@ -67,16 +67,16 @@ Terminal status values are:
 | DA-S3 — Apply Required to multi-selection once | 1 | decisive workflow `009`; bulk `003`; runtime bulk `003` | Bulk grid | **Implemented and verified.** |
 | DA-S4 — Preflight issue reaches field within two actions | 1–3 | decisive workflow `010`; workspace `002`, runtime `001`; preflight `004`, runtime `004` | Deep-link index | **Implemented and verified.** |
 | DA-S5 — Property-path search shows all users and releases | 1–3 | decisive workflow `010`; workspace `004`; runtime workspace `005` | Global project index | **Implemented and verified.** |
-| DA-S6 — Core workflow completes keyboard-only | Every phase | decisive workflow `010`, runtime `005`; durable drafts `007`, runtime `005`; workspace `007–009`, runtime `004`, `006–007`; bulk `007`, runtime `005`; catalog `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, runtime `004`; release `007`, runtime `005`; interchange `007`, runtime `006` | Accessible components in each slice | **Implemented and verified in actual Chrome.** Focus return and keyboard-only operation passed the R03 walkthrough. |
+| DA-S6 — Core workflow completes keyboard-only | Every phase | decisive workflow `010`, runtime `005`; durable drafts `007`, runtime `005`; workspace `007–009`, runtime `004`, `006–007`; bulk `007`, runtime `005`; catalog `006`, runtime `005`; applicability `008`, runtime `005`; profile `007`, runtime `005`; flow `008`, runtime `005`; preflight `004`, runtime `004`; release `007`, runtime `005`; interchange `007`, runtime `006` | Accessible components in each slice | **Implemented and verified at deterministic component/runtime boundaries; external walkthrough pending.** Focus return and keyboard interactions pass automated gates, while the paired-Windows keyboard-only walkthrough remains outside this autonomous environment. |
 
 ## Terminal program gates
 
 | Gate | Stable scenario evidence | Status |
 | --- | --- | --- |
 | Existing-user migration or explicit compatibility | foundation `004–005`; catalog `005`; profile `006`; decisive runtime `003` | **Passed.** Migration and compatibility scenarios preserve supported identities and semantic behavior. |
-| Representative 500-property, 50-flow benchmark | workspace `006`; preflight `008`; decisive runtime `004` | **Passed in actual Chrome.** Rendering remained bounded and the recorded interaction task stayed within the 100 ms limit. |
-| Actual browser boundaries for storage, focus, layout, clipboard, download, and reload | Runtime scenario IDs enumerated in each DLSP row; documentation export runtime `002–004`; interchange runtime `001–006`; decisive runtime `001–006` | **Passed.** Runtime evidence used production callbacks or deterministic adapters at the extension/browser boundary. |
-| Real-Chrome 360/520/720/full-page walkthrough and keyboard pass | `Data layer Retail and Trade decisive workflow runtime 005–006` | **Passed.** R03 records native side-panel widths plus 1280px full-page workspace evidence and keyboard focus restoration. |
+| Representative 500-property, 50-flow benchmark | workspace `006`; preflight `008`; decisive runtime `004` | **Passed in the deterministic browser-component harness.** Rendering remained bounded and the recorded interaction task stayed within the 100 ms limit. |
+| Browser-sensitive storage, focus, layout, clipboard, download, and reload automation | Runtime scenario IDs enumerated in each DLSP row; documentation export runtime `002–004`; interchange runtime `001–006`; decisive runtime `001–006` | **Passed at production callback or deterministic component boundaries.** These automated results do not substitute for the separately prepared paired-Windows actual-extension walkthrough. |
+| Actual-extension 360/520/720/full-page walkthrough and keyboard pass | `Data layer Retail and Trade decisive workflow runtime 005–006` plus R04 walkthrough procedure | **External verification pending.** R04 explicitly records that the paired-Windows actual-extension capture matrix was not produced in the autonomous environment. |
 | Immutable R01 brief and evidence delivered downstream | First approved specification commit includes the authoritative report and exact `artifacts/schema-editor-walkthrough/R01/` tree | **Passed.** Delivered unchanged in specification commit `a58c9d1415`. |
 
 The previously approved Phase 0 rule slices are committed in `1426e15` and `de5cfde`. They remain part of this program's implementation lineage and passed the coder, refactorer, architect, and terminal functional-delivery gates with the later slices.
@@ -95,7 +95,7 @@ The first implementation lineage failed the architect's terminal functional-deli
 | Structured whole-project release diff, recovery, restore-as-draft, and Publish versus Publish-and-close behavior | atomic release `001–007`, runtime `001–005` |
 | Staged full-graph collision resolution, rollback, and semantic full-fidelity round trip | project interchange `001–007`, runtime `001–006`; decisive workflow `007`, runtime `002` |
 | Coverage matrix, static ambiguity analysis, Where used, and issue deep links to exact fields | fixtures/preflight `001–008`, runtime `001–005`; workspace `002`, `004`, runtime `001`, `005` |
-| Decisive keyboard-only, 500-property/50-flow performance, and actual-extension R03 visual evidence at 360/520/720/full-page widths | decisive runtime `004–006` |
+| Decisive keyboard-only and 500-property/50-flow automated performance evidence; paired-Windows actual-extension visual evidence remains external | decisive runtime `004–006`; R04 walkthrough report |
 
 Passing generic acceptance handlers or naming these concepts in a collection is not completion evidence. Each runtime scenario must drive the production extension boundary, or the same production callback through a deterministic adapter, and assert browser storage, clipboard, focus, scrolling, computed layout, download content, or temporal results as applicable.
 
@@ -113,11 +113,12 @@ Passing generic acceptance handlers or naming these concepts in a collection is 
 ## Terminal verification record
 
 - Specification lineage: `a58c9d1415` followed by correction specification `a144c4963e`.
-- Production lineage: coder `9035d428303f7be59ae988807be2625131a24fff`, refactorer `1f1cd3f839`, architect `60207d292b`.
-- Generated Gherkin soft mutation: 392 of 392 mutants killed across 28 feature files; zero survivors or errors.
-- Property verification: 200 generated cases passed. Refactor verification: 241 tests and 1,282 assertions passed; maximum CRAP was 3.0.
+- R02 correction lineage: specification `6650dbcffe`, coder `cac1845ac4`, conflict recovery `8e9c2df2cb`, refactorer `8110fea6da`, architect `1d6c8c26b7`, and terminal pack-ownership correction `7b983d7e50`.
+- Generated Gherkin soft mutation: 579 of 579 mutants killed across the complete 50-feature program; zero survivors or errors.
+- Property verification: 200 generated cases passed. Refactor verification: 243 tests and 1,300 assertions passed; maximum changed-adapter CRAP was 4.5.
 - Direct acceptance packs: command palette, hotkeys, capture, event library, schemas, defects, replay, and shell all exited successfully.
-- Actual-extension evidence: `artifacts/side-panel-walkthrough/R03/` and `docs/side-panel-visual-walkthrough-recommendations-R03.md`.
-- Release status: every DLSP-01 through DLSP-12 recommendation and decisive criterion is implemented and verified. No program item is blocked.
+- Automated visual/component evidence: `artifacts/schema-editor-walkthrough/R03/` and `docs/full-site-data-layer-specification-workflow-assessment-R03.md`.
+- External walkthrough record: `docs/side-panel-visual-walkthrough-recommendations-R04.md`. The paired-Windows actual-extension and keyboard-only capture matrix is pending.
+- Release status: every DLSP-01 through DLSP-12 production correction and decisive automated criterion is implemented and passes terminal gates. Full release verification remains conditional on the external paired-Windows operator walkthrough.
 
-The documented demo is hosted on a separately prepared Windows machine and requires collaborative setup with the product owner, so reproducing it is outside the autonomous development environment. R03 used a local fixture to exercise the same extension/browser boundary and decisive event sequence. This evidence-environment difference is not product debt, a regression, a blocked item, or a release follow-up.
+The documented demo is hosted on a separately prepared Windows machine and requires collaborative setup with the product owner, so reproducing it is outside the autonomous development environment. R03 used local deterministic adapters and component rendering to exercise production callbacks and the decisive event sequence. R04 preserves the remaining evidence gap: those results are not a substitute for the paired-Windows actual-extension walkthrough.

@@ -4,7 +4,7 @@ export type IdFactory = (kind: string) => string;
 export interface Requirement { path: string; type?: string; required?: boolean; forbidden?: boolean; allowedValues?: readonly unknown[]; description?:string; examples?:readonly unknown[]; rules?:readonly Record<string,unknown>[]; introducedIn?:string; origin?: string; }
 export interface ProjectEntity { id: string; name: string; [key: string]: unknown; }
 export interface Profile extends ProjectEntity { requirements: Requirement[]; }
-export interface Predicate { kind: "predicate"; field: string; operator: string; value?: unknown; }
+export interface Predicate { kind: "predicate"; field: string; operator: string; value?: unknown; values?: readonly unknown[]; pattern?: string; valuePath?: string; }
 export interface ConditionGroup { kind: "all" | "any" | "not"; conditions: Condition[]; }
 export type Condition = Predicate | ConditionGroup;
 export interface SpecificationCollections {
@@ -86,16 +86,26 @@ export function composeRequirementProfiles(profiles: readonly Pick<Profile,"id"|
 }
 
 function fieldValue(context: Record<string,unknown>, field: string): unknown {
+  if(field.startsWith("/"))return field.split("/").filter(Boolean).reduce<unknown>((value,key)=>value&&typeof value==="object"?(value as Record<string,unknown>)[key]:undefined,context.payload??context);
   if (field.startsWith("payload.")) return field.slice(8).split(".").reduce<unknown>((value,key)=>value && typeof value === "object" ? (value as Record<string,unknown>)[key] : undefined,context.payload);
-  return context[field];
+  return field.split(".").reduce<unknown>((value,key)=>value&&typeof value==="object"?(value as Record<string,unknown>)[key]:undefined,context);
 }
 function predicateMatches(predicate: Predicate, context: Record<string,unknown>): boolean {
-  const actual=fieldValue(context,predicate.field), expected=predicate.value;
-  if (predicate.operator === "exists") return actual !== undefined;
-  if (predicate.operator === "equals") return String(actual) === String(expected);
-  if (predicate.operator === "contains") return String(actual).includes(String(expected));
-  if (predicate.operator === "glob") return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g,"\\$&").replaceAll("*",".*")}$`).test(String(actual));
-  if (predicate.operator === "regex") { try { return new RegExp(String(expected)).test(String(actual)); } catch { return false; } }
+  const actual=fieldValue(context,predicate.field),expected=predicate.valuePath?fieldValue(context,predicate.valuePath):predicate.value,operator=predicate.operator.toLowerCase().replaceAll("_","-");
+  if(operator==="exists")return actual!==undefined;
+  if(operator==="does not exist")return actual===undefined;
+  if(operator==="equals")return Object.is(actual,expected);
+  if(operator==="does not equal"||operator==="not equals")return!Object.is(actual,expected);
+  if(operator==="is one of")return(predicate.values??(Array.isArray(expected)?expected:[])).some((candidate)=>Object.is(candidate,actual));
+  if(operator==="contains")return String(actual).includes(String(expected));
+  if(operator==="glob")return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g,"\\$&").replaceAll("*",".*")}$`).test(String(actual));
+  if(operator==="regex"||operator==="matches pattern"){try{return new RegExp(predicate.pattern??String(expected)).test(String(actual));}catch{return false;}}
+  if(typeof actual==="number"&&typeof expected==="number"){
+    if(operator==="is greater than")return actual>expected;
+    if(operator==="is at least")return actual>=expected;
+    if(operator==="is less than")return actual<expected;
+    if(operator==="is at most")return actual<=expected;
+  }
   return false;
 }
 export function conditionMatches(condition: Condition, context: Record<string,unknown>): boolean {
@@ -174,6 +184,10 @@ export function searchProjectAssignments(project:SpecificationProject,query:stri
 
 export interface FlowStepInput extends Omit<ProjectEntity,"id"> { pageId?:string;eventId?:string;minimum:number;maximum:number;optional:boolean;branch?:string;transition?:{from:string;to:string}; }
 export function addFlowStep(state:ProjectState,flowId:string,input:FlowStepInput,id:IdFactory):ProjectState{if(input.minimum<0||input.maximum<input.minimum)throw new Error("Flow occurrence bounds are invalid.");const normalized={...clone(input),...(input.pageId?{pageId:input.pageId}:{}),...(input.eventId?{eventId:input.eventId}:{})};if(!input.pageId)delete normalized.pageId;if(!input.eventId)delete normalized.eventId;return transactProject(state,`Add ${input.name} flow step`,(project)=>({...project,collections:{...project.collections,flows:project.collections.flows.map((flow)=>flow.id===flowId?{...flow,steps:[...((flow.steps as ProjectEntity[]|undefined)??[]),{...normalized,id:id("flow-step")}] }:flow)}}));}
+export interface FlowStepUpdate {name:string;pageId?:string;eventId?:string;minimum:number;maximum:number;optional:boolean;branch?:string}
+export function saveFlowStep(state:ProjectState,flowId:string,stepId:string,input:FlowStepUpdate):ProjectState{if(input.minimum<0||input.maximum<input.minimum)throw new Error("Flow occurrence bounds are invalid.");return transactProject(state,`Save flow step ${stepId}`,(project)=>({...project,collections:{...project.collections,flows:project.collections.flows.map((flow)=>{if(flow.id!==flowId)return flow;const steps=(flow.steps as ProjectEntity[]|undefined)??[];if(!steps.some(({id})=>id===stepId))throw new Error(`Unknown flow step ${stepId}.`);return{...flow,steps:steps.map((step)=>{if(step.id!==stepId)return step;const updated={...step,...clone(input)};if(!input.pageId)delete updated.pageId;if(!input.eventId)delete updated.eventId;return updated;})};})}}));}
+export interface FlowTransition{id:string;toStepId:string;condition?:Condition}
+export function saveFlowTransition(state:ProjectState,flowId:string,fromStepId:string,transition:FlowTransition):ProjectState{return transactProject(state,`Save flow transition ${transition.id}`,(project)=>({...project,collections:{...project.collections,flows:project.collections.flows.map((flow)=>{if(flow.id!==flowId)return flow;const steps=(flow.steps as ProjectEntity[]|undefined)??[];if(!steps.some(({id})=>id===fromStepId))throw new Error(`Unknown source step ${fromStepId}.`);if(!steps.some(({id})=>id===transition.toStepId))throw new Error(`Unknown target step ${transition.toStepId}.`);return{...flow,steps:steps.map((step)=>{if(step.id!==fromStepId)return step;const transitions=(step.transitions as FlowTransition[]|undefined)??[],existing=transitions.some(({id})=>id===transition.id);return{...step,transitions:existing?transitions.map((candidate)=>candidate.id===transition.id?clone(transition):candidate):[...transitions,clone(transition)]};})};})}}));}
 export function reorderFlowStep(state:ProjectState,flowId:string,from:number,to:number):ProjectState{return transactProject(state,"Reorder flow step",(project)=>({...project,collections:{...project.collections,flows:project.collections.flows.map((flow)=>{if(flow.id!==flowId)return flow;const steps=[...((flow.steps as ProjectEntity[]|undefined)??[])],moved=steps.splice(from,1)[0];if(!moved)return flow;steps.splice(Math.max(0,Math.min(to,steps.length)),0,moved);return{...flow,steps};})}}));}
 
 export interface DocumentationExportOptions { fields: readonly string[]; include: { applicability:boolean; flows:boolean; fixtures:boolean; releases:boolean }; }

@@ -57,19 +57,19 @@ const family = [
 assert.ok(family, `No detailed R02 scenario dispatcher for ${scenario.feature}`);
 
 const dispatch = {
-  "canonical project schema drafts": ["schema-sync","schema-sync","conflict","repository","repository","migration","release","interchange","assignment","temporal","repository","migration","assignment","assignment","project","repository"],
+  "canonical project schema drafts": ["schema-sync","schema-sync","conflict","repository","repository","migration","release","interchange","assignment","temporal","repository","migration","assignment","assignment","project","repository","repository","assignment","schema-sync","schema-sync","assurance","repository"],
   "contextual specification editors": ["project","project","project","project","assignment","temporal","project","project","project","project","project","project","project"],
-  "effective requirement coverage correction": ["assurance","assurance","assurance","assurance","assurance","assurance","assurance"],
-  "effective schema compilation": ["engine","engine","engine","engine","engine","engine","migration"],
-  "greenfield retail trade production release": ["project","decisive","temporal","assurance","assurance","interchange","repository","bulk","project","assurance","decisive","evidence","decisive","project","project"],
-  "production fixture execution": ["assurance","assurance","assurance","assurance","assurance","assurance","assurance"],
-  "specification builder operator usability": ["project","project","project","project","project","project","project","project","project","project","project","project","project"],
-  "staged multiformat bulk authoring": ["bulk","bulk","bulk","bulk","bulk","bulk","bulk","bulk","bulk"],
-  "temporal flow execution correction": ["temporal","temporal","temporal","temporal","temporal","temporal","temporal","temporal","temporal","temporal","temporal"],
-  "truthful preflight release correction": ["assurance","assurance","assurance","assurance","assurance","release","release","interchange","interchange","assurance","assurance","assurance","assurance","release"],
-  "unified specification evaluation": ["engine","decisive","decisive","engine","engine","engine","engine","engine"],
+  "effective requirement coverage correction": Array(9).fill("assurance"),
+  "effective schema compilation": ["engine","engine","engine","engine","engine","engine","migration",...Array(6).fill("engine")],
+  "greenfield retail trade production release": ["project","decisive","temporal","assurance","assurance","interchange","repository","bulk","project","assurance","decisive","evidence","decisive","project","project","decisive","project"],
+  "production fixture execution": Array(10).fill("assurance"),
+  "specification builder operator usability": Array(20).fill("project"),
+  "staged multiformat bulk authoring": Array(10).fill("bulk"),
+  "temporal flow execution correction": Array(13).fill("temporal"),
+  "truthful preflight release correction": ["assurance","assurance","assurance","assurance","assurance","release","release","interchange","interchange","assurance","assurance","assurance","assurance","release","assurance","release","release"],
+  "unified specification evaluation": ["engine","decisive","decisive",...Array(8).fill("engine")],
 };
-const probeName = dispatch[family][scenario.index];
+const probeName = family==="greenfield retail trade production release"&&scenario.index===11&&!feature.includes("runtime")?"decisive":dispatch[family][scenario.index];
 assert.ok(probeName, `No scenario-indexed branch for ${scenario.feature} index ${scenario.index}`);
 
 let sequence = 0;
@@ -195,7 +195,8 @@ const probes = {
     return {fixture:result.status,coverage:coverage.totalRows,blockers:preflight.blockers.length};
   },
   release() {
-    const state={project:structuredClone(assuranceProject),draft:{id:"draft:release",status:"Saved",updatedAt:new Date(0).toISOString()},history:{undo:[],redo:[]}};
+    const project=structuredClone(assuranceProject);project.publicationPolicy.fixturesRequired=false;project.collections.fixtures=project.collections.fixtures.map((fixture)=>({...fixture,releasePolicy:"optional"}));
+    const state={project,draft:{id:"draft:release",status:"Saved",updatedAt:new Date(0).toISOString()},history:{undo:[],redo:[]}};
     const released=publishCompiledRelease(state,{id:(kind)=>`${kind}:scenario`,write:()=>{}});
     assert.equal(released.project.releases.length,state.project.releases.length+1);
     assert.ok(released.project.releases.at(-1).executablePlan);

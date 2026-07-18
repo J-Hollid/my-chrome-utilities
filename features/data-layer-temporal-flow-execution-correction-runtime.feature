@@ -92,3 +92,17 @@ Feature: Data layer temporal flow execution correction runtime
     When an observation misses entry, no runtime instance is created
     When a valid entry and later exit are captured, Live marks one stable instance complete
     And a subsequent markerless purchase does not revive or route from the completed instance
+
+  # Data layer temporal flow execution correction runtime 012
+  Scenario: Data layer temporal flow execution correction runtime 012
+    Given Retail and Trade Flow editors are available in the installed Builder
+    When the operator switches from Retail to Trade and activates the first visible step action
+    Then only a Trade step can change and every Retail step remains byte-for-byte unchanged
+    And the rendered list, submitted command, compiled automaton, and persisted transition share the Trade Flow identity
+
+  # Data layer temporal flow execution correction runtime 013
+  Scenario: Data layer temporal flow execution correction runtime 013
+    Given the operator authors an optional Retail branch and join through in-place step controls
+    When the same journey runs as a Fixture and through the real observer
+    Then both traverse the authored transition identities and return the same active steps and occurrence results
+    And removing or changing an authored transition changes both results after publication

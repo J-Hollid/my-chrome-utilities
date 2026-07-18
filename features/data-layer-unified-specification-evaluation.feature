@@ -64,3 +64,26 @@ Feature: Data layer unified specification evaluation
     When the operator opens Specification Builder
     Then the workspace is visibly labelled Preview with the unresolved parity reason
     And production publication is disabled until the same decisive observation passes fixture, preflight, release, and Live evaluation
+
+  # Data layer unified specification evaluation 009
+  Scenario: Data layer unified specification evaluation 009
+    Given a published plan evaluates one Purchase observation
+    When Fixture, matcher test, preflight evidence, release evidence, and Live display that evaluation
+    Then each exposes the same result identity, assignment winner, rejected candidates, active Flow and step, effective Profiles, schema revision, issues, and provenance
+    And no consumer substitutes a reduced or independently recomputed validation result
+
+  # Data layer unified specification evaluation 010
+  Scenario: Data layer unified specification evaluation 010
+    Given release 1 is published and draft revision 24 changes Retail applicability and currency allowed values
+    When a Retail Purchase is observed before another release
+    Then Live uses release 1 assignment, schema revision, issues, and provenance
+    And draft revision 24 affects only Preview and visibly identifies evidence made stale
+    When revision 24 is published as release 2
+    Then subsequent Live observations identify and use immutable release 2
+
+  # Data layer unified specification evaluation 011
+  Scenario: Data layer unified specification evaluation 011
+    Given unified evaluation and legacy Live validation disagree
+    When the Live event row is rendered
+    Then only unified evaluation is labelled authoritative
+    And legacy output is absent or explicitly labelled migration comparison and cannot affect status, issues, or release evidence

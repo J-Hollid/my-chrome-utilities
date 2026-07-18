@@ -55,3 +55,22 @@ Feature: Data layer production fixture execution runtime
     When a rerender, navigation, reload, and one failed save occur
     Then the repair and its field-level status survive
     And rerunning after Retry records one current result for the new canonical revision
+
+  # Data layer production fixture execution runtime 008
+  Scenario Outline: Data layer production fixture execution runtime 008
+    Given the installed Fixture editor contains <empty_case>
+    When the operator selects Run Fixture
+    Then no Pass result or coverage evidence is created
+    And the exact missing guided field is focused with a repair explanation
+    Examples:
+      | empty_case |
+      | no observations |
+      | no assertions |
+      | empty payload and empty expected result |
+
+  # Data layer production fixture execution runtime 009
+  Scenario: Data layer production fixture execution runtime 009
+    Given positive and negative Retail and Trade Fixtures were created only through guided controls
+    When the operator runs them in the installed extension
+    Then each result includes assertions and actual-versus-expected differences from the production evaluator
+    And their evidence can populate only matching Page, Event, Flow step, and requirement coverage cells

@@ -53,27 +53,45 @@ export function composeRequirementProfiles(profiles) {
     return { requirements: [...requirements.values()], conflicts };
 }
 function fieldValue(context, field) {
+    if (field.startsWith("/"))
+        return field.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context.payload ?? context);
     if (field.startsWith("payload."))
         return field.slice(8).split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context.payload);
-    return context[field];
+    return field.split(".").reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, context);
 }
 function predicateMatches(predicate, context) {
-    const actual = fieldValue(context, predicate.field), expected = predicate.value;
-    if (predicate.operator === "exists")
+    const actual = fieldValue(context, predicate.field), expected = predicate.valuePath ? fieldValue(context, predicate.valuePath) : predicate.value, operator = predicate.operator.toLowerCase().replaceAll("_", "-");
+    if (operator === "exists")
         return actual !== undefined;
-    if (predicate.operator === "equals")
-        return String(actual) === String(expected);
-    if (predicate.operator === "contains")
+    if (operator === "does not exist")
+        return actual === undefined;
+    if (operator === "equals")
+        return Object.is(actual, expected);
+    if (operator === "does not equal" || operator === "not equals")
+        return !Object.is(actual, expected);
+    if (operator === "is one of")
+        return (predicate.values ?? (Array.isArray(expected) ? expected : [])).some((candidate) => Object.is(candidate, actual));
+    if (operator === "contains")
         return String(actual).includes(String(expected));
-    if (predicate.operator === "glob")
+    if (operator === "glob")
         return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`).test(String(actual));
-    if (predicate.operator === "regex") {
+    if (operator === "regex" || operator === "matches pattern") {
         try {
-            return new RegExp(String(expected)).test(String(actual));
+            return new RegExp(predicate.pattern ?? String(expected)).test(String(actual));
         }
         catch {
             return false;
         }
+    }
+    if (typeof actual === "number" && typeof expected === "number") {
+        if (operator === "is greater than")
+            return actual > expected;
+        if (operator === "is at least")
+            return actual >= expected;
+        if (operator === "is less than")
+            return actual < expected;
+        if (operator === "is at most")
+            return actual <= expected;
     }
     return false;
 }
@@ -221,6 +239,18 @@ export function addFlowStep(state, flowId, input, id) { if (input.minimum < 0 ||
     throw new Error("Flow occurrence bounds are invalid."); const normalized = { ...clone(input), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.eventId ? { eventId: input.eventId } : {}) }; if (!input.pageId)
     delete normalized.pageId; if (!input.eventId)
     delete normalized.eventId; return transactProject(state, `Add ${input.name} flow step`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => flow.id === flowId ? { ...flow, steps: [...(flow.steps ?? []), { ...normalized, id: id("flow-step") }] } : flow) } })); }
+export function saveFlowStep(state, flowId, stepId, input) { if (input.minimum < 0 || input.maximum < input.minimum)
+    throw new Error("Flow occurrence bounds are invalid."); return transactProject(state, `Save flow step ${stepId}`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
+            return flow; const steps = flow.steps ?? []; if (!steps.some(({ id }) => id === stepId))
+            throw new Error(`Unknown flow step ${stepId}.`); return { ...flow, steps: steps.map((step) => { if (step.id !== stepId)
+                return step; const updated = { ...step, ...clone(input) }; if (!input.pageId)
+                delete updated.pageId; if (!input.eventId)
+                delete updated.eventId; return updated; }) }; }) } })); }
+export function saveFlowTransition(state, flowId, fromStepId, transition) { return transactProject(state, `Save flow transition ${transition.id}`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
+            return flow; const steps = flow.steps ?? []; if (!steps.some(({ id }) => id === fromStepId))
+            throw new Error(`Unknown source step ${fromStepId}.`); if (!steps.some(({ id }) => id === transition.toStepId))
+            throw new Error(`Unknown target step ${transition.toStepId}.`); return { ...flow, steps: steps.map((step) => { if (step.id !== fromStepId)
+                return step; const transitions = step.transitions ?? [], existing = transitions.some(({ id }) => id === transition.id); return { ...step, transitions: existing ? transitions.map((candidate) => candidate.id === transition.id ? clone(transition) : candidate) : [...transitions, clone(transition)] }; }) }; }) } })); }
 export function reorderFlowStep(state, flowId, from, to) { return transactProject(state, "Reorder flow step", (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((flow) => { if (flow.id !== flowId)
             return flow; const steps = [...(flow.steps ?? [])], moved = steps.splice(from, 1)[0]; if (!moved)
             return flow; steps.splice(Math.max(0, Math.min(to, steps.length)), 0, moved); return { ...flow, steps }; }) } })); }
