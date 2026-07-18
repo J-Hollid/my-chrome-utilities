@@ -14,6 +14,10 @@ import {
   projectImpactPreview,
 } from "../dist/data-layer-specification-guidance.js";
 import {
+  capturedValidationDestinationChoices,
+  createFixtureFromCapturedValidation,
+} from "../dist/data-layer-specification-project.js";
+import {
   CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,
   subscribeCanonicalProjectChanges,
 } from "../dist/data-layer-specification-repository.js";
@@ -68,6 +72,44 @@ for (let sample=0; sample<200; sample+=1) {
   affected.push("later mutation");
   assert.deepEqual(impact.affectedEntities,[`entity:${sample}`],
     "impact previews must conserve their original affected-entity set");
+
+  const capturedEvent=project.collections.events[sample%project.collections.events.length];
+  const destinations=capturedValidationDestinationChoices(project,{
+    eventName:capturedEvent.eventName,
+    sourceId:capturedEvent.sourceId,
+  });
+  assert.deepEqual(destinations.events,
+    [{id:capturedEvent.id,name:capturedEvent.name}],
+    "continuation choices must expose only canonically matching named Events");
+  assert.deepEqual(destinations.pages,
+    project.collections.pages.map(({id,name})=>({id,name})),
+    "continuation choices must conserve canonical Page identities and names");
+  assert.equal(destinations.flowSteps.length,
+    project.collections.flows.flatMap(({steps=[]})=>steps).length,
+    "continuation choices must conserve all named Flow steps");
+  const payload={sample,nested:{currency:"EUR"}};
+  const fixtureState=createFixtureFromCapturedValidation(
+    {project,draft:{id:`draft:${sample}`,status:"Saved",updatedAt:"2026-07-18T00:00:00Z"},history:{undo:[],redo:[]}},
+    {name:destinations.suggestedFixtureName,captureId:`capture:${sample}`,
+      sourceId:capturedEvent.sourceId,eventName:capturedEvent.eventName,payload,
+      schemaId:"schema:retail",eventId:capturedEvent.id,
+      pageId:destinations.pages[0]?.id,flowStepId:destinations.flowSteps[0]?.id,
+      profileId:destinations.profiles[0]?.id,
+      expected:{status:"pass",issueCodes:[]}},
+    (kind)=>`${kind}:property-${sample}`,
+  );
+  payload.nested.currency="mutated";
+  const continuedFixture=fixtureState.project.collections.fixtures[0];
+  assert.equal(project.collections.fixtures.length,0,
+    "captured continuation must not mutate the prior project revision");
+  assert.equal(continuedFixture.observations[0].payload.nested.currency,"EUR",
+    "captured continuation must own an independent observation payload");
+  assert.deepEqual(
+    {eventId:continuedFixture.eventId,pageId:continuedFixture.pageId,
+      flowStepId:continuedFixture.flowStepId,profileIds:continuedFixture.profileIds},
+    {eventId:capturedEvent.id,pageId:destinations.pages[0]?.id,
+      flowStepId:destinations.flowSteps[0]?.id,profileIds:[destinations.profiles[0]?.id]},
+    "captured Fixtures must conserve the reviewed canonical destination identities");
 
   let listener;
   let notifications=0;
