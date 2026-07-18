@@ -111,6 +111,7 @@ await assert.rejects(()=>validateVerificationPacks([...packs,{...packs[0],id:"du
 assert.equal(packs.length>=6,true);for(const pack of packs)for(const key of ["source","unit","property","features","handlers","browserAdapters","dependencies"])assert.equal(Array.isArray(pack[key]),true,`${pack.id}.${key}`);
 const commandPalettePack=packs.find(({id})=>id==="command-palette");const shellPack=packs.find(({id})=>id==="shell");
 const capturePack=packs.find(({id})=>id==="capture");const schemasPack=packs.find(({id})=>id==="schemas");
+assert.ok(schemasPack.source.includes("src/data-layer-specification-model.ts"),"The canonical Specification Project model must be owned by the schemas verification pack");
 assert.ok(commandPalettePack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"));
 assert.equal(shellPack.handlers.includes("acceptance/src/acceptance/steps/palette.clj"),false);
 assert.ok(shellPack.features.includes("features/data-layer-secondary-view-separation.feature"));
