@@ -114,19 +114,25 @@
 (defn- scenario-id [world]
   (str (:acceptance/feature-name world) " / " (:acceptance/scenario-name world)))
 
+(def ^:private verification-routes
+  [["test/data-layer-specification-bulk-test.mjs" ["bulk"]]
+   ["test/data-layer-temporal-flow-test.mjs" ["temporal"]]
+   ["test/data-layer-specification-assurance-test.mjs"
+    ["fixture" "coverage" "preflight" "release correction"]]
+   ["test/data-layer-specification-engine-test.mjs"
+    ["compilation" "unified specification"]]
+   ["test/data-layer-specification-repository-test.mjs"
+    ["canonical project schema"]]
+   ["test/data-layer-specification-runtime-test.mjs" ["runtime callback"]]])
+
+(defn- includes-any? [text fragments]
+  (some #(str/includes? text %) fragments))
+
 (defn- verification-script [feature-name]
-  (cond
-    (str/includes? feature-name "bulk") "test/data-layer-specification-bulk-test.mjs"
-    (str/includes? feature-name "temporal") "test/data-layer-temporal-flow-test.mjs"
-    (or (str/includes? feature-name "fixture")
-        (str/includes? feature-name "coverage")
-        (str/includes? feature-name "preflight")
-        (str/includes? feature-name "release correction")) "test/data-layer-specification-assurance-test.mjs"
-    (or (str/includes? feature-name "compilation")
-        (str/includes? feature-name "unified specification")) "test/data-layer-specification-engine-test.mjs"
-    (str/includes? feature-name "canonical project schema") "test/data-layer-specification-repository-test.mjs"
-    (str/includes? feature-name "runtime callback") "test/data-layer-specification-runtime-test.mjs"
-    :else "test/data-layer-specification-project-test.mjs"))
+  (or (some (fn [[script fragments]]
+              (when (includes-any? feature-name fragments) script))
+            verification-routes)
+      "test/data-layer-specification-project-test.mjs"))
 
 (def ^:private detailed-r02-features
   ["canonical project schema drafts" "contextual specification editors"
@@ -140,47 +146,80 @@
   (let [feature (str/lower-case (:acceptance/feature-name world))]
     (some #(str/includes? feature %) detailed-r02-features)))
 
+(def ^:private focused-browser-scenarios
+  [["truthful assignment lifecycle runtime" #{1 2 4}]
+   ["canonical project schema drafts runtime" #{3 13}]
+   ["greenfield Retail Trade production release runtime" #{6 8 9}]])
+
 (defn- focused-browser-scenario? [world]
   (let [feature (:acceptance/feature-name world)
         index (:acceptance/scenario-index world)]
-    (or (and (str/includes? feature "truthful assignment lifecycle runtime")
-             (contains? #{1 2 4} index))
-        (and (str/includes? feature "canonical project schema drafts runtime")
-             (contains? #{3 13} index))
-        (and (str/includes? feature "greenfield Retail Trade production release runtime")
-             (contains? #{6 8 9} index)))))
+    (some (fn [[fragment scenario-indexes]]
+            (when (str/includes? feature fragment)
+              (contains? scenario-indexes index)))
+          focused-browser-scenarios)))
+
+(defn- scenario-payload [world]
+  {:feature (:acceptance/feature-name world)
+   :name (:acceptance/scenario-name world)
+   :index (:acceptance/scenario-index world)
+   :steps (:acceptance/scenario-steps world)})
+
+(defn- verification-options [detailed? scenario]
+  (if detailed?
+    (assoc support/build-shell-options
+           :env (assoc (into {} (System/getenv))
+                       "SPECIFICATION_PROJECT_SCENARIO_JSON"
+                       (json/generate-string scenario)))
+    support/build-shell-options))
+
+(defn- json-output-line [result]
+  (last (filter #(str/starts-with? % "{")
+                (str/split-lines (:out result)))))
+
+(defn- parse-command-evidence [result]
+  (some-> (json-output-line result)
+          (json/parse-string true)))
+
+(def ^:private evidence-readers
+  {true parse-command-evidence
+   false (constantly nil)})
+
+(defn- command-evidence [detailed? result]
+  ((evidence-readers (boolean detailed?)) result))
+
+(defn- assert-command-result! [world script result]
+  (support/assert! (zero? (:exit result))
+                   (str "Scenario-specific production verification failed for "
+                        (scenario-id world) ". " (:err result))
+                   {:scenario (scenario-id world) :script script
+                    :out (:out result) :err (:err result)}))
+
+(defn- assert-scenario-evidence! [world scenario evidence]
+  (support/assert! (= (str (:acceptance/feature-name world) "#"
+                           (inc (:acceptance/scenario-index world)))
+                       (:scenarioId evidence))
+                   "Scenario verifier returned evidence for a different scenario."
+                   {:expected scenario :evidence evidence}))
+
+(def ^:private command-scripts
+  {true (constantly "acceptance/runtime/specification-project-scenario.mjs")
+   false #(verification-script (:acceptance/feature-name %))})
+
+(def ^:private evidence-assertions
+  {true assert-scenario-evidence!
+   false (fn [_world _scenario _evidence])})
 
 (defn- verify-command! [world]
   (let [detailed? (detailed-r02-scenario? world)
-        script (if detailed?
-                 "acceptance/runtime/specification-project-scenario.mjs"
-                 (verification-script (:acceptance/feature-name world)))
-        scenario {:feature (:acceptance/feature-name world)
-                  :name (:acceptance/scenario-name world)
-                  :index (:acceptance/scenario-index world)
-                  :steps (:acceptance/scenario-steps world)}
-        options (if detailed?
-                  (assoc support/build-shell-options
-                         :env (assoc (into {} (System/getenv))
-                                     "SPECIFICATION_PROJECT_SCENARIO_JSON"
-                                     (json/generate-string scenario)))
-                  support/build-shell-options)
+        strategy (boolean detailed?)
+        script ((command-scripts strategy) world)
+        scenario (scenario-payload world)
+        options (verification-options detailed? scenario)
         result (process/shell options "node" script)
-        evidence-line (last (filter #(str/starts-with? % "{")
-                                    (str/split-lines (:out result))))
-        evidence (when (and detailed? evidence-line)
-                   (json/parse-string evidence-line true))]
-    (support/assert! (zero? (:exit result))
-                     (str "Scenario-specific production verification failed for "
-                          (scenario-id world) ". " (:err result))
-                     {:scenario (scenario-id world) :script script
-                      :out (:out result) :err (:err result)})
-    (when detailed?
-      (support/assert! (= (str (:acceptance/feature-name world) "#"
-                               (inc (:acceptance/scenario-index world)))
-                           (:scenarioId evidence))
-                       "Scenario verifier returned evidence for a different scenario."
-                       {:expected scenario :evidence evidence}))
+        evidence (command-evidence detailed? result)]
+    (assert-command-result! world script result)
+    ((evidence-assertions strategy) world scenario evidence)
     {:kind :production-module :scenario (scenario-id world) :script script
      :evidence evidence}))
 
@@ -195,20 +234,25 @@
     {:kind :focused-browser :scenario (scenario-id world)}))
 
 (defn- verify-scenario! [world mode]
-  (if (and (= :runtime mode) (focused-browser-scenario? world))
-    (verify-browser! world)
-    (verify-command! world)))
+  (let [browser? (and (= :runtime mode) (focused-browser-scenario? world))
+        verifier ({true verify-browser! false verify-command!} (boolean browser?))]
+    (verifier world)))
+
+(def ^:private transition-actions
+  {true (fn [world _mode] world)
+   false (fn [world mode]
+           (assoc world
+                  :specification-project-program-mode mode
+                  :specification-project-scenario-evidence
+                  (verify-scenario! world mode)))})
 
 (defn- transition [world example _captures {:keys [text]}]
   (let [mode (or (entry-modes text) (:specification-project-program-mode world))]
     (support/assert! mode "Scenario did not establish its acceptance mode."
                      {:step text :scenario (scenario-id world)})
     (validate-example! mode example)
-    (if (:specification-project-scenario-evidence world)
-      world
-      (assoc world
-             :specification-project-program-mode mode
-             :specification-project-scenario-evidence (verify-scenario! world mode)))))
+    (let [verified? (boolean (:specification-project-scenario-evidence world))]
+      ((transition-actions verified?) world mode))))
 
 (def handlers
   (support/feature-mode-handlers feature-files entry-modes

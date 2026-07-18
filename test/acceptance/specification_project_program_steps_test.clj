@@ -15,6 +15,35 @@
   (deref (ns-resolve 'acceptance.steps.specification-project-program
                      'validate-example!)))
 
+(defn- program-helper [name]
+  (deref (ns-resolve 'acceptance.steps.specification-project-program name)))
+
+(deftest routes-scenarios-to-focused-verification
+  (let [verification-script (program-helper 'verification-script)
+        detailed? (program-helper 'detailed-r02-scenario?)
+        focused? (program-helper 'focused-browser-scenario?)
+        command-evidence (program-helper 'command-evidence)]
+    (is (= "test/data-layer-specification-bulk-test.mjs"
+           (verification-script "staged bulk requirements")))
+    (is (= "test/data-layer-specification-assurance-test.mjs"
+           (verification-script "truthful preflight release correction")))
+    (is (= "test/data-layer-specification-project-test.mjs"
+           (verification-script "project workspace")))
+    (is (detailed? {:acceptance/feature-name
+                    "Data layer unified specification evaluation runtime"}))
+    (is (not (detailed? {:acceptance/feature-name
+                         "Data layer durable authoring drafts"})))
+    (is (focused? {:acceptance/feature-name
+                   "Data layer canonical project schema drafts runtime"
+                   :acceptance/scenario-index 13}))
+    (is (not (focused? {:acceptance/feature-name
+                        "Data layer canonical project schema drafts runtime"
+                        :acceptance/scenario-index 12})))
+    (is (= {:scenarioId "Feature#1"}
+           (command-evidence true {:out "build output\n{\"scenarioId\":\"Feature#1\"}\n"})))
+    (is (nil? (command-evidence true {:out "build output\n"})))
+    (is (nil? (command-evidence false {:out "{\"ignored\":true}\n"})))))
+
 (deftest validates-complete-specification-project-example-rows
   (let [validate! (example-validator)
         model-row {"review_state" "unresolved matcher tie"
@@ -115,5 +144,17 @@
              observed
              ["When two same-schema same-event assignments are created through rendered controls"
               "Then production storage contains two unequal stable IDs"]))))
+    (is (= [:created :search :bulk :release :documentation :flow :assignment
+            :editor :coverage :save-failure :atomic-rollback
+            :conflict-resolution :review :import :responsive :decisive]
+           (:scenarioAssertions
+            ((scenario-runtime-assertion)
+             observed
+             ["A blank project contextual editor supports search, 100 valid bulk rows, a release dialog and publish"
+              "Documentation clipboard flow journey assignment pinned revision markerless Retail Trade"
+              "The flow editor is structured and optional with coverage for 500 properties and 50 flows"
+              "Save failed retry storage adapter preserves prior persisted bytes when a write fails"
+              "A stale field-level revision conflict supports reapply"
+              "Release review historical revision file chooser import at 360 with a primary scroll owner"]))))
     (is (thrown? clojure.lang.ExceptionInfo
                  ((scenario-runtime-assertion) observed ["Then unrelated behavior happens"])))))
