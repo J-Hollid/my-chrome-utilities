@@ -3,6 +3,7 @@ import {
   adoptSavedSchema,
   commitSavedSchemaSynchronization,
   capturedValidationDestinationChoices,
+  applyCapturedValidationToProfile,
   createFixtureFromCapturedValidation,
   createSpecificationProject,
   stageSavedSchemaSynchronization,
@@ -43,10 +44,26 @@ assert.deepEqual(choices.flowSteps,[{id:"step:confirmation",name:"Retail checkou
 assert.deepEqual(choices.profiles,[{id:"profile:retail",name:"Retail"}]);
 assert.equal(choices.suggestedFixtureName,"Purchase captured validation");
 
-state=createFixtureFromCapturedValidation(state,{name:"Captured purchase proves schema",captureId:"capture-17",sourceId:"event-history",eventName:"purchase",payload:{currency:"EUR",order_id:"o-1",value:12},schemaId:saved.id,expected:{status:"pass",issueCodes:[]}},id);
+const evaluated={resultIdentity:"result:purchase-17",winner:{schemaId:saved.id,schemaRevision:4},issueDetails:[]};
+state=createFixtureFromCapturedValidation(state,{name:"Captured purchase proves schema",captureId:"capture-17",sourceId:"event-history",eventName:"purchase",payload:{currency:"EUR",order_id:"o-1",value:12},schemaId:saved.id,evaluated},id);
 const fixture=state.project.collections.fixtures[0];
 assert.equal(fixture.assertions.length,2);
+assert.deepEqual(fixture.expected,{status:"pass",issueCodes:[]});
+assert.equal(fixture.evaluationResultIdentity,evaluated.resultIdentity);
 assert.deepEqual(fixture.provenance,{kind:"captured-validation",captureId:"capture-17"});
 assert.equal(fixture.observations[0].eventName,"purchase");
+const failed=createFixtureFromCapturedValidation(state,{name:"Captured invalid purchase",captureId:"capture-18",sourceId:"event-history",eventName:"purchase",payload:{currency:"CAD"},schemaId:saved.id,evaluated:{...evaluated,resultIdentity:"result:purchase-18",issueDetails:[{path:"/currency",code:"enum"},{path:"/currency",code:"enum"}]}},id).project.collections.fixtures.at(-1);
+assert.deepEqual(failed.expected,{status:"fail",issueCodes:["enum"]},"assertions must be derived from the evaluated issue result");
+
+state=applyCapturedValidationToProfile(state,{captureId:"capture-17",profileId:"profile:retail",schemaId:saved.id,evaluated});
+const requirements=state.project.collections.profiles[0].requirements;
+assert.deepEqual(requirements.map(({path,type,required,allowedValues})=>({path,type,required,allowedValues})),[
+  {path:"/currency",type:"string",required:undefined,allowedValues:["EUR","GBP"]},
+  {path:"/order_id",type:"string",required:undefined,allowedValues:undefined},
+  {path:"/value",type:"number",required:undefined,allowedValues:undefined},
+]);
+assert.ok(requirements.every(({origin,evaluationResultIdentity})=>origin==="captured-validation:capture-17"&&evaluationResultIdentity===evaluated.resultIdentity));
+assert.equal(state.history.undo.at(-1).label,"Add evaluated capture capture-17 requirements to Retail");
+assert.throws(()=>applyCapturedValidationToProfile(state,{captureId:"capture-18",profileId:"profile:retail",schemaId:saved.id,evaluated:{...evaluated,winner:{schemaId:"schema:other",schemaRevision:1}}}),/does not prove schema/);
 
 console.log("saved-schema and captured-validation continuation tests passed");

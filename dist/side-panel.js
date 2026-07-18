@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, capturedValidationDestinationChoices, commitCanonicalProjectState, createFixtureFromCapturedValidation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -4027,6 +4027,7 @@ function recheckCapturedSchemaValidation() {
             schemaResult.textContent = "No captured events are available to recheck.";
         return;
     }
+    const canonical = restoreCanonicalProjectEnvelope(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), compiled = canonical ? compileSpecificationProject(canonical) : undefined;
     let checked = 0;
     const issueRows = [];
     const checkedAt = new Date().toISOString();
@@ -4034,6 +4035,14 @@ function recheckCapturedSchemaValidation() {
     liveObserverState = {
         ...liveObserverState,
         events: events.map((event) => {
+            const evaluated = compiled?.status === "compiled" ? evaluateSpecificationObservation(compiled.plan, { sourceId: event.sourceId, eventName: event.name, payload: event.payload, pageUrl: event.pageUrl }) : undefined;
+            if (evaluated?.winner) {
+                checked += 1;
+                const schema = canonical.project.collections.schemaDrafts.find(({ id }) => id === evaluated.winner.schemaId), state = evaluated.issueDetails.length ? `${evaluated.issueDetails.length} issues` : "Valid";
+                issueRows.push(...evaluated.issueDetails.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.path || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · evaluated result ${evaluated.resultIdentity}` })));
+                records.push({ eventId: event.id, eventName: event.name, state, checkedAt, schemaId: evaluated.winner.schemaId, schemaName: schema?.name ?? evaluated.winner.schemaId, schemaVersion: evaluated.winner.schemaRevision, target: "payload", issueCodes: evaluated.issueDetails.map(({ code }) => code), assignmentId: evaluated.winner.assignmentId, assignmentName: String(canonical.project.collections.assignments.find(({ id }) => id === evaluated.winner.assignmentId)?.name ?? evaluated.winner.assignmentId), assignmentEvidence: `Evaluated result ${evaluated.resultIdentity}`, evaluated: { resultIdentity: evaluated.resultIdentity, winner: evaluated.winner, issueDetails: evaluated.issueDetails.map(({ code, path }) => ({ code, path })) } });
+                return { ...event, validation: state };
+            }
             const validation = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, schemas, event.pageUrl);
             if (validation.state !== "Not checked")
                 checked += 1;
@@ -4076,9 +4085,9 @@ function reviewCapturedValidationContinuation(record, trigger) {
             schemaResult.textContent = "Create or open a Specification Project before continuing captured validation.";
         return;
     }
-    if (!captured || !record.schemaId) {
+    if (!captured || !record.schemaId || !record.evaluated) {
         if (schemaResult)
-            schemaResult.textContent = "The captured event or validated schema is no longer available.";
+            schemaResult.textContent = "Recheck the captured event with the project evaluator before continuing.";
         return;
     }
     if (!project.project.collections.schemaDrafts.some(({ id }) => id === record.schemaId)) {
@@ -4087,32 +4096,38 @@ function reviewCapturedValidationContinuation(record, trigger) {
         return;
     }
     const choices = capturedValidationDestinationChoices(project.project, { eventName: record.eventName, sourceId: captured.sourceId });
+    const proposedRequirements = capturedValidationProfileRequirements(project.project, { captureId: record.eventId, schemaId: record.schemaId, evaluated: record.evaluated });
     if (!choices.events.length) {
         if (schemaResult)
             schemaResult.textContent = `Add the ${record.eventName} Event to ${project.project.name} before continuing.`;
         return;
     }
-    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"), select = (labelText, values, optional = false) => { const label = document.createElement("label"), control = document.createElement("select"); label.textContent = labelText; if (optional)
+    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), review = document.createElement("p"), name = document.createElement("input"), select = (labelText, values, optional = false) => { const label = document.createElement("label"), control = document.createElement("select"); label.textContent = labelText; if (optional)
         control.append(new Option(`No ${labelText.toLowerCase()}`, "")); control.append(...values.map(({ id, name: optionName }) => new Option(optionName, id))); label.append(control); dialog.append(label); return control; }, confirm = document.createElement("button"), cancel = document.createElement("button");
     heading.textContent = "Continue captured validation in project";
-    summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.project.name}. Review one captured observation and proposed status/issue assertions before Save.`;
+    summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.project.name}.`;
+    review.textContent = `Evaluated result ${record.evaluated.resultIdentity}. Proposed assertions: status ${record.evaluated.issueDetails.length ? "fail" : "pass"}; issue codes ${record.evaluated.issueDetails.map(({ code }) => code).join(", ") || "none"}. Proposed Profile requirements: ${proposedRequirements.map(({ path, type, required }) => `${path} (${type ?? "value"}${required ? ", required" : ""})`).join(", ") || "none"}. Each requirement retains this evidence identity.`;
     name.value = choices.suggestedFixtureName;
     name.setAttribute("aria-label", "Fixture name");
-    dialog.append(heading, summary, name);
-    const event = select("Event", choices.events), page = select("Page", choices.pages, true), step = select("Flow step", choices.flowSteps, true), profile = select("Profile", choices.profiles, true);
+    dialog.append(heading, summary, review, name);
+    const destination = select("Destination", [{ id: "fixture", name: "Guided Fixture" }, { id: "profile", name: "Profile requirements" }]), event = select("Event", choices.events), page = select("Page", choices.pages, true), step = select("Flow step", choices.flowSteps, true), profile = select("Profile", choices.profiles, true);
     confirm.type = cancel.type = "button";
     confirm.textContent = "Save Fixture and open in Builder";
     cancel.textContent = "Cancel";
+    destination.addEventListener("change", () => { const toProfile = destination.value === "profile"; name.hidden = event.parentElement.hidden = page.parentElement.hidden = step.parentElement.hidden = toProfile; confirm.textContent = toProfile ? "Add requirements and open Profile" : "Save Fixture and open in Builder"; });
     confirm.addEventListener("click", () => { try {
-        const next = createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), expected: { status: /pass|valid/i.test(record.state) ? "pass" : "fail", issueCodes: record.issueCodes ?? [] } }, (kind) => `${kind}:${crypto.randomUUID()}`), fixture = next.project.collections.fixtures.at(-1), result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue capture ${record.eventId} as Fixture`, base: project });
+        const toProfile = destination.value === "profile";
+        if (toProfile && !profile.value)
+            throw new Error("Choose a Profile for the evaluated requirements.");
+        const next = toProfile ? applyCapturedValidationToProfile(project, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: project });
         if (result.status === "conflict")
-            throw new Error(`Project changed at revision ${result.revision}; review the Fixture again.`);
-        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ kind: "fixtures", id: fixture.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId }));
+            throw new Error(`Project changed at revision ${result.revision}; review the continuation again.`);
+        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ kind, id: entity.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId, evaluationResultIdentity: record.evaluated.resultIdentity }));
         dialog.close();
         dialog.remove();
         if (schemaResult)
-            schemaResult.textContent = `Saved ${fixture.name} in ${project.project.name}; opening the canonical Fixture in Builder.`;
-        globalThis.open(`specification-builder.html?kind=fixtures&entity=${encodeURIComponent(fixture.id)}&source=side-panel&revision=${result.revision}`, "_blank");
+            schemaResult.textContent = `Saved evaluated capture evidence in ${entity.name}; opening it in Builder.`;
+        globalThis.open(`specification-builder.html?kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel&revision=${result.revision}`, "_blank");
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
@@ -4124,7 +4139,7 @@ function reviewCapturedValidationContinuation(record, trigger) {
     name.focus({ preventScroll: true });
 }
 function renderSchemaValidationRecords() {
-    schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => { const item = document.createElement("li"), summary = document.createElement("span"), continueButton = document.createElement("button"); summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`; continueButton.type = "button"; continueButton.textContent = "Continue in project"; continueButton.disabled = !record.schemaId; continueButton.addEventListener("click", () => reviewCapturedValidationContinuation(record, continueButton)); item.append(summary, continueButton); return item; }));
+    schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => { const item = document.createElement("li"), summary = document.createElement("span"), continueButton = document.createElement("button"); summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`; continueButton.type = "button"; continueButton.textContent = "Continue in project"; continueButton.disabled = !record.schemaId || !record.evaluated; continueButton.addEventListener("click", () => reviewCapturedValidationContinuation(record, continueButton)); item.append(summary, continueButton); return item; }));
 }
 function persistEventTemplateLibrary() {
     dataLayerStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));
