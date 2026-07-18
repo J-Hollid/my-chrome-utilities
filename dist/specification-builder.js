@@ -1,4 +1,5 @@
-import { addProjectEntity, addFlowStep, buildCoverageMatrix, buildReleaseReview, commitBulkProperties, commitStagedProjectImport, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, projectPreflight, publishProjectRelease, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, addFlowStep, buildCoverageMatrix, buildReleaseReview, commitBulkProperties, commitStagedProjectImport, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, mergeProjectSchemasIntoLibrary, projectPreflight, publishProjectRelease, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, restoreSchemaLibrary, serializeSchemaLibrary, } from "./utilities/data-layer/schemas.js";
 const STORAGE_KEY = "my-chrome-utilities.specification-project.v1", NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1";
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -6,8 +7,26 @@ const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state;
 let selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl;
+function projectSchemas(next) { return next.project.collections.schemaDrafts; }
+function restoreStoredValue(key, value) { if (value === null)
+    localStorage.removeItem(key);
+else
+    localStorage.setItem(key, value); }
+function writeProjectState(next) { const previousProject = localStorage.getItem(STORAGE_KEY), previousSchemas = localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), projectValue = JSON.stringify(next), existing = restoreSchemaLibrary(previousSchemas), schemaValue = serializeSchemaLibrary(mergeProjectSchemasIntoLibrary(existing, projectSchemas(next))); try {
+    localStorage.setItem(STORAGE_KEY, projectValue);
+    localStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, schemaValue);
+}
+catch (error) {
+    try {
+        restoreStoredValue(STORAGE_KEY, previousProject);
+    }
+    finally {
+        restoreStoredValue(SCHEMA_LIBRARY_STORAGE_KEY, previousSchemas);
+    }
+    throw error;
+} }
 function persist(next) { state = next; try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    writeProjectState(next);
     q("#project-state").textContent = "Saved";
     q("#retry-save").hidden = true;
 }
@@ -33,11 +52,13 @@ function restore() { const stored = localStorage.getItem(STORAGE_KEY); if (store
     } }
 function persistNavigation() { localStorage.setItem(NAVIGATION_KEY, JSON.stringify({ kind: selectedKind, ...(selectedId ? { id: selectedId } : {}) })); }
 function entitySearchText(value) { return JSON.stringify(value).toLowerCase(); }
+function entitiesForKind(kind) { if (!state)
+    return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
     return; for (const kind of Object.keys(labels)) {
-    const item = document.createElement("li"), button = document.createElement("button");
+    const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
     button.type = "button";
-    button.textContent = `${labels[kind]} (${state.project.collections[kind].length})`;
+    button.textContent = `${labels[kind]} (${count})`;
     button.dataset.kind = kind;
     button.setAttribute("aria-current", String(kind === selectedKind));
     button.addEventListener("click", () => { selectedKind = kind; selectedId = undefined; persistNavigation(); render(); q("#workspace-pane").focus(); });
@@ -46,7 +67,7 @@ function renderTree() { const tree = q("#project-tree"); tree.replaceChildren();
 } const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
 function renderWorkspace() { const content = q("#workspace-content"); content.replaceChildren(); if (!state)
     return; const search = q("#project-search").value.trim().toLowerCase(); if (search) {
-    const matches = Object.entries(state.project.collections).flatMap(([kind, entities]) => entities.filter((entity) => entitySearchText(entity).includes(search)).map((entity) => ({ kind, entity }))).slice(0, 40);
+    const matches = Object.keys(labels).flatMap((kind) => entitiesForKind(kind).filter((entity) => entitySearchText(entity).includes(search)).map((entity) => ({ kind, entity }))).slice(0, 40);
     const heading = document.createElement("h1");
     heading.textContent = "Global search";
     const count = document.createElement("p");
@@ -72,7 +93,7 @@ function renderWorkspace() { const content = q("#workspace-content"); content.re
     content.append(heading, count, list);
     q("#project-breadcrumb").textContent = `${state.project.name} / Search / ${search}`;
     return;
-} const all = state.project.collections[selectedKind], visible = all.slice(0, 40); const heading = document.createElement("h1"); heading.textContent = labels[selectedKind]; const count = document.createElement("p"); count.className = "status-text"; count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · virtualized with bounded overscan" : ""}`; const list = document.createElement("ul"); list.className = "entity-grid"; list.setAttribute("role", "listbox"); for (const entity of visible) {
+} const all = entitiesForKind(selectedKind), visible = all.slice(0, 40); const heading = document.createElement("h1"); heading.textContent = labels[selectedKind]; const count = document.createElement("p"); count.className = "status-text"; count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · virtualized with bounded overscan" : ""}`; const list = document.createElement("ul"); list.className = "entity-grid"; list.setAttribute("role", "listbox"); for (const entity of visible) {
     const row = document.createElement("li");
     row.className = "entity-row";
     row.dataset.entityId = entity.id;
@@ -221,7 +242,15 @@ q("#publish-project").addEventListener("click", (event) => { if (!state)
     return; lastInvokingControl = event.currentTarget; const preflight = projectPreflight(state.project), prior = state.project.releases.at(-1), review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : state.project, state.project), diff = q("#release-diff"); diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; })); q("#release-summary").textContent = preflight.blockers.length ? `Publication blocked by ${preflight.blockers.length} issues.` : `Release ${state.project.releases.length + 1}: ${review.sections.length} structured changes; coverage, ambiguity, affected consumers, and breaking changes reviewed.`; q("#confirm-release").disabled = Boolean(preflight.blockers.length); q("#confirm-release-close").disabled = Boolean(preflight.blockers.length); q("#restore-release").disabled = !prior; releaseDialog.showModal(); releaseDialog.querySelector("h2")?.focus(); });
 q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
 const confirmRelease = (close) => { if (!state)
-    return; const next = publishProjectRelease(state, { id, write: (project) => localStorage.setItem(STORAGE_KEY, JSON.stringify({ project, history: { undo: [], redo: [] } })) }); state = next; localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); releaseDialog.close(); render(); if (close)
+    return; let next; try {
+    next = publishProjectRelease(state, { id, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) });
+}
+catch {
+    q("#project-state").textContent = "Save failed";
+    q("#release-summary").textContent = "Publication failed; project and schema library were restored.";
+    q("#retry-save").hidden = false;
+    return;
+} state = next; releaseDialog.close(); render(); if (close)
     q("#project-workspace").hidden = true;
 else {
     q("#release-summary").textContent = `Release ${next.project.releases.length} published.`;
