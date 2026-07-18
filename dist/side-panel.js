@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyCanonicalSchemaDraftEdits, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -1837,6 +1837,43 @@ function openSchemaExportChoices(trigger, schema) {
     schemaExportChoices.showModal();
     extension.focus({ preventScroll: true });
 }
+function reviewSavedSchemaAdoption(schema, trigger) {
+    const serialized = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized);
+    if (!project || !envelope) {
+        if (schemaResult)
+            schemaResult.textContent = "Create or open a Specification Project before adopting a saved schema.";
+        return;
+    }
+    if (project.project.collections.schemaDrafts.some(({ id }) => id === schema.id)) {
+        if (schemaResult)
+            schemaResult.textContent = `${schema.name} is already used by ${project.project.name}; open Builder to review synchronization.`;
+        return;
+    }
+    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"), profiles = project.project.collections.profiles.map(({ name }) => name).join(", ") || "no destination Profile selected";
+    heading.textContent = "Review saved-schema adoption";
+    summary.textContent = `${schema.name} revision ${schema.version} → project ${project.project.name}; destination Profiles: ${profiles}; source lineage will be recorded; conflicts: none detected; affected consumers: compilation, coverage, release, and Live.`;
+    confirm.type = cancel.type = "button";
+    confirm.textContent = "Add saved schema to project";
+    cancel.textContent = "Cancel";
+    confirm.addEventListener("click", () => { try {
+        const next = adoptSavedSchema(project, schema), result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Adopt saved schema ${schema.name}`, base: project });
+        if (result.status === "conflict")
+            throw new Error(`Project changed at revision ${result.revision}; review adoption again.`);
+        dialog.close();
+        dialog.remove();
+        if (schemaResult)
+            schemaResult.textContent = `Adopted ${schema.name} revision ${schema.version} into ${project.project.name} with source lineage.`;
+        renderSchemas();
+    }
+    catch (error) {
+        summary.textContent = error instanceof Error ? error.message : String(error);
+    } });
+    cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); trigger.focus({ preventScroll: true }); });
+    dialog.append(heading, summary, confirm, cancel);
+    document.body.append(dialog);
+    dialog.showModal();
+    confirm.focus({ preventScroll: true });
+}
 function renderSchemas() {
     const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
     if (schemaEmptyState)
@@ -1848,6 +1885,7 @@ function renderSchemas() {
             const item = document.createElement("li");
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
+            const adopt = document.createElement("button");
             const build = document.createElement("button");
             const exportCurrent = document.createElement("button");
             const reportMissing = document.createElement("button");
@@ -1858,9 +1896,10 @@ function renderSchemas() {
             item.textContent = schema.published === false
                 ? `${schema.name} · unpublished draft · ${pending} pending changes. `
                 : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
+            revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
             revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
+            adopt.textContent = "Add saved schema to project";
             build.textContent = "Build specification";
             exportCurrent.textContent = "Export";
             reportMissing.textContent = "Report missing event";
@@ -1870,6 +1909,7 @@ function renderSchemas() {
                 renderSchemaDraft();
             });
             duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+            adopt.addEventListener("click", () => reviewSavedSchemaAdoption(schema, adopt));
             build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
             exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
             reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
@@ -1888,7 +1928,7 @@ function renderSchemas() {
                     schemaDeleteReview.showModal();
                 }
             });
-            item.append(revise, duplicate, build, exportCurrent, reportMissing, remove);
+            item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
             return item;
         }));
 }

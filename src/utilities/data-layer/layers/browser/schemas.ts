@@ -28,3 +28,4 @@ export { revalidateCurrentLiveSession } from "../../../../data-layer-schema-publ
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation, type SpecificationRuntimeObservation, type SpecificationRuntimeResult, type SpecificationRuntimeStorage } from "../../../../data-layer-specification-runtime.js";
 export { applyCanonicalSchemaDraftEdits } from "../../../../data-layer-specification-model.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "../../../../data-layer-specification-repository.js";
+export { adoptSavedSchema } from "../../../../data-layer-specification-project.js";

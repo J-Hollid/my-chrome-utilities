@@ -340,6 +340,7 @@
       "test/data-layer-live-guided-conditional-rule-authoring-test.mjs",
       "test/data-layer-live-guided-workflow-test.mjs",
       "test/data-layer-condition-query-test.mjs",
+      "test/data-layer-project-continuation-test.mjs",
       "test/data-layer-specification-guidance-test.mjs",
       "test/data-layer-live-schema-property-declaration-test.mjs",
       "test/data-layer-live-validation-presentation-test.mjs",

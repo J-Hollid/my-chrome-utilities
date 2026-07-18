@@ -171,6 +171,50 @@ export function createProjectSchemaDraft(state:ProjectState,input:ProjectSchemaD
   });
 }
 
+export interface SavedSchemaSource {id:string;name:string;version:number;document:Record<string,unknown>;assignments?:readonly unknown[];published?:boolean}
+export interface SavedSchemaSynchronizationReview {schemaId:string;fromRevision:number;toRevision:number;changes:{path:string;before:unknown;after:unknown}[];localOverrides:string[];source:SavedSchemaSource}
+const equalJson=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
+const recordValue=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==="object"&&!Array.isArray(value);
+function documentChanges(before:unknown,after:unknown,path=""):SavedSchemaSynchronizationReview["changes"]{if(equalJson(before,after))return[];if(recordValue(before)&&recordValue(after)){return[...new Set([...Object.keys(before),...Object.keys(after)])].flatMap((key)=>documentChanges(before[key],after[key],`${path}/${key}`));}return[{path:path||"/",before:clone(before),after:clone(after)}];}
+function synchronizeDocument(base:unknown,current:unknown,next:unknown):unknown{if(equalJson(current,base))return clone(next);if(recordValue(base)&&recordValue(current)&&recordValue(next)){const merged:Record<string,unknown>={};for(const key of new Set([...Object.keys(base),...Object.keys(current),...Object.keys(next)])){const value=synchronizeDocument(base[key],current[key],next[key]);if(value!==undefined)merged[key]=value;}return merged;}return clone(current);}
+
+export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):ProjectState{
+  if(!source.published)throw new Error("Only a published saved schema can be adopted.");
+  return transactProject(state,`Adopt saved schema ${source.name}`,(project)=>{
+    if(project.collections.schemaDrafts.some(({id})=>id===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
+    const schema=createSchemaWorkingDraft({...clone(source),assignments:clone(source.assignments??[])} as unknown as SchemaDefinition) as unknown as ProjectEntity;
+    const adopted={...schema,sourceLineage:{librarySchemaId:source.id,adoptedRevision:source.version,synchronizedRevision:source.version},sourceDocument:clone(source.document)};
+    return{...project,collections:{...project.collections,schemaDrafts:[...project.collections.schemaDrafts,adopted]}};
+  });
+}
+
+export function stageSavedSchemaSynchronization(state:ProjectState,source:SavedSchemaSource):SavedSchemaSynchronizationReview{
+  const adopted=state.project.collections.schemaDrafts.find(({id})=>id===source.id),lineage=adopted?.sourceLineage as {librarySchemaId?:string;synchronizedRevision?:number}|undefined;
+  if(!adopted||lineage?.librarySchemaId!==source.id)throw new Error(`Saved schema ${source.name} has not been adopted.`);
+  const fromRevision=Number(lineage.synchronizedRevision),base=adopted.sourceDocument,current=(adopted.workingDraft as {document?:unknown}|undefined)?.document??adopted.document;
+  if(source.version<=fromRevision)throw new Error(`Saved schema ${source.name} has no newer revision.`);
+  const changes=documentChanges(base,source.document),localOverrides=documentChanges(base,current).map(({path})=>path);
+  return{schemaId:source.id,fromRevision,toRevision:source.version,changes,localOverrides,source:clone(source)};
+}
+
+export function commitSavedSchemaSynchronization(state:ProjectState,review:SavedSchemaSynchronizationReview):ProjectState{
+  return transactProject(state,`Synchronize saved schema ${review.schemaId} to revision ${review.toRevision}`,(project)=>{
+    const adopted=project.collections.schemaDrafts.find(({id})=>id===review.schemaId),lineage=adopted?.sourceLineage as {synchronizedRevision?:number}|undefined;
+    if(!adopted||lineage?.synchronizedRevision!==review.fromRevision)throw new Error("Saved-schema synchronization review is stale.");
+    const working=adopted.workingDraft as Record<string,unknown>,document=synchronizeDocument(adopted.sourceDocument,working?.document??adopted.document,review.source.document);
+    const schemaDrafts=project.collections.schemaDrafts.map((schema)=>schema.id===review.schemaId?{...schema,sourceDocument:clone(review.source.document),sourceLineage:{...(schema.sourceLineage as Record<string,unknown>),synchronizedRevision:review.toRevision},workingDraft:{...working,document,pendingChanges:[...((working.pendingChanges as string[]|undefined)??[]),`Synchronized saved schema revision ${review.toRevision}`]}}:schema);
+    const fixtures=project.collections.fixtures.map((fixture)=>JSON.stringify(fixture).includes(review.schemaId)?{...fixture,evidenceStatus:"stale",staleReason:`Schema ${review.schemaId} synchronized to revision ${review.toRevision}`}:fixture);
+    return{...project,collections:{...project.collections,schemaDrafts,fixtures}};
+  });
+}
+
+export interface CapturedValidationContinuation {name:string;captureId:string;sourceId:string;eventName:string;payload:unknown;schemaId:string;expected:{status:"pass"|"fail";issueCodes:readonly string[]}}
+export function createFixtureFromCapturedValidation(state:ProjectState,input:CapturedValidationContinuation,id:IdFactory):ProjectState{
+  if(!state.project.collections.schemaDrafts.some(({id:schemaId})=>schemaId===input.schemaId))throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
+  const fixture={id:id("fixture"),name:input.name,mode:"event",schemaId:input.schemaId,observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected:clone(input.expected),assertions:[{field:"status",equals:input.expected.status},{field:"issueCodes",equals:clone(input.expected.issueCodes)}],provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
+  return transactProject(state,`Create Fixture from capture ${input.captureId}`,(project)=>({...project,collections:{...project.collections,fixtures:[...project.collections.fixtures,fixture]}}));
+}
+
 export interface ProjectAssignmentInput extends Omit<ProjectEntity,"id"> { id?:string;name:string;schemaId:string;eventId?:string;eventName:string;applicabilitySetId?:string;sourceId:string;target:string;priority:number;versionPolicy:"pinned"|"follow latest";schemaRevision?:number;condition?:Condition; }
 function canonicalAssignmentCondition(project:SpecificationProject,condition:Condition|undefined):Condition|undefined{if(!condition)return undefined;if(condition.kind!=="predicate")return{...condition,conditions:condition.conditions.map((child)=>canonicalAssignmentCondition(project,child)!)};if(condition.field!=="flowId"||typeof condition.value!=="string")return clone(condition);const normalized=condition.value.trim().toLowerCase(),flow=project.collections.flows.find((candidate)=>candidate.id===condition.value||candidate.name.trim().toLowerCase()===normalized);return{...condition,...(flow?{value:flow.id}:{})};}
 export function saveProjectAssignment(state:ProjectState,input:ProjectAssignmentInput,id:IdFactory):ProjectState{
