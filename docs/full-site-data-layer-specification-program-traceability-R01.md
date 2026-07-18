@@ -120,4 +120,4 @@ Passing generic acceptance handlers or naming these concepts in a collection is 
 - Actual-extension evidence: `artifacts/side-panel-walkthrough/R03/` and `docs/side-panel-visual-walkthrough-recommendations-R03.md`.
 - Release status: every DLSP-01 through DLSP-12 recommendation and decisive criterion is implemented and verified. No program item is blocked.
 
-The only recorded follow-up is `VW-R03-01`, a P1 reproducibility improvement to add the documented `npm run demo` fixture. It is not a production regression or a blocker for the delivered Specification Project behavior.
+The documented demo is hosted on a separately prepared Windows machine and requires collaborative setup with the product owner, so reproducing it is outside the autonomous development environment. R03 used a local fixture to exercise the same extension/browser boundary and decisive event sequence. This evidence-environment difference is not product debt, a regression, a blocked item, or a release follow-up.
