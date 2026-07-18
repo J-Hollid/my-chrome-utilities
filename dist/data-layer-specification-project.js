@@ -256,10 +256,15 @@ export function commitSavedSchemaSynchronization(state, review) {
         return { ...project, collections: { ...project.collections, schemaDrafts, fixtures } };
     });
 }
+export function capturedValidationDestinationChoices(project, capture) {
+    const named = (entities) => entities.map(({ id, name }) => ({ id, name })), events = named(project.collections.events.filter((event) => event.eventName === capture.eventName && event.sourceId === capture.sourceId));
+    const flowSteps = project.collections.flows.flatMap((flow) => (flow.steps ?? []).map((step) => ({ id: step.id, name: `${flow.name} / ${step.name}` })));
+    return { events, pages: named(project.collections.pages), flowSteps, profiles: named(project.collections.profiles), suggestedFixtureName: `${capture.eventName.replace(/(^|[_-])(\w)/g, (_match, _prefix, letter) => letter.toUpperCase())} captured validation` };
+}
 export function createFixtureFromCapturedValidation(state, input, id) {
     if (!state.project.collections.schemaDrafts.some(({ id: schemaId }) => schemaId === input.schemaId))
         throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
-    const fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected: clone(input.expected), assertions: [{ field: "status", equals: input.expected.status }, { field: "issueCodes", equals: clone(input.expected.issueCodes) }], provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
+    const fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), ...(input.profileId ? { profileIds: [input.profileId] } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected: clone(input.expected), assertions: [{ field: "status", equals: input.expected.status }, { field: "issueCodes", equals: clone(input.expected.issueCodes) }], provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
     return transactProject(state, `Create Fixture from capture ${input.captureId}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: [...project.collections.fixtures, fixture] } }));
 }
 function canonicalAssignmentCondition(project, condition) { if (!condition)

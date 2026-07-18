@@ -148,7 +148,7 @@
 
 (def ^:private focused-browser-scenarios
   [["truthful assignment lifecycle runtime" #{1 2 4}]
-   ["canonical project schema drafts runtime" #{3 13}]
+   ["canonical project schema drafts runtime" #{3 13 20}]
    ["greenfield Retail Trade production release runtime" #{6 8 9}]])
 
 (defn- focused-browser-scenario? [world]

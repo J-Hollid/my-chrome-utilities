@@ -98,7 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, commitCanonicalProjectState, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, capturedValidationDestinationChoices, commitCanonicalProjectState, createFixtureFromCapturedValidation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -4040,7 +4040,7 @@ function recheckCapturedSchemaValidation() {
             const assignment = validation.assignment;
             const assignmentDetails = assignment ? `assignment id ${assignment.id ?? "none"} · name ${assignment.name ?? "none"} · source ${assignment.sourceId} · event ${assignment.eventName} · target ${assignment.target} · priority ${assignment.priority ?? 0} · domain ${assignment.domainCondition ?? "any"} · pathname ${assignment.pathnameCondition ?? "any"} · policy ${assignment.versionPolicy ?? "pinned"} · ${assignment.enabled === false ? "disabled" : "enabled"}` : `assignment ${validation.target ?? "automatic"}`;
             issueRows.push(...validation.issues.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.instancePath || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual}${issue.conditionSummary ? ` · condition ${issue.conditionSummary}` : ""} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · ${issue.schemaLocation} · ${assignmentDetails}` })));
-            records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), ...(validation.target ? { target: validation.target } : {}), ...(validation.assignment?.id ? { assignmentId: validation.assignment.id } : {}), ...(validation.assignment?.name ? { assignmentName: validation.assignment.name } : {}), ...(validation.assignmentEvidence ? { assignmentEvidence: validation.assignmentEvidence.summary } : {}) });
+            records.push({ eventId: event.id, eventName: event.name, state: validation.state, checkedAt, ...(validation.schema ? { schemaId: validation.schema.id, schemaName: validation.schema.name, schemaVersion: validation.schema.version } : {}), issueCodes: validation.issues.map((issue) => issue.rule ?? issue.schemaLocation), ...(validation.target ? { target: validation.target } : {}), ...(validation.assignment?.id ? { assignmentId: validation.assignment.id } : {}), ...(validation.assignment?.name ? { assignmentName: validation.assignment.name } : {}), ...(validation.assignmentEvidence ? { assignmentEvidence: validation.assignmentEvidence.summary } : {}) });
             if (validation.state === "Assignment error" && schemaAssignmentConflicts)
                 schemaAssignmentConflicts.textContent = validation.assignmentEvidence?.summary ?? "Assignment error";
             return { ...event, validation: validation.state };
@@ -4069,8 +4069,62 @@ function refreshCurrentLiveAfterSchemaPublication() {
     }
     return refreshed.revalidatedEventIds.length;
 }
+function reviewCapturedValidationContinuation(record, trigger) {
+    const serialized = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized), captured = liveObserverState.events.find(({ id }) => id === record.eventId);
+    if (!project || !envelope) {
+        if (schemaResult)
+            schemaResult.textContent = "Create or open a Specification Project before continuing captured validation.";
+        return;
+    }
+    if (!captured || !record.schemaId) {
+        if (schemaResult)
+            schemaResult.textContent = "The captured event or validated schema is no longer available.";
+        return;
+    }
+    if (!project.project.collections.schemaDrafts.some(({ id }) => id === record.schemaId)) {
+        if (schemaResult)
+            schemaResult.textContent = `Add ${record.schemaName ?? "the validated schema"} to ${project.project.name} before creating its Fixture.`;
+        return;
+    }
+    const choices = capturedValidationDestinationChoices(project.project, { eventName: record.eventName, sourceId: captured.sourceId });
+    if (!choices.events.length) {
+        if (schemaResult)
+            schemaResult.textContent = `Add the ${record.eventName} Event to ${project.project.name} before continuing.`;
+        return;
+    }
+    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"), select = (labelText, values, optional = false) => { const label = document.createElement("label"), control = document.createElement("select"); label.textContent = labelText; if (optional)
+        control.append(new Option(`No ${labelText.toLowerCase()}`, "")); control.append(...values.map(({ id, name: optionName }) => new Option(optionName, id))); label.append(control); dialog.append(label); return control; }, confirm = document.createElement("button"), cancel = document.createElement("button");
+    heading.textContent = "Continue captured validation in project";
+    summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.project.name}. Review one captured observation and proposed status/issue assertions before Save.`;
+    name.value = choices.suggestedFixtureName;
+    name.setAttribute("aria-label", "Fixture name");
+    dialog.append(heading, summary, name);
+    const event = select("Event", choices.events), page = select("Page", choices.pages, true), step = select("Flow step", choices.flowSteps, true), profile = select("Profile", choices.profiles, true);
+    confirm.type = cancel.type = "button";
+    confirm.textContent = "Save Fixture and open in Builder";
+    cancel.textContent = "Cancel";
+    confirm.addEventListener("click", () => { try {
+        const next = createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), expected: { status: /pass|valid/i.test(record.state) ? "pass" : "fail", issueCodes: record.issueCodes ?? [] } }, (kind) => `${kind}:${crypto.randomUUID()}`), fixture = next.project.collections.fixtures.at(-1), result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue capture ${record.eventId} as Fixture`, base: project });
+        if (result.status === "conflict")
+            throw new Error(`Project changed at revision ${result.revision}; review the Fixture again.`);
+        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ kind: "fixtures", id: fixture.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId }));
+        dialog.close();
+        dialog.remove();
+        if (schemaResult)
+            schemaResult.textContent = `Saved ${fixture.name} in ${project.project.name}; opening the canonical Fixture in Builder.`;
+        globalThis.open(`specification-builder.html?kind=fixtures&entity=${encodeURIComponent(fixture.id)}&source=side-panel&revision=${result.revision}`, "_blank");
+    }
+    catch (error) {
+        summary.textContent = error instanceof Error ? error.message : String(error);
+    } });
+    cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); trigger.focus({ preventScroll: true }); });
+    dialog.append(confirm, cancel);
+    document.body.append(dialog);
+    dialog.showModal();
+    name.focus({ preventScroll: true });
+}
 function renderSchemaValidationRecords() {
-    schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => Object.assign(document.createElement("li"), { textContent: `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}` })));
+    schemaValidationRecordList?.replaceChildren(...schemaValidationRecords.map((record) => { const item = document.createElement("li"), summary = document.createElement("span"), continueButton = document.createElement("button"); summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`; continueButton.type = "button"; continueButton.textContent = "Continue in project"; continueButton.disabled = !record.schemaId; continueButton.addEventListener("click", () => reviewCapturedValidationContinuation(record, continueButton)); item.append(summary, continueButton); return item; }));
 }
 function persistEventTemplateLibrary() {
     dataLayerStorage.setItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, serializeEventTemplateLibrary(eventTemplates));

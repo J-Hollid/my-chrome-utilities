@@ -208,10 +208,15 @@ export function commitSavedSchemaSynchronization(state:ProjectState,review:Saved
   });
 }
 
-export interface CapturedValidationContinuation {name:string;captureId:string;sourceId:string;eventName:string;payload:unknown;schemaId:string;expected:{status:"pass"|"fail";issueCodes:readonly string[]}}
+export function capturedValidationDestinationChoices(project:SpecificationProject,capture:{eventName:string;sourceId:string}):{events:{id:string;name:string}[];pages:{id:string;name:string}[];flowSteps:{id:string;name:string}[];profiles:{id:string;name:string}[];suggestedFixtureName:string}{
+  const named=(entities:readonly ProjectEntity[])=>entities.map(({id,name})=>({id,name})),events=named(project.collections.events.filter((event)=>event.eventName===capture.eventName&&event.sourceId===capture.sourceId));
+  const flowSteps=project.collections.flows.flatMap((flow)=>((flow.steps as ProjectEntity[]|undefined)??[]).map((step)=>({id:step.id,name:`${flow.name} / ${step.name}`})));
+  return{events,pages:named(project.collections.pages),flowSteps,profiles:named(project.collections.profiles),suggestedFixtureName:`${capture.eventName.replace(/(^|[_-])(\w)/g,(_match,_prefix,letter:string)=>letter.toUpperCase())} captured validation`};
+}
+export interface CapturedValidationContinuation {name:string;captureId:string;sourceId:string;eventName:string;payload:unknown;schemaId:string;eventId?:string;pageId?:string;flowStepId?:string;profileId?:string;expected:{status:"pass"|"fail";issueCodes:readonly string[]}}
 export function createFixtureFromCapturedValidation(state:ProjectState,input:CapturedValidationContinuation,id:IdFactory):ProjectState{
   if(!state.project.collections.schemaDrafts.some(({id:schemaId})=>schemaId===input.schemaId))throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
-  const fixture={id:id("fixture"),name:input.name,mode:"event",schemaId:input.schemaId,observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected:clone(input.expected),assertions:[{field:"status",equals:input.expected.status},{field:"issueCodes",equals:clone(input.expected.issueCodes)}],provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
+  const fixture={id:id("fixture"),name:input.name,mode:"event",schemaId:input.schemaId,...(input.eventId?{eventId:input.eventId}:{}),...(input.pageId?{pageId:input.pageId}:{}),...(input.flowStepId?{flowStepId:input.flowStepId}:{}),...(input.profileId?{profileIds:[input.profileId]}:{}),observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected:clone(input.expected),assertions:[{field:"status",equals:input.expected.status},{field:"issueCodes",equals:clone(input.expected.issueCodes)}],provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
   return transactProject(state,`Create Fixture from capture ${input.captureId}`,(project)=>({...project,collections:{...project.collections,fixtures:[...project.collections.fixtures,fixture]}}));
 }
 
