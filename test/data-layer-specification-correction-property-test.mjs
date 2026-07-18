@@ -56,6 +56,17 @@ for (let sample=0; sample<200; sample+=1) {
 
   const provingProject=structuredClone(project);
   provingProject.collections.fixtures=[fixture];
+  const evidenceCompilation=compileSpecificationProject(
+    createCanonicalProjectEnvelope(provingProject,`draft:${sample}`));
+  assert.equal(evidenceCompilation.status,"compiled");
+  assert.notEqual(evidenceCompilation.plan.contentIdentity,firstCompilation.plan.contentIdentity,
+    "adding Fixture evidence must change the complete plan envelope identity");
+  assert.equal(evidenceCompilation.plan.evaluatorContentIdentity,firstCompilation.plan.evaluatorContentIdentity,
+    "adding Fixture evidence must preserve the executable evaluator identity");
+  assert.equal(
+    evaluateSpecificationObservation(evidenceCompilation.plan,observations[1]).resultIdentity,
+    firstResult.resultIdentity,
+    "the same observation must retain its evaluator result identity after evidence-only changes");
   const firstPreflight=specificationPreflight(createCanonicalProjectEnvelope(provingProject,`draft:${sample}`));
   const secondPreflight=specificationPreflight(createCanonicalProjectEnvelope(structuredClone(provingProject),`draft:${sample}`));
   assert.equal(firstPreflight.contentIdentity,secondPreflight.contentIdentity,
