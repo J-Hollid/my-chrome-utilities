@@ -51,6 +51,14 @@
   (support/assert! (and (get-in corrections [:importReview :blocked]) (str/includes? (get-in corrections [:importReview :remapped]) "Collision remapped") (get-in corrections [:importReview :committed])) "Staged collision resolution and atomic project import changed." corrections))
 (defn- assert-responsive! [corrections]
   (support/assert! (and (= [360 520 720 1280] (mapv :width (:layouts corrections))) (every? #(and (zero? (:pageOverflow %)) (<= (:rendered %) 40)) (:layouts corrections))) "Responsive decisive-workflow evidence changed." corrections))
+(defn- assert-continuation! [corrections]
+  (support/assert! (and (get-in corrections [:capturedContinuation :reviewOpen])
+                        (= ["Purchase"] (get-in corrections [:capturedContinuation :eventNames]))
+                        (= "captured-validation" (get-in corrections [:capturedContinuation :provenance]))
+                        (= 2 (get-in corrections [:capturedContinuation :assertionCount]))
+                        (get-in corrections [:capturedContinuation :openedBuilder]))
+                   "Captured validation did not continue through rendered controls into one canonical Fixture."
+                   corrections))
 
 (defn assert-runtime! [observed]
   (assert-created! observed)
@@ -88,6 +96,7 @@
    [:conflict-resolution ["stale" "reapply" "field-level revision conflict"]]
    [:review ["release review" "historical revision"]]
    [:import ["file chooser" "import"]]
+   [:continuation ["continue in project" "captured observation"]]
    [:responsive ["360" "narrow pane" "primary scroll"]]])
 
 (def ^:private scenario-assertions
@@ -106,6 +115,7 @@
    :conflict-resolution #(assert-conflict-resolution! (:corrections %))
    :review #(assert-review! (:corrections %))
    :import #(assert-import! (:corrections %))
+   :continuation #(assert-continuation! (:corrections %))
    :responsive #(assert-responsive! (:corrections %))})
 
 (defn- includes-any? [text fragments]
@@ -116,11 +126,13 @@
       (every? #(str/includes? text %) ["retail" "trade"])))
 
 (defn- scenario-assertion-labels [text]
-  (cond-> (->> scenario-assertion-fragments
-               (keep (fn [[label fragments]]
-                       (when (includes-any? text fragments) label)))
-               vec)
-    (decisive-scenario? text) (conj :decisive)))
+  (if (str/includes? text "continue in project")
+    [:continuation]
+    (cond-> (->> scenario-assertion-fragments
+                 (keep (fn [[label fragments]]
+                         (when (includes-any? text fragments) label)))
+                 vec)
+      (decisive-scenario? text) (conj :decisive))))
 
 (defn assert-runtime-scenario! [observed scenario-steps]
   (let [text (str/lower-case (str/join " " scenario-steps))

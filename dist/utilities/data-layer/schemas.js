@@ -10,5 +10,5 @@ export { allowedValueExpansionAvailability } from "../../data-layer-allowed-valu
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "./layers/browser/schemas.js";
 export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
-export { adoptSavedSchema } from "./layers/browser/schemas.js";
+export { adoptSavedSchema, capturedValidationDestinationChoices, createFixtureFromCapturedValidation } from "./layers/browser/schemas.js";
 //# sourceMappingURL=schemas.js.map
