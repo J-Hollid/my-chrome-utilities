@@ -358,6 +358,10 @@ import {
   findPanelEmptyStateElements,
   renderPanelEmptyState,
 } from "./panel-empty-states-ui.js";
+import {
+  recordSpecificationCapture,
+  recordSpecificationNavigation,
+} from "./utilities/data-layer/schemas.js";
 
 const PROJECT_NAME = "my-chrome-utilities";
 
@@ -4355,6 +4359,12 @@ async function startLiveHistoryCapture(
           rawValue,
           timestamp,
         );
+        recordSpecificationCapture(globalThis.localStorage,{
+          sessionId:`tab:${observation.tabId??dataLayerSessionState.session?.tabId??"active"}`,
+          pageUrl:dataLayerSessionState.session?.currentUrl??observation.pageUrl,
+          sourceId:dataLayerSessionState.session?.historyPath??observation.historyPath,
+          rawValue,
+        });
         updateSessionFromObserverState();
         persistAndRenderObservationState();
       },
@@ -5436,7 +5446,7 @@ const targetPathStatusController = createTargetPathStatusController({
   read: currentTargetObservation,
   apply: (observation) => {
     dataLayerObserverState = attachHistoryArrayObserver(
-      dataLayerObserverState,
+      { ...dataLayerObserverState, sessionState:dataLayerSessionState },
       observation,
     );
     updateSessionFromObserverState();
@@ -5556,6 +5566,10 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
           dataLayerSessionState,
           changeInfo.url,
         );
+        recordSpecificationNavigation(globalThis.localStorage,{
+          sessionId:`tab:${tabId}`,
+          pageUrl:changeInfo.url,
+        });
         persistAndRenderSessionState();
       }
     }

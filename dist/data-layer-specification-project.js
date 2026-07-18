@@ -86,8 +86,15 @@ export function conditionMatches(condition, context) {
         return condition.conditions.some((item) => conditionMatches(item, context));
     return !condition.conditions.some((item) => conditionMatches(item, context));
 }
+function lifecycleAssignments(project) {
+    const embedded = project.collections.schemaDrafts.flatMap((entry) => {
+        const schema = entry;
+        return [...(schema.workingDraft?.assignments ?? schema.assignments ?? [])].map((assignment) => ({ ...clone(assignment), id: assignment.id ?? `${schema.id}:${assignment.sourceId}:${assignment.eventName}:${assignment.target}`, name: assignment.name ?? assignment.eventName, schemaId: schema.id, ...(assignment.schemaVersion !== undefined ? { schemaRevision: assignment.schemaVersion } : {}) }));
+    });
+    return embedded.length ? embedded : project.collections.assignments;
+}
 export function resolveApplicability(project, context) {
-    const candidates = [...project.collections.applicabilitySets, ...project.collections.assignments].map((entry) => { const condition = entry.condition; const matched = condition ? conditionMatches(condition, context) : false; return { id: entry.id, name: entry.name, matched, priority: Number(entry.priority ?? 0), evidence: matched ? "All configured predicates matched" : "At least one predicate did not match" }; });
+    const candidates = [...project.collections.applicabilitySets, ...lifecycleAssignments(project)].map((entry) => { const condition = entry.condition; const matched = condition ? conditionMatches(condition, context) : false; return { id: entry.id, name: entry.name, matched, priority: Number(entry.priority ?? 0), evidence: matched ? "All configured predicates matched" : "At least one predicate did not match" }; });
     const matched = candidates.filter(({ matched }) => matched).sort((a, b) => b.priority - a.priority), top = matched[0]?.priority, ties = matched.filter(({ priority }) => priority === top).map(({ id, name }) => ({ id, name }));
     return { candidates, ...(ties.length === 1 ? { winner: ties[0] } : {}), ties };
 }
@@ -148,22 +155,34 @@ export function commitBulkProperties(state, profileId, properties) { const error
 export function applyBulkRequirement(state, profileId, paths, update) { return transactProject(state, `Update ${paths.length} requirements`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === profileId ? { ...profile, requirements: profile.requirements.map((requirement) => paths.includes(requirement.path) ? { ...requirement, ...update } : requirement) } : profile) } })); }
 export function publishProjectRelease(state, options) { if (!state.draft)
     throw new Error("There is no project draft to publish."); const preflight = projectPreflight(state.project); if (preflight.blockers.length)
-    throw new Error(`Project preflight has ${preflight.blockers.length} blockers.`); const revision = state.project.releases.length + 1, release = { id: options.id("release"), name: `Release ${revision}`, revision, createdAt: now(), snapshot: clone(state.project.collections) }; const project = { ...state.project, releases: [...state.project.releases, release], currentRelease: release.id }; options.write(project); return { project, history: { undo: [], redo: [] } }; }
+    throw new Error(`Project preflight has ${preflight.blockers.length} blockers.`); const publishedSchemas = state.project.collections.schemaDrafts.map((entry) => { const schema = entry; return (schema.workingDraft ? publishSchemaWorkingDraft(schema) : schema); }), collections = { ...state.project.collections, schemaDrafts: publishedSchemas, assignments: [] }; const revision = state.project.releases.length + 1, release = { id: options.id("release"), name: `Release ${revision}`, revision, createdAt: now(), snapshot: clone(collections) }; const project = { ...state.project, collections, releases: [...state.project.releases, release], currentRelease: release.id }; options.write(project); return { project, history: { undo: [], redo: [] } }; }
 export function exportSpecificationProject(project) { return JSON.stringify({ format: "my-chrome-utilities.specification-project", version: 1, project }); }
 export function importSpecificationProject(serialized, options) { const parsed = JSON.parse(serialized); if (parsed.format !== "my-chrome-utilities.specification-project" || parsed.version !== 1 || !parsed.project)
     throw new Error("Unsupported Specification Project format."); const collisions = options.existingProjects.some(({ id }) => id === parsed.project.id) ? [parsed.project.id] : []; return { project: clone(parsed.project), collisions }; }
 export function migrateLegacyLibrary(legacy, options) { const state = createSpecificationProject({ name: "Legacy Schema Library", site: "compatibility.local", id: options.id }); const issues = []; const events = (legacy.schemas ?? []).flatMap((schema) => (schema.assignments ?? []).flatMap((assignment) => { if (!assignment.id || !assignment.eventName)
     return issues.push({ sourceId: String(assignment.id ?? schema.id ?? "unknown"), message: "Assignment identity or event name is unresolved" }), []; return [{ id: String(assignment.id), name: String(assignment.eventName), eventName: assignment.eventName, sourceId: assignment.sourceId, target: assignment.target, legacySchemaId: schema.id }]; })); const profiles = (legacy.schemas ?? []).map((schema) => ({ id: String(schema.id), name: String(schema.name ?? schema.id), requirements: [], legacyVersion: schema.version })); return { project: { ...state.project, collections: { ...state.project.collections, profiles, events }, compatibility: { legacySnapshot: JSON.stringify(legacy) } }, issues }; }
-export function createProjectSchemaDraft(state, input, id) { return transactProject(state, `Create ${input.name} schema draft`, (project) => ({ ...project, collections: { ...project.collections, schemaDrafts: [...project.collections.schemaDrafts, { id: id("schema-draft"), name: input.name, schemaId: input.schemaId, baseRevision: input.baseRevision, publishedRevision: { revision: input.baseRevision, name: input.name, description: input.description }, workingDraft: { name: input.name, description: input.description, selectedProperty: null, expandedPaths: [], scrollTop: 0 } }] } })); }
+export function createProjectSchemaDraft(state, input, _id) {
+    return transactProject(state, `Create ${input.name} schema draft`, (project) => {
+        if (project.collections.schemaDrafts.some(({ id }) => id === input.schemaId))
+            throw new Error(`Schema ${input.schemaId} already exists.`);
+        const published = { ...createSchema(input.name, input.baseRevision, { type: "object", properties: {} }), id: input.schemaId, published: true, documentation: { description: input.description } };
+        const schema = createSchemaWorkingDraft(published);
+        return { ...project, collections: { ...project.collections, schemaDrafts: [...project.collections.schemaDrafts, schema] } };
+    });
+}
 export function saveProjectAssignment(state, input, id) {
     if (!input.schemaId.trim() || !input.eventName.trim() || !input.sourceId.trim() || !input.target.trim())
         throw new Error("Assignment routing fields must not be blank.");
     if (input.versionPolicy === "pinned" && !Number.isInteger(input.schemaRevision))
         throw new Error("Pinned assignments require a real schema revision.");
-    const existing = input.id ? state.project.collections.assignments.find((assignment) => assignment.id === input.id) : undefined, identity = existing?.id ?? id("assignment"), saved = { ...clone(input), id: identity };
-    return transactProject(state, `${existing ? "Update" : "Create"} assignment ${input.name}`, (project) => ({ ...project, collections: { ...project.collections, assignments: existing ? project.collections.assignments.map((assignment) => assignment.id === identity ? saved : assignment) : [...project.collections.assignments, saved] } }));
+    const schemaEntry = state.project.collections.schemaDrafts.find(({ id: schemaId }) => schemaId === input.schemaId);
+    if (!schemaEntry)
+        throw new Error(`Schema ${input.schemaId} does not have a project working draft.`);
+    const schema = schemaEntry, current = schema.workingDraft?.assignments ?? schema.assignments, existing = input.id ? current.find((assignment) => assignment.id === input.id) : undefined, identity = existing?.id ?? id("assignment");
+    const { schemaRevision, condition, ...routing } = clone(input), saved = { ...routing, target: routing.target, id: identity, schemaId: input.schemaId, ...(input.versionPolicy === "pinned" ? { schemaVersion: schemaRevision } : {}), ...(condition ? { condition } : {}) };
+    return transactProject(state, `${existing ? "Update" : "Create"} assignment ${input.name}`, (project) => ({ ...project, collections: { ...project.collections, assignments: [], schemaDrafts: project.collections.schemaDrafts.map((entry) => entry.id !== input.schemaId ? entry : updateSchemaWorkingDraft(entry, { assignments: existing ? current.map((assignment) => assignment.id === identity ? saved : assignment) : [...current, saved] }, `${existing ? "Update" : "Add"} assignment ${input.name}`)) } }));
 }
-export function searchProjectAssignments(project, query) { const normalized = query.trim().toLowerCase(), rows = project.collections.assignments.filter((assignment) => assignment.schemaId && assignment.eventName && assignment.sourceId && assignment.target && (!normalized || JSON.stringify(assignment).toLowerCase().includes(normalized))), conflicts = []; for (let left = 0; left < rows.length; left += 1)
+export function searchProjectAssignments(project, query) { const normalized = query.trim().toLowerCase(), rows = lifecycleAssignments(project).filter((assignment) => assignment.schemaId && assignment.eventName && assignment.sourceId && assignment.target && (!normalized || JSON.stringify(assignment).toLowerCase().includes(normalized))), conflicts = []; for (let left = 0; left < rows.length; left += 1)
     for (let right = left + 1; right < rows.length; right += 1) {
         const a = rows[left], b = rows[right];
         if (a.schemaId === b.schemaId && a.eventName === b.eventName && Number(a.priority) === Number(b.priority))
@@ -196,10 +215,21 @@ export function advanceFlowInstance(project, instance, input) {
     if (!flow)
         throw new Error(`Unknown flow ${instance.flowId}`);
     const steps = flow.steps ?? [];
-    const currentIndex = Math.max(0, steps.findIndex(({ id }) => id === instance.currentStepId)), candidates = steps.slice(currentIndex);
-    const step = candidates.find((candidate) => !candidate.eventId || candidate.eventId === input.eventId);
+    const currentIndex = instance.currentStepId ? Math.max(0, steps.findIndex(({ id }) => id === instance.currentStepId)) : 0, candidates = steps.slice(currentIndex), matches = (candidate) => (!candidate.eventId || candidate.eventId === input.eventId) && (!candidate.pageId || candidate.pageId === input.pageId);
+    let step;
+    for (const candidate of candidates) {
+        const unconstrained = !candidate.eventId && !candidate.pageId;
+        if (candidate.optional && unconstrained)
+            continue;
+        if (matches(candidate)) {
+            step = candidate;
+            break;
+        }
+        if (!candidate.optional)
+            break;
+    }
     if (!step)
-        return { ...instance, status: "failed" };
+        return instance;
     const count = (instance.occurrences[step.id] ?? 0) + 1, occurrences = { ...instance.occurrences, [step.id]: count };
     const maximum = Number(step.maximum ?? 1), index = steps.indexOf(step), next = count >= maximum ? steps[index + 1] : step;
     return { ...instance, currentStepId: next?.id ?? step.id, occurrences, history: [...instance.history, { stepId: step.id, ...input }], status: next ? "active" : "complete" };
@@ -229,4 +259,6 @@ export function stageProjectImport(serialized, current, options) { const parsed 
 export function commitStagedProjectImport(current, staged, options) { if (staged.blockers.length)
     throw new Error(`Import has ${staged.blockers.length} unresolved blockers.`); const next = clone(staged.state); options.write(next); return next; }
 export function buildCoverageMatrix(project, options) { const all = Object.entries(project.collections).flatMap(([kind, entities]) => entities.map((entity) => ({ id: entity.id, kind, name: entity.name, state: (kind === "profiles" && entity.requirements.length === 0 ? "issue" : "covered"), issueLink: `?kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entity.id)}&field=${kind === "profiles" ? "requirements" : "name"}` }))); return { rows: all.slice(0, options.rowLimit), totalRows: all.length }; }
+export function mergeProjectSchemasIntoLibrary(existing, projectSchemas) { const projectIds = new Set(projectSchemas.map(({ id }) => id)); return [...existing.filter(({ id }) => !projectIds.has(id)), ...projectSchemas]; }
+import { createSchema, createSchemaWorkingDraft, publishSchemaWorkingDraft, updateSchemaWorkingDraft, } from "./data-layer-schema-verification.js";
 //# sourceMappingURL=data-layer-specification-project.js.map

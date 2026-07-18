@@ -28,14 +28,17 @@
                                    :focusRestored true}
                    :restoreAvailable true
                    :graph {:properties 500 :flows 50 :flowSteps 3}
-                   :flow {:occurrences {"purchase" 1} :persisted true}
+                   :flow {:occurrences {"retail" 5 "purchase" 1} :persisted true}
                    :assignmentLifecycle
                    {:search {:count "1 assignment" :empty false}
                     :ids ["assignment-1" "assignment-2"]
                     :stableId true
                     :conditionPreserved true
-                    :pinnedRevision 1
+                    :pinnedRevision 3
                     :publishedUnchanged true
+                    :sidePanelSynced true
+                    :legacyAfterSave true
+                    :projectAuthoritativeAfterSave true
                     :blankExcluded true
                     :blankMessage "Complete the routing fields"}
                    :decisive {:retail {:selector "retail checkout"
@@ -61,9 +64,14 @@
                             :valuePresent true
                             :retried "Saved"
                             :count 1}
+                   :atomicRollback {:projectBytesUnchanged true
+                                    :schemaBytesUnchanged true
+                                    :status "Save failed"}
                    :releaseReview {:summary "structured changes"
                                    :publishedBefore 1
-                                   :focusRestored true}
+                                   :focusRestored true
+                                   :legacyPreserved true
+                                   :projectAuthoritative true}
                    :importReview {:blocked true
                                   :remapped "Collision remapped"
                                   :committed true}

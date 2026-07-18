@@ -15,9 +15,9 @@
 (defn- assert-documentation! [corrections]
   (support/assert! (and (= (get-in corrections [:documentation :preview]) (get-in corrections [:documentation :plain])) (str/includes? (get-in corrections [:documentation :html]) "omitted flows") (get-in corrections [:documentation :focusRestored])) "Actual rich/plain clipboard output, loss metadata, or documentation focus restoration changed." corrections))
 (defn- assert-flow! [corrections]
-  (support/assert! (and (= {:properties 500 :flows 50 :flowSteps 3} (:graph corrections)) (= [1] (vec (vals (get-in corrections [:flow :occurrences])))) (get-in corrections [:flow :persisted])) "Structured temporal flow state or benchmark graph persistence changed." corrections))
+  (support/assert! (and (= {:properties 500 :flows 50 :flowSteps 3} (:graph corrections)) (= [1 5] (sort (vals (get-in corrections [:flow :occurrences])))) (get-in corrections [:flow :persisted])) "Structured temporal flow state or benchmark graph persistence changed." corrections))
 (defn- assert-assignment! [corrections]
-  (support/assert! (and (= "1 assignment" (get-in corrections [:assignmentLifecycle :search :count])) (false? (get-in corrections [:assignmentLifecycle :search :empty])) (= 2 (count (set (get-in corrections [:assignmentLifecycle :ids])))) (get-in corrections [:assignmentLifecycle :stableId]) (get-in corrections [:assignmentLifecycle :conditionPreserved]) (= 1 (get-in corrections [:assignmentLifecycle :pinnedRevision])) (get-in corrections [:assignmentLifecycle :publishedUnchanged]) (get-in corrections [:assignmentLifecycle :blankExcluded]) (str/includes? (get-in corrections [:assignmentLifecycle :blankMessage]) "routing fields")) "Truthful assignment rows, identity, pinned revision, structured conditions, placeholder exclusion, or draft isolation changed." corrections))
+  (support/assert! (and (= "1 assignment" (get-in corrections [:assignmentLifecycle :search :count])) (false? (get-in corrections [:assignmentLifecycle :search :empty])) (= 2 (count (set (get-in corrections [:assignmentLifecycle :ids])))) (get-in corrections [:assignmentLifecycle :stableId]) (get-in corrections [:assignmentLifecycle :conditionPreserved]) (= 3 (get-in corrections [:assignmentLifecycle :pinnedRevision])) (get-in corrections [:assignmentLifecycle :publishedUnchanged]) (get-in corrections [:assignmentLifecycle :sidePanelSynced]) (get-in corrections [:assignmentLifecycle :legacyAfterSave]) (get-in corrections [:assignmentLifecycle :projectAuthoritativeAfterSave]) (get-in corrections [:assignmentLifecycle :blankExcluded]) (str/includes? (get-in corrections [:assignmentLifecycle :blankMessage]) "routing fields")) "Truthful assignment rows, identity, pinned revision, structured conditions, placeholder exclusion, draft isolation, or schema-library preservation changed." corrections))
 (defn- assert-decisive! [corrections]
   (support/assert! (and (= ["retail checkout" "trade checkout"] [(get-in corrections [:decisive :retail :selector]) (get-in corrections [:decisive :trade :selector])]) (not= (get-in corrections [:decisive :retail :winner]) (get-in corrections [:decisive :trade :winner])) (not= (get-in corrections [:decisive :retail :schemaId]) (get-in corrections [:decisive :trade :schemaId])) (false? (get-in corrections [:decisive :markerPresent])) (false? (get-in corrections [:decisive :ambiguous]))) "Markerless Retail and Trade prior-flow resolution changed." corrections))
 (defn- assert-editor! [corrections]
@@ -26,8 +26,10 @@
   (support/assert! (and (<= (get-in corrections [:coverage :rendered]) 40) (< (get-in corrections [:coverage :duration]) 100) (str/includes? (get-in corrections [:coverage :deepLink]) "kind=") (get-in corrections [:coverage :focused])) "Coverage virtualization, benchmark, or exact-field deep linking changed." corrections))
 (defn- assert-save-failure! [corrections]
   (support/assert! (= {:status "Save failed" :retryVisible true :valuePresent true :retried "Saved" :count 1} (:failed corrections)) "Recoverable autosave did not retain and retry one draft transaction." corrections))
+(defn- assert-atomic-rollback! [corrections]
+  (support/assert! (= {:projectBytesUnchanged true :schemaBytesUnchanged true :status "Save failed"} (:atomicRollback corrections)) "A failed second storage write did not restore both prior byte strings." corrections))
 (defn- assert-review! [corrections]
-  (support/assert! (and (str/includes? (get-in corrections [:releaseReview :summary]) "structured changes") (= 1 (get-in corrections [:releaseReview :publishedBefore])) (get-in corrections [:releaseReview :focusRestored]) (:restoreAvailable corrections)) "Structured release review, immutable prior release, restore, or focus behavior changed." corrections))
+  (support/assert! (and (str/includes? (get-in corrections [:releaseReview :summary]) "structured changes") (= 1 (get-in corrections [:releaseReview :publishedBefore])) (get-in corrections [:releaseReview :focusRestored]) (get-in corrections [:releaseReview :legacyPreserved]) (get-in corrections [:releaseReview :projectAuthoritative]) (:restoreAvailable corrections)) "Structured release review, immutable prior release, unrelated-schema preservation, project-schema authority, restore, or focus behavior changed." corrections))
 (defn- assert-import! [corrections]
   (support/assert! (and (get-in corrections [:importReview :blocked]) (str/includes? (get-in corrections [:importReview :remapped]) "Collision remapped") (get-in corrections [:importReview :committed])) "Staged collision resolution and atomic project import changed." corrections))
 (defn- assert-responsive! [corrections]
@@ -47,6 +49,7 @@
     (assert-editor! corrections)
     (assert-coverage! corrections)
     (assert-save-failure! corrections)
+    (assert-atomic-rollback! corrections)
     (assert-review! corrections)
     (assert-import! corrections)
     (assert-responsive! corrections))
