@@ -402,6 +402,7 @@
       "test/data-layer-schema-publication-refresh-property-test.mjs",
       "test/data-layer-schema-rule-property-identity-property-test.mjs",
       "test/data-layer-schema-specification-builder-property-test.mjs",
+      "test/data-layer-specification-correction-property-test.mjs",
       "test/data-layer-specification-project-property-test.mjs",
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"

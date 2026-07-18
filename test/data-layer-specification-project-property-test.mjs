@@ -24,6 +24,7 @@ import {
   SPECIFICATION_PROJECT_STORAGE_KEY,
   recordSpecificationCapture,
 } from "../dist/data-layer-specification-runtime.js";
+import {publishCompiledRelease} from "../dist/data-layer-specification-assurance.js";
 
 let seed = 0x70726f6a;
 
@@ -185,7 +186,15 @@ for (let sample = 0; sample < 200; sample += 1) {
       maximum:1,
     }],
   }, id);
-  const runtimeValues = new Map([[SPECIFICATION_PROJECT_STORAGE_KEY, JSON.stringify(runtimeFlowState)]]);
+  const releasableRuntimeState={
+    ...runtimeFlowState,
+    project:{
+      ...runtimeFlowState.project,
+      publicationPolicy:{...runtimeFlowState.project.publicationPolicy,fixturesRequired:false},
+    },
+  };
+  const publishedRuntimeState=publishCompiledRelease(releasableRuntimeState,{id,write:()=>{}});
+  const runtimeValues = new Map([[SPECIFICATION_PROJECT_STORAGE_KEY, JSON.stringify(publishedRuntimeState)]]);
   const runtimeStorage = {
     getItem:(key) => runtimeValues.get(key) ?? null,
     setItem:(key, value) => runtimeValues.set(key, value),

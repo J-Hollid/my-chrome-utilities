@@ -16,14 +16,15 @@ function entityRevisions(state:ProjectState,previous?:PersistedCanonicalProject)
 }
 function envelopeFor(state:ProjectState,revision:number,previous?:PersistedCanonicalProject,command?:CanonicalProjectCommandRecord):PersistedCanonicalProject{const base=createCanonicalProjectEnvelope(state.project,state.draft?.id??`release:${state.project.currentRelease??"unpublished"}`);return{...base,revision,entityRevisions:entityRevisions(state,previous),draft:clone(state.draft),history:clone(state.history),commands:[...(previous?.commands??[]),...(command?[clone(command)]:[])]};}
 export function restoreCanonicalProjectEnvelope(serialized:string|null):PersistedCanonicalProject|undefined{if(!serialized)return undefined;const parsed=JSON.parse(serialized) as PersistedCanonicalProject|ProjectState;if("format"in parsed&&parsed.format==="my-chrome-utilities.canonical-specification-project")return clone(parsed);if("project"in parsed)return envelopeFor(parsed as ProjectState,0);throw new Error("Unsupported Specification Project storage format.");}
-export function restoreCanonicalProjectState(serialized:string|null):ProjectState|undefined{const envelope=restoreCanonicalProjectEnvelope(serialized);return envelope?{project:clone(envelope.project),...(envelope.draft?{draft:clone(envelope.draft)}:{}),history:clone(envelope.history??{undo:[],redo:[]})}:undefined;}
+function stateFromEnvelope(envelope:PersistedCanonicalProject):ProjectState{return{project:clone(envelope.project),...(envelope.draft?{draft:clone(envelope.draft)}:{}),history:clone(envelope.history??{undo:[],redo:[]})};}
+export function restoreCanonicalProjectState(serialized:string|null):ProjectState|undefined{const envelope=restoreCanonicalProjectEnvelope(serialized);return envelope?stateFromEnvelope(envelope):undefined;}
 export interface CanonicalProjectStorageEvent{key:string|null;newValue:string|null}
 export interface CanonicalProjectChangeTarget{addEventListener(type:"storage",listener:(event:CanonicalProjectStorageEvent)=>void):void;removeEventListener(type:"storage",listener:(event:CanonicalProjectStorageEvent)=>void):void}
 export function subscribeCanonicalProjectChanges(target:CanonicalProjectChangeTarget,notify:(change:{revision:number;state:ProjectState})=>void):()=>void{
   const listener=(event:CanonicalProjectStorageEvent):void=>{
     if(event.key!==CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY||!event.newValue)return;
-    const envelope=restoreCanonicalProjectEnvelope(event.newValue),state=restoreCanonicalProjectState(event.newValue);
-    if(envelope&&state)notify({revision:envelope.revision,state});
+    const envelope=restoreCanonicalProjectEnvelope(event.newValue);
+    if(envelope)notify({revision:envelope.revision,state:stateFromEnvelope(envelope)});
   };
   target.addEventListener("storage",listener);
   return()=>target.removeEventListener("storage",listener);
