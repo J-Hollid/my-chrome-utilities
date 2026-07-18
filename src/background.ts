@@ -25,13 +25,9 @@ async function openSidePanelForCurrentActiveTab(): Promise<void> {
 }
 
 chrome.action.onClicked.addListener(openSidePanelForActiveTab);
-chrome.commands.onCommand.addListener((command, tab) => {
+chrome.commands.onCommand.addListener((command) => {
   if (command === OPEN_SIDE_PANEL_COMMAND) {
-    if (tab) {
-      openSidePanelForActiveTab(tab);
-    } else {
-      void openSidePanelForCurrentActiveTab();
-    }
+    void openSidePanelForCurrentActiveTab();
   }
 });
 

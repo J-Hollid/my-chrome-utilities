@@ -1,6 +1,6 @@
 export function headlessChromeArguments(profile, extensionRoot) {
   return [
-    ...(extensionRoot ? [] : ["--headless=new"]),
+    "--headless=new",
     "--disable-gpu",
     "--disable-background-networking",
     "--disable-component-update",
