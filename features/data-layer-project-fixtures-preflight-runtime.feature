@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=502155cb43b34ec55e2c37c49c0a0d2763419ad73e90d85005f56bf14f576322
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:35.294789427Z","feature_name":"Data layer project fixtures and preflight runtime","feature_path":"features/data-layer-project-fixtures-preflight-runtime.feature","background_hash":"0041570f578588c696fc8c4c79779b4d813880734c206e8652b7f9163f8a53fb","implementation_hash":"sha256:6bc84f3c932df34b6dec2ce8d490a386922946bd32b955f84652887914fde919","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project fixtures and preflight runtime
 
   Background:

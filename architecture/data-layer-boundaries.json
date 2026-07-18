@@ -544,6 +544,18 @@
     "module": "schemas",
     "layer": "browser"
   },
+  "src/data-layer-specification-project.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-specification-runtime.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/specification-builder.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
   "src/data-layer-source.ts": {
     "module": "capture",
     "layer": "core"

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=490bddcc247b278912e72b429694810667a5da84811011109c958c80b3356935
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:31.639485601Z","feature_name":"Data layer documentation export runtime","feature_path":"features/data-layer-documentation-export-runtime.feature","background_hash":"ace01b143ed96082112d4fa0013cec01d4bf12427d25c9e0ab0e292a418a051d","implementation_hash":"sha256:6f211b7a1075676dba5283c593fd874e3200ce05b5b678157ff381c4c7597496","scenarios":[{"index":2,"name":"Data layer documentation export runtime 003","scenario_hash":"9837fc44550edd876f895bdca520d690b491f9920b8dc6dd19253886f59be880","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:31.639485601Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer documentation export runtime
 
   Background:

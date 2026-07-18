@@ -24,6 +24,7 @@
                         [acceptance.local-rule-promotion-availability-steps-test]
                         [acceptance.rule-edit-sync-steps-test]
                         [acceptance.required-rule-type-independence-steps-test]
+                        [acceptance.specification-project-program-steps-test]
                         [acceptance.live-guided-conditional-rules-steps-test]
                         [acceptance.saved-event-feed-filters-steps-test]
                         [acceptance.defect-report-undeclared-property-removal-steps-test]
@@ -109,6 +110,7 @@
                                                 'acceptance.local-rule-promotion-availability-steps-test
                                                 'acceptance.rule-edit-sync-steps-test
                                                 'acceptance.required-rule-type-independence-steps-test
+                                                'acceptance.specification-project-program-steps-test
                                                 'acceptance.live-guided-conditional-rules-steps-test
                                                 'acceptance.saved-event-feed-filters-steps-test
                                                 'acceptance.defect-report-undeclared-property-removal-steps-test
@@ -250,9 +252,14 @@
                          (let [property-result (process/shell {:out :inherit
                                                               :err :inherit
                                                               :continue true}
-                                                              "npm" "run" "test:property:browser-core")]
+                                                              "npm" "run" "test:property:browser-core")
+                               project-result (process/shell {:out :inherit
+                                                             :err :inherit
+                                                             :continue true}
+                                                            "npm" "run" "test:property:specification-project")]
                            (when (or (pos? (+ (:fail result) (:error result)))
-                                     (not (zero? (:exit property-result))))
+                                     (not (zero? (:exit property-result)))
+                                     (not (zero? (:exit project-result))))
                              (System/exit 1))))}
   test:hardening {:doc "Run mutation hardening tests."
                   :requires ([clojure.test :as test]

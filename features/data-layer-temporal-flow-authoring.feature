@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=d16f8456f90be54689e9128bac1ef00d49d17ea23f01455d8ff2dcbdef14ff5b
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:16.287213562Z","feature_name":"Data layer temporal flow authoring","feature_path":"features/data-layer-temporal-flow-authoring.feature","background_hash":"3dbd49d76ab68fcd04039fe06b14293d435970ce49372c09d331b8229830180e","implementation_hash":"sha256:71ceb843406db90b78f9c359cb188ef286e4d0d7adcf58b8aa14dffc6385e652","scenarios":[{"index":2,"name":"Data layer temporal flow authoring 003","scenario_hash":"7957f77405f84901c94674379a8e566a9f128b4ee831ed0b02c37a70b71248f7","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:16.287213562Z"},{"index":4,"name":"Data layer temporal flow authoring 005","scenario_hash":"bd0bfa5291996d873e0158f4f19da1e813d691091e976b9a743bddf44051315f","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:16.287213562Z"},{"index":7,"name":"Data layer temporal flow authoring 008","scenario_hash":"98a501de7535969c1d4017d81c99aa98e2bd28aa119b0d544ae085f86305c11d","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:16.287213562Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer temporal flow authoring
 
   Background:

@@ -98,6 +98,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
+import { recordSpecificationCapture, recordSpecificationNavigation, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -4631,6 +4632,12 @@ async function startLiveHistoryCapture(observation) {
                 if (!observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
                     return;
                 dataLayerObserverState = appendObservedHistoryEntry(dataLayerObserverState, rawValue, timestamp);
+                recordSpecificationCapture(globalThis.localStorage, {
+                    sessionId: `tab:${observation.tabId ?? dataLayerSessionState.session?.tabId ?? "active"}`,
+                    pageUrl: dataLayerSessionState.session?.currentUrl ?? observation.pageUrl,
+                    sourceId: dataLayerSessionState.session?.historyPath ?? observation.historyPath,
+                    rawValue,
+                });
                 updateSessionFromObserverState();
                 persistAndRenderObservationState();
             },
@@ -5776,7 +5783,7 @@ const targetPathStatusController = createTargetPathStatusController({
     },
     read: currentTargetObservation,
     apply: (observation) => {
-        dataLayerObserverState = attachHistoryArrayObserver(dataLayerObserverState, observation);
+        dataLayerObserverState = attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, observation);
         updateSessionFromObserverState();
         persistAndRenderSessionState();
         restartLiveHistoryCaptureIfActive(observation);
@@ -5867,6 +5874,10 @@ if (typeof chrome !== "undefined" && chrome.tabs?.onUpdated) {
             stopLiveHistoryCapture();
             if (changeInfo.url !== undefined) {
                 dataLayerSessionState = navigateSession(dataLayerSessionState, changeInfo.url);
+                recordSpecificationNavigation(globalThis.localStorage, {
+                    sessionId: `tab:${tabId}`,
+                    pageUrl: changeInfo.url,
+                });
                 persistAndRenderSessionState();
             }
         }

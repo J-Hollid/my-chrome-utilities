@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=ef9c1f8308d7d218fe10c6a437a786a925271bbf60bdcfdc9ce5d0999c9c1d8e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:10.230132007Z","feature_name":"Data layer Retail and Trade decisive workflow","feature_path":"features/data-layer-retail-trade-decisive-workflow.feature","background_hash":"690ac29ebe0c0696aa893570b19dcf41b61f5f49000f4d2ffbba92d7a9a4c4be","implementation_hash":"sha256:1d4d6d8a955f5a26be618b63e2cb3c03b47993e6cd778771695da56cb416af49","scenarios":[]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Retail and Trade decisive workflow
 
   Background:

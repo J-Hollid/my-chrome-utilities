@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=481056354e590d7592b607baf4a863815a9fda57bfa25aa82e867815b3cd1a4f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:18.691621484Z","feature_name":"Data layer truthful assignment lifecycle","feature_path":"features/data-layer-truthful-assignment-lifecycle.feature","background_hash":"bdbf8591a65a393d9ca24d758d61fcf277fcf7c44a839a30d75141f4b0550cc3","implementation_hash":"sha256:4bd34d604c47b39de99a1f30b09f496f3821179d7496272852a130b789f1b3fc","scenarios":[{"index":0,"name":"Data layer truthful assignment lifecycle 001","scenario_hash":"0fd839c4251b356eeeb768d7206deef31cef33c8d6f80b8f26bead5f79deea86","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:18.691621484Z"},{"index":2,"name":"Data layer truthful assignment lifecycle 003","scenario_hash":"69b16bf26867941e33ce582aac54c4b5b5cef9b35305d0285f537cee2a3ec1da","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:18.691621484Z"},{"index":4,"name":"Data layer truthful assignment lifecycle 005","scenario_hash":"5ac1a2fe7e3af09658af0908b493b128e6a5b7aa6344614e84cf0d06e7bc283c","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:18.691621484Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer truthful assignment lifecycle
 
   Background:

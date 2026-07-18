@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=ce56fc97a2fb6fbf5c4513d257765ea9eba6cba0b1f36116091f848fe0077010
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:48.259271612Z","feature_name":"Data layer temporal flow authoring runtime","feature_path":"features/data-layer-temporal-flow-authoring-runtime.feature","background_hash":"a9a8b1f55b5797701f1d39f8f2a9bf0662988e92051284e05f2f34f34a2d07c4","implementation_hash":"sha256:2de08dc25936714a5f0485cdf76ac80bbba649d235b033b08ecccfeb1aed66b2","scenarios":[{"index":1,"name":"Data layer temporal flow authoring runtime 002","scenario_hash":"cd0153bed38ee68a39cead147a7331b5e278f0f59db5fd49640c22a8ac46d9ea","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:48.259271612Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer temporal flow authoring runtime
 
   Background:

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=3d86de84f02e34772be64d1a4192e08241ba433edea1d06addc27f5d6e3e82fc
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-18T01:03:08.478776282Z","feature_name":"Data layer project interchange","feature_path":"features/data-layer-project-interchange.feature","background_hash":"fd2cfbe1df5cb48926914f4cd035f72125fd798f23a529dda310f297c2eeb7ff","implementation_hash":"sha256:ed9315509de159dbef5555302b3fc830b13468f4d1b4fd00300b29f634c77a44","scenarios":[{"index":3,"name":"Data layer project interchange 004","scenario_hash":"ff3c1be571f2e7df0ac68b3c8acbe2ea7a159ba88a4fc4dbb88170237954450e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:08.478776282Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project interchange
 
   Background:
