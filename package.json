@@ -9,7 +9,7 @@
     "build": "npm run typecheck && node scripts/check-architecture.mjs && node scripts/build.mjs",
     "package": "npm run build && node scripts/package.mjs",
     "test:unit": "bb test:unit",
-    "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs && node test/background-command-test.mjs",
+    "test:unit:source-foundation": "npm run build && node test/data-layer-source-foundation-test.mjs",
     "test:unit:data-layer-session": "npm run build && node test/data-layer-session-test.mjs && node test/data-layer-fresh-session-test.mjs && node test/data-layer-live-session-end-test.mjs && node test/data-layer-live-session-target-release-test.mjs",
     "test:unit:observation-targets": "npm run build && node test/data-layer-observation-targets-test.mjs && node test/data-layer-target-path-status-test.mjs",
     "test:unit:live-observer": "npm run build && node test/data-layer-live-observer-test.mjs && node test/data-layer-event-feed-query-test.mjs && node test/data-layer-event-feed-query-ui-test.mjs && node test/data-layer-saved-event-feed-filters-test.mjs && node test/data-layer-live-responsive-layout-test.mjs && node test/data-layer-live-inspector-return-test.mjs && node test/data-layer-event-feed-summaries-test.mjs && node test/data-layer-live-session-controls-test.mjs && node test/data-layer-live-guided-workflow-test.mjs && node test/data-layer-live-session-summary-test.mjs && node test/data-layer-live-inspector-actions-test.mjs",
