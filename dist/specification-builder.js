@@ -3,7 +3,7 @@ import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequireme
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 const projectPreflight = (project) => specificationPreflight(createCanonicalProjectEnvelope(project, "release-review"));
-import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
+import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1";
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -17,14 +17,24 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
 q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
-let state;
+let state, lastCommittedState;
 let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl;
-function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: state?.history.undo.at(-1)?.label ?? "Project edit" }); if (result.status === "conflict") {
+function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
+    lastCommittedState = structuredClone(result.current);
     canonicalRevision = result.revision;
     throw new Error(`Revision conflict: current ${result.revision}; pending ${result.pendingLabel}`);
-} canonicalRevision = result.revision; pendingConflict = undefined; }
+} canonicalRevision = result.revision; pendingConflict = undefined; lastCommittedState = structuredClone(next); }
+function showConflictReview() { if (!pendingConflict)
+    return; const inspection = inspectCanonicalProjectConflict(pendingConflict), dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"); q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`; fields.querySelectorAll("label").forEach((label) => label.remove()); for (const field of inspection.conflictingFields) {
+    const label = document.createElement("label"), input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = field;
+    label.append(input, ` Use pending value for ${field}`);
+    fields.append(label);
+} if (!dialog.open)
+    dialog.showModal(); dialog.querySelector("h2")?.focus(); }
 function persist(next) { state = next; try {
     writeProjectState(next);
     q("#project-state").textContent = `Saved · revision ${canonicalRevision}`;
@@ -35,11 +45,14 @@ catch (error) {
         state = next.draft ? { ...next, draft: { ...next.draft, status: "Save failed" } } : next;
     q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : "Save failed";
     q("#retry-save").hidden = false;
+    if (pendingConflict)
+        showConflictReview();
 } render(); renderFlowSteps(); renderAssignments(); }
 function restore() { const stored = localStorage.getItem(STORAGE_KEY); if (stored)
     try {
         const envelope = restoreCanonicalProjectEnvelope(stored);
         state = restoreCanonicalProjectState(stored);
+        lastCommittedState = state ? structuredClone(state) : undefined;
         canonicalRevision = envelope?.revision ?? 0;
     }
     catch {
@@ -467,10 +480,18 @@ q("#remap-import").addEventListener("click", () => { if (!stagedImport || !state
 q("#commit-import").addEventListener("click", () => { if (!state || !stagedImport)
     return; persist(commitStagedProjectImport(state, stagedImport, { write: () => { } })); importDialog.close(); q("#import-project").focus(); });
 q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; importDialog.close(); q("#import-project").focus(); });
-q("#retry-save").addEventListener("click", () => { const retry = pendingConflict?.pending ?? state; if (retry) {
-    canonicalRevision = pendingConflict?.revision ?? canonicalRevision;
-    persist(retry.draft ? { ...retry, draft: { ...retry.draft, status: "Saved" } } : retry);
-} });
+const conflictDialog = q("#project-conflict-review");
+function completeConflict(strategy) { if (!pendingConflict)
+    return; const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value), resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); q("#project-inspector").focus(); }
+q("#reload-project-conflict").addEventListener("click", () => { if (!pendingConflict)
+    return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); q("#project-inspector").focus(); });
+q("#reapply-project-conflict").addEventListener("click", () => completeConflict("reapply"));
+q("#merge-project-conflict").addEventListener("click", () => completeConflict("merge"));
+q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
+    showConflictReview();
+    return;
+} if (state)
+    persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
 restore();
 render();
 renderFlowSteps();

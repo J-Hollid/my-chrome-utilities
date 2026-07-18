@@ -36,6 +36,15 @@
                         (get-in corrections [:atomicRollback :schemaBytesUnchanged])
                         (str/starts-with? (get-in corrections [:atomicRollback :status]) "Save failed"))
                    "A failed canonical-envelope write mutated persisted project or compatibility bytes." corrections))
+(defn- assert-conflict-resolution! [corrections]
+  (support/assert! (and (get-in corrections [:conflictResolution :open])
+                        (= ["Reload current revision" "Reapply pending edit" "Merge selected fields"]
+                           (get-in corrections [:conflictResolution :actions]))
+                        (get-in corrections [:conflictResolution :externalPreserved])
+                        (get-in corrections [:conflictResolution :pendingPreserved])
+                        (get-in corrections [:conflictResolution :closed]))
+                   "Rendered Reload, Reapply, or field-level Merge lost a concurrent edit."
+                   corrections))
 (defn- assert-review! [corrections]
   (support/assert! (and (str/includes? (get-in corrections [:releaseReview :summary]) "structured changes") (= 1 (get-in corrections [:releaseReview :publishedBefore])) (get-in corrections [:releaseReview :focusRestored]) (get-in corrections [:releaseReview :legacyPreserved]) (get-in corrections [:releaseReview :projectAuthoritative]) (:restoreAvailable corrections)) "Structured release review, immutable prior release, unrelated-schema preservation, project-schema authority, restore, or focus behavior changed." corrections))
 (defn- assert-import! [corrections]
@@ -58,6 +67,7 @@
     (assert-coverage! corrections)
     (assert-save-failure! corrections)
     (assert-atomic-rollback! corrections)
+    (assert-conflict-resolution! corrections)
     (assert-review! corrections)
     (assert-import! corrections)
     (assert-responsive! corrections))
@@ -110,6 +120,10 @@
                                  (str/includes? text "prior persisted bytes")
                                  (str/includes? text "write fails"))
             #(assert-atomic-rollback! corrections))
+    (check! :conflict-resolution (or (str/includes? text "stale")
+                                     (str/includes? text "reapply")
+                                     (str/includes? text "field-level revision conflict"))
+            #(assert-conflict-resolution! corrections))
     (check! :review (or (str/includes? text "release review")
                         (str/includes? text "historical revision"))
             #(assert-review! corrections))

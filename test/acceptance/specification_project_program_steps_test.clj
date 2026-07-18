@@ -90,6 +90,13 @@
                    :atomicRollback {:projectBytesUnchanged true
                                     :schemaBytesUnchanged true
                                     :status "Save failed"}
+                   :conflictResolution {:open true
+                                        :actions ["Reload current revision"
+                                                  "Reapply pending edit"
+                                                  "Merge selected fields"]
+                                        :externalPreserved true
+                                        :pendingPreserved true
+                                        :closed true}
                    :releaseReview {:summary "structured changes"
                                    :publishedBefore 1
                                    :focusRestored true
