@@ -313,5 +313,5 @@
    "Operator-interface example is outside its canonical domain."))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-18T22:21:47.259489157+02:00", :module-hash "-784828432", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "868810159"} {:id "def/base-canonical-example-values", :kind "def", :line 4, :end-line 242, :hash "-493480636"} {:id "def/schema-example-values", :kind "def", :line 244, :end-line 303, :hash "-1295269211"} {:id "def/canonical-example-values", :kind "def", :line 305, :end-line 306, :hash "-811014458"} {:id "defn/validate-example!", :kind "defn", :line 308, :end-line 313, :hash "-160255012"}]}
+;; {:version 1, :tested-at "2026-07-18T22:30:03.290474106+02:00", :module-hash "-784828432", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "868810159"} {:id "def/base-canonical-example-values", :kind "def", :line 4, :end-line 242, :hash "-493480636"} {:id "def/schema-example-values", :kind "def", :line 244, :end-line 303, :hash "-1295269211"} {:id "def/canonical-example-values", :kind "def", :line 305, :end-line 306, :hash "-811014458"} {:id "defn/validate-example!", :kind "defn", :line 308, :end-line 313, :hash "-160255012"}]}
 ;; clj-mutate-manifest-end
