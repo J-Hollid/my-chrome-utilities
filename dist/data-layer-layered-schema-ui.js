@@ -8,7 +8,7 @@ const structuredPaths = (document, prefix = "") => { if (!document || typeof doc
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
 export function installLayeredSchemaUi(options) {
     const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
-    let graphSelection, returnFocus;
+    let graphSelection, returnFocus, flowReturn;
     summary.setAttribute("aria-label", "Schema constraints summary");
     editor.setAttribute("aria-label", "Shared schema constraints editor");
     editor.hidden = true;
@@ -131,16 +131,27 @@ export function installLayeredSchemaUi(options) {
         }
         back.type = "button";
         back.textContent = "Return to Flow";
-        back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus(); });
+        back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; if (flowReturn) {
+            const saved = flowReturn, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]');
+            pane.scrollLeft = saved.scrollLeft;
+            pane.scrollTop = saved.scrollTop;
+            if (graph && graph.getAttribute("viewBox") !== saved.viewBox)
+                graph.setAttribute("viewBox", saved.viewBox);
+            queueMicrotask(() => document.querySelector(`[data-occurrence-id="${saved.occurrenceId}"]`)?.focus({ preventScroll: true }));
+        }
+        else
+            returnFocus?.focus({ preventScroll: true }); });
         editor.append(title, identity, areas, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
-    document.addEventListener("click", (event) => { const target = event.target.closest("[data-occurrence-id]"); if (!target)
-        return; const { state } = options.context(), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, graphs = state?.project.documentationFlowGraphs; graphSelection = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === target.dataset.occurrenceId) : undefined; renderSummary(); });
+    const selectGraphOccurrence = (target) => { const { state } = options.context(), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, graphs = state?.project.documentationFlowGraphs, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'), occurrenceId = target.dataset.occurrenceId; graphSelection = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === occurrenceId) : undefined; if (occurrenceId)
+        flowReturn = { occurrenceId, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
+    document.addEventListener("click", (event) => { const target = event.target.closest("[data-occurrence-id]"); if (target)
+        selectGraphOccurrence(target); });
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
-        return; const target = event.target.closest("[data-occurrence-id]"); if (!target)
-        return; const { state } = options.context(), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, graphs = state?.project.documentationFlowGraphs; graphSelection = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === target.dataset.occurrenceId) : undefined; renderSummary(); });
+        return; const target = event.target.closest("[data-occurrence-id]"); if (target)
+        selectGraphOccurrence(target); });
     return { render() { if (!editor.hidden)
             return; graphSelection = undefined; renderSummary(); } };
 }
