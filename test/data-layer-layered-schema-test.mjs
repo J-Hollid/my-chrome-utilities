@@ -5,7 +5,7 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {appendSharedProfileConstraint,compareLayeredRevisions,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
@@ -123,6 +123,14 @@ assert.deepEqual(compareLayeredRevisions(revisionProfile,"source","draft"),{
   removedPaths:[],
   retainedPaths:["/existing","/nested","/nested/value"],
   constraintChanges:2,
+});
+assert.deepEqual(composeStructuredRules(
+  [{kind:"advanced"}],
+  [{id:"rule:advanced"}],
+  {field:"country",operator:"equals",value:"NL",reusableRuleId:"rule:shipping"},
+),{
+  rules:[{kind:"advanced"},{field:"country",operator:"equals",value:"NL"}],
+  reusableRules:[{id:"rule:advanced"},{id:"rule:shipping"}],
 });
 
 const detailState=structuredClone(pathState),detailOccurrence=detailState.project.documentationFlowGraphs["flow:selected"].occurrences[0];
