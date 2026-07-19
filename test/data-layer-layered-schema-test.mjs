@@ -5,7 +5,8 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {effectivePropertySummary,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,effectivePropertySummary,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
@@ -93,5 +94,16 @@ assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.
 assert.equal(layeredContributorPath(pathState,{id:"occurrence:context",name:"Context occurrence",pageGroupId:"group:selected",pageId:"page:selected",contextBindingId:"binding:selected"},"Event-occurrence","flow:selected").eventId,"event:selected");
 assert.equal(layeredEventRole({id:"occurrence:context",name:"Context occurrence",contextBindingId:"binding:selected"}),"context");
 assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');
+
+const profileDraft=createSpecificationProject({name:"Layered profile editor",site:"shop.example",id:(kind)=>`${kind}:layered-editor`});
+profileDraft.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",requirements:[],schemaConstraints:[{path:"/existing",type:"string"}]});
+const editedProfileDraft=appendSharedProfileConstraint(profileDraft,"profile:sitewide",{path:"/nested/value",type:"number",presence:"required",documentation:"Nested value"});
+assert.deepEqual(editedProfileDraft.project.collections.profiles[0].schemaConstraints,[
+  {path:"/existing",type:"string"},
+  {path:"/nested/value",type:"number",presence:"required",documentation:"Nested value"},
+]);
+assert.equal(editedProfileDraft.project.collections.profiles[0].compiledTargetsStale,true);
+assert.equal(editedProfileDraft.history.undo.at(-1).label,"Save schema constraint for Sitewide");
+assert.throws(()=>appendSharedProfileConstraint(profileDraft,"profile:missing",{path:"/value"}),/Shared Profile profile:missing is unavailable/);
 
 console.log("data-layer layered schema tests passed");

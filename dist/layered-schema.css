@@ -12,3 +12,25 @@
   overflow: auto;
   white-space: pre-wrap;
 }
+
+#side-panel-layered-profile-editor {
+  border-block-end: 1px solid var(--border-color, #c8c8c8);
+  margin-block-end: 1rem;
+  padding-block-end: 1rem;
+}
+
+#side-panel-layered-profile-editor form,
+#side-panel-layered-profile-editor label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+#side-panel-layered-profile-editor form {
+  gap: 0.75rem;
+}
+
+#side-panel-layered-profile-editor textarea {
+  box-sizing: border-box;
+  min-height: 8rem;
+  width: 100%;
+}

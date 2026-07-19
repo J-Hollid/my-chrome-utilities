@@ -6,6 +6,65 @@ const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", pageG
 const contributionFor = (entity, scope) => ({ id: entity.id, name: entity.name, scope, constraints: (entity.schemaConstraints ?? []) });
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
+const constraintFields = [
+    { name: "path", label: "Property path" },
+    { name: "type", label: "Scalar or container type", options: ["", "string", "number", "boolean", "object", "array"] },
+    { name: "allowedValues", label: "Allowed values (JSON)" },
+    { name: "presence", label: "Required, optional, forbidden, or permitted", options: ["", "required", "optional", "forbidden", "permitted"] },
+    { name: "expectedValue", label: "Expected value" },
+    { name: "enforcement", label: "Enforcement policy", options: ["", "invariant", "overridable"] },
+    { name: "target", label: "Target events" },
+    { name: "patterns", label: "Regular expressions (JSON)" },
+    { name: "condition", label: "Condition (JSON)" },
+    { name: "documentation", label: "Documentation" },
+    { name: "examples", label: "Examples (JSON)" },
+    { name: "rules", label: "Conditional, reusable, range, and cardinality rules (JSON)" },
+];
+const appendConstraintFields = (form) => { for (const { name, label: labelText, options } of constraintFields) {
+    const label = document.createElement("label"), control = options ? document.createElement("select") : document.createElement("input");
+    label.textContent = labelText;
+    control.setAttribute("name", name);
+    if (control instanceof HTMLInputElement)
+        control.type = "text";
+    if (name === "path")
+        control.required = true;
+    if (options)
+        for (const value of options)
+            control.append(new Option(value || "Choose", value));
+    label.append(control);
+    form.append(label);
+} };
+const constraintFromForm = (form) => { const data = new FormData(form), parse = (name) => { const value = String(data.get(name) ?? "").trim(); if (!value)
+    return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules"].includes(name))
+    return JSON.parse(value); return value; }; return { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}) }; };
+const profileStructuredDocument = (profile) => profile.structuredSchema ?? profile.structuredDraft?.document;
+export const sharedProfilePropertyPaths = (profile) => [...new Set([...structuredPaths(profileStructuredDocument(profile)), ...(profile.schemaConstraints ?? []).map(({ path }) => path)])];
+export function appendSharedProfileConstraint(state, profileId, constraint) { const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile)
+    throw new Error(`Shared Profile ${profileId} is unavailable.`); return transactProject(state, `Save schema constraint for ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === profileId ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), structuredClone(constraint)], compiledTargetsStale: true } : candidate) } })); }
+export function mountSidePanelLayeredProfileEditor(options) { let selectedProfileId, feedback = ""; const render = () => { const state = options.load(), profiles = state?.project.collections.profiles ?? []; options.host.replaceChildren(); const heading = document.createElement("h4"); heading.textContent = "Shared Profile schema editor"; options.host.setAttribute("aria-label", "Side-panel Shared Profile editor"); if (!state) {
+    const empty = document.createElement("p");
+    empty.textContent = "Create or open a Specification Project to edit Shared Profiles.";
+    options.host.append(heading, empty);
+    return;
+} if (!profiles.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Adopt or create a Shared Profile to begin structured schema authoring.";
+    options.host.append(heading, empty);
+    return;
+} if (!profiles.some(({ id }) => id === selectedProfileId))
+    selectedProfileId = profiles[0].id; const profile = profiles.find(({ id }) => id === selectedProfileId), selector = document.createElement("select"), selectorLabel = document.createElement("label"), identity = document.createElement("p"), revision = document.createElement("p"), search = document.createElement("input"), tree = document.createElement("ul"), form = document.createElement("form"), save = document.createElement("button"), status = document.createElement("output"), advanced = document.createElement("details"), advancedSummary = document.createElement("summary"), advancedJson = document.createElement("textarea"); selector.setAttribute("aria-label", "Shared Profile to edit"); for (const candidate of profiles)
+    selector.append(new Option(candidate.name, candidate.id)); selector.value = profile.id; selector.addEventListener("change", () => { selectedProfileId = selector.value; feedback = ""; render(); }); selectorLabel.append("Shared Profile", selector); identity.textContent = `Contributor: ${profile.name} · Scope: Shared Profile`; revision.textContent = `Revision comparison · Source revision ${String(profile.sourceRevision ?? "new")} · Draft constraints ${String((profile.schemaConstraints ?? []).length)}`; search.type = "search"; search.setAttribute("aria-label", "Side-panel Shared Profile property search"); search.placeholder = "Search and filter structured property paths"; tree.setAttribute("aria-label", "Side-panel Shared Profile structured property tree"); const paths = sharedProfilePropertyPaths(profile), refreshPaths = () => { tree.replaceChildren(...paths.filter((path) => path.toLowerCase().includes(search.value.toLowerCase())).map((path) => { const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = path; button.addEventListener("click", () => { form.elements.namedItem("path").value = path; }); item.append(button, " · nested property · rules · documentation · examples"); return item; })); }; search.addEventListener("input", refreshPaths); refreshPaths(); appendConstraintFields(form); save.type = "submit"; save.textContent = "Save Shared Profile constraint"; form.append(save); status.setAttribute("role", "status"); status.textContent = feedback; form.addEventListener("submit", (event) => { event.preventDefault(); try {
+    const current = options.load();
+    if (!current)
+        throw new Error("The Specification Project is unavailable.");
+    options.persist(appendSharedProfileConstraint(current, profile.id, constraintFromForm(form)));
+    feedback = `Saved structured constraint to ${profile.name} · compiled targets stale · Draft`;
+    render();
+}
+catch (error) {
+    feedback = error instanceof Error ? error.message : String(error);
+    status.textContent = feedback;
+} }); advancedSummary.textContent = "Advanced JSON (optional)"; advancedJson.setAttribute("aria-label", "Optional Shared Profile advanced JSON"); advancedJson.readOnly = true; advancedJson.value = JSON.stringify({ structuredSchema: profileStructuredDocument(profile), constraints: profile.schemaConstraints ?? [] }, null, 2); advanced.append(advancedSummary, advancedJson); options.host.append(heading, selectorLabel, identity, revision, search, tree, form, status, advanced); }; render(); return { render }; }
 export const layeredEventRole = (entity) => entity.contextBindingId || entity.occurrenceType === "page-context" ? "context" : "interaction";
 export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined].filter(Boolean).join(" · ");
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
@@ -109,17 +168,7 @@ export function installLayeredSchemaUi(options) {
         const refreshPaths = () => { tree.replaceChildren(...paths.filter((path) => path.includes(search.value)).map((path) => { const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = path; button.addEventListener("click", () => { form.querySelector('[name="path"]').value = path; }); item.append(button); return item; })); };
         search.addEventListener("input", refreshPaths);
         refreshPaths();
-        const fields = [["path", "Property path", "text"], ["type", "Scalar type", "text"], ["allowedValues", "Allowed values (JSON)", "text"], ["presence", "Required, optional, forbidden, or permitted", "text"], ["expectedValue", "Expected value", "text"], ["enforcement", "Enforcement policy", "text"], ["target", "Target events", "text"], ["patterns", "Regular expressions (JSON)", "text"], ["condition", "Condition (JSON)", "text"], ["documentation", "Documentation", "text"], ["examples", "Examples (JSON)", "text"], ["rules", "Conditional and reusable rules (JSON)", "text"]];
-        for (const [name, labelText, type] of fields) {
-            const label = document.createElement("label"), input = document.createElement("input");
-            label.textContent = labelText;
-            input.name = name;
-            input.type = type;
-            if (name === "path")
-                input.required = true;
-            label.append(input);
-            form.append(label);
-        }
+        appendConstraintFields(form);
         const save = document.createElement("button");
         save.type = "submit";
         save.textContent = "Save constraint";
