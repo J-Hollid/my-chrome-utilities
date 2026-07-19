@@ -296,6 +296,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
+import { mountSidePanelLayeredProfileEditor } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./utilities/data-layer/schemas.js";
@@ -544,6 +545,7 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const sidePanelLayeredProfileEditorHost = document.querySelector<HTMLElement>("#side-panel-layered-profile-editor");
 const liveEventQuery = document.querySelector<HTMLElement>("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
 const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-master, #schema-rule-library, #schema-assignments"));
@@ -875,6 +877,7 @@ let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 const canonicalProjectAtStartup=restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if(canonicalProjectAtStartup)schemas=[...schemas.filter((schema)=>!canonicalProjectAtStartup.project.collections.schemaDrafts.some(({id})=>id===schema.id)),...canonicalProjectAtStartup.project.collections.schemaDrafts as unknown as SchemaDefinition[]];
 let canonicalProjectSchemaIds=new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({id})=>id)??[]);const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)));
+const sidePanelLayeredProfileEditor=sidePanelLayeredProfileEditorHost?mountSidePanelLayeredProfileEditor({host:sidePanelLayeredProfileEditorHost,load:()=>restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),persist:(next)=>{const serialized=dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),base=restoreCanonicalProjectState(serialized);if(!envelope||!base)throw new Error("The Specification Project is unavailable.");const result=commitCanonicalProjectState(dataLayerStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Side-panel Shared Profile constraint",base});if(result.status==="conflict")throw new Error(`Shared Profile changed at project revision ${result.revision}; review the structured edit again.`);}}):undefined;
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
   dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -5668,7 +5671,7 @@ subscribeCanonicalProjectChanges(globalThis as unknown as Parameters<typeof subs
   schemas=[...schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)&&!nextIds.has(id)),...projectSchemas];
   canonicalProjectSchemaIds=nextIds;
   if(schemaDraft&&nextIds.has(schemaDraft.id)){const current=projectSchemas.find(({id})=>id===schemaDraft?.id);if(current)schemaDraft=schemaEditorDraft(current);}
-  renderSchemas();renderSchemaWorkflowRows();if(schemaDraft)renderSchemaDraft();
+  renderSchemas();renderSchemaWorkflowRows();if(schemaDraft)renderSchemaDraft();sidePanelLayeredProfileEditor?.render();
 });
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
