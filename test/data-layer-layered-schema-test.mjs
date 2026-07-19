@@ -5,6 +5,7 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
+import {layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-ui.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
@@ -77,5 +78,17 @@ const invalid=validateLayeredObservation({targetId:"target:alternative",targetNa
 assert.deepEqual(invalid.issues.find(({path})=>path==="/funnel_step"),{path:"/funnel_step",code:"EXPECTED_VALUE",severity:"error",expected:"3b",actual:"3a",provenance:"Alternative shipping"});
 assert.equal(invalid.flowCompletionClaim,undefined);
 assert.match(exportLayeredSchema({targetName:"Alternative shipping branch",pageName:"Shipping Page",eventName:"Purchase Event",activation:"documentation-only",compiled:ready}),/Documentation only — not automatically validated/);
+
+const pathState={project:{collections:{
+  profiles:[{id:"profile:selected",name:"Selected"},{id:"profile:unrelated",name:"Unrelated"}],
+  events:[{id:"event:selected",name:"Selected event"},{id:"event:unrelated",name:"Unrelated event"}],
+  pageGroups:[{id:"group:selected",name:"Selected group",pageIds:["page:selected"]},{id:"group:unrelated",name:"Unrelated group",pageIds:["page:unrelated"]}],
+  pages:[{id:"page:selected",name:"Selected page"},{id:"page:unrelated",name:"Unrelated page"}],
+  flows:[{id:"flow:selected",name:"Selected flow"},{id:"flow:unrelated",name:"Unrelated flow"}],
+},documentationFlowGraphs:{"flow:selected":{occurrences:[{id:"occurrence:selected",name:"Selected occurrence",profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected"},{id:"occurrence:sibling",name:"Sibling occurrence",eventId:"event:unrelated",pageGroupId:"group:selected",pageId:"page:selected"}]},"flow:unrelated":{occurrences:[{id:"occurrence:unrelated",name:"Unrelated occurrence",eventId:"event:unrelated",pageGroupId:"group:unrelated",pageId:"page:unrelated"}]}}}};
+const selectedOccurrence=pathState.project.documentationFlowGraphs["flow:selected"].occurrences[0],selectedPath=layeredContributorPath(pathState,selectedOccurrence,"Event-occurrence","flow:selected"),selectedContributors=layeredContributorsForPath(pathState,selectedPath);
+assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",occurrenceId:"occurrence:selected"});
+assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","flow:selected","occurrence:selected"]);
+assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.flows[0],"Flow Page-instance"),{flowId:"flow:selected"});
 
 console.log("data-layer layered schema tests passed");
