@@ -5,7 +5,7 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {appendSharedProfileConstraint,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,compareLayeredRevisions,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
@@ -108,6 +108,22 @@ assert.deepEqual(editedProfileDraft.project.collections.profiles[0].schemaConstr
 assert.equal(editedProfileDraft.project.collections.profiles[0].compiledTargetsStale,true);
 assert.equal(editedProfileDraft.history.undo.at(-1).label,"Save schema constraint for Sitewide");
 assert.throws(()=>appendSharedProfileConstraint(profileDraft,"profile:missing",{path:"/value"}),/Shared Profile profile:missing is unavailable/);
+
+const revisionProfile={
+  id:"profile:revision",
+  name:"Revision profile",
+  sourceRevision:4,
+  structuredSchema:{properties:{existing:{type:"string"},nested:{type:"object",properties:{value:{type:"number"}}}}},
+  schemaConstraints:[{path:"/nested/value",minimum:1},{path:"/draft_only",presence:"required"}],
+};
+assert.deepEqual(compareLayeredRevisions(revisionProfile,"source","draft"),{
+  fromLabel:"Source revision 4",
+  toLabel:"Current draft",
+  addedPaths:["/draft_only"],
+  removedPaths:[],
+  retainedPaths:["/existing","/nested","/nested/value"],
+  constraintChanges:2,
+});
 
 const detailState=structuredClone(pathState),detailOccurrence=detailState.project.documentationFlowGraphs["flow:selected"].occurrences[0];
 detailState.project.collections.profiles[0].schemaConstraints=[{path:"/profile_value",target:"all",condition:{field:"country",equals:"NL"},enforcement:"invariant"}];
