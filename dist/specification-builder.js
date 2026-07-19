@@ -4,7 +4,7 @@ import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishPro
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-executable-flow-ui.js";
-import { installFlowGraphBuilder } from "./utilities/data-layer/flow-graph.js";
+import { flowPageGroupLaneIds, installFlowGraphBuilder, setFlowPageGroupLanes } from "./utilities/data-layer/flow-graph.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
@@ -182,7 +182,7 @@ function renderFixtureExecution(form, fixture) { const section = document.create
 } const execution = runProductionFixture(compiled.plan, fixture), last = execution.steps.at(-1), capturedIdentity = String(fixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
 function renderSelectedEntityEditor(content, entity) { if (!state)
     return; const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), nameLabel = document.createElement("label"), name = document.createElement("input"), actions = document.createElement("div"), save = document.createElement("button"), duplicate = document.createElement("button"), remove = document.createElement("button"), usage = document.createElement("p"); section.className = "contextual-editor"; heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`; name.name = "name"; name.required = true; name.value = entity.name; nameLabel.textContent = "Name"; nameLabel.append(name); form.append(nameLabel); for (const field of editorFields[selectedKind]) {
-    const label = document.createElement("label"), control = fieldControl(field, entity);
+    const label = document.createElement("label"), control = fieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds" ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) } : entity);
     label.textContent = field.label;
     label.append(control);
     form.append(label);
@@ -202,7 +202,13 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
         update.requirements = profileRequirements(form);
     if (selectedKind === "schemaDrafts")
         update.workingDraft = { ...entity.workingDraft, profileIds: update.profileIds };
-    persist(transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => candidate.id === entity.id ? { ...candidate, ...update } : candidate) } })));
+    const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
+    if (laneIds)
+        delete update.pageGroupIds;
+    const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => { if (candidate.id !== entity.id)
+                return candidate; const merged = { ...candidate, ...update }; if (selectedKind === "flows")
+                delete merged.pageGroupIds; return merged; }) } }));
+    persist(selectedKind === "flows" ? setFlowPageGroupLanes(edited, entity.id, laneIds ?? []) : edited);
 }
 catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);

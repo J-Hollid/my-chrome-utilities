@@ -1,4 +1,4 @@
-import { addGraphOccurrence, documentaryFlowGraph, flowOutline, flowRelationshipText, moveGraphOccurrence, projectFlowGraph, addInteractionOccurrenceToPage, addUngroupedPageFrame, inspectUngroupedPageDrop, removeGraphOccurrence, reorderGraphOccurrence, saveGraphRelationship, updateGraphOccurrence, } from "./data-layer-flow-graph.js";
+import { addGraphOccurrence, documentaryFlowGraph, flowOutline, flowPageGroupLaneIds, flowRelationshipText, moveGraphOccurrence, projectFlowGraph, addInteractionOccurrenceToPage, addUngroupedPageFrame, inspectUngroupedPageDrop, removeGraphOccurrence, reorderGraphOccurrence, saveGraphRelationship, updateGraphOccurrence, } from "./data-layer-flow-graph.js";
 const lanes = [{ name: "Context", x: 30 }, { name: "Shipping", x: 230 }, { name: "Payment", x: 430 }, { name: "Merge", x: 630 }];
 const nodeWidth = 170, nodeHeight = 82;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
@@ -61,7 +61,7 @@ export function installFlowGraphBuilder(options) {
         laneSelect.closest("form")?.append(controls);
     }
     function renderSelectors() { const { state, flow } = current(); if (!state)
-        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); const laneIds = flow ? (flow.pageGroupIds ?? []) : [], groups = laneIds.map((groupId) => state.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)); replaceOptions(pageGroup, groups, "Choose Page Group"); syncAddContextBindings(); }
+        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); const laneIds = flow ? flowPageGroupLaneIds(state.project, flow.id) : [], groups = laneIds.map((groupId) => state.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)); replaceOptions(pageGroup, groups, "Choose Page Group"); syncAddContextBindings(); }
     function renderInspector() {
         render(false);
         synchronizeRenderedOccurrenceControls();
@@ -394,7 +394,7 @@ export function installFlowGraphBuilder(options) {
             const name = occurrenceForm.querySelector('[aria-label="Occurrence name"]'), page = occurrenceForm.querySelector('[aria-label="Resolved Page"]'), event = occurrenceForm.querySelector('select[aria-label="Shared Event"]'), nodeRole = occurrenceForm.querySelector('[aria-label="Role"]'), lane = occurrenceForm.querySelector('[aria-label="Canvas lane"]'), step = current().steps.find(({ id }) => id === name.dataset.editOccurrenceId);
             name.required = page.required = event.required = true;
             if (step?.pageGroupId) {
-                const { state, flow } = current(), laneIds = flow?.pageGroupIds ?? [], groups = laneIds.map((groupId) => state?.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group));
+                const { state, flow } = current(), laneIds = state && flow ? flowPageGroupLaneIds(state.project, flow.id) : [], groups = laneIds.map((groupId) => state?.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group));
                 replaceOptions(lane, groups, "Choose Page Group");
                 lane.value = String(step.pageGroupId);
                 lane.setAttribute("aria-label", "Page Group");
