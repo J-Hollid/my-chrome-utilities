@@ -4,7 +4,7 @@ import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishPro
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-executable-flow-ui.js";
-import { flowPageGroupLaneIds, installFlowGraphBuilder, setFlowPageGroupLanes } from "./utilities/data-layer/flow-graph.js";
+import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder } from "./utilities/data-layer/flow-graph.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
@@ -208,7 +208,7 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => { if (candidate.id !== entity.id)
                 return candidate; const merged = { ...candidate, ...update }; if (selectedKind === "flows")
                 delete merged.pageGroupIds; return merged; }) } }));
-    persist(selectedKind === "flows" && laneIds ? setFlowPageGroupLanes(edited, entity.id, laneIds) : edited);
+    persist(selectedKind === "flows" ? applyFlowPageGroupLaneSelection(edited, entity.id, laneIds) : edited);
 }
 catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);
