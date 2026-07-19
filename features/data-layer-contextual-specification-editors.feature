@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:33:54.605365871Z","feature_name":"Data layer contextual specification editors","feature_path":"features/data-layer-contextual-specification-editors.feature","background_hash":"1f42a10ae2b349d44e411ff2abefb0f569f1c14fdbd4023366822e8d38af5ef7","implementation_hash":"sha256:3479c8ee683b41229ad4ac5dfd5f98f0c6861f2ce17b989902992369eda4d7e8","scenarios":[{"index":8,"name":"Data layer contextual specification editors 009","scenario_hash":"10b10a6310673ed6fa72f4b48e4b8b73960152a3c40295bb7783438cc507b305","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:54.605365871Z"},{"index":12,"name":"Data layer contextual specification editors 013","scenario_hash":"2c67360bae9bc5e9b7fe057645454bed9aed44f97dfce715d08b765d9f068d08","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:33:54.605365871Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: the Flow editor now owns context and interaction nodes, documentary relationships, Profiles, Assignments, notes, and layout; timeout, correlation, and Journey Fixture controls are post-MVP.
 Feature: Data layer contextual specification editors
 
   Background:
@@ -28,7 +27,7 @@ Feature: Data layer contextual specification editors
   Scenario: Data layer contextual specification editors 003
     Given an Event is selected
     When the operator edits it
-    Then Source, Canonical event name, Validation target, Context-setting or interaction role, Profiles, and Applicability are visible
+    Then Source, Canonical event name, Validation target, Profiles, Applicability, and Occurrence policy are visible
     And selecting references uses searchable names while persisting stable IDs
 
   # Data layer contextual specification editors 004
@@ -36,22 +35,20 @@ Feature: Data layer contextual specification editors
     Given an Applicability Set is selected
     When the operator edits it
     Then nested All, Any, and Not groups, named predicates, priority, fallback, and plain-language summary are visible
-    And current, pasted, and Event validation case contexts can be tested with candidate and winner evidence
+    And current, pasted, and fixture contexts can be tested with candidate and winner evidence
 
   # Data layer contextual specification editors 005
   Scenario: Data layer contextual specification editors 005
     Given a Flow is selected
     When the operator edits it
-    Then Purpose, Page contexts, context-setting and interaction Event-occurrence nodes, documentary relationships, Profiles, Assignments, notes, and layout are visible
-    And nodes own required, optional, conditional, or informational obligation and multiplicity
-    And expected-next, alternative, parallel, and merge relationships are labelled as manual topology expectations
+    Then Entry, Exit, Timeout, Correlation, Steps, Branches, Joins, Transitions, Profiles, and Applicability are visible
     And Page and Event references are searchable stable selectors rather than free text
 
   # Data layer contextual specification editors 006
   Scenario: Data layer contextual specification editors 006
-    Given an Event validation case is selected
+    Given a Fixture is selected
     When the operator edits it
-    Then observed context, payload, exact expected Assignment, schema revision, issues, result differences, and release policy are visible
+    Then Single event and Journey modes expose context, observations, correlation, exact expected winner, step, schema, issues, and release policy
     And raw JSON has field-local syntax and semantic feedback
 
   # Data layer contextual specification editors 007
@@ -82,7 +79,7 @@ Feature: Data layer contextual specification editors
       | Event |
       | Applicability Set |
       | Flow |
-      | Event validation case |
+      | Fixture |
       | Schema draft |
       | Assignment |
 
@@ -104,10 +101,9 @@ Feature: Data layer contextual specification editors
   # Data layer contextual specification editors 012
   Scenario: Data layer contextual specification editors 012
     Given an Applicability Set is being authored
-    When the operator combines guided Host, Path, Query, Hash, SPA route, Source, Event, Target, Payload, Raw input, Environment, and explicit Session predicates
+    When the operator combines guided Host, Path, Query, Hash, SPA route, Source, Event, Target, Payload, Raw input, Environment, Session, Flow, and Step predicates
     Then each predicate uses a type-appropriate control and field-local syntax guidance
     And overlap analysis identifies wildcard, regular-expression, shadow, fallback, and equal-priority relationships with exact source links
-    And Flow and Event-occurrence references appear only in Where used and never as matcher predicates
 
   # Data layer contextual specification editors 013
   Scenario Outline: Data layer contextual specification editors 013
@@ -123,6 +119,6 @@ Feature: Data layer contextual specification editors
       | Event |
       | Applicability Set |
       | Flow |
-      | Event validation case |
+      | Fixture |
       | Schema draft |
       | Assignment |

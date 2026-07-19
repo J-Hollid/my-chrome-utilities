@@ -1,137 +1,180 @@
 Feature: Data layer Flow effective schema assignment runtime
 
   Background:
-    Given the built extension is running with production composition, Assignment, validation, and Live systems
+    Given the built extension is running with production composition, Assignment, and per-event validation systems
     And Retail Purchase and Trade Purchase reference one shared Purchase Event
 
   # Data layer Flow effective schema assignment runtime 001
   Scenario: Data layer Flow effective schema assignment runtime 001
-    When production compilation resolves Base, Page, Event, Profile, and occurrence layers
-    Then the graph inspector, effective-schema preview, validation plan, and documentation projection contain identical paths, values, revisions, and provenance
+    When production compilation resolves Base, Page, Event, ordered Profile, and occurrence layers
+    Then the graph inspector, effective-schema view, validation input, and documentation projection contain identical paths, values, revisions, and provenance
+    And structural containers and children are both present
     And neither occurrence creates a copied Purchase schema
 
   # Data layer Flow effective schema assignment runtime 002
   Scenario: Data layer Flow effective schema assignment runtime 002
-    Given Retail route channel is retail and Trade route channel is trade
-    And immutable release 3 contains both route-channel Assignments and effective schemas
-    When byte-identical Purchase payloads are observed on both routes
-    Then production Assignment resolution selects Retail for retail and Trade for trade
-    And each result records rejected candidates, effective Profiles, schema revision, issues, and provenance
-    And no prior Flow state participates
+    Given Checkout and Confirmation have different observable Page matchers
+    When actual controls create Purchase on Confirmation by human Page and Event names
+    Then production Assignment data retains stable Confirmation and Purchase references
+    And no raw Page or Event identifier is entered
+    And duplicate Page or Event labels are visibly disambiguated before selection
+    When a Confirmation Purchase and a Checkout Purchase are tested
+    Then the Confirmation observation selects Purchase on Confirmation
+    And the Checkout observation rejects it with named Page-matcher evidence
+    When an equal-priority Assignment with identical observable inputs is enabled
+    Then production matcher testing renders both names and no winner
 
   # Data layer Flow effective schema assignment runtime 003
-  Scenario: Data layer Flow effective schema assignment runtime 003
-    Given Retail Purchase and Trade Purchase Assignments have different schemas, equal priority, and identical observable predicates
-    And those compiled Assignments are in immutable release 3
-    When one matching Purchase is observed
-    Then actual Live renders both human names, matching predicate evidence, and an equal-priority tie
-    And no Assignment or schema wins
-    And no schema is selected by graph order, predecessor, Flow label, row order, or last edit
-
-  # Data layer Flow effective schema assignment runtime 004
-  Scenario Outline: Data layer Flow effective schema assignment runtime 004
-    Given immutable release 3 production Purchase schema contains <constraint>
-    When actual payload <payload_value> is observed
-    Then the rendered issue is <issue_code> at <path> with expected <expected>, actual <actual>, severity Error, and origin <origin>
-    And the repair target opens that exact independently authored requirement
+  Scenario Outline: Data layer Flow effective schema assignment runtime 003
+    Given production Purchase schema contains <constraint>
+    When actual per-event validation receives <payload_value>
+    Then the rendered issue is <code> at <path> with expected <expected>, actual <actual>, severity Error, and origin <origin>
 
     Examples:
-      | constraint             | payload_value                   | issue_code  | path                             | expected          | actual | origin         |
-      | string transaction ID  | transaction_id is 42            | type        | /ecommerce/transaction_id        | string            | 42     | Purchase Event |
-      | GBP or EUR currency    | currency is USD                 | enum        | /ecommerce/currency              | GBP or EUR        | USD    | Retail Profile |
-      | forbidden coupon       | coupon is SUMMER                | forbidden   | /ecommerce/coupon                | absent            | SUMMER | Retail Profile |
-      | required value         | value is absent                 | required    | /ecommerce/value                 | present           | absent | Purchase Event |
-      | Trade order condition  | purchase_order_number is absent | conditional | /ecommerce/purchase_order_number | present for Trade | absent | Trade Profile  |
+      | constraint                  | payload_value                   | code        | path                             | expected          | actual | origin         |
+      | string transaction ID       | transaction_id is 42            | type        | /ecommerce/transaction_id        | string            | 42     | Purchase Event |
+      | GBP or EUR currency         | currency is USD                 | enum        | /ecommerce/currency              | GBP or EUR        | USD    | Retail Profile |
+      | forbidden coupon            | coupon is SUMMER                | forbidden   | /ecommerce/coupon                | absent            | SUMMER | Retail Profile |
+      | required value              | value is absent                 | required    | /ecommerce/value                 | present           | absent | Purchase Event |
+
+  # Data layer Flow effective schema assignment runtime 004
+  Scenario: Data layer Flow effective schema assignment runtime 004
+    Given one Purchase observation has a selected Assignment and valid payload result
+    When documentary predecessor, branch, layout, and multiplicity records are changed
+    Then production validation returns the same Assignment, effective schema, and payload result
+    And serialized and rendered results contain no active Flow, current node, transition, branch, join, occurrence, or journey verdict
 
   # Data layer Flow effective schema assignment runtime 005
   Scenario: Data layer Flow effective schema assignment runtime 005
-    Given production Live release 3 validates Retail Purchase
-    When shared Purchase changes only in draft revision 24
-    Then the graph preview identifies draft revision 24 and stale evidence
-    And the same observed payload remains byte-equivalent in Live under release 3
-    And publication changes Live only after the new compilation result passes review
+    Given production Retail Purchase is bound to Confirmation
+    And production Assignment Checkout Purchase is scoped to Checkout
+    When the same observation is tested in editor, captured validation, and matcher test
+    Then all three production paths reject Checkout Purchase with named Page evidence
+    And an empty Page-scope intersection never selects it globally
+    When two production Page matchers cover the same observation
+    Then all three paths report Page ambiguity and no winner
+    And a contradictory supplied Page identifier cannot bypass observable matching
 
   # Data layer Flow effective schema assignment runtime 006
-  Scenario: Data layer Flow effective schema assignment runtime 006
-    Given a captured Purchase has a production validation result
-    When it is attached to Retail Purchase and opened between side panel and Builder
-    Then assignment winner, effective schema, issues, provenance, observation identity, and project revision remain identical
-    And attaching it changes only the documented association and manual testing record
-
-  # Data layer Flow effective schema assignment runtime 007
-  Scenario: Data layer Flow effective schema assignment runtime 007
-    When Retail Purchase requirements are opened on both production surfaces
-    Then both render the same rich rows, columns, examples, conditions, customization, Spreadsheet output, and Rich table output
-    And committing through either surface produces one canonical requirement command and one refreshed effective schema
-
-  # Data layer Flow effective schema assignment runtime 008
-  Scenario Outline: Data layer Flow effective schema assignment runtime 008
-    Given a production Event occurrence has <condition>
-    When the matcher-domain analyzer and schema compiler refresh its node
-    Then the actual single status is <status>
-    And the actual direct repair is <repair>
+  Scenario Outline: Data layer Flow effective schema assignment runtime 006
+    Given actual controls create Confirmation Purchase on Confirmation
+    And actual controls create <candidate_configuration>
+    When the graph inspector and Assignment matcher calculate Confirmation Purchase
+    Then both production paths show status <status>
+    And both production paths show winner <winner> and contract <selected_contract>
+    And both production paths render <page_evidence>
 
     Examples:
-      | condition                                                        | status               | repair                            |
-      | conflicting types and Documentation only mode                    | Schema blocked       | resolve schema conflict           |
-      | valid schema, Documentation only mode, and equal-priority overlap | Documentation only   | restore automatic validation      |
-      | valid schema and equal-priority overlap                           | Ambiguous Assignment | resolve matcher overlap           |
-      | Retail A wins retail while Retail B wins outlet                   | Ambiguous Assignment | choose one whole-domain Assignment |
-      | valid schema and no covering enabled Assignment                   | No Assignment        | create or enable Assignment       |
-      | unique winners except one uncovered matcher-domain region         | No Assignment        | cover unmatched region            |
-      | one deterministic draft contract absent from release 3            | Draft only           | review and publish the draft plan |
-      | one stable Assignment with a draft-only matcher content revision   | Draft only           | publish the compiled revision     |
-      | one deterministic contract identical to release 3                 | Ready                | inspect published Assignment      |
+      | candidate_configuration                                  | status        | winner                | selected_contract     | page_evidence                                          |
+      | Checkout Purchase at priority 20                         | No Assignment | none                  | none                  | Checkout is disjoint from Confirmation                 |
+      | Checkout Purchase at 20 and Confirmation Purchase at 10 | Assigned      | Confirmation Purchase | Confirmation contract | higher-priority Checkout is rejected by Page           |
+      | Checkout Purchase and Confirmation Purchase both at 10  | Assigned      | Confirmation Purchase | Confirmation contract | disjoint Pages are not reported as an equal-priority tie |
+
+  # Data layer Flow effective schema assignment runtime 007
+  Scenario Outline: Data layer Flow effective schema assignment runtime 007
+    Given actual controls save Confirmation Page with <matcher>
+    When <observation> is tested in the Assignment editor, a saved Event example, and captured side-panel validation
+    Then all three paths resolve <resolved_page>
+    And all three paths serialize the same Page-resolution semantic identity, normalized Page context, and predicate evidence <evidence>
+    And all three paths select Assignment <winner>
+
+    Examples:
+      | matcher                                         | observation                                           | resolved_page | evidence                           | winner                   |
+      | exact host shop.example                         | URL https://shop.example/checkout/confirmation        | Confirmation  | host shop.example                  | Purchase on Confirmation |
+      | environment Production                          | environment Staging and an otherwise matching URL     | none          | expected Production actual Staging | none                     |
+      | path glob /checkout/*                           | URL https://shop.example/checkout/confirmation        | Confirmation  | path /checkout/confirmation        | Purchase on Confirmation |
+      | path regular expression ^/checkout/.*$          | URL https://shop.example/checkout/confirmation        | Confirmation  | path /checkout/confirmation        | Purchase on Confirmation |
+      | route template /{channel}/checkout/confirmation | URL https://shop.example/retail/checkout/confirmation | Confirmation  | route variable channel retail      | Purchase on Confirmation |
+      | query channel=retail                            | URL https://shop.example/checkout?channel=trade       | none          | expected retail actual trade       | none                     |
+      | hash complete                                   | URL https://shop.example/checkout#cancelled           | none          | expected complete actual cancelled | none                     |
+      | SPA route /checkout/confirmation                | SPA route /checkout/confirmation                      | Confirmation  | SPA route /checkout/confirmation   | Purchase on Confirmation |
+
+  # Data layer Flow effective schema assignment runtime 008
+  Scenario: Data layer Flow effective schema assignment runtime 008
+    Given only Confirmation matches one Purchase observation
+    And Purchase on Confirmation is the winner in the Assignment editor, a saved Event example, and captured validation
+    When actual controls change an otherwise unreferenced Checkout Page matcher to cover that observation
+    Then all three Page-resolution semantic identities change
+    And all three paths report Checkout and Confirmation, identical normalized predicate evidence, and no winner
+    And both Page matcher fields are available as direct repair actions
+    When only Checkout and Confirmation display names are renamed
+    Then their stable references and Page-resolution semantic identities remain unchanged
+    And all visible candidate, ambiguity, and repair labels use the new names
 
   # Data layer Flow effective schema assignment runtime 009
   Scenario: Data layer Flow effective schema assignment runtime 009
-    Given a valid production occurrence has no Assignment and displays No Assignment
-    When actual controls review and confirm Documentation only
-    Then graph, outline, checklist, Confluence preview, and Spreadsheet preview show Documentation only
-    And selected draft compilation permits publication without an Assignment for that occurrence
-    When that exact draft compilation passes preflight, review, and publication
-    Then the published validation plan contains no automatic-validation claim for it
-    When actual controls restore Automatic validation required
-    Then No Assignment and the publication blocker return
+    Given actual controls create Retail Purchase Assignment for Confirmation Page
+    When captured side-panel validation invokes Page resolution without a URL or normalized Page context
+    Then the production resolver selects no Assignment and no effective contract
+    And the rendered reason is missing observable Page context for Retail Purchase Assignment
+    And Provide Page context for Retail Purchase Assignment opens the caller input that must be repaired
 
   # Data layer Flow effective schema assignment runtime 010
   Scenario: Data layer Flow effective schema assignment runtime 010
-    Given one Assignment references the same named Applicability Set in Builder and side panel
-    When actual controls save nested All, Any, and Not matcher groups for that named set from each surface in both orders
-    Then both render the same canonical predicates, priority, summary, test result, and overlap diagnostics
-    And the Assignment retains one stable Applicability reference without an embedded condition copy
-    And Page, Event, node, relationship, Profile, Assignment, Event-case, checklist-run, schema, and release changes propagate without whole-collection replacement
+    Given the built extension opens a saved canonical project where Retail Purchase Assignment retains the last Page label Confirmation but its stable Page reference no longer resolves
+    When the graph inspector, Assignment editor, and captured side-panel validation resolve Retail Purchase Assignment
+    Then all three production paths block it with Retail Purchase Assignment references its missing Page named Confirmation
+    And all three paths select no Assignment and no effective contract
+    And Select a replacement Page for Retail Purchase Assignment opens its Page selector
 
   # Data layer Flow effective schema assignment runtime 011
-  Scenario Outline: Data layer Flow effective schema assignment runtime 011
-    Given production Event case Purchase contract is <requirement> and <content>
-    When the actual Event-case runner uses the production Assignment and validator
-    Then the rendered case status is <case_status>
-    And the production release gate is <gate_status>
-
-    Examples:
-      | requirement | content                                               | case_status | gate_status |
-      | required    | empty                                                 | Blocked     | blocked     |
-      | required    | expected valid but receives enum issue USD            | Failing     | blocked     |
-      | required    | expects Retail winner but receives Trade              | Failing     | blocked     |
-      | required    | expects a tie but receives Retail winner              | Failing     | blocked     |
-      | required    | expects and receives enum issue USD with exact fields | Passing     | allowed     |
-      | required    | matching result from an older contract revision       | Stale       | blocked     |
-      | optional    | empty                                                 | Not run     | allowed     |
+  Scenario: Data layer Flow effective schema assignment runtime 011
+    Given actual controls author the Trade Profile rule /customer/type equals business requires /ecommerce/purchase_order_number
+    And the complete Trade Purchase payload satisfies every other effective requirement:
+      """json
+      {
+        "event": "purchase",
+        "page": { "type": "confirmation" },
+        "customer": { "type": "business" },
+        "ecommerce": {
+          "transaction_id": "TRADE-1001",
+          "currency": "EUR",
+          "value": 125.00
+        }
+      }
+      """
+    When actual Assignment-backed per-event validation receives the payload
+    Then exactly one rendered issue reports path /ecommerce/purchase_order_number, code conditional, severity Error, expected present when /customer/type equals business, actual absent, and origin Trade Profile
+    And its repair link opens the authored Trade Profile conditional rule
 
   # Data layer Flow effective schema assignment runtime 012
   Scenario: Data layer Flow effective schema assignment runtime 012
-    Given preflight produced content-addressed result compile:7K3M for project revision 24
-    When review approves compile:7K3M and publication is requested without a semantic edit
-    Then publication consumes compile:7K3M unchanged and release metadata records that identity
-    When a semantic requirement changes after review
-    Then compile:7K3M is invalidated and publication requires a new preflight and review
+    Given actual schema controls allow GBP, EUR, or USD at Purchase Event /ecommerce/currency
+    And actual schema controls narrow that path to GBP or EUR in Retail Profile
+    And actual schema controls narrow that path to exact GBP in Retail Purchase occurrence
+    When production composition combines those compatible currency constraints for Retail Purchase
+    Then the effective /ecommerce/currency constraint is exact GBP without a conflict
+    And the graph inspector, validator input, and documentation export each render exactly this ordered provenance:
+      | order | layer      | entity          | authored constraint       | composition decision                    |
+      | 1     | Event      | Purchase        | GBP or EUR or USD allowed | introduce GBP or EUR or USD allowed set |
+      | 2     | Profile    | Retail          | GBP or EUR allowed        | narrow allowed set to GBP or EUR        |
+      | 3     | occurrence | Retail Purchase | exact GBP                 | narrow allowed set to exact GBP         |
 
   # Data layer Flow effective schema assignment runtime 013
-  Scenario: Data layer Flow effective schema assignment runtime 013
-    Given release 3 observes Purchase retail 101 with route channel retail and currency USD
-    When production Live opens its unified Event validation result
-    Then observation identity, normalized context, release 3, Retail winner evidence, and Trade rejection reason are rendered
-    And Sitewide and Retail Profiles and schema revision 8 are rendered
-    And one issue renders path /ecommerce/currency, code enum, severity Error, expected GBP or EUR, actual USD, and Retail Profile provenance
-    And serialized production result and rendered output omit authoritative Flow, current-node, transition-outcome, temporal-occurrence verdict, active-branch, join-state, and journey-verdict fields
+  Scenario Outline: Data layer Flow effective schema assignment runtime 013
+    Given actual schema controls declare /tags as an optional array on Purchase Event
+    And actual schema controls declare <constraint> on scalar array-item path /tags/*
+    When production composition compiles the Purchase Event array requirements for Retail Purchase
+    Then the graph inspector, validator input, and documentation export each retain /tags/* with <constraint> and provenance Purchase Event
+    When actual Assignment-backed validation receives array payload <payload>
+    Then exactly one rendered issue reports path /tags/0, code <code>, severity Error, expected <expected>, actual <actual>, and provenance Purchase Event requirement /tags/*
+
+    Examples:
+      | constraint                          | payload       | code  | expected             | actual    |
+      | string type                         | [42]          | type  | string               | 42        |
+      | allowed values primary or secondary | ["legacy"]   | enum  | primary or secondary | legacy    |
+      | exact value primary                 | ["secondary"] | exact | primary              | secondary |
+
+  # Data layer Flow effective schema assignment runtime 014
+  Scenario Outline: Data layer Flow effective schema assignment runtime 014
+    Given actual controls author <event_constraint> in Purchase Event and <profile_constraint> in Retail Profile on the same effective path
+    When production composition compiles Retail Purchase
+    Then compilation is blocked without an executable partial contract
+    And the installed diagnostic names Purchase Event, Retail Profile, <event_constraint>, and <profile_constraint>
+
+    Examples:
+      | event_constraint        | profile_constraint       |
+      | string type             | number type              |
+      | Required presence       | Forbidden presence       |
+      | allowed GBP or EUR      | allowed USD              |
+      | rule value above 0      | rule value below 0       |

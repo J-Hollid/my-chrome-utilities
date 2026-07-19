@@ -73,7 +73,7 @@ Feature: Data layer bulk requirement authoring
   Scenario: Data layer bulk requirement authoring 006
     Given a bulk rename moves /commerce/order to /ecommerce/order
     When the staged review is displayed
-    Then affected rules, Applicability Sets, Event-occurrence contracts, Assignments, Event validation cases, and exports are identified
+    Then affected rules, applicability, flows, fixtures, and exports are identified
     And unresolved external references block commit
     And confirmation moves the subtree and references in one transaction
 

@@ -19,14 +19,14 @@ Feature: Data layer Specification Builder operator usability
   Scenario: Data layer Specification Builder operator usability 002
     Given a blank project was created
     When Overview opens
-    Then Foundation, Shared entities, Requirements, Specification Flows, Assignments and Event cases, Documentation, and Release progress is visible
+    Then Context, Requirements, Applicability, Flows, Fixtures, Preflight, and Release progress is visible
     And one recommended next action reflects the first incomplete required stage
 
   # Data layer Specification Builder operator usability 003
   Scenario: Data layer Specification Builder operator usability 003
     Given an entity and field are selected
     When the workspace renders
-    Then project, environment, draft or release, selected entity, selected Flow and Event-occurrence node when applicable, and automatic-validation state remain visible
+    Then project, environment, draft or release, selected entity, active flow and step when applicable, and validation state remain visible
     And raw UUIDs appear only behind explicit copy affordances
 
   # Data layer Specification Builder operator usability 004
@@ -40,7 +40,7 @@ Feature: Data layer Specification Builder operator usability
   Scenario: Data layer Specification Builder operator usability 005
     Given global search finds /ecommerce/value
     When the operator opens one result
-    Then the exact requirement field opens with origin, Pages, Events, Event-occurrence nodes, Event validation cases, Assignments, and releases visible
+    Then the exact requirement field opens with origin, pages, events, flow steps, fixtures, and releases visible
     And Back returns to the same query, result position, and scroll offset
 
   # Data layer Specification Builder operator usability 006
@@ -80,7 +80,7 @@ Feature: Data layer Specification Builder operator usability
   # Data layer Specification Builder operator usability 010
   Scenario: Data layer Specification Builder operator usability 010
     Given a project has replaced the creation screen
-    When rerender, preflight, documentation preview, a dialog, and reload occur
+    When rerender, preflight, coverage, a dialog, and reload occur
     Then the hidden creation screen occupies zero computed layout space
     And the workspace never jumps below an empty viewport-sized region
 
@@ -94,11 +94,11 @@ Feature: Data layer Specification Builder operator usability
   # Data layer Specification Builder operator usability 012
   Scenario Outline: Data layer Specification Builder operator usability 012
     Given no project exists
-    When the operator completes the <start_path> start path
-    Then <durable_outcome> is staged or created and survives reload
+    When the operator completes the <start-path> start path
+    Then <durable-outcome> is staged or created and survives reload
     And Back or Cancel returns without an unexplained partial project
     Examples:
-      | start_path | durable_outcome |
+      | start-path | durable-outcome |
       | Template | selected template project preview |
       | Import full project | full graph migration review |
       | JSON example | inferred requirement staging grid |
@@ -124,23 +124,23 @@ Feature: Data layer Specification Builder operator usability
       | entity | confusable_entity |
       | Profile | Schema |
       | Applicability Set | Assignment |
-      | Page | Event-occurrence node |
-      | Event validation case | Live observation |
+      | Page | Flow step |
+      | Fixture | Live observation |
       | Draft | Published release |
 
   # Data layer Specification Builder operator usability 015
   Scenario: Data layer Specification Builder operator usability 015
     Given a fresh project has no authored entities
     When the operator opens the project overview
-    Then task entry points offer Create a shared Purchase Event, Add a Specification Flow, Add Retail and Trade requirements, and Validate checkout confirmation
-    And the specification map shows Foundation, Shared entities, Requirements, Specification Flows, Assignments and Event cases, Documentation, and Release with completion and blockers
+    Then task entry points offer Create a shared Purchase event, Add a funnel, Add flow-specific requirements, and Prove checkout confirmation
+    And the specification map shows Foundation, Shared entities, Requirements, Flows, Routing, Proof, and Release with completion and blockers
     And one Continue action identifies what to do next, why, and what it unlocks
 
   # Data layer Specification Builder operator usability 016
   Scenario Outline: Data layer Specification Builder operator usability 016
     Given the operator is about to <action>
     When the impact preview opens
-    Then it names affected entities, draft or published scope, documentation and per-event validation consequences, and evidence that will become stale
+    Then it names affected entities, draft or published scope, runtime consequence, and evidence that will become stale
     When the operator confirms the action
     Then one completion message states exactly what changed, the resulting revision, stale evidence, and the Undo path
     Examples:
@@ -148,7 +148,7 @@ Feature: Data layer Specification Builder operator usability
       | change Profile composition |
       | change Applicability |
       | change an Assignment |
-      | remove an Event-occurrence node |
+      | remove a Flow step |
       | publish a release |
 
   # Data layer Specification Builder operator usability 017
@@ -159,8 +159,8 @@ Feature: Data layer Specification Builder operator usability
     And one repair action opens the exact named entity and field without exposing a raw ID
     Examples:
       | assurance_view | state |
-      | Event validation cases | empty required case |
-      | Assignment readiness | no covering Assignment |
+      | Fixtures | zero observations |
+      | Coverage | zero effective cells |
       | Preflight | compiler failure |
       | Release review | unresolved ambiguity |
       | Live | no permitted target |
@@ -170,14 +170,14 @@ Feature: Data layer Specification Builder operator usability
     Given any contextual entity editor is open
     When the workspace toolbar and inspector render
     Then toolbar actions are grouped as Validate, Release, and More with one contextual primary action
-    And unrelated Add Entity, Event occurrence, Schema draft, Assignment, and Bulk forms are absent from the inspector
+    And unrelated Add Entity, Flow Steps, Schema Draft, Assignment, and Bulk forms are absent from the inspector
     And the preserved desktop three-pane hierarchy and 44 CSS px control targets remain available
 
   # Data layer Specification Builder operator usability 020
   Scenario: Data layer Specification Builder operator usability 020
     Given the fresh-project empty state offers the Retail and Trade worked example
     When the operator opens it
-    Then it demonstrates shared Pages and Events, Sitewide and Retail or Trade Profiles, 2 documentary Flows, Assignments, positive and negative Event validation cases, a manual checklist, documentation export, and Live explanation
+    Then it demonstrates one shared Page and Event, Sitewide and flow-specific Profiles, 2 Flows, Assignments, positive and negative Fixtures, Coverage, and Live explanation
     And dismissing the example returns to the unchanged project and the same recommended next action
 
   # Data layer Specification Builder operator usability 021
@@ -186,6 +186,6 @@ Feature: Data layer Specification Builder operator usability
     When either surface presents a relevant next action
     Then the side panel explains its in-page capture, validation, and quick-edit role
     And the standalone Builder explains its project composition, rich specification, assurance, and release role
-    And contextual Continue actions connect saved schema to project adoption, captured validation to Event validation case or Profile authoring or manual occurrence attachment, and project schema to the rich table builder
+    And contextual Continue actions connect saved schema to project adoption, captured validation to Fixture or Profile authoring, and project schema to the rich table builder
     And each action names the destination, transferred context, draft or release scope, and effect before navigation
     And no workflow requires export/import, clipboard transfer, raw IDs, or recreation merely to move between surfaces

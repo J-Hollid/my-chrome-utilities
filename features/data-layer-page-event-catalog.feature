@@ -41,10 +41,10 @@ Feature: Data layer page and event catalog
 
   # Data layer page and event catalog 004
   Scenario: Data layer page and event catalog 004
-    Given Purchase is used by Retail and Trade Event-occurrence nodes, Event validation cases, and one release
+    Given Purchase is used by Retail and Trade flow steps, fixtures, and one release
     When the operator requests to delete Purchase
     Then deletion review identifies every dependant
-    And unresolved Event-occurrence node, Event validation case, or release references block deletion
+    And unresolved flow, fixture, or release references block deletion
     And replacing the event reference updates all selected draft dependants atomically
 
   # Data layer page and event catalog 005

@@ -3,11 +3,10 @@
 # {"version":1,"tested_at":"2026-07-18T12:33:43.068981284Z","feature_name":"Data layer documentation export","feature_path":"features/data-layer-documentation-export.feature","background_hash":"5a31a614da7506fcaf3d1b1a19273cd3568cb63b465bf310bef8005d22d020a8","implementation_hash":"sha256:fc8b6a40cb27bc8de5b8810ead8df6d738a6119598ac8beb1725156f93d9b9fc","scenarios":[{"index":1,"name":"Data layer documentation export 002","scenario_hash":"e2b598e7818212a4a6f66e49be56f37c4e82272a33039e9e7bfea5a4d1c8aeb0","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:02:58.526408431Z"},{"index":2,"name":"Data layer documentation export 003","scenario_hash":"2357f6988ee00ed08ee7acea7da0ac5461bef07e59232e4392a409bf88395b1f","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:02:58.526408431Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: property-table export remains supporting behavior; complete Flow graph documentation is specified by data-layer-flow-documentation-export.
 Feature: Data layer documentation export
 
   Background:
-    Given Shop data specification contains published requirements, Applicability, Specification Flows, Event validation cases, and release metadata
+    Given Shop data specification contains published requirements, applicability, flows, fixtures, and release metadata
 
   # Data layer documentation export 001
   Scenario: Data layer documentation export 001
@@ -27,7 +26,7 @@ Feature: Data layer documentation export
       | optional_field         | included_content                           |
       | requirement provenance | origin profile and precedence              |
       | applicability summary  | named pages and matcher summary             |
-      | where used             | Pages, Events, and Event-occurrence nodes   |
+      | where used             | pages, events, and flow steps               |
       | release metadata       | project release identity and revision       |
 
   # Data layer documentation export 003
@@ -46,7 +45,7 @@ Feature: Data layer documentation export
 
   # Data layer documentation export 004
   Scenario: Data layer documentation export 004
-    Given selected output omits Applicability, graph, Event-case, provenance, or release semantics
+    Given selected output omits applicability, flows, fixtures, or release semantics
     When preview and copied output are produced
     Then each omitted semantic category is identified as lossy
     And the operator is directed to full-fidelity project export for complete interchange

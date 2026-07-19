@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:33:43.682728657Z","feature_name":"Data layer requirement profile composition","feature_path":"features/data-layer-requirement-profile-composition.feature","background_hash":"c1a8fac40c209ade4c950fcce5b5c78443e37a93a9800957dda0098adb20bae4","implementation_hash":"sha256:6cb2f5baf484e1039446086ff6ed9e8f54ebb3e2ccf718b05283cf24bde36768","scenarios":[{"index":1,"name":"Data layer requirement profile composition 002","scenario_hash":"884cd12beba4fcfa51725d8af2f1ee14b68e6278345383870f88ea63058da456","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:10.147455780Z"},{"index":2,"name":"Data layer requirement profile composition 003","scenario_hash":"0d1109f95af2cab30bc54cf0987bbdd815eedbc12a50cad7f9ada9a0a53cd708","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:10.147455780Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: Flow-step composition becomes Event-occurrence refinement; graph relationships never participate in runtime validation selection.
 Feature: Data layer requirement profile composition
 
   Background:
@@ -13,7 +12,7 @@ Feature: Data layer requirement profile composition
   Scenario: Data layer requirement profile composition 001
     Given Retail confirmation context references Sitewide, Commerce, Purchase, and Retail confirmation
     When its effective requirements are resolved
-    Then requirements compose in explicit Base, Page, shared Event, ordered Profiles, and Event-occurrence refinement order
+    Then profiles compose in explicit baseline, page group, page, event, flow, flow step, and environment order
     And the resolved contract does not require a combined inheritance child
     And arbitrary multiple inheritance is unavailable
 
@@ -48,13 +47,13 @@ Feature: Data layer requirement profile composition
   Scenario: Data layer requirement profile composition 004
     Given Purchase and Retail confirmation are adjacent in composition order
     When the operator proposes reversing them
-    Then a before-and-after preview identifies every affected property, rule, Page, Event, Event-occurrence node, Event validation case, and release
+    Then a before-and-after preview identifies every affected property, rule, page, event, flow step, fixture, and release
     And the order remains unchanged before confirmation
     And confirmation records the explicit precedence change in the project draft
 
   # Data layer requirement profile composition 005
   Scenario: Data layer requirement profile composition 005
-    Given Commerce is used by 12 Pages, 4 Events, and 8 Event-occurrence nodes
+    Given Commerce is used by 12 pages, 4 events, and 8 flow steps
     When the operator edits Commerce
     Then Where used and impact identify all 24 consumers before commit
     And each effective requirement links to its source profile and introducing release

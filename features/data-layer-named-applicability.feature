@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:33:43.275593697Z","feature_name":"Data layer named applicability","feature_path":"features/data-layer-named-applicability.feature","background_hash":"befba8efefdd72ed67aa9bd73bc5ff36e720d8019a2e5cf6ba41df55561bfe54","implementation_hash":"sha256:2fd7714f2aa3c7161a4e1c38bb1455cf7a1ba71a23cac2babedf2e22ffa830c2","scenarios":[{"index":2,"name":"Data layer named applicability 003","scenario_hash":"2f96670f96ba54c6cd578427fb76e27d8434cf03d9dff93999c0e9e1bcb1ae24","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":3,"name":"Data layer named applicability 004","scenario_hash":"381af7e1dfe2d96586f13b776c15740ff5cc4c48cef36cc1817aacbd43822cc1","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":5,"name":"Data layer named applicability 006","scenario_hash":"935d87e5993cbd2221f5e124a659d3ee6a5dd0271085dfef7a9b53d31b223e19","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"},{"index":7,"name":"Data layer named applicability 008","scenario_hash":"881469cef232ef4fc6a8e8172728668e84713e2f2a55fad85e3cf1d93d51aee2","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:02.208449455Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: observable matcher and stable-reference behavior remains; Flow state, Flow name, and Flow-step predicates are not MVP Assignment inputs.
 Feature: Data layer named applicability
 
   Background:
@@ -15,17 +14,17 @@ Feature: Data layer named applicability
     When matcher conditions are authored
     Then host supports exact, glob, and regular-expression matching
     And path supports exact, glob, regular expression, and named route templates
-    And query, hash, SPA route variables, source, event, payload, raw input, environment, and explicitly available session variables are available
+    And query, hash, SPA route variables, source, event, payload, raw input, flow state, and session variables are available
     And conditions compose in nested All, Any, and Not groups
     And include, exclude, and fallback behavior are explicit
 
   # Data layer named applicability 002
   Scenario: Data layer named applicability 002
-    Given Retail confirmation matches purchase on shop.example.test/checkout/confirmation when observable route channel is retail
+    Given Retail confirmation matches purchase on shop.example.test/checkout/confirmation when current flow is Retail
     When its summary is displayed
     Then the plain-language summary states that complete applicability before its technical expression
     And named reusable condition sets and referenced entities are visible
-    And Where used lists every Page, Event, Profile, Event-occurrence node, and Assignment that references it
+    And Where used lists every page, event, profile, and flow step that references it
 
   # Data layer named applicability 003
   Scenario Outline: Data layer named applicability 003
@@ -52,7 +51,7 @@ Feature: Data layer named applicability
       | test_input              | result_evidence                                      |
       | current page and event  | each matching and failing predicate                  |
       | pasted URL and event    | normalized context and predicate reasons             |
-      | saved Event validation case | expected and actual applicability                |
+      | saved fixture           | expected and actual applicability                    |
 
   # Data layer named applicability 005
   Scenario: Data layer named applicability 005
@@ -72,7 +71,7 @@ Feature: Data layer named applicability
       | overlap_kind                         | diagnostic                                      |
       | equal exact purchase contexts        | blocking tie                                    |
       | broader checkout glob over exact URL | exact winner and shadowed-glob warning          |
-      | intersecting regular expressions     | overlap requiring Event validation case or operator resolution |
+      | intersecting regular expressions     | overlap requiring fixture or operator resolution |
       | explicit fallback plus exact match   | exact winner and non-conflicting fallback       |
 
   # Data layer named applicability 007
@@ -109,19 +108,21 @@ Feature: Data layer named applicability
     Given Checkout confirmation Page and Purchase Event are shared by Retail and Trade
     When the operator saves either entity without contextual Applicability
     Then no Applicability Set is selected or invented
-    And both entities remain available to every Specification Flow and Assignment until explicitly scoped
+    And both entities remain available to every Flow and Assignment until explicitly scoped
 
   # Data layer named applicability 011
   Scenario Outline: Data layer named applicability 011
-    Given an observable predicate requires a <reference_kind> reference
+    Given a predicate requires a <reference_kind> reference
     When the operator selects <human_name>
     Then the selector continues to display <human_name> after Save and reload
-    And the matcher persists and evaluates the selected stable reference against current observation inputs
-    And Flow and Event-occurrence node references remain available only through Where used
+    And the matcher persists and evaluates the selected stable reference
     Examples:
       | reference_kind | human_name |
+      | Flow | Retail checkout |
+      | Flow step | Retail confirmation |
       | Page | Checkout confirmation |
       | Event | Purchase |
+      | Profile | Retail confirmation requirements |
 
   # Data layer named applicability 012
   Scenario Outline: Data layer named applicability 012

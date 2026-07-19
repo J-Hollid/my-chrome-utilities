@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:34:34.668940068Z","feature_name":"Data layer contextual specification editors runtime","feature_path":"features/data-layer-contextual-specification-editors-runtime.feature","background_hash":"91ca42472f5e0458db0f2382fe0c6f1c3e434acd12da289b76de0ddb4f107e6e","implementation_hash":"sha256:da03f8cf338cfc92aa96fb36b712ac26b1373f1a10d16b30902527d5d9879b5c","scenarios":[{"index":12,"name":"Data layer contextual specification editors runtime 013","scenario_hash":"351d568d16371ac4742aeb9a92243be41bf78060468416e42da74d363ce19b95","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-18T12:34:34.668940068Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: production Flow editing follows the directional graph contract; temporal execution-only controls are post-MVP.
 Feature: Data layer contextual specification editors runtime
 
   Background:
@@ -24,8 +23,8 @@ Feature: Data layer contextual specification editors runtime
 
   # Data layer contextual specification editors runtime 003
   Scenario: Data layer contextual specification editors runtime 003
-    When the operator creates an Event with source, canonical name, target, context role, profile, and applicability
-    Then the Event is selectable by name from a Page and Specification Flow editor
+    When the operator creates an Event with source, canonical name, target, profile, applicability, and occurrence policy
+    Then the event is selectable by name from a Page and Flow editor
     And renaming it updates labels without changing its persisted stable identity
 
   # Data layer contextual specification editors runtime 004
@@ -36,17 +35,16 @@ Feature: Data layer contextual specification editors runtime
 
   # Data layer contextual specification editors runtime 005
   Scenario: Data layer contextual specification editors runtime 005
-    When the operator creates a Flow with searchable Page, Event, Profile, Assignment, and Applicability selectors
-    And documents context-setting and interaction nodes, node obligations and multiplicities, expected-next, alternative, parallel, and merge relationships, notes, and layout
-    Then reopening the Flow editor shows stable named references and every configured documentation field
+    When the operator creates a Flow with searchable Page, Event, Profile, and Applicability selectors
+    And configures entry, exit, timeout, correlation, branches, joins, and transitions
+    Then reopening the Flow editor shows stable named references and every configured semantic field
     And no free-text nonexistent reference can be saved
-    And no temporal execution status or control is rendered
 
   # Data layer contextual specification editors runtime 006
   Scenario: Data layer contextual specification editors runtime 006
-    When the operator creates one positive and one negative Event validation case through rendered controls
-    Then each editor retains its observed context, payload, expected Assignment, schema revision, issues, result differences, and policy after reload
-    And malformed case JSON remains an uncommitted field-local error
+    When the operator creates one event Fixture and one journey Fixture through rendered controls
+    Then each editor retains its context, observations, correlation, expected winner, step, schema, issues, and policy after reload
+    And malformed fixture JSON remains an uncommitted field-local error
 
   # Data layer contextual specification editors runtime 007
   Scenario: Data layer contextual specification editors runtime 007
@@ -62,7 +60,7 @@ Feature: Data layer contextual specification editors runtime
 
   # Data layer contextual specification editors runtime 009
   Scenario: Data layer contextual specification editors runtime 009
-    Given a selected Page is referenced by an Event-occurrence node and Event validation case
+    Given a selected Page is referenced by a Flow and Fixture
     When the operator attempts to delete it
     Then the rendered dependency review links both consumers and blocks deletion
     When the operator reassigns both consumers and confirms deletion
@@ -87,11 +85,10 @@ Feature: Data layer contextual specification editors runtime
 
   # Data layer contextual specification editors runtime 012
   Scenario: Data layer contextual specification editors runtime 012
-    When the operator builds Host, Path, Query, Hash, SPA route, Source, Event, Target, Payload, Raw input, Environment, and explicit Session predicates through rendered controls
+    When the operator builds Host, Path, Query, Hash, SPA route, Source, Event, Target, Payload, Raw input, Environment, Session, Flow, and Step predicates through rendered controls
     Then each saved predicate reopens with its typed value and plain-language summary
     And the rendered overlap analysis detects a wildcard shadow, regular-expression overlap, fallback, and equal-priority tie
     And every diagnostic opens its exact predicate field
-    And Flow and Event-occurrence references are absent from matcher controls and remain available in Where used
 
   # Data layer contextual specification editors runtime 013
   Scenario Outline: Data layer contextual specification editors runtime 013
@@ -107,6 +104,6 @@ Feature: Data layer contextual specification editors runtime
       | Event |
       | Applicability Set |
       | Flow |
-      | Event validation case |
+      | Fixture |
       | Schema draft |
       | Assignment |

@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:34:23.106116969Z","feature_name":"Data layer requirement profile composition runtime","feature_path":"features/data-layer-requirement-profile-composition-runtime.feature","background_hash":"75150d491a5876603cd1da3151c60451871c4ecd139d0031b6496fac8c8b3ea0","implementation_hash":"sha256:5e7a4b7ec7279940300a20a9cec9e7cba0ae396d03de42792c1197f44883b510","scenarios":[{"index":1,"name":"Data layer requirement profile composition runtime 002","scenario_hash":"91b5d82eeb87bc6a480e34fe4b42a5b35e9da916870a379c0e793862b7ee72e1","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:39.460726970Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: production composition resolves Base, Page, Event, Profile, and occurrence layers without temporal Flow state.
 Feature: Data layer requirement profile composition runtime
 
   Background:
@@ -31,7 +30,7 @@ Feature: Data layer requirement profile composition runtime
 
   # Data layer requirement profile composition runtime 003
   Scenario: Data layer requirement profile composition runtime 003
-    Given profile order affects requirements used by Pages, Events, Event-occurrence nodes, Event validation cases, documentation, and releases
+    Given profile order affects requirements used by pages, events, flows, fixtures, and releases
     When reordering preview, cancel, confirm, Undo, and reload run through production callbacks
     Then actual before-and-after impact lists every changed consumer
     And cancel, confirm, Undo, and reload preserve their respective complete snapshots

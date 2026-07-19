@@ -3,7 +3,6 @@
 # {"version":1,"tested_at":"2026-07-18T12:34:22.833042993Z","feature_name":"Data layer named applicability runtime","feature_path":"features/data-layer-named-applicability-runtime.feature","background_hash":"0f1fdbd3e1aa2c11831751ba647c750c58b573b99188990bb8097438de7b9dfa","implementation_hash":"sha256:99acb9be5d21048457aa8fe2f1d4126324da74672566f1f0fad37aee6741a250","scenarios":[{"index":1,"name":"Data layer named applicability runtime 002","scenario_hash":"a293538970250e482567f169d2c0b3bb865bb9eab246ef6fec78f172fc687158","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:35.161196457Z"},{"index":4,"name":"Data layer named applicability runtime 005","scenario_hash":"92e3343be982a729d099a5a98978500a411d5969846c20627748af23f06926f0","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-18T01:03:35.161196457Z"}]}
 # acceptance-mutation-manifest-end
 
-# MVP scope notice: production Assignment resolution uses current observable predicates only; prior Flow state cannot select a schema.
 Feature: Data layer named applicability runtime
 
   Background:
@@ -12,7 +11,7 @@ Feature: Data layer named applicability runtime
 
   # Data layer named applicability runtime 001
   Scenario: Data layer named applicability runtime 001
-    When nested host, path, query, hash, event, payload, environment, and explicit session conditions are saved through actual controls
+    When nested host, path, query, hash, event, payload, and flow-state conditions are saved through actual controls
     Then production storage retains the complete All, Any, and Not tree
     And reload renders the same plain-language summary and technical expression
     And actual resolution evaluates every retained predicate
@@ -32,7 +31,7 @@ Feature: Data layer named applicability runtime
   # Data layer named applicability runtime 003
   Scenario: Data layer named applicability runtime 003
     Given three production applicability candidates include a winner, tie, shadowed matcher, and fallback across test contexts
-    When current context, pasted context, and Event validation case tests run through production resolution callbacks
+    When current context, pasted context, and fixture tests run through production resolution callbacks
     Then the actual DOM renders all candidates and their predicate evidence
     And winner, tie, shadowed, fallback, and non-match states agree with resolver output
     And project storage remains byte-for-byte unchanged
@@ -66,11 +65,10 @@ Feature: Data layer named applicability runtime
 
   # Data layer named applicability runtime 007
   Scenario: Data layer named applicability runtime 007
-    Given the installed matcher editor lists Checkout confirmation Page and Purchase Event by name
-    When the operator selects both and saves without reading their stable IDs
-    Then canonical storage contains the selected Page and Event references
-    And the production evaluator matches an observable Checkout Purchase and rejects Product view with exact predicate reasons
-    And Where used shows Retail checkout and Retail Purchase without adding either reference to matcher input
+    Given the installed matcher editor lists Retail checkout by name
+    When the operator selects it and saves without reading its stable ID
+    Then canonical storage contains the selected Flow reference
+    And the production evaluator matches a Retail observation and rejects a Trade observation with exact predicate reasons
 
   # Data layer named applicability runtime 008
   Scenario: Data layer named applicability runtime 008

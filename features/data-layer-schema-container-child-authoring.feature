@@ -97,7 +97,7 @@ Feature: Data layer schema container child authoring
     Given /ecommerce is an explicit object requirement and /ecommerce/transaction_id is an explicit string child requirement
     When the operator opens the compiled effective preview
     Then both requirements appear in one nested document with their authored provenance
-    And Save, Event-case testing, preflight, documentation, and release remain available without renaming or removing the parent requirement
+    And Save, preflight, coverage, and release remain available without renaming or removing the parent requirement
 
   # Data layer schema container child authoring 009
   Scenario: Data layer schema container child authoring 009

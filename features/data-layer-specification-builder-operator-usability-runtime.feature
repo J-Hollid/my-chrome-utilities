@@ -18,23 +18,22 @@ Feature: Data layer Specification Builder operator usability runtime
 
   # Data layer Specification Builder operator usability runtime 002
   Scenario: Data layer Specification Builder operator usability runtime 002
-    Given a clean isolated Chrome profile has no project
     When the operator creates a blank project through rendered controls
-    Then Overview shows Foundation, Shared entities, Requirements, Specification Flows, Assignments and Event cases, Documentation, and Release with one current next action
-    And completing Foundation advances the visible progress to Shared entities
+    Then Overview shows the 7-stage authoring sequence and one current next action
+    And completing Context advances the visible progress to Requirements
 
   # Data layer Specification Builder operator usability runtime 003
   Scenario: Data layer Specification Builder operator usability runtime 003
-    Given a Flow Event-occurrence node is selected and its required Event validation case is Failing
+    Given a Flow step is selected and its fixture result is failing
     When the workspace rerenders
-    Then computed visible content retains project, environment, draft, Flow, Event-occurrence node, and automatic-validation state
+    Then computed visible content retains project, environment, draft, Flow, step, and validation state
     And stable IDs are absent from primary row prose but available through labelled copy controls
 
   # Data layer Specification Builder operator usability runtime 004
   Scenario: Data layer Specification Builder operator usability runtime 004
-    Given the operator expanded the documentary relationship editor and scrolled it
+    Given the operator expanded the Flow transition editor and scrolled it
     When a Page is selected
-    Then the accessibility tree contains no documentary relationship controls or stale Flow values
+    Then the accessibility tree contains no Flow transition controls or stale Flow values
     And the Page editor starts at its own restored position and context
 
   # Data layer Specification Builder operator usability runtime 005
@@ -56,10 +55,10 @@ Feature: Data layer Specification Builder operator usability runtime
   Scenario Outline: Data layer Specification Builder operator usability runtime 007
     Given the actual Builder viewport is <width>
     When the operator opens a long Flow editor and traverses Tree, Editor, and Inspector
-    Then computed layout has <pane_count> and one primary vertical scroll owner
+    Then computed layout has <pane-count> and one primary vertical scroll owner
     And no horizontal page overflow or detached selected context is present
     Examples:
-      | width | pane_count |
+      | width | pane-count |
       | 360 CSS px | 1 active pane |
       | 520 CSS px | 1 active pane |
       | 720 CSS px | 1 active pane |
@@ -82,7 +81,7 @@ Feature: Data layer Specification Builder operator usability runtime
   # Data layer Specification Builder operator usability runtime 010
   Scenario: Data layer Specification Builder operator usability runtime 010
     Given a project has been created
-    When the operator adds an entity, runs preflight, opens documentation preview, opens and closes a dialog, and reloads
+    When the operator adds an entity, runs preflight, opens coverage, opens and closes a dialog, and reloads
     Then computed style keeps the hidden creation screen at zero width, height, and layout contribution
     And the workspace top position does not jump by a viewport
 
@@ -96,11 +95,11 @@ Feature: Data layer Specification Builder operator usability runtime
   # Data layer Specification Builder operator usability runtime 012
   Scenario Outline: Data layer Specification Builder operator usability runtime 012
     Given a fresh isolated Chrome profile has no project
-    When the operator completes the rendered <start_path> path
-    Then <durable_outcome> is visibly staged or created and survives an actual extension reload
+    When the operator completes the rendered <start-path> path
+    Then <durable-outcome> is visibly staged or created and survives an actual extension reload
     And cancelling a repeated attempt leaves no partial project
     Examples:
-      | start_path | durable_outcome |
+      | start-path | durable-outcome |
       | Template | selected template project preview |
       | Import full project | full graph migration review |
       | JSON example | inferred requirement staging grid |
@@ -132,8 +131,8 @@ Feature: Data layer Specification Builder operator usability runtime
     And Back restores the prior view and scroll position
     Examples:
       | state |
-      | empty required Event validation case |
-      | Event occurrence with No Assignment |
+      | empty Fixture |
+      | zero-cell Coverage |
       | compiler failure |
       | applicability overlap |
 
@@ -141,7 +140,7 @@ Feature: Data layer Specification Builder operator usability runtime
   Scenario: Data layer Specification Builder operator usability runtime 016
     Given the operator changes a relationship and then publishes through actual controls
     When before-action and after-action messages are inspected
-    Then they name affected entities, draft or published scope, documentation and per-event validation consequences, stale evidence, revision, and Undo availability
+    Then they name affected entities, draft or published scope, runtime consequence, stale evidence, revision, and Undo availability
     And the messages agree with canonical storage and the compiled plan
 
   # Data layer Specification Builder operator usability runtime 017
@@ -160,6 +159,6 @@ Feature: Data layer Specification Builder operator usability runtime
   Scenario: Data layer Specification Builder operator usability runtime 018
     Given installed side panel and standalone Builder display a saved schema, captured validation, and active project
     When the operator follows each rendered cross-surface Continue action
-    Then schema adoption, captured-observation continuation to Event case, Profile, or manual occurrence, rich table building, nested Assignment query building, and return navigation open the named destination with complete context
+    Then schema adoption, captured-observation continuation, rich table building, and return navigation open the named destination with complete context
     And each surface states its complementary role and the canonical consequence before and after the action
     And no action exposes a raw ID or requires clipboard, export/import, duplicate authoring, or a reduced standalone model

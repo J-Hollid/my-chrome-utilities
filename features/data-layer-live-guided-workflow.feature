@@ -1,4 +1,3 @@
-# MVP scope notice: Live remains Assignment-backed per-event validation; active Flow, current step, and temporal journey guidance are superseded by non-authoritative documented-occurrence links.
 Feature: Data layer Live guided workflow
 
   Background:
@@ -61,17 +60,15 @@ Feature: Data layer Live guided workflow
 
   # Data layer Live guided workflow 005
   Scenario: Data layer Live guided workflow 005
-    Given target shop.example needs origin access that has not been granted
+    Given target discovery needs browsing access that has not been granted
     When the operator opens Choose target
-    Then Live identifies https://shop.example, the data read for observation, why it is needed, grant persistence, and how to revoke it
+    Then Live explains which pages require access, why observation needs it, and whether the grant persists
     And Request access is a deliberate action before the browser permission prompt
-    And denial reads and captures nothing and leaves Live usable with retry guidance and no claim that target validation passed
-    And Browse all tabs is a separate expert action that explains its broader read scope before any browser prompt
+    And denial leaves Live usable with retry guidance and no claim that target validation passed
 
   # Data layer Live guided workflow 006
   Scenario: Data layer Live guided workflow 006
     Given a permitted target emits a Purchase observation
     When its Live result opens
-    Then Assignment winner, rejected candidates, effective Profiles, schema revision, exact issues, and provenance are visible together
-    And possible documented Event-occurrence links are labelled non-authoritative and show no active Flow or step
+    Then assignment winner, rejected candidates, active Flow and step, effective Profiles, schema revision, issues, and provenance are visible together
     And the result identifies the immutable published release and never labels legacy validation as authoritative

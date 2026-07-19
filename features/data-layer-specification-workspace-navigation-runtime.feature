@@ -58,7 +58,7 @@ Feature: Data layer Specification workspace navigation runtime
       | Final order total              | documentation text      |
       | ISO 4217 currency              | rule                    |
       | /checkout/confirmation         | matcher term            |
-      | Trade missing account          | Event validation case name |
+      | Trade missing account          | fixture name            |
 
   # Data layer Specification workspace navigation runtime 006
   Scenario Outline: Data layer Specification workspace navigation runtime 006
