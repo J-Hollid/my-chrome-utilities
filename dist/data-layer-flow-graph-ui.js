@@ -13,9 +13,25 @@ function svgClientPoint(graph, clientX, clientY) { const matrix = graph.getScree
 function addSelect(form, id, labelText, choices, before) { const label = document.createElement("label"), select = document.createElement("select"); select.id = id; label.textContent = labelText; for (const [value, text] of choices)
     select.append(new Option(text, value)); label.append(select); form.insertBefore(label, before); return select; }
 export function installFlowGraphBuilder(options) {
-    const editor = q("#flow-step-editor"), addForm = q("#add-flow-step-form"), minimumLabel = q("#flow-step-minimum").closest("label");
-    editor.querySelector("summary").textContent = "Specification Flow graph and outline";
-    editor.querySelector("p").textContent = "Event payload validation remains independent; sequence, branch, and occurrence expectations are checked manually.";
+    const inspector = q("#project-inspector"), editor = q("#flow-step-editor"), addForm = q("#add-flow-step-form"), list = q("#flow-step-list"), result = q("#flow-step-result"), minimumLabel = q("#flow-step-minimum").closest("label"), inspectorContext = document.createElement("div"), documentaryEditor = document.createElement("section");
+    inspectorContext.id = "flow-inspector-context";
+    documentaryEditor.id = "flow-documentary-editor";
+    documentaryEditor.append(addForm, list, result);
+    inspector.insertBefore(inspectorContext, q("#add-entity-form"));
+    inspector.insertBefore(documentaryEditor, editor);
+    const advancedSummary = editor.querySelector("summary"), advancedCopy = editor.querySelector("p");
+    advancedSummary.textContent = "Advanced executable steps";
+    advancedCopy.textContent = "Executable-step controls define runtime sequence semantics independently of documentary journey expectations.";
+    const advancedForm = document.createElement("form"), advancedLabel = document.createElement("label"), advancedName = document.createElement("input"), advancedSubmit = document.createElement("button"), advancedList = document.createElement("ol");
+    advancedLabel.textContent = "Executable step name";
+    advancedName.required = true;
+    advancedName.setAttribute("aria-label", "Executable step name");
+    advancedSubmit.type = "submit";
+    advancedSubmit.textContent = "Add executable step";
+    advancedLabel.append(advancedName);
+    advancedForm.append(advancedLabel, advancedSubmit);
+    advancedList.setAttribute("aria-label", "Executable runtime sequence");
+    editor.append(advancedForm, advancedList);
     const role = addSelect(addForm, "flow-step-role", "Role", [["interaction", "Interaction"], ["context-setting", "Context-setting"]], minimumLabel), obligation = addSelect(addForm, "flow-step-obligation", "Obligation", [["Required", "Required"], ["Optional", "Optional"], ["Conditional", "Conditional"], ["Informational", "Informational"]], minimumLabel);
     const addName = q("#flow-step-name"), addPage = q("#flow-step-page"), addEvent = q("#flow-step-event");
     addName.required = addPage.required = addEvent.required = true;
@@ -26,7 +42,7 @@ export function installFlowGraphBuilder(options) {
     q("#flow-step-maximum").closest("label").firstChild.textContent = "Expected maximum";
     q("#flow-step-optional").closest("label").hidden = true;
     addForm.querySelector('button[type="submit"]').textContent = "Add Event occurrence";
-    let selectedRelationshipId;
+    let selectedItem, selectedRelationshipId, inspectorOnly = false;
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : { occurrences: [], relationships: [] }; return { ...context, flow, steps: graph.occurrences, relationships: graph.relationships }; };
     const synchronizedRole = (eventId, fallback) => { const event = current().state?.project.collections.events.find(({ id }) => id === eventId), eventRole = event?.role; return eventRole === "context-setting" || eventRole === "interaction" ? { role: eventRole, authoritative: true } : { role: fallback === "context-setting" ? "context-setting" : "interaction", authoritative: false }; };
     const syncRoleControl = (eventSelect, roleSelect, fallback = roleSelect.value) => { const selected = synchronizedRole(eventSelect.value, fallback); roleSelect.value = selected.role; roleSelect.disabled = selected.authoritative; roleSelect.title = selected.authoritative ? "This role is defined by the selected Event." : "Choose a fallback role until the Event definition has one."; };
@@ -35,14 +51,43 @@ export function installFlowGraphBuilder(options) {
     const occurrenceInput = (values) => ({ name: values.name, pageId: values.pageId, eventId: values.eventId, fallbackRole: values.fallbackRole, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, layout: { lane: values.lane, x: values.x, y: values.y } });
     function renderSelectors() { const { state } = current(); if (!state)
         return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); }
-    function focusOccurrence(nodeId) { document.querySelector(`[data-edit-occurrence-id="${nodeId}"]`)?.focus(); }
-    function focusRelationship(relationshipId) { queueMicrotask(() => document.querySelector(`[aria-label="Synchronized editable Flow outline"] [data-relationship-id="${relationshipId}"] button`)?.focus()); }
+    function renderInspector() {
+        inspectorOnly = true;
+        render();
+        inspectorOnly = false;
+        synchronizeRenderedOccurrenceControls();
+        const { steps, relationships } = current(), selection = selectedItem, sourceId = selection?.kind === "relationship" ? relationships.find(({ id }) => id === selection.id)?.sourceNodeId : undefined;
+        for (const item of Array.from(list.children)) {
+            const occurrenceId = item.querySelector("[data-edit-occurrence-id]")?.dataset.editOccurrenceId;
+            item.toggleAttribute("hidden", Boolean(selection && occurrenceId !== (selection.kind === "occurrence" ? selection.id : sourceId)));
+            if (selection?.kind === "relationship")
+                for (const form of Array.from(item.querySelectorAll(":scope > div > form")))
+                    form.toggleAttribute("hidden", form.querySelector("[data-edit-relationship-id]")?.dataset.editRelationshipId !== selection.id);
+        }
+        document.querySelectorAll("#flow-graph-workspace [data-occurrence-id],#flow-graph-workspace [data-relationship-id]").forEach((element) => element.classList.toggle("is-selected", element.dataset[selection?.kind === "occurrence" ? "occurrenceId" : "relationshipId"] === selection?.id));
+        documentaryEditor.querySelector(".flow-selection-heading")?.remove();
+        if (!selection)
+            return;
+        const heading = document.createElement("h3"), occurrence = steps.find(({ id }) => id === selection.id), relationship = relationships.find(({ id }) => id === selection.id), source = steps.find(({ id }) => id === relationship?.sourceNodeId), target = steps.find(({ id }) => id === relationship?.targetNodeId);
+        heading.className = "flow-selection-heading";
+        heading.tabIndex = -1;
+        heading.textContent = selection.kind === "occurrence" ? `Selected occurrence: ${occurrence?.name ?? selection.id}` : `Selected relationship: ${source?.name ?? "Unknown source"} → ${target?.name ?? "Unknown target"}`;
+        documentaryEditor.insertBefore(heading, list);
+        heading.focus({ preventScroll: true });
+    }
+    function selectItem(kind, itemId) { selectedItem = { kind, id: itemId }; renderInspector(); queueMicrotask(() => document.querySelector(kind === "occurrence" ? `[data-edit-occurrence-id="${itemId}"]` : `[data-edit-relationship-id="${itemId}"]`)?.focus()); }
+    function focusOccurrence(nodeId) { selectItem("occurrence", nodeId); }
+    function focusRelationship(relationshipId) { selectedItem = { kind: "relationship", id: relationshipId }; document.querySelectorAll("#flow-graph-workspace [data-relationship-id]").forEach((element) => element.classList.toggle("is-selected", element.dataset.relationshipId === relationshipId)); queueMicrotask(() => document.querySelector(`[aria-label="Synchronized editable Flow outline"] [data-relationship-id="${relationshipId}"] button`)?.focus()); }
     function saveLayout(flowId, nodeId, currentLayout, x, y) { const { state } = current(); if (!state)
         return; const lane = laneForX(x), layout = { lane: lane.name, x: lane.x, y: Math.max(55, Math.round(y)) }; if (layout.x === currentLayout.x && layout.y === currentLayout.y && layout.lane === currentLayout.lane) {
         document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus();
         return;
     } options.persist(moveGraphOccurrence(state, flowId, nodeId, layout)); queueMicrotask(() => document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus()); }
-    function renderGraph(form, flow) {
+    function renderGraph(host, flow) {
+        if (inspectorOnly)
+            return;
+        host = q("#flow-graph-workspace");
+        host.replaceChildren();
         const { state } = current();
         if (!state)
             return;
@@ -67,7 +112,7 @@ export function installFlowGraphBuilder(options) {
             action.addEventListener("click", () => { addEvent.value = ""; role.disabled = false; role.value = "context-setting"; q("#flow-step-name").focus(); });
             empty.append(copy, action);
             section.append(heading, boundary, empty);
-            form.append(section);
+            host.append(section);
             return;
         }
         const positions = new Map(projection.graph.nodes.map((node, index) => [node.id, node.layout ?? { lane: node.role === "context-setting" ? "Context" : "Shipping", x: node.role === "context-setting" ? 30 : 230, y: 70 + index * 120 }])), canvasHeight = Math.max(360, ...Array.from(positions.values(), ({ y }) => y + 150));
@@ -89,19 +134,27 @@ export function installFlowGraphBuilder(options) {
             const source = positions.get(relationship.sourceNodeId), target = positions.get(relationship.targetNodeId);
             if (!source || !target)
                 continue;
-            const record = flowRelationshipText(projection.graph, relationship), item = document.createElement("li"), button = document.createElement("button"), edge = document.createElementNS(graph.namespaceURI, "g"), line = document.createElementNS(graph.namespaceURI, "line"), arrow = document.createElementNS(graph.namespaceURI, "polygon"), label = document.createElementNS(graph.namespaceURI, "text"), geometry = flowEdgeGeometry(source, target);
+            const record = flowRelationshipText(projection.graph, relationship), item = document.createElement("li"), button = document.createElement("button"), edge = document.createElementNS(graph.namespaceURI, "g"), line = document.createElementNS(graph.namespaceURI, "line"), arrow = document.createElementNS(graph.namespaceURI, "polygon"), label = document.createElementNS(graph.namespaceURI, "text"), geometry = flowEdgeGeometry(source, target), selected = selectedItem?.kind === "relationship" && relationship.id === selectedItem.id, select = () => selectItem("relationship", relationship.id);
             button.type = "button";
             button.textContent = record;
-            button.setAttribute("aria-current", String(relationship.id === selectedRelationshipId));
-            button.addEventListener("click", () => document.querySelector(`[data-edit-relationship-id="${relationship.id}"]`)?.focus());
+            button.setAttribute("aria-current", String(selected));
+            button.addEventListener("click", select);
             item.dataset.relationshipId = relationship.id;
-            item.classList.toggle("is-selected", relationship.id === selectedRelationshipId);
+            item.classList.toggle("is-selected", selected);
             item.append(button);
             outline.append(item);
             edge.dataset.relationshipId = relationship.id;
             edge.dataset.directed = "true";
             edge.classList.add("flow-edge");
-            edge.classList.toggle("is-selected", relationship.id === selectedRelationshipId);
+            edge.classList.toggle("is-selected", selected);
+            edge.tabIndex = 0;
+            edge.setAttribute("role", "button");
+            edge.setAttribute("aria-label", `Edit relationship ${record}`);
+            edge.addEventListener("click", select);
+            edge.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                select();
+            } });
             line.setAttribute("x1", String(geometry.startX));
             line.setAttribute("y1", String(geometry.startY));
             line.setAttribute("x2", String(geometry.endX));
@@ -175,7 +228,7 @@ export function installFlowGraphBuilder(options) {
         outlineView.append(outlineHeading, outline);
         views.append(graphView, outlineView);
         section.append(heading, boundary, views, diagnostics);
-        form.append(section);
+        host.append(section);
     }
     function render() {
         const list = q("#flow-step-list");
@@ -273,6 +326,8 @@ export function installFlowGraphBuilder(options) {
         q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
     } });
     addForm.addEventListener("reset", () => queueMicrotask(() => { role.disabled = false; role.value = "interaction"; }));
-    return { render: () => { render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); }, renderSelectors };
+    advancedForm.addEventListener("submit", (event) => { event.preventDefault(); const { state, flow } = current(); if (!state || !flow || !advancedName.value.trim())
+        return; options.persist(options.addExecutableStep(state, flow.id, advancedName.value.trim())); advancedName.value = ""; });
+    return { render: () => { const { flow } = current(), active = Boolean(flow), executableSteps = flow ? flow.steps ?? [] : []; documentaryEditor.hidden = !active; editor.hidden = !active; render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); advancedList.replaceChildren(...executableSteps.map((step, index) => { const item = document.createElement("li"); item.textContent = `${index + 1}. ${step.name}`; return item; })); }, renderSelectors };
 }
 //# sourceMappingURL=data-layer-flow-graph-ui.js.map

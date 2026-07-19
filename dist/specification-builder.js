@@ -1,4 +1,4 @@
-import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, addFlowStep, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
@@ -257,50 +257,73 @@ function renderCollectionGuidance(content) { if (!state)
     section.append(heading, tasks, map, next, reason, worked);
 } if (section.childElementCount)
     content.append(section); }
-function renderWorkspace() { const content = q("#workspace-content"); content.replaceChildren(); if (!state)
-    return; const search = q("#project-search").value.trim().toLowerCase(); if (search) {
-    const matches = Object.keys(labels).flatMap((kind) => entitiesForKind(kind).filter((entity) => entitySearchText(entity).includes(search)).map((entity) => ({ kind, entity }))).slice(0, 40);
-    const heading = document.createElement("h1");
-    heading.textContent = "Global search";
-    const count = document.createElement("p");
+function renderWorkspace() {
+    const content = q("#workspace-content");
+    content.replaceChildren();
+    if (!state)
+        return;
+    const search = q("#project-search").value.trim().toLowerCase();
+    if (search) {
+        const matches = Object.keys(labels).flatMap((kind) => entitiesForKind(kind).filter((entity) => entitySearchText(entity).includes(search)).map((entity) => ({ kind, entity }))).slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul");
+        heading.textContent = "Global search";
+        count.className = "status-text";
+        count.textContent = `${matches.length} matching project entities`;
+        list.className = "entity-grid";
+        for (const { kind, entity } of matches) {
+            const row = document.createElement("li"), select = document.createElement("button"), location = document.createElement("span"), used = document.createElement("span");
+            row.className = "entity-row";
+            select.type = "button";
+            select.textContent = entity.name;
+            select.addEventListener("click", () => { selectedKind = kind; selectedId = entity.id; persistNavigation(); q("#project-search").value = ""; render(); });
+            location.className = "search-location";
+            location.textContent = labels[kind];
+            used.textContent = `Used ${whereUsed(entity.id).length} times`;
+            row.append(select, location, used);
+            list.append(row);
+        }
+        content.append(heading, count, list);
+        q("#project-breadcrumb").textContent = `${state.project.name} / Search / ${search}`;
+        return;
+    }
+    const all = entitiesForKind(selectedKind), selected = all.find(({ id }) => id === selectedId);
+    q("#project-breadcrumb").textContent = `${state.project.name} / ${labels[selectedKind]}${selectedId ? ` / ${selected?.name ?? selectedId}` : ""}`;
+    q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity.";
+    if (selectedKind === "flows" && selected) {
+        const heading = document.createElement("h1"), graphHost = document.createElement("div"), inspectorHost = q("#flow-inspector-context");
+        heading.textContent = selected.name;
+        graphHost.id = "flow-graph-workspace";
+        content.append(heading, graphHost);
+        inspectorHost.replaceChildren();
+        renderSelectedEntityEditor(inspectorHost, selected);
+        return;
+    }
+    q("#flow-inspector-context").replaceChildren();
+    renderCollectionGuidance(content);
+    const visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul");
+    heading.textContent = labels[selectedKind];
     count.className = "status-text";
-    count.textContent = `${matches.length} matching project entities`;
-    const list = document.createElement("ul");
+    count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}`;
     list.className = "entity-grid";
-    for (const { kind, entity } of matches) {
-        const row = document.createElement("li");
+    list.setAttribute("role", "listbox");
+    for (const entity of visible) {
+        const row = document.createElement("li"), select = document.createElement("button"), kindText = document.createElement("span"), usage = document.createElement("span");
         row.className = "entity-row";
-        const select = document.createElement("button");
+        row.dataset.entityId = entity.id;
+        row.setAttribute("role", "option");
+        row.setAttribute("aria-selected", String(entity.id === selectedId));
         select.type = "button";
         select.textContent = entity.name;
-        select.addEventListener("click", () => { selectedKind = kind; selectedId = entity.id; persistNavigation(); q("#project-search").value = ""; render(); });
-        const location = document.createElement("span");
-        location.className = "search-location";
-        location.textContent = labels[kind];
-        const used = document.createElement("span");
-        used.textContent = `Used ${whereUsed(entity.id).length} times`;
-        row.append(select, location, used);
+        select.addEventListener("click", () => { selectedId = entity.id; persistNavigation(); render(); });
+        kindText.className = "search-location";
+        kindText.textContent = labels[selectedKind];
+        usage.textContent = `Used ${whereUsed(entity.id).length} times`;
+        row.append(select, kindText, usage);
         list.append(row);
     }
     content.append(heading, count, list);
-    q("#project-breadcrumb").textContent = `${state.project.name} / Search / ${search}`;
-    return;
-} renderCollectionGuidance(content); const all = entitiesForKind(selectedKind), visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul"); heading.textContent = labels[selectedKind]; count.className = "status-text"; count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}`; list.className = "entity-grid"; list.setAttribute("role", "listbox"); for (const entity of visible) {
-    const row = document.createElement("li"), select = document.createElement("button"), kindText = document.createElement("span"), usage = document.createElement("span");
-    row.className = "entity-row";
-    row.dataset.entityId = entity.id;
-    row.setAttribute("role", "option");
-    row.setAttribute("aria-selected", String(entity.id === selectedId));
-    select.type = "button";
-    select.textContent = entity.name;
-    select.addEventListener("click", () => { selectedId = entity.id; persistNavigation(); render(); });
-    kindText.className = "search-location";
-    kindText.textContent = labels[selectedKind];
-    usage.textContent = `Used ${whereUsed(entity.id).length} times`;
-    row.append(select, kindText, usage);
-    list.append(row);
-} content.append(heading, count, list); q("#project-breadcrumb").textContent = `${state.project.name} / ${labels[selectedKind]}${selectedId ? ` / ${all.find(({ id }) => id === selectedId)?.name ?? selectedId}` : ""}`; const selected = all.find(({ id }) => id === selectedId); q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity."; if (selected)
-    renderSelectedEntityEditor(content, selected); }
+    if (selected)
+        renderSelectedEntityEditor(content, selected);
+}
 function whereUsed(identity) { if (!state)
     return []; const result = []; for (const [kind, entities] of Object.entries(state.project.collections))
     for (const entity of entities)
@@ -559,7 +582,7 @@ q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
     return;
 } if (state)
     persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
-flowGraphBuilder = installFlowGraphBuilder({ context: () => ({ ...state ? { state } : {}, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) }), persist, id });
+flowGraphBuilder = installFlowGraphBuilder({ context: () => ({ ...state ? { state } : {}, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) }), persist, addExecutableStep: (current, flowId, name) => addFlowStep(current, flowId, { name, minimum: 1, maximum: 1, optional: false, transitions: [] }, id), id });
 restore();
 if (!state) {
     const stagedStart = localStorage.getItem(START_PATH_KEY);
