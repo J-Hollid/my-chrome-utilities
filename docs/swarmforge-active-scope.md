@@ -3,17 +3,23 @@
 ## Current authority
 
 The active specification cycles are the interactive directional Flow graph review
-checkpoint and the focused layered effective-schema checkpoint. Their contracts are:
+checkpoint and the focused canonical authoring and layered effective-schema
+checkpoint. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
+- `features/data-layer-canonical-shared-profile-schema-authoring.feature`
+- `features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature`
 - `features/data-layer-layered-schema-constraints.feature`
 - `features/data-layer-layered-schema-constraints-runtime.feature`
 
-The user-approved layered-schema cycle is later authority than the earlier
-graph-only scope reduction. It supersedes that reduction only for behavior named
-by the two layered-schema contracts above. Agents must not discard, reject, or
-classify this cycle as inactive because of the earlier reduction.
+The correction program for the four schema contracts is
+`docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
+
+The user-approved canonical-authoring and layered-schema cycles are later authority
+than the earlier graph-only scope reduction. They supersede that reduction only for
+behavior named by the four schema contracts above. Agents must not discard, reject,
+or classify these cycles as inactive because of the earlier reduction.
 
 The checkpoint covers human Page and Event selectors, context-setting and
 interaction occurrences, expected-next/alternative/parallel/merge relationships,
@@ -31,20 +37,33 @@ context-binding references without inventing Page Group membership. Any retained
 executable-step authoring is an explicitly separate Advanced function and does not
 duplicate or replace documentary graph authoring.
 
-The layered schema checkpoint makes Shared Profiles the rich base-schema authoring
-surface; composes Event, Page Group, Page, Flow Page-instance, and Event-occurrence
-constraints; and supports automatic applicability, manual assignment, or explicit
-documentation-only activation. It includes only the effective-schema developer export
-for a selected context. The cycle requires the named integration with the existing
-assignment resolver and per-Event validator, the Shared Profile editing parity between
-Builder and side panel, and Flow selection restoration specified by its scenarios.
-These requirements are not a general Assignment, resolver, or cross-surface concurrency
-redesign. General Assignment redesign, resolver redesign beyond that integration,
-project-wide documentation export beyond the selected-context export, fixtures,
-coverage, preflight, release, Live, broad cross-surface concurrency beyond the named
-editing parity, and temporal Flow execution are not active work. A future slice
-requires product-owner review, a new approved specification cycle, and a new
-file-based SwarmForge handoff.
+The canonical authoring checkpoint replaces the current lightweight requirements
+grid, structured draft, and path-constraint overlay as competing editable schema
+models. Shared Profiles own one canonical revisioned property tree. Builder and side
+panel use the same complete editor core, including structural nested authoring,
+typed properties, conditional presence, allowed values, rich rules, documentation,
+examples, nested All/Any/Not predicate building, revision comparison, and
+synchronized Tree and Table views. Existing
+profile data migrates atomically without loss. Command-scoped patches, base
+revisions, and subscriptions prevent stale whole-profile overwrites.
+
+The layered schema checkpoint uses that same property and rule model for Shared
+Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
+contributions. Contributor kind changes contextual applicability and provenance,
+not authoring capabilities. Page and Event branches compose for a contained Event
+occurrence; incompatible parallel rules block until explicitly resolved. The
+checkpoint supports automatic applicability, manual assignment, or explicit
+Documentation-only activation and includes only the effective-schema developer
+export for a selected context.
+
+The cycle requires named integration with the existing assignment resolver and
+per-Event validator plus Flow selection restoration. These requirements are not a
+general Assignment or resolver redesign. Project-wide documentation export,
+fixtures, coverage, preflight, release, Live, temporal Flow execution, and
+cross-surface concurrency beyond the canonical schema editor are not active work.
+Agent role-playing without source knowledge and facilitated Windows usability are
+not acceptance gates. A future slice requires product-owner review, a new approved
+specification cycle, and a new file-based SwarmForge handoff.
 
 ## Archived material
 
@@ -56,12 +75,13 @@ removed from the active tree on 2026-07-19. Their anchor commit is an ancestor o
 - Local convenience branch: `archive/data-layer-r02-r04-specifications-2026-07-19`
 
 That snapshot contains all 60 behavior/runtime feature files from the completed
-specification work. Master retains the two graph contracts named above and removes
-the other 58: 28 full-site R01 files, 22 correction R02/R04 files, and eight
-deferred Flow-slice files, together containing 545 scenarios. The archive also
-contains 11 detailed program/assessment documents and 111 schema-editor or
-side-panel walkthrough artifacts. These are reference material, not acceptance
-authority.
+specification work. The scope reduction retained the two graph contracts and
+removed the other 58: 28 full-site R01 files, 22 correction R02/R04 files, and eight
+deferred Flow-slice files, together containing 545 scenarios. The four schema
+contracts now listed as current authority were added or revised by later approved
+cycles; they do not reactivate the archived files. The archive also contains 11
+detailed program/assessment documents and 111 schema-editor or side-panel
+walkthrough artifacts. These are reference material, not acceptance authority.
 
 The following compact manifest is a names-only, non-authoritative history locator.
 Each listed stem denotes both `data-layer-<stem>.feature` and
@@ -119,6 +139,10 @@ The layered effective-schema checkpoint sequence is exactly:
 node scripts/run-focused-acceptance.mjs --pack layered_schema
 node scripts/package.mjs
 ```
+
+The `layered_schema` pack must register all four canonical-authoring and layered-
+schema feature contracts and their focused production evidence. Adding the new
+contracts does not authorize extra checkpoint commands.
 
 Each pack command performs its registered type/build, focused unit tests, installed
 browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
