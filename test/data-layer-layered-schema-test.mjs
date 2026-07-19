@@ -5,7 +5,7 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {appendSharedProfileConstraint,effectivePropertySummary,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
@@ -105,5 +105,14 @@ assert.deepEqual(editedProfileDraft.project.collections.profiles[0].schemaConstr
 assert.equal(editedProfileDraft.project.collections.profiles[0].compiledTargetsStale,true);
 assert.equal(editedProfileDraft.history.undo.at(-1).label,"Save schema constraint for Sitewide");
 assert.throws(()=>appendSharedProfileConstraint(profileDraft,"profile:missing",{path:"/value"}),/Shared Profile profile:missing is unavailable/);
+
+const detailState=structuredClone(pathState),detailOccurrence=detailState.project.documentationFlowGraphs["flow:selected"].occurrences[0];
+detailState.project.collections.profiles[0].schemaConstraints=[{path:"/profile_value",target:"all",condition:{field:"country",equals:"NL"},enforcement:"invariant"}];
+detailState.project.collections.events[0].schemaConstraints=[{path:"/event_value",target:"event:selected",enforcement:"overridable"}];
+const detailRows=layeredContributionDetails(detailState,detailOccurrence,"Event-occurrence","flow:selected");
+assert.deepEqual(detailRows.slice(0,2),[
+  {contributorId:"profile:selected",contributorName:"Selected",scope:"Shared Profile",path:"/profile_value",target:"all",condition:'{"field":"country","equals":"NL"}',enforcement:"invariant",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
+  {contributorId:"event:selected",contributorName:"Selected event",scope:"Event",path:"/event_value",target:"event:selected",condition:"Always",enforcement:"overridable",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
+]);
 
 console.log("data-layer layered schema tests passed");

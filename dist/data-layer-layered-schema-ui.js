@@ -78,6 +78,7 @@ export function layeredContributorsForPath(state, path) {
     const one = (entities, id, scope) => id ? entities.filter((entity) => entity.id === id).map((entity) => contributionFor(entity, scope)) : [];
     return [...one(state.project.collections.profiles, path.profileId, "Shared Profile"), ...one(state.project.collections.events, path.eventId, "Event"), ...one(state.project.collections.pageGroups, path.pageGroupId, "Page Group"), ...one(state.project.collections.pages, path.pageId, "Page"), ...one(state.project.collections.flows, path.flowId, "Flow Page-instance"), ...(occurrence ? [contributionFor(occurrence, occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence")] : [])];
 }
+export function layeredContributionDetails(state, entity, scope, flowId) { return layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)).flatMap((contributor) => contributor.constraints.map((constraint) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, path: constraint.path, target: constraint.target ?? "all", condition: constraint.condition ? JSON.stringify(constraint.condition) : "Always", enforcement: constraint.enforcement ?? "not set", usedById: entity.id, usedByName: entity.name, usedByScope: scope }))); }
 export function installLayeredSchemaUi(options) {
     const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
     let graphSelection, graphSelectionScope, returnFocus, flowReturn;
@@ -161,6 +162,22 @@ export function installLayeredSchemaUi(options) {
         identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`;
         areas.setAttribute("aria-label", "Constraint result layers");
         areas.textContent = `Inherited constraints · Local contributions · Effective results · Superseded expectations · Blocking conflicts (${compiled.conflicts.length})`;
+        const contributionDetails = document.createElement("section"), contributionHeading = document.createElement("h3"), contributionList = document.createElement("ul");
+        contributionDetails.setAttribute("aria-label", "Layered contribution details");
+        contributionHeading.textContent = "Contribution provenance and relationships";
+        for (const detail of layeredContributionDetails(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined)) {
+            const item = document.createElement("li");
+            item.dataset.contributorId = detail.contributorId;
+            item.dataset.constraintPath = detail.path;
+            item.textContent = `${detail.contributorName} · ${detail.scope} · ${detail.path} · Target events: ${detail.target} · Condition: ${detail.condition} · Enforcement policy: ${detail.enforcement} · Used by: ${detail.usedByName} (${detail.usedByScope})`;
+            contributionList.append(item);
+        }
+        if (!contributionList.children.length) {
+            const empty = document.createElement("li");
+            empty.textContent = `No inherited or local contributions yet · Used by: ${entity.name} (${scope})`;
+            contributionList.append(empty);
+        }
+        contributionDetails.append(contributionHeading, contributionList);
         search.type = "search";
         search.setAttribute("aria-label", "Add constraint inherited property search");
         search.placeholder = "Search inherited property paths";
@@ -198,7 +215,7 @@ export function installLayeredSchemaUi(options) {
         }
         else
             returnFocus?.focus({ preventScroll: true }); });
-        editor.append(title, identity, areas, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
+        editor.append(title, identity, areas, contributionDetails, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
