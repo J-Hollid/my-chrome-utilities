@@ -22,10 +22,11 @@ new approved specification cycle, and a new file-based SwarmForge handoff.
 ## Archived material
 
 Detailed full-site R01, correction R02/R04, and later Flow specifications were
-removed from the active tree on 2026-07-19. They remain available at:
+removed from the active tree on 2026-07-19. Their anchor commit is an ancestor of
+`master`, so it remains available in a normal full clone:
 
-- Branch: `archive/data-layer-r02-r04-specifications-2026-07-19`
 - Anchor commit: `d346e89a4c98376b2e85ec48963c2b07af6fe3c0`
+- Local convenience branch: `archive/data-layer-r02-r04-specifications-2026-07-19`
 
 That snapshot contains all 60 behavior/runtime feature files from the completed
 specification work. Master retains the two graph contracts named above and removes
@@ -38,11 +39,13 @@ authority.
 Recovery examples:
 
 ```sh
-git show archive/data-layer-r02-r04-specifications-2026-07-19:docs/full-site-data-layer-specification-correction-program-R04.md
-git worktree add /tmp/data-layer-specification-archive archive/data-layer-r02-r04-specifications-2026-07-19
+git show d346e89a4c98376b2e85ec48963c2b07af6fe3c0:docs/full-site-data-layer-specification-correction-program-R04.md
+git worktree add --detach /tmp/data-layer-specification-archive d346e89a4c98376b2e85ec48963c2b07af6fe3c0
 ```
 
-Unmerged experiments are preserved separately and must not be merged wholesale:
+Unmerged experiments are preserved under local-only branches and must not be
+merged wholesale. They will not appear in a fresh clone unless deliberately
+published or otherwise exported:
 
 - `archive/r02-page-resolver-wip-2026-07-19`
 - `archive/r02-refactorer-recovery-8e9-2026-07-19`
