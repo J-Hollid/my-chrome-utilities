@@ -1,4 +1,4 @@
-import { compileLayeredSchema } from "./data-layer-layered-schema.js";
+import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
 import { transactProject } from "./data-layer-specification-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -15,9 +15,70 @@ export function installLayeredSchemaUi(options) {
     inspector.insertBefore(summary, inspector.firstChild?.nextSibling ?? null);
     workspace.prepend(editor);
     const current = () => { const { state, kind, entityId } = options.context(), entity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined; return { state, kind, entity: graphSelection ?? entity, scope: graphSelection ? "Event-occurrence" : scopeFor(kind) }; };
-    const allContributors = (state) => [
-        ...state.project.collections.profiles.map((entity) => contributionFor(entity, "Shared Profile")), ...state.project.collections.events.map((entity) => contributionFor(entity, "Event")), ...state.project.collections.pageGroups.map((entity) => contributionFor(entity, "Page Group")), ...state.project.collections.pages.map((entity) => contributionFor(entity, "Page")), ...state.project.collections.flows.map((entity) => contributionFor(entity, "Flow Page-instance")),
-    ];
+    const allContributors = (state) => {
+        const graphs = state.project.documentationFlowGraphs, graphContributors = Object.values(graphs ?? {}).flatMap(({ occurrences }) => (occurrences ?? []).map((entity) => contributionFor(entity, entity.freePageFrame ? "Flow Page-instance" : "Event-occurrence")));
+        return [
+            ...state.project.collections.profiles.map((entity) => contributionFor(entity, "Shared Profile")), ...state.project.collections.events.map((entity) => contributionFor(entity, "Event")), ...state.project.collections.pageGroups.map((entity) => contributionFor(entity, "Page Group")), ...state.project.collections.pages.map((entity) => contributionFor(entity, "Page")), ...state.project.collections.flows.map((entity) => contributionFor(entity, "Flow Page-instance")), ...graphContributors,
+        ];
+    };
+    const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
+    const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(allContributors(state), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
+    function renderRuntimeControls(state, entity, scope, compiled) {
+        const section = document.createElement("section"), heading = document.createElement("h3"), propertyTree = document.createElement("ol"), activation = document.createElement("select"), priority = document.createElement("input"), applicability = document.createElement("textarea"), saveTarget = document.createElement("button"), observation = document.createElement("textarea"), test = document.createElement("button"), assignmentResult = document.createElement("pre"), manual = document.createElement("select"), payload = document.createElement("textarea"), validate = document.createElement("button"), validationResult = document.createElement("pre"), developerExport = document.createElement("button"), exportResult = document.createElement("pre"), existing = storedTargets(state).find(({ contributorId }) => contributorId === entity.id);
+        section.setAttribute("aria-label", "Effective schema operations");
+        heading.textContent = "Compiled effective schema and activation";
+        propertyTree.setAttribute("aria-label", "Compiled layered property tree");
+        for (const [path, property] of Object.entries(compiled.properties)) {
+            const item = document.createElement("li");
+            item.textContent = `${path} · ${property.origins.map(({ scope: originScope, contributorName }) => `${originScope}: ${contributorName}`).join(" → ")}${property.superseded.length ? ` · superseded ${property.superseded.map(({ contributorName, value }) => `${contributorName} ${String(value)}`).join(", ")}` : ""}`;
+            propertyTree.append(item);
+        }
+        for (const conflict of compiled.conflicts) {
+            const item = document.createElement("li"), left = document.createElement("button"), right = document.createElement("button");
+            item.className = "error";
+            left.type = right.type = "button";
+            left.textContent = conflict.contributors[0] ?? "Earlier contributor";
+            right.textContent = conflict.contributors[1] ?? entity.name;
+            item.append(`${conflict.path}: ${conflict.message} · `, left, " ↔ ", right);
+            propertyTree.append(item);
+        }
+        for (const value of ["automatic", "manual", "documentation-only"])
+            activation.append(new Option(value === "documentation-only" ? "Documentation only" : value, value));
+        activation.setAttribute("aria-label", "Layered target activation");
+        activation.value = existing?.activation ?? "manual";
+        priority.type = "number";
+        priority.value = String(existing?.priority ?? 10);
+        priority.setAttribute("aria-label", "Layered target priority");
+        applicability.setAttribute("aria-label", "Layered applicability predicates");
+        applicability.value = JSON.stringify(existing?.applicability ?? [], null, 2);
+        saveTarget.type = "button";
+        saveTarget.textContent = "Save activation target";
+        saveTarget.addEventListener("click", () => { const context = { eventId: String(entity.eventId ?? entity.id), eventRole: (entity.occurrenceType === "page-context" ? "context" : "interaction"), ...(scope === "Event-occurrence" ? { occurrenceId: entity.id } : {}) }, target = { id: existing?.id ?? `layered-target:${entity.id}`, name: entity.name, contributorId: entity.id, activation: activation.value, priority: Number(priority.value), applicability: JSON.parse(applicability.value || "[]"), ...context, revision: (existing?.revision ?? 0) + 1, flowName: String(entity.flowName ?? "Checkout journey"), pageName: String(entity.pageName ?? entity.pageId ?? "Shipping Page"), eventName: String(entity.eventName ?? "Purchase Event") }, next = transactProject(state, `Save layered activation for ${entity.name}`, (project) => ({ ...project, layeredSchemaTargets: [...(project.layeredSchemaTargets ?? []).filter(({ contributorId }) => contributorId !== entity.id), target] })); options.persist(next); renderEditor(); });
+        observation.setAttribute("aria-label", "Applicability test observation");
+        observation.value = '{"pathname":"/checkout/shipping","page_name":"shipping","checkout_variant":"alternative","eventName":"Purchase"}';
+        test.type = "button";
+        test.textContent = "Test automatic applicability";
+        assignmentResult.setAttribute("aria-label", "Layered assignment evidence");
+        test.addEventListener("click", () => { const result = resolveLayeredTarget(executableTargets(current().state), JSON.parse(observation.value)); assignmentResult.textContent = JSON.stringify({ selectionMode: result.selectionMode, winner: result.winner?.name, ties: result.ties, candidates: result.candidates }, null, 2); });
+        manual.setAttribute("aria-label", "Manual layered target");
+        manual.append(new Option("Choose Flow / Page / Event target", ""), ...storedTargets(state).filter(({ activation: mode }) => mode === "manual").map((target) => new Option(`${target.flowName} / ${target.pageName} / ${target.eventName}`, target.id)));
+        payload.setAttribute("aria-label", "Layered validation payload");
+        payload.value = '{"funnel_step":"3a","funnel_name":"checkout"}';
+        validate.type = "button";
+        validate.textContent = "Validate selected layered target";
+        validationResult.setAttribute("aria-label", "Layered validation result");
+        validate.addEventListener("click", () => { const targets = executableTargets(current().state), manualResolution = manual.value ? resolveLayeredTarget(targets, {}, { manualTargetId: manual.value }) : undefined, automaticResolution = manual.value ? undefined : resolveLayeredTarget(targets, JSON.parse(observation.value)), winner = manualResolution?.winner ?? automaticResolution?.winner; if (!winner) {
+            validationResult.textContent = JSON.stringify({ blocked: true, ties: automaticResolution?.ties ?? [], automaticWinnerClaim: false });
+            return;
+        } const stored = storedTargets(current().state).find(({ id }) => id === winner.id); validationResult.textContent = JSON.stringify({ ...validateLayeredObservation({ targetId: winner.id, targetName: winner.name, revision: stored.revision, compiled: winner.compiled }, JSON.parse(payload.value)), selectionMode: manualResolution ? "manual" : "automatic", automaticWinnerClaim: Boolean(automaticResolution?.winner) }, null, 2); });
+        developerExport.type = "button";
+        developerExport.textContent = "Generate effective schema developer export";
+        exportResult.setAttribute("aria-label", "Effective schema developer export");
+        developerExport.addEventListener("click", () => { const target = storedTargets(current().state).find(({ contributorId }) => contributorId === entity.id); exportResult.textContent = exportLayeredSchema({ targetName: target?.flowName ?? entity.name, pageName: target?.pageName ?? String(entity.pageId ?? "Page"), eventName: target?.eventName ?? String(entity.eventId ?? "Event"), activation: target?.activation ?? "manual", compiled }); });
+        const labeled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };
+        section.append(heading, propertyTree, labeled("Activation", activation), labeled("Priority", priority), labeled("Applicability", applicability), saveTarget, labeled("Test observation", observation), test, assignmentResult, labeled("Manual Flow / Page / Event", manual), labeled("Validation payload", payload), validate, validationResult, developerExport, exportResult);
+        return section;
+    }
     function renderSummary() { const { state, entity, scope } = current(); summary.replaceChildren(); if (!state || !entity) {
         summary.hidden = true;
         return;
@@ -72,7 +133,7 @@ export function installLayeredSchemaUi(options) {
         back.type = "button";
         back.textContent = "Return to Flow";
         back.addEventListener("click", () => { editor.hidden = true; Array.from(workspace.children).forEach((child) => child.hidden = false); returnFocus?.focus(); });
-        editor.append(title, identity, areas, search, tree, form, status, back);
+        editor.append(title, identity, areas, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
