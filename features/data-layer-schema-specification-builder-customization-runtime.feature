@@ -86,15 +86,3 @@ Feature: Data layer schema specification builder customization runtime
     Then row-specific example overrides reset while copy and column preferences remain
     And clipboard fallback retains the configured headings, columns, rows, and examples
     And closing the builder leaves production schemas, documentation, and rules unchanged
-
-  # Data layer schema specification builder customization runtime 008
-  Scenario Outline: Data layer schema specification builder customization runtime 008
-    Given installed <origin_surface> has customized the production rich specification builder
-    When Continue on <destination_surface> is activated
-    Then the destination opens the same schema revision, selected properties, column order, headings, style, and example choices
-    And every customization remains operable and produces matching Spreadsheet and Rich table clipboard output
-    And returning restores exact focus and configuration without a schema, project, or revision mutation
-    Examples:
-      | origin_surface | destination_surface |
-      | side panel | standalone Builder |
-      | standalone Builder | side panel |

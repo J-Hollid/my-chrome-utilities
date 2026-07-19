@@ -8,6 +8,11 @@
 - Preserve project-local SwarmForge configuration under `swarmforge/`.
 - Keep swarm state local under `.swarmforge/`, worktrees under `.worktrees/`, and shared scripts under `swarmforge/scripts/`.
 
+## Active Specification Scope
+- Before starting or resuming data-layer specification work, read `docs/swarmforge-active-scope.md`.
+- Treat archived branches, completed handoffs, historical commits, recovery refs, and workspace-local walkthroughs as non-authoritative unless a new user-approved specifier handoff explicitly activates them.
+- Use the task-scoped verification commands named by the active scope. Do not infer a current implementation program from the full regression suite.
+
 ## Handoffs
 - Prefer terse, explicit handoffs that report state and request role-appropriate review. Do not include verifications or sender process narrative.
 

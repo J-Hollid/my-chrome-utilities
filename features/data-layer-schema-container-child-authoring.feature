@@ -91,17 +91,3 @@ Feature: Data layer schema container child authoring
     And both remain identified as Manual with their selected value types
     And /products/*/product_name remains present
     And current revision 3 remains unchanged
-
-  # Data layer schema container child authoring 008
-  Scenario: Data layer schema container child authoring 008
-    Given /ecommerce is an explicit object requirement and /ecommerce/transaction_id is an explicit string child requirement
-    When the operator opens the compiled effective preview
-    Then both requirements appear in one nested document with their authored provenance
-    And Save, preflight, coverage, and release remain available without renaming or removing the parent requirement
-
-  # Data layer schema container child authoring 009
-  Scenario: Data layer schema container child authoring 009
-    Given a parent or child requirement cannot compile
-    When compilation is requested from any authoring or assurance action
-    Then the prior valid preview remains identified as prior
-    And a visible compiler issue names the human Profile, exact path, field, cause, and repair action

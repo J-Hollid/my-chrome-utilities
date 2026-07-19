@@ -65,17 +65,3 @@ Feature: Data layer schema container child authoring runtime
     Then production persistence remains byte-equivalent and Go to existing property /products/*/product_name is rendered
     When the rendered form is cancelled
     Then the dialog closes and focus returns to Add item property on /products
-
-  # Data layer schema container child authoring runtime 006
-  Scenario: Data layer schema container child authoring runtime 006
-    Given the installed Profile editor contains explicit /ecommerce and /ecommerce/transaction_id requirements
-    When the operator saves and runs preflight through rendered controls
-    Then the installed Builder renders one nested effective document without a silent exception
-    And the executable plan contains both paths with the same types and provenance
-
-  # Data layer schema container child authoring runtime 007
-  Scenario: Data layer schema container child authoring runtime 007
-    Given an invalid scalar parent conflicts with an authored child path
-    When the operator invokes effective preview
-    Then a visible compiler error focuses the exact parent Type field
-    And the last valid executable plan remains unchanged and is not labelled current draft output

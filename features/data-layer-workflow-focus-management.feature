@@ -7,7 +7,7 @@ Feature: Data Layer workflow focus management
   Scenario Outline: Data Layer workflow focus management 001
     Given <tab_set> tab <initial_tab> is selected and has keyboard focus
     When the operator presses <navigation_key>
-    Then keyboard focus and selection move to <target_tab> in <tab_set>
+    Then <tab_set> tab <target_tab> is selected and has keyboard focus
     And only the panel associated with <target_tab> is displayed
     And the selected tab is the only tab in <tab_set> with tab stop position 0
 
@@ -92,25 +92,3 @@ Feature: Data Layer workflow focus management
       | Back to captured event                  | originating purchase event row              |
     And the workflow verifies push-confirmation focus containment with Tab and Shift+Tab
     And no transition leaves focus on the document body, hidden content, or an unrelated control
-
-  # Data Layer workflow focus management 007
-  Scenario Outline: Data Layer workflow focus management 007
-    Given the installed Builder project tree has focus on <initial_item>
-    When the operator uses tree navigation key <key>
-    Then focus moves to <target_item> without opening an unrelated workspace
-    And the focused item is the tree's only tab stop
-    Examples:
-      | initial_item | key | target_item |
-      | Pages | ArrowDown | Page groups |
-      | Page groups | ArrowUp | Pages |
-      | Flows | Home | Shared profiles |
-      | Pages | End | Releases |
-
-  # Data Layer workflow focus management 008
-  Scenario: Data Layer workflow focus management 008
-    Given preflight reports an error in Retail confirmation requirements at /ecommerce/currency Allowed values
-    When the operator opens the error
-    Then the Retail confirmation requirements editor opens with the Allowed values control focused
-    And its accessible name includes Retail confirmation requirements, /ecommerce/currency, and Allowed values
-    When the error is repaired and saved
-    Then focus returns to the originating preflight result and the repaired status is announced once

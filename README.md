@@ -2,6 +2,10 @@
 
 A small Manifest V3 side panel extension.
 
+Current SwarmForge specification scope is recorded in
+[`docs/swarmforge-active-scope.md`](docs/swarmforge-active-scope.md). Historical
+data-layer correction programs are archived and are not implementation authority.
+
 ## Portable Build
 
 Create the unpacked extension build:

@@ -57,18 +57,3 @@ Feature: Data layer Live guided workflow
       | target_readiness | setup_action           |
       | Ready            | Start testing Checkout |
       | Unavailable      | Choose target           |
-
-  # Data layer Live guided workflow 005
-  Scenario: Data layer Live guided workflow 005
-    Given target discovery needs browsing access that has not been granted
-    When the operator opens Choose target
-    Then Live explains which pages require access, why observation needs it, and whether the grant persists
-    And Request access is a deliberate action before the browser permission prompt
-    And denial leaves Live usable with retry guidance and no claim that target validation passed
-
-  # Data layer Live guided workflow 006
-  Scenario: Data layer Live guided workflow 006
-    Given a permitted target emits a Purchase observation
-    When its Live result opens
-    Then assignment winner, rejected candidates, active Flow and step, effective Profiles, schema revision, issues, and provenance are visible together
-    And the result identifies the immutable published release and never labels legacy validation as authoritative

@@ -70,11 +70,3 @@ Feature: Data layer schema specification builder runtime
     And property content is escaped without changing its displayed meaning
     And fallback feedback identifies when only plain text was copied
     And no production schema, documentation, rule, source, or selection state is mutated
-
-  # Data layer schema specification builder runtime 006
-  Scenario: Data layer schema specification builder runtime 006
-    Given side panel and standalone Builder open the same canonical project effective schema revision
-    When the production specification builder is invoked on both installed surfaces
-    Then both render the same hierarchical selection, rich seven-column rows, effective conditions, conflicts, completeness, and export modes
-    And equivalent Spreadsheet and Rich table copies contain structurally identical cells and ordering
-    And the standalone surface does not substitute its lightweight requirement grid or a parallel derivation model

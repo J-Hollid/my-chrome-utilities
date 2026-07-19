@@ -7,3 +7,12 @@ tmp/
 .nyc_output/
 *.tsbuildinfo
 *.log
+*:Zone.Identifier
+
+# Historical operator walkthroughs are intentionally outside active SwarmForge scope.
+artifacts/schema-editor-walkthrough/R0[1-4]/
+artifacts/side-panel-walkthrough/R0[2-3]/
+docs/side-panel-visual-walkthrough-recommendations.md
+docs/side-panel-visual-walkthrough-recommendations-R0[1-4].md
+docs/side-panel-visual-walkthrough-workflow.md
+docs/side-panel-walkthrough-decisions.md
