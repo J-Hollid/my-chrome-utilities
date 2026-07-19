@@ -181,10 +181,11 @@ function synchronizeDocument(base:unknown,current:unknown,next:unknown):unknown{
 export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):ProjectState{
   if(!source.published)throw new Error("Only a published saved schema can be adopted.");
   return transactProject(state,`Adopt saved schema ${source.name}`,(project)=>{
-    if(project.collections.schemaDrafts.some(({id})=>id===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
+    if(project.collections.schemaDrafts.some(({id})=>id===source.id)||project.collections.profiles.some(({sourceIdentity})=>sourceIdentity===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
     const schema=createSchemaWorkingDraft({...clone(source),assignments:clone(source.assignments??[])} as unknown as SchemaDefinition) as unknown as ProjectEntity;
     const adopted={...schema,sourceLineage:{librarySchemaId:source.id,adoptedRevision:source.version,synchronizedRevision:source.version},sourceDocument:clone(source.document)};
-    return{...project,collections:{...project.collections,schemaDrafts:[...project.collections.schemaDrafts,adopted]}};
+    const profile:Profile={id:`profile:${source.id}`,name:source.name,requirements:requirementsFromSchema(source.document),sourceIdentity:source.id,sourceRevision:source.version,adoptionProvenance:{kind:"saved-schema-library",schemaId:source.id,revision:source.version},structuredSchema:clone(source.document),structuredDraft:{document:clone(source.document),status:"Draft"}};
+    return{...project,collections:{...project.collections,profiles:[...project.collections.profiles,profile],schemaDrafts:[...project.collections.schemaDrafts,adopted]}};
   });
 }
 

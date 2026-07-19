@@ -1,0 +1,14 @@
+#layered-schema-editor-host {
+  min-width: 0;
+  padding: 1rem;
+}
+
+#layered-schema-editor-host textarea {
+  min-height: 7rem;
+  width: 100%;
+}
+
+#layered-schema-editor-host pre {
+  overflow: auto;
+  white-space: pre-wrap;
+}

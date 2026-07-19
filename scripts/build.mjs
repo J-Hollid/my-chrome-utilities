@@ -9,3 +9,4 @@ await copyFile("side-panel.html", "dist/side-panel.html");
 await copyFile("side-panel.css", "dist/side-panel.css");
 await copyFile("specification-builder.html", "dist/specification-builder.html");
 await copyFile("specification-builder.css", "dist/specification-builder.css");
+await copyFile("layered-schema.css", "dist/layered-schema.css");
