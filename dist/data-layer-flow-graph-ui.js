@@ -13,25 +13,12 @@ function svgClientPoint(graph, clientX, clientY) { const matrix = graph.getScree
 function addSelect(form, id, labelText, choices, before) { const label = document.createElement("label"), select = document.createElement("select"); select.id = id; label.textContent = labelText; for (const [value, text] of choices)
     select.append(new Option(text, value)); label.append(select); form.insertBefore(label, before); return select; }
 export function installFlowGraphBuilder(options) {
-    const inspector = q("#project-inspector"), editor = q("#flow-step-editor"), addForm = q("#add-flow-step-form"), list = q("#flow-step-list"), result = q("#flow-step-result"), minimumLabel = q("#flow-step-minimum").closest("label"), inspectorContext = document.createElement("div"), documentaryEditor = document.createElement("section");
+    const inspector = q("#project-inspector"), advancedEditor = q("#flow-step-editor"), addForm = q("#add-flow-step-form"), list = q("#flow-step-list"), result = q("#flow-step-result"), minimumLabel = q("#flow-step-minimum").closest("label"), inspectorContext = document.createElement("div"), documentaryEditor = document.createElement("section");
     inspectorContext.id = "flow-inspector-context";
     documentaryEditor.id = "flow-documentary-editor";
     documentaryEditor.append(addForm, list, result);
     inspector.insertBefore(inspectorContext, q("#add-entity-form"));
-    inspector.insertBefore(documentaryEditor, editor);
-    const advancedSummary = editor.querySelector("summary"), advancedCopy = editor.querySelector("p");
-    advancedSummary.textContent = "Advanced executable steps";
-    advancedCopy.textContent = "Executable-step controls define runtime sequence semantics independently of documentary journey expectations.";
-    const advancedForm = document.createElement("form"), advancedLabel = document.createElement("label"), advancedName = document.createElement("input"), advancedSubmit = document.createElement("button"), advancedList = document.createElement("ol");
-    advancedLabel.textContent = "Executable step name";
-    advancedName.required = true;
-    advancedName.setAttribute("aria-label", "Executable step name");
-    advancedSubmit.type = "submit";
-    advancedSubmit.textContent = "Add executable step";
-    advancedLabel.append(advancedName);
-    advancedForm.append(advancedLabel, advancedSubmit);
-    advancedList.setAttribute("aria-label", "Executable runtime sequence");
-    editor.append(advancedForm, advancedList);
+    inspector.insertBefore(documentaryEditor, advancedEditor);
     const role = addSelect(addForm, "flow-step-role", "Role", [["interaction", "Interaction"], ["context-setting", "Context-setting"]], minimumLabel), obligation = addSelect(addForm, "flow-step-obligation", "Obligation", [["Required", "Required"], ["Optional", "Optional"], ["Conditional", "Conditional"], ["Informational", "Informational"]], minimumLabel);
     const addName = q("#flow-step-name"), addPage = q("#flow-step-page"), addEvent = q("#flow-step-event");
     addName.required = addPage.required = addEvent.required = true;
@@ -233,8 +220,6 @@ export function installFlowGraphBuilder(options) {
         const { state, flow, steps } = current();
         if (!state || !flow)
             return;
-        if (editor instanceof HTMLDetailsElement)
-            editor.open = true;
         if (renderWorkspace)
             renderGraph(flow);
         steps.forEach((step, index) => {
@@ -323,8 +308,6 @@ export function installFlowGraphBuilder(options) {
         q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
     } });
     addForm.addEventListener("reset", () => queueMicrotask(() => { role.disabled = false; role.value = "interaction"; }));
-    advancedForm.addEventListener("submit", (event) => { event.preventDefault(); const { state, flow } = current(); if (!state || !flow || !advancedName.value.trim())
-        return; options.persist(options.addExecutableStep(state, flow.id, advancedName.value.trim())); advancedName.value = ""; });
-    return { render: () => { const { flow } = current(), active = Boolean(flow), executableSteps = flow ? flow.steps ?? [] : []; documentaryEditor.hidden = !active; editor.hidden = !active; render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); advancedList.replaceChildren(...executableSteps.map((step, index) => { const item = document.createElement("li"); item.textContent = `${index + 1}. ${step.name}`; return item; })); }, renderSelectors };
+    return { render: () => { const active = Boolean(current().flow); documentaryEditor.hidden = !active; render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); }, renderSelectors };
 }
 //# sourceMappingURL=data-layer-flow-graph-ui.js.map

@@ -694,7 +694,8 @@
     "id": "flow_graph",
     "source": [
       "src/data-layer-flow-graph.ts",
-      "src/data-layer-flow-graph-ui.ts"
+      "src/data-layer-flow-graph-ui.ts",
+      "src/data-layer-executable-flow-ui.ts"
     ],
     "dependencies": [],
     "unit": [

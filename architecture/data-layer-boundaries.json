@@ -13,6 +13,10 @@
       "src/utilities/data-layer/schemas.ts"
     ]
   },
+  "src/data-layer-executable-flow-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
   "src/data-layer-allowed-value-expansion-ui.ts": {
     "module": "schemas",
     "layer": "browser"
