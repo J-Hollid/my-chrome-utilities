@@ -20,31 +20,26 @@ const constraintFields = [
     { name: "minItems", label: "Minimum items", inputType: "number" },
     { name: "maxItems", label: "Maximum items", inputType: "number" },
     { name: "condition", label: "Condition (JSON)" },
+    { name: "conditionalField", label: "Conditional rule field" },
+    { name: "conditionalOperator", label: "Conditional rule operator", options: ["", "equals", "not-equals", "matches", "exists"] },
+    { name: "conditionalValue", label: "Conditional rule value" },
+    { name: "reusableRuleId", label: "Reusable rule identifier" },
     { name: "documentation", label: "Documentation" },
     { name: "examples", label: "Examples (JSON)" },
-    { name: "rules", label: "Conditional rules (JSON)" },
-    { name: "reusableRules", label: "Reusable rules (JSON)" },
 ];
-const appendConstraintFields = (form) => { for (const { name, label: labelText, options, inputType } of constraintFields) {
-    const label = document.createElement("label"), control = options ? document.createElement("select") : document.createElement("input");
-    label.textContent = labelText;
-    control.setAttribute("name", name);
-    if (control instanceof HTMLInputElement) {
-        control.type = inputType ?? "text";
-        if (inputType === "number")
-            control.step = "any";
-    }
-    if (name === "path")
-        control.required = true;
-    if (options)
-        for (const value of options)
-            control.append(new Option(value || "Choose", value));
-    label.append(control);
-    form.append(label);
-} };
+const appendConstraintFields = (form) => { const appendField = (host, { name, label: labelText, options, inputType }) => { const label = document.createElement("label"), control = options ? document.createElement("select") : document.createElement("input"); label.textContent = labelText; control.setAttribute("name", name); if (control instanceof HTMLInputElement) {
+    control.type = inputType ?? "text";
+    if (inputType === "number")
+        control.step = "any";
+} if (name === "path")
+    control.required = true; if (options)
+    for (const value of options)
+        control.append(new Option(value || "Choose", value)); label.append(control); host.append(label); }; for (const field of constraintFields)
+    appendField(form, field); const advanced = document.createElement("details"), summary = document.createElement("summary"); summary.textContent = "Advanced rule JSON (optional)"; appendField(advanced, { name: "rules", label: "Conditional rules JSON" }); appendField(advanced, { name: "reusableRules", label: "Reusable rules JSON" }); advanced.prepend(summary); form.append(advanced); };
+export function composeStructuredRules(rules, reusableRules, structured) { return { rules: [...rules, ...(structured.field ? [{ field: structured.field, operator: structured.operator || "equals", ...(structured.value ? { value: structured.value } : {}) }] : [])], reusableRules: [...reusableRules, ...(structured.reusableRuleId ? [{ id: structured.reusableRuleId }] : [])] }; }
 const constraintFromForm = (form) => { const data = new FormData(form), parse = (name) => { const value = String(data.get(name) ?? "").trim(); if (!value)
     return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules", "reusableRules"].includes(name))
-    return JSON.parse(value); return value; }, number = (name) => parse(name) === undefined ? undefined : Number(parse(name)), minimum = number("minimum"), maximum = number("maximum"), minItems = number("minItems"), maxItems = number("maxItems"); return { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}), ...(parse("reusableRules") ? { reusableRules: parse("reusableRules") } : {}) }; };
+    return JSON.parse(value); return value; }, number = (name) => parse(name) === undefined ? undefined : Number(parse(name)), minimum = number("minimum"), maximum = number("maximum"), minItems = number("minItems"), maxItems = number("maxItems"), composedRules = composeStructuredRules(parse("rules") ?? [], parse("reusableRules") ?? [], { field: String(parse("conditionalField") ?? ""), operator: String(parse("conditionalOperator") ?? ""), value: String(parse("conditionalValue") ?? ""), reusableRuleId: String(parse("reusableRuleId") ?? "") }); return { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(composedRules.rules.length ? { rules: composedRules.rules } : {}), ...(composedRules.reusableRules.length ? { reusableRules: composedRules.reusableRules } : {}) }; };
 const profileStructuredDocument = (profile) => profile.structuredSchema ?? profile.structuredDraft?.document;
 export const sharedProfilePropertyPaths = (profile) => [...new Set([...structuredPaths(profileStructuredDocument(profile)), ...(profile.schemaConstraints ?? []).map(({ path }) => path)])];
 export function compareLayeredRevisions(entity, from, to) { const sourcePaths = structuredPaths(profileStructuredDocument(entity)), draftPaths = sharedProfilePropertyPaths(entity), pathsFor = (choice) => choice === "source" ? sourcePaths : draftPaths, labelFor = (choice) => choice === "source" ? `Source revision ${String(entity.sourceRevision ?? "new")}` : "Current draft", fromPaths = pathsFor(from), toPaths = pathsFor(to), fromSet = new Set(fromPaths), toSet = new Set(toPaths); return { fromLabel: labelFor(from), toLabel: labelFor(to), addedPaths: toPaths.filter((path) => !fromSet.has(path)), removedPaths: fromPaths.filter((path) => !toSet.has(path)), retainedPaths: toPaths.filter((path) => fromSet.has(path)), constraintChanges: from === to ? 0 : (entity.schemaConstraints ?? []).length }; }
