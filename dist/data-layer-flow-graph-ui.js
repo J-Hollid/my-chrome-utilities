@@ -1,4 +1,4 @@
-import { addGraphOccurrence, documentaryFlowGraph, flowOutline, flowRelationshipText, moveGraphOccurrence, projectFlowGraph, removeGraphOccurrence, reorderGraphOccurrence, saveGraphRelationship, updateGraphOccurrence, } from "./data-layer-flow-graph.js";
+import { addGraphOccurrence, documentaryFlowGraph, flowOutline, flowRelationshipText, moveGraphOccurrence, projectFlowGraph, addInteractionOccurrenceToPage, addUngroupedPageFrame, inspectUngroupedPageDrop, removeGraphOccurrence, reorderGraphOccurrence, saveGraphRelationship, setFlowPageGroupLanes, updateGraphOccurrence, } from "./data-layer-flow-graph.js";
 const lanes = [{ name: "Context", x: 30 }, { name: "Shipping", x: 230 }, { name: "Payment", x: 430 }, { name: "Merge", x: 630 }];
 const nodeWidth = 170, nodeHeight = 82;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
@@ -19,25 +19,73 @@ export function installFlowGraphBuilder(options) {
     documentaryEditor.append(addForm, list, result);
     inspector.insertBefore(inspectorContext, q("#add-entity-form"));
     inspector.insertBefore(documentaryEditor, advancedEditor);
-    const role = addSelect(addForm, "flow-step-role", "Role", [["interaction", "Interaction"], ["context-setting", "Context-setting"]], minimumLabel), obligation = addSelect(addForm, "flow-step-obligation", "Obligation", [["Required", "Required"], ["Optional", "Optional"], ["Conditional", "Conditional"], ["Informational", "Informational"]], minimumLabel);
+    const role = addSelect(addForm, "flow-step-role", "Role", [["interaction", "Interaction"], ["context-setting", "Context-setting"]], minimumLabel), pageGroup = addSelect(addForm, "flow-step-page-group", "Page Group", [], minimumLabel), occurrenceType = addSelect(addForm, "flow-step-occurrence-type", "Occurrence type", [["interaction", "Interaction"], ["page-context", "Page context"]], minimumLabel), contextBinding = addSelect(addForm, "flow-step-context-binding", "Context-event binding", [], minimumLabel), obligation = addSelect(addForm, "flow-step-obligation", "Obligation", [["Required", "Required"], ["Optional", "Optional"], ["Conditional", "Conditional"], ["Informational", "Informational"]], minimumLabel);
     const addName = q("#flow-step-name"), addPage = q("#flow-step-page"), addEvent = q("#flow-step-event");
     addName.required = addPage.required = addEvent.required = true;
     q("#flow-step-name").closest("label").firstChild.textContent = "Occurrence name";
-    q("#flow-step-page").closest("label").firstChild.textContent = "Resolved Page";
+    q("#flow-step-page").closest("label").firstChild.textContent = "Page";
     q("#flow-step-event").closest("label").firstChild.textContent = "Shared Event";
     q("#flow-step-minimum").closest("label").firstChild.textContent = "Expected minimum";
     q("#flow-step-maximum").closest("label").firstChild.textContent = "Expected maximum";
     q("#flow-step-optional").closest("label").hidden = true;
-    addForm.querySelector('button[type="submit"]').textContent = "Add Event occurrence";
+    role.closest("label").hidden = true;
+    addForm.querySelector('button[type="submit"]').textContent = "Add occurrence";
     let selectedItem;
-    const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : { occurrences: [], relationships: [] }; return { ...context, flow, steps: graph.occurrences, relationships: graph.relationships }; };
+    const current = () => { const context = options.context(), flow = context.flowId ? context.state?.project.collections.flows.find(({ id }) => id === context.flowId) : undefined, graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : { pageGroupIds: [], occurrences: [], relationships: [] }; return { ...context, flow, pageGroupIds: graph.pageGroupIds, steps: graph.occurrences, relationships: graph.relationships }; };
     const synchronizedRole = (eventId, fallback) => { const event = current().state?.project.collections.events.find(({ id }) => id === eventId), eventRole = event?.role; return eventRole === "context-setting" || eventRole === "interaction" ? { role: eventRole, authoritative: true } : { role: fallback === "context-setting" ? "context-setting" : "interaction", authoritative: false }; };
     const syncRoleControl = (eventSelect, roleSelect, fallback = roleSelect.value) => { const selected = synchronizedRole(eventSelect.value, fallback); roleSelect.value = selected.role; roleSelect.disabled = selected.authoritative; roleSelect.title = selected.authoritative ? "This role is defined by the selected Event." : "Choose a fallback role until the Event definition has one."; };
     addEvent.addEventListener("change", () => syncRoleControl(addEvent, role));
+    const syncAddContextBindings = () => { const page = current().state?.project.collections.pages.find(({ id }) => id === addPage.value), bindings = page?.contextEventBindings ?? [], value = contextBinding.value; contextBinding.replaceChildren(new Option("Choose Page context binding", ""), ...bindings.map(({ id, name }) => new Option(name, id))); contextBinding.value = value; const contextual = occurrenceType.value === "page-context"; contextBinding.closest("label").hidden = !contextual; addEvent.closest("label").hidden = contextual; contextBinding.required = contextual; addEvent.required = !contextual; };
+    addPage.addEventListener("change", syncAddContextBindings);
+    occurrenceType.addEventListener("change", syncAddContextBindings);
     const laneForX = (x) => lanes.reduce((nearest, lane) => Math.abs(lane.x - x) < Math.abs(nearest.x - x) ? lane : nearest, lanes[0]);
-    const occurrenceInput = (values) => ({ name: values.name, pageId: values.pageId, eventId: values.eventId, fallbackRole: values.fallbackRole, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, layout: { lane: values.lane, x: values.x, y: values.y } });
-    function renderSelectors() { const { state } = current(); if (!state)
-        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); }
+    const occurrenceInput = (values, existing) => { const common = { name: values.name, pageId: values.pageId, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, y: values.y }; if (existing?.freePageFrame)
+        return { ...common, freePageFrame: true, pageId: String(existing.pageId), contextBindingId: String(existing.contextBindingId) }; if (existing?.freePageFrameId)
+        return { ...common, freePageFrameId: String(existing.freePageFrameId), pageId: String(existing.pageId), eventId: values.eventId }; const editorPageGroup = current().state?.project.collections.pageGroups.some(({ id }) => id === values.lane) ? values.lane : "", pageGroupId = editorPageGroup || pageGroup.value, contextual = editorPageGroup ? values.fallbackRole === "context-setting" : occurrenceType.value === "page-context", eventReference = editorPageGroup ? values.eventId : contextual ? contextBinding.value : values.eventId; return pageGroupId ? { ...common, pageGroupId, ...(contextual ? { contextBindingId: eventReference } : { eventId: eventReference }) } : { name: values.name, pageId: values.pageId, eventId: values.eventId, fallbackRole: values.fallbackRole, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, layout: { lane: values.lane, x: values.x, y: values.y } }; };
+    function renderFlowLaneControls() {
+        const { state, flow, pageGroupIds } = current(), form = document.querySelector("#flow-inspector-context .contextual-editor form");
+        if (!state || !flow || !form || form.querySelector('[aria-label="Page Group lane controls"]'))
+            return;
+        const laneLabel = document.createElement("label"), laneSelect = document.createElement("select"), selectedGroups = pageGroupIds.map((groupId) => state.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)), remainingGroups = state.project.collections.pageGroups.filter(({ id }) => !pageGroupIds.includes(id));
+        laneLabel.textContent = "Ordered Page Group lanes";
+        laneSelect.name = "pageGroupIds";
+        laneSelect.multiple = true;
+        laneSelect.setAttribute("aria-label", "Ordered Page Group lanes");
+        for (const group of [...selectedGroups, ...remainingGroups]) {
+            const option = new Option(group.name, group.id);
+            option.selected = pageGroupIds.includes(group.id);
+            laneSelect.append(option);
+        }
+        laneLabel.append(laneSelect);
+        form.insertBefore(laneLabel, form.querySelector(".editor-actions"));
+        const controls = document.createElement("section"), up = document.createElement("button"), down = document.createElement("button"), message = document.createElement("p");
+        controls.setAttribute("aria-label", "Page Group lane controls");
+        up.type = down.type = "button";
+        up.textContent = "Move selected lane up";
+        down.textContent = "Move selected lane down";
+        message.setAttribute("role", "status");
+        form.addEventListener("submit", (event) => { const fresh = current().state; if (!fresh)
+            return; try {
+            const next = setFlowPageGroupLanes(fresh, flow.id, Array.from(laneSelect.selectedOptions, ({ value }) => value));
+            if (next !== fresh)
+                options.persist(next);
+        }
+        catch (error) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            message.textContent = error instanceof Error ? error.message : String(error);
+        } }, { capture: true });
+        const selectedOption = () => Array.from(laneSelect.options).find(({ selected }) => selected);
+        const move = (delta) => { const option = selectedOption(); if (!option)
+            return; const index = Array.from(laneSelect.options).indexOf(option), targetIndex = Math.max(0, Math.min(laneSelect.options.length - 1, index + delta)); if (index === targetIndex)
+            return; laneSelect.insertBefore(option, delta > 0 ? laneSelect.options[targetIndex].nextSibling : laneSelect.options[targetIndex]); option.selected = true; laneSelect.dispatchEvent(new Event("change", { bubbles: true })); };
+        up.addEventListener("click", () => move(-1));
+        down.addEventListener("click", () => move(1));
+        controls.append(up, down, message);
+        laneSelect.closest("form")?.append(controls);
+    }
+    function renderSelectors() { const { state, pageGroupIds } = current(); if (!state)
+        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); const groups = pageGroupIds.map((groupId) => state.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)); replaceOptions(pageGroup, groups, "Choose Page Group"); syncAddContextBindings(); }
     function renderInspector() {
         render(false);
         synchronizeRenderedOccurrenceControls();
@@ -63,9 +111,22 @@ export function installFlowGraphBuilder(options) {
     function selectItem(kind, itemId) { selectedItem = { kind, id: itemId }; renderInspector(); queueMicrotask(() => document.querySelector(kind === "occurrence" ? `[data-edit-occurrence-id="${itemId}"]` : `[data-edit-relationship-id="${itemId}"]`)?.focus()); }
     function focusOccurrence(nodeId) { selectItem("occurrence", nodeId); }
     function focusRelationship(relationshipId) { selectedItem = { kind: "relationship", id: relationshipId }; document.querySelectorAll("#flow-graph-workspace [data-relationship-id]").forEach((element) => element.classList.toggle("is-selected", element.dataset.relationshipId === relationshipId)); queueMicrotask(() => document.querySelector(`[aria-label="Synchronized editable Flow outline"] [data-relationship-id="${relationshipId}"] button`)?.focus()); }
-    function saveLayout(flowId, nodeId, currentLayout, x, y) { const { state } = current(); if (!state)
-        return; const lane = laneForX(x), layout = { lane: lane.name, x: lane.x, y: Math.max(55, Math.round(y)) }; if (layout.x === currentLayout.x && layout.y === currentLayout.y && layout.lane === currentLayout.lane) {
-        document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus();
+    function saveLayout(flowId, nodeId, currentLayout, x, y) { const { state, steps } = current(); if (!state)
+        return; const occurrence = steps.find(({ id }) => id === nodeId), node = document.querySelector(`[data-occurrence-id="${nodeId}"]`), semantic = Boolean(occurrence?.pageGroupId || occurrence?.freePageFrame || occurrence?.freePageFrameId), nextY = Math.max(55, Math.round(y)); if (semantic && Math.abs(x - currentLayout.x) > 85) {
+        node?.setAttribute("transform", `translate(${currentLayout.x} ${currentLayout.y})`);
+        result.textContent = "Move rejected: Event occurrences cannot cross Page or Page Group containment boundaries. Add the predefined Event from Components to another Page frame.";
+        node?.focus();
+        return;
+    } if (semantic) {
+        if (nextY === currentLayout.y) {
+            node?.focus();
+            return;
+        }
+        options.persist(moveGraphOccurrence(state, flowId, nodeId, { y: nextY }));
+        queueMicrotask(() => document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus());
+        return;
+    } const lane = laneForX(x), layout = { lane: lane.name, x: lane.x, y: nextY }; if (layout.x === currentLayout.x && layout.y === currentLayout.y && layout.lane === currentLayout.lane) {
+        node?.focus();
         return;
     } options.persist(moveGraphOccurrence(state, flowId, nodeId, layout)); queueMicrotask(() => document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus()); }
     function renderGraph(flow) {
@@ -75,6 +136,9 @@ export function installFlowGraphBuilder(options) {
         if (!state)
             return;
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), instructions = document.createElement("p"), views = document.createElement("div"), graph = document.createElementNS("http://www.w3.org/2000/svg", "svg"), outline = document.createElement("ol");
+        const graphLanes = projection.lanes.length ? projection.lanes.map(({ id, name }, index) => ({ id, name, x: 30 + index * 200 })) : lanes.map((lane) => ({ ...lane, id: lane.name }));
+        if (projection.graph.nodes.some(({ freePageFrame, freePageFrameId }) => freePageFrame || freePageFrameId))
+            graphLanes.push({ id: "ungrouped", name: "Ungrouped entry pages", x: 30 + projection.lanes.length * 200 });
         section.className = "documentary-flow";
         heading.textContent = "Directional Flow graph";
         boundary.className = "status-text";
@@ -85,24 +149,90 @@ export function installFlowGraphBuilder(options) {
         graph.setAttribute("aria-label", "Interactive directional Flow canvas");
         graph.setAttribute("role", "application");
         outline.setAttribute("aria-label", "Synchronized editable Flow outline");
+        const palette = document.createElement("section"), paletteHeading = document.createElement("h4"), paletteItems = document.createElement("div"), frames = document.createElement("section"), frameHeading = document.createElement("h4"), guidance = document.createElement("p");
+        palette.setAttribute("aria-label", "Flow component palette");
+        paletteHeading.textContent = "Components";
+        frames.setAttribute("aria-label", "Flow Page frames");
+        frameHeading.textContent = "Page frames";
+        guidance.setAttribute("role", "status");
+        guidance.textContent = "Event occurrences cannot cross Page or Page Group containment boundaries. Add the predefined Event to another Page frame to create a distinct occurrence.";
+        const componentButton = (kind, entity) => { const button = document.createElement("button"); button.type = "button"; button.draggable = true; button.dataset.componentKind = kind; button.dataset.componentId = entity.id; button.textContent = `${kind === "page" ? "Page" : "Event"}: ${entity.name}`; button.addEventListener("dragstart", (event) => { event.dataTransfer?.setData("application/x-flow-component", JSON.stringify({ kind, id: entity.id })); }); return button; };
+        paletteItems.append(...state.project.collections.pages.map((page) => componentButton("page", page)), ...state.project.collections.events.map((event) => componentButton("event", event)));
+        palette.append(paletteHeading, paletteItems);
+        const acceptDrop = (target) => (event) => { event.preventDefault(); const raw = event.dataTransfer?.getData("application/x-flow-component"); if (!raw)
+            return; const component = JSON.parse(raw); if (component.kind === "event") {
+            const selectedEvent = state.project.collections.events.find(({ id }) => id === component.id);
+            if (!selectedEvent)
+                return;
+            options.persist(addInteractionOccurrenceToPage(state, flow.id, { name: selectedEvent.name, ...target, eventId: selectedEvent.id, obligation: "Required", minimum: 1, maximum: 1, y: 70 + projection.graph.nodes.filter(({ pageId }) => pageId === target.pageId).length * 120 }, options.id));
+            return;
+        } if (target.pageGroupId) {
+            const inspection = inspectUngroupedPageDrop(state.project, flow.id, component.id, target.pageGroupId);
+            guidance.textContent = `${inspection.message} Open membership editor: ${inspection.guidance}`;
+            return;
+        } };
+        for (const lane of projection.lanes) {
+            const memberIds = lane.pageIds ?? [];
+            for (const pageId of memberIds) {
+                const page = state.project.collections.pages.find(({ id }) => id === pageId);
+                if (!page)
+                    continue;
+                const frame = document.createElement("div");
+                frame.tabIndex = 0;
+                frame.dataset.pageFrameId = page.id;
+                frame.dataset.pageGroupId = lane.id;
+                frame.textContent = `${lane.name} / ${page.name}`;
+                frame.addEventListener("dragover", (event) => event.preventDefault());
+                frame.addEventListener("drop", acceptDrop({ pageId: page.id, pageGroupId: lane.id }));
+                frames.append(frame);
+            }
+        }
+        for (const free of current().steps.filter(({ freePageFrame }) => freePageFrame)) {
+            const page = state.project.collections.pages.find(({ id }) => id === free.pageId), frame = document.createElement("div");
+            frame.tabIndex = 0;
+            frame.dataset.freePageFrameId = free.id;
+            frame.textContent = `Ungrouped / ${page?.name ?? free.name}`;
+            frame.addEventListener("dragover", (event) => event.preventDefault());
+            frame.addEventListener("drop", acceptDrop({ pageId: String(free.pageId), freePageFrameId: free.id }));
+            frames.append(frame);
+        }
+        const ungrouped = document.createElement("div");
+        ungrouped.tabIndex = 0;
+        ungrouped.dataset.ungroupedDropzone = "true";
+        ungrouped.textContent = "Ungrouped entry pages";
+        ungrouped.addEventListener("dragover", (event) => event.preventDefault());
+        ungrouped.addEventListener("drop", (event) => { event.preventDefault(); const raw = event.dataTransfer?.getData("application/x-flow-component"); if (!raw)
+            return; const component = JSON.parse(raw); if (component.kind !== "page")
+            return; const page = state.project.collections.pages.find(({ id }) => id === component.id), binding = (page?.contextEventBindings ?? [])[0]; if (!page || !binding) {
+            guidance.textContent = "Choose a Page with a context-event binding before creating an ungrouped entry frame.";
+            return;
+        } try {
+            options.persist(addUngroupedPageFrame(state, flow.id, { name: `${page.name} entry`, pageId: page.id, contextBindingId: binding.id, y: 70 }, options.id));
+        }
+        catch (error) {
+            guidance.textContent = error instanceof Error ? error.message : String(error);
+        } });
+        frames.prepend(frameHeading, ungrouped);
+        section.append(palette, frames, guidance);
         if (!projection.graph.nodes.length) {
             const empty = document.createElement("section"), copy = document.createElement("p"), action = document.createElement("button");
             empty.className = "flow-empty-state";
-            copy.textContent = "Context-setting Events establish Page context; interaction Events document activity within it. Occurrences reuse stable Page and Event references. Payload validation remains independent; topology, branch, and journey expectations remain manual.";
+            copy.textContent = "Page Groups define lanes, Pages bind context Events, and Events own reusable payload schemas. Occurrences retain stable Page Group, Page, binding, and Event references. Per-Event payload validation remains independent; topology, branch, and journey expectations remain manual.";
             action.type = "button";
             action.className = "primary";
-            action.textContent = "Start a context-setting Event";
-            action.addEventListener("click", () => { addEvent.value = ""; role.disabled = false; role.value = "context-setting"; q("#flow-step-name").focus(); });
+            action.textContent = "Start a Page-context occurrence";
+            action.addEventListener("click", () => { occurrenceType.value = "page-context"; syncAddContextBindings(); q("#flow-step-name").focus(); });
             empty.append(copy, action);
             section.append(heading, boundary, empty);
             host.append(section);
             return;
         }
-        const positions = new Map(projection.graph.nodes.map((node, index) => [node.id, node.layout ?? { lane: node.role === "context-setting" ? "Context" : "Shipping", x: node.role === "context-setting" ? 30 : 230, y: 70 + index * 120 }])), canvasHeight = Math.max(360, ...Array.from(positions.values(), ({ y }) => y + 150));
-        graph.setAttribute("viewBox", `0 0 840 ${canvasHeight}`);
-        for (const lane of lanes) {
+        const positions = new Map(projection.graph.nodes.map((node, index) => [node.id, node.layout ?? { lane: node.role === "context-setting" ? "Context" : "Shipping", x: node.role === "context-setting" ? 30 : 230, y: 70 + index * 120 }])), canvasHeight = Math.max(360, ...Array.from(positions.values(), ({ y }) => y + 150)), canvasWidth = Math.max(840, graphLanes.length * 200 + 40);
+        graph.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
+        for (const lane of graphLanes) {
             const band = document.createElementNS(graph.namespaceURI, "rect"), label = document.createElementNS(graph.namespaceURI, "text");
             band.classList.add("flow-lane");
+            band.dataset.pageGroupId = lane.id;
             band.setAttribute("x", String(lane.x - 15));
             band.setAttribute("y", "8");
             band.setAttribute("width", "200");
@@ -184,11 +314,10 @@ export function installFlowGraphBuilder(options) {
                 focusOccurrence(nodeData.id);
                 return;
             } if (!event.key.startsWith("Arrow"))
-                return; event.preventDefault(); const currentLane = Math.max(0, lanes.findIndex(({ name }) => name === position.lane)); if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                const nextIndex = Math.max(0, Math.min(lanes.length - 1, currentLane + (event.key === "ArrowLeft" ? -1 : 1)));
-                saveLayout(flow.id, nodeData.id, position, lanes[nextIndex].x, position.y);
+                return; event.preventDefault(); if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                saveLayout(flow.id, nodeData.id, position, position.x + (event.key === "ArrowLeft" ? -200 : 200), position.y);
                 return;
-            } const distance = event.shiftKey ? 60 : 20; saveLayout(flow.id, nodeData.id, position, lanes[currentLane].x, Math.max(55, position.y + (event.key === "ArrowUp" ? -distance : distance))); });
+            } const distance = event.shiftKey ? 60 : 20; saveLayout(flow.id, nodeData.id, position, position.x, Math.max(55, position.y + (event.key === "ArrowUp" ? -distance : distance))); });
             node.addEventListener("pointerdown", (event) => { if (event.button !== 0)
                 return; event.preventDefault(); node.focus(); const origin = svgClientPoint(graph, event.clientX, event.clientY), pointerId = event.pointerId; let nextX = position.x, nextY = position.y, finished = false; try {
                 node.setPointerCapture(pointerId);
@@ -261,7 +390,7 @@ export function installFlowGraphBuilder(options) {
             up.disabled = index === 0;
             down.disabled = index === steps.length - 1;
             form.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); const fresh = current().state; if (!fresh)
-                return; const laneX = lanes.find(({ name }) => name === lane.value)?.x ?? 230; options.persist(updateGraphOccurrence(fresh, flow.id, step.id, occurrenceInput({ name: name.value.trim(), pageId: page.value, eventId: event.value, fallbackRole: nodeRole.value, obligation: nodeObligation.value, minimum: Number(minimum.value), maximum: Number(maximum.value), lane: lane.value, x: laneX, y: position?.y ?? 70 + index * 120 }))); queueMicrotask(() => document.querySelector(`[data-edit-occurrence-id="${step.id}"]`)?.focus()); });
+                return; const laneX = lanes.find(({ name }) => name === lane.value)?.x ?? 230; options.persist(updateGraphOccurrence(fresh, flow.id, step.id, occurrenceInput({ name: name.value.trim(), pageId: page.value, eventId: event.value, fallbackRole: nodeRole.value, obligation: nodeObligation.value, minimum: Number(minimum.value), maximum: Number(maximum.value), lane: lane.value, x: laneX, y: position?.y ?? 70 + index * 120 }, step))); queueMicrotask(() => document.querySelector(`[data-edit-occurrence-id="${step.id}"]`)?.focus()); });
             up.addEventListener("click", () => { const fresh = current().state; if (fresh)
                 options.persist(reorderGraphOccurrence(fresh, flow.id, index, index - 1)); });
             down.addEventListener("click", () => { const fresh = current().state; if (fresh)
@@ -285,10 +414,46 @@ export function installFlowGraphBuilder(options) {
             const occurrenceForm = item.querySelector("form");
             if (!occurrenceForm)
                 continue;
-            const name = occurrenceForm.querySelector('[aria-label="Occurrence name"]'), page = occurrenceForm.querySelector('[aria-label="Resolved Page"]'), event = occurrenceForm.querySelector('[aria-label="Shared Event"]'), nodeRole = occurrenceForm.querySelector('[aria-label="Role"]');
+            const name = occurrenceForm.querySelector('[aria-label="Occurrence name"]'), page = occurrenceForm.querySelector('[aria-label="Resolved Page"]'), event = occurrenceForm.querySelector('select[aria-label="Shared Event"]'), nodeRole = occurrenceForm.querySelector('[aria-label="Role"]'), lane = occurrenceForm.querySelector('[aria-label="Canvas lane"]'), step = current().steps.find(({ id }) => id === name.dataset.editOccurrenceId);
             name.required = page.required = event.required = true;
-            syncRoleControl(event, nodeRole);
-            event.addEventListener("change", () => syncRoleControl(event, nodeRole));
+            const contained = Boolean(step?.pageGroupId || step?.freePageFrame || step?.freePageFrameId);
+            if (contained) {
+                const { state, pageGroupIds } = current(), groups = pageGroupIds.map((groupId) => state?.project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group));
+                if (step?.pageGroupId) {
+                    replaceOptions(lane, groups, "Choose Page Group");
+                    lane.value = String(step.pageGroupId);
+                    lane.setAttribute("aria-label", "Page Group");
+                }
+                else {
+                    lane.replaceChildren(new Option("Ungrouped entry pages", "ungrouped"));
+                    lane.value = "ungrouped";
+                    lane.setAttribute("aria-label", "Page frame region");
+                }
+                nodeRole.hidden = true;
+                const contextual = Boolean(step?.contextBindingId), type = occurrenceForm.querySelector('[aria-label="Occurrence type"]') ?? document.createElement("output");
+                type.setAttribute("aria-label", "Occurrence type");
+                type.textContent = contextual ? "Page context" : "Interaction";
+                if (!type.parentElement)
+                    occurrenceForm.insertBefore(type, nodeRole);
+                nodeRole.value = contextual ? "context-setting" : "interaction";
+                if (contextual) {
+                    const selectedPage = state?.project.collections.pages.find(({ id }) => id === step?.pageId), bindings = selectedPage?.contextEventBindings ?? [];
+                    replaceOptions(event, bindings, "Choose context-event binding");
+                    event.value = String(step?.contextBindingId);
+                    event.setAttribute("aria-label", "Context-event binding");
+                }
+                else
+                    event.value = String(step?.eventId ?? "");
+            }
+            else {
+                syncRoleControl(event, nodeRole);
+                event.addEventListener("change", () => syncRoleControl(event, nodeRole));
+            }
+            if (contained) {
+                lane.disabled = true;
+                page.disabled = true;
+                lane.title = page.title = "Containment is fixed. Add the predefined Event from Components to another Page frame.";
+            }
             for (const target of Array.from(item.querySelectorAll('[aria-label^="Relationship target"]')))
                 target.required = true;
         }
@@ -308,6 +473,6 @@ export function installFlowGraphBuilder(options) {
         q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
     } });
     addForm.addEventListener("reset", () => queueMicrotask(() => { role.disabled = false; role.value = "interaction"; }));
-    return { render: () => { const active = Boolean(current().flow); documentaryEditor.hidden = !active; render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); }, renderSelectors };
+    return { render: () => { const active = Boolean(current().flow); documentaryEditor.hidden = !active; render(); synchronizeRenderedOccurrenceControls(); syncRoleControl(addEvent, role); renderFlowLaneControls(); }, renderSelectors };
 }
 //# sourceMappingURL=data-layer-flow-graph-ui.js.map
