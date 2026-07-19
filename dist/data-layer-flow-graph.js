@@ -1,10 +1,10 @@
 import { transactProject } from "./utilities/data-layer/schemas.js";
 const clone = (value) => structuredClone(value);
 const graphIndex = (project) => project.documentationFlowGraphs ?? {};
-const storedGraph = (project, flowId) => graphIndex(project)[flowId] ?? { occurrences: [], relationships: [] };
+const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacy = project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds; return { pageGroupIds: [...(stored?.pageGroupIds ?? legacy ?? [])], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [] }; };
 const saveStoredGraph = (project, flowId, graph) => ({ ...project, documentationFlowGraphs: { ...graphIndex(project), [flowId]: graph } });
 const normalizedOccurrence = (input) => {
-    if (input.pageGroupId || input.freePageFrameId) {
+    if (input.pageGroupId || input.freePageFrameId || input.freePageFrame) {
         const { layout, y, fallbackRole, eventId, ...values } = clone(input);
         void layout;
         void fallbackRole;
@@ -13,7 +13,8 @@ const normalizedOccurrence = (input) => {
     const { layout, ...values } = clone(input), legacyLayout = layout ?? { lane: "Shipping", x: 230, y: Number(input.y ?? 70) };
     return { ...values, lane: legacyLayout.lane, position: { x: legacyLayout.x, y: legacyLayout.y }, optional: input.obligation === "Optional" };
 };
-export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { pageGroupIds: graph.pageGroupIds ?? [], occurrences: graph.occurrences, relationships: graph.relationships }; }
+export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { pageGroupIds: graph.pageGroupIds, occurrences: graph.occurrences, relationships: graph.relationships }; }
+export function flowPageGroupLaneIds(project, flowId) { return storedGraph(project, flowId).pageGroupIds; }
 export function flowOccurrenceEventSchema(project, flowId, occurrenceId) {
     const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), page = project.collections.pages.find(({ id }) => id === occurrence?.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence?.contextBindingId), event = project.collections.events.find(({ id }) => id === (binding?.eventId ?? occurrence?.eventId));
     return event?.schemaDraftId ?? event?.schemaId;
@@ -27,16 +28,21 @@ function validOccurrence(state, flowId, input) {
     const page = state.project.collections.pages.find(({ id }) => id === input.pageId);
     if (!page)
         throw new Error("A Flow occurrence requires an existing Page.");
-    if (input.pageGroupId || input.freePageFrameId) {
+    if (input.pageGroupId || input.freePageFrameId || input.freePageFrame) {
         if (input.pageGroupId) {
-            const group = state.project.collections.pageGroups.find(({ id }) => id === input.pageGroupId), laneIds = storedGraph(state.project, flow.id).pageGroupIds ?? [], memberIds = group?.pageIds ?? [];
+            const group = state.project.collections.pageGroups.find(({ id }) => id === input.pageGroupId), laneIds = flowPageGroupLaneIds(state.project, flowId), memberIds = group?.pageIds ?? [];
             if (!group || !laneIds.includes(group.id) || !memberIds.includes(page.id))
                 throw new Error("A Flow occurrence requires a selected Page Group containing its Page.");
         }
-        else {
+        else if (input.freePageFrameId) {
             const frame = storedGraph(state.project, flowId).occurrences.find(({ id }) => id === input.freePageFrameId);
             if (!frame?.freePageFrame || frame.pageId !== page.id)
                 throw new Error("An ungrouped interaction requires an existing free Page frame for its Page.");
+        }
+        else {
+            const selectedGroups = new Set(flowPageGroupLaneIds(state.project, flowId)), grouped = state.project.collections.pageGroups.some((group) => selectedGroups.has(group.id) && (group.pageIds ?? []).includes(page.id));
+            if (grouped)
+                throw new Error("A Page contained by a selected Page Group cannot remain an ungrouped entry Page.");
         }
         const binding = (page.contextEventBindings ?? []).find(({ id }) => id === input.contextBindingId), eventId = input.contextBindingId ? binding?.eventId : input.eventId;
         if (input.contextBindingId && !binding)
@@ -75,9 +81,9 @@ export function moveGraphOccurrence(state, flowId, occurrenceId, layout) {
     const occurrence = storedGraph(state.project, flowId).occurrences.find(({ id }) => id === occurrenceId), position = occurrence?.position;
     if (!occurrence)
         return state;
-    if (occurrence.pageGroupId || occurrence.freePageFrameId) {
+    if (occurrence.pageGroupId || occurrence.freePageFrameId || occurrence.freePageFrame) {
         const requestedGroup = "pageGroupId" in layout ? layout.pageGroupId : undefined;
-        if (requestedGroup && requestedGroup !== occurrence.pageGroupId || occurrence.freePageFrameId && requestedGroup)
+        if (requestedGroup && requestedGroup !== occurrence.pageGroupId || Boolean(occurrence.freePageFrameId || occurrence.freePageFrame) && requestedGroup)
             return state;
         if (position?.y === layout.y)
             return state;
@@ -106,13 +112,15 @@ export function setFlowPageGroupLanes(state, flowId, pageGroupIds) {
         throw new Error(`Unknown Flow ${flowId}`);
     if (new Set(pageGroupIds).size !== pageGroupIds.length || pageGroupIds.some((groupId) => !known.has(groupId)))
         throw new Error("Flow lanes require distinct existing Page Group references.");
-    const removed = new Set((graph.pageGroupIds ?? []).filter((groupId) => !pageGroupIds.includes(groupId))), affected = graph.occurrences.find((occurrence) => removed.has(String(occurrence.pageGroupId ?? "")));
+    const removed = new Set(graph.pageGroupIds.filter((groupId) => !pageGroupIds.includes(groupId))), affected = graph.occurrences.find((occurrence) => removed.has(String(occurrence.pageGroupId ?? "")));
     if (affected)
         throw new Error(`${affected.name} must be reassigned or removed before removing its Page Group lane.`);
-    if (JSON.stringify(graph.pageGroupIds ?? []) === JSON.stringify(pageGroupIds))
+    if (JSON.stringify(graph.pageGroupIds) === JSON.stringify(pageGroupIds) && !("pageGroupIds" in flow))
         return state;
-    return transactProject(state, "Set Flow Page Group lanes", (project) => saveStoredGraph(project, flowId, { ...storedGraph(project, flowId), pageGroupIds: [...pageGroupIds] }));
+    return transactProject(state, "Set Flow Page Group lanes", (project) => { const current = storedGraph(project, flowId); return saveStoredGraph({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => { if (candidate.id !== flowId)
+                return candidate; const { pageGroupIds: discarded, ...stored } = candidate; void discarded; return stored; }) } }, flowId, { ...current, pageGroupIds: [...pageGroupIds] }); });
 }
+export function applyFlowPageGroupLaneSelection(state, flowId, pageGroupIds) { return pageGroupIds === undefined ? state : setFlowPageGroupLanes(state, flowId, pageGroupIds); }
 export function inspectOccurrenceContainmentMove(project, flowId, occurrenceId, targetPageGroupId, targetPageId) {
     const flow = project.collections.flows.find(({ id }) => id === flowId), occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), sourcePage = project.collections.pages.find(({ id }) => id === occurrence?.pageId), targetPage = project.collections.pages.find(({ id }) => id === targetPageId), targetGroup = project.collections.pageGroups.find(({ id }) => id === targetPageGroupId), rejected = !occurrence || occurrence.pageId !== targetPageId || occurrence.pageGroupId !== targetPageGroupId;
     return { rejected, message: rejected ? `${occurrence?.name ?? occurrenceId} remains inside ${sourcePage?.name ?? occurrence?.pageId ?? "its Page"}; it cannot move into ${targetPage?.name ?? targetPageId} in ${targetGroup?.name ?? targetPageGroupId} within ${flow?.name ?? flowId}. Event occurrences cannot cross Page or Page Group containment boundaries.` : "The occurrence remains in its current Page frame.", guidance: "Add the predefined Event from the component palette to create a distinct occurrence in another Page frame." };
@@ -122,7 +130,7 @@ export function addUngroupedPageFrame(state, flowId, input, id) {
     const flow = state.project.collections.flows.find(({ id }) => id === flowId), page = state.project.collections.pages.find(({ id }) => id === input.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === input.contextBindingId);
     if (!flow || !page || !binding)
         throw new Error("A free Page frame requires an existing Flow, Page, and Page context binding.");
-    const selectedGroups = new Set(storedGraph(state.project, flowId).pageGroupIds ?? []), grouped = state.project.collections.pageGroups.some((group) => selectedGroups.has(group.id) && (group.pageIds ?? []).includes(page.id));
+    const selectedGroups = new Set(flowPageGroupLaneIds(state.project, flowId)), grouped = state.project.collections.pageGroups.some((group) => selectedGroups.has(group.id) && (group.pageIds ?? []).includes(page.id));
     if (grouped)
         throw new Error("A Page already contained by a selected Page Group cannot become an ungrouped entry Page.");
     return transactProject(state, `Add ${page.name} ungrouped entry Page`, (project) => { const graph = storedGraph(project, flowId), frame = { id: id("flow-page-frame"), name: input.name, pageId: page.id, contextBindingId: binding.id, freePageFrame: true, obligation: "Required", minimum: 1, maximum: 1, optional: false, position: { y: input.y } }; return saveStoredGraph(project, flowId, { ...graph, occurrences: [...graph.occurrences, frame] }); });
@@ -151,7 +159,7 @@ export function projectFlowGraph(project, flowId) {
     const flow = project.collections.flows.find(({ id }) => id === flowId);
     if (!flow)
         throw new Error(`Unknown Flow ${flowId}`);
-    const stored = storedGraph(project, flowId), laneIds = stored.pageGroupIds ?? [], lanes = laneIds.map((groupId) => project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)).map(clone);
+    const laneIds = flowPageGroupLaneIds(project, flowId), lanes = laneIds.map((groupId) => project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)).map(clone), stored = storedGraph(project, flowId);
     const nodes = stored.occurrences.map((occurrence, index) => {
         const page = project.collections.pages.find(({ id }) => id === occurrence.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), eventId = String(binding?.eventId ?? occurrence.eventId ?? ""), event = project.collections.events.find(({ id }) => id === eventId), position = occurrence.position, pageGroupId = typeof occurrence.pageGroupId === "string" ? occurrence.pageGroupId : undefined, freePageFrame = Boolean(occurrence.freePageFrame || occurrence.freePageFrameId), laneIndex = pageGroupId ? laneIds.indexOf(pageGroupId) : -1, eventRole = event?.role, role = binding ? "context-setting" : pageGroupId || freePageFrame ? "interaction" : eventRole === "context-setting" || eventRole === "interaction" ? eventRole : occurrence.fallbackRole === "context-setting" ? "context-setting" : "interaction", layout = position && typeof position.y === "number" ? { lane: freePageFrame ? "Ungrouped entry pages" : laneIndex >= 0 ? lanes[laneIndex]?.name ?? pageGroupId : typeof occurrence.lane === "string" ? occurrence.lane : "Shipping", x: freePageFrame ? 30 + laneIds.length * 200 : laneIndex >= 0 ? 30 + laneIndex * 200 : typeof position.x === "number" ? position.x : 230, y: position.y } : undefined;
         return { id: occurrence.id, name: occurrence.name, eventId, pageId: String(occurrence.pageId ?? ""), ...(pageGroupId ? { pageGroupId } : {}), ...(occurrence.freePageFrameId ? { freePageFrameId: String(occurrence.freePageFrameId) } : {}), ...(occurrence.freePageFrame ? { freePageFrame: true } : {}), ...(binding ? { contextBindingId: binding.id, occurrenceType: "page-context" } : { ...(pageGroupId || freePageFrame ? { occurrenceType: "interaction" } : {}) }), role, obligation: (typeof occurrence.obligation === "string" ? occurrence.obligation : occurrence.optional ? "Optional" : "Required"), expectedMinimum: Number(occurrence.minimum ?? 1), ...(occurrence.maximum !== undefined ? { expectedMaximum: Number(occurrence.maximum) } : {}), ...(layout ? { layout } : {}) };
