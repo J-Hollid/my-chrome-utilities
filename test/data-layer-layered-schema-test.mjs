@@ -46,6 +46,9 @@ assert.match(compilePair({presence:"required"},{presence:"optional"}).conflicts[
 assert.match(compilePair({presence:"forbidden"},{presence:"permitted"}).conflicts[0].message,/forbidden property cannot be re-enabled/);
 assert.deepEqual(compilePair({patterns:["^[a-z]+$"]},{patterns:["shipping$"]}).properties["/value"].patterns,["^[a-z]+$","shipping$"]);
 assert.equal(compilePair({rules:[{condition:"base"}]},{rules:[{condition:"specific"}]}).properties["/value"].rules.length,2);
+const bounded=compilePair({minimum:0,maximum:10,minItems:1,maxItems:8,reusableRules:[{id:"rule:base"}]},{minimum:2,maximum:7,minItems:3,maxItems:5,reusableRules:[{id:"rule:specific"}]}).properties["/value"];
+assert.deepEqual({minimum:bounded.minimum,maximum:bounded.maximum,minItems:bounded.minItems,maxItems:bounded.maxItems},{minimum:2,maximum:7,minItems:3,maxItems:5});
+assert.deepEqual(bounded.reusableRules,[{id:"rule:base"},{id:"rule:specific"}]);
 
 const invariant=compileLayeredSchema([base,checkout,{...shipping,constraints:[{...shipping.constraints[0],enforcement:"invariant"}]},alternative],{eventId:"event:purchase",eventRole:"interaction"});
 assert.equal(invariant.status,"blocked");

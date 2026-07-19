@@ -40,8 +40,18 @@ export function compileLayeredSchema(contributors, context) {
                 next.presence = constraint.presence;
             if (constraint.patterns)
                 next.patterns = [...(prior.patterns ?? []), ...constraint.patterns];
+            if (constraint.minimum !== undefined)
+                next.minimum = prior.minimum === undefined ? constraint.minimum : Math.max(prior.minimum, constraint.minimum);
+            if (constraint.maximum !== undefined)
+                next.maximum = prior.maximum === undefined ? constraint.maximum : Math.min(prior.maximum, constraint.maximum);
+            if (constraint.minItems !== undefined)
+                next.minItems = prior.minItems === undefined ? constraint.minItems : Math.max(prior.minItems, constraint.minItems);
+            if (constraint.maxItems !== undefined)
+                next.maxItems = prior.maxItems === undefined ? constraint.maxItems : Math.min(prior.maxItems, constraint.maxItems);
             if (constraint.rules)
                 next.rules = [...(prior.rules ?? []), ...constraint.rules.map(clone)];
+            if (constraint.reusableRules)
+                next.reusableRules = [...(prior.reusableRules ?? []), ...constraint.reusableRules.map(clone)];
             if (constraint.expectedValue !== undefined) {
                 if (prior.expectedValue !== undefined && !same(prior.expectedValue, constraint.expectedValue)) {
                     if (prior.enforcement === "invariant")

@@ -15,17 +15,25 @@ const constraintFields = [
     { name: "enforcement", label: "Enforcement policy", options: ["", "invariant", "overridable"] },
     { name: "target", label: "Target events" },
     { name: "patterns", label: "Regular expressions (JSON)" },
+    { name: "minimum", label: "Minimum value", inputType: "number" },
+    { name: "maximum", label: "Maximum value", inputType: "number" },
+    { name: "minItems", label: "Minimum items", inputType: "number" },
+    { name: "maxItems", label: "Maximum items", inputType: "number" },
     { name: "condition", label: "Condition (JSON)" },
     { name: "documentation", label: "Documentation" },
     { name: "examples", label: "Examples (JSON)" },
-    { name: "rules", label: "Conditional, reusable, range, and cardinality rules (JSON)" },
+    { name: "rules", label: "Conditional rules (JSON)" },
+    { name: "reusableRules", label: "Reusable rules (JSON)" },
 ];
-const appendConstraintFields = (form) => { for (const { name, label: labelText, options } of constraintFields) {
+const appendConstraintFields = (form) => { for (const { name, label: labelText, options, inputType } of constraintFields) {
     const label = document.createElement("label"), control = options ? document.createElement("select") : document.createElement("input");
     label.textContent = labelText;
     control.setAttribute("name", name);
-    if (control instanceof HTMLInputElement)
-        control.type = "text";
+    if (control instanceof HTMLInputElement) {
+        control.type = inputType ?? "text";
+        if (inputType === "number")
+            control.step = "any";
+    }
     if (name === "path")
         control.required = true;
     if (options)
@@ -35,8 +43,8 @@ const appendConstraintFields = (form) => { for (const { name, label: labelText, 
     form.append(label);
 } };
 const constraintFromForm = (form) => { const data = new FormData(form), parse = (name) => { const value = String(data.get(name) ?? "").trim(); if (!value)
-    return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules"].includes(name))
-    return JSON.parse(value); return value; }; return { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}) }; };
+    return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules", "reusableRules"].includes(name))
+    return JSON.parse(value); return value; }, number = (name) => parse(name) === undefined ? undefined : Number(parse(name)), minimum = number("minimum"), maximum = number("maximum"), minItems = number("minItems"), maxItems = number("maxItems"); return { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}), ...(parse("reusableRules") ? { reusableRules: parse("reusableRules") } : {}) }; };
 const profileStructuredDocument = (profile) => profile.structuredSchema ?? profile.structuredDraft?.document;
 export const sharedProfilePropertyPaths = (profile) => [...new Set([...structuredPaths(profileStructuredDocument(profile)), ...(profile.schemaConstraints ?? []).map(({ path }) => path)])];
 export function appendSharedProfileConstraint(state, profileId, constraint) { const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile)
@@ -53,7 +61,7 @@ export function mountSidePanelLayeredProfileEditor(options) { let selectedProfil
     return;
 } if (!profiles.some(({ id }) => id === selectedProfileId))
     selectedProfileId = profiles[0].id; const profile = profiles.find(({ id }) => id === selectedProfileId), selector = document.createElement("select"), selectorLabel = document.createElement("label"), identity = document.createElement("p"), revision = document.createElement("p"), search = document.createElement("input"), tree = document.createElement("ul"), form = document.createElement("form"), save = document.createElement("button"), status = document.createElement("output"), advanced = document.createElement("details"), advancedSummary = document.createElement("summary"), advancedJson = document.createElement("textarea"); selector.setAttribute("aria-label", "Shared Profile to edit"); for (const candidate of profiles)
-    selector.append(new Option(candidate.name, candidate.id)); selector.value = profile.id; selector.addEventListener("change", () => { selectedProfileId = selector.value; feedback = ""; render(); }); selectorLabel.append("Shared Profile", selector); identity.textContent = `Contributor: ${profile.name} · Scope: Shared Profile`; revision.textContent = `Revision comparison · Source revision ${String(profile.sourceRevision ?? "new")} · Draft constraints ${String((profile.schemaConstraints ?? []).length)}`; search.type = "search"; search.setAttribute("aria-label", "Side-panel Shared Profile property search"); search.placeholder = "Search and filter structured property paths"; tree.setAttribute("aria-label", "Side-panel Shared Profile structured property tree"); const paths = sharedProfilePropertyPaths(profile), refreshPaths = () => { tree.replaceChildren(...paths.filter((path) => path.toLowerCase().includes(search.value.toLowerCase())).map((path) => { const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = path; button.addEventListener("click", () => { form.elements.namedItem("path").value = path; }); item.append(button, " · nested property · rules · documentation · examples"); return item; })); }; search.addEventListener("input", refreshPaths); refreshPaths(); appendConstraintFields(form); save.type = "submit"; save.textContent = "Save Shared Profile constraint"; form.append(save); status.setAttribute("role", "status"); status.textContent = feedback; form.addEventListener("submit", (event) => { event.preventDefault(); try {
+    selector.append(new Option(candidate.name, candidate.id)); selector.value = profile.id; selector.addEventListener("change", () => { selectedProfileId = selector.value; feedback = ""; render(); }); selectorLabel.append("Shared Profile", selector); identity.textContent = `Contributor: ${profile.name} · Scope: Shared Profile`; revision.setAttribute("aria-label", "Shared Profile revision comparison"); revision.textContent = `Revision comparison · Source revision ${String(profile.sourceRevision ?? "new")} · Draft constraints ${String((profile.schemaConstraints ?? []).length)}`; search.type = "search"; search.setAttribute("aria-label", "Side-panel Shared Profile property search"); search.placeholder = "Search and filter structured property paths"; tree.setAttribute("aria-label", "Side-panel Shared Profile structured property tree"); const paths = sharedProfilePropertyPaths(profile), refreshPaths = () => { tree.replaceChildren(...paths.filter((path) => path.toLowerCase().includes(search.value.toLowerCase())).map((path) => { const item = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = path; button.addEventListener("click", () => { form.elements.namedItem("path").value = path; }); item.append(button, " · nested property · rules · documentation · examples"); return item; })); }; search.addEventListener("input", refreshPaths); refreshPaths(); appendConstraintFields(form); save.type = "submit"; save.textContent = "Save Shared Profile constraint"; form.append(save); status.setAttribute("role", "status"); status.textContent = feedback; form.addEventListener("submit", (event) => { event.preventDefault(); try {
     const current = options.load();
     if (!current)
         throw new Error("The Specification Project is unavailable.");
@@ -66,7 +74,7 @@ catch (error) {
     status.textContent = feedback;
 } }); advancedSummary.textContent = "Advanced JSON (optional)"; advancedJson.setAttribute("aria-label", "Optional Shared Profile advanced JSON"); advancedJson.readOnly = true; advancedJson.value = JSON.stringify({ structuredSchema: profileStructuredDocument(profile), constraints: profile.schemaConstraints ?? [] }, null, 2); advanced.append(advancedSummary, advancedJson); options.host.append(heading, selectorLabel, identity, revision, search, tree, form, status, advanced); }; render(); return { render }; }
 export const layeredEventRole = (entity) => entity.contextBindingId || entity.occurrenceType === "page-context" ? "context" : "interaction";
-export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined].filter(Boolean).join(" · ");
+export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileId = (state, entity) => referencedId(entity, "profileId") ?? (entity.profileIds?.length === 1 ? String(entity.profileIds[0]) : state.project.collections.profiles.length === 1 ? state.project.collections.profiles[0].id : undefined);
 export function layeredContributorPath(state, entity, scope, flowId) {
@@ -178,6 +186,9 @@ export function installLayeredSchemaUi(options) {
             contributionList.append(empty);
         }
         contributionDetails.append(contributionHeading, contributionList);
+        const revisionComparison = document.createElement("p");
+        revisionComparison.setAttribute("aria-label", "Layered revision comparison");
+        revisionComparison.textContent = `Revision comparison · Source revision ${String(entity.sourceRevision ?? "project draft")} · Local constraints ${String((entity.schemaConstraints ?? []).length)}`;
         search.type = "search";
         search.setAttribute("aria-label", "Add constraint inherited property search");
         search.placeholder = "Search inherited property paths";
@@ -191,9 +202,7 @@ export function installLayeredSchemaUi(options) {
         save.textContent = "Save constraint";
         form.append(save);
         status.setAttribute("role", "status");
-        form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form), parse = (name) => { const value = String(data.get(name) ?? "").trim(); if (!value)
-            return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules"].includes(name))
-            return JSON.parse(value); return value; }, constraint = { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}) }; const next = transactProject(state, `Save schema constraint for ${entity.name}`, (project) => { if (graphSelection && (graphSelectionScope === "Event-occurrence" || Boolean(graphSelection.freePageFrame))) {
+        form.addEventListener("submit", (event) => { event.preventDefault(); const constraint = constraintFromForm(form), next = transactProject(state, `Save schema constraint for ${entity.name}`, (project) => { if (graphSelection && (graphSelectionScope === "Event-occurrence" || Boolean(graphSelection.freePageFrame))) {
             const flowId = options.context().entityId, graphs = project.documentationFlowGraphs;
             return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], occurrences: graphs[flowId].occurrences.map((candidate) => candidate.id === entity.id ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), constraint], compiledTargetsStale: true } : candidate) } } };
         } const collectionKind = graphSelectionScope === "Page" ? "pages" : graphSelectionScope === "Page Group" ? "pageGroups" : options.context().kind; return { ...project, collections: { ...project.collections, [collectionKind]: project.collections[collectionKind].map((candidate) => candidate.id === entity.id ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), constraint], compiledTargetsStale: true } : candidate) } }; }); options.persist(next); status.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; renderSummary(); renderEditor(); });
@@ -215,7 +224,7 @@ export function installLayeredSchemaUi(options) {
         }
         else
             returnFocus?.focus({ preventScroll: true }); });
-        editor.append(title, identity, areas, contributionDetails, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
+        editor.append(title, identity, areas, contributionDetails, revisionComparison, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
