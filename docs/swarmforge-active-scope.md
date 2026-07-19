@@ -36,6 +36,26 @@ contains 11 detailed program/assessment documents and 111 schema-editor or
 side-panel walkthrough artifacts. These are reference material, not acceptance
 authority.
 
+The following compact manifest is a names-only, non-authoritative history locator.
+Each listed stem denotes both `data-layer-<stem>.feature` and
+`data-layer-<stem>-runtime.feature`; it does not reactivate or restate any archived
+behavioral claim.
+
+- R01: `atomic-project-release`, `bulk-requirement-authoring`,
+  `documentation-export`, `durable-authoring-drafts`, `named-applicability`,
+  `page-event-catalog`, `project-fixtures-preflight`, `project-interchange`,
+  `requirement-profile-composition`, `retail-trade-decisive-workflow`,
+  `specification-project-foundation`, `specification-workspace-navigation`,
+  `temporal-flow-authoring`, `truthful-assignment-lifecycle`.
+- R02/R04: `canonical-project-schema-drafts`,
+  `contextual-specification-editors`, `effective-requirement-coverage-correction`,
+  `effective-schema-compilation`, `greenfield-retail-trade-production-release`,
+  `production-fixture-execution`, `specification-builder-operator-usability`,
+  `staged-multiformat-bulk-authoring`, `temporal-flow-execution-correction`,
+  `truthful-preflight-release-correction`, `unified-specification-evaluation`.
+- Deferred Flow: `flow-cross-surface-integration`, `flow-documentation-export`,
+  `flow-effective-schema-assignment`, `flow-specification-terminal-workflow`.
+
 Recovery examples:
 
 ```sh
@@ -59,5 +79,21 @@ program. Workspace-local untracked walkthrough files are likewise non-authoritat
 
 Use the dedicated `flow_graph` verification pack and its focused commands for this
 checkpoint. Do not estimate or execute this work from every command reached through
-the schema or shell dependency graph. Full regression, full acceptance, browser
-matrices, and archived feature packs require explicit direction.
+the schema or shell dependency graph. The cumulative checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/package.mjs
+```
+
+The pack command performs type/build, both focused graph unit and persistence tests,
+the one small installed-browser adapter, Gherkin generation, and focused runtime
+acceptance. The package command consumes that already-built `dist`; `npm run package`
+is not part of this sequence because it rebuilds.
+
+For local diagnosis, `npm run typecheck`, `npm run build`,
+`node test/data-layer-flow-graph-test.mjs`, and
+`node test/data-layer-flow-graph-persistence-test.mjs` are optional developer
+alternatives, not additional checkpoint steps. `schemas`, `shell`, full browser
+matrices, full acceptance, and full regression are not checkpoint gates. They and
+archived feature packs require explicit direction.

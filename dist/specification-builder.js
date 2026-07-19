@@ -1,8 +1,9 @@
-import { addProjectEntity, addFlowStep, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, reorderFlowStep, restoreReleaseAsDraft, saveFlowStep, saveFlowTransition, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
+import { installFlowGraphBuilder } from "./utilities/data-layer/flow-graph.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
@@ -22,7 +23,7 @@ q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state, lastCommittedState;
-let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema;
+let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder;
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
@@ -52,7 +53,7 @@ catch (error) {
     q("#retry-save").hidden = false;
     if (pendingConflict)
         showConflictReview();
-} render(); renderFlowSteps(); renderAssignments(); }
+} render(); renderAssignments(); }
 function restore() { const stored = localStorage.getItem(STORAGE_KEY); if (stored)
     try {
         const envelope = restoreCanonicalProjectEnvelope(stored);
@@ -78,14 +79,20 @@ function entitiesForKind(kind) { if (!state)
 const editorFields = {
     profiles: [], pages: [{ key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "pageGroupIds", label: "Page groups", collection: "pageGroups", multiple: true }, { key: "expectedEventIds", label: "Expected events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "pageIds", label: "Members", collection: "pages", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
-    events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "role", label: "Flow role", type: "flow-role" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     fixtures: [{ key: "mode", label: "Fixture mode" }, { key: "context", label: "Context", type: "json" }, { key: "observations", label: "Ordered observations", type: "json" }, { key: "payload", label: "Payload", type: "json" }, { key: "expected", label: "Expected winner, step, schema and issues", type: "json" }, { key: "releasePolicy", label: "Release policy" }],
     schemaDrafts: [{ key: "profileIds", label: "Ordered requirement profiles", collection: "profiles", multiple: true }, { key: "localOverrides", label: "Local overrides", type: "json" }],
     assignments: [{ key: "schemaDraftId", label: "Schema", collection: "schemaDrafts" }, { key: "eventId", label: "Event", collection: "events" }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }, { key: "priority", label: "Priority", type: "number" }, { key: "versionPolicy", label: "Version policy" }, { key: "schemaRevision", label: "Pinned schema revision", type: "number" }],
 };
-function fieldControl(field, entity) { if (field.collection && state) {
+function fieldControl(field, entity) { if (field.type === "flow-role") {
+    const select = document.createElement("select");
+    select.name = field.key;
+    select.append(new Option("Interaction", "interaction"), new Option("Context-setting", "context-setting"));
+    select.value = entity[field.key] === "context-setting" ? "context-setting" : "interaction";
+    return select;
+} if (field.collection && state) {
     const select = document.createElement("select");
     select.name = field.key;
     select.multiple = Boolean(field.multiple);
@@ -322,70 +329,9 @@ function documentationResult() { if (!state)
     throw new Error("No project"); const fields = ["path", "type", ...Array.from(document.querySelectorAll(".documentation-field:checked"), ({ value }) => value)]; return exportDocumentation(state.project, { fields, include: { applicability: q("#documentation-applicability").checked, flows: q("#documentation-flows").checked, fixtures: q("#documentation-fixtures").checked, releases: q("#documentation-releases").checked } }); }
 function refreshDocumentation() { q("#documentation-preview").textContent = documentationResult().preview; }
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
-function renderFlowSteps() {
-    const list = q("#flow-step-list");
-    list.replaceChildren();
-    if (!state || selectedKind !== "flows" || !selectedId)
-        return;
-    const renderedFlowId = selectedId, flow = state.project.collections.flows.find(({ id }) => id === renderedFlowId), steps = flow?.steps ?? [];
-    const stillSelected = () => selectedKind === "flows" && selectedId === renderedFlowId;
-    steps.forEach((step, index) => {
-        const item = document.createElement("li"), form = document.createElement("form"), heading = document.createElement("h3"), name = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), optional = document.createElement("input"), branch = document.createElement("input"), page = document.createElement("select"), event = document.createElement("select"), save = document.createElement("button"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"), transitions = document.createElement("div");
-        heading.textContent = `${index + 1}. ${step.name}`;
-        name.value = step.name;
-        name.setAttribute("aria-label", "Step name");
-        minimum.type = maximum.type = "number";
-        minimum.min = "0";
-        maximum.min = "1";
-        minimum.value = String(step.minimum ?? 1);
-        maximum.value = String(step.maximum ?? 1);
-        minimum.setAttribute("aria-label", "Minimum occurrences");
-        maximum.setAttribute("aria-label", "Maximum occurrences");
-        optional.type = "checkbox";
-        optional.checked = Boolean(step.optional);
-        optional.setAttribute("aria-label", "Optional step");
-        branch.value = String(step.branch ?? "");
-        branch.setAttribute("aria-label", "Branch or join name");
-        replaceOptions(page, state.project.collections.pages, "Any page");
-        replaceOptions(event, state.project.collections.events, "Any event");
-        page.value = String(step.pageId ?? "");
-        event.value = String(step.eventId ?? "");
-        page.setAttribute("aria-label", "Page");
-        event.setAttribute("aria-label", "Event");
-        save.type = "submit";
-        save.textContent = "Save step";
-        up.type = down.type = remove.type = "button";
-        up.textContent = "Move up";
-        down.textContent = "Move down";
-        remove.textContent = "Remove";
-        up.disabled = index === 0;
-        down.disabled = index === steps.length - 1;
-        form.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); if (!state || !stillSelected())
-            return; persist(saveFlowStep(state, renderedFlowId, step.id, { name: name.value.trim(), pageId: page.value, eventId: event.value, minimum: Number(minimum.value), maximum: Number(maximum.value), optional: optional.checked, branch: branch.value.trim() })); });
-        up.addEventListener("click", () => { if (state && stillSelected())
-            persist(reorderFlowStep(state, renderedFlowId, index, index - 1)); });
-        down.addEventListener("click", () => { if (state && stillSelected())
-            persist(reorderFlowStep(state, renderedFlowId, index, index + 1)); });
-        remove.addEventListener("click", () => { if (!state || !stillSelected())
-            return; persist(transactProject(state, `Remove ${step.name} flow step`, (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => candidate.id === renderedFlowId ? { ...candidate, steps: (candidate.steps ?? []).filter(({ id }) => id !== step.id).map((candidateStep) => ({ ...candidateStep, transitions: (candidateStep.transitions ?? []).filter(({ toStepId }) => toStepId !== step.id) })) } : candidate) } }))); });
-        form.append(heading, name, page, event, minimum, maximum, optional, branch, save, up, down, remove);
-        const appendTransitionEditor = (transition) => { const row = document.createElement("form"), target = document.createElement("select"), condition = document.createElement("textarea"), commit = document.createElement("button"); replaceOptions(target, steps.filter(({ id }) => id !== step.id), "Choose next step"); target.value = transition?.toStepId ?? ""; target.setAttribute("aria-label", `Next step from ${step.name}`); condition.value = transition?.condition ? JSON.stringify(transition.condition) : ""; condition.placeholder = 'Optional condition JSON'; condition.setAttribute("aria-label", `Transition condition from ${step.name}`); commit.type = "submit"; commit.textContent = transition ? "Save transition" : "Add transition"; row.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); if (!state || !stillSelected() || !target.value)
-            return; try {
-            persist(saveFlowTransition(state, renderedFlowId, step.id, { id: transition?.id ?? id("flow-transition"), toStepId: target.value, ...(condition.value.trim() ? { condition: JSON.parse(condition.value) } : {}) }));
-        }
-        catch (error) {
-            q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
-        } }); row.append(target, condition, commit); transitions.append(row); };
-        for (const transition of step.transitions ?? [])
-            appendTransitionEditor(transition);
-        appendTransitionEditor();
-        item.append(form, transitions);
-        list.append(item);
-    });
-}
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
-    return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Any page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Any event"); const flow = selectedKind === "flows" ? state.project.collections.flows.find(({ id }) => id === selectedId) : undefined, steps = flow?.steps ?? []; replaceOptions(q("#flow-step-from"), steps, "Choose step"); replaceOptions(q("#flow-step-to"), steps, "Choose step"); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
+    return; flowGraphBuilder?.renderSelectors(); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
     const eventName = String(event.eventName ?? "");
     if (eventName && eventName !== event.id) {
         const alias = document.createElement("option");
@@ -428,7 +374,7 @@ function renderAssignments() {
 function render() { const empty = q("#project-empty"), workspace = q("#project-workspace"); empty.hidden = Boolean(state); workspace.hidden = !state; if (!state) {
     q("#project-context").textContent = "No project";
     return;
-} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts"; q("#assignment-editor").hidden = selectedKind !== "assignments"; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId; renderTree(); renderWorkspace(); renderReferenceSelectors(); }
+} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts"; q("#assignment-editor").hidden = selectedKind !== "assignments"; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId; renderTree(); renderWorkspace(); renderReferenceSelectors(); flowGraphBuilder?.render(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); persist(createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id })); q("#workspace-pane").focus(); });
 document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
@@ -439,21 +385,6 @@ q("#undo-project").addEventListener("click", () => { if (state)
 q("#redo-project").addEventListener("click", () => { if (state)
     persist(redoProjectTransaction(state)); });
 q("#project-search").addEventListener("input", renderWorkspace);
-q("#add-flow-step-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state || selectedKind !== "flows" || !selectedId) {
-    q("#flow-step-result").textContent = "Select a flow before adding a structured step.";
-    return;
-} try {
-    persist(addFlowStep(state, selectedId, { name: q("#flow-step-name").value.trim(), pageId: q("#flow-step-page").value, eventId: q("#flow-step-event").value, minimum: Number(q("#flow-step-minimum").value), maximum: Number(q("#flow-step-maximum").value), optional: q("#flow-step-optional").checked, branch: q("#flow-step-branch").value.trim() }, id));
-    q("#flow-step-result").textContent = "Structured step saved in the flow draft. Add its canonical transitions in place.";
-    q("#add-flow-step-form").reset();
-    q("#flow-step-minimum").value = "1";
-    q("#flow-step-maximum").value = "1";
-    renderFlowSteps();
-}
-catch (error) {
-    q("#flow-step-result").textContent = error instanceof Error ? error.message : String(error);
-    q("#flow-step-minimum").focus();
-} });
 q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
 const savedSchemaDialog = q("#saved-schema-review"), savedSchemaChanges = q("#saved-schema-review-changes");
@@ -628,6 +559,7 @@ q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
     return;
 } if (state)
     persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
+flowGraphBuilder = installFlowGraphBuilder({ context: () => ({ ...state ? { state } : {}, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) }), persist, id });
 restore();
 if (!state) {
     const stagedStart = localStorage.getItem(START_PATH_KEY);
@@ -644,12 +576,10 @@ subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
     lastCommittedState = structuredClone(next);
     canonicalRevision = revision;
     render();
-    renderFlowSteps();
     renderAssignments();
     q("#project-state").textContent = `Updated from canonical revision ${revision}`;
 });
 render();
-renderFlowSteps();
 renderAssignments();
 const parameters = new URLSearchParams(location.search), deepKind = parameters.get("kind"), deepId = parameters.get("entity");
 if (deepKind && deepKind in labels) {

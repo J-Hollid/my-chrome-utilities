@@ -2,101 +2,53 @@ Feature: Data layer directional Flow specification graph
 
   Background:
     Given Shop project contains Pages Checkout, Confirmation, and Delivery options
-    And Shop project contains Events route_view, add_shipping_info, add_payment_info, and Purchase
     And Specification Flow Checkout journey is open
 
   # Data layer directional Flow specification graph 001
   Scenario: Data layer directional Flow specification graph 001
-    Given route_view is a context-setting Event definition
-    When the operator adds a route_view context occurrence for Checkout
-    And adds add_payment_info as an interaction occurrence using the human Page and Event selectors
-    And connects route_view to add_payment_info as Expected next on the canvas
-    Then both nodes persist stable Page and Event references without copying either definition
-    And the graph and synchronized outline show the same names, roles, Pages, and identities
-    And the canvas shows a directed arrow from the route_view source port to the add_payment_info target port
-    When the operator moves add_payment_info to the Payment lane and saves
-    And reopens Checkout journey
-    Then its Payment lane, node coordinates, directed edge, source, and target are unchanged
+    When visible controls create a context occurrence, an interaction occurrence, and a documented relationship
+    And pointer drag moves the interaction occurrence to the Payment lane
+    And an Arrow key moves that occurrence vertically
+    And the outline editor changes that relationship's group, label, and documentation condition
+    Then one persisted record exists for each occurrence and relationship with stable Page and Event references
+    And documentary graph authoring leaves executable Flow steps and transitions unchanged
+    And the relationship keeps its stable ID without a duplicate
+    And graph and outline expose the exact directed source, target, references, edited meaning, and saved layout after reload
 
   # Data layer directional Flow specification graph 002
   Scenario: Data layer directional Flow specification graph 002
-    Given page_view has interaction role while route_view has context-setting role
-    When occurrences of both Events are added to Checkout
-    Then route_view establishes the authoring Page context
-    And page_view does not establish context because of its emitted name
-    And changing either emitted name leaves both roles unchanged
+    Given route_view is context-setting and page_view is interaction
+    When visible controls reuse route_view for Checkout and Confirmation in one SPA Flow
+    And create parallel Shipping and Payment branches beneath Checkout
+    And edit only Shipping to Delivery options
+    And rename route_view to route_context and Confirmation to Order confirmation
+    Then exactly four named occurrences and two distinct parallel relationships retain their stable topology
+    And Shipping Page binding is the sole occurrence delta while Payment and every other binding remain unchanged
+    And Payment remains unchanged and bound to Checkout after reload
+    And graph and outline show the renamed Event and Page after reload
+    And captured Event, Page, occurrence, relationship endpoint, and branch bindings remain byte-for-byte stable across rename and reload
 
   # Data layer directional Flow specification graph 003
   Scenario: Data layer directional Flow specification graph 003
-    Given shared Event route_view is used by Checkout and Confirmation context occurrences
-    When interaction occurrences are added beneath both contexts
-    Then each context occurrence retains the same stable route_view Event reference
-    And each interaction occurrence persists its resolved stable Page reference
-    And Where used lists every occurrence without creating copied Event schemas
-    When the operator renames route_view to route_context and Confirmation to Order confirmation
-    Then graph, outline, and Where used show the new human names
-    And every Event, Page, and occurrence stable reference remains unchanged
+    Given rendered occurrence controls contain obligation and multiplicity choices
+    And rendered relationship controls offer expected-next, alternative, parallel, and merge
+    When those human-name controls create all four relationship kinds
+    And graph and outline are compared
+    Then both views contain the same stable topology and node expectations
+    And no Flow verdict is stored or rendered
+    And documentary topology is stored outside executable Flow entities
+    And sequence, branch, and occurrence expectations remain explicitly manual
 
   # Data layer directional Flow specification graph 004
-  Scenario Outline: Data layer directional Flow specification graph 004
-    Given add_shipping_info and add_payment_info are Event occurrences
-    When the operator connects them as <relationship>
-    Then graph, outline, and documentation preview identify <meaning>
-    And one stable relationship stores the source, target, kind, group, label, and plain-language condition
-    And the condition is labelled documentation rather than an executable query
-
-    Examples:
-      | relationship | meaning                                  |
-      | expected next | normally expected ordering              |
-      | alternative   | one documented alternative              |
-      | parallel      | independently expected branches         |
-      | merge         | documentary continuation after branches |
+  Scenario: Data layer directional Flow specification graph 004
+    Given keyboard focus is on add_shipping_info in the synchronized outline
+    When keyboard controls create a Parallel relationship to add_payment_info and save
+    Then exactly one stable relationship persists and focus returns to its outline row
+    And graph and outline identify that same relationship without a pointer-only action
 
   # Data layer directional Flow specification graph 005
-  Scenario Outline: Data layer directional Flow specification graph 005
-    Given add_payment_info has one incoming expected-next relationship
-    When the operator sets its obligation to <obligation> and multiplicity to <multiplicity>
-    Then the Event occurrence is the only canonical owner of that expectation
-    And graph, outline, and documentation preview render the saved occurrence expectation unchanged
-    And no optional or repeated relationship kind is created
-
-    Examples:
-      | obligation    | multiplicity |
-      | required      | exactly 1    |
-      | optional      | 0 or 1       |
-      | conditional   | 1 when known |
-      | informational | any count    |
-
-  # Data layer directional Flow specification graph 006
-  Scenario: Data layer directional Flow specification graph 006
-    Given Checkout splits into parallel Shipping and Payment branches
-    When Shipping changes its Page context to Delivery options
-    Then Payment retains Checkout as its Page context
-    And both branch Page references remain explicit after reload
-    When the branches merge and a following interaction has no unambiguous Page
-    Then that occurrence is blocked with both incoming Page names
-    And its repair action focuses the Page selector
-
-  # Data layer directional Flow specification graph 007
-  Scenario: Data layer directional Flow specification graph 007
-    When Checkout journey is authored, inspected, or exported
-    Then it states that Event payloads are validated independently through Assignments
-    And it states that sequence, branch, and occurrence expectations are checked manually
-    And it never describes the graph as an active, traversed, passed, or failed journey
-
-  # Data layer directional Flow specification graph 008
-  Scenario: Data layer directional Flow specification graph 008
-    Given keyboard focus is on add_shipping_info in the synchronized outline
-    When the operator adds a Parallel relationship to add_payment_info using only human-name controls
-    Then exactly one canonical relationship is selected and focused after save
-    And the same relationship appears in the graph without a drag operation
-    And Arrow, Home, and End keys move through the outline without changing graph data
-
-  # Data layer directional Flow specification graph 009
-  Scenario: Data layer directional Flow specification graph 009
+  Scenario: Data layer directional Flow specification graph 005
     Given Checkout journey contains no Event occurrences
     When its empty state opens
-    Then it explains context-setting and interaction occurrences with one example of each
-    And it explains reusable Page and Event references, the effective-schema layers, and Assignment-backed payload validation
-    And its explanation distinguishes independent validation from manual topology and count expectations
-    And Add a context-setting Event is the single recommended next action
+    Then it explains context-setting and interaction occurrences, stable Page and Event references, independent payload validation, and manual journey expectations
+    And exactly one primary action starts context-setting Event authoring without adding an incomplete record

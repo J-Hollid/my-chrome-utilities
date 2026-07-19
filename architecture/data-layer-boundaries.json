@@ -1,4 +1,18 @@
 {
+  "src/data-layer-flow-graph.ts": {
+    "module": "flow-graph",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-flow-graph-ui.ts": {
+    "module": "flow-graph",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
   "src/data-layer-allowed-value-expansion-ui.ts": {
     "module": "schemas",
     "layer": "browser"
@@ -578,7 +592,10 @@
   },
   "src/specification-builder.ts": {
     "module": "schemas",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/flow-graph.ts"
+    ]
   },
   "src/data-layer-source.ts": {
     "module": "capture",

@@ -321,7 +321,15 @@
       "src/specification-builder.ts",
       "src/data-layer-schema",
       "src/data-layer-validation",
-      "src/utilities/data-layer"
+    "src/utilities/data-layer/capture.ts",
+    "src/utilities/data-layer/defect-reporting.ts",
+    "src/utilities/data-layer/event-library.ts",
+    "src/utilities/data-layer/index.ts",
+    "src/utilities/data-layer/layers",
+    "src/utilities/data-layer/live-inspection.ts",
+    "src/utilities/data-layer/replay.ts",
+    "src/utilities/data-layer/flow-graph.ts",
+    "src/utilities/data-layer/schemas.ts"
     ],
     "dependencies": [
       "capture"
@@ -680,6 +688,29 @@
     ],
     "browserAdapters": [
       "test/browser-packs/replay.mjs"
+    ]
+  },
+  {
+    "id": "flow_graph",
+    "source": [
+      "src/data-layer-flow-graph.ts",
+      "src/data-layer-flow-graph-ui.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-flow-graph-test.mjs",
+      "test/data-layer-flow-graph-persistence-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-directional-flow-specification-graph.feature",
+      "features/data-layer-directional-flow-specification-graph-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/flow_graph.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/flow-graph.mjs"
     ]
   },
   {

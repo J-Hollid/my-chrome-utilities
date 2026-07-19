@@ -22,6 +22,7 @@ const publicDataLayerModules = new Set([
   "schemas",
   "defect-reporting",
   "replay",
+  "flow-graph",
 ]);
 
 function importsOf(source) {
