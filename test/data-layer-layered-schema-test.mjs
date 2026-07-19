@@ -5,7 +5,7 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-ui.js";
+import {effectivePropertySummary,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-ui.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
@@ -90,5 +90,6 @@ const selectedOccurrence=pathState.project.documentationFlowGraphs["flow:selecte
 assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",occurrenceId:"occurrence:selected"});
 assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","flow:selected","occurrence:selected"]);
 assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.flows[0],"Flow Page-instance"),{flowId:"flow:selected"});
+assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');
 
 console.log("data-layer layered schema tests passed");
