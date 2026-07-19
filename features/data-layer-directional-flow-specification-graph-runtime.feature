@@ -6,33 +6,35 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 001
   Scenario: Data layer directional Flow specification graph runtime 001
-    When actual controls create a context occurrence, an interaction occurrence, and a documented relationship
-    And pointer drag moves the interaction occurrence to the Payment lane
+    Given production Page Group Checkout is the first lane and contains Checkout Page
+    And Checkout Page binds route_view as its SPA context Event
+    When actual controls create a Checkout page-context occurrence, an add_payment_info interaction occurrence, and a documented relationship
+    And pointer drag moves the interaction occurrence vertically within the Checkout lane
     And an Arrow key moves that occurrence vertically
     And the rendered outline editor changes that relationship's group, label, and documentation condition
-    Then production storage contains one persisted record for each item with stable references
+    Then production storage contains one persisted record for each authored occurrence and relationship
     And executable Flow steps and transitions remain unchanged
     And no visible legacy transition selector or occurrence-level relationship group exists or persists
     And the installed per-occurrence relationship form is the sole relationship authoring path
     And the relationship keeps its stable ID without a duplicate
-    And rendered graph and outline expose the exact names, roles, Page and Event references, endpoints, and edited relationship
+    And rendered graph and outline expose the Checkout lane name, exact occurrence types, Page and Event references, endpoints, and edited relationship
     And the canvas renders one directed edge from the stored source port to the stored target port
-    And reload preserves the same node coordinates, Payment lane, directed edge, source, and target
+    And reload preserves the same vertical node coordinates, Checkout Page Group reference, directed edge, source, and target
 
   # Data layer directional Flow specification graph runtime 002
   Scenario: Data layer directional Flow specification graph runtime 002
-    Given route_view is context-setting and page_view is interaction
-    When visible controls reuse route_view for Checkout and Confirmation in one SPA Flow
-    And create parallel Shipping and Payment branches beneath Checkout
+    Given Checkout journey uses its configured production Page Group lanes
+    And Checkout and Confirmation Pages each bind shared Event route_view as a context Event
+    When visible controls reuse both route_view context bindings in one SPA Flow
+    And create parallel Shipping and Payment interaction occurrences on Checkout
     And edit only Shipping to Delivery options
-    Then emitted names do not determine either Event role
-    And each interaction occurrence stores its resolved Page reference
+    Then Page context bindings rather than Event names determine context-setting use
     And exactly four named occurrences and two distinct parallel relationships retain their stable topology
-    And Shipping Page binding is the sole occurrence delta while Payment and every other binding remain unchanged
-    And Payment remains unchanged and bound to Checkout
-    When visible controls rename route_view to route_context and Confirmation to Order confirmation
-    Then graph and outline render the new labels after reload
-    And captured Event, Page, occurrence, relationship endpoint, and branch bindings remain byte-for-byte stable across rename and reload
+    And Shipping Page and Page Group references are the sole occurrence delta while Payment and every other binding remain unchanged
+    And Payment remains unchanged in the Checkout Page Group and bound to Checkout
+    When visible controls rename route_view to route_context, Delivery Page Group to Fulfilment, and Confirmation Page to Order confirmation
+    Then graph and outline render the new Event, Page Group, and Page labels after reload
+    And captured Event, Page, Page Group, context-binding, occurrence, relationship endpoint, and branch references remain byte-for-byte stable across rename and reload
 
   # Data layer directional Flow specification graph runtime 003
   Scenario: Data layer directional Flow specification graph runtime 003
@@ -57,8 +59,9 @@ Feature: Data layer directional Flow specification graph runtime
   Scenario: Data layer directional Flow specification graph runtime 005
     Given the selected production Flow has no occurrences
     When the installed empty state renders
-    Then it explains both Event roles, reusable Page and Event references, independent payload validation, and manual journey expectations
-    And exactly one primary action starts context-setting Event authoring without adding an incomplete record
+    Then it explains that Page Groups define lanes, Pages bind context Events, and Events own reusable payload schemas
+    And it explains stable references, independent per-Event payload validation, and manual journey expectations
+    And exactly one primary action starts Page-context occurrence authoring without adding an incomplete record
     And no project record changes until that action is invoked
 
   # Data layer directional Flow specification graph runtime 006
@@ -76,7 +79,8 @@ Feature: Data layer directional Flow specification graph runtime
     Given the installed canvas contains Checkout route and Purchase occurrences joined by an expected-next relationship
     When actual keyboard controls select Checkout route on the canvas
     Then the Inspector heading identifies Checkout route by its rendered human name
-    And the Inspector renders its shared Page, shared Event, role, obligation, occurrence bounds, and lane controls
+    And the Inspector renders its Page Group, Page, context-event binding, derived page-context type, obligation, and occurrence-bound controls
+    And the Inspector renders no editable occurrence-role or free-form lane control
     When actual keyboard controls select the expected-next relationship in the canvas or outline
     Then the Inspector heading identifies the relationship by rendered source and target names
     And the Inspector renders its kind, target, group, label, documentation condition, and expectation controls
@@ -84,3 +88,36 @@ Feature: Data layer directional Flow specification graph runtime
     When the selected relationship is changed and saved through the Inspector
     Then production storage updates the same stable relationship without a duplicate
     And rendered graph and outline refresh while focus returns to that relationship
+
+  # Data layer directional Flow specification graph runtime 008
+  Scenario: Data layer directional Flow specification graph runtime 008
+    Given production Page Groups Checkout, Delivery, and Confirmation have stable IDs and member Pages
+    When actual Flow controls select them as lanes in that order
+    Then canonical Flow storage contains the three ordered Page Group references
+    And the initial installed graph projections agree with the selected human-name order
+    When actual controls rename Delivery to Fulfilment and move it after Confirmation
+    Then Fulfilment replaces Delivery as the third installed lane after Checkout and Confirmation in both graph projections
+    And canonical occurrences retain their Page Group references and vertical positions
+    And rendered horizontal positions derive from current lane order rather than persisted semantic coordinates
+
+  # Data layer directional Flow specification graph runtime 009
+  Scenario: Data layer directional Flow specification graph runtime 009
+    Given Checkout Page has initial-load page_view and route-change route_view context-event bindings
+    And Purchase Event owns one reusable payload schema
+    When actual controls add page-context occurrences for both Checkout bindings
+    And add a Purchase interaction occurrence on Checkout
+    Then both production page-context records persist binding references while Purchase persists its Event reference and all three persist Checkout Page and Page Group references
+    And stored production occurrence semantics contain no role value, schema copy, or lane-name string
+    And the production per-Event evaluator resolves the canonical Event schema independently of manual journey expectations
+
+  # Data layer directional Flow specification graph runtime 010
+  Scenario: Data layer directional Flow specification graph runtime 010
+    Given Checkout Page belongs to Checkout and Trade Page Groups selected as production Flow lanes
+    And Purchase interaction is assigned to the Trade lane by stable Page Group reference
+    When actual controls attempt to remove Trade membership or the Trade lane
+    Then the installed consequential-action review names Purchase, Checkout Page, Trade Page Group, and Checkout journey
+    And the destructive control is blocked until the occurrence is reassigned or removed
+    And canonical storage does not silently move the occurrence
+    When actual controls reassign Purchase to Checkout and confirm removal
+    Then one canonical revision updates the occurrence, membership, and Flow lane order
+    And one installed Undo restores the complete prior Page Group assignment

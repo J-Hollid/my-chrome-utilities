@@ -12,10 +12,13 @@ The checkpoint covers human Page and Event selectors, context-setting and
 interaction occurrences, expected-next/alternative/parallel/merge relationships,
 pointer and keyboard positioning, synchronized outline editing, stable references,
 persistence/reload, primary main-workspace ownership of the graph and outline,
-selection-driven contextual Inspector editing, and the explicit boundary that
-payload validation is independent while journey expectations remain manual. Any
-retained executable-step authoring is an explicitly separate Advanced function and
-does not duplicate or replace documentary graph authoring.
+selection-driven contextual Inspector editing, Page Group-defined lanes, Page-owned
+context-event bindings, Event-owned reusable schemas for interaction and context
+events, and the explicit boundary that payload validation is independent while
+journey expectations remain manual. Occurrences persist stable Page Group, Page,
+context-binding, and Event references rather than hardcoded lane names or editable
+global Event roles. Any retained executable-step authoring is an explicitly separate
+Advanced function and does not duplicate or replace documentary graph authoring.
 
 Schema composition, Assignment readiness, resolver redesign, documentation export,
 fixtures, coverage, preflight, release, Live, cross-surface concurrency, and temporal
