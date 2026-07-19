@@ -726,7 +726,9 @@
       "test/data-layer-layered-schema-persistence-test.mjs",
       "test/data-layer-layered-schema-adoption-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-layered-schema-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-layered-schema-constraints.feature",
       "features/data-layer-layered-schema-constraints-runtime.feature"
