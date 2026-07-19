@@ -29,9 +29,18 @@
             observed (:flowGraph (json/parse-string line true))]
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
-(defn- all-true? [values] (every? true? (vals values)))
-(defn- assert-runtime! [{:keys [authoring branch topology keyboard empty installedBoundary]}]
-  (support/assert! (and installedBoundary (all-true? authoring)) "Installed graph authoring evidence failed." authoring)
+(def evidence-category-keys #{:authoring :branch :topology :keyboard :empty})
+(def required-evidence-keys (conj evidence-category-keys :installedBoundary))
+(defn all-true? [values]
+  (and (map? values) (seq values) (every? true? (vals values))))
+(defn complete-browser-evidence? [evidence]
+  (and (map? evidence)
+       (= required-evidence-keys (set (keys evidence)))
+       (true? (:installedBoundary evidence))
+       (every? #(all-true? (get evidence %)) evidence-category-keys)))
+(defn- assert-runtime! [{:keys [authoring branch topology keyboard empty] :as evidence}]
+  (support/assert! (complete-browser-evidence? evidence) "Installed graph evidence is incomplete or contains a false value." evidence)
+  (support/assert! (all-true? authoring) "Installed graph authoring evidence failed." authoring)
   (support/assert! (all-true? branch) "Parallel branch isolation or stable-ID rename evidence failed." branch)
   (support/assert! (all-true? topology) "Graph/outline topology or manual-boundary evidence failed." topology)
   (support/assert! (all-true? keyboard) "Stable relationship keyboard focus/selection evidence failed." keyboard)
