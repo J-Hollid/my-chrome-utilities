@@ -159,6 +159,18 @@
     "module": "schemas",
     "layer": "browser"
   },
+  "src/data-layer-layered-schema.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/data-layer-layered-schema-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-live-guided-workflow-ui.ts": {
     "module": "capture",
     "layer": "browser"

@@ -715,6 +715,32 @@
     ]
   },
   {
+    "id": "layered_schema",
+    "source": [
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-layered-schema-ui.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-layered-schema-test.mjs",
+      "test/data-layer-layered-schema-persistence-test.mjs",
+      "test/data-layer-layered-schema-adoption-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-layered-schema-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-layered-schema-constraints.feature",
+      "features/data-layer-layered-schema-constraints-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/layered_schema.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/layered-schema.mjs"
+    ]
+  },
+  {
     "id": "shell",
     "source": [
       "src/active-page",
