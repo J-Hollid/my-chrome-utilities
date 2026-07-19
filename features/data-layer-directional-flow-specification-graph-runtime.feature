@@ -12,6 +12,8 @@ Feature: Data layer directional Flow specification graph runtime
     And the rendered outline editor changes that relationship's group, label, and documentation condition
     Then production storage contains one persisted record for each item with stable references
     And executable Flow steps and transitions remain unchanged
+    And no visible legacy transition selector or occurrence-level relationship group exists or persists
+    And the installed per-occurrence relationship form is the sole relationship authoring path
     And the relationship keeps its stable ID without a duplicate
     And rendered graph and outline expose the exact names, roles, Page and Event references, endpoints, and edited relationship
     And the canvas renders one directed edge from the stored source port to the stored target port

@@ -24,7 +24,6 @@ export function installFlowGraphBuilder(options) {
     q("#flow-step-event").closest("label").firstChild.textContent = "Shared Event";
     q("#flow-step-minimum").closest("label").firstChild.textContent = "Expected minimum";
     q("#flow-step-maximum").closest("label").firstChild.textContent = "Expected maximum";
-    q("#flow-step-branch").closest("label").firstChild.textContent = "Relationship group";
     q("#flow-step-optional").closest("label").hidden = true;
     addForm.querySelector('button[type="submit"]').textContent = "Add Event occurrence";
     let selectedRelationshipId;
@@ -33,9 +32,9 @@ export function installFlowGraphBuilder(options) {
     const syncRoleControl = (eventSelect, roleSelect, fallback = roleSelect.value) => { const selected = synchronizedRole(eventSelect.value, fallback); roleSelect.value = selected.role; roleSelect.disabled = selected.authoritative; roleSelect.title = selected.authoritative ? "This role is defined by the selected Event." : "Choose a fallback role until the Event definition has one."; };
     addEvent.addEventListener("change", () => syncRoleControl(addEvent, role));
     const laneForX = (x) => lanes.reduce((nearest, lane) => Math.abs(lane.x - x) < Math.abs(nearest.x - x) ? lane : nearest, lanes[0]);
-    const occurrenceInput = (values) => ({ name: values.name, pageId: values.pageId, eventId: values.eventId, fallbackRole: values.fallbackRole, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, relationshipGroup: values.group, layout: { lane: values.lane, x: values.x, y: values.y } });
-    function renderSelectors() { const { state, steps } = current(); if (!state)
-        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); replaceOptions(q("#flow-step-from"), steps, "Choose occurrence"); replaceOptions(q("#flow-step-to"), steps, "Choose occurrence"); }
+    const occurrenceInput = (values) => ({ name: values.name, pageId: values.pageId, eventId: values.eventId, fallbackRole: values.fallbackRole, obligation: values.obligation, minimum: values.minimum, maximum: values.maximum, layout: { lane: values.lane, x: values.x, y: values.y } });
+    function renderSelectors() { const { state } = current(); if (!state)
+        return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); }
     function focusOccurrence(nodeId) { document.querySelector(`[data-edit-occurrence-id="${nodeId}"]`)?.focus(); }
     function focusRelationship(relationshipId) { queueMicrotask(() => document.querySelector(`[aria-label="Synchronized editable Flow outline"] [data-relationship-id="${relationshipId}"] button`)?.focus()); }
     function saveLayout(flowId, nodeId, currentLayout, x, y) { const { state } = current(); if (!state)
@@ -189,7 +188,7 @@ export function installFlowGraphBuilder(options) {
             editor.open = true;
         renderGraph(addForm, flow);
         steps.forEach((step, index) => {
-            const item = document.createElement("li"), form = document.createElement("form"), heading = document.createElement("h3"), name = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), nodeRole = document.createElement("select"), nodeObligation = document.createElement("select"), group = document.createElement("input"), lane = document.createElement("select"), page = document.createElement("select"), event = document.createElement("select"), save = document.createElement("button"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"), relationships = document.createElement("div"), position = step.position;
+            const item = document.createElement("li"), form = document.createElement("form"), heading = document.createElement("h3"), name = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), nodeRole = document.createElement("select"), nodeObligation = document.createElement("select"), lane = document.createElement("select"), page = document.createElement("select"), event = document.createElement("select"), save = document.createElement("button"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"), relationships = document.createElement("div"), position = step.position;
             heading.textContent = `${index + 1}. ${step.name}`;
             name.value = step.name;
             name.dataset.editOccurrenceId = step.id;
@@ -208,8 +207,6 @@ export function installFlowGraphBuilder(options) {
                 nodeObligation.append(new Option(value, value));
             nodeObligation.value = String(step.obligation ?? (step.optional ? "Optional" : "Required"));
             nodeObligation.setAttribute("aria-label", "Obligation");
-            group.value = String(step.relationshipGroup ?? step.branch ?? "");
-            group.setAttribute("aria-label", "Relationship group");
             replaceOptions(page, state.project.collections.pages, "Choose Page");
             replaceOptions(event, state.project.collections.events, "Choose Event");
             page.value = String(step.pageId ?? "");
@@ -229,14 +226,14 @@ export function installFlowGraphBuilder(options) {
             up.disabled = index === 0;
             down.disabled = index === steps.length - 1;
             form.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); const fresh = current().state; if (!fresh)
-                return; const laneX = lanes.find(({ name }) => name === lane.value)?.x ?? 230; options.persist(updateGraphOccurrence(fresh, flow.id, step.id, occurrenceInput({ name: name.value.trim(), pageId: page.value, eventId: event.value, fallbackRole: nodeRole.value, obligation: nodeObligation.value, minimum: Number(minimum.value), maximum: Number(maximum.value), group: group.value.trim(), lane: lane.value, x: laneX, y: position?.y ?? 70 + index * 120 }))); queueMicrotask(() => document.querySelector(`[data-edit-occurrence-id="${step.id}"]`)?.focus()); });
+                return; const laneX = lanes.find(({ name }) => name === lane.value)?.x ?? 230; options.persist(updateGraphOccurrence(fresh, flow.id, step.id, occurrenceInput({ name: name.value.trim(), pageId: page.value, eventId: event.value, fallbackRole: nodeRole.value, obligation: nodeObligation.value, minimum: Number(minimum.value), maximum: Number(maximum.value), lane: lane.value, x: laneX, y: position?.y ?? 70 + index * 120 }))); queueMicrotask(() => document.querySelector(`[data-edit-occurrence-id="${step.id}"]`)?.focus()); });
             up.addEventListener("click", () => { const fresh = current().state; if (fresh)
                 options.persist(reorderGraphOccurrence(fresh, flow.id, index, index - 1)); });
             down.addEventListener("click", () => { const fresh = current().state; if (fresh)
                 options.persist(reorderGraphOccurrence(fresh, flow.id, index, index + 1)); });
             remove.addEventListener("click", () => { const fresh = current().state; if (fresh)
                 options.persist(removeGraphOccurrence(fresh, flow.id, step.id)); });
-            form.append(heading, name, page, event, nodeRole, nodeObligation, minimum, maximum, group, lane, save, up, down, remove);
+            form.append(heading, name, page, event, nodeRole, nodeObligation, minimum, maximum, lane, save, up, down, remove);
             const appendRelationship = (relationship) => { const row = document.createElement("form"), target = document.createElement("select"), kind = document.createElement("select"), relationGroup = document.createElement("input"), label = document.createElement("input"), documentationCondition = document.createElement("input"), expectation = document.createElement("input"), commit = document.createElement("button"); replaceOptions(target, steps.filter(({ id }) => id !== step.id), "Choose target occurrence"); target.value = relationship?.toStepId ?? ""; target.setAttribute("aria-label", `Relationship target from ${step.name}`); for (const value of ["expected-next", "alternative", "parallel", "merge"])
                 kind.append(new Option(value, value)); kind.value = relationship?.kind ?? "expected-next"; kind.setAttribute("aria-label", "Relationship kind"); if (relationship)
                 kind.dataset.editRelationshipId = relationship.id; relationGroup.value = relationship?.group ?? ""; relationGroup.setAttribute("aria-label", "Relationship group"); label.value = relationship?.label ?? ""; label.setAttribute("aria-label", `Relationship label from ${step.name}`); documentationCondition.value = relationship?.documentationCondition ?? ""; documentationCondition.setAttribute("aria-label", `Documentation condition from ${step.name}`); documentationCondition.placeholder = "Plain-language documentation condition"; expectation.value = relationship?.expectation ?? ""; expectation.setAttribute("aria-label", `Relationship expectation from ${step.name}`); commit.type = "submit"; commit.textContent = relationship ? "Save relationship" : "Add relationship"; row.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); const fresh = current().state; if (!fresh || !target.value)
@@ -266,7 +263,7 @@ export function installFlowGraphBuilder(options) {
         return;
     } try {
         const projectedRole = synchronizedRole(addEvent.value, role.value).role, nodeObligation = obligation.value, lane = projectedRole === "context-setting" ? lanes[0] : lanes[1];
-        options.persist(addGraphOccurrence(state, flow.id, occurrenceInput({ name: addName.value.trim(), pageId: addPage.value, eventId: addEvent.value, fallbackRole: role.value, obligation: nodeObligation, minimum: Number(q("#flow-step-minimum").value), maximum: Number(q("#flow-step-maximum").value), group: q("#flow-step-branch").value.trim(), lane: lane.name, x: lane.x, y: 70 + steps.length * 120 }), options.id));
+        options.persist(addGraphOccurrence(state, flow.id, occurrenceInput({ name: addName.value.trim(), pageId: addPage.value, eventId: addEvent.value, fallbackRole: role.value, obligation: nodeObligation, minimum: Number(q("#flow-step-minimum").value), maximum: Number(q("#flow-step-maximum").value), lane: lane.name, x: lane.x, y: 70 + steps.length * 120 }), options.id));
         q("#flow-step-result").textContent = "Event occurrence saved with stable Page and Event references.";
         addForm.reset();
         q("#flow-step-minimum").value = "1";

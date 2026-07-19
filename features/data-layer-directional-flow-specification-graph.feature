@@ -12,6 +12,8 @@ Feature: Data layer directional Flow specification graph
     And the outline editor changes that relationship's group, label, and documentation condition
     Then one persisted record exists for each occurrence and relationship with stable Page and Event references
     And documentary graph authoring leaves executable Flow steps and transitions unchanged
+    And no legacy transition selector or occurrence-level relationship group is exposed or stored
+    And the per-occurrence relationship form is the sole relationship authoring path
     And the relationship keeps its stable ID without a duplicate
     And graph and outline expose the exact directed source, target, references, edited meaning, and saved layout after reload
 

@@ -4,7 +4,7 @@ export type FlowRole="context-setting"|"interaction";
 export type FlowObligation="Required"|"Optional"|"Conditional"|"Informational";
 export type FlowRelationshipKind="expected-next"|"alternative"|"parallel"|"merge";
 export interface FlowLayout {lane:string;x:number;y:number}
-export interface FlowOccurrenceInput {name:string;pageId:string;eventId:string;fallbackRole:FlowRole;obligation:FlowObligation;minimum:number;maximum:number;relationshipGroup?:string;layout:FlowLayout}
+export interface FlowOccurrenceInput {name:string;pageId:string;eventId:string;fallbackRole:FlowRole;obligation:FlowObligation;minimum:number;maximum:number;layout:FlowLayout}
 export interface FlowRelationshipInput {id?:string;toStepId:string;kind:FlowRelationshipKind;group?:string;label?:string;documentationCondition?:string;expectation?:string}
 export interface FlowNode {id:string;name:string;eventId:string;pageId:string;role:FlowRole;obligation:FlowObligation;expectedMinimum:number;expectedMaximum?:number;layout?:FlowLayout}
 export interface FlowRelationship {id:string;sourceNodeId:string;targetNodeId:string;kind:FlowRelationshipKind;group?:string;label?:string;documentationCondition?:string;expectation?:string}
@@ -23,7 +23,7 @@ const graphIndex=(project:SpecificationProject):Record<string,StoredDocumentaryF
 const storedGraph=(project:SpecificationProject,flowId:string):StoredDocumentaryFlowGraph=>graphIndex(project)[flowId]??{occurrences:[],relationships:[]};
 const saveStoredGraph=(project:SpecificationProject,flowId:string,graph:StoredDocumentaryFlowGraph):SpecificationProject=>({...project,documentationFlowGraphs:{...graphIndex(project),[flowId]:graph}});
 type ValidatedOccurrence=Omit<FlowOccurrenceInput,"fallbackRole">&{fallbackRole?:FlowRole};
-const normalizedOccurrence=(input:ValidatedOccurrence):Omit<ProjectEntity,"id">=>{const {layout,...values}=clone(input);return{...values,lane:layout.lane,position:{x:layout.x,y:layout.y},optional:input.obligation==="Optional",relationshipGroup:input.relationshipGroup??""};};
+const normalizedOccurrence=(input:ValidatedOccurrence):Omit<ProjectEntity,"id">=>{const {layout,...values}=clone(input);return{...values,lane:layout.lane,position:{x:layout.x,y:layout.y},optional:input.obligation==="Optional"};};
 
 export function documentaryFlowGraph(project:SpecificationProject,flowId:string):DocumentaryFlowGraph{const graph=storedGraph(project,flowId);return{occurrences:graph.occurrences,relationships:graph.relationships};}
 function validOccurrence(state:ProjectState,flowId:string,input:FlowOccurrenceInput):ValidatedOccurrence{
@@ -43,7 +43,7 @@ export function addGraphOccurrence(state:ProjectState,flowId:string,input:FlowOc
 export function updateGraphOccurrence(state:ProjectState,flowId:string,occurrenceId:string,input:FlowOccurrenceInput):ProjectState{
   if(!storedGraph(state.project,flowId).occurrences.some(({id})=>id===occurrenceId))throw new Error("Unknown documentary Flow occurrence.");
   const valid=validOccurrence(state,flowId,input);
-  return transactProject(state,`Save Flow occurrence ${occurrenceId}`,(project)=>{const graph=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...graph,occurrences:graph.occurrences.map((occurrence)=>{if(occurrence.id!==occurrenceId)return occurrence;const {layout:discardedLayout,...stored}=occurrence;void discardedLayout;return{...stored,...normalizedOccurrence(valid)};})});});
+  return transactProject(state,`Save Flow occurrence ${occurrenceId}`,(project)=>{const graph=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...graph,occurrences:graph.occurrences.map((occurrence)=>{if(occurrence.id!==occurrenceId)return occurrence;const {layout:discardedLayout,relationshipGroup:discardedRelationshipGroup,branch:discardedBranch,...stored}=occurrence;void discardedLayout;void discardedRelationshipGroup;void discardedBranch;return{...stored,...normalizedOccurrence(valid)};})});});
 }
 export function moveGraphOccurrence(state:ProjectState,flowId:string,occurrenceId:string,layout:FlowLayout):ProjectState{
   const occurrence=storedGraph(state.project,flowId).occurrences.find(({id})=>id===occurrenceId),position=occurrence?.position as {x?:number;y?:number}|undefined;

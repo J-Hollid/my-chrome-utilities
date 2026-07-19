@@ -3,7 +3,7 @@ const clone = (value) => structuredClone(value);
 const graphIndex = (project) => project.documentationFlowGraphs ?? {};
 const storedGraph = (project, flowId) => graphIndex(project)[flowId] ?? { occurrences: [], relationships: [] };
 const saveStoredGraph = (project, flowId, graph) => ({ ...project, documentationFlowGraphs: { ...graphIndex(project), [flowId]: graph } });
-const normalizedOccurrence = (input) => { const { layout, ...values } = clone(input); return { ...values, lane: layout.lane, position: { x: layout.x, y: layout.y }, optional: input.obligation === "Optional", relationshipGroup: input.relationshipGroup ?? "" }; };
+const normalizedOccurrence = (input) => { const { layout, ...values } = clone(input); return { ...values, lane: layout.lane, position: { x: layout.x, y: layout.y }, optional: input.obligation === "Optional" }; };
 export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { occurrences: graph.occurrences, relationships: graph.relationships }; }
 function validOccurrence(state, flowId, input) {
     if (!state.project.collections.flows.some(({ id }) => id === flowId))
@@ -29,7 +29,7 @@ export function updateGraphOccurrence(state, flowId, occurrenceId, input) {
         throw new Error("Unknown documentary Flow occurrence.");
     const valid = validOccurrence(state, flowId, input);
     return transactProject(state, `Save Flow occurrence ${occurrenceId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, occurrences: graph.occurrences.map((occurrence) => { if (occurrence.id !== occurrenceId)
-            return occurrence; const { layout: discardedLayout, ...stored } = occurrence; void discardedLayout; return { ...stored, ...normalizedOccurrence(valid) }; }) }); });
+            return occurrence; const { layout: discardedLayout, relationshipGroup: discardedRelationshipGroup, branch: discardedBranch, ...stored } = occurrence; void discardedLayout; void discardedRelationshipGroup; void discardedBranch; return { ...stored, ...normalizedOccurrence(valid) }; }) }); });
 }
 export function moveGraphOccurrence(state, flowId, occurrenceId, layout) {
     const occurrence = storedGraph(state.project, flowId).occurrences.find(({ id }) => id === occurrenceId), position = occurrence?.position;
