@@ -107,12 +107,24 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 010
   Scenario: Data layer directional Flow specification graph 010
-    Given Checkout Page belongs to Checkout and Trade Page Groups selected as Flow lanes
-    And Purchase interaction is assigned to the Trade lane by stable Page Group reference
-    When the operator attempts to remove Trade membership or the Trade lane
-    Then the consequential-action review names Purchase, Checkout Page, Trade Page Group, and Checkout journey
-    And removal is blocked until the occurrence is reassigned or removed
-    And no occurrence is silently moved to another lane
-    When the operator reassigns Purchase to Checkout and confirms removal
-    Then one canonical transaction updates the occurrence, membership, and Flow lane order
-    And one Undo restores the complete prior Page Group assignment
+    Given Checkout Page belongs to Checkout Page Group and Purchase interaction is inside its Page frame
+    And Trade Page belongs to Trade Page Group in the same Flow
+    When pointer or keyboard movement attempts to move Purchase into the Trade lane or Trade Page frame
+    Then the gesture is rejected and Purchase returns to its saved position inside Checkout Page
+    And no Page Group, Page, Event, occurrence, or canonical revision changes
+    And guidance explains that Event occurrences cannot cross Page or Page Group containment boundaries
+    When the predefined Purchase Event is dragged from the component palette into Trade Page
+    Then a distinct interaction occurrence is created inside Trade Page using the same stable Event reference
+    And the Checkout occurrence and both Page Group memberships remain unchanged
+
+  # Data layer directional Flow specification graph 011
+  Scenario: Data layer directional Flow specification graph 011
+    Given ungrouped Landing Page has context binding page_view
+    When Landing Page is dragged from the component palette into Ungrouped entry pages outside the named Flow lanes
+    Then one free Page frame persists its stable Page and context-binding references without a Page Group reference
+    And the frame renders its page_view context occurrence and accepts interaction Events from the component palette
+    And relationships may be drawn from its Event occurrences into grouped Page frames
+    And neither Page Group membership nor Flow lane order changes
+    When Landing Page is dropped over a named Page Group lane
+    Then the move is rejected without changing canonical state
+    And guidance links directly to Page Group membership editing

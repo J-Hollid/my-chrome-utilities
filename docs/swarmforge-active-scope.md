@@ -15,10 +15,14 @@ persistence/reload, primary main-workspace ownership of the graph and outline,
 selection-driven contextual Inspector editing, Page Group-defined lanes, Page-owned
 context-event bindings, Event-owned reusable schemas for interaction and context
 events, and the explicit boundary that payload validation is independent while
-journey expectations remain manual. Occurrences persist stable Page Group, Page,
-context-binding, and Event references rather than hardcoded lane names or editable
-global Event roles. Any retained executable-step authoring is an explicitly separate
-Advanced function and does not duplicate or replace documentary graph authoring.
+journey expectations remain manual. Occurrences inside grouped Page frames persist
+stable Page Group, Page, context-binding, and Event references rather than hardcoded
+lane names or editable global Event roles. Event occurrences cannot move across Page
+or Page Group containment boundaries. Generic Page entry frames may instead be placed
+in an explicit ungrouped region outside the named Flow lanes; they persist Page and
+context-binding references without inventing Page Group membership. Any retained
+executable-step authoring is an explicitly separate Advanced function and does not
+duplicate or replace documentary graph authoring.
 
 Schema composition, Assignment readiness, resolver redesign, documentation export,
 fixtures, coverage, preflight, release, Live, cross-surface concurrency, and temporal

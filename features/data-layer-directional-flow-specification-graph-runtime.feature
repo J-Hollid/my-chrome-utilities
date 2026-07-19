@@ -112,12 +112,24 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 010
   Scenario: Data layer directional Flow specification graph runtime 010
-    Given Checkout Page belongs to Checkout and Trade Page Groups selected as production Flow lanes
-    And Purchase interaction is assigned to the Trade lane by stable Page Group reference
-    When actual controls attempt to remove Trade membership or the Trade lane
-    Then the installed consequential-action review names Purchase, Checkout Page, Trade Page Group, and Checkout journey
-    And the destructive control is blocked until the occurrence is reassigned or removed
-    And canonical storage does not silently move the occurrence
-    When actual controls reassign Purchase to Checkout and confirm removal
-    Then one canonical revision updates the occurrence, membership, and Flow lane order
-    And one installed Undo restores the complete prior Page Group assignment
+    Given Checkout Page belongs to Checkout Page Group and Purchase interaction is inside its production Page frame
+    And Trade Page belongs to Trade Page Group in the same production Flow
+    When actual pointer or keyboard movement attempts to move Purchase into the Trade lane or Trade Page frame
+    Then the installed gesture is rejected and Purchase returns to its saved position inside Checkout Page
+    And the canonical project bytes and revision remain unchanged after rejection
+    And installed guidance explains that Event occurrences cannot cross Page or Page Group containment boundaries
+    When the predefined Purchase Event is dragged from the production component palette into Trade Page
+    Then canonical storage creates a distinct interaction occurrence inside Trade Page using the same stable Event reference
+    And Checkout retains its original occurrence while Trade receives only the new occurrence
+
+  # Data layer directional Flow specification graph runtime 011
+  Scenario: Data layer directional Flow specification graph runtime 011
+    Given ungrouped Landing Page has context binding page_view
+    When actual controls drag Landing Page from the component palette into Ungrouped entry pages outside the named Flow lanes
+    Then canonical storage contains one free Page frame with stable Page and context-binding references and no Page Group reference
+    And the installed frame renders its page_view context occurrence and accepts interaction Events from the component palette
+    And actual controls can draw a relationship from its Event occurrence into a grouped Page frame
+    And free-frame creation does not edit Page Group entities or the Flow's ordered lane references
+    When actual controls drop Landing Page over a named Page Group lane
+    Then the installed move is rejected without changing canonical state
+    And installed guidance deep-links to Landing Page's Page Group membership editor
