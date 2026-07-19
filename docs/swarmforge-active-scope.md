@@ -10,6 +10,11 @@ checkpoint and the focused layered effective-schema checkpoint. Their contracts 
 - `features/data-layer-layered-schema-constraints.feature`
 - `features/data-layer-layered-schema-constraints-runtime.feature`
 
+The user-approved layered-schema cycle is later authority than the earlier
+graph-only scope reduction. It supersedes that reduction only for behavior named
+by the two layered-schema contracts above. Agents must not discard, reject, or
+classify this cycle as inactive because of the earlier reduction.
+
 The checkpoint covers human Page and Event selectors, context-setting and
 interaction occurrences, expected-next/alternative/parallel/merge relationships,
 pointer and keyboard positioning, synchronized outline editing, stable references,
@@ -30,11 +35,16 @@ The layered schema checkpoint makes Shared Profiles the rich base-schema authori
 surface; composes Event, Page Group, Page, Flow Page-instance, and Event-occurrence
 constraints; and supports automatic applicability, manual assignment, or explicit
 documentation-only activation. It includes only the effective-schema developer export
-for a selected context. General Assignment redesign, resolver redesign, project-wide
-documentation export, fixtures, coverage, preflight, release, Live, broad cross-surface
-concurrency, and temporal Flow execution are not active work. A future slice requires
-product-owner review, a new approved specification cycle, and a new file-based
-SwarmForge handoff.
+for a selected context. The cycle requires the named integration with the existing
+assignment resolver and per-Event validator, the Shared Profile editing parity between
+Builder and side panel, and Flow selection restoration specified by its scenarios.
+These requirements are not a general Assignment, resolver, or cross-surface concurrency
+redesign. General Assignment redesign, resolver redesign beyond that integration,
+project-wide documentation export beyond the selected-context export, fixtures,
+coverage, preflight, release, Live, broad cross-surface concurrency beyond the named
+editing parity, and temporal Flow execution are not active work. A future slice
+requires product-owner review, a new approved specification cycle, and a new
+file-based SwarmForge handoff.
 
 ## Archived material
 
