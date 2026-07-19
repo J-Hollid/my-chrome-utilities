@@ -2,11 +2,13 @@
 
 ## Current authority
 
-The only active specification cycle is the interactive directional Flow graph
-review checkpoint. Its active contracts are:
+The active specification cycles are the interactive directional Flow graph review
+checkpoint and the focused layered effective-schema checkpoint. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
+- `features/data-layer-layered-schema-constraints.feature`
+- `features/data-layer-layered-schema-constraints-runtime.feature`
 
 The checkpoint covers human Page and Event selectors, context-setting and
 interaction occurrences, expected-next/alternative/parallel/merge relationships,
@@ -24,10 +26,15 @@ context-binding references without inventing Page Group membership. Any retained
 executable-step authoring is an explicitly separate Advanced function and does not
 duplicate or replace documentary graph authoring.
 
-Schema composition, Assignment readiness, resolver redesign, documentation export,
-fixtures, coverage, preflight, release, Live, cross-surface concurrency, and temporal
-Flow execution are not active work. A future slice requires product-owner review, a
-new approved specification cycle, and a new file-based SwarmForge handoff.
+The layered schema checkpoint makes Shared Profiles the rich base-schema authoring
+surface; composes Event, Page Group, Page, Flow Page-instance, and Event-occurrence
+constraints; and supports automatic applicability, manual assignment, or explicit
+documentation-only activation. It includes only the effective-schema developer export
+for a selected context. General Assignment redesign, resolver redesign, project-wide
+documentation export, fixtures, coverage, preflight, release, Live, broad cross-surface
+concurrency, and temporal Flow execution are not active work. A future slice requires
+product-owner review, a new approved specification cycle, and a new file-based
+SwarmForge handoff.
 
 ## Archived material
 
@@ -87,19 +94,27 @@ program. Workspace-local untracked walkthrough files are likewise non-authoritat
 
 ## Verification boundary
 
-Use the dedicated `flow_graph` verification pack and its focused commands for this
-checkpoint. Do not estimate or execute this work from every command reached through
-the schema or shell dependency graph. The cumulative checkpoint sequence is exactly:
+Use the task-specific verification pack. Do not estimate or execute either checkpoint
+from every command reached through the schema or shell dependency graph. The Flow
+graph checkpoint sequence is exactly:
 
 ```sh
 node scripts/run-focused-acceptance.mjs --pack flow_graph
 node scripts/package.mjs
 ```
 
-The pack command performs type/build, both focused graph unit and persistence tests,
-the one small installed-browser adapter, Gherkin generation, and focused runtime
-acceptance. The package command consumes that already-built `dist`; `npm run package`
-is not part of this sequence because it rebuilds.
+The layered effective-schema checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack layered_schema
+node scripts/package.mjs
+```
+
+Each pack command performs its registered type/build, focused unit tests, installed
+browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
+must be declared in the registry rather than invoked as extra commands. The package
+command consumes that already-built `dist`; `npm run package` is not part of either
+sequence because it rebuilds.
 
 For local diagnosis, `npm run typecheck`, `npm run build`,
 `node test/data-layer-flow-graph-test.mjs`, and
