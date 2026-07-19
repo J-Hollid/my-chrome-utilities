@@ -7,13 +7,13 @@ const contributionFor = (entity, scope) => ({ id: entity.id, name: entity.name, 
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
 export function installLayeredSchemaUi(options) {
-    const inspector = q("#project-inspector"), workspace = q("#workspace-content"), summary = document.createElement("section"), editor = document.createElement("section");
+    const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
     let graphSelection, returnFocus;
     summary.setAttribute("aria-label", "Schema constraints summary");
     editor.setAttribute("aria-label", "Shared schema constraints editor");
     editor.hidden = true;
     inspector.insertBefore(summary, inspector.firstChild?.nextSibling ?? null);
-    workspace.prepend(editor);
+    editorHost.append(editor);
     const current = () => { const { state, kind, entityId } = options.context(), entity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined; return { state, kind, entity: graphSelection ?? entity, scope: graphSelection ? "Event-occurrence" : scopeFor(kind) }; };
     const allContributors = (state) => {
         const graphs = state.project.documentationFlowGraphs, graphContributors = Object.values(graphs ?? {}).flatMap(({ occurrences }) => (occurrences ?? []).map((entity) => contributionFor(entity, entity.freePageFrame ? "Flow Page-instance" : "Event-occurrence")));
@@ -82,8 +82,7 @@ export function installLayeredSchemaUi(options) {
     function renderSummary() { const { state, entity, scope } = current(); summary.replaceChildren(); if (!state || !entity) {
         summary.hidden = true;
         return;
-    } summary.hidden = false; const title = document.createElement("h3"), counts = document.createElement("p"), open = document.createElement("button"), compiled = compileLayeredSchema(allContributors(state), { eventId: String(entity.eventId ?? entity.id), eventRole: entity.occurrenceType === "page-context" ? "context" : "interaction", ...(entity.id ? { occurrenceId: entity.id } : {}) }), local = (entity.schemaConstraints ?? []).length, activation = String(entity.activation ?? "manual"); title.textContent = `Schema constraints · ${entity.name} · ${scope}`; counts.textContent = `Inherited ${Math.max(0, compiled.provenance.length - 1)} · Local ${local} · Effective ${Object.keys(compiled.properties).length} · Conflict ${compiled.conflicts.length} · Activation ${activation}`; open.type = "button"; open.textContent = "Open complete schema editor"; open.addEventListener("click", () => { returnFocus = open; renderEditor(); editor.hidden = false; Array.from(workspace.children).forEach((child) => { if (child !== editor)
-        child.hidden = true; }); editor.querySelector("h2")?.focus(); }); summary.append(title, counts, open); }
+    } summary.hidden = false; const title = document.createElement("h3"), counts = document.createElement("p"), open = document.createElement("button"), compiled = compileLayeredSchema(allContributors(state), { eventId: String(entity.eventId ?? entity.id), eventRole: entity.occurrenceType === "page-context" ? "context" : "interaction", ...(entity.id ? { occurrenceId: entity.id } : {}) }), local = (entity.schemaConstraints ?? []).length, activation = String(entity.activation ?? "manual"); title.textContent = `Schema constraints · ${entity.name} · ${scope}`; counts.textContent = `Inherited ${Math.max(0, compiled.provenance.length - 1)} · Local ${local} · Effective ${Object.keys(compiled.properties).length} · Conflict ${compiled.conflicts.length} · Activation ${activation}`; open.type = "button"; open.textContent = "Open complete schema editor"; open.addEventListener("click", () => { returnFocus = open; renderEditor(); editor.hidden = false; editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); }); summary.append(title, counts, open); }
     function renderEditor() {
         const { state, entity, scope } = current();
         editor.replaceChildren();
@@ -132,7 +131,7 @@ export function installLayeredSchemaUi(options) {
         }
         back.type = "button";
         back.textContent = "Return to Flow";
-        back.addEventListener("click", () => { editor.hidden = true; Array.from(workspace.children).forEach((child) => child.hidden = false); returnFocus?.focus(); });
+        back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus(); });
         editor.append(title, identity, areas, search, tree, form, status, renderRuntimeControls(state, entity, scope, compiled), back);
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
@@ -142,8 +141,7 @@ export function installLayeredSchemaUi(options) {
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
         return; const target = event.target.closest("[data-occurrence-id]"); if (!target)
         return; const { state } = options.context(), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, graphs = state?.project.documentationFlowGraphs; graphSelection = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === target.dataset.occurrenceId) : undefined; renderSummary(); });
-    return { render() { if (!editor.isConnected)
-            workspace.prepend(editor); if (!editor.hidden)
+    return { render() { if (!editor.hidden)
             return; graphSelection = undefined; renderSummary(); } };
 }
 //# sourceMappingURL=data-layer-layered-schema-ui.js.map
