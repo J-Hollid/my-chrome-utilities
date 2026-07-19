@@ -60,3 +60,27 @@ Feature: Data layer directional Flow specification graph runtime
     Then it explains both Event roles, reusable Page and Event references, independent payload validation, and manual journey expectations
     And exactly one primary action starts context-setting Event authoring without adding an incomplete record
     And no project record changes until that action is invoked
+
+  # Data layer directional Flow specification graph runtime 006
+  Scenario: Data layer directional Flow specification graph runtime 006
+    When actual controls select Checkout journey from the Flows collection
+    Then the rendered breadcrumb identifies Checkout journey as the active Flow
+    And exactly one visible interactive directional canvas and one visible synchronized editable Flow outline are descendants of the production main workspace
+    And no canvas or Flow outline is a descendant of the contextual Inspector
+    And the Inspector identifies Checkout journey and renders its Flow-level controls
+    And executable-step controls remain available only in a separately labelled Advanced section whose explanation distinguishes runtime sequence semantics from documentary journey expectations
+    And no documentary occurrence or relationship control is duplicated in that Advanced section
+
+  # Data layer directional Flow specification graph runtime 007
+  Scenario: Data layer directional Flow specification graph runtime 007
+    Given the installed canvas contains Checkout route and Purchase occurrences joined by an expected-next relationship
+    When actual keyboard controls select Checkout route on the canvas
+    Then the Inspector heading identifies Checkout route by its rendered human name
+    And the Inspector renders its shared Page, shared Event, role, obligation, occurrence bounds, and lane controls
+    When actual keyboard controls select the expected-next relationship in the canvas or outline
+    Then the Inspector heading identifies the relationship by rendered source and target names
+    And the Inspector renders its kind, target, group, label, documentation condition, and expectation controls
+    And the installed main workspace has kept the same canvas and outline mounted at their saved coordinates throughout both selections
+    When the selected relationship is changed and saved through the Inspector
+    Then production storage updates the same stable relationship without a duplicate
+    And rendered graph and outline refresh while focus returns to that relationship

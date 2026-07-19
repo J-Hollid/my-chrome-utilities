@@ -54,3 +54,27 @@ Feature: Data layer directional Flow specification graph
     When its empty state opens
     Then it explains context-setting and interaction occurrences, stable Page and Event references, independent payload validation, and manual journey expectations
     And exactly one primary action starts context-setting Event authoring without adding an incomplete record
+
+  # Data layer directional Flow specification graph 006
+  Scenario: Data layer directional Flow specification graph 006
+    When Checkout journey is selected from the Flows collection
+    Then the project breadcrumb identifies Checkout journey as the active Flow
+    And the main workspace replaces the Flow collection list with exactly one interactive directional canvas and one synchronized editable Flow outline
+    And the contextual Inspector contains neither the canvas nor the outline
+    And the Inspector identifies Checkout journey and exposes its Flow-level properties
+    And executable-step authoring remains available only in a separately labelled Advanced section that explains it is independent of documentary journey expectations
+    And the Advanced section does not duplicate documentary occurrences or relationships
+
+  # Data layer directional Flow specification graph 007
+  Scenario: Data layer directional Flow specification graph 007
+    Given Checkout journey contains Checkout route and Purchase occurrences joined by an expected-next relationship
+    When Checkout route is selected from the canvas
+    Then the Inspector identifies Checkout route by its human name
+    And the Inspector offers its shared Page, shared Event, role, obligation, occurrence bounds, and lane
+    When the expected-next relationship is selected from the canvas or outline
+    Then the Inspector identifies the relationship by its human source and target names
+    And the Inspector offers its kind, target, group, label, documentation condition, and expectation
+    And the main workspace has kept the same canvas and outline mounted at their saved layout throughout both selections
+    When the selected relationship is saved
+    Then the same stable relationship is updated without a duplicate
+    And graph and outline refresh while focus returns to that relationship
