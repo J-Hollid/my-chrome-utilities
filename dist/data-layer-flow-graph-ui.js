@@ -42,7 +42,7 @@ export function installFlowGraphBuilder(options) {
     q("#flow-step-maximum").closest("label").firstChild.textContent = "Expected maximum";
     q("#flow-step-optional").closest("label").hidden = true;
     addForm.querySelector('button[type="submit"]').textContent = "Add Event occurrence";
-    let selectedItem, selectedRelationshipId, inspectorOnly = false;
+    let selectedItem;
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : { occurrences: [], relationships: [] }; return { ...context, flow, steps: graph.occurrences, relationships: graph.relationships }; };
     const synchronizedRole = (eventId, fallback) => { const event = current().state?.project.collections.events.find(({ id }) => id === eventId), eventRole = event?.role; return eventRole === "context-setting" || eventRole === "interaction" ? { role: eventRole, authoritative: true } : { role: fallback === "context-setting" ? "context-setting" : "interaction", authoritative: false }; };
     const syncRoleControl = (eventSelect, roleSelect, fallback = roleSelect.value) => { const selected = synchronizedRole(eventSelect.value, fallback); roleSelect.value = selected.role; roleSelect.disabled = selected.authoritative; roleSelect.title = selected.authoritative ? "This role is defined by the selected Event." : "Choose a fallback role until the Event definition has one."; };
@@ -52,9 +52,7 @@ export function installFlowGraphBuilder(options) {
     function renderSelectors() { const { state } = current(); if (!state)
         return; replaceOptions(q("#flow-step-page"), state.project.collections.pages, "Choose Page"); replaceOptions(q("#flow-step-event"), state.project.collections.events, "Choose Event"); }
     function renderInspector() {
-        inspectorOnly = true;
-        render();
-        inspectorOnly = false;
+        render(false);
         synchronizeRenderedOccurrenceControls();
         const { steps, relationships } = current(), selection = selectedItem, sourceId = selection?.kind === "relationship" ? relationships.find(({ id }) => id === selection.id)?.sourceNodeId : undefined;
         for (const item of Array.from(list.children)) {
@@ -83,10 +81,8 @@ export function installFlowGraphBuilder(options) {
         document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus();
         return;
     } options.persist(moveGraphOccurrence(state, flowId, nodeId, layout)); queueMicrotask(() => document.querySelector(`[data-occurrence-id="${nodeId}"]`)?.focus()); }
-    function renderGraph(host, flow) {
-        if (inspectorOnly)
-            return;
-        host = q("#flow-graph-workspace");
+    function renderGraph(flow) {
+        const host = q("#flow-graph-workspace");
         host.replaceChildren();
         const { state } = current();
         if (!state)
@@ -230,7 +226,7 @@ export function installFlowGraphBuilder(options) {
         section.append(heading, boundary, views, diagnostics);
         host.append(section);
     }
-    function render() {
+    function render(renderWorkspace = true) {
         const list = q("#flow-step-list");
         list.replaceChildren();
         addForm.querySelector(".documentary-flow")?.remove();
@@ -239,7 +235,8 @@ export function installFlowGraphBuilder(options) {
             return;
         if (editor instanceof HTMLDetailsElement)
             editor.open = true;
-        renderGraph(addForm, flow);
+        if (renderWorkspace)
+            renderGraph(flow);
         steps.forEach((step, index) => {
             const item = document.createElement("li"), form = document.createElement("form"), heading = document.createElement("h3"), name = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), nodeRole = document.createElement("select"), nodeObligation = document.createElement("select"), lane = document.createElement("select"), page = document.createElement("select"), event = document.createElement("select"), save = document.createElement("button"), up = document.createElement("button"), down = document.createElement("button"), remove = document.createElement("button"), relationships = document.createElement("div"), position = step.position;
             heading.textContent = `${index + 1}. ${step.name}`;
@@ -290,7 +287,7 @@ export function installFlowGraphBuilder(options) {
             const appendRelationship = (relationship) => { const row = document.createElement("form"), target = document.createElement("select"), kind = document.createElement("select"), relationGroup = document.createElement("input"), label = document.createElement("input"), documentationCondition = document.createElement("input"), expectation = document.createElement("input"), commit = document.createElement("button"); replaceOptions(target, steps.filter(({ id }) => id !== step.id), "Choose target occurrence"); target.value = relationship?.toStepId ?? ""; target.setAttribute("aria-label", `Relationship target from ${step.name}`); for (const value of ["expected-next", "alternative", "parallel", "merge"])
                 kind.append(new Option(value, value)); kind.value = relationship?.kind ?? "expected-next"; kind.setAttribute("aria-label", "Relationship kind"); if (relationship)
                 kind.dataset.editRelationshipId = relationship.id; relationGroup.value = relationship?.group ?? ""; relationGroup.setAttribute("aria-label", "Relationship group"); label.value = relationship?.label ?? ""; label.setAttribute("aria-label", `Relationship label from ${step.name}`); documentationCondition.value = relationship?.documentationCondition ?? ""; documentationCondition.setAttribute("aria-label", `Documentation condition from ${step.name}`); documentationCondition.placeholder = "Plain-language documentation condition"; expectation.value = relationship?.expectation ?? ""; expectation.setAttribute("aria-label", `Relationship expectation from ${step.name}`); commit.type = "submit"; commit.textContent = relationship ? "Save relationship" : "Add relationship"; row.addEventListener("submit", (submitEvent) => { submitEvent.preventDefault(); const fresh = current().state; if (!fresh || !target.value)
-                return; const relationshipId = relationship?.id ?? options.id("flow-relationship"); selectedRelationshipId = relationshipId; options.persist(saveGraphRelationship(fresh, flow.id, step.id, { id: relationshipId, toStepId: target.value, kind: kind.value, ...(relationGroup.value.trim() ? { group: relationGroup.value.trim() } : {}), ...(label.value.trim() ? { label: label.value.trim() } : {}), ...(documentationCondition.value.trim() ? { documentationCondition: documentationCondition.value.trim() } : {}), ...(expectation.value.trim() ? { expectation: expectation.value.trim() } : {}) }, options.id)); focusRelationship(relationshipId); }); row.append(kind, target, relationGroup, label, documentationCondition, expectation, commit); relationships.append(row); };
+                return; const relationshipId = relationship?.id ?? options.id("flow-relationship"); options.persist(saveGraphRelationship(fresh, flow.id, step.id, { id: relationshipId, toStepId: target.value, kind: kind.value, ...(relationGroup.value.trim() ? { group: relationGroup.value.trim() } : {}), ...(label.value.trim() ? { label: label.value.trim() } : {}), ...(documentationCondition.value.trim() ? { documentationCondition: documentationCondition.value.trim() } : {}), ...(expectation.value.trim() ? { expectation: expectation.value.trim() } : {}) }, options.id)); focusRelationship(relationshipId); }); row.append(kind, target, relationGroup, label, documentationCondition, expectation, commit); relationships.append(row); };
             for (const relationship of current().relationships.filter(({ sourceNodeId }) => sourceNodeId === step.id))
                 appendRelationship({ ...relationship, id: relationship.id, toStepId: String(relationship.targetNodeId ?? "") });
             appendRelationship();
