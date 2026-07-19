@@ -213,6 +213,11 @@ export function installFlowGraphBuilder(options) {
             band.setAttribute("y", "8");
             band.setAttribute("width", "200");
             band.setAttribute("height", String(canvasHeight - 16));
+            if (lane.id !== "ungrouped") {
+                band.tabIndex = 0;
+                band.setAttribute("role", "button");
+                band.setAttribute("aria-label", `Edit Page Group ${lane.name} schema constraints`);
+            }
             label.classList.add("flow-lane-label");
             label.setAttribute("x", String(lane.x));
             label.setAttribute("y", "32");

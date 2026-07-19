@@ -21,13 +21,13 @@ export function layeredContributorsForPath(state, path) {
 }
 export function installLayeredSchemaUi(options) {
     const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
-    let graphSelection, returnFocus, flowReturn;
+    let graphSelection, graphSelectionScope, returnFocus, flowReturn;
     summary.setAttribute("aria-label", "Schema constraints summary");
     editor.setAttribute("aria-label", "Shared schema constraints editor");
     editor.hidden = true;
     inspector.insertBefore(summary, inspector.firstChild?.nextSibling ?? null);
     editorHost.append(editor);
-    const current = () => { const { state, kind, entityId } = options.context(), entity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined; return { state, kind, entity: graphSelection ?? entity, scope: graphSelection ? "Event-occurrence" : scopeFor(kind) }; };
+    const current = () => { const { state, kind, entityId } = options.context(), entity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined; return { state, kind, entity: graphSelection ?? entity, scope: graphSelectionScope ?? scopeFor(kind) }; };
     const contributorsFor = (state, entity, scope) => layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined));
     const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
     const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(layeredContributorsForPath(state, target), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
@@ -127,10 +127,10 @@ export function installLayeredSchemaUi(options) {
         status.setAttribute("role", "status");
         form.addEventListener("submit", (event) => { event.preventDefault(); const data = new FormData(form), parse = (name) => { const value = String(data.get(name) ?? "").trim(); if (!value)
             return undefined; if (["allowedValues", "patterns", "condition", "examples", "rules"].includes(name))
-            return JSON.parse(value); return value; }, constraint = { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}) }; const next = transactProject(state, `Save schema constraint for ${entity.name}`, (project) => { if (graphSelection) {
+            return JSON.parse(value); return value; }, constraint = { path: String(data.get("path")), ...(parse("type") ? { type: String(parse("type")) } : {}), ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("presence") ? { presence: parse("presence") } : {}), ...(parse("expectedValue") !== undefined ? { expectedValue: parse("expectedValue") } : {}), ...(parse("enforcement") ? { enforcement: parse("enforcement") } : {}), ...(parse("target") ? { target: String(parse("target")) } : {}), ...(parse("patterns") ? { patterns: parse("patterns") } : {}), ...(parse("condition") ? { condition: parse("condition") } : {}), ...(parse("documentation") ? { documentation: String(parse("documentation")) } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}) }; const next = transactProject(state, `Save schema constraint for ${entity.name}`, (project) => { if (graphSelection && (graphSelectionScope === "Event-occurrence" || Boolean(graphSelection.freePageFrame))) {
             const flowId = options.context().entityId, graphs = project.documentationFlowGraphs;
             return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], occurrences: graphs[flowId].occurrences.map((candidate) => candidate.id === entity.id ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), constraint], compiledTargetsStale: true } : candidate) } } };
-        } return { ...project, collections: { ...project.collections, [options.context().kind]: project.collections[options.context().kind].map((candidate) => candidate.id === entity.id ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), constraint], compiledTargetsStale: true } : candidate) } }; }); options.persist(next); status.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; renderSummary(); renderEditor(); });
+        } const collectionKind = graphSelectionScope === "Page" ? "pages" : graphSelectionScope === "Page Group" ? "pageGroups" : options.context().kind; return { ...project, collections: { ...project.collections, [collectionKind]: project.collections[collectionKind].map((candidate) => candidate.id === entity.id ? { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []), constraint], compiledTargetsStale: true } : candidate) } }; }); options.persist(next); status.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; renderSummary(); renderEditor(); });
         const schemaDocument = entity.structuredSchema ?? entity.structuredDraft?.document;
         for (const path of structuredPaths(schemaDocument)) {
             const item = document.createElement("li");
@@ -145,7 +145,7 @@ export function installLayeredSchemaUi(options) {
             pane.scrollTop = saved.scrollTop;
             if (graph && graph.getAttribute("viewBox") !== saved.viewBox)
                 graph.setAttribute("viewBox", saved.viewBox);
-            queueMicrotask(() => document.querySelector(`[data-occurrence-id="${saved.occurrenceId}"]`)?.focus({ preventScroll: true }));
+            queueMicrotask(() => document.querySelector(saved.selector)?.focus({ preventScroll: true }));
         }
         else
             returnFocus?.focus({ preventScroll: true }); });
@@ -153,14 +153,29 @@ export function installLayeredSchemaUi(options) {
     }
     editor.addEventListener("submit", () => queueMicrotask(() => { const output = editor.querySelector('[role="status"]'), scope = current().scope; if (output)
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
-    const selectGraphOccurrence = (target) => { const { state } = options.context(), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, graphs = state?.project.documentationFlowGraphs, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'), occurrenceId = target.dataset.occurrenceId; graphSelection = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === occurrenceId) : undefined; if (occurrenceId)
-        flowReturn = { occurrenceId, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
-    document.addEventListener("click", (event) => { const target = event.target.closest("[data-occurrence-id]"); if (target)
-        selectGraphOccurrence(target); });
+    const graphContributorSelector = '[data-occurrence-id],[data-page-frame-id],[aria-label="Interactive directional Flow canvas"] [data-page-group-id]';
+    const selectGraphContributor = (target) => { const { state, kind, entityId: flowId } = options.context(); if (!state || kind !== "flows" || !flowId)
+        return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageId = target.dataset.pageFrameId, pageGroupId = !pageId ? target.dataset.pageGroupId : undefined, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (occurrenceId) {
+        graphSelection = graphs[flowId]?.occurrences?.find(({ id }) => id === occurrenceId);
+        graphSelectionScope = graphSelection?.freePageFrame ? "Flow Page-instance" : "Event-occurrence";
+    }
+    else if (pageId) {
+        graphSelection = state.project.collections.pages.find(({ id }) => id === pageId);
+        graphSelectionScope = "Page";
+    }
+    else if (pageGroupId && pageGroupId !== "ungrouped") {
+        graphSelection = state.project.collections.pageGroups.find(({ id }) => id === pageGroupId);
+        graphSelectionScope = "Page Group";
+    }
+    else
+        return; if (!graphSelection)
+        return; const id = CSS.escape(occurrenceId ?? pageId ?? pageGroupId), selector = occurrenceId ? `[data-occurrence-id="${id}"]` : pageId ? `[data-page-frame-id="${id}"]` : `[aria-label="Interactive directional Flow canvas"] [data-page-group-id="${id}"]`; flowReturn = { selector, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
+    document.addEventListener("click", (event) => { const target = event.target.closest(graphContributorSelector); if (target)
+        selectGraphContributor(target); });
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
-        return; const target = event.target.closest("[data-occurrence-id]"); if (target)
-        selectGraphOccurrence(target); });
+        return; const target = event.target.closest(graphContributorSelector); if (target)
+        selectGraphContributor(target); });
     return { render() { if (!editor.hidden)
-            return; graphSelection = undefined; renderSummary(); } };
+            return; graphSelection = undefined; graphSelectionScope = undefined; renderSummary(); } };
 }
 //# sourceMappingURL=data-layer-layered-schema-ui.js.map
