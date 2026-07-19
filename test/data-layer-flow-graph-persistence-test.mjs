@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {addGraphOccurrence,documentaryFlowGraph,projectFlowGraph,saveGraphRelationship,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
+import {addGraphOccurrence,documentaryFlowGraph,projectFlowGraph,saveGraphRelationship,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
 import {addProjectEntity,createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {commitCanonicalProjectState,restoreCanonicalProjectState} from "../dist/data-layer-specification-repository.js";
 
@@ -24,5 +24,7 @@ assert.equal(projection.catalog.events.find(({id})=>id===route.id).name,"route_c
 assert.equal(projection.catalog.pages.find(({id})=>id===confirmation.id).name,"Order confirmation");
 assert.deepEqual(projection.graph.relationships.map(({kind})=>kind),["parallel","parallel"]);
 assert.deepEqual(renamed.project.collections.flows[0].steps,[],"documentary persistence must leave executable Flow steps empty");
+
+let laneSequence=0,laneState=createSpecificationProject({name:"Lane persistence",site:"shop.example",id:(kind)=>`${kind}:lane-persist-${++laneSequence}`});const laneId=(kind)=>`${kind}:lane-persist-${++laneSequence}`,laneAdd=(kind,entity)=>{laneState=addProjectEntity(laneState,kind,entity,laneId);return laneState.project.collections[kind].at(-1);},lanePage=laneAdd("pages",{name:"Checkout"}),laneEvent=laneAdd("events",{name:"Purchase",schemaId:"schema:purchase"}),laneGroup=laneAdd("pageGroups",{name:"Checkout",pageIds:[lanePage.id]}),laneFlow=laneAdd("flows",{name:"Checkout lanes",steps:[],pageGroupIds:[]});laneState=setFlowPageGroupLanes(laneState,laneFlow.id,[laneGroup.id]);laneState=addGraphOccurrence(laneState,laneFlow.id,{name:"Purchase",pageGroupId:laneGroup.id,pageId:lanePage.id,eventId:laneEvent.id,obligation:"Required",minimum:1,maximum:1,y:170},laneId);const laneValues=new Map(),laneStorage={getItem:(key)=>laneValues.get(key)??null,setItem:(key,value)=>laneValues.set(key,value)};assert.equal(commitCanonicalProjectState(laneStorage,laneState).status,"committed");const laneReload=restoreCanonicalProjectState(laneValues.values().next().value),laneStored=documentaryFlowGraph(laneReload.project,laneFlow.id).occurrences[0],laneProjected=projectFlowGraph(laneReload.project,laneFlow.id);assert.deepEqual({pageGroupId:laneStored.pageGroupId,position:laneStored.position},{pageGroupId:laneGroup.id,position:{y:170}});assert.deepEqual(laneProjected.lanes.map(({id,name})=>[id,name]),[[laneGroup.id,"Checkout"]]);assert.equal(laneProjected.graph.nodes[0].layout.x,30);
 
 console.log("Flow graph persistence tests passed");

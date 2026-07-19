@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {addGraphOccurrence,documentaryFlowGraph,flowOutline,flowRelationshipText,inspectFlowGraph,moveGraphOccurrence,projectFlowGraph,removeGraphOccurrence,reorderGraphOccurrence,saveGraphRelationship,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
+import {addGraphOccurrence,documentaryFlowGraph,flowOccurrenceEventSchema,flowOutline,flowRelationshipText,inspectFlowGraph,inspectPageGroupLaneRemoval,moveGraphOccurrence,projectFlowGraph,removeGraphOccurrence,removePageGroupLaneAndMembership,reorderGraphOccurrence,saveGraphRelationship,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
 import {flowEdgeGeometry} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
@@ -66,5 +66,28 @@ for(const [source,target] of [[{x:230,y:70},{x:30,y:70}],[{x:230,y:70},{x:230,y:
   assert.equal(Object.values(geometry).every((value)=>typeof value==="string"||Number.isFinite(value)),true,"edge geometry must remain finite");
   assert.equal(geometry.arrow.split(/[ ,]/).map(Number).every(Number.isFinite),true,"arrowhead coordinates must remain finite");
 }
+
+let laneSequence=0,laneState=createSpecificationProject({name:"Lane shop",site:"shop.example",id:(kind)=>`${kind}:lane-${++laneSequence}`});
+const laneId=(kind)=>`${kind}:lane-${++laneSequence}`,laneAdd=(kind,entity)=>{laneState=addProjectEntity(laneState,kind,entity,laneId);return laneState.project.collections[kind].at(-1);};
+const laneCheckoutPage=laneAdd("pages",{name:"Checkout",contextEventBindings:[]}),laneRoute=laneAdd("events",{name:"route_view",eventName:"route_view"}),lanePurchase=laneAdd("events",{name:"Purchase",eventName:"purchase",schemaId:"schema:purchase"});
+const initialBinding={id:"context-binding:initial",name:"Initial load",eventId:laneRoute.id,trigger:"initial-load"},routeBinding={id:"context-binding:route",name:"Route change",eventId:laneRoute.id,trigger:"route-change"};
+laneState={...laneState,project:{...laneState.project,collections:{...laneState.project.collections,pages:laneState.project.collections.pages.map((page)=>page.id===laneCheckoutPage.id?{...page,contextEventBindings:[initialBinding,routeBinding]}:page)}}};
+const checkoutGroup=laneAdd("pageGroups",{name:"Checkout",pageIds:[laneCheckoutPage.id]}),deliveryGroup=laneAdd("pageGroups",{name:"Delivery",pageIds:[laneCheckoutPage.id]}),confirmationGroup=laneAdd("pageGroups",{name:"Confirmation",pageIds:[laneCheckoutPage.id]}),tradeGroup=laneAdd("pageGroups",{name:"Trade",pageIds:[laneCheckoutPage.id]}),laneFlow=laneAdd("flows",{name:"Checkout journey",steps:[],pageGroupIds:[]});
+laneState=setFlowPageGroupLanes(laneState,laneFlow.id,[checkoutGroup.id,deliveryGroup.id,confirmationGroup.id]);
+assert.deepEqual(laneState.project.collections.flows.at(-1).pageGroupIds,[checkoutGroup.id,deliveryGroup.id,confirmationGroup.id]);
+const addLaneOccurrence=(input)=>{laneState=addGraphOccurrence(laneState,laneFlow.id,{name:input.name,pageGroupId:input.pageGroupId,pageId:laneCheckoutPage.id,...(input.contextBindingId?{contextBindingId:input.contextBindingId}:{eventId:lanePurchase.id}),obligation:"Required",minimum:1,maximum:1,y:input.y},laneId);return documentaryFlowGraph(laneState.project,laneFlow.id).occurrences.at(-1);};
+const initialContext=addLaneOccurrence({name:"Checkout initial",pageGroupId:checkoutGroup.id,contextBindingId:initialBinding.id,y:70}),routeContext=addLaneOccurrence({name:"Checkout route",pageGroupId:checkoutGroup.id,contextBindingId:routeBinding.id,y:190}),purchaseOccurrence=addLaneOccurrence({name:"Purchase",pageGroupId:deliveryGroup.id,y:310});
+for(const occurrenceRecord of [initialContext,routeContext,purchaseOccurrence])assert.equal(["role","fallbackRole","lane","layout","schema","schemaId"].some((key)=>key in occurrenceRecord),false,"semantic occurrence storage excludes derived role, lane, coordinates, and Event schema copies");
+assert.equal("x" in purchaseOccurrence.position,false);assert.equal(initialContext.contextBindingId,initialBinding.id);assert.equal(purchaseOccurrence.eventId,lanePurchase.id);
+assert.equal(flowOccurrenceEventSchema(laneState.project,laneFlow.id,purchaseOccurrence.id),"schema:purchase");
+let laneProjection=projectFlowGraph(laneState.project,laneFlow.id);
+assert.deepEqual(laneProjection.lanes.map(({id,name})=>[id,name]),[[checkoutGroup.id,"Checkout"],[deliveryGroup.id,"Delivery"],[confirmationGroup.id,"Confirmation"]]);
+assert.deepEqual(laneProjection.graph.nodes.map(({pageGroupId,layout})=>[pageGroupId,layout.x,layout.y]),[[checkoutGroup.id,30,70],[checkoutGroup.id,30,190],[deliveryGroup.id,230,310]]);
+laneState={...laneState,project:{...laneState.project,collections:{...laneState.project.collections,pageGroups:laneState.project.collections.pageGroups.map((group)=>group.id===deliveryGroup.id?{...group,name:"Fulfilment"}:group)}}};
+laneState=setFlowPageGroupLanes(laneState,laneFlow.id,[checkoutGroup.id,confirmationGroup.id,deliveryGroup.id]);laneProjection=projectFlowGraph(laneState.project,laneFlow.id);
+assert.deepEqual(laneProjection.lanes.map(({name})=>name),["Checkout","Confirmation","Fulfilment"]);assert.equal(laneProjection.graph.nodes.find(({id})=>id===purchaseOccurrence.id).layout.x,430);assert.equal(documentaryFlowGraph(laneState.project,laneFlow.id).occurrences.find(({id})=>id===purchaseOccurrence.id).position.y,310);
+laneState=setFlowPageGroupLanes(laneState,laneFlow.id,[checkoutGroup.id,confirmationGroup.id,deliveryGroup.id,tradeGroup.id]);laneState=updateGraphOccurrence(laneState,laneFlow.id,purchaseOccurrence.id,{name:"Purchase",pageGroupId:tradeGroup.id,pageId:laneCheckoutPage.id,eventId:lanePurchase.id,obligation:"Required",minimum:1,maximum:1,y:310});
+const review=inspectPageGroupLaneRemoval(laneState.project,laneFlow.id,tradeGroup.id,laneCheckoutPage.id);assert.equal(review.blocked,true);for(const name of["Purchase","Checkout","Trade","Checkout journey"])assert.ok(review.message.includes(name));assert.throws(()=>removePageGroupLaneAndMembership(laneState,laneFlow.id,tradeGroup.id,laneCheckoutPage.id,[]),/reassign/i);
+const beforeRemoval=structuredClone(laneState);laneState=removePageGroupLaneAndMembership(laneState,laneFlow.id,tradeGroup.id,laneCheckoutPage.id,[{occurrenceId:purchaseOccurrence.id,pageGroupId:checkoutGroup.id}]);assert.equal(laneState.history.undo.length,beforeRemoval.history.undo.length+1);assert.equal(documentaryFlowGraph(laneState.project,laneFlow.id).occurrences.find(({id})=>id===purchaseOccurrence.id).pageGroupId,checkoutGroup.id);assert.equal(laneState.project.collections.pageGroups.find(({id})=>id===tradeGroup.id).pageIds.includes(laneCheckoutPage.id),false);assert.equal(laneState.project.collections.flows.find(({id})=>id===laneFlow.id).pageGroupIds.includes(tradeGroup.id),false);
 
 console.log("Flow graph projection tests passed");
