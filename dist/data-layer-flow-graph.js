@@ -13,7 +13,7 @@ const normalizedOccurrence = (input) => {
     const { layout, ...values } = clone(input), legacyLayout = layout ?? { lane: "Shipping", x: 230, y: Number(input.y ?? 70) };
     return { ...values, lane: legacyLayout.lane, position: { x: legacyLayout.x, y: legacyLayout.y }, optional: input.obligation === "Optional" };
 };
-export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { occurrences: graph.occurrences, relationships: graph.relationships }; }
+export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { pageGroupIds: graph.pageGroupIds ?? [], occurrences: graph.occurrences, relationships: graph.relationships }; }
 export function flowOccurrenceEventSchema(project, flowId, occurrenceId) {
     const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), page = project.collections.pages.find(({ id }) => id === occurrence?.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence?.contextBindingId), event = project.collections.events.find(({ id }) => id === (binding?.eventId ?? occurrence?.eventId));
     return event?.schemaDraftId ?? event?.schemaId;
@@ -28,7 +28,7 @@ function validOccurrence(state, flowId, input) {
     if (!page)
         throw new Error("A Flow occurrence requires an existing Page.");
     if (input.pageGroupId) {
-        const group = state.project.collections.pageGroups.find(({ id }) => id === input.pageGroupId), laneIds = flow.pageGroupIds ?? [], memberIds = group?.pageIds ?? [];
+        const group = state.project.collections.pageGroups.find(({ id }) => id === input.pageGroupId), laneIds = storedGraph(state.project, flow.id).pageGroupIds ?? [], memberIds = group?.pageIds ?? [];
         if (!group || !laneIds.includes(group.id) || !memberIds.includes(page.id))
             throw new Error("A Flow occurrence requires a selected Page Group containing its Page.");
         const binding = (page.contextEventBindings ?? []).find(({ id }) => id === input.contextBindingId), eventId = input.contextBindingId ? binding?.eventId : input.eventId;
@@ -89,33 +89,36 @@ export function reorderGraphOccurrence(state, flowId, from, to) {
 export function removeGraphOccurrence(state, flowId, occurrenceId) {
     if (!state.project.collections.flows.some(({ id }) => id === flowId) || !storedGraph(state.project, flowId).occurrences.some(({ id }) => id === occurrenceId))
         return state;
-    return transactProject(state, `Remove Flow occurrence ${occurrenceId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { occurrences: graph.occurrences.filter(({ id }) => id !== occurrenceId), relationships: graph.relationships.filter(({ sourceNodeId, targetNodeId }) => sourceNodeId !== occurrenceId && targetNodeId !== occurrenceId) }); });
+    return transactProject(state, `Remove Flow occurrence ${occurrenceId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, occurrences: graph.occurrences.filter(({ id }) => id !== occurrenceId), relationships: graph.relationships.filter(({ sourceNodeId, targetNodeId }) => sourceNodeId !== occurrenceId && targetNodeId !== occurrenceId) }); });
 }
 export function setFlowPageGroupLanes(state, flowId, pageGroupIds) {
-    const flow = state.project.collections.flows.find(({ id }) => id === flowId), known = new Set(state.project.collections.pageGroups.map(({ id }) => id));
+    const flow = state.project.collections.flows.find(({ id }) => id === flowId), known = new Set(state.project.collections.pageGroups.map(({ id }) => id)), graph = storedGraph(state.project, flowId);
     if (!flow)
         throw new Error(`Unknown Flow ${flowId}`);
     if (new Set(pageGroupIds).size !== pageGroupIds.length || pageGroupIds.some((groupId) => !known.has(groupId)))
         throw new Error("Flow lanes require distinct existing Page Group references.");
-    if (JSON.stringify(flow.pageGroupIds ?? []) === JSON.stringify(pageGroupIds))
+    const removed = new Set((graph.pageGroupIds ?? []).filter((groupId) => !pageGroupIds.includes(groupId))), affected = graph.occurrences.find((occurrence) => removed.has(String(occurrence.pageGroupId ?? "")));
+    if (affected)
+        throw new Error(`${affected.name} must be reassigned or removed before removing its Page Group lane.`);
+    if (JSON.stringify(graph.pageGroupIds ?? []) === JSON.stringify(pageGroupIds))
         return state;
-    return transactProject(state, "Set Flow Page Group lanes", (project) => ({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => candidate.id === flowId ? { ...candidate, pageGroupIds: [...pageGroupIds] } : candidate) } }));
+    return transactProject(state, "Set Flow Page Group lanes", (project) => saveStoredGraph(project, flowId, { ...storedGraph(project, flowId), pageGroupIds: [...pageGroupIds] }));
 }
 export function inspectPageGroupLaneRemoval(project, flowId, pageGroupId, pageId) {
-    const flow = project.collections.flows.find(({ id }) => id === flowId), group = project.collections.pageGroups.find(({ id }) => id === pageGroupId), page = project.collections.pages.find(({ id }) => id === pageId), occurrences = storedGraph(project, flowId).occurrences.filter((occurrence) => occurrence.pageGroupId === pageGroupId && occurrence.pageId === pageId), names = occurrences.map(({ name }) => name).join(", ");
+    const flow = project.collections.flows.find(({ id }) => id === flowId), group = project.collections.pageGroups.find(({ id }) => id === pageGroupId), page = project.collections.pages.find(({ id }) => id === pageId), occurrences = storedGraph(project, flowId).occurrences.filter((occurrence) => occurrence.pageGroupId === pageGroupId), names = occurrences.map(({ name }) => name).join(", ");
     return { blocked: Boolean(occurrences.length), occurrenceIds: occurrences.map(({ id }) => id), message: occurrences.length ? `${names} uses ${page?.name ?? pageId} in ${group?.name ?? pageGroupId} for ${flow?.name ?? flowId}; reassign or remove the occurrence before removing membership or lane.` : "No Flow occurrence blocks this Page Group change." };
 }
 export function removePageGroupLaneAndMembership(state, flowId, pageGroupId, pageId, reassignments) {
-    const review = inspectPageGroupLaneRemoval(state.project, flowId, pageGroupId, pageId), replacement = new Map(reassignments.map(({ occurrenceId, pageGroupId: target }) => [occurrenceId, target]));
+    const review = inspectPageGroupLaneRemoval(state.project, flowId, pageGroupId, pageId), graph = storedGraph(state.project, flowId), replacement = new Map(reassignments.map(({ occurrenceId, pageGroupId: target }) => [occurrenceId, target]));
     if (review.occurrenceIds.some((occurrenceId) => !replacement.has(occurrenceId)))
         throw new Error(review.message);
     const validGroups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group.pageIds ?? []]));
     for (const occurrenceId of review.occurrenceIds) {
-        const target = replacement.get(occurrenceId);
-        if (!validGroups.get(target)?.includes(pageId))
+        const occurrence = graph.occurrences.find(({ id }) => id === occurrenceId), target = replacement.get(occurrenceId);
+        if (!validGroups.get(target)?.includes(String(occurrence.pageId ?? "")))
             throw new Error("Reassign every affected occurrence to a Page Group containing its Page.");
     }
-    return transactProject(state, `Reassign occurrences and remove ${pageGroupId} Flow lane`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph({ ...project, collections: { ...project.collections, pageGroups: project.collections.pageGroups.map((group) => group.id === pageGroupId ? { ...group, pageIds: (group.pageIds ?? []).filter((id) => id !== pageId) } : group), flows: project.collections.flows.map((flow) => flow.id === flowId ? { ...flow, pageGroupIds: (flow.pageGroupIds ?? []).filter((id) => id !== pageGroupId) } : flow) } }, flowId, { ...graph, occurrences: graph.occurrences.map((occurrence) => replacement.has(occurrence.id) ? { ...occurrence, pageGroupId: replacement.get(occurrence.id) } : occurrence) }); });
+    return transactProject(state, `Reassign occurrences and remove ${pageGroupId} Flow lane`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph({ ...project, collections: { ...project.collections, pageGroups: project.collections.pageGroups.map((group) => group.id === pageGroupId ? { ...group, pageIds: (group.pageIds ?? []).filter((id) => id !== pageId) } : group) } }, flowId, { ...graph, pageGroupIds: (graph.pageGroupIds ?? []).filter((id) => id !== pageGroupId), occurrences: graph.occurrences.map((occurrence) => replacement.has(occurrence.id) ? { ...occurrence, pageGroupId: replacement.get(occurrence.id) } : occurrence) }); });
 }
 export function saveGraphRelationship(state, flowId, fromOccurrenceId, input, id) {
     const graph = storedGraph(state.project, flowId), occurrenceIds = new Set(graph.occurrences.map(({ id }) => id));
@@ -137,7 +140,7 @@ export function projectFlowGraph(project, flowId) {
     const flow = project.collections.flows.find(({ id }) => id === flowId);
     if (!flow)
         throw new Error(`Unknown Flow ${flowId}`);
-    const laneIds = flow.pageGroupIds ?? [], lanes = laneIds.map((groupId) => project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)).map(clone), stored = storedGraph(project, flowId);
+    const stored = storedGraph(project, flowId), laneIds = stored.pageGroupIds ?? [], lanes = laneIds.map((groupId) => project.collections.pageGroups.find(({ id }) => id === groupId)).filter((group) => Boolean(group)).map(clone);
     const nodes = stored.occurrences.map((occurrence, index) => {
         const page = project.collections.pages.find(({ id }) => id === occurrence.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), eventId = String(binding?.eventId ?? occurrence.eventId ?? ""), event = project.collections.events.find(({ id }) => id === eventId), position = occurrence.position, pageGroupId = typeof occurrence.pageGroupId === "string" ? occurrence.pageGroupId : undefined, laneIndex = pageGroupId ? laneIds.indexOf(pageGroupId) : -1, eventRole = event?.role, role = binding ? "context-setting" : pageGroupId ? "interaction" : eventRole === "context-setting" || eventRole === "interaction" ? eventRole : occurrence.fallbackRole === "context-setting" ? "context-setting" : "interaction", layout = position && typeof position.y === "number" ? { lane: laneIndex >= 0 ? lanes[laneIndex]?.name ?? pageGroupId : typeof occurrence.lane === "string" ? occurrence.lane : "Shipping", x: laneIndex >= 0 ? 30 + laneIndex * 200 : typeof position.x === "number" ? position.x : 230, y: position.y } : undefined;
         return { id: occurrence.id, name: occurrence.name, eventId, pageId: String(occurrence.pageId ?? ""), ...(pageGroupId ? { pageGroupId } : {}), ...(binding ? { contextBindingId: binding.id, occurrenceType: "page-context" } : { ...(pageGroupId ? { occurrenceType: "interaction" } : {}) }), role, obligation: (typeof occurrence.obligation === "string" ? occurrence.obligation : occurrence.optional ? "Optional" : "Required"), expectedMinimum: Number(occurrence.minimum ?? 1), ...(occurrence.maximum !== undefined ? { expectedMaximum: Number(occurrence.maximum) } : {}), ...(layout ? { layout } : {}) };
