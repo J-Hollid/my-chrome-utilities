@@ -32,12 +32,13 @@
 (def evidence-category-keys #{:authoring :branch :topology :keyboard :empty})
 (def required-evidence-keys (conj evidence-category-keys :installedBoundary))
 (defn all-true? [values]
-  (and (map? values) (seq values) (every? true? (vals values))))
+  (boolean (and (map? values) (seq values) (every? true? (vals values)))))
 (defn complete-browser-evidence? [evidence]
-  (and (map? evidence)
-       (= required-evidence-keys (set (keys evidence)))
-       (true? (:installedBoundary evidence))
-       (every? #(all-true? (get evidence %)) evidence-category-keys)))
+  (boolean
+   (and (map? evidence)
+        (= required-evidence-keys (set (keys evidence)))
+        (true? (:installedBoundary evidence))
+        (every? #(all-true? (get evidence %)) evidence-category-keys))))
 (defn- assert-runtime! [{:keys [authoring branch topology keyboard empty] :as evidence}]
   (support/assert! (complete-browser-evidence? evidence) "Installed graph evidence is incomplete or contains a false value." evidence)
   (support/assert! (all-true? authoring) "Installed graph authoring evidence failed." authoring)
