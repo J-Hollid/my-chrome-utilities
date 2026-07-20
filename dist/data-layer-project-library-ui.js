@@ -1,4 +1,4 @@
-import { activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectMetadata, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
+import { activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
 import { undoProjectTransaction } from "./data-layer-specification-project.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 const q = (root, selector) => { const value = root.querySelector(selector); if (!value)
@@ -54,7 +54,7 @@ export function mountProjectLibraryUi(options) {
         confirm.disabled = true;
         for (const choice of ["merge", "reject", "retry"])
             dialog.append(button(`${choice[0].toUpperCase()}${choice.slice(1)} ${current.pendingWrite.label}`, `${choice} pending command ${current.pendingWrite.label}`, () => { try {
-                const persisted = choice === "merge" ? { state: current.state, revision: Math.max(current.revision, current.pendingWrite.baseRevision) + 1 } : undefined;
+                const persisted = choice === "merge" ? { state: replayProjectCommand(current.state, current.pendingWrite), revision: Math.max(current.revision, current.pendingWrite.baseRevision) + 1 } : undefined;
                 library = resolveProjectWrite(library, library.activeProjectId, choice, persisted, now);
                 persist(library);
                 confirm.disabled = false;

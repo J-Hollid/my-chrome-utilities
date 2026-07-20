@@ -12,6 +12,7 @@ import {
   projectRecordNeedsSynchronization,
   recordProjectNavigation,
   replaceActiveProjectState,
+  replayProjectCommand,
   resolveProjectNavigation,
   resolveProjectWrite,
   setProjectPendingWrite,
@@ -70,8 +71,11 @@ assert.equal(library.activeProjectId,"project-retail");
 const rejected=resolveProjectWrite(library,"project-retail","reject",undefined,clock);
 assert.equal(rejected.projects["project-retail"].revision,14);
 assert.equal(rejected.projects["project-retail"].state.project.namingConventions.currency,undefined);
-const merged=resolveProjectWrite(library,"project-retail","merge",{state:retail,revision:15},clock);
+assert.throws(()=>resolveProjectWrite(library,"project-retail","merge",{state:retail,revision:15},clock),/apply.*Set \/currency type/i,"Merge must reject a persisted no-op");
+const mergedState=replayProjectCommand(retail,library.projects["project-retail"].pendingWrite),merged=resolveProjectWrite(library,"project-retail","merge",{state:mergedState,revision:15},clock);
 assert.equal(merged.projects["project-retail"].revision,15);
+assert.equal(merged.projects["project-retail"].state.project.namingConventions.currency,"number");
+assert.equal(merged.projects["project-retail"].state.history.undo.at(-1).label,"Set /currency type");
 library=resolveProjectWrite(library,"project-retail","retry",undefined,clock);
 assert.equal(library.projects["project-retail"].state.project.namingConventions.currency,"number");
 assert.equal(library.projects["project-retail"].state.history.undo.at(-1).label,"Set /currency type");
