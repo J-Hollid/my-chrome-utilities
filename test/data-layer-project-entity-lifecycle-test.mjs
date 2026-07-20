@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
-import {createProjectCollectionEntity,hasCanonicalProfileOverviewActions,inspectProjectEntityRemoval,projectCollectionCreationFields,projectCollectionDefinitions,projectEntityWorkspaceRoute,projectInspectorTogglePresentation,removeProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
+import {createProjectCollectionEntity,hasCanonicalProfileOverviewActions,inspectProjectEntityRemoval,projectCollectionCreationFields,projectCollectionCreationRoute,projectCollectionDefinitions,projectEntityWorkspaceRoute,projectInspectorTogglePresentation,removeProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
 
 let sequence=0;const id=(kind)=>`${kind}:lifecycle:${sequence++}`;
 let state=createSpecificationProject({name:"Retail website",site:"retail.example.com",id});
@@ -8,6 +8,7 @@ const examples={profiles:"Sitewide",pageGroups:"Checkout",pages:"Cart",events:"P
 for(const [kind,name] of Object.entries(examples))state=createProjectCollectionEntity(state,kind,name,id);
 for(const [kind,name] of Object.entries(examples)){const entities=state.project.collections[kind];assert.equal(entities.length,1,`${kind} has one entity`);assert.equal(entities[0].name,name);assert.match(projectCollectionDefinitions[kind].addAction,/^Add /);}
 for(const [kind,name] of Object.entries(examples)){const definition=projectCollectionDefinitions[kind],entity=state.project.collections[kind][0];assert.deepEqual(projectEntityWorkspaceRoute(kind,entity.id,name),{kind,entityId:entity.id,heading:`${definition.singular}: ${name}`,label:`${definition.singular} workspace for ${name}`,backAction:`Back to ${definition.overview}`});}
+for(const kind of Object.keys(examples)){const definition=projectCollectionDefinitions[kind];assert.deepEqual(projectCollectionCreationRoute(kind),{kind,heading:`Create ${definition.singular}`,label:`Create ${definition.singular} for ${definition.overview}`,backAction:`Back to ${definition.overview}`});}
 assert.deepEqual(state.project.collections.flows[0].steps,[],"Add Flow starts a documentary canvas without executable steps");
 const expectedCreationFields={profiles:["Profile purpose"],pageGroups:["Membership matcher"],pages:["Path matcher","Page Groups"],events:["Canonical event name","Documentary role"],applicabilitySets:["Priority","Fallback"],flows:["Correlation field"],fixtures:["Fixture mode","Event","Page","Flow","Release policy"],schemaDrafts:["Schema description"],assignments:["Schema","Event","Applicability Set","Priority","Version policy"]};
 for(const [kind,labels] of Object.entries(expectedCreationFields))assert.deepEqual(projectCollectionCreationFields[kind].map(({label})=>label),labels,`${kind} exposes type-specific creation fields`);

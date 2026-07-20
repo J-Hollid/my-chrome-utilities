@@ -18,7 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -43,11 +43,22 @@ let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
-function renderCanonicalProfileEditor(host, entity) {
+function renderCanonicalEntityEditor(host, kind, entity) {
     if (!state)
         return;
     const canonical = entity.canonicalSchema;
     if (!canonical) {
+        if (kind === "schemaDrafts") {
+            const section = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), initialize = document.createElement("button");
+            heading.textContent = "Initialize canonical Schema Draft";
+            summary.textContent = "Create one canonical payload definition for this project-owned Draft lineage.";
+            initialize.type = "button";
+            initialize.textContent = "Initialize canonical Schema";
+            initialize.addEventListener("click", () => persist(transactProject(state, `Initialize canonical schema for ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, schemaDrafts: project.collections.schemaDrafts.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: entity.id, contributorName: entity.name }) } : candidate) } }))));
+            section.append(heading, summary, initialize);
+            host.append(section);
+            return;
+        }
         const review = migrateLegacyProfile(entity, { id }), section = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), list = document.createElement("ul"), confirm = document.createElement("button");
         const sourceDefinitions = Object.values(review.document.nodes).reduce((count, node) => count + node.provenance.length, 0), deduplicated = sourceDefinitions - Object.keys(review.document.nodes).length;
         section.setAttribute("aria-label", "Canonical schema migration review");
@@ -73,8 +84,8 @@ function renderCanonicalProfileEditor(host, entity) {
     }
     const editorHost = document.createElement("section");
     host.append(editorHost);
-    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections.profiles.find(({ id: profileId }) => profileId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections.profiles.find(({ id: profileId }) => profileId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
-            persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === entity.id ? { ...profile, canonicalSchema: result.document, requirements: [] } : profile) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
+    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+            persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document, ...(kind === "profiles" ? { requirements: [] } : {}) } : candidate) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
 }
 function renderCanonicalProfileOverview(host) {
     if (!state || selectedKind !== "profiles" || selectedId)
@@ -368,7 +379,7 @@ const editorFields = {
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     fixtures: [{ key: "mode", label: "Fixture mode" }, { key: "context", label: "Context", type: "json" }, { key: "observations", label: "Ordered observations", type: "json" }, { key: "payload", label: "Payload", type: "json" }, { key: "expected", label: "Expected winner, step, schema and issues", type: "json" }, { key: "releasePolicy", label: "Release policy" }],
-    schemaDrafts: [{ key: "profileIds", label: "Ordered requirement profiles", collection: "profiles", multiple: true }, { key: "localOverrides", label: "Local overrides", type: "json" }],
+    schemaDrafts: [],
     assignments: [{ key: "schemaDraftId", label: "Schema", collection: "schemaDrafts" }, { key: "eventId", label: "Event", collection: "events" }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }, { key: "priority", label: "Priority", type: "number" }, { key: "versionPolicy", label: "Version policy" }, { key: "schemaRevision", label: "Pinned schema revision", type: "number" }],
 };
 function fieldControl(field, entity) { if (field.type === "flow-role") {
@@ -454,17 +465,15 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     form.append(label);
 } if (selectedKind === "fixtures")
     renderFixtureExecution(form, entity); if (selectedKind === "schemaDrafts") {
-    const preview = document.createElement("pre"), working = entity.workingDraft;
-    preview.textContent = JSON.stringify(working?.document ?? entity.document ?? {}, null, 2);
-    preview.setAttribute("aria-label", "Compiled effective schema document");
-    form.append(preview);
+    const status = document.createElement("p");
+    status.textContent = "Draft · canonical payload definition and project lineage";
+    status.setAttribute("role", "status");
+    form.append(status);
 } save.type = "submit"; save.textContent = "Save complete entity"; duplicate.type = "button"; duplicate.textContent = "Duplicate"; usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`; actions.className = "editor-actions"; actions.append(save, duplicate); form.append(actions, usage); form.addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; try {
     const update = { name: name.value.trim() };
     for (const field of editorFields[selectedKind])
         update[field.key] = editorValue(field, form.elements.namedItem(field.key));
-    if (selectedKind === "schemaDrafts")
-        update.workingDraft = { ...entity.workingDraft, profileIds: update.profileIds };
     const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
     if (laneIds)
         delete update.pageGroupIds;
@@ -476,8 +485,8 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
 catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);
 } }); duplicate.addEventListener("click", () => { if (!state)
-    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
-    renderCanonicalProfileEditor(content, entity); }
+    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles" || selectedKind === "schemaDrafts")
+    renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
     return; for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
@@ -525,13 +534,17 @@ function renderCollectionGuidance(content) { if (!state)
     section.append(heading, tasks, map, next, reason, worked);
 } if (section.childElementCount)
     content.append(section); }
-function replaceProjectRoute(kind, entityId) { if (!state)
-    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.delete("route"); url.searchParams.set("kind", kind); if (entityId)
+function replaceProjectRoute(kind, entityId, action) { if (!state)
+    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); if (action)
+    url.searchParams.set("route", action);
+else
+    url.searchParams.delete("route"); url.searchParams.set("kind", kind); if (entityId)
     url.searchParams.set("entity", entityId);
 else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
 function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
 function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(() => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)?.focus({ preventScroll: true })); }
+function openProjectCollectionCreation(kind) { projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.collection && state) {
     const select = document.createElement("select");
     select.name = field.key;
@@ -567,11 +580,13 @@ function projectCreationFieldValue(field, control) { if (control instanceof HTML
 function renderCreationPage(content, kind) {
     if (!state)
         return;
-    const definition = projectCollectionDefinitions[kind], fields = projectCollectionCreationFields[kind], section = document.createElement("section"), heading = document.createElement("h1"), purpose = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), form = document.createElement("form"), name = document.createElement("input"), nameLabel = document.createElement("label"), settings = document.createElement("fieldset"), legend = document.createElement("legend"), cancel = document.createElement("button"), create = document.createElement("button"), feedback = document.createElement("output");
+    const definition = projectCollectionDefinitions[kind], route = projectCollectionCreationRoute(kind), fields = projectCollectionCreationFields[kind], section = document.createElement("section"), heading = document.createElement("h1"), purpose = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), form = document.createElement("form"), name = document.createElement("input"), nameLabel = document.createElement("label"), settings = document.createElement("fieldset"), legend = document.createElement("legend"), cancel = document.createElement("button"), create = document.createElement("button"), feedback = document.createElement("output");
     section.className = "collection-lifecycle-page";
     section.dataset.creationKind = kind;
+    section.dataset.projectRoute = "add";
+    section.setAttribute("aria-label", route.label);
     heading.tabIndex = -1;
-    heading.textContent = `Create ${definition.singular}`;
+    heading.textContent = route.heading;
     purpose.textContent = `Purpose: ${definition.purpose}. Example: ${definition.example}.`;
     prerequisites.textContent = `Prerequisites: ${definition.prerequisites.join(", ")}.`;
     usedBy.textContent = `Used by: ${definition.consumers.join(", ")}.`;
@@ -711,7 +726,7 @@ function renderWorkspace() {
     primary.textContent = definition.addAction;
     primary.dataset.addKind = selectedKind;
     primary.setAttribute("aria-label", `${definition.addAction} to ${state.project.name}`);
-    primary.addEventListener("click", () => { creationKind = selectedKind; selectedId = undefined; render(); });
+    primary.addEventListener("click", () => openProjectCollectionCreation(selectedKind));
     guidance.className = "project-guidance";
     purpose.textContent = definition.purpose;
     example.textContent = `Example: ${definition.example}.`;
@@ -827,7 +842,7 @@ function render() { const empty = q("#project-empty"), workspace = q("#project-w
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
-} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts" || projectOverview; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
+} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); const next = createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id }), at = new Date().toISOString(); library = projectLibrary([{ state: next, revision: 0, createdAt: at, lastModifiedAt: at }], next.project.id); localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); persist(next); q("#workspace-pane").focus(); });
 document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
@@ -1037,7 +1052,7 @@ flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuil
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
 layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist });
 const synchronizeActiveProjectContext = (serialized) => { const change = activeProjectContextChange(serialized, state?.project.id, canonicalRevision); if (!change.changed)
-    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; selectedKind = "profiles"; selectedId = undefined; projectOverview = Boolean(active); if (active) {
+    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
     const navigation = resolveProjectNavigation(library, active.state.project.id);
     if (navigation) {
         projectOverview = false;
@@ -1094,15 +1109,17 @@ subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
 });
 render();
 renderAssignments();
-const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind"), deepId = routeParameters.get("entity"); if (deepKind && deepKind in labels) {
+const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind"), deepId = routeParameters.get("entity"), requestedAction = routeParameters.get("route"); if (deepKind && deepKind in labels) {
     projectOverview = false;
     selectedKind = deepKind;
-    selectedId = deepId && state && state.project.collections[deepKind].some(({ id }) => id === deepId) ? deepId : undefined;
+    creationKind = requestedAction === "add" ? deepKind : undefined;
+    selectedId = creationKind ? undefined : deepId && state && state.project.collections[deepKind].some(({ id }) => id === deepId) ? deepId : undefined;
     persistNavigation();
     render();
-    const inspector = q("#project-inspector");
-    inspector.tabIndex = -1;
-    inspector.focus();
+    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : q("#project-inspector"); if (target) {
+        target.tabIndex = -1;
+        target.focus({ preventScroll: true });
+    } });
 } if (routeParameters.get("view") === "documentation" && state)
     q("#generate-documentation").click(); };
 const requestedProject = routeParameters.get("project");

@@ -32,6 +32,7 @@ export const projectCollectionCreationFields:Record<ProjectEntityKind,readonly P
 
 export function hasCanonicalProfileOverviewActions(kind:ProjectEntityKind,selectedId:string|undefined):boolean{return kind==="profiles"&&!selectedId;}
 export function projectInspectorTogglePresentation(open:boolean):{label:string;expanded:"true"|"false"}{return{label:open?"Hide Inspector":"Show Inspector",expanded:open?"true":"false"};}
+export function projectCollectionCreationRoute(kind:ProjectEntityKind):{kind:ProjectEntityKind;heading:string;label:string;backAction:string}{const definition=projectCollectionDefinitions[kind];return{kind,heading:`Create ${definition.singular}`,label:`Create ${definition.singular} for ${definition.overview}`,backAction:`Back to ${definition.overview}`};}
 export function projectEntityWorkspaceRoute(kind:ProjectEntityKind,entityId:string,name:string):{kind:ProjectEntityKind;entityId:string;heading:string;label:string;backAction:string}{const definition=projectCollectionDefinitions[kind];return{kind,entityId,heading:`${definition.singular}: ${name}`,label:`${definition.singular} workspace for ${name}`,backAction:`Back to ${definition.overview}`};}
 
 const containsIdentity=(value:unknown,identity:string):boolean=>{if(value===identity)return true;if(Array.isArray(value))return value.some((entry)=>containsIdentity(entry,identity));if(value&&typeof value==="object")return Object.values(value as Record<string,unknown>).some((entry)=>containsIdentity(entry,identity));return false;};
