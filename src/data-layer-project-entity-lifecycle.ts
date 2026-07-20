@@ -31,7 +31,6 @@ export const projectCollectionCreationFields:Record<ProjectEntityKind,readonly P
 };
 
 export function hasSavedSchemaAdoptionActions(kind:ProjectEntityKind,selectedId:string|undefined):boolean{return kind==="profiles"&&!selectedId;}
-export function projectCollectionOverviewActionLabels(kind:ProjectEntityKind):readonly [string]{return[projectCollectionDefinitions[kind].addAction];}
 export function projectInspectorTogglePresentation(open:boolean):{label:string;expanded:"true"|"false"}{return{label:open?"Hide Inspector":"Show Inspector",expanded:open?"true":"false"};}
 export function projectCollectionCreationRoute(kind:ProjectEntityKind):{kind:ProjectEntityKind;heading:string;label:string;backAction:string}{const definition=projectCollectionDefinitions[kind];return{kind,heading:`Create ${definition.singular}`,label:`Create ${definition.singular} for ${definition.overview}`,backAction:`Back to ${definition.overview}`};}
 export function projectEntityWorkspaceRoute(kind:ProjectEntityKind,entityId:string,name:string):{kind:ProjectEntityKind;entityId:string;heading:string;label:string;backAction:string}{const definition=projectCollectionDefinitions[kind];return{kind,entityId,heading:`${definition.singular}: ${name}`,label:`${definition.singular} workspace for ${name}`,backAction:`Back to ${definition.overview}`};}

@@ -6,6 +6,7 @@ export function createUnifiedCanonicalEditorController(mount, id = (kind) => `${
     const core = mount({ host: globalThis.document?.createElement("section"), surface: "Side panel", load: () => active?.load() ?? empty, dispatch: (command) => active?.dispatch(command) ?? { status: "conflict", document: empty, message: "Select a schema before editing." }, id, onUndo: () => active?.onUndo?.(), onRedo: () => active?.onRedo?.() });
     return {
         select(adapter) { active = adapter; core.render(); },
+        clear() { active = undefined; },
         current: () => active?.load() ?? empty,
         dispatch: (command) => active?.dispatch(command) ?? { status: "conflict", document: empty, message: "Select a schema before editing." },
         active: () => active,
@@ -19,12 +20,10 @@ export function mountUnifiedSidePanelCanonicalEditor(input) {
     chrome.append(identity, actions);
     input.host.replaceChildren(chrome, coreHost);
     input.host.dataset.canonicalEditorMounts = String(Number(input.host.dataset.canonicalEditorMounts ?? 0) + 1);
-    let active;
-    const empty = savedSchemaCanonicalDocument({ id: "schema:empty", name: "No schema selected", version: 0, document: { type: "object" } }, input.id);
-    const core = mountCanonicalSchemaEditor({ host: coreHost, surface: "Side panel", load: () => active?.load() ?? empty, dispatch: (command) => active?.dispatch(command) ?? { status: "conflict", document: empty, message: "Select a schema before editing." }, id: input.id, onUndo: () => active?.onUndo?.(), onRedo: () => active?.onRedo?.() });
-    const renderContext = () => { identity.textContent = active?.label ?? "Select a saved schema or project contributor."; actions.replaceChildren(...(active?.actions ?? []).map((action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = action.label; button.addEventListener("click", action.run); return button; })); };
+    const controller = createUnifiedCanonicalEditorController((options) => mountCanonicalSchemaEditor({ ...options, host: coreHost }), input.id);
+    const renderContext = () => { const active = controller.active(); identity.textContent = active?.label ?? "Select a saved schema or project contributor."; actions.replaceChildren(...(active?.actions ?? []).map((action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = action.label; button.addEventListener("click", action.run); return button; })); };
     renderContext();
-    return { select(adapter) { active = adapter; input.host.hidden = false; input.host.setAttribute("aria-label", "Side panel schema editor region"); renderContext(); core.render(); }, close() { active = undefined; input.host.hidden = true; input.host.removeAttribute("aria-label"); renderContext(); }, render() { renderContext(); core.render(); }, active: () => active };
+    return { select(adapter) { controller.select(adapter); input.host.hidden = false; input.host.setAttribute("aria-label", "Side panel schema editor region"); renderContext(); }, close() { controller.clear(); input.host.hidden = true; input.host.removeAttribute("aria-label"); renderContext(); }, render() { renderContext(); controller.render(); }, active: controller.active };
 }
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 export function savedSchemaCanonicalDocument(schema, id) {

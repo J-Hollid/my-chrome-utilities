@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
-import {createProjectCollectionEntity,hasSavedSchemaAdoptionActions,inspectProjectEntityRemoval,projectCollectionCreationFields,projectCollectionCreationRoute,projectCollectionDefinitions,projectCollectionOverviewActionLabels,projectEntityWorkspaceRoute,projectInspectorTogglePresentation,removeProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
+import {createProjectCollectionEntity,hasSavedSchemaAdoptionActions,inspectProjectEntityRemoval,projectCollectionCreationFields,projectCollectionCreationRoute,projectCollectionDefinitions,projectEntityWorkspaceRoute,projectInspectorTogglePresentation,removeProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
 
 let sequence=0;const id=(kind)=>`${kind}:lifecycle:${sequence++}`;
 let state=createSpecificationProject({name:"Retail website",site:"retail.example.com",id});
 const examples={profiles:"Sitewide",pageGroups:"Checkout",pages:"Cart",events:"Purchase",applicabilitySets:"Retail checkout",flows:"Checkout journey",schemaDrafts:"Purchase payload",assignments:"Retail Purchase",fixtures:"Valid purchase"};
 for(const [kind,name] of Object.entries(examples))state=createProjectCollectionEntity(state,kind,name,id);
 for(const [kind,name] of Object.entries(examples)){const entities=state.project.collections[kind];assert.equal(entities.length,1,`${kind} has one entity`);assert.equal(entities[0].name,name);assert.match(projectCollectionDefinitions[kind].addAction,/^Add /);}
-for(const kind of Object.keys(examples))assert.deepEqual(projectCollectionOverviewActionLabels(kind),[projectCollectionDefinitions[kind].addAction],`${kind} overview exposes one Add route`);
 for(const [kind,name] of Object.entries(examples)){const definition=projectCollectionDefinitions[kind],entity=state.project.collections[kind][0];assert.deepEqual(projectEntityWorkspaceRoute(kind,entity.id,name),{kind,entityId:entity.id,heading:`${definition.singular}: ${name}`,label:`${definition.singular} workspace for ${name}`,backAction:`Back to ${definition.overview}`});}
 for(const kind of Object.keys(examples)){const definition=projectCollectionDefinitions[kind];assert.deepEqual(projectCollectionCreationRoute(kind),{kind,heading:`Create ${definition.singular}`,label:`Create ${definition.singular} for ${definition.overview}`,backAction:`Back to ${definition.overview}`});}
 assert.deepEqual(state.project.collections.flows[0].steps,[],"Add Flow starts a documentary canvas without executable steps");

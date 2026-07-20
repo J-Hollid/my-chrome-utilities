@@ -815,6 +815,7 @@
     ],
     "property": [
       "test/data-layer-canonical-schema-property-test.mjs",
+      "test/data-layer-side-panel-unified-schema-editor-property-test.mjs",
       "test/data-layer-composed-schema-builders-property-test.mjs",
       "test/data-layer-composed-schema-workspace-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
