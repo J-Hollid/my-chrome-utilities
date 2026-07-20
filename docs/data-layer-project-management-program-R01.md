@@ -4,9 +4,10 @@
 
 This program is the active authority for managing data-layer Specification
 Projects, choosing the single active project, opening that project in Specification
-Studio, and moving a project between installations. It adds a focused project-
-management slice to the current Flow, canonical-schema, and selected-Flow export
-checkpoints. It does not reactivate the archived full-site R02/R04 release program.
+Studio, managing its top-level entity collections, and moving a project between
+installations. It adds a focused project-management and entity-lifecycle slice to
+the current Flow, canonical-schema, and selected-Flow export checkpoints. It does
+not reactivate the archived full-site R02/R04 release program.
 
 The project library may hold multiple projects, but zero or one stable project
 identity is active for an extension profile. A project selection, preview, import,
@@ -19,13 +20,18 @@ The side panel has a top-level `Projects` tab. An operator can create projects,
 browse the library, edit metadata, safely switch the active context, open the active
 project in Specification Studio, export a complete project Draft, and import a
 validated bundle as a new inactive project. Every project-bound surface visibly
-names and subscribes to the same active project.
+names and subscribes to the same active project. Within Studio, every top-level
+entity collection owns its Add, Open, and Remove routes in the main workspace; the
+Inspector is optional context and owns no collection lifecycle command.
 
 The implementation cannot pass by retaining one implicit singleton state, choosing
 the first stored project, placing project controls inside Schema, changing only a
 header while retaining old project records, sharing navigation or entity selection
 between projects, replacing an existing project during import, or using a mocked
-project list disconnected from production storage and Specification Studio.
+project list disconnected from production storage and Specification Studio. It also
+cannot pass with one generic Inspector form that asks the operator to choose an
+internal collection kind, with entity creation or removal available only while the
+Inspector is open, or with a lightweight creation path that writes a parallel model.
 
 ## Project repository and active context
 
@@ -82,11 +88,11 @@ row action includes the project name in its accessible name. At 360px the tab us
 one vertical scroll owner, no horizontal page scrolling, deterministic dialog focus,
 and complete keyboard access.
 
-When no project is active, project-bound Schema, Page, Page Group, Event, Flow, and
-documentation surfaces state `No active project` and offer `Open project` and
-`Create project`. Storage order, recency, and a one-result list cannot implicitly
-choose a project. Global capabilities such as the Saved Schema Library remain
-available without fabricating project context.
+When no project is active, every project-bound collection and documentation surface
+states `No active project` and offers `Open project` and `Create project`. Storage
+order, recency, and a one-result list cannot implicitly choose a project. Global
+capabilities such as the Saved Schema Library remain available without fabricating
+project context.
 
 ## Switching and pending writes
 
@@ -98,9 +104,10 @@ reject, or retry. After resolution, the saved current revision remains in the
 library and the target becomes the sole active identity.
 
 Side panel and Specification Studio subscribe to the same active-context record.
-They replace project projections only after activation commits. Schema, Pages, Page
-Groups, Events, Flows, documentation, assignments, and selected entities must not
-show a mixture from two projects during or after the switch.
+They replace project projections only after activation commits. Shared Profiles,
+Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments,
+documentation, and selected entities must not show a mixture from two projects
+during or after the switch.
 
 Each project owns its last valid Studio and side-panel location. Returning to a
 project restores only locations whose stable references still exist in that
@@ -125,6 +132,63 @@ project workspace were a schema capability. A contextual `Open schema in
 Specification Studio` may deep-link through the owning active project. The existing
 schema documentation-table builder remains a schema documentation action; it does
 not establish or launch project context.
+
+## Project entity collection workspaces
+
+Each top-level project collection has an overview in Specification Studio:
+
+- Shared Profiles;
+- Page Groups;
+- Pages;
+- Events;
+- Applicability;
+- Flows;
+- Fixtures;
+- Schemas; and
+- Assignments.
+
+`Schemas` exposes the canonical schema entity and its Draft state. It does not
+restore a separate lightweight `Schema drafts` editor or another schema model. Flow
+Page instances and Event occurrences remain contextual graph components created in
+their owning Flow and Page frame rather than misleading top-level collections.
+
+Every populated overview provides a type-specific `Add <entity>` contextual primary
+action. Each row provides accessible `Open <name>` and `Remove <name>` actions. An
+empty overview explains the entity's plain-language purpose, gives an example, names
+prerequisites and consumers, and exposes the same Add action. No route requires the
+operator to choose a kind from internal collection names.
+
+Add opens a project-scoped creation page in the main workspace. The page identifies
+the entity type, explains prerequisites and `Used by` relationships, presents the
+type-specific fields and complete canonical editor appropriate to that entity, and
+provides explicit Cancel and Create actions. Creation is one canonical project
+command; the new stable identity appears in the same overview and opens in its
+dedicated workspace. The Inspector contains no generic Add entity form or kind
+selector and closing it cannot affect creation.
+
+Open routes to the entity's dedicated main-workspace configuration. Schema-bearing
+entities use the one canonical schema editor and effective-schema projection already
+defined by the canonical-authoring and layered-schema checkpoints. Flow creation
+opens the canvas-first Flow workspace. Fixture and Assignment creation may expose
+their existing canonical fields, but this lifecycle checkpoint does not activate
+fixture execution, release assurance, or a new assignment resolver.
+
+Remove begins from the overview row and opens a main-workspace impact review. It
+names the entity, its type, affected references using human names, Draft and
+evidence consequences, and cancellation. An entity with no dependents is removed by
+one command and one Undo restores the same identity. A referenced entity cannot be
+removed until every dependency is explicitly repaired or removed in its own
+workspace; the product must not silently cascade, leave dangling references, or
+hide affected Flow, Assignment, Fixture, schema, membership, or applicability
+records. Successful feedback names exactly what changed, which evidence became
+stale, Draft status, and Undo.
+
+At 360px the overview, creation page, impact review, and result use one vertical
+scroll owner and no horizontal page scroll. Add, Open, Remove, repair, Cancel, and
+Create have complete keyboard routes and do not depend on hover. Repeated row actions
+include their entity name. After removal, focus returns to the next row, otherwise
+the previous row, otherwise the empty-state Add action; Undo restores focus to the
+restored entity.
 
 ## Global Saved Schema Library boundary
 
@@ -197,11 +261,13 @@ Deliver the active card, searchable library, create and edit forms, switch revie
 no-active guidance, responsive keyboard operation, and explicit project context in
 every project-bound surface.
 
-### Phase C — Studio and Schema boundaries
+### Phase C — Studio, entity collections, and Schema boundaries
 
 Route project actions to Project overview in Specification Studio, preserve entity
 deep links under stable project identity, remove the misleading schema-owned project
-launcher, and connect Saved Schema adoption through safe project activation.
+launcher, replace the generic Inspector entity form with type-specific collection
+overviews and main-workspace creation/removal routes, and connect Saved Schema
+adoption through safe project activation.
 
 ### Phase D — portable bundles
 
@@ -237,6 +303,11 @@ pair. `Portability NNN` refers to
 | P13 | Invalid import can partially mutate the library | Portability 003 | Exact malformed, version, and dangling-reference blockers disable commit | Format validator and transaction boundary | Focused blocker, disabled action, byte equality, counts, and active ID | D | Every invalid bundle produces zero repository writes |
 | P14 | Existing singleton projects need lossless upgrade | Portability 004 | One atomic migration preserves identity, state, navigation, and history | Legacy adapter, repository migration, and marker | Before/after graph, active ID, history, reload count, and recovery bytes | A, E | One reloadable library entry replaces the singleton without duplication |
 | P15 | Components could pass without a coherent installed workflow | Portability 005 | Visible create, edit, switch, Studio, export, import, open, and reload sequence | Installed side panel, Studio, repository, serializer, and router | Operator event trace, active-ID history, project bytes, remapped graph, and reloaded DOM | E | Exactly one project remains active and every project stays isolated end to end |
+| P16 | Entity creation is a generic Inspector form | Context 011 | Every collection overview owns a named Add action and type-specific main-workspace creation page | Studio collection router, canonical creation commands, and Inspector composition | Nine rendered overviews, creation routes, row actions, absent generic kind selector, and canonical IDs | C, E | Every top-level entity can be added, opened, and offered for removal with the Inspector closed |
+| P17 | Empty collections provide no self-guiding start | Context 012 | Guided empty states explain purpose, example, prerequisites, consumers, and the same Add action | Collection projection, guidance model, keyboard router, and focus adapter | Nine zero-record views, guidance fields, creation route identity, and focused heading | C, E | An empty overview starts its entity workflow without Inspector or internal collection knowledge |
+| P18 | Safe removal is not available from the overview | Context 013 | A named row action opens impact review, removes one entity, reports consequences, and supports identity-preserving Undo | Dependency index, project command repository, evidence invalidation, and focus adapter | Review counts, one removed ID, unaffected bytes, result, Undo identity, and focus sequence | C, E | Removing an unreferenced entity is atomic, explained, reversible, and Inspector-independent |
+| P19 | Removing a referenced entity can cascade or leave dangling state | Context 014 | Removal blocks and deep-links every human-named dependency until explicitly repaired | Cross-collection dependency index, removal guard, and entity routes | Named Flow, Assignment, and Fixture dependencies, disabled confirmation, byte equality, and enabled action after repairs | C, E | No referenced entity is deleted implicitly or leaves a dangling reference |
+| P20 | Collection lifecycle controls fail at narrow widths or keyboard operation | Context 015–016 | Deterministic focus, labelled controls, one-scroll layout, and a nine-collection installed workflow | Responsive Studio UI, accessibility tree, production repository, and reload subscriptions | Overflow measurements, accessible names, focus destinations, created IDs, restored rows, and absent Inspector form | C, E | All nine collections complete Add, Open, and Remove discovery through visible production controls |
 
 ## Assumptions and deferred decisions
 
@@ -245,8 +316,9 @@ pair. `Portability NNN` refers to
 - The current supported versioned JSON project bundle is the first-release transport.
 - Project archive, delete, simultaneous windows pinned to different projects,
   replace import, and cross-project merge require later approved specifications.
-- Fixtures, release publication, Live evaluation, and temporal Flow enforcement are
-  not activated by this project-management slice.
+- Fixture and Assignment collection creation, opening, and guarded removal are
+  active here; fixture execution, release publication, Live evaluation, assignment-
+  resolver redesign, and temporal Flow enforcement are not activated.
 
 ## Terminal acceptance
 
@@ -256,4 +328,7 @@ the built extension, and packaging consumes that same build. Terminal evidence m
 show visible project creation and metadata, one active identity throughout every
 switch, complete cross-surface context replacement, project-owned Studio routing,
 portable export, atomic remapped import, reload persistence, and no cross-project
-entity leakage.
+entity leakage. It must also create and restore one entity through each of the nine
+collection overviews with the Inspector closed, prove the generic Inspector form is
+absent, and demonstrate safe and dependency-blocked removal through production
+commands.

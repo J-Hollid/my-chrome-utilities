@@ -34,9 +34,9 @@ behavior named by the four schema contracts above. Agents must not discard, reje
 or classify these cycles as inactive because of the earlier reduction.
 
 The project-management contracts are likewise later user-approved authority only
-for the named project library, active context, Studio routing, portability, and
-singleton migration behavior. They do not reactivate the archived project-
-foundation or release specifications.
+for the named project library, active context, Studio routing, top-level project-
+entity collection lifecycle, portability, and singleton migration behavior. They
+do not reactivate the archived project-foundation or release specifications.
 
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
@@ -94,6 +94,18 @@ Every project-bound surface subscribes to the same active identity, pending writ
 block switching, and per-project navigation prevents cross-project entity lookup.
 Specification Studio opens from a project at Project overview; schema actions may
 deep-link inside the owning project but do not own the workspace.
+
+Every top-level Studio collection overview owns its type-specific Add action and
+human-named Open and Remove row actions. The covered collections are Shared
+Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, and
+Assignments. Add opens a guided project-scoped creation page in the main workspace;
+Open uses the entity's dedicated workspace; Remove performs named dependency impact
+review and never silently cascades. Guided empty states expose the same Add route.
+The contextual Inspector contains no generic Add entity form, entity-kind selector,
+or exclusive removal action. Schemas use the canonical schema model with Draft
+status rather than restoring a parallel lightweight Schema-draft editor. Flow Page
+instances and Event occurrences remain created within the canvas, not as top-level
+collections.
 
 The global Saved Schema Library remains usable without active project context.
 Adoption safely activates the chosen project and creates one project-owned Draft
@@ -167,11 +179,13 @@ direct repairs, but do not roll back the membership or hide the configuration.
 
 The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a
-general Assignment or resolver redesign. Project-wide batch documentation export,
-fixtures, coverage, preflight, release, Live, temporal Flow execution, and
-cross-surface concurrency beyond the canonical schema editor are not active work.
-Agent role-playing without source knowledge and facilitated Windows usability are
-not acceptance gates. A future slice requires product-owner review, a new approved
+general Assignment or resolver redesign. Top-level Fixture and Assignment overview
+creation, opening, and guarded removal are active only as project-entity lifecycle;
+fixture execution and resolver semantics are not. Project-wide batch documentation
+export, coverage, preflight, release, Live, temporal Flow execution, and cross-
+surface concurrency beyond the canonical schema editor are not active work. Agent
+role-playing without source knowledge and facilitated Windows usability are not
+acceptance gates. A future slice requires product-owner review, a new approved
 specification cycle, and a new file-based SwarmForge handoff.
 
 ## Archived material
@@ -269,7 +283,8 @@ node scripts/package.mjs
 
 The `project_management` pack must register all four project-management contracts
 and focused production evidence for the project repository, side-panel Projects
-tab, Specification Studio router, versioned serializer, import remapper, and legacy
+tab, Specification Studio router, all nine entity collection lifecycle routes,
+dependency-guarded removal, versioned serializer, import remapper, and legacy
 singleton migration. It may declare canonical schema dependencies in the pack
 registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.

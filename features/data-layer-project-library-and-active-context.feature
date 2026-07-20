@@ -35,7 +35,7 @@ Feature: Data layer project library and active context
     When the operator changes its name to Retail data layer and updates purpose, website, owner, and notes
     Then one project-metadata command preserves project-retail and every project-owned entity identity
     And the Projects tab, active-project header, Specification Studio, and deep links display Retail data layer
-    And its schemas, Pages, Page Groups, Events, Flows, assignments, and Draft revision remain associated with project-retail
+    And every project entity collection and Draft revision remains associated with project-retail
     And one Undo restores the previous metadata without changing project context
 
   # Data layer project library and active context 004
@@ -45,7 +45,7 @@ Feature: Data layer project library and active context
     Then the consequence review names the current and target projects and every project-bound surface that will change
     When the operator authorizes replacement of project-retail by project-trade
     Then project-trade is the sole active project identity
-    And Schema, Pages, Page Groups, Events, Flows, documentation, and Specification Studio show only Trade portal records
+    And Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments, documentation, and Specification Studio show only Trade portal records
     And Retail website remains saved without becoming a second active context
 
   # Data layer project library and active context 005
@@ -60,7 +60,7 @@ Feature: Data layer project library and active context
   # Data layer project library and active context 006
   Scenario: Data layer project library and active context 006
     Given no selection record exists for project context
-    When the operator opens a project-bound Schema, Page, Event, Flow, or documentation tab
+    When the operator opens any project-bound collection or documentation tab
     Then the surface states No active project and offers Open project and Create project
     And no library entry is selected implicitly because it is first, recent, or the only result
     And the global Saved Schema Library remains available without inventing a project context
@@ -103,3 +103,108 @@ Feature: Data layer project library and active context
     And every repeated project action has an accessible name containing its project name
     And focus enters the switch review, reaches confirmation and cancellation, and returns to Trade portal after confirmation
     And the active-project header updates without moving focus into another side-panel tab
+
+  # Data layer project library and active context 011
+  Scenario Outline: Data layer project library and active context 011
+    Given Retail website is active and the Inspector is closed
+    And the <overview> overview contains <entity>
+    When project navigation selects <overview>
+    Then the main workspace identifies <overview> and exposes <add action> as its contextual primary action
+    And the <entity> row exposes Open <entity> and Remove <entity>
+    And no Add, Open, or Remove capability requires the Inspector
+    When the operator activates <add action>
+    Then a project-scoped <creation page> opens in the main workspace
+    And it explains the entity purpose, prerequisites, and Used by relationships before its type-specific fields
+    And Cancel and Create <singular> are available without a generic entity-kind selector
+
+    Examples:
+      | overview        | entity            | add action                | creation page                    | singular          |
+      | Shared Profiles | Sitewide          | Add Shared Profile        | Create Shared Profile            | Shared Profile    |
+      | Page Groups     | Checkout          | Add Page Group            | Create Page Group                | Page Group        |
+      | Pages           | Cart              | Add Page                  | Create Page                      | Page              |
+      | Events          | Purchase          | Add Event                 | Create Event                     | Event             |
+      | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
+      | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
+      | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
+      | Schemas         | Purchase payload  | Add Schema                | Create Schema                    | Schema            |
+      | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
+
+  # Data layer project library and active context 012
+  Scenario Outline: Data layer project library and active context 012
+    Given Retail website is active and <overview> contains no entities
+    When the operator opens <overview> with the Inspector closed
+    Then a guided empty state explains <purpose>
+    And it gives one example, names its prerequisites and consumers, and exposes <add action>
+    When keyboard controls activate <add action>
+    Then the same main-workspace creation page used by a populated overview opens
+    And focus moves to its heading without opening or focusing the Inspector
+
+    Examples:
+      | overview        | add action                | purpose                                               |
+      | Shared Profiles | Add Shared Profile        | reusable schema rules and documentation               |
+      | Page Groups     | Add Page Group            | shared Page context and inherited requirements         |
+      | Pages           | Add Page                  | observable Page context and specific requirements      |
+      | Events          | Add Event                 | reusable interaction or context-setting event          |
+      | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
+      | Flows           | Add Flow                  | documentary journey topology                           |
+      | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
+      | Schemas         | Add Schema                | canonical payload definition and Draft lineage         |
+      | Assignments     | Add Assignment            | production schema selection for matching observations  |
+
+  # Data layer project library and active context 013
+  Scenario: Data layer project library and active context 013
+    Given the Pages overview contains Cart and unreferenced Landing
+    When Remove Landing is invoked from its overview row
+    Then an impact review in the main workspace names Landing, one Page removal, zero dependent references, and Draft consequences
+    And Cancel removal and Remove Landing are available while the Inspector remains closed
+    When the operator confirms Remove Landing
+    Then one canonical command removes only Landing's stable Page identity
+    And feedback names Landing, Draft status, stale evidence, and one Undo action
+    And focus returns to Cart in the Pages overview
+    When the operator invokes Undo once
+    Then Landing returns with its original stable identity and focus returns to Landing
+
+  # Data layer project library and active context 014
+  Scenario: Data layer project library and active context 014
+    Given Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture
+    When deletion is requested for Purchase from the Events overview
+    Then the removal review names all three dependent entities and their relationship to Purchase
+    And confirmation is blocked with Open Checkout journey, Open Retail Purchase, and Open Valid purchase repair actions
+    And no Event, Flow, Assignment, Fixture, project revision, or evidence state changes
+    When the operator removes every dependency through its named workspace and returns to the review
+    Then Remove Purchase becomes available without silently deleting another entity
+
+  # Data layer project library and active context 015
+  Scenario Outline: Data layer project library and active context 015
+    Given the Pages overview at 360 pixels contains <ordered Pages>
+    And keyboard focus is on Remove <removed Page> while the Inspector is closed
+    When the operator completes the safe removal using only keyboard controls
+    Then computed 360px geometry keeps the overview, impact review, and result within one vertical scrolling region and the viewport width
+    And accessible-name inspection identifies the owning Page on every repeated row action
+    And focus returns to <focus target>
+
+    Examples:
+      | ordered Pages        | removed Page | focus target |
+      | Alpha, Landing, Cart | Landing      | Cart         |
+      | Alpha, Landing       | Landing      | Alpha        |
+      | Landing              | Landing      | Add Page     |
+
+  # Data layer project library and active context 016
+  Scenario: Data layer project library and active context 016
+    Given Retail website has empty project collections and its Inspector is closed
+    When the operator uses only collection overviews and main-workspace creation pages to create
+      | overview        | entity             |
+      | Shared Profiles | Sitewide           |
+      | Page Groups     | Checkout           |
+      | Pages           | Cart               |
+      | Events          | Purchase           |
+      | Applicability   | Retail checkout    |
+      | Flows           | Checkout journey   |
+      | Schemas         | Purchase payload   |
+      | Assignments     | Retail Purchase    |
+      | Fixtures        | Valid purchase     |
+    And the operator reloads Specification Studio
+    Then every overview restores exactly its created row with Open and Remove actions
+    And each row opens its dedicated project-scoped workspace
+    And the contextual Inspector contains no generic Add entity form, entity-kind selector, or exclusive removal action
+    And one canonical project graph owns every created stable identity and reference

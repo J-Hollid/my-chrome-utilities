@@ -36,7 +36,7 @@ Feature: Data layer project library and active context runtime
     When actual metadata controls save Retail data layer with changed purpose, website, owner, and notes
     Then one production metadata command retains project-retail and every contained stable identity
     And installed Projects, active header, Studio title, and deep links render Retail data layer
-    And serialized schemas, Pages, Page Groups, Events, Flows, assignments, and Draft revision remain owned by project-retail
+    And every serialized project entity collection and Draft revision remains owned by project-retail
     When actual Undo runs once
     Then prior metadata returns without issuing an activation command
 
@@ -47,7 +47,7 @@ Feature: Data layer project library and active context runtime
     Then the installed review names both project identities and every project-bound surface that will change
     When selection storage changes from project-retail to project-trade through the review
     Then active-project persistence contains only project-trade
-    And production Schema, Pages, Page Groups, Events, Flows, documentation, and Studio projections contain no Retail website record
+    And production Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments, documentation, and Studio projections contain no Retail website record
     And serialized project-retail remains saved and inactive
 
   # Data layer project library and active context runtime 005
@@ -62,7 +62,7 @@ Feature: Data layer project library and active context runtime
   # Data layer project library and active context runtime 006
   Scenario: Data layer project library and active context runtime 006
     Given the production selection record has no project ID
-    When actual controls open a project-bound Schema, Page, Event, Flow, or documentation tab
+    When actual controls open any project-bound collection or documentation tab
     Then the installed surface renders No active project, Open project, and Create project
     And no project ID is inferred from storage order, recency, or result count
     And actual Saved Schema Library controls remain usable without an active-project write
@@ -105,3 +105,109 @@ Feature: Data layer project library and active context runtime
     And accessible names for repeated controls contain their project names
     And production focus enters the review, reaches confirm and cancel, and returns to Trade portal after confirmation
     And active-project header rendering does not focus another tab
+
+  # Data layer project library and active context runtime 011
+  Scenario Outline: Data layer project library and active context runtime 011
+    Given production project-retail is active and the installed Inspector is closed
+    And the production <overview> collection contains <entity>
+    When actual project navigation opens <overview>
+    Then the rendered main workspace identifies <overview> and exposes <add action> as its contextual primary action
+    And the rendered <entity> row exposes Open <entity> and Remove <entity>
+    And installed Add, Open, and Remove controls remain operable while the Inspector pane is closed
+    When production pointer input invokes <add action>
+    Then the installed project-scoped <creation page> replaces the collection workspace
+    And rendered guidance explains purpose, prerequisites, and Used by relationships before type-specific fields
+    And Cancel plus Create <singular> render without a generic entity-kind selector
+
+    Examples:
+      | overview        | entity            | add action                | creation page                    | singular          |
+      | Shared Profiles | Sitewide          | Add Shared Profile        | Create Shared Profile            | Shared Profile    |
+      | Page Groups     | Checkout          | Add Page Group            | Create Page Group                | Page Group        |
+      | Pages           | Cart              | Add Page                  | Create Page                      | Page              |
+      | Events          | Purchase          | Add Event                 | Create Event                     | Event             |
+      | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
+      | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
+      | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
+      | Schemas         | Purchase payload  | Add Schema                | Create Schema                    | Schema            |
+      | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
+
+  # Data layer project library and active context runtime 012
+  Scenario Outline: Data layer project library and active context runtime 012
+    Given production project-retail is active and <overview> has zero records
+    When actual controls open <overview> with the installed Inspector closed
+    Then the rendered empty state explains <purpose>
+    And it renders one example, prerequisites, consumers, and <add action>
+    When Enter invokes <add action> from the empty state
+    Then the same production creation route used by a populated overview opens in the main workspace
+    And document focus moves to its heading without mounting or focusing the Inspector
+
+    Examples:
+      | overview        | add action                | purpose                                               |
+      | Shared Profiles | Add Shared Profile        | reusable schema rules and documentation               |
+      | Page Groups     | Add Page Group            | shared Page context and inherited requirements         |
+      | Pages           | Add Page                  | observable Page context and specific requirements      |
+      | Events          | Add Event                 | reusable interaction or context-setting event          |
+      | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
+      | Flows           | Add Flow                  | documentary journey topology                           |
+      | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
+      | Schemas         | Add Schema                | canonical payload definition and Draft lineage         |
+      | Assignments     | Add Assignment            | production schema selection for matching observations  |
+
+  # Data layer project library and active context runtime 013
+  Scenario: Data layer project library and active context runtime 013
+    Given production Pages contain Cart and unreferenced Landing
+    When the installed Landing row invokes its removal review
+    Then the installed main-workspace impact review renders Landing, one Page removal, zero dependent references, and Draft consequences
+    And Cancel removal and Remove Landing are operable while the Inspector is absent
+    When the installed confirmation commits Landing deletion
+    Then one production command removes only Landing's stable Page ID
+    And rendered feedback names Landing, Draft status, stale evidence, and one Undo action
+    And focus returns to the Cart row in the installed Pages overview
+    When actual Undo runs once
+    Then production Landing returns under its original ID and focus returns to its row
+
+  # Data layer project library and active context runtime 014
+  Scenario: Data layer project library and active context runtime 014
+    Given production Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture
+    When the production Purchase row requests deletion
+    Then the installed review renders all three human dependent names and relationship descriptions
+    And confirmation is disabled with Open Checkout journey, Open Retail Purchase, and Open Valid purchase controls
+    And serialized Event, Flow, Assignment, Fixture, revision, and evidence bytes remain identical
+    When actual controls remove every dependency through its production workspace and return
+    Then Remove Purchase is enabled without any implicit dependent deletion
+
+  # Data layer project library and active context runtime 015
+  Scenario Outline: Data layer project library and active context runtime 015
+    Given the production Pages overview at 360 CSS pixels contains <ordered Pages>
+    And actual keyboard focus is on Remove <removed Page> while the Inspector is absent
+    When production keyboard events complete the safe removal
+    Then computed overview, review, and result bounds share one vertical scrolling region and fit the 360 CSS pixel viewport
+    And accessible names for every repeated Open and Remove control contain the owning Page name
+    And production focus returns to <focus target>
+
+    Examples:
+      | ordered Pages        | removed Page | focus target |
+      | Alpha, Landing, Cart | Landing      | Cart         |
+      | Alpha, Landing       | Landing      | Alpha        |
+      | Landing              | Landing      | Add Page     |
+
+  # Data layer project library and active context runtime 016
+  Scenario: Data layer project library and active context runtime 016
+    Given canonical project-retail collections are all empty
+    And production layout starts without the Inspector pane
+    When actual overview and main-workspace controls create
+      | overview        | entity             |
+      | Shared Profiles | Sitewide           |
+      | Page Groups     | Checkout           |
+      | Pages           | Cart               |
+      | Events          | Purchase           |
+      | Applicability   | Retail checkout    |
+      | Flows           | Checkout journey   |
+      | Schemas         | Purchase payload   |
+      | Assignments     | Retail Purchase    |
+      | Fixtures        | Valid purchase     |
+    And the built Specification Studio reloads
+    Then each installed overview restores exactly its created row with Open and Remove controls
+    And each row opens its dedicated project-scoped workspace
+    And the production Inspector DOM contains no generic Add entity form, entity-kind selector, or exclusive removal action
+    And canonical project-retail storage owns every created stable ID and reference exactly once
