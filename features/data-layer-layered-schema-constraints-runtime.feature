@@ -274,7 +274,7 @@ Feature: Data layer layered schema constraints runtime
     And uncovered funnel_step type plus Checkout funnel_name invariant block effective compilation
     And rendered rows separate winning local facets, unresolved parent facets, and invariant provenance
     And installed repair links offer permitted Cart adjustment, Partner Checkout editing, or membership removal
-    And production validation and developer export expose Blocked rather than Ready
+    And production validation and developer export expose Blocked rather than Ready without duplicate no-op controls
 
   # Data layer layered schema constraints runtime 019
   Scenario: Data layer layered schema constraints runtime 019

@@ -47,6 +47,10 @@ const saved=saveComposedSchemaLocalFacets(reset,"pages","page:cart","/funnel_ste
 assert.deepEqual(saved.project.collections.pages[0].localSchemaContributions,[{path:"/funnel_step",expectedValue:"2"}],"only the changed local facet is stored");
 assert.equal(composedSchemaWorkspace(saved,saved.project.collections.pages[0],"Page").rows.find(({path})=>path==="/funnel_step").effective.expectedValue,"2");
 
+const inheritedAgain=saveComposedSchemaLocalFacets(saved,"pages","page:cart","/funnel_step",{});
+assert.deepEqual(inheritedAgain.project.collections.pages[0].localSchemaContributions,[],"an empty sparse override does not persist a path-only local contribution");
+assert.equal(composedSchemaWorkspace(inheritedAgain,inheritedAgain.project.collections.pages[0],"Page").rows.find(({path})=>path==="/funnel_step").action,"override");
+
 const localOnly=saveComposedSchemaLocalFacets(saved,"pages","page:cart","/cart_note",{type:"string",documentation:"Cart-only note"});
 assert.equal(composedSchemaWorkspace(localOnly,localOnly.project.collections.pages[0],"Page").rows.find(({path})=>path==="/cart_note").action,"remove");
 

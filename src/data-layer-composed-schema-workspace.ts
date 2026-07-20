@@ -55,7 +55,7 @@ function updateEntity(state:ProjectState,kind:ProjectEntityKind,entityId:string,
 
 export function saveComposedSchemaLocalFacets(state:ProjectState,kind:"pages"|"pageGroups",entityId:string,path:string,facets:Omit<LayerConstraint,"path">):ProjectState{
   const sparse=Object.fromEntries(Object.entries(facets).filter(([,value])=>value!==undefined&&value!=="")) as Omit<LayerConstraint,"path">;
-  return updateEntity(state,kind,entityId,`Override ${path} at ${kind==="pages"?"Page":"Page Group"}`,(entity)=>{const existing=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[],next=[...existing.filter((constraint)=>constraint.path!==path),{path,...clone(sparse)}];return{...entity,localSchemaContributions:next,compiledTargetsStale:true};});
+  return updateEntity(state,kind,entityId,`Override ${path} at ${kind==="pages"?"Page":"Page Group"}`,(entity)=>{const existing=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[],next=[...existing.filter((constraint)=>constraint.path!==path),...(Object.keys(sparse).length?[{path,...clone(sparse)}]:[])];return{...entity,localSchemaContributions:next,compiledTargetsStale:true};});
 }
 
 export function resetComposedSchemaLocalProperty(state:ProjectState,kind:"pages"|"pageGroups",entityId:string,path:string):ProjectState{

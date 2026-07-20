@@ -95,7 +95,7 @@ function labeledControl(text, control) { const label = document.createElement("l
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
     if (!state)
         return;
-    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), operations = document.createElement("div"), validate = document.createElement("button"), developerExport = document.createElement("button");
+    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div");
     section.className = "composed-schema-workspace";
     section.setAttribute("aria-label", model.heading);
     section.dataset.schemaStatus = model.status;
@@ -185,13 +185,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         wrapper.append(overview, detail);
         rows.append(wrapper);
     }
-    validate.type = developerExport.type = "button";
-    validate.textContent = "Validate effective schema";
-    developerExport.textContent = "Generate effective schema developer export";
-    validate.disabled = developerExport.disabled = model.status === "blocked";
-    operations.className = "composed-schema-operations";
-    operations.append(validate, developerExport);
-    section.append(heading, summary, columns, rows, operations);
+    section.append(heading, summary, columns, rows);
     host.append(section);
     const canonical = entity.canonicalSchema;
     if (canonical) {

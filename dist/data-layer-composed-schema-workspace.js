@@ -33,7 +33,7 @@ function updateEntity(state, kind, entityId, label, update) {
 }
 export function saveComposedSchemaLocalFacets(state, kind, entityId, path, facets) {
     const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== ""));
-    return updateEntity(state, kind, entityId, `Override ${path} at ${kind === "pages" ? "Page" : "Page Group"}`, (entity) => { const existing = entity.localSchemaContributions ?? [], next = [...existing.filter((constraint) => constraint.path !== path), { path, ...clone(sparse) }]; return { ...entity, localSchemaContributions: next, compiledTargetsStale: true }; });
+    return updateEntity(state, kind, entityId, `Override ${path} at ${kind === "pages" ? "Page" : "Page Group"}`, (entity) => { const existing = entity.localSchemaContributions ?? [], next = [...existing.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...clone(sparse) }] : [])]; return { ...entity, localSchemaContributions: next, compiledTargetsStale: true }; });
 }
 export function resetComposedSchemaLocalProperty(state, kind, entityId, path) {
     return updateEntity(state, kind, entityId, `Reset ${path} to parents`, (entity) => {
