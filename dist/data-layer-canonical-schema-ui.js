@@ -5,6 +5,7 @@ const labeled = (text, control) => { const label = dom.createElement("label"); l
 const input = (name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const select = (name, values, value) => { const control = dom.createElement("select"); control.name = name; for (const entry of values)
     control.append(new Option(entry, entry)); control.value = value; return control; };
+export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function mountCanonicalSchemaEditor(options) {
     let query = "", feedback = "", pendingType;
     const send = (command) => { const result = options.dispatch(command); if (result.status === "conflict")
@@ -41,7 +42,7 @@ export function mountCanonicalSchemaEditor(options) {
         options.host.setAttribute("aria-label", `${options.surface} canonical schema editor`);
         options.host.dataset.canonicalSchemaId = document.id;
         options.host.dataset.canonicalRevision = String(document.revision);
-        const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), baseRevision = input("commandBaseRevision", String(document.revision), "number"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
+        const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), baseRevision = input("commandBaseRevision", String(document.revision), "number"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), results = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
         title.textContent = document.contributorName;
         state.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · revision ${document.revision}`;
         undo.type = redo.type = "button";
@@ -54,23 +55,7 @@ export function mountCanonicalSchemaEditor(options) {
         baseRevision.min = "0";
         baseRevision.setAttribute("aria-label", "Command base revision");
         header.append(title, state, undo, redo, labeled("Command base revision", baseRevision));
-        search.type = "search";
-        search.setAttribute("aria-label", "Canonical property search");
-        search.placeholder = "Search properties";
-        search.value = query;
-        search.addEventListener("input", () => { query = search.value; render(); });
-        treeView.type = tableView.type = "button";
-        treeView.textContent = "Tree";
-        tableView.textContent = "Table";
-        treeView.setAttribute("aria-pressed", String(document.view === "tree"));
-        tableView.setAttribute("aria-pressed", String(document.view === "table"));
-        treeView.addEventListener("click", () => send({ kind: "view", baseRevision: document.revision, view: "tree" }));
-        tableView.addEventListener("click", () => send({ kind: "view", baseRevision: document.revision, view: "table" }));
-        views.append(treeView, tableView);
-        navigator.setAttribute("aria-label", "Canonical property navigator");
-        navigator.append(search, filter, views);
-        const rows = canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(query.toLowerCase()));
-        if (document.view === "tree") {
+        const refreshResults = () => { results.replaceChildren(); const rows = canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(query.toLowerCase())); if (document.view === "tree") {
             const tree = dom.createElement("ul");
             tree.setAttribute("aria-label", "Canonical property tree");
             for (const row of rows) {
@@ -84,7 +69,7 @@ export function mountCanonicalSchemaEditor(options) {
                 item.append(choose);
                 tree.append(item);
             }
-            navigator.append(tree);
+            results.append(tree);
         }
         else {
             const table = dom.createElement("table"), head = dom.createElement("thead"), body = dom.createElement("tbody");
@@ -108,8 +93,25 @@ export function mountCanonicalSchemaEditor(options) {
                 body.append(tr);
             }
             table.append(head, body);
-            navigator.append(table);
-        }
+            results.append(table);
+        } };
+        search.type = "search";
+        search.setAttribute("aria-label", "Canonical property search");
+        search.placeholder = "Search properties";
+        search.value = query;
+        bindCanonicalPropertySearch(search, (next) => { query = next; refreshResults(); });
+        treeView.type = tableView.type = "button";
+        treeView.textContent = "Tree";
+        tableView.textContent = "Table";
+        treeView.setAttribute("aria-pressed", String(document.view === "tree"));
+        tableView.setAttribute("aria-pressed", String(document.view === "table"));
+        treeView.addEventListener("click", () => send({ kind: "view", baseRevision: document.revision, view: "tree" }));
+        tableView.addEventListener("click", () => send({ kind: "view", baseRevision: document.revision, view: "table" }));
+        views.append(treeView, tableView);
+        results.setAttribute("aria-label", "Canonical property search results");
+        navigator.setAttribute("aria-label", "Canonical property navigator");
+        navigator.append(search, filter, views, results);
+        refreshResults();
         const rootName = input("newRootPropertyName", "property"), addRoot = dom.createElement("button");
         rootName.setAttribute("aria-label", "New root property name");
         addRoot.type = "button";
