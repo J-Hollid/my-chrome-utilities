@@ -8,6 +8,7 @@ import {
   flowDocumentationPropertyPaths,
   flowDocumentationSnapshotStale,
   flowValueMapTable,
+  orderFlowDocumentationOccurrenceIds,
   renderFlowDocumentationClipboard,
   writeFlowDocumentationWorkbook,
 } from "../dist/data-layer-flow-table-documentation-export.js";
@@ -41,10 +42,31 @@ const values=flowValueMapTable(snapshot);
 assert.deepEqual(values.headings,["Checkout journey","Step 1 Cart / page_view","Step 2a Shipping / add_shipping_info","Step 2b Payment / add_payment_info"]);
 assert.equal(values.rows.find(([path])=>path==="page_name")[1],"cart");
 assert.equal(values.rows.find(([path])=>path==="form_name")[1],"guest or logged_in");
-assert.match(values.rows.find(([path])=>path==="form_name")[2],/Required.*not specified/);
+assert.equal(values.rows.find(([path])=>path==="form_name")[2],"Required value not specified");
 assert.equal(values.rows.find(([path])=>path==="error_message")[1],"Not expected");
 assert.match(values.rows.find(([path])=>path==="error_message")[2],/Required when form_status Equals failed/);
-assert.match(values.rows.find(([path])=>path==="debug_message")[3],/Blocked/);
+assert.equal(values.rows.find(([path])=>path==="debug_message")[3],"Blocked conflicting definitions");
+
+assert.deepEqual(orderFlowDocumentationOccurrenceIds([
+  {id:"confirmation",pageGroupId:"confirmation"},
+  {id:"payment",pageGroupId:"payment"},
+  {id:"cart",pageGroupId:"checkout"},
+  {id:"shipping",pageGroupId:"shipping"},
+],[
+  {sourceNodeId:"cart",targetNodeId:"payment",kind:"parallel"},
+  {sourceNodeId:"shipping",targetNodeId:"confirmation",kind:"merge"},
+  {sourceNodeId:"cart",targetNodeId:"shipping",kind:"parallel"},
+  {sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"},
+],["checkout","shipping","payment","confirmation"]),{ids:["cart","shipping","payment","confirmation"],labels:{cart:"1",shipping:"2a",payment:"2b",confirmation:"3"}});
+assert.deepEqual(orderFlowDocumentationOccurrenceIds([
+  {id:"cart",pageGroupId:"checkout"},{id:"shipping",pageGroupId:"shipping"},{id:"payment",pageGroupId:"payment"},{id:"confirmation",pageGroupId:"confirmation"},
+],[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"parallel"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}],["checkout","shipping","payment","confirmation"]).labels,{});
+
+const unresolved=compileFlowDocumentationSnapshot({projectId:"project:shop",projectName:"Shop",flowId:"flow:checkout",flowName:"Checkout journey",graphRevision:8,sourceState:"draft",generatedAt:"2026-07-20T00:00:00.000Z",contexts:[{...contexts[2],compiled:compiled({}),unresolved:[{path:"/payment_reference",issue:"Unresolved property reference",repair:"Open Payment property reference"}]}]});
+assert.equal(unresolved.incomplete,true);
+assert.deepEqual(unresolved.diagnostics.map(({contextName,path,issue,repair})=>({contextName,path,issue,repair})),[{contextName:"Payment / add_payment_info",path:"/payment_reference",issue:"Unresolved property reference",repair:"Open Payment property reference"}]);
+assert.deepEqual(flowValueMapTable(unresolved).rows.find(([path])=>path==="payment_reference"),["payment_reference","Incomplete"]);
+assert.deepEqual(captureMatrixTable(unresolved).rows.find(([path])=>path==="payment_reference"),["payment_reference","Incomplete"]);
 
 const matrix=captureMatrixTable(snapshot);
 assert.deepEqual(matrix.rows.find(([path])=>path==="page_name"),["page_name","M","M","—"]);
@@ -84,5 +106,6 @@ assert.equal(workbook instanceof Uint8Array,true);assert.equal(new TextDecoder()
 const binary=new TextDecoder().decode(workbook);
 for(const sheet of ["Flow values","Capture matrix","Legend and provenance","Export diagnostics"])assert.match(binary,new RegExp(sheet));
 assert.doesNotMatch(binary,/<f>/);assert.match(binary,/Draft — incomplete/);assert.match(binary,/&lt;script&gt;/);
+assert.match(binary,/Checkout journey · Draft — incomplete/);
 
 console.log("Flow table documentation export tests passed");

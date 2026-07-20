@@ -721,13 +721,14 @@
       "src/data-layer-flow-table-documentation-export-ui.ts"
     ],
     "dependencies": [
-      "flow_graph",
-      "layered_schema"
+      "flow_graph"
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-flow-table-documentation-export-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-flow-table-documentation-export.feature",
       "features/data-layer-flow-table-documentation-export-runtime.feature"
