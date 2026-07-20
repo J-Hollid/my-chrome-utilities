@@ -72,13 +72,15 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 007
   Scenario: Data layer directional Flow specification graph 007
-    Given Landing Page has context binding page_view and no Page Group membership
-    When the operator drags Landing from Pages into Ungrouped entry pages
-    Then one free Landing frame persists its Page and context-binding references without a Page Group reference
-    And the frame accepts interaction Events and drawn relationships
-    When Landing is released over the named-lane dropzone for Checkout
-    Then the drop is rejected without changing canonical state
-    And guidance links to Page Group membership editing
+    Given Landing with page_view and Campaign with route_view are Pages without Page Group membership
+    And no free Page frame is present
+    When the operator starts dragging Landing outside the selected Page Group lanes
+    Then narrow Place before lanes and Place after lanes affordances appear at the left and right canvas edges
+    And neither affordance occupies a lane-sized background
+    When Landing is released on Place before lanes and Campaign is released on Place after lanes
+    Then compact free Landing and Campaign frames sandwich the Page Group lanes
+    And each frame persists its before-lanes or after-lanes region, coordinates, Page, and binding references without a Page Group reference
+    And empty edge backgrounds collapse while both frames remain available for Events and relationships
 
   # Data layer directional Flow specification graph 008
   Scenario: Data layer directional Flow specification graph 008
@@ -162,3 +164,17 @@ Feature: Data layer directional Flow specification graph
     Then the canvas and outline contain two Page Group-derived lanes, two Page frames, three occurrences, and two directed relationships
     And no fixed lane, Inspector-authored graph item, raw ID, copied Event schema, or executable transition was created
     And per-Event payload validation remains independent while journey expectations remain manual
+
+  # Data layer directional Flow specification graph 016
+  Scenario: Data layer directional Flow specification graph 016
+    Given the movement fixture places free Landing before the lanes, free Campaign after the lanes, and grouped Cart in Checkout
+    When the operator moves Landing through the after-lanes edge affordance
+    Then Landing keeps its frame, Page, binding, Event, and relationship identities
+    And only its presentation region and coordinates change from before-lanes to after-lanes
+    When keyboard controls place Landing before the lanes again
+    Then focus returns to Landing at its persisted left-side position
+    When pointer or keyboard controls try to move Cart outside the Page Group lanes
+    Then the move is rejected without a canonical revision change
+    And guidance links to Cart Page Group membership
+    When the Flow reloads
+    Then free frames render only in their saved edge regions and never enter Page Group lane order or documentation lane headings

@@ -71,13 +71,15 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 007
   Scenario: Data layer directional Flow specification graph runtime 007
-    Given production Landing has page_view binding and no Page Group reference
-    When actual controls drag Landing into Ungrouped entry pages
-    Then one free Landing frame persists its Page and binding IDs without a Page Group ID
-    And actual controls can add an interaction Event and start a relationship from that frame
-    When the Landing component is released over the installed Checkout dropzone
-    Then the production drop is rejected without a canonical write
-    And rendered repair guidance links to Page Group membership
+    Given production Landing with page_view and Campaign with route_view have no Page Group reference
+    And the installed canvas contains no free Page frame
+    When actual pointer events drag Landing beyond the selected lane bounds
+    Then narrow Place before lanes and Place after lanes targets render at opposite canvas edges
+    And computed target geometry is not lane-sized
+    When pointerup places Landing before the lanes and Campaign after the lanes
+    Then compact production frames render on opposite sides of the Page Group lanes
+    And canonical records store before-lanes or after-lanes, coordinates, Page IDs, and binding IDs without Page Group IDs
+    And unused edge backgrounds leave the DOM while both frames accept Event drops and connection ports
 
   # Data layer directional Flow specification graph runtime 008
   Scenario: Data layer directional Flow specification graph runtime 008
@@ -161,3 +163,17 @@ Feature: Data layer directional Flow specification graph runtime
     Then production canvas and outline contain two derived lanes, two Page frames, three occurrences, and two directed relationships
     And canonical storage contains no fixed lane, Inspector-authored item, raw selector ID, copied Event schema, or executable transition
     And installed per-Event payload validation remains independent while journey expectations remain manual
+
+  # Data layer directional Flow specification graph runtime 016
+  Scenario: Data layer directional Flow specification graph runtime 016
+    Given the production movement fixture places free Landing before the lanes, free Campaign after the lanes, and grouped Cart in Checkout
+    When actual pointer events move Landing through the after-lanes target
+    Then stored identity is byte-identical for the frame and every domain record it references
+    And stored presentation changes only region and coordinates from before-lanes to after-lanes
+    When installed keyboard controls place Landing before the lanes again
+    Then focus returns to Landing at its persisted left-side transform
+    When actual pointer or keyboard controls move Cart beyond the lane bounds
+    Then production rejects the move without changing project bytes or revision
+    And rendered guidance links to Cart membership
+    When actual Projects controls reopen the saved Flow
+    Then each free frame renders in its saved edge region and is absent from canonical lane order and documentation lane headings

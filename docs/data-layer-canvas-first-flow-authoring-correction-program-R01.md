@@ -19,7 +19,7 @@ The following earlier clauses are explicitly superseded:
 
 The Flow workspace behaves as a graphical specification editor. An operator selects
 and orders existing Page Groups to define lanes, places Page components into their
-valid lanes or an ungrouped entry region, places bound context events and reusable
+valid lanes or transient free-page edge regions, places bound context events and reusable
 interaction Events inside Page frames, positions them freely within their valid
 containment, and draws directed relationships between visible ports.
 
@@ -63,8 +63,18 @@ A grouped Page may be added only to the lane for its actual Page Group membershi
 Dragging a Page into another group is rejected and deep-links to membership editing.
 The Flow cannot silently rewrite the Page contract.
 
-A Page without Page Group membership may be placed in `Ungrouped entry pages`. It
-stores no invented Page Group reference and cannot be dropped into a named lane.
+A Page without Page Group membership may be placed before the first lane or after
+the last lane. These are compact free-page regions, not lanes. When no free Page is
+being dragged and no frame occupies an edge, no large ungrouped background is
+rendered. Dragging an eligible Page beyond either lane boundary reveals narrow
+`Place before lanes` and `Place after lanes` affordances; the target beneath the
+pointer expands only enough to make the drop clear.
+
+A dropped free frame stores `before-lanes` or `after-lanes` plus presentation
+coordinates, Page identity, and context-binding identity without an invented Page
+Group. Existing free frames may move between the two sides because side placement
+is documentary layout, not membership. A grouped Page cannot leave its lane through
+an edge target and instead receives a link to membership editing.
 
 A Page frame exposes its Page-owned context-event bindings. Each binding includes
 the Event reference and trigger purpose, such as initial load or SPA route change.
@@ -107,7 +117,7 @@ The main Flow workspace owns:
 
 - searchable Page Groups, Pages, and Events catalogs;
 - Page Group selection, ordering, and guarded removal;
-- Page-frame insertion and ungrouped entry pages;
+- Page-frame insertion and transient before-lanes and after-lanes free-page targets;
 - Page-context and interaction Event insertion;
 - free positioning within containment;
 - connection ports and drawing;
@@ -133,6 +143,7 @@ topology. Reload preserves:
 
 - ordered Page Group references;
 - Page-frame containment;
+- free Page-frame before-lanes or after-lanes region and coordinates;
 - binding and Event references;
 - presentation coordinates;
 - selected item and viewport where applicable; and
@@ -204,7 +215,7 @@ runtime feature.
 | F05 | Pages need Page Group-aware insertion | Flow 004 | Page search, owner labels, valid-lane insert, invalid-lane repair | Page membership resolver and frame command | Stable IDs and no-op rejection | B | A Page cannot be inserted into the wrong group |
 | F06 | Page context may have multiple setting Events | Flow 005 | Page frame offers binding names and trigger purposes | Page context-binding repository | Two stored binding references and no role/schema copy | B | Initial load and SPA bindings coexist distinctly |
 | F07 | Interaction Events must be reusable components | Flow 006 | Drag and keyboard insertion into Page frames | Event catalog and occurrence command | Same Event ID, distinct occurrence IDs | B | Reuse does not duplicate the Event or schema |
-| F08 | Generic Pages need an entry region | Flow 007 | Ungrouped frame without invented membership | Free-frame command and membership guard | Stored absence of Page Group ID | B | Ungrouped Page works but cannot enter a named lane |
+| F08 | Free Pages are rendered as one permanent lane after all Page Groups | Flow 007 | Transient left and right edge targets create compact frames that sandwich lanes | Free-frame command, edge-target UI, and layout projection | Target geometry, stored region and coordinates, absent Page Group ID | B | No free-page pseudo-lane or empty lane-sized background remains |
 | F09 | Freehand layout must respect contracts | Flow 008 | Free positioning inside frame; cross-boundary rejection | Pointer/keyboard layout adapter and repository | Coordinates after reload and unchanged revision on rejection | B | Movement never mutates Page membership |
 | F10 | Relationships are not drawable | Flow 009 | Output-to-input drag, preview, target highlight, atomic edge | Pointer adapter, SVG renderer, relationship command | Actual pointer events, temporary edge, stored relationship | C | Edge is created without source/target form submission |
 | F11 | Cancelled drawing can leave unsafe state | Flow 010 | Invalid targets and Escape remove preview with no write | Connection state machine and transaction boundary | Byte-identical project and absent partial record | C | Every invalid or cancelled gesture is atomic no-op |
@@ -213,6 +224,7 @@ runtime feature.
 | F14 | Inspector should complement the canvas | Flow 013 | Inline node actions; optional details; schema editor round trip | Selection routing and workspace restoration | Closed-Inspector actions plus restored node/viewport | A, D | No exclusive graph command appears only in Inspector |
 | F15 | Renames and reload can corrupt human projections | Flow 014 | New names with unchanged IDs, coordinates, topology, and meaning | Catalog subscriptions, repository, renderer | Before/after stable references and reload evidence | D | Renames change labels only |
 | F16 | Isolated tests can mask the wrong interface | Flow 015 | Fresh Flow built entirely through installed main-workspace controls | Built extension, production storage, Flow UI | End-to-end control trace and canonical records | D | Terminal result has derived lanes, frames, nodes, edges, and no forbidden state |
+| F17 | Free frames need two-sided movement without weakening membership | Flow 016 | Pointer and keyboard move free frames between sides while grouped Pages remain contained | Layout command, membership guard, focus adapter, reload projection | Stable identities, unchanged rejection revision, restored focus and sides | B, D | Edge region changes presentation only and never enters lane order |
 
 ## Terminal acceptance
 
@@ -221,7 +233,7 @@ dry-check with no findings, the focused `flow_graph` pack executes the runtime
 scenarios through the built extension, and packaging consumes that same build.
 
 Terminal evidence must prove a fresh Flow can be completed with the Inspector
-closed. A component-only canvas, direct repository injection, pre-created edges,
-form-submitted source and target, fixed lane constants, or assertions over source
-strings cannot satisfy the runtime feature.
-
+closed. It must also prove that free Pages use transient left and right edge targets
+rather than a permanent ungrouped lane. A component-only canvas, direct repository
+injection, pre-created edges, form-submitted source and target, fixed lane constants,
+or assertions over source strings cannot satisfy the runtime feature.

@@ -36,8 +36,10 @@ documentary graph command. Earlier form-first clauses are superseded.
 
 Only ordered Page Group references define named lanes; the empty Flow has no lanes
 and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pages
-remain in their Page Group lane, while generic entry Pages may use an explicit
-ungrouped region without invented membership. Page-owned bindings define context-
+remain in their Page Group lane, while free Pages may use transient before-lanes or
+after-lanes edge targets without invented membership. Empty edge targets do not
+render as permanent lane-sized groups; compact free frames sandwich the Page Group
+lanes only where content exists. Page-owned bindings define context-
 setting occurrences, including multiple SPA bindings; reusable Events define
 interaction occurrences. Occurrences cannot cross Page or Page Group boundaries.
 Parallel branches and merges are included in the first canvas release. Graph records
