@@ -30,6 +30,21 @@
     ]
   },
   {
+    "id": "durable_project_repository",
+    "source": [],
+    "dependencies": [
+      "project_management"
+    ],
+    "unit": [],
+    "property": [],
+    "features": [
+      "features/data-layer-durable-project-repository.feature",
+      "features/data-layer-durable-project-repository-runtime.feature"
+    ],
+    "handlers": [],
+    "browserAdapters": []
+  },
+  {
     "id": "command-palette",
     "source": [
       "src/command-palette",
