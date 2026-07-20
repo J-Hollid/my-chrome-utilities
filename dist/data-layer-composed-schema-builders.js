@@ -1,5 +1,7 @@
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const propertyChoice = (choices, definitionId) => choices.find((choice) => choice.definitionId === definitionId);
+const conditionPropertyPath = (choices, definitionId) => propertyChoice(choices, definitionId)?.path ?? definitionId;
 const normalizedCondition = (condition) => {
     if (condition.kind === "predicate")
         return clone(condition);
@@ -55,7 +57,7 @@ export function evaluateComposedCondition(condition, observation, propertyChoice
     if (condition.kind === "any")
         return condition.children.some((child) => evaluateComposedCondition(child, observation, propertyChoices));
     return !condition.children.some((child) => evaluateComposedCondition(child, observation, propertyChoices));
-} const path = propertyChoices.find(({ definitionId }) => definitionId === condition.propertyId)?.path ?? condition.propertyId, actual = valueAt(observation, path), expected = condition.value; switch (condition.operator) {
+} const actual = valueAt(observation, conditionPropertyPath(propertyChoices, condition.propertyId)), expected = condition.value; switch (condition.operator) {
     case "Equals": return same(actual, expected);
     case "Does not equal": return !same(actual, expected);
     case "Exists": return actual !== undefined;
@@ -83,7 +85,7 @@ const button = (text, run) => { const control = document.createElement("button")
 const option = (value, label = value) => new Option(label, value);
 const groupEntries = (root) => { const entries = []; const visit = (group, path) => { entries.push({ path, label: `${group.kind === "all" ? "All" : group.kind === "any" ? "Any" : "Not"} ${path.length ? path.join(".") : "root"}` }); group.children.forEach((child, index) => { if (child.kind !== "predicate")
     visit(child, [...path, index]); }); }; visit(root, []); return entries; };
-const conditionText = (condition, propertyChoices) => condition.kind === "predicate" ? `${propertyChoices.find(({ definitionId }) => definitionId === condition.propertyId)?.path ?? condition.propertyId} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind === "all" ? "All" : condition.kind === "any" ? "Any" : "Not"} (${condition.children.map((child) => conditionText(child, propertyChoices)).join(condition.kind === "any" ? " or " : " and ")})`;
+const conditionText = (condition, propertyChoices) => condition.kind === "predicate" ? `${conditionPropertyPath(propertyChoices, condition.propertyId)} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind === "all" ? "All" : condition.kind === "any" ? "Any" : "Not"} (${condition.children.map((child) => conditionText(child, propertyChoices)).join(condition.kind === "any" ? " or " : " and ")})`;
 const conditionBranches = (root) => { const branches = []; const visit = (group, path) => group.children.forEach((child, index) => { const childPath = [...path, index]; branches.push({ path: childPath, condition: child }); if (child.kind !== "predicate")
     visit(child, childPath); }); visit(root, []); return branches; };
 export function mountComposedSchemaFacetBuilder(options) {
@@ -147,7 +149,7 @@ export function mountComposedSchemaFacetBuilder(options) {
         catch (error) {
             feedback = error instanceof Error ? error.message : String(error);
         } render(); };
-        const addPredicate = () => { const selected = options.propertyChoices.find(({ definitionId }) => definitionId === property.value); if (!selected) {
+        const addPredicate = () => { const selected = propertyChoice(options.propertyChoices, property.value); if (!selected) {
             feedback = "Choose a referenced property.";
             render();
             return;
