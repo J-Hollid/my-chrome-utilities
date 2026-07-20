@@ -293,7 +293,7 @@ export function installFlowGraphBuilder(options) {
         views.className = "flow-projections";
         projection.lanes.forEach((lane, index) => { const group = svg("g"), rect = svg("rect"), label = svg("text"), x = laneOffset + index * laneWidth + 10; group.dataset.pageGroupId = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", "20"); rect.setAttribute("width", String(laneWidth - 20)); rect.setAttribute("height", "730"); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragover", (event) => event.preventDefault()); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
             insertPage(page, lane.id); }); label.classList.add("flow-lane-label"); label.setAttribute("x", String(x + 12)); label.setAttribute("y", "45"); label.textContent = lane.name; group.append(rect, label); canvas.append(group); });
-        const clearEdgeTargets = () => canvas.querySelectorAll("[data-free-page-edge-target]").forEach((target) => target.remove()), edgeEligible = (page) => { const selectedGroups = new Set(stored.pageGroupIds), grouped = state.project.collections.pageGroups.some((group) => selectedGroups.has(group.id) && (group.pageIds ?? []).includes(page.id)); return !grouped; }, showEdgeTargets = () => { clearEdgeTargets(); for (const region of ["before-lanes", "after-lanes"]) {
+        const clearEdgeTargets = () => canvas.querySelectorAll("[data-free-page-edge-target]").forEach((target) => target.remove()), edgeEligible = (page) => !state.project.collections.pageGroups.some((group) => (group.pageIds ?? []).includes(page.id)), showEdgeTargets = () => { clearEdgeTargets(); for (const region of ["before-lanes", "after-lanes"]) {
             const target = svg("g"), rect = svg("rect"), label = svg("text"), x = region === "before-lanes" ? 2 : viewWidth - 74;
             target.dataset.freePageEdgeTarget = region;
             target.setAttribute("role", "button");
@@ -363,11 +363,18 @@ export function installFlowGraphBuilder(options) {
             label.setAttribute("y", "20");
             label.textContent = `${storedFrame.freePageRegion === "before-lanes" ? "Before" : "After"} lanes · ${page?.name ?? storedFrame.pageId}`;
             let start, targetRegion;
-            const move = (event) => { const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
-                targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!start)
-                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); const region = targetRegion ?? storedFrame.freePageRegion, afterStart = laneOffset + stored.pageGroupIds.length * laneWidth, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - start.clientX)) : Math.max(12, Math.round(x + event.clientX - start.clientX - afterStart)); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: Math.max(55, Math.round(position.y + event.clientY - start.clientY)) })); queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus()); };
+            const owns = (event) => Boolean(start) && event.pointerId === start.pointerId, stop = (pointerId) => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (frame.hasPointerCapture(pointerId))
+                frame.releasePointerCapture(pointerId); start = undefined; targetRegion = undefined; }, move = (event) => { if (!owns(event))
+                return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
+                targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!owns(event))
+                return; const initial = start, region = targetRegion ?? storedFrame.freePageRegion, afterStart = laneOffset + stored.pageGroupIds.length * laneWidth, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - initial.clientX)) : Math.max(12, Math.round(x + event.clientX - initial.clientX - afterStart)), nextY = Math.max(55, Math.round(position.y + event.clientY - initial.clientY)); stop(initial.pointerId); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: nextY })); queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus()); }, cancel = (event) => { if (!owns(event))
+                return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus()); };
             frame.addEventListener("focus", showEdgeTargets);
-            frame.addEventListener("pointerdown", (event) => { start = { clientX: event.clientX, clientY: event.clientY }; targetRegion = undefined; showEdgeTargets(); window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); });
+            frame.addEventListener("pointerdown", (event) => { if (start)
+                return; start = { clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; targetRegion = undefined; showEdgeTargets(); window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+                frame.setPointerCapture(event.pointerId);
+            }
+            catch { /* Synthetic regression events have no active device pointer to capture. */ } });
             frame.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
                 return; event.preventDefault(); const region = event.key === "ArrowLeft" ? "before-lanes" : event.key === "ArrowRight" ? "after-lanes" : storedFrame.freePageRegion, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: Number(position.x ?? 24), y: Math.max(55, position.y + dy) })); queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus()); });
             frame.append(rect, label);
@@ -475,10 +482,12 @@ export function installFlowGraphBuilder(options) {
                 statusRepairHref = "";
             } render(); focusNode(); };
             let dragStart, dragEdgeRegion;
-            const stopDragTracking = () => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); }, moveDraggedNode = (event) => { if (!dragStart)
+            const ownsDrag = (event) => Boolean(dragStart) && event.pointerId === dragStart.pointerId, stopDragTracking = (pointerId) => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); if (group.hasPointerCapture(pointerId))
+                group.releasePointerCapture(pointerId); dragStart = undefined; dragEdgeRegion = undefined; }, moveDraggedNode = (event) => { if (!ownsDrag(event))
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
-                dragEdgeRegion = edge.dataset.freePageEdgeTarget; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = () => { dragStart = undefined; dragEdgeRegion = undefined; stopDragTracking(); clearEdgeTargets(); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!dragStart)
-                return; const x = dragStart.x + event.clientX - dragStart.clientX, y = Math.max(55, Math.round(dragStart.y + event.clientY - dragStart.clientY)), targetEdgeRegion = dragEdgeRegion; dragStart = undefined; dragEdgeRegion = undefined; stopDragTracking(); if (nodeData.freePageFrame) {
+                dragEdgeRegion = edge.dataset.freePageEdgeTarget; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))
+                return; const pointerId = dragStart.pointerId; stopDragTracking(pointerId); clearEdgeTargets(); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!ownsDrag(event))
+                return; const initial = dragStart, x = initial.x + event.clientX - initial.clientX, y = Math.max(55, Math.round(initial.y + event.clientY - initial.clientY)), targetEdgeRegion = dragEdgeRegion; stopDragTracking(initial.pointerId); if (nodeData.freePageFrame) {
                 const afterStart = laneOffset + stored.pageGroupIds.length * laneWidth, region = targetEdgeRegion ?? (x < laneOffset ? "before-lanes" : x > afterStart ? "after-lanes" : undefined);
                 if (!region) {
                     clearEdgeTargets();
@@ -500,9 +509,12 @@ export function installFlowGraphBuilder(options) {
                 }
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, semantic ? { y } : { lane: layout.lane, x, y })); focusNode(); };
-            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle"))
-                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY }; if (nodeData.freePageFrame)
-                showEdgeTargets(); window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); group.setPointerCapture(event.pointerId); });
+            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle") || dragStart)
+                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; if (nodeData.freePageFrame)
+                showEdgeTargets(); window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
+                group.setPointerCapture(event.pointerId);
+            }
+            catch { /* Synthetic regression events have no active device pointer to capture. */ } });
             group.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
                 event.preventDefault();
                 startConnection();

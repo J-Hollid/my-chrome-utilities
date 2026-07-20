@@ -150,7 +150,7 @@ export function inspectOccurrenceContainmentMove(project, flowId, occurrenceId, 
 }
 export function addInteractionOccurrenceToPage(state, flowId, input, id) { return addGraphOccurrence(state, flowId, input, id); }
 export function addFreePageFrame(state, flowId, input, id) {
-    const graph = storedGraph(state.project, flowId), page = state.project.collections.pages.find(({ id }) => id === input.pageId), selectedGroups = new Set(graph.pageGroupIds), grouped = state.project.collections.pageGroups.some((group) => selectedGroups.has(group.id) && (group.pageIds ?? []).includes(input.pageId));
+    const graph = storedGraph(state.project, flowId), page = state.project.collections.pages.find(({ id }) => id === input.pageId), grouped = state.project.collections.pageGroups.some((group) => (group.pageIds ?? []).includes(input.pageId));
     if (!page || grouped || graph.pageFrames.some(({ pageId, freePageRegion }) => pageId === input.pageId && Boolean(freePageRegion)))
         return state;
     return transactProject(state, "Add free Flow Page frame", (project) => { const current = storedGraph(project, flowId), frame = { id: id("flow-page-frame"), pageId: input.pageId, freePageRegion: input.region, position: { x: Math.max(12, Math.round(input.x)), y: Math.max(55, Math.round(input.y)) } }; return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, frame] }); });
