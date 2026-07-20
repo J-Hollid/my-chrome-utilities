@@ -2,18 +2,18 @@ Feature: Data layer project portability and upgrade runtime
 
   # Data layer project portability and upgrade runtime 001
   Scenario: Data layer project portability and upgrade runtime 001
-    Given production project-retail is active at persisted Draft revision 14 with metadata, schemas, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
+    Given production project-retail is active with a Saved Draft based on Published revision 3 and contains metadata, schemas, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
     When actual Projects controls export Retail website
-    Then one downloaded versioned bundle identifies project-retail and Draft revision 14
+    Then one downloaded versioned bundle identifies project-retail, its Saved Draft, and base Published revision 3
     And parsed bundle data contains the complete canonical project graph with resolvable stable references
     And it contains no unadopted library schema, permission, Live observation, compilation cache, interface state, or Undo history
-    And storage hash, selected context, and Draft revision match their pre-export values
+    And storage hash, selected context, Saved Draft, and Published revision match their pre-export values
 
   # Data layer project portability and upgrade runtime 002
   Scenario: Data layer project portability and upgrade runtime 002
     Given production project-retail is active and a valid bundle also uses project-retail for linked Sitewide, Cart, Purchase, and Retail checkout records
     When actual controls choose that file through Import project
-    Then the installed review renders format version, source name, Draft revision, entity counts, reference integrity, migrations, unique target name Retail website copy, and Import as new project
+    Then the installed review renders format version, source name, Published revision, Saved Draft state, entity counts, reference integrity, migrations, unique target name Retail website copy, and Import as new project
     And canonical project storage is unchanged before confirmation
     When actual controls confirm Import as new project
     Then production stores inactive Retail website copy with new project and project-owned entity identities
@@ -39,11 +39,12 @@ Feature: Data layer project portability and upgrade runtime
 
   # Data layer project portability and upgrade runtime 004
   Scenario: Data layer project portability and upgrade runtime 004
-    Given production storage has only singleton Legacy shop project project-legacy with metadata, Draft revision 9, project graph, navigation, and Undo history
+    Given production storage has only singleton Legacy shop project project-legacy with metadata, storage generation 9, project graph, navigation, and Undo history
     When the installed project-library migration runs
     Then one atomic repository write creates one Legacy shop entry with unchanged project and entity identities
     And active-project persistence becomes project-legacy
-    And every pre-upgrade content hash for metadata, Draft, graph, navigation, and history is conserved
+    And every pre-upgrade content hash for metadata, Draft, graph, and navigation is conserved
+    And production project state contains no Undo or Redo while a recoverable backup retains their legacy bytes and checksum
     When the extension reloads twice
     Then repository bytes contain one unmigrated-again Legacy shop entry and the same active identity
 
@@ -53,7 +54,7 @@ Feature: Data layer project portability and upgrade runtime
     When installed project controls create Agency platform, edit metadata, switch to Retail website, and open its Project overview in Specification Studio
     And actual controls export Retail website, import it as a new inactive project, and open the imported project
     Then observed active-project history contains exactly one identity after every context change
-    And serialized existing projects retain metadata, canonical graphs, and Draft revisions
+    And serialized existing projects retain metadata, canonical graphs, Saved Drafts, and Published revisions
     And the imported graph uses remapped stable references with effective schema output equivalent to Retail website
     When the installed side panel and Specification Studio reload
     Then both render the imported project as active with no Retail website or Agency platform entity in their project-bound views

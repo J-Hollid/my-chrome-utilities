@@ -45,7 +45,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When article_name is selected
     Then the main workspace renders a property navigator, complete schema table, expandable article_name details, and effective documentation outside the Inspector
     And production search, filtering, revision comparison, object, array, item-type, scalar-type, presence, allowed-value, regular-expression, range, cardinality, conditional-rule, reusable-rule, documentation, example, and impact-review actions match the side-panel schema editor
-    And installed Tree and Table views share the selected property and canonical revision
+    And installed Tree and Table views share the selected property and canonical Saved Draft
     And complete authoring succeeds without editing advanced JSON
 
   # Data layer canonical Shared Profile schema authoring runtime 006
@@ -120,13 +120,13 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
   # Data layer canonical Shared Profile schema authoring runtime 012
   Scenario: Data layer canonical Shared Profile schema authoring runtime 012
-    Given installed Builder and side panel opened Opened Article at revision 8
-    When Builder commits article_author as revision 9
+    Given installed Builder and side panel opened Opened Article at Draft token article-8
+    When Builder commits article_author with Draft token article-9
     Then the subscribed side panel renders article_author without reopening the project
-    When a side-panel command based on revision 8 proposes article_category
-    Then production persistence never replaces the complete revision 9 profile with the stale snapshot
+    When a side-panel command based on token article-8 proposes article_category
+    Then production persistence never replaces the complete token article-9 profile with the stale snapshot
     And the installed conflict flow merges, rejects, or retries only the article_category command
-    And final canonical storage contains every accepted command exactly once at one revision
+    And final canonical storage contains every accepted command exactly once in one Saved Draft
 
   # Data layer canonical Shared Profile schema authoring runtime 013
   Scenario: Data layer canonical Shared Profile schema authoring runtime 013
@@ -135,7 +135,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And Table verifies the property and the side panel changes its comments
     And the installed extension reloads
     Then production Tree, Table, and side panel show one metadata.category definition with identical semantics and stable identity
-    And the production compiler and validator consume that exact canonical draft revision
+    And the production compiler and validator consume that exact canonical Saved Draft
 
   # Data layer canonical Shared Profile schema authoring runtime 014
   Scenario: Data layer canonical Shared Profile schema authoring runtime 014
@@ -156,7 +156,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then after each event document.activeElement is the same connected search input
     And its observed value is the full prefix with selectionStart and selectionEnd after the newest character
     And production rows narrow to article_name without focusing a result, filter, view control, or property editor
-    And canonical revision, project bytes, transaction history, and persisted storage remain unchanged
+    And Draft token, project bytes, page-scoped Undo, and persisted storage remain unchanged
 
     Examples:
       | contributor       | surface        | viewport_width |
@@ -215,9 +215,9 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
   # Data layer canonical Shared Profile schema authoring runtime 019
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 019
-    Given the two installed schema projections subscribe to canonical record Opened Article at revision 8
+    Given the two installed schema projections subscribe to canonical record Opened Article at Draft token article-8
     When actual controls complete <operation> in <authoring_surface>
-    Then <observing_surface> renders <result> at canonical revision 9
+    Then <observing_surface> renders <result> at Draft token article-9
     And command telemetry identifies the same purpose-built control and property-scoped command for both surfaces
     And canonical bytes contain neither raw-JSON substitution nor a surface-specific schema representation
 
@@ -228,4 +228,4 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | make article_name Required when article_type Equals News          | side panel        | standalone        | structured conditional presence              |
       | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
       | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
-      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and Undo result |
+      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and page-scoped Undo result |

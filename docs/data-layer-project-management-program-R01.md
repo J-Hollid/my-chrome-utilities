@@ -67,8 +67,8 @@ The guided project form exposes:
 - owner or team; and
 - notes.
 
-System-managed stable identity, Draft revision, created time, and last-modified time
-are displayed where useful but are not free-text identity fields. A trimmed project
+System-managed stable identity, Saved Draft state, Published revision, created time,
+and last-modified time are displayed where useful but are not free-text identity fields. A trimmed project
 name is required and case-insensitively unique within the local library. Metadata
 changes are revisioned project commands with impact feedback and one Undo. A rename
 updates library rows, active headers, Studio titles, and human-readable deep links
@@ -78,7 +78,7 @@ without changing stable project or entity references.
 
 `Projects` is a peer of Schema and other top-level side-panel tabs. It contains:
 
-1. an Active project card with name, website, Draft revision, last-modified state,
+1. an Active project card with name, website, Saved Draft, Published revision, last-modified state,
    `Open in Specification Studio`, `Edit details`, and `Export`;
 2. a searchable Project library with explicit Active and Switch actions; and
 3. contextual `Create project` and `Import project` actions.
@@ -205,10 +205,10 @@ standalone use and its lineage metadata, but not unrelated global library record
 ## Project export
 
 Export is available from the active card and a project-library row. It uses the
-latest fully persisted Draft revision; a pending failed write must be resolved
-before export can claim that revision. One versioned project bundle includes:
+latest fully persisted Saved Draft; a pending failed write must be resolved before
+export can claim that Draft. One versioned project bundle includes:
 
-- project metadata and Draft revision;
+- project metadata, Saved Draft state, and base Published revision;
 - canonical schemas and inheritance references;
 - Pages, Page Groups, Events, Flows, occurrences, applicability, and assignments;
 - documentation configuration; and
@@ -221,8 +221,8 @@ not issue a project mutation or change active context.
 ## Project import
 
 `Import project` stages a selected bundle before any repository write. Review shows
-format version, source name and Draft revision, entity counts, reference integrity,
-required migrations, an editable unique target name, and the only first-release
+format version, source name, Published revision, Saved Draft state, entity counts,
+reference integrity, required migrations, an editable unique target name, and the only first-release
 commit mode: `Import as new project`. A colliding source name is deterministically
 prefilled with `<source name> copy` and must be unique before commit.
 
@@ -242,10 +242,13 @@ Replace, append, and merge into an existing project are not part of this release
 
 On first run after upgrade, an existing singleton Specification Project is wrapped
 in the project repository and becomes active. The atomic migration preserves its
-stable identity, all contained identities, metadata, Draft revision, canonical
-graph, navigation, and Undo/Redo history. A migration marker prevents subsequent
-reloads from duplicating or resetting it. Failure leaves the prior singleton bytes
-recoverable and does not create a partial library.
+stable identity, all contained identities, metadata, current Draft, any intentional
+Published revision, canonical graph, and navigation. Under the later durable-project
+repository program, legacy full-snapshot Undo/Redo is omitted from the active project
+and remains available only in a checksummed recovery backup. A migration
+marker prevents subsequent reloads from duplicating or resetting the project.
+Failure leaves the prior singleton bytes recoverable and does not create a partial
+library.
 
 ## Delivery phases
 
@@ -292,7 +295,7 @@ pair. `Portability NNN` refers to
 | P02 | A second project cannot be created safely | Context 002 | Guided metadata creation previews and activates a new empty project | Project creation transaction and active-context store | New stable ID, empty graph, unchanged prior bytes, and next action | A, B | Creating a project preserves every existing project and yields one active identity |
 | P03 | Project metadata cannot be edited | Context 003 | Name, purpose, website, owner, and notes update everywhere with Undo | Metadata command and project projections | Stable IDs, revisioned command, headers, deep links, and Undo | B | Rename changes no stable identity or project ownership |
 | P04 | Operators cannot explicitly change project context | Context 004 | Switch review atomically replaces every project-bound surface | Active-context command, subscriptions, and projections | Before/after active ID and complete visible collection separation | A, B | No surface retains a record from the prior project |
-| P05 | Switching may strand or lose a pending write | Context 005 | Unresolved commands block activation with property-scoped repair | Revision repository and switch coordinator | Pending command, absent target subscription, resolved revision, and retained Draft | A, B | Target activates only after current-project persistence is safe |
+| P05 | Switching may strand or lose a pending write | Context 005 | Unresolved commands block activation with property-scoped repair | Draft-token repository and switch coordinator | Pending command, absent target subscription, resolved token, and retained Draft | A, B | Target activates only after current-project persistence is safe |
 | P06 | No-active state silently selects a project | Context 006 | Guided empty state offers Open and Create while global schemas remain available | Active-context resolver and surface guards | Absent active ID, rendered guidance, and no inferred lookup | A, B | Storage order and recency cannot establish context |
 | P07 | Specification workspace is misleadingly schema-owned | Context 007 | Project action opens Project overview; schema action only deep-links inside it | Studio router and side-panel action ownership | Project route/title, overview, schema DOM, and entity deep link | C | Studio opens without a schema owning the project workspace |
 | P08 | Navigation can resolve an entity against the wrong project | Context 008 | Per-project locations restore and deep links activate before resolving | Navigation store, deep-link parser, and project-scoped resolver | Stored locations, consequence review, activation order, and resolved IDs | A, C | An inactive-project link never resolves within the active project |
@@ -301,7 +304,7 @@ pair. `Portability NNN` refers to
 | P11 | Project export may omit required graph data or leak transient state | Portability 001 | One versioned persisted-Draft bundle has complete graph and explicit exclusions | Serializer, reference walker, and download adapter | Parsed bundle, resolvable references, excluded categories, unchanged revision | D | Exported project is self-contained without runtime or UI residue |
 | P12 | Import can overwrite an existing project or preserve colliding IDs | Portability 002 | Staged Import as new project remaps owned identities and leaves source inactive | Parser, migrator, remapper, atomic repository commit | Review, new IDs, mapped references, lineage, prior bytes, and compiled result | D, E | Imported graph resolves independently and no prior project changes |
 | P13 | Invalid import can partially mutate the library | Portability 003 | Exact malformed, version, and dangling-reference blockers disable commit | Format validator and transaction boundary | Focused blocker, disabled action, byte equality, counts, and active ID | D | Every invalid bundle produces zero repository writes |
-| P14 | Existing singleton projects need lossless upgrade | Portability 004 | One atomic migration preserves identity, state, navigation, and history | Legacy adapter, repository migration, and marker | Before/after graph, active ID, history, reload count, and recovery bytes | A, E | One reloadable library entry replaces the singleton without duplication |
+| P14 | Existing singleton projects need lossless upgrade | Portability 004 | One atomic migration preserves identity, current state, and navigation while omitting page-scoped history | Legacy adapter, durable repository migration, backup, and marker | Before/after graph, active ID, absent active history, history backup, reload count, and recovery bytes | A, E | One reloadable library entry replaces the singleton without duplication or persisted Undo/Redo |
 | P15 | Components could pass without a coherent installed workflow | Portability 005 | Visible create, edit, switch, Studio, export, import, open, and reload sequence | Installed side panel, Studio, repository, serializer, and router | Operator event trace, active-ID history, project bytes, remapped graph, and reloaded DOM | E | Exactly one project remains active and every project stays isolated end to end |
 | P16 | Entity creation is a generic Inspector form | Context 011 | Every collection overview owns a named Add action and type-specific main-workspace creation page | Studio collection router, canonical creation commands, and Inspector composition | Nine rendered overviews, creation routes, row actions, absent generic kind selector, and canonical IDs | C, E | Every top-level entity can be added, opened, and offered for removal with the Inspector closed |
 | P17 | Empty collections provide no self-guiding start | Context 012 | Guided empty states explain purpose, example, prerequisites, consumers, and the same Add action | Collection projection, guidance model, keyboard router, and focus adapter | Nine zero-record views, guidance fields, creation route identity, and focused heading | C, E | An empty overview starts its entity workflow without Inspector or internal collection knowledge |

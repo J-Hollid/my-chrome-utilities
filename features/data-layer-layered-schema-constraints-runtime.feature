@@ -230,7 +230,7 @@ Feature: Data layer layered schema constraints runtime
     And it preserves Page-owned order before group-only memberships and blocks any missing group reference
     When actual controls confirm the proposed order
     Then one production transaction stores only Cart's ordered stable Page Group IDs
-    And installed group member views derive Cart from that canonical revision
+    And installed group member views derive Cart from that canonical Saved Draft
     When actual Undo runs once
     Then serialized membership state equals the complete legacy fixture
 

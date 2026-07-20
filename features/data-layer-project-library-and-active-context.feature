@@ -2,15 +2,15 @@ Feature: Data layer project library and active context
 
   Background:
     Given the project library contains
-      | stable identity | name           | website             | draft revision |
-      | project-retail  | Retail website | retail.example.com  | 14             |
-      | project-trade   | Trade portal   | trade.example.com   | 7              |
+      | stable identity | name           | website             | published revision | draft status |
+      | project-retail  | Retail website | retail.example.com  | 3                  | Saved        |
+      | project-trade   | Trade portal   | trade.example.com   | 1                  | Saved        |
 
   # Data layer project library and active context 001
   Scenario: Data layer project library and active context 001
     Given the Projects projection marks Retail website Active
     When the operator opens the Projects side-panel tab
-    Then an Active project card identifies Retail website, retail.example.com, Draft revision 14, and last-modified state
+    Then an Active project card identifies Retail website, retail.example.com, Saved Draft, Published revision 3, and last-modified state
     And project-level actions are Open in Specification Studio, Edit details, and Export
     And the searchable Project library marks Retail website Active and offers Switch, Edit details, and Export for Trade portal
     And Create project and Import project are contextual library actions
@@ -35,7 +35,7 @@ Feature: Data layer project library and active context
     When the operator changes its name to Retail data layer and updates purpose, website, owner, and notes
     Then one project-metadata command preserves project-retail and every project-owned entity identity
     And the Projects tab, active-project header, Specification Studio, and deep links display Retail data layer
-    And every project entity collection and Draft revision remains associated with project-retail
+    And every project entity collection, Saved Draft, and Published revision 3 remain associated with project-retail
     And one Undo restores the previous metadata without changing project context
 
   # Data layer project library and active context 004
@@ -50,12 +50,13 @@ Feature: Data layer project library and active context
 
   # Data layer project library and active context 005
   Scenario: Data layer project library and active context 005
-    Given Retail website revision 14 has an unresolved stale property command
+    Given Retail website Draft token draft-retail-14 has an unresolved stale property command
     When the operator requests Switch to Trade portal
     Then the active identity remains project-retail and the switch is blocked before any Trade portal subscription starts
     And the exact pending command offers merge, reject, or retry without discarding the Retail website Draft
-    When the operator resolves the command as Retail website revision 15 and retries the switch
-    Then Trade portal becomes active and Retail website revision 15 remains available unchanged
+    When the operator resolves the command with Draft token draft-retail-15 and retries the switch
+    Then Trade portal becomes active and the saved Retail website Draft remains available unchanged
+    And Retail website Published revision 3 has not advanced
 
   # Data layer project library and active context 006
   Scenario: Data layer project library and active context 006
@@ -170,7 +171,7 @@ Feature: Data layer project library and active context
     When deletion is requested for Purchase from the Events overview
     Then the removal review names all three dependent entities and their relationship to Purchase
     And confirmation is blocked with Open Checkout journey, Open Retail Purchase, and Open Valid purchase repair actions
-    And no Event, Flow, Assignment, Fixture, project revision, or evidence state changes
+    And no Event, Flow, Assignment, Fixture, Saved Draft, Published revision, or evidence state changes
     When the operator removes every dependency through its named workspace and returns to the review
     Then Remove Purchase becomes available without silently deleting another entity
 
