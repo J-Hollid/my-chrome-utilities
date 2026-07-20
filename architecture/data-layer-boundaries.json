@@ -187,6 +187,13 @@
       "src/data-layer-specification-project.ts"
     ]
   },
+  "src/data-layer-composed-schema-builders.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-layered-schema.ts"
+    ]
+  },
   "src/data-layer-page-group-membership.ts": {
     "module": "schemas",
     "layer": "application",

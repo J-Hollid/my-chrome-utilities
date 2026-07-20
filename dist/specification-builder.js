@@ -13,6 +13,7 @@ import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-l
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
+import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
@@ -95,7 +96,7 @@ function labeledControl(text, control) { const label = document.createElement("l
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
     if (!state)
         return;
-    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div");
+    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), propertyChoices = model.rows.map(({ path, effective }) => ({ path, type: effective.type }));
     section.className = "composed-schema-workspace";
     section.setAttribute("aria-label", model.heading);
     section.dataset.schemaStatus = model.status;
@@ -109,21 +110,14 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         columns.append(Object.assign(document.createElement("strong"), { textContent: label }));
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${model.heading} rows`);
-    const parse = (value, fallback) => { if (!value.trim())
-        return undefined; try {
-        return JSON.parse(value);
-    }
-    catch {
-        return fallback;
-    } }, same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
     for (const row of model.rows) {
-        const wrapper = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = document.createElement("button"), detail = document.createElement("div"), facets = document.createElement("fieldset"), legend = document.createElement("legend"), type = document.createElement("select"), presence = document.createElement("select"), expected = document.createElement("input"), allowed = document.createElement("input"), condition = document.createElement("textarea"), rules = document.createElement("textarea"), documentation = document.createElement("textarea"), example = document.createElement("input"), provenance = document.createElement("ol"), save = document.createElement("button"), impact = document.createElement("div");
+        const wrapper = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = document.createElement("button"), detail = document.createElement("div"), builder = document.createElement("section"), provenance = document.createElement("ol"), impact = document.createElement("div");
         wrapper.className = "composed-schema-row";
         wrapper.dataset.effectivePropertyPath = row.path;
         wrapper.dataset.validationState = row.validationState;
         overview.className = "composed-schema-row-overview";
         overview.setAttribute("role", "row");
-        toggle.type = primary.type = save.type = "button";
+        toggle.type = primary.type = "button";
         toggle.className = "composed-schema-row-toggle";
         toggle.textContent = row.path;
         toggle.setAttribute("aria-expanded", "false");
@@ -136,20 +130,6 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         detail.className = "composed-schema-row-detail";
         detail.hidden = true;
         detail.setAttribute("aria-label", `${row.path} stacked row detail`);
-        legend.textContent = `Common and complex facets for ${row.path}`;
-        type.append(new Option("Inherit type", ""), ...['string', 'number', 'integer', 'boolean', 'object', 'array', 'null'].map((value) => new Option(value, value)));
-        presence.append(new Option("Inherit presence", ""), ...['required', 'optional', 'forbidden', 'permitted'].map((value) => new Option(value, value)));
-        type.value = String(row.local.type ?? row.effective.type ?? "");
-        presence.value = String(row.local.presence ?? row.effective.presence ?? "");
-        expected.value = row.local.expectedValue === undefined ? String(row.effective.expectedValue ?? "") : String(row.local.expectedValue);
-        allowed.value = JSON.stringify(row.local.allowedValues ?? row.effective.allowedValues ?? []);
-        condition.value = row.local.condition ? JSON.stringify(row.local.condition, null, 2) : "";
-        rules.value = row.local.rules ? JSON.stringify(row.local.rules, null, 2) : "";
-        documentation.value = String(row.local.documentation ?? row.effective.documentation ?? "");
-        const effectiveExample = row.local.examples?.[0] ?? row.effective.examples?.[0];
-        example.value = effectiveExample === undefined ? "" : JSON.stringify(effectiveExample);
-        for (const [control, label] of [[type, "Type"], [presence, "Presence"], [expected, "Expected value"], [allowed, "Allowed values JSON"], [condition, "Conditions JSON"], [rules, "Rules JSON"], [documentation, "Documentation"], [example, "Example JSON"]])
-            facets.append(labeledControl(label, control));
         provenance.setAttribute("aria-label", `${row.path} provenance`);
         provenance.append(Object.assign(document.createElement("li"), { textContent: "Provenance" }));
         for (const origin of row.provenance)
@@ -166,9 +146,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
             } });
             impact.append(control);
         }
-        save.textContent = "Save local facets";
-        save.addEventListener("click", () => { const inherited = row.inherited ?? {}, expectedType = type.value || row.effective.type, expectedValue = expected.value === "" ? undefined : expectedType === "string" ? expected.value : parse(expected.value, expected.value), candidate = { type: type.value || undefined, presence: presence.value || undefined, expectedValue, allowedValues: parse(allowed.value, []), condition: parse(condition.value, condition.value), rules: parse(rules.value, []), documentation: documentation.value || undefined, examples: example.value ? [(parse(example.value, example.value))] : undefined }, sparse = Object.fromEntries(Object.entries(candidate).filter(([key, value]) => value !== undefined && !same(value, inherited[key]))); persist(saveComposedSchemaLocalFacets(state, kind, entity.id, row.path, sparse)); });
-        const openDetail = () => { detail.hidden = false; toggle.setAttribute("aria-expanded", "true"); expected.focus(); };
+        const openDetail = () => { detail.hidden = false; toggle.setAttribute("aria-expanded", "true"); builder.querySelector("input,select,button")?.focus(); };
         toggle.addEventListener("click", () => { detail.hidden = !detail.hidden; toggle.setAttribute("aria-expanded", String(!detail.hidden)); if (detail.hidden)
             toggle.focus(); });
         primary.addEventListener("click", () => { if (row.action === "override") {
@@ -181,9 +159,10 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         detailAction.addEventListener("click", () => primary.click());
         actions.append(primary);
         overview.append(toggle, effective, source, local, validation, actions);
-        detail.append(facets, save, detailAction, provenance, impact);
+        detail.append(builder, detailAction, provenance, impact);
         wrapper.append(overview, detail);
         rows.append(wrapper);
+        mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (facets) => persist(saveComposedSchemaLocalFacets(state, kind, entity.id, row.path, facets)) });
     }
     section.append(heading, summary, columns, rows);
     host.append(section);
