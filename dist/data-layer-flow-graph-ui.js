@@ -5,6 +5,7 @@ const q = (selector, root = document) => { const element = root.querySelector(se
 const svg = (tag) => document.createElementNS("http://www.w3.org/2000/svg", tag);
 const button = (text, action) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", action); return control; };
 const entityName = (entities, id, fallback = "Unknown") => entities.find((entity) => entity.id === id)?.name ?? fallback;
+const elementByData = (attribute, id) => Array.from(document.querySelectorAll(`[${attribute}]`)).find((element) => element.getAttribute(attribute) === id);
 export function flowEdgeGeometry(source, target, width = nodeWidth, height = nodeHeight) {
     const halfWidth = width / 2, halfHeight = height / 2, sourceCenter = { x: source.x + halfWidth, y: source.y + halfHeight }, targetCenter = { x: target.x + halfWidth, y: target.y + halfHeight }, dx = targetCenter.x - sourceCenter.x, dy = targetCenter.y - sourceCenter.y, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, borderDistance = Math.min(Math.abs(unitX) < 0.001 ? Infinity : halfWidth / Math.abs(unitX), Math.abs(unitY) < 0.001 ? Infinity : halfHeight / Math.abs(unitY)), candidateStart = { x: sourceCenter.x + unitX * borderDistance, y: sourceCenter.y + unitY * borderDistance }, candidateEnd = { x: targetCenter.x - unitX * borderDistance, y: targetCenter.y - unitY * borderDistance }, forwardDistance = (candidateEnd.x - candidateStart.x) * unitX + (candidateEnd.y - candidateStart.y) * unitY, midpoint = { x: (sourceCenter.x + targetCenter.x) / 2, y: (sourceCenter.y + targetCenter.y) / 2 }, startX = forwardDistance > 0 ? candidateStart.x : midpoint.x - unitX * 6, startY = forwardDistance > 0 ? candidateStart.y : midpoint.y - unitY * 6, endX = forwardDistance > 0 ? candidateEnd.x : midpoint.x + unitX * 6, endY = forwardDistance > 0 ? candidateEnd.y : midpoint.y + unitY * 6, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
     return { startX, startY, endX, endY, arrow: `${baseX + normalX},${baseY + normalY} ${endX},${endY} ${baseX - normalX},${baseY - normalY}` };
@@ -19,8 +20,11 @@ export function installFlowGraphBuilder(options) {
     let selected;
     let connection;
     let statusMessage = "";
+    let statusRepairHref = "";
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next) => { try {
+        statusMessage = "";
+        statusRepairHref = "";
         options.persist(next);
     }
     catch (error) {
@@ -83,6 +87,13 @@ export function installFlowGraphBuilder(options) {
             }
             else
                 persist(next);
+            return;
+        }
+        if (targetGroupId) {
+            const attempted = state.project.collections.pageGroups.find(({ id }) => id === targetGroupId);
+            statusMessage = `${page.name} does not belong to ${attempted?.name ?? targetGroupId}. Open Page Group membership to repair placement.`;
+            statusRepairHref = `?kind=pages&entity=${encodeURIComponent(page.id)}&field=pageGroupIds`;
+            render();
             return;
         }
         const allMembership = state.project.collections.pageGroups.some((group) => (group.pageIds ?? []).includes(page.id));
@@ -254,21 +265,37 @@ export function installFlowGraphBuilder(options) {
         renderFrameCards(frames);
         status.setAttribute("role", "status");
         status.textContent = statusMessage || (!stored.pageGroupIds.length ? "Add a Page Group to begin. No fallback lanes exist." : !stored.pageFrames.length ? "Add a Page from the Pages catalog." : "Draw from an output port to an input port, or press Enter on an output port.");
+        if (statusRepairHref) {
+            const repair = document.createElement("a");
+            repair.href = statusRepairHref;
+            repair.textContent = "Open Page Group membership";
+            status.append(" ", repair);
+        }
         canvas.classList.add("flow-graph-canvas");
         canvas.setAttribute("aria-label", "Interactive directional Flow canvas");
         canvas.setAttribute("role", "application");
+        canvas.dataset.viewport = JSON.stringify(stored.viewport ?? { x: 0, y: 0, zoom: 1 });
         canvas.setAttribute("viewBox", `0 0 ${Math.max(720, stored.pageGroupIds.length * laneWidth + 220)} 780`);
         outline.setAttribute("aria-label", "Synchronized editable Flow outline");
         views.className = "flow-projections";
         projection.lanes.forEach((lane, index) => { const group = svg("g"), rect = svg("rect"), label = svg("text"), x = index * laneWidth + 10; group.dataset.pageGroupId = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", "20"); rect.setAttribute("width", String(laneWidth - 20)); rect.setAttribute("height", "730"); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragover", (event) => event.preventDefault()); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
             insertPage(page, lane.id); }); label.classList.add("flow-lane-label"); label.setAttribute("x", String(x + 12)); label.setAttribute("y", "45"); label.textContent = lane.name; group.append(rect, label); canvas.append(group); });
-        if (stored.occurrences.some(({ freePageFrame, freePageFrameId }) => freePageFrame || freePageFrameId)) {
-            const label = svg("text");
-            label.classList.add("flow-lane-label");
-            label.setAttribute("x", String(projection.lanes.length * laneWidth + 22));
+        {
+            const ungrouped = svg("rect"), label = svg("text"), x = projection.lanes.length * laneWidth + 10;
+            ungrouped.dataset.ungroupedDropzone = "true";
+            ungrouped.setAttribute("x", String(x));
+            ungrouped.setAttribute("y", "20");
+            ungrouped.setAttribute("width", String(laneWidth - 20));
+            ungrouped.setAttribute("height", "730");
+            ungrouped.setAttribute("class", "flow-lane flow-ungrouped-dropzone");
+            ungrouped.addEventListener("dragover", (event) => event.preventDefault());
+            ungrouped.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+                insertPage(page); });
+            label.classList.add("flow-ungrouped-label");
+            label.setAttribute("x", String(x + 12));
             label.setAttribute("y", "45");
             label.textContent = "Ungrouped entry pages";
-            canvas.append(label);
+            canvas.append(ungrouped, label);
         }
         for (const frame of stored.pageFrames) {
             const laneIndex = stored.pageGroupIds.indexOf(String(frame.pageGroupId)), x = laneIndex * laneWidth + 20, y = frame.position.y, group = svg("g"), rect = svg("rect"), label = svg("text"), page = state.project.collections.pages.find(({ id }) => id === frame.pageId);
@@ -322,8 +349,9 @@ export function installFlowGraphBuilder(options) {
             const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), input = svg("circle"), output = svg("circle"), layout = nodeData.layout;
             group.classList.add("flow-node");
             group.dataset.occurrenceId = nodeData.id;
+            group.dataset.keyboardOutputFor = nodeData.id;
             group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
-            group.tabIndex = 0;
+            group.setAttribute("tabindex", "0");
             group.setAttribute("role", "button");
             group.setAttribute("aria-label", `${nodeData.name}. Drag or use Arrow keys to move.`);
             box.setAttribute("width", String(nodeWidth));
@@ -338,18 +366,18 @@ export function installFlowGraphBuilder(options) {
             input.setAttribute("cx", "0");
             input.setAttribute("cy", String(nodeHeight / 2));
             input.setAttribute("r", "8");
-            input.tabIndex = 0;
+            input.setAttribute("tabindex", "0");
             input.dataset.inputPortFor = nodeData.id;
             input.setAttribute("aria-label", `Input port for ${nodeData.name}`);
             output.setAttribute("cx", String(nodeWidth));
             output.setAttribute("cy", String(nodeHeight / 2));
             output.setAttribute("r", "8");
-            output.tabIndex = 0;
+            output.setAttribute("tabindex", "0");
             output.dataset.outputPortFor = nodeData.id;
             output.setAttribute("aria-label", `Output port for ${nodeData.name}`);
-            const startConnection = () => { connection?.preview?.remove(); const preview = svg("line"), targets = projection.graph.nodes.filter(({ id }) => id !== nodeData.id).map(({ id }) => id); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(layout.x + nodeWidth)); preview.setAttribute("y1", String(layout.y + nodeHeight / 2)); preview.setAttribute("x2", String(layout.x + nodeWidth + 20)); preview.setAttribute("y2", String(layout.y + nodeHeight / 2)); canvas.append(preview); connection = { sourceId: nodeData.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; document.querySelector(`[data-input-port-for="${CSS.escape(targets[0] ?? "")}"]`)?.classList.add("is-valid-target"); };
+            const startConnection = () => { connection?.preview?.remove(); const preview = svg("line"), targets = Array.from(document.querySelectorAll("[data-input-port-for]")).map((element) => element.getAttribute("data-input-port-for")).filter((id) => Boolean(id) && id !== nodeData.id); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(layout.x + nodeWidth)); preview.setAttribute("y1", String(layout.y + nodeHeight / 2)); preview.setAttribute("x2", String(layout.x + nodeWidth + 20)); preview.setAttribute("y2", String(layout.y + nodeHeight / 2)); canvas.append(preview); connection = { sourceId: nodeData.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); output.focus(); };
             output.addEventListener("pointerdown", (event) => { event.stopPropagation(); startConnection(); });
-            output.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
+            output.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Enter" && !connection) {
                 event.preventDefault();
                 startConnection();
                 return;
@@ -362,7 +390,7 @@ export function installFlowGraphBuilder(options) {
                 event.preventDefault();
                 document.querySelectorAll(".is-valid-target").forEach((element) => element.classList.remove("is-valid-target"));
                 connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
-                document.querySelector(`[data-input-port-for="${CSS.escape(connection.targets[connection.targetIndex] ?? "")}"]`)?.classList.add("is-valid-target");
+                elementByData("data-input-port-for", connection.targets[connection.targetIndex] ?? "")?.classList.add("is-valid-target");
                 return;
             } if (event.key === "Enter") {
                 event.preventDefault();
@@ -381,7 +409,29 @@ export function installFlowGraphBuilder(options) {
                 render();
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, semantic ? { y: Math.max(55, Math.round(y)) } : { lane: layout.lane, x, y })); });
-            group.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
+            group.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
+                event.preventDefault();
+                startConnection();
+                return;
+            } if (connection?.sourceId === nodeData.id) {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    cancelConnection();
+                    return;
+                }
+                if (event.key.startsWith("Arrow")) {
+                    event.preventDefault();
+                    document.querySelectorAll(".is-valid-target").forEach((element) => element.classList.remove("is-valid-target"));
+                    connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
+                    elementByData("data-input-port-for", connection.targets[connection.targetIndex] ?? "")?.classList.add("is-valid-target");
+                    return;
+                }
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitConnection(connection.targets[connection.targetIndex]);
+                    return;
+                }
+            } if (!event.key.startsWith("Arrow"))
                 return; event.preventDefault(); const dx = event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; if (dx && (nodeData.pageFrameId || nodeData.pageGroupId || nodeData.freePageFrameId)) {
                 statusMessage = "Move rejected. Add the predefined Event to another Page frame instead.";
                 render();
@@ -405,10 +455,24 @@ export function installFlowGraphBuilder(options) {
             commitConnection(input.dataset.inputPortFor);
         else
             cancelConnection(); });
-        canvas.addEventListener("keydown", (event) => { if (event.key === "Escape" && connection) {
+        canvas.addEventListener("keydown", (event) => { if (!connection)
+            return; if (event.key === "Escape") {
             event.preventDefault();
+            event.stopImmediatePropagation();
             cancelConnection();
-        } });
+            return;
+        } if (event.key.startsWith("Arrow")) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            document.querySelectorAll(".is-valid-target").forEach((element) => element.classList.remove("is-valid-target"));
+            connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
+            elementByData("data-input-port-for", connection.targets[connection.targetIndex] ?? "")?.classList.add("is-valid-target");
+            return;
+        } if (event.key === "Enter") {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            commitConnection(connection.targets[connection.targetIndex]);
+        } }, true);
         views.append(canvas, outline);
         renderRelationshipPopover(popover);
         renderActions(actions);
