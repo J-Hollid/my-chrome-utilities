@@ -50,6 +50,19 @@ export function composedConditionPredicate(choice, operator, value) { return { p
 export function removeComposedConditionBranch(draft, path) { if (!path.length)
     return { ...draft, condition: { kind: "all", children: [] } }; const condition = clone(draft.condition), parent = groupAt(condition, path.slice(0, -1)); parent.children.splice(path.at(-1), 1); return { ...draft, condition }; }
 export function addComposedRule(draft, rule) { return { ...draft, rules: [...draft.rules, clone(rule)] }; }
+export function composedRuleIssue(rule) {
+    if (!String(rule.message ?? "").trim())
+        return "Enter an issue message.";
+    if (rule.kind === "pattern" && !String(rule.pattern ?? "").trim())
+        return "Enter a regular expression.";
+    if (rule.kind === "range" && rule.minimum === undefined && rule.maximum === undefined)
+        return "Enter a minimum or maximum.";
+    if (rule.kind === "cardinality" && rule.minItems === undefined && rule.maxItems === undefined)
+        return "Enter minimum or maximum items.";
+    if (rule.kind === "condition" && !rule.condition)
+        return "Build a condition before adding a condition rule.";
+    return undefined;
+}
 const valueAt = (observation, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, observation);
 export function evaluateComposedCondition(condition, observation, propertyChoices = []) { if (condition.kind !== "predicate") {
     if (condition.kind === "all")
@@ -77,6 +90,10 @@ export function evaluateComposedCondition(condition, observation, propertyChoice
     default: return false;
 } }
 export function sparseComposedFacets(draft, inherited) {
+    if (draft.exampleMethod !== "blank" && draft.exampleValue === undefined)
+        throw new Error(draft.exampleMethod === "allowed-value" ? "Choose an allowed-value example." : "Enter a custom typed example.");
+    if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => same(value, draft.exampleValue)))
+        throw new Error("Choose an example from the current allowed values.");
     const candidate = { ...(draft.type ? { type: draft.type } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues) } : {}), ...(draft.condition.children.length ? { condition: clone(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) };
     return Object.fromEntries(Object.entries(candidate).filter(([key, value]) => !same(value, inherited[key])));
 }
@@ -183,7 +200,11 @@ export function mountComposedSchemaFacetBuilder(options) {
             control.setAttribute("aria-label", name);
         }
         draft.rules.forEach((rule, index) => { const item = document.createElement("li"); item.append(`${String(rule.kind)} · ${String(rule.message ?? "No message")} `, button("Remove rule", () => { draft = { ...draft, rules: draft.rules.filter((_, candidate) => candidate !== index) }; render(); })); ruleList.append(item); });
-        const addRule = () => { const numeric = (control) => control.value === "" ? undefined : Number(control.value), rule = { kind: ruleKind.value, severity: severity.value, message: message.value, ...(pattern.value ? { pattern: pattern.value } : {}), ...(numeric(minimum) !== undefined ? { minimum: numeric(minimum) } : {}), ...(numeric(maximum) !== undefined ? { maximum: numeric(maximum) } : {}), ...(numeric(minItems) !== undefined ? { minItems: numeric(minItems) } : {}), ...(numeric(maxItems) !== undefined ? { maxItems: numeric(maxItems) } : {}), ...(reusable.value ? { reusableRuleId: reusable.value } : {}), ...(ruleKind.value === "condition" && draft.condition.children.length ? { condition: clone(draft.condition) } : {}) }; draft = addComposedRule(draft, rule); render(); };
+        const addRule = () => { const numeric = (control) => control.value === "" ? undefined : Number(control.value), rule = { kind: ruleKind.value, severity: severity.value, message: message.value, ...(pattern.value ? { pattern: pattern.value } : {}), ...(numeric(minimum) !== undefined ? { minimum: numeric(minimum) } : {}), ...(numeric(maximum) !== undefined ? { maximum: numeric(maximum) } : {}), ...(numeric(minItems) !== undefined ? { minItems: numeric(minItems) } : {}), ...(numeric(maxItems) !== undefined ? { maxItems: numeric(maxItems) } : {}), ...(reusable.value ? { reusableRuleId: reusable.value } : {}), ...(ruleKind.value === "condition" && draft.condition.children.length ? { condition: clone(draft.condition) } : {}) }, issue = composedRuleIssue(rule); if (issue) {
+            feedback = issue;
+            render();
+            return;
+        } draft = addComposedRule(draft, rule); feedback = ""; render(); };
         rules.append(rulesLegend, ruleList, labeled("Rule kind", ruleKind), labeled("Pattern", pattern), labeled("Minimum", minimum), labeled("Maximum", maximum), labeled("Minimum items", minItems), labeled("Maximum items", maxItems), labeled("Severity", severity), labeled("Issue message", message), labeled("Reusable rule", reusable), button("Add structured rule", addRule));
         const example = document.createElement("fieldset"), exampleLegend = document.createElement("legend"), method = document.createElement("select"), allowedExample = document.createElement("select"), customExample = document.createElement("input");
         example.setAttribute("aria-label", "Composed example builder");
@@ -207,7 +228,14 @@ export function mountComposedSchemaFacetBuilder(options) {
             render();
         } });
         example.append(exampleLegend, labeled("Example method", method), labeled("Allowed-value example", allowedExample), labeled("Custom typed example", customExample));
-        const save = button("Save local facets", () => options.onSave(sparseComposedFacets(draft, options.inherited ?? { path: options.path }))), status = document.createElement("output");
+        const save = button("Save local facets", () => { try {
+            options.onSave(sparseComposedFacets(draft, options.inherited ?? { path: options.path }));
+            feedback = "";
+        }
+        catch (error) {
+            feedback = error instanceof Error ? error.message : String(error);
+            render();
+        } }), status = document.createElement("output");
         status.setAttribute("role", "status");
         status.textContent = feedback;
         options.host.append(common, allowed, condition, rules, example, save, status);

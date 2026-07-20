@@ -4,6 +4,7 @@ import {
   addComposedConditionGroup,
   addComposedConditionPredicate,
   addComposedRule,
+  composedRuleIssue,
   composedConditionPredicate,
   composedFacetDraft,
   evaluateComposedCondition,
@@ -44,6 +45,8 @@ draft=addComposedRule(draft,{kind:"pattern",pattern:"^[0-9a-z]+$",severity:"erro
 draft=addComposedRule(draft,{kind:"range",minimum:1,maximum:4,severity:"warning",message:"Review step range",reusableRuleId:"rule:step"});
 assert.equal(draft.rules.length,2);
 assert.equal(draft.rules[1].reusableRuleId,"rule:step");
+assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:""}),/issue message/);
+assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:"Mismatch"}),/regular expression/);
 
 draft={...draft,exampleMethod:"allowed-value",exampleValue:"3a"};
 const sparse=sparseComposedFacets(draft,inherited);
@@ -55,6 +58,7 @@ assert.equal(typedComposedValue("null","anything"),null);
 assert.equal(typedComposedValue("string","02"),"02");
 assert.throws(()=>typedComposedValue("integer","2.5"),/whole number/);
 assert.throws(()=>typedComposedValue("boolean","maybe"),/true or false/);
+assert.throws(()=>sparseComposedFacets({...draft,exampleMethod:"allowed-value",exampleValue:undefined},inherited),/Choose an allowed-value example/);
 assert.equal(composedFacetDraft({path:"/note",allowedValues:["brief"],examples:["brief"]},{path:"/note"}).exampleMethod,"allowed-value","reload reconstructs an allowed-value example method from structured storage");
 
 const propertyChoice={path:"/customer_type",definitionId:"definition:customer-type",type:"string"};
@@ -69,5 +73,8 @@ const builderCompiled=compileLayeredSchema([{id:"page:cart",name:"Cart",scope:"P
 const validateBuilderPayload=(payload)=>validateLayeredObservation({targetId:"target:cart",targetName:"Cart",revision:1,compiled:builderCompiled},payload).issues;
 assert.deepEqual(validateBuilderPayload({customer_type:"retail"}).map(({path,code})=>({path,code})),[{path:"/discount",code:"REQUIRED"}],"matching observations activate the saved condition in the production validator");
 assert.deepEqual(validateBuilderPayload({customer_type:"trade"}),[],"nonmatching observations leave the saved condition inactive");
+
+const ruleCompiled=compileLayeredSchema([{id:"page:rules",name:"Rules",scope:"Page",constraints:[{path:"/note",type:"string",rules:[{kind:"pattern",pattern:"^cart",severity:"warning",message:"Start with cart"}]}]}],{eventId:"event:cart",eventRole:"interaction"});
+assert.deepEqual(validateLayeredObservation({targetId:"target:rules",targetName:"Rules",revision:1,compiled:ruleCompiled},{note:"other"}).issues.map(({path,code})=>({path,code})),[{path:"/note",code:"PATTERN"}],"structured pattern rules feed the production validator");
 
 console.log("data-layer composed schema builder tests passed");

@@ -4,13 +4,18 @@ const origin = (contributor) => ({ contributorId: contributor.id, contributorNam
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const branch = (scope) => scope === "Event" ? "event" : scope === "Page Group" || scope === "Page" || scope === "Flow Page-instance" ? "page" : scope === "Event-occurrence" ? "occurrence" : "shared";
 const parallelMismatch = (left, right) => Boolean(left.type && right.type && left.type !== right.type || left.expectedValue !== undefined && right.expectedValue !== undefined && !same(left.expectedValue, right.expectedValue) || left.presence === "required" && right.presence === "forbidden" || left.presence === "forbidden" && right.presence === "required");
+const numericRuleValues = (rules, kind, field) => rules.filter((rule) => rule.kind === kind && typeof rule[field] === "number").map((rule) => rule[field]);
+const constraintWithStructuredRules = (constraint) => {
+    const rules = constraint.rules ?? [], patterns = [...new Set([...(constraint.patterns ?? []), ...rules.filter((rule) => rule.kind === "pattern" && typeof rule.pattern === "string").map((rule) => rule.pattern)])], minimums = [...(constraint.minimum === undefined ? [] : [constraint.minimum]), ...numericRuleValues(rules, "range", "minimum")], maximums = [...(constraint.maximum === undefined ? [] : [constraint.maximum]), ...numericRuleValues(rules, "range", "maximum")], minimumItems = [...(constraint.minItems === undefined ? [] : [constraint.minItems]), ...numericRuleValues(rules, "cardinality", "minItems")], maximumItems = [...(constraint.maxItems === undefined ? [] : [constraint.maxItems]), ...numericRuleValues(rules, "cardinality", "maxItems")];
+    return { ...constraint, ...(patterns.length ? { patterns } : {}), ...(minimums.length ? { minimum: Math.max(...minimums) } : {}), ...(maximums.length ? { maximum: Math.min(...maximums) } : {}), ...(minimumItems.length ? { minItems: Math.max(...minimumItems) } : {}), ...(maximumItems.length ? { maxItems: Math.min(...maximumItems) } : {}) };
+};
 export function compileLayeredSchema(contributors, context) {
     const activeContributors = contributors.filter(({ active }) => active !== false), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names) => conflicts.push({ path, message, contributors: names });
     const applicableGroups = activeContributors.filter(({ scope, applicabilityConditional }) => scope === "Page Group" && applicabilityConditional);
     if (applicableGroups.length > 1)
         conflict("/", "ambiguous Page Group applicability; membership order cannot select a winner", applicableGroups.map(({ name }) => name));
-    const active = activeContributors.flatMap((contributor) => contributor.constraints.filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
+    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
     for (const page of active.filter(({ contributor }) => branch(contributor.scope) === "page"))
         for (const event of active.filter(({ contributor }) => branch(contributor.scope) === "event")) {
             if (page.constraint.path !== event.constraint.path || !parallelMismatch(page.constraint, event.constraint))
@@ -24,7 +29,8 @@ export function compileLayeredSchema(contributors, context) {
             }
         }
     for (const contributor of activeContributors)
-        for (const constraint of contributor.constraints) {
+        for (const rawConstraint of contributor.constraints) {
+            const constraint = constraintWithStructuredRules(rawConstraint);
             if (!included(constraint.target, context)) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path: constraint.path, target: constraint.target ?? "all" });
                 continue;
