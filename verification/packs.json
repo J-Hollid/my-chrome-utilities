@@ -700,7 +700,8 @@
     "dependencies": [],
     "unit": [
       "test/data-layer-flow-graph-test.mjs",
-      "test/data-layer-flow-graph-persistence-test.mjs"
+      "test/data-layer-flow-graph-persistence-test.mjs",
+      "test/data-layer-flow-page-context-model-test.mjs"
     ],
     "property": [],
     "features": [

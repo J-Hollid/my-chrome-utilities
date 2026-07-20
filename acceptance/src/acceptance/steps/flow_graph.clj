@@ -21,6 +21,7 @@
   (when-not @model-verified?
     (checked-command! "Flow graph projection verification failed." "node" "test/data-layer-flow-graph-test.mjs")
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
+    (checked-command! "Flow Page-context model verification failed." "node" "test/data-layer-flow-page-context-model-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -30,7 +31,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 17))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 18))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
