@@ -11,6 +11,10 @@ export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PRO
 export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
+export { applyCanonicalCommand, createCanonicalSchema, migrateLegacyProfile } from "../../data-layer-canonical-schema.js";
+export { mountUnifiedSidePanelCanonicalEditor, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
+export { resolveSidePanelSchemaContributor } from "../../data-layer-side-panel-schema-editor.js";
+export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, createFixtureFromCapturedValidation, evaluateSpecificationObservation, transactProject } from "./layers/browser/schemas.js";
 export { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, previewPageGroupMembershipMove, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "../../data-layer-page-group-membership.js";
 export { PROJECT_LIBRARY_STORAGE_KEY, activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectLibrary, projectMetadata, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, setProjectPendingWrite, stageProjectImport, updateProjectMetadata } from "./layers/browser/schemas.js";

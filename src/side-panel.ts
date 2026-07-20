@@ -296,8 +296,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { mountSidePanelLayeredProfileEditor } from "./utilities/data-layer/schemas.js";
-import { sidePanelSchemaGroups } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, mountSidePanelLayeredProfileEditor, mountUnifiedSidePanelCanonicalEditor, redoProjectTransaction, resolveSidePanelSchemaContributor, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
@@ -889,6 +888,8 @@ if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
 let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(dataLayerStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
 let guidedPropertyReturn: { eventId:string; path:string; expanded:string[]; inspectorScroll:number; feedScroll:number } | undefined;
 let schemaDraft: SchemaDefinition | undefined;
+let savedCanonicalDocument:CanonicalSchemaDocument|undefined;
+const unifiedSchemaEditor=schemaEditor?mountUnifiedSidePanelCanonicalEditor({host:schemaEditor,id:(kind)=>`${kind}:${crypto.randomUUID()}`}):undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
 let pendingSchemaRestoration: { schemaId: string; version: number } | undefined;
@@ -2077,11 +2078,7 @@ function renderSchemas(): void {
       ? `${schema.name} · role Saved schema · scope Library · lineage ${parent?.name??"Library root"} · revision ${schema.version} · Draft · ${pending} pending changes. `
       : `${schema.name} · current revision ${schema.version} · role Saved schema · scope Library · lineage ${parent?.name??"Library root"} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
     revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; adopt.textContent = "Add saved schema to project"; build.textContent = "Build documentation table"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
-    revise.addEventListener("click", () => {
-      sidePanelLayeredProfileEditor?.close();
-      schemaDraft = schemaEditorDraft(schema);
-      renderSchemaDraft();
-    });
+    revise.addEventListener("click", () => openSavedSchemaInUnifiedEditor(schema));
     duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
     adopt.addEventListener("click",()=>reviewSavedSchemaAdoption(schema,adopt));
     build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
@@ -2096,7 +2093,7 @@ function renderSchemas(): void {
     }); item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove); return item;
   }));}
   if(!project){const item=document.createElement("li"),open=document.createElement("button"),create=document.createElement("button");item.setAttribute("role","status");item.textContent="No active project. ";open.type=create.type="button";open.textContent="Open project";create.textContent="Create project";open.addEventListener("click",()=>showDataLayerView("Projects",true));create.addEventListener("click",()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();});item.append(open,create);nodes.push(item);}
-  for(const group of groups.filter(({name})=>name!=="Saved schemas")){nodes.push(heading(group.name));for(const entry of group.entries){const item=document.createElement("li"),open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=entry.key;item.dataset.schemaRole=entry.role;item.textContent=`${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;open.type=studio.type="button";open.textContent="Open schema";studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${entry.name} schema in Specification Studio`);open.addEventListener("click",()=>{schemaDraft=undefined;sidePanelLayeredProfileEditor?.select(entry.key);});studio.addEventListener("click",()=>{if(!project)return;const separator=entry.key.indexOf(":"),kind=entry.key.slice(0,separator),entityId=entry.key.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);nodes.push(item);}}
+  for(const group of groups.filter(({name})=>name!=="Saved schemas")){nodes.push(heading(group.name));for(const entry of group.entries){const item=document.createElement("li"),open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=entry.key;item.dataset.schemaRole=entry.role;item.textContent=`${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;open.type=studio.type="button";open.textContent="Open schema";studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${entry.name} schema in Specification Studio`);open.addEventListener("click",()=>openContributorInUnifiedEditor(entry.key));studio.addEventListener("click",()=>{if(!project)return;const separator=entry.key.indexOf(":"),kind=entry.key.slice(0,separator),entityId=entry.key.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);nodes.push(item);}}
   schemaList?.replaceChildren(...nodes);
 }
 
@@ -2641,6 +2638,28 @@ function persistSchemaEditorDraft(change?: string): void {
   try { persistSchemaLibrary(); }
   catch (error) { schemas = previousSchemas; throw error; }
   renderSchemas();
+}
+
+function openContributorInUnifiedEditor(key:string):void{
+  schemaDraft=undefined;savedCanonicalDocument=undefined;const state=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),selection=state&&resolveSidePanelSchemaContributor(state,key);
+  if(!state||!selection)throw new Error("The selected schema contributor is unavailable.");
+  if(selection.collectionKind==="pages"||selection.collectionKind==="pageGroups"||!selection.entity.canonicalSchema){unifiedSchemaEditor?.close();sidePanelLayeredProfileEditor?.select(key);return;}
+  sidePanelLayeredProfileEditor?.close();if(schemaDetailEmpty)schemaDetailEmpty.hidden=true;
+  unifiedSchemaEditor?.select({key,label:`${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,load:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!;return selected.entity.canonicalSchema as CanonicalSchemaDocument;},dispatch:(command)=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!,document=selected.entity.canonicalSchema as CanonicalSchemaDocument,result=applyCanonicalCommand(document,command);if(result.status==="applied"||result.status==="rebased")commitUnifiedContributorState(writeUnifiedContributorCanonical(live,selected,result.document),`${command.kind} canonical property in ${selected.entity.name}`);return result;},onUndo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;commitUnifiedContributorState(undoProjectTransaction(live),`Undo canonical schema edit in ${selection.entity.name}`);unifiedSchemaEditor?.render();},onRedo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;commitUnifiedContributorState(redoProjectTransaction(live),`Redo canonical schema edit in ${selection.entity.name}`);unifiedSchemaEditor?.render();}});
+}
+
+function writeUnifiedContributorCanonical(state:ProjectState,selection:SidePanelContributorSelection,canonical:CanonicalSchemaDocument):ProjectState{
+  const replace=(candidate:ProjectEntity):ProjectEntity=>candidate.id===selection.entity.id?{...candidate,canonicalSchema:canonical,...(selection.collectionKind==="profiles"?{requirements:[]}:{})}:candidate;
+  return transactProject(state,`Save canonical schema for ${selection.entity.name}`,(project)=>{if(selection.collectionKind){const collection=project.collections[selection.collectionKind] as ProjectEntity[];return{...project,collections:{...project.collections,[selection.collectionKind]:collection.map(replace)}} as typeof project;}const graphs=project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[];relationships?:ProjectEntity[]}>,graph=graphs[selection.flowId!]!,field=selection.scope==="Flow Page-instance"?"pageFrames":"occurrences",entries=graph[field]??[];return{...project,documentationFlowGraphs:{...graphs,[selection.flowId!]:{...graph,[field]:entries.map(replace)}}};});
+}
+
+function commitUnifiedContributorState(next:ProjectState,label:string):void{
+  const serialized=globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),base=restoreCanonicalProjectState(serialized);if(!envelope||!base)throw new Error("The Specification Project is unavailable.");const result=commitCanonicalProjectState(globalThis.localStorage,next,{expectedRevision:envelope.revision,pendingLabel:label,base});if(result.status==="conflict")throw new Error(`Schema contributor changed at project revision ${result.revision}; review the canonical command again.`);
+}
+
+function openSavedSchemaInUnifiedEditor(schema:SchemaDefinition):void{
+  sidePanelLayeredProfileEditor?.close();schemaDraft=schemaEditorDraft(schema);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);if(schemaDetailEmpty)schemaDetailEmpty.hidden=true;
+  unifiedSchemaEditor?.select({key:`saved:${schema.id}`,label:`${schema.name} · Saved schema working draft`,load:()=>savedCanonicalDocument!,dispatch:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased"){savedCanonicalDocument=result.document;schemaDraft=savedSchemaFromCanonical(schemaDraft!,result.document);persistSchemaEditorDraft(`${command.kind} canonical property`);}return result;},actions:[{label:"Publish schema",run:()=>{if(saveSchemaButton){saveSchemaButton.disabled=false;saveSchemaButton.click();}}},{label:"Close editor",run:()=>{schemaDraft=undefined;savedCanonicalDocument=undefined;unifiedSchemaEditor?.close();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;}}]});
 }
 
 function openSchemaPropertyCopyReview(path:string, trigger:HTMLButtonElement):void {
@@ -5681,7 +5700,7 @@ subscribeCanonicalProjectChanges(globalThis as unknown as Parameters<typeof subs
   schemas=[...schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)&&!nextIds.has(id)),...projectSchemas];
   canonicalProjectSchemaIds=nextIds;
   if(schemaDraft&&nextIds.has(schemaDraft.id)){const current=projectSchemas.find(({id})=>id===schemaDraft?.id);if(current)schemaDraft=schemaEditorDraft(current);}
-  renderSchemas();renderSchemaWorkflowRows();if(schemaDraft)renderSchemaDraft();sidePanelLayeredProfileEditor?.render();
+  renderSchemas();renderSchemaWorkflowRows();if(unifiedSchemaEditor?.active())unifiedSchemaEditor.render();sidePanelLayeredProfileEditor?.render();
 });
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();

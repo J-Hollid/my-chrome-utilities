@@ -224,6 +224,15 @@
       "src/data-layer-canonical-schema.ts"
     ]
   },
+  "src/data-layer-side-panel-unified-schema-editor.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-schema-ui.ts",
+      "src/data-layer-schema-verification.ts"
+    ]
+  },
   "src/data-layer-layered-schema-project.ts": {
     "module": "schemas",
     "layer": "application",

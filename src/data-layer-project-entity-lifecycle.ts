@@ -7,7 +7,7 @@ export interface ProjectEntityDependency {kind:ProjectEntityKind|"flowGraph";id:
 export interface ProjectEntityRemovalReview {kind:ProjectEntityKind;id:string;name:string;dependencies:ProjectEntityDependency[];blocked:boolean;summary:string;}
 
 export const projectCollectionDefinitions:Record<ProjectEntityKind,ProjectCollectionDefinition>={
-  profiles:{kind:"profiles",overview:"Shared Profiles",singular:"Shared Profile",addAction:"Add Shared Profile",purpose:"reusable schema rules and documentation",example:"Sitewide",prerequisites:["project Draft"],consumers:["Pages","Page Groups","Events","Flows"]},
+  profiles:{kind:"profiles",overview:"Shared Profiles",singular:"Shared Profile",addAction:"Add Shared Profile",purpose:"reusable complete schemas for generic or event-specific variables",example:"Sitewide",prerequisites:["project Draft"],consumers:["Pages","Page Groups","Events","Flows"]},
   pageGroups:{kind:"pageGroups",overview:"Page Groups",singular:"Page Group",addAction:"Add Page Group",purpose:"shared Page context and inherited requirements",example:"Checkout",prerequisites:["optional Shared Profiles"],consumers:["Pages","Flow lanes"]},
   pages:{kind:"pages",overview:"Pages",singular:"Page",addAction:"Add Page",purpose:"observable Page context and specific requirements",example:"Cart",prerequisites:["optional Page Groups"],consumers:["Flows","Fixtures"]},
   events:{kind:"events",overview:"Events",singular:"Event",addAction:"Add Event",purpose:"reusable interaction or context-setting event",example:"Purchase",prerequisites:["optional Schemas"],consumers:["Flows","Assignments","Fixtures"]},

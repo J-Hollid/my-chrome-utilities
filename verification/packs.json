@@ -778,6 +778,7 @@
     "source": [
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
+      "src/data-layer-side-panel-unified-schema-editor.ts",
       "src/data-layer-composed-schema-builders.ts",
       "src/data-layer-composed-schema-workspace.ts",
       "src/data-layer-page-group-membership.ts",
@@ -789,6 +790,7 @@
     "dependencies": [],
     "unit": [
       "test/data-layer-canonical-schema-authoring-test.mjs",
+      "test/data-layer-side-panel-unified-schema-editor-test.mjs",
       "test/data-layer-composed-schema-builders-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",
       "test/data-layer-page-group-membership-test.mjs",
