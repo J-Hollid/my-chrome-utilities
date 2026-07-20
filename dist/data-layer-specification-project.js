@@ -1,3 +1,4 @@
+import { canonicalConstraints, canonicalRequirements, canonicalSchemaFromJsonSchema, canonicalSchemaWithConstraint, createCanonicalSchema } from "./data-layer-canonical-schema.js";
 const clone = (value) => structuredClone(value);
 const now = () => new Date().toISOString();
 export function createSpecificationProject(input) {
@@ -33,13 +34,18 @@ export function redoProjectTransaction(state) {
     return { ...state, project: clone(entry.project), history: { undo: [...state.history.undo, { label: entry.label, project: clone(state.project) }], redo: state.history.redo.slice(0, -1) } };
 }
 export function addProjectEntity(state, kind, entity, id) {
-    return transactProject(state, `Add ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: [...project.collections[kind], { ...clone(entity), id: id(kind.slice(0, -1) || kind) }] } }));
+    const identity = id(kind.slice(0, -1) || kind), added = { ...clone(entity), id: identity }, canonical = added.canonicalSchema;
+    if (canonical) {
+        canonical.contributorId = identity;
+        canonical.contributorName = String(entity.name);
+    }
+    return transactProject(state, `Add ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: [...project.collections[kind], added] } }));
 }
 export function composeRequirementProfiles(profiles) {
     const requirements = new Map();
     const conflicts = [];
     for (const profile of profiles)
-        for (const requirement of profile.requirements) {
+        for (const requirement of profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements) {
             const prior = requirements.get(requirement.path);
             if (prior && prior.type && requirement.type && prior.type !== requirement.type)
                 conflicts.push({ path: requirement.path, origins: [prior.origin ?? "unknown", profile.id], reason: `Incompatible types ${prior.type} and ${requirement.type}` });
@@ -188,9 +194,17 @@ export function projectPreflight(project) {
     return { blockers, warnings: [] };
 }
 const supportedTypes = new Set(["string", "number", "boolean", "object", "array"]);
-export function commitBulkProperties(state, profileId, properties) { const errors = properties.flatMap((property, index) => !property.path.startsWith("/") ? [{ index, path: property.path, message: "Use a canonical /path" }] : !supportedTypes.has(property.type) ? [{ index, path: property.path, message: "Choose a supported type" }] : []); if (errors.length)
-    return { state, errors }; return { errors: [], state: transactProject(state, `Import ${properties.length} properties`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === profileId ? { ...profile, requirements: [...profile.requirements, ...properties.map((property) => ({ ...property }))] } : profile) } })) }; }
-export function applyBulkRequirement(state, profileId, paths, update) { return transactProject(state, `Update ${paths.length} requirements`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === profileId ? { ...profile, requirements: profile.requirements.map((requirement) => paths.includes(requirement.path) ? { ...requirement, ...update } : requirement) } : profile) } })); }
+export function commitBulkProperties(state, profileId, properties) { const errors = properties.flatMap((property, index) => !property.path.startsWith("/") ? [{ index, path: property.path, message: "Use a generated canonical /path" }] : !supportedTypes.has(property.type) ? [{ index, path: property.path, message: "Choose a supported type" }] : []); if (errors.length)
+    return { state, errors }; const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile)
+    throw new Error(`Unknown Profile ${profileId}.`); let canonical = profile.canonicalSchema ?? createCanonicalSchema({ id: `canonical:${profile.id}`, contributorId: profile.id, contributorName: profile.name }), sequence = 0; for (const property of properties)
+    canonical = canonicalSchemaWithConstraint(canonical, property, (kind) => `${kind}:${profile.id}:bulk:${++sequence}`); return { errors: [], state: transactProject(state, `Import ${properties.length} canonical properties`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === profileId ? { ...candidate, canonicalSchema: canonical, requirements: [] } : candidate) } })) }; }
+export function applyBulkRequirement(state, profileId, paths, update) { const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile?.canonicalSchema)
+    throw new Error(`Profile ${profileId} has no canonical schema.`); let canonical = profile.canonicalSchema, sequence = 0; const existing = new Map(canonicalConstraints(canonical).map((constraint) => [constraint.path, constraint])); for (const path of paths) {
+    const prior = existing.get(path);
+    if (!prior)
+        throw new Error(`Canonical property ${path} is unavailable.`);
+    canonical = canonicalSchemaWithConstraint(canonical, { ...prior, ...update, path }, (kind) => `${kind}:${profile.id}:bulk-update:${++sequence}`);
+} return transactProject(state, `Update ${paths.length} canonical properties`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === profileId ? { ...candidate, canonicalSchema: canonical, requirements: [] } : candidate) } })); }
 export function publishProjectRelease(state, options) { if (!state.draft)
     throw new Error("There is no project draft to publish."); const preflight = projectPreflight(state.project); if (preflight.blockers.length)
     throw new Error(`Project preflight has ${preflight.blockers.length} blockers.`); const publishedSchemas = state.project.collections.schemaDrafts.map((entry) => { const schema = entry; return (schema.workingDraft ? publishSchemaWorkingDraft(schema) : schema); }), collections = { ...state.project.collections, schemaDrafts: publishedSchemas }; const revision = state.project.releases.length + 1, release = { id: options.id("release"), name: `Release ${revision}`, revision, createdAt: now(), snapshot: clone(collections) }; const project = { ...state.project, collections, releases: [...state.project.releases, release], currentRelease: release.id }; options.write(project); return { project, history: { undo: [], redo: [] } }; }
@@ -231,10 +245,11 @@ export function adoptSavedSchema(state, source) {
     return transactProject(state, `Adopt saved schema ${source.name}`, (project) => {
         if (project.collections.schemaDrafts.some(({ id }) => id === source.id) || project.collections.profiles.some(({ sourceIdentity }) => sourceIdentity === source.id))
             throw new Error(`Saved schema ${source.name} is already adopted.`);
-        const schema = createSchemaWorkingDraft({ ...clone(source), assignments: clone(source.assignments ?? []) });
-        const adopted = { ...schema, sourceLineage: { librarySchemaId: source.id, adoptedRevision: source.version, synchronizedRevision: source.version }, sourceDocument: clone(source.document) };
-        const profile = { id: `profile:${source.id}`, name: source.name, requirements: requirementsFromSchema(source.document), sourceIdentity: source.id, sourceRevision: source.version, adoptionProvenance: { kind: "saved-schema-library", schemaId: source.id, revision: source.version }, structuredSchema: clone(source.document), structuredDraft: { document: clone(source.document), status: "Draft" } };
-        return { ...project, collections: { ...project.collections, profiles: [...project.collections.profiles, profile], schemaDrafts: [...project.collections.schemaDrafts, adopted] } };
+        let canonicalSequence = 0;
+        const profileId = `profile:${source.id}`, canonicalSchema = canonicalSchemaFromJsonSchema({ id: `canonical:${source.id}`, contributorId: profileId, contributorName: source.name, sourceIdentity: source.id, sourceRevision: source.version, document: clone(source.document), idFactory: (kind) => `${profileId}:${kind}:${++canonicalSequence}` });
+        canonicalSchema.sourceContent = { document: clone(source.document), rules: clone(source.rules ?? []), documentation: clone(source.documentation ?? ""), examples: clone(source.examples ?? []) };
+        const profile = { id: profileId, name: source.name, requirements: [], canonicalSchema, sourceIdentity: source.id, sourceRevision: source.version, adoptionProvenance: { kind: "saved-schema-library", schemaId: source.id, revision: source.version } };
+        return { ...project, collections: { ...project.collections, profiles: [...project.collections.profiles, profile] } };
     });
 }
 export function stageSavedSchemaSynchronization(state, source) {
@@ -299,7 +314,10 @@ export function applyCapturedValidationToProfile(state, input) {
     if (!profile)
         throw new Error(`Unknown Profile ${input.profileId}.`);
     const proposed = capturedValidationProfileRequirements(state.project, input);
-    return transactProject(state, `Add evaluated capture ${input.captureId} requirements to ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id !== profile.id ? candidate : { ...candidate, requirements: [...candidate.requirements.filter(({ path }) => !proposed.some((item) => item.path === path)), ...proposed] }) } }));
+    let canonical = profile.canonicalSchema ?? createCanonicalSchema({ id: `canonical:${profile.id}`, contributorId: profile.id, contributorName: profile.name }), sequence = 0;
+    for (const requirement of proposed)
+        canonical = canonicalSchemaWithConstraint(canonical, requirement, (kind) => `${kind}:${profile.id}:capture:${++sequence}`);
+    return transactProject(state, `Add evaluated capture ${input.captureId} canonical properties to ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id !== profile.id ? candidate : { ...candidate, canonicalSchema: canonical, requirements: [] }) } }));
 }
 function canonicalAssignmentCondition(project, condition) { if (!condition)
     return undefined; if (condition.kind !== "predicate")
@@ -349,7 +367,7 @@ export function reorderFlowStep(state, flowId, from, to) { return transactProjec
             return flow; steps.splice(Math.max(0, Math.min(to, steps.length)), 0, moved); return { ...flow, steps }; }) } })); }
 export function exportDocumentation(project, options) {
     const header = ["Path", ...options.fields.filter((field) => field !== "path").map((field) => field.replace(/[A-Z]/g, (letter) => ` ${letter}`).replace(/^./, (letter) => letter.toUpperCase()))];
-    const rows = project.collections.profiles.flatMap((profile) => profile.requirements.map((requirement) => {
+    const rows = project.collections.profiles.flatMap((profile) => (profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements).map((requirement) => {
         const usage = Object.entries(project.collections).flatMap(([kind, entities]) => entities.filter((entity) => JSON.stringify(entity).includes(profile.id)).map((entity) => `${kind}/${entity.name}`));
         return options.fields.map((field) => field === "path" ? requirement.path : field === "type" ? (requirement.type ?? "") : field === "provenance" ? `${profile.name} (${profile.id})` : field === "whereUsed" ? usage.join(", ") : String(requirement[field] ?? ""));
     }));
@@ -449,7 +467,7 @@ export function stageProjectImport(serialized, current, options) {
 }
 export function commitStagedProjectImport(current, staged, options) { if (staged.blockers.length)
     throw new Error(`Import has ${staged.blockers.length} unresolved blockers.`); const next = clone(staged.state); options.write(next); return next; }
-export function buildCoverageMatrix(project, options) { const all = Object.entries(project.collections).flatMap(([kind, entities]) => entities.map((entity) => ({ id: entity.id, kind, name: entity.name, state: (kind === "profiles" && entity.requirements.length === 0 ? "issue" : "covered"), issueLink: `?kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entity.id)}&field=${kind === "profiles" ? "requirements" : "name"}` }))); return { rows: all.slice(0, options.rowLimit), totalRows: all.length }; }
+export function buildCoverageMatrix(project, options) { const all = Object.entries(project.collections).flatMap(([kind, entities]) => entities.map((entity) => ({ id: entity.id, kind, name: entity.name, state: (kind === "profiles" && (!entity.canonicalSchema || canonicalRequirements(entity.canonicalSchema).length === 0) ? "issue" : "covered"), issueLink: `?kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entity.id)}&field=${kind === "profiles" ? "canonicalSchema" : "name"}` }))); return { rows: all.slice(0, options.rowLimit), totalRows: all.length }; }
 export function mergeProjectSchemasIntoLibrary(existing, projectSchemas) { const projectIds = new Set(projectSchemas.map(({ id }) => id)); return [...existing.filter(({ id }) => !projectIds.has(id)), ...projectSchemas]; }
 import { createSchema, createSchemaWorkingDraft, publishSchemaWorkingDraft, } from "./data-layer-schema-verification.js";
 //# sourceMappingURL=data-layer-specification-project.js.map

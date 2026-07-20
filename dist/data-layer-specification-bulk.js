@@ -1,4 +1,5 @@
 import { transactProject } from "./data-layer-specification-project.js";
+import { canonicalSchemaWithConstraint, createCanonicalSchema } from "./data-layer-canonical-schema.js";
 const supported = new Set(["string", "number", "boolean", "object", "array"]);
 function flattenSchema(document, path = "") { const rows = []; for (const [name, property] of Object.entries(document?.properties ?? {})) {
     const child = `${path}/${name}`, required = (document.required ?? []).includes(name);
@@ -21,5 +22,7 @@ else
 export function applyStagedBulkAction(staged, rowIds, update) { const selected = new Set(rowIds); return { ...staged, rows: staged.rows.map((row) => selected.has(row.id) ? { ...row, ...structuredClone(update), selected: true } : row) }; }
 export function windowStagedBulkRows(staged, range) { return staged.rows.slice(Math.max(0, range.offset), Math.max(0, range.offset) + Math.max(0, range.limit)); }
 export function commitStagedBulkRequirements(state, profileId, staged) { if (staged.errors.length)
-    throw new Error(`Repair ${staged.errors.length} staged fields before commit.`); return transactProject(state, `Commit ${staged.rows.length} staged requirements`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === profileId ? { ...profile, requirements: [...profile.requirements, ...staged.rows.map(({ id: selectedId, selected, ...requirement }) => requirement)] } : profile) } })); }
+    throw new Error(`Repair ${staged.errors.length} staged fields before commit.`); const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile)
+    throw new Error(`Unknown Profile ${profileId}.`); let canonical = profile.canonicalSchema ?? createCanonicalSchema({ id: `canonical:${profile.id}`, contributorId: profile.id, contributorName: profile.name }), sequence = 0; for (const { id: selectedId, selected, ...requirement } of staged.rows)
+    canonical = canonicalSchemaWithConstraint(canonical, requirement, (kind) => `${kind}:${profile.id}:staged:${++sequence}`); return transactProject(state, `Commit ${staged.rows.length} staged canonical properties`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === profileId ? { ...candidate, canonicalSchema: canonical, requirements: [] } : candidate) } })); }
 //# sourceMappingURL=data-layer-specification-bulk.js.map
