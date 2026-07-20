@@ -252,15 +252,21 @@ export function installFlowGraphBuilder(options) {
         if (!state || !stored)
             return;
         const migration = reviewLegacyFlowContextMigration(state.project, flow.id);
-        if (migration.items.length) {
+        if (migration.items.length || migration.blockers.length) {
             const review = document.createElement("section"), heading = document.createElement("h3"), list = document.createElement("ul"), confirm = button("Confirm Page-context migration", () => persist(migrateLegacyFlowContextBindings(current().state, flow.id)));
             review.setAttribute("aria-label", "Flow Page-context migration review");
             heading.textContent = "Review Page-context migration";
             for (const item of migration.items) {
                 const row = document.createElement("li");
-                row.textContent = `${item.pageName} / ${item.eventName} · ${item.trigger} · affected occurrence`;
+                row.textContent = `${item.flowName} / ${item.pageName} / ${item.eventName} · ${item.trigger} · occurrence ${item.occurrenceName}`;
                 list.append(row);
             }
+            for (const blocker of migration.blockers) {
+                const row = document.createElement("li");
+                row.textContent = blocker.message;
+                list.append(row);
+            }
+            confirm.disabled = Boolean(migration.blockers.length) || !migration.items.length;
             review.append(heading, list, confirm);
             host.append(review);
         }

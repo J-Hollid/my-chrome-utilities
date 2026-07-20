@@ -53,7 +53,7 @@ function validOccurrence(state, flowId, input) {
         void discardedEventId;
         return { ...semantic, name: input.name.trim() };
     }
-    const authoritative = event.role === "context-setting" || event.role === "interaction", role = (input.role ?? (authoritative ? event.role : input.fallbackRole ?? "interaction")), { fallbackRole, ...values } = input;
+    const authoritative = event.role === "context-setting" || event.role === "interaction", role = (authoritative ? event.role : input.role ?? input.fallbackRole ?? "interaction"), { fallbackRole, ...values } = input;
     void fallbackRole;
     return { ...values, name: input.name.trim(), role };
 }
@@ -170,13 +170,43 @@ export function moveFreePageFrame(state, flowId, frameId, presentation) {
         return state;
     return transactProject(state, `Move free Page frame ${frameId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, pageFrames: graph.pageFrames.map((item) => item.id === frameId ? { ...item, freePageRegion: next.region, position: { x: next.x, y: next.y } } : item) }); });
 }
-export function reviewLegacyFlowContextMigration(project, flowId) { const graph = storedGraph(project, flowId), items = graph.occurrences.flatMap((occurrence) => { if (!occurrence.contextBindingId)
-    return []; const page = project.collections.pages.find(({ id }) => id === occurrence.pageId), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), event = project.collections.events.find(({ id }) => id === binding?.eventId); return binding && event ? [{ occurrenceId: occurrence.id, pageName: page?.name ?? "Page", eventName: event.name, trigger: String(binding.trigger ?? binding.name ?? "") }] : []; }); return { items }; }
-export function migrateLegacyFlowContextBindings(state, flowId) { const review = reviewLegacyFlowContextMigration(state.project, flowId); if (!review.items.length)
-    return state; return transactProject(state, "Migrate legacy Flow Page context bindings", (project) => { const graph = storedGraph(project, flowId), pagesById = new Map(project.collections.pages.map((page) => [page.id, page])), occurrences = graph.occurrences.map((occurrence) => { if (!occurrence.contextBindingId)
-    return occurrence; const page = pagesById.get(String(occurrence.pageId)), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId); if (!binding)
-    return occurrence; const { contextBindingId, eventId: discardedEventId, role: discardedRole, trigger: discardedTrigger, ...stored } = occurrence; void contextBindingId; void discardedEventId; void discardedRole; void discardedTrigger; return { ...stored, eventId: String(binding.eventId), role: "context-setting", trigger: String(binding.trigger ?? binding.name ?? "") }; }), pages = project.collections.pages.map((page) => { if (!("contextEventBindings" in page))
-    return page; const { contextEventBindings, ...stored } = page; void contextEventBindings; return stored; }); return saveStoredGraph({ ...project, collections: { ...project.collections, pages } }, flowId, { ...graph, occurrences }); }); }
+export function reviewLegacyFlowContextMigration(project, flowId) {
+    void flowId;
+    const items = [], blockers = [];
+    for (const [candidateFlowId, graph] of Object.entries(graphIndex(project))) {
+        const flow = project.collections.flows.find(({ id }) => id === candidateFlowId), flowName = flow?.name ?? "Unknown Flow";
+        for (const occurrence of graph.occurrences) {
+            if (!occurrence.contextBindingId)
+                continue;
+            const occurrenceName = typeof occurrence.name === "string" && occurrence.name.trim() ? occurrence.name.trim() : "Unnamed occurrence", base = { flowId: candidateFlowId, occurrenceId: occurrence.id, flowName, occurrenceName }, page = project.collections.pages.find(({ id }) => id === occurrence.pageId);
+            if (!page) {
+                blockers.push({ ...base, message: `${occurrenceName} in ${flowName} has a missing Page.` });
+                continue;
+            }
+            const binding = (page.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId);
+            if (!binding) {
+                blockers.push({ ...base, message: `${occurrenceName} in ${flowName} has a missing Page binding on ${page.name}.` });
+                continue;
+            }
+            const event = project.collections.events.find(({ id }) => id === binding.eventId);
+            if (!event) {
+                blockers.push({ ...base, message: `${occurrenceName} in ${flowName} has a missing Event on ${page.name}.` });
+                continue;
+            }
+            items.push({ ...base, pageName: page.name, eventName: event.name, trigger: String(binding.trigger ?? binding.name ?? "") });
+        }
+    }
+    return { items, blockers };
+}
+export function migrateLegacyFlowContextBindings(state, flowId) {
+    const review = reviewLegacyFlowContextMigration(state.project, flowId);
+    if (review.blockers.length || !review.items.length)
+        return state;
+    return transactProject(state, "Migrate legacy Flow Page context bindings", (project) => { const pagesById = new Map(project.collections.pages.map((page) => [page.id, page])), eventsById = new Map(project.collections.events.map((event) => [event.id, event])), documentationFlowGraphs = Object.fromEntries(Object.entries(graphIndex(project)).map(([candidateFlowId, graph]) => [candidateFlowId, { ...graph, occurrences: graph.occurrences.map((occurrence) => { if (!occurrence.contextBindingId)
+                return occurrence; const page = pagesById.get(String(occurrence.pageId)), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), event = eventsById.get(String(binding?.eventId ?? "")); if (!binding || !event)
+                return occurrence; const { contextBindingId, eventId: discardedEventId, role: discardedRole, trigger: discardedTrigger, ...stored } = occurrence; void contextBindingId; void discardedEventId; void discardedRole; void discardedTrigger; const authoritative = event.role === "context-setting" || event.role === "interaction"; return { ...stored, eventId: event.id, role: authoritative ? event.role : "context-setting", trigger: String(binding.trigger ?? binding.name ?? "") }; }) }])), pages = project.collections.pages.map((page) => { if (!("contextEventBindings" in page))
+        return page; const { contextEventBindings, ...stored } = page; void contextEventBindings; return stored; }); return { ...project, collections: { ...project.collections, pages }, documentationFlowGraphs }; });
+}
 export function saveGraphRelationship(state, flowId, fromOccurrenceId, input, id) {
     const graph = storedGraph(state.project, flowId), occurrenceIds = new Set(graph.occurrences.map(({ id }) => id));
     if (fromOccurrenceId === input.toStepId)
