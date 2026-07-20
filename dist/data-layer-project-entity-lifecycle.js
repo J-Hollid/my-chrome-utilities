@@ -11,6 +11,7 @@ export const projectCollectionDefinitions = {
     schemaDrafts: { kind: "schemaDrafts", overview: "Schemas", singular: "Schema", addAction: "Add Schema", purpose: "canonical payload definition and Draft lineage", example: "Purchase payload", prerequisites: ["project Draft"], consumers: ["Events", "Assignments"] },
     assignments: { kind: "assignments", overview: "Assignments", singular: "Assignment", addAction: "Add Assignment", purpose: "production schema selection for matching observations", example: "Retail Purchase", prerequisites: ["Schema", "Event", "Applicability Set"], consumers: ["production evaluator"] },
 };
+export function hasCanonicalProfileOverviewActions(kind, selectedId) { return kind === "profiles" && !selectedId; }
 const containsIdentity = (value, identity) => { if (value === identity)
     return true; if (Array.isArray(value))
     return value.some((entry) => containsIdentity(entry, identity)); if (value && typeof value === "object")

@@ -18,7 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { createProjectCollectionEntity, inspectProjectEntityRemoval, projectCollectionDefinitions, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionDefinitions, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -92,7 +92,7 @@ function renderCanonicalProfileOverview(host) {
         return;
     } review.replaceChildren(); review.textContent = `Review ${source.name} revision ${source.version}: one project-owned canonical draft will preserve source lineage. `; const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = "Confirm adding saved schema"; confirm.addEventListener("click", () => { const next = adoptSavedSchema(state, source); selectedId = next.project.collections.profiles.at(-1).id; persist(next); persistNavigation(); }); review.append(confirm); });
     section.append(heading, guidance, labeledControl("Name", name), add, labeledControl("Saved Schema Library", saved), adopt, review);
-    host.prepend(section);
+    host.append(section);
 }
 function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
@@ -656,6 +656,8 @@ function renderWorkspace() {
         content.append(status);
     }
     content.append(heading, primary, guidance, count, list);
+    if (hasCanonicalProfileOverviewActions(selectedKind, selectedId))
+        renderCanonicalProfileOverview(content);
     if (selected) {
         renderSelectedEntityEditor(content, selected);
         if (selectedKind === "pages") {

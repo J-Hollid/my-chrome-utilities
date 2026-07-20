@@ -230,6 +230,8 @@ const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [r
 const schemaPanels = Array.from(document.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetail = document.querySelector("#schema-detail");
+if (sidePanelLayeredProfileEditorHost && schemaDetail && !schemaDetail.contains(sidePanelLayeredProfileEditorHost))
+    schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorNameAssistance = document.createElement("output");
@@ -664,7 +666,7 @@ let savedInspectorTemplateId;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor;
-const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: globalThis.localStorage, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: () => { renderSchemas(); sidePanelLayeredProfileEditor?.close(); } });
+const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: globalThis.localStorage, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
 const canonicalProjectAtStartup = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if (canonicalProjectAtStartup)
     schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];

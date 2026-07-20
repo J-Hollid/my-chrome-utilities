@@ -553,6 +553,7 @@ const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("
 const schemaPanels = Array.from(document.querySelectorAll<HTMLElement>("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector<HTMLElement>("#schema-editor");
 const schemaDetail = document.querySelector<HTMLElement>("#schema-detail");
+if(sidePanelLayeredProfileEditorHost&&schemaDetail&&!schemaDetail.contains(sidePanelLayeredProfileEditorHost))schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
 const schemaDetailEmpty = document.querySelector<HTMLElement>("#schema-detail-empty");
 const schemaEditorName = document.querySelector<HTMLInputElement>("#schema-editor-name");
 const schemaEditorNameAssistance = document.createElement("output"); schemaEditorNameAssistance.id = "schema-editor-name-assistance"; schemaEditorNameAssistance.setAttribute("aria-live", "polite"); schemaEditorName?.setAttribute("aria-describedby", schemaEditorNameAssistance.id); schemaEditorName?.after(schemaEditorNameAssistance);
@@ -877,7 +878,7 @@ let savedInspectorTemplateId: string | undefined;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor:ReturnType<typeof mountSidePanelLayeredProfileEditor>|undefined;
-const projectLibraryUi=mountProjectLibraryUi({root:document,storage:globalThis.localStorage,projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{renderSchemas();sidePanelLayeredProfileEditor?.close();}});
+const projectLibraryUi=mountProjectLibraryUi({root:document,storage:globalThis.localStorage,projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:renderSchemas});
 const canonicalProjectAtStartup=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if(canonicalProjectAtStartup)schemas=[...schemas.filter((schema)=>!canonicalProjectAtStartup.project.collections.schemaDrafts.some(({id})=>id===schema.id)),...canonicalProjectAtStartup.project.collections.schemaDrafts as unknown as SchemaDefinition[]];
 let canonicalProjectSchemaIds=new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({id})=>id)??[]);const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)));
