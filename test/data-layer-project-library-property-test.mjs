@@ -4,8 +4,11 @@ import {
   commitProjectImport,
   exportProjectBundle,
   projectLibrary,
+  replayProjectCommand,
+  resolveProjectWrite,
   restoreProjectLibrary,
   serializeProjectLibrary,
+  setProjectPendingWrite,
   stageProjectImport,
 } from "../dist/data-layer-project-library.js";
 
@@ -37,6 +40,16 @@ for(let example=0;example<120;example+=1){
   const imported=commitProjectImport(library,staged,()=>timestamp);
   assert.equal(imported.activeProjectId,projectId,"import must not activate the new project");
   assert.deepEqual(imported.projects[projectId],library.projects[projectId],"import must not mutate the active project");
+
+  const value=random()<0.5?`currency-${suffix}`:Math.floor(random()*10_000),pendingWrite={label:`Set currency ${suffix}`,baseRevision:example,fields:["/currency"],command:{kind:"set-project-value",path:"/namingConventions/currency",value}},pendingLibrary=setProjectPendingWrite(library,projectId,pendingWrite),pendingBytes=serializeProjectLibrary(pendingLibrary),latest=structuredClone(state),latestNote=`Concurrent note ${suffix}`,collectionBytes=JSON.stringify(latest.project.collections);
+  latest.project.notes=latestNote;
+  const mergedState=replayProjectCommand(latest,pendingWrite),merged=resolveProjectWrite(pendingLibrary,projectId,"merge",{state:mergedState,revision:example+1},()=>timestamp),record=merged.projects[projectId];
+  assert.equal(record.state.project.namingConventions.currency,value,"merge applies the exact pending value");
+  assert.equal(record.state.project.notes,latestNote,"merge preserves an unrelated persisted edit");
+  assert.equal(JSON.stringify(record.state.project.collections),collectionBytes,"merge preserves unrelated collections");
+  assert.equal(record.revision,example+1,"merge advances from the persisted revision");
+  assert.equal(record.pendingWrite,undefined,"merge clears only the resolved pending marker");
+  assert.equal(serializeProjectLibrary(pendingLibrary),pendingBytes,"merge does not mutate its input library");
 }
 
 console.log("data-layer project library properties passed");
