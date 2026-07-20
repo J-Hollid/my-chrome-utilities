@@ -274,7 +274,7 @@ Feature: Data layer layered schema constraints
     And the uncovered funnel_step type and Checkout funnel_name invariant block the effective schema
     And each blocked row distinguishes winning local facets, unresolved parent facets, and invariant provenance
     And direct repairs offer adjust Cart override where permitted, edit Partner Checkout, or remove the membership
-    And validation and developer export cannot report the blocked Page schema as ready
+    And validation and developer export cannot report the blocked Page schema as ready or expose duplicate no-op controls
 
   # Data layer layered schema constraints 019
   Scenario: Data layer layered schema constraints 019

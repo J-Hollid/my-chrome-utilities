@@ -24,7 +24,8 @@ import {
   type FreePageRegion,
   type FlowRelationshipKind,
 } from "./data-layer-flow-graph.js";
-import {orderedPageGroupIds,type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
+import {orderedPageGroupIds} from "./utilities/data-layer/page-group-membership.js";
+import {type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
 
 export interface FlowGraphBuilderContext {state?:ProjectState;flowId?:string}
 export interface FlowGraphBuilderIntegration {render():void;renderSelectors():void}

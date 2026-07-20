@@ -327,6 +327,7 @@
     "src/utilities/data-layer/index.ts",
     "src/utilities/data-layer/layers",
     "src/utilities/data-layer/live-inspection.ts",
+    "src/utilities/data-layer/page-group-membership.ts",
     "src/utilities/data-layer/replay.ts",
     "src/utilities/data-layer/flow-graph.ts",
     "src/utilities/data-layer/schemas.ts"
@@ -764,6 +765,7 @@
     ],
     "property": [
       "test/data-layer-canonical-schema-property-test.mjs",
+      "test/data-layer-composed-schema-workspace-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [
