@@ -12,6 +12,7 @@
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [
+      "test/data-layer-project-entity-lifecycle-property-test.mjs",
       "test/data-layer-project-library-property-test.mjs"
     ],
     "features": [

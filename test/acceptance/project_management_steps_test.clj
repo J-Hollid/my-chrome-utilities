@@ -12,7 +12,7 @@
   (into {:installedBoundary true}
         (concat
          (map (fn [index] [(keyword (format "context%03d" index)) true])
-              (range 1 11))
+              (range 1 17))
          (map (fn [index] [(keyword (format "portability%03d" index)) true])
               (range 1 6)))))
 
@@ -20,7 +20,7 @@
   (is (false? (project-management/complete-browser-evidence? nil)))
   (is (false? (project-management/complete-browser-evidence? {})))
   (is (false? (project-management/complete-browser-evidence?
-               (dissoc complete-evidence :context010))))
+               (dissoc complete-evidence :context016))))
   (is (false? (project-management/complete-browser-evidence?
                (assoc complete-evidence :unexpected true))))
   (is (false? (project-management/complete-browser-evidence?
