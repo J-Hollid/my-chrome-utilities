@@ -9,6 +9,7 @@ import {
   exportProjectBundle,
   migrateSingletonProject,
   projectLibrary,
+  projectRecordNeedsSynchronization,
   recordProjectNavigation,
   replaceActiveProjectState,
   resolveProjectNavigation,
@@ -78,6 +79,9 @@ assert.equal(library.projects["project-retail"].pendingWrite,undefined);
 library=activateProject(library,"project-trade",clock);
 assert.equal(library.activeProjectId,"project-trade");
 assert.equal(library.projects["project-retail"].revision,15);
+assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],library.projects["project-retail"].state,15),false,"an identical singleton projection must not rewrite project-library bytes");
+const externalRetailEdit=structuredClone(library.projects["project-retail"].state);externalRetailEdit.project.notes="External edit";
+assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],externalRetailEdit,15),true);assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],library.projects["project-retail"].state,16),true);
 
 const externalLibrary=recordProjectNavigation(library,"project-trade",{kind:"flows",id:"flow:project-trade"}),externalSwitch=activeProjectContextChange(JSON.stringify(externalLibrary),"project-retail",15);
 assert.equal(externalSwitch.changed,true,"an external active identity change invalidates the open Studio context");

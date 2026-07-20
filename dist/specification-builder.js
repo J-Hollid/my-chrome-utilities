@@ -9,7 +9,7 @@ import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPag
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
-import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, saveProjectState, serializeProjectLibrary } from "./data-layer-project-library.js";
+import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, migrateSingletonProject, projectLibrary, projectRecordNeedsSynchronization, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, saveProjectState, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -1000,7 +1000,8 @@ subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
     if (pendingConflict)
         return;
     library = restoreProjectLibrary(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library;
-    if (library.activeProjectId === next.project.id) {
+    const activeRecord = library.activeProjectId === next.project.id ? library.projects[next.project.id] : undefined;
+    if (activeRecord && projectRecordNeedsSynchronization(activeRecord, next, revision)) {
         library = saveProjectState(library, next.project.id, next, revision);
         localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
     }

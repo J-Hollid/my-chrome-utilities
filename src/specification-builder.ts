@@ -46,7 +46,7 @@ import {
   type CanonicalProjectChangeTarget,
   type CanonicalCommitResult,
 } from "./data-layer-specification-repository.js";
-import {PROJECT_LIBRARY_STORAGE_KEY,activateProject,activeProjectContextChange,migrateSingletonProject,projectLibrary,recordProjectNavigation,replaceActiveProjectState,resolveProjectNavigation,restoreProjectLibrary,saveProjectState,serializeProjectLibrary,type ProjectLibrary} from "./data-layer-project-library.js";
+import {PROJECT_LIBRARY_STORAGE_KEY,activateProject,activeProjectContextChange,migrateSingletonProject,projectLibrary,projectRecordNeedsSynchronization,recordProjectNavigation,replaceActiveProjectState,resolveProjectNavigation,restoreProjectLibrary,saveProjectState,serializeProjectLibrary,type ProjectLibrary} from "./data-layer-project-library.js";
 import {effectivePropertySummary,installLayeredSchemaUi} from "./data-layer-layered-schema-ui.js";
 import {compileLayeredSchema} from "./data-layer-layered-schema.js";
 import {layeredContributorPath,layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
@@ -229,7 +229,7 @@ if(!state){const stagedStart=localStorage.getItem(START_PATH_KEY);if(stagedStart
 subscribeCanonicalProjectChanges(window as unknown as CanonicalProjectChangeTarget,({revision,state:next})=>{
   if(pendingConflict)return;
   library=restoreProjectLibrary(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY))??library;
-  if(library.activeProjectId===next.project.id){library=saveProjectState(library,next.project.id,next,revision);localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY,serializeProjectLibrary(library));}
+  const activeRecord=library.activeProjectId===next.project.id?library.projects[next.project.id]:undefined;if(activeRecord&&projectRecordNeedsSynchronization(activeRecord,next,revision)){library=saveProjectState(library,next.project.id,next,revision);localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY,serializeProjectLibrary(library));}
   state=structuredClone(next);lastCommittedState=structuredClone(next);canonicalRevision=revision;
   render();renderAssignments();
   q("#project-state").textContent=`Updated from canonical revision ${revision}`;

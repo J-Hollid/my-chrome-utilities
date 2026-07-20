@@ -136,7 +136,7 @@ export function mountProjectLibraryUi(options) {
     importControl.addEventListener("click", () => file.click());
     file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
         importReview(await selected.text()); file.value = ""; });
-    subscribeProjectLibraryChanges(options.changeTarget ?? window, () => library, (next) => { library = next; options.onChange?.(); render(); });
+    subscribeProjectLibraryChanges(options.changeTarget ?? window, () => library, (next) => { library = next; render(); options.onChange?.(); });
     render();
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
         return; library = saveProjectState(library, state.project.id, state, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
