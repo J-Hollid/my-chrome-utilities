@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {subscribeProjectLibraryChanges} from "../dist/data-layer-project-library-ui.js";
 import {
   activateProject,
   activeProjectContextChange,
@@ -88,6 +89,14 @@ const externallyEdited=structuredClone(library);externallyEdited.projects["proje
 assert.equal(activeProjectContextChange(JSON.stringify(externallyEdited),"project-trade",7).changed,true,"an external active revision refreshes an already-open Studio");
 const noActive=structuredClone(library);delete noActive.activeProjectId;
 assert.equal(activeProjectContextChange(JSON.stringify(noActive),"project-trade",7).active,undefined,"external deactivation clears project-bound Studio state");
+
+const storageListeners=new Set(),storageTarget={addEventListener(type,listener){assert.equal(type,"storage");storageListeners.add(listener);},removeEventListener(type,listener){assert.equal(type,"storage");storageListeners.delete(listener);}},emit=(event)=>{for(const listener of storageListeners)listener(event);};let mountedLibrary=externalLibrary,synchronizations=0;
+const unsubscribeLibrary=subscribeProjectLibraryChanges(storageTarget,()=>mountedLibrary,(next)=>{mountedLibrary=next;synchronizations+=1;});
+emit({key:"unrelated",newValue:JSON.stringify(externallyEdited)});emit({key:"my-chrome-utilities.specification-project-library.v1",newValue:JSON.stringify(externalLibrary)});
+assert.equal(synchronizations,0,"unrelated and byte-identical storage events do not echo into the mounted UI");
+emit({key:"my-chrome-utilities.specification-project-library.v1",newValue:JSON.stringify(externallyEdited)});
+assert.equal(synchronizations,1);assert.equal(mountedLibrary.projects["project-trade"].revision,8,"the mounted library consumes an external Studio revision");
+unsubscribeLibrary();emit({key:"my-chrome-utilities.specification-project-library.v1",newValue:JSON.stringify(externalLibrary)});assert.equal(synchronizations,1,"disposed mounts stop consuming storage events");
 
 const remappedState=structuredClone(library.projects["project-trade"].state);
 remappedState.project.id="project-trade-imported";

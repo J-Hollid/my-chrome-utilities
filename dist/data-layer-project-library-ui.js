@@ -15,6 +15,9 @@ const metadataFields = (form, values) => { const fields = {}; for (const [key, l
     fields[key] = control;
 } return fields; };
 const readMetadata = (fields) => ({ name: fields.name.value, purpose: fields.purpose.value, website: fields.website.value, owner: fields.owner.value, notes: fields.notes.value });
+export function subscribeProjectLibraryChanges(target, current, notify) { const listener = (event) => { if (event.key !== PROJECT_LIBRARY_STORAGE_KEY || !event.newValue)
+    return; const next = restoreProjectLibrary(event.newValue); if (next && serializeProjectLibrary(next) !== serializeProjectLibrary(current()))
+    notify(next); }; target.addEventListener("storage", listener); return () => target.removeEventListener("storage", listener); }
 export function mountProjectLibraryUi(options) {
     const now = options.now ?? (() => new Date().toISOString()), id = options.id ?? ((kind) => `${kind}:${crypto.randomUUID()}`), activeHeader = q(options.root, "#active-project-header"), activeCard = q(options.root, "#active-project-card"), search = q(options.root, "#project-library-search"), list = q(options.root, "#project-library-list"), create = q(options.root, "#create-library-project"), importControl = q(options.root, "#import-library-project"), file = q(options.root, "#import-library-project-file"), status = q(options.root, "#project-library-status");
     const singleton = options.storage.getItem(options.projectStorageKey), state = restoreCanonicalProjectState(singleton), envelope = restoreCanonicalProjectEnvelope(singleton), navigation = options.storage.getItem(options.navigationStorageKey);
@@ -133,6 +136,7 @@ export function mountProjectLibraryUi(options) {
     importControl.addEventListener("click", () => file.click());
     file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
         importReview(await selected.text()); file.value = ""; });
+    subscribeProjectLibraryChanges(options.changeTarget ?? window, () => library, (next) => { library = next; options.onChange?.(); render(); });
     render();
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
         return; library = saveProjectState(library, state.project.id, state, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
