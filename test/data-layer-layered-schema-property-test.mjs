@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {compileLayeredSchema,resolveLayeredTarget} from "../dist/data-layer-layered-schema.js";
+import {flowPageFrameContributor,layeredContributorPath} from "../dist/data-layer-layered-schema-project.js";
 
 let seed=0x51a7e;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
@@ -20,6 +21,12 @@ for(let iteration=0;iteration<200;iteration+=1){
   const priority=1+Math.floor(random()*50),compiled=first,automatic={id:`auto:${iteration}`,name:"Automatic",activation:"automatic",priority,applicability:[],compiled},lower={...automatic,id:`lower:${iteration}`,name:"Lower",priority:priority-1},documentation={...automatic,id:`docs:${iteration}`,name:"Docs",activation:"documentation-only",priority:priority+100},resolution=resolveLayeredTarget([lower,documentation,automatic],{});
   assert.equal(resolution.winner?.id,automatic.id,"the unique highest automatic priority wins");
   assert.equal(resolution.candidates.some(({id})=>id===documentation.id),false,"documentation-only targets never enter automatic candidates");
+
+  const flowId=`flow:${iteration}`,pageId=`page:${iteration}`,groupId=`group:${iteration}`,frameId=`frame:${iteration}`,frameName=random()>=0.5?`Named frame ${iteration}`:"",frame={id:frameId,name:frameName,pageId,pageGroupId:groupId,canonicalSchema:{id:`schema:${iteration}`}},state={project:{collections:{profiles:[],events:[],pageGroups:[{id:groupId,name:`Group ${iteration}`,pageIds:[pageId]}],pages:[{id:pageId,name:`Page ${iteration}`}],flows:[{id:flowId,name:`Flow ${iteration}`}],applicabilitySets:[],fixtures:[],schemaDrafts:[],assignments:[]},documentationFlowGraphs:{[flowId]:{pageGroupIds:[groupId],pageFrames:[frame],occurrences:[],relationships:[]}}}},contributor=flowPageFrameContributor(state,flowId,frameId);
+  assert.deepEqual({id:contributor.id,pageId:contributor.pageId,pageGroupId:contributor.pageGroupId,schemaId:contributor.canonicalSchema.id},{id:frameId,pageId,pageGroupId:groupId,schemaId:`schema:${iteration}`},"frame projection conserves every stable reference");
+  assert.equal(contributor.name,frameName||`Page ${iteration} in Flow ${iteration}`,"blank frame names derive from stable human context");
+  assert.deepEqual(layeredContributorPath(state,contributor,"Flow Page-instance",flowId),{pageGroupId:groupId,pageId,flowId,pageFrameId:frameId},"frame contributor paths remain stable across generated identities");
+  assert.equal(flowPageFrameContributor(state,flowId,`missing:${iteration}`),undefined,"unknown frame IDs never fall back to a Page or Flow entity");
 }
 
 console.log("data-layer layered schema property tests passed");

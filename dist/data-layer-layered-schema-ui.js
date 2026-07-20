@@ -2,14 +2,12 @@ import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, valida
 import { confirmCanonicalMigration, redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
 const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", pageGroups: "Page Group", pages: "Page", flows: "Flow Page-instance" }[kind] ?? "Event-occurrence");
 export const canonicalLayerEditorSurface = (kind) => kind === "flows" ? "Flow workspace" : "Builder";
-export function flowPageFrameContributor(state, flowId, pageFrameId) { const graph = state.project.documentationFlowGraphs?.[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId); if (!frame)
-    return; const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), flow = state.project.collections.flows.find(({ id }) => id === flowId); return { ...frame, name: typeof frame.name === "string" && frame.name.trim() ? frame.name : `${page?.name ?? "Page"} in ${flow?.name ?? "Flow"}` }; }
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
 export function composeStructuredRules(rules, reusableRules, structured) { return { rules: [...rules, ...(structured.field ? [{ field: structured.field, operator: structured.operator || "equals", ...(structured.value ? { value: structured.value } : {}) }] : [])], reusableRules: [...reusableRules, ...(structured.reusableRuleId ? [{ id: structured.reusableRuleId }] : [])] }; }

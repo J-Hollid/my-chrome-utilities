@@ -2,7 +2,7 @@ import {compileLayeredSchema,exportLayeredSchema,resolveLayeredTarget,validateLa
 import {confirmCanonicalMigration,redoProjectTransaction,transactProject,undoProjectTransaction,type ProjectEntity,type ProjectEntityKind,type ProjectState} from "./data-layer-specification-project.js";
 import {applyCanonicalCommand,canonicalSchemaWithConstraint,canonicalTableRows,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {mountCanonicalSchemaEditor} from "./data-layer-canonical-schema-ui.js";
-import {layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
+import {flowPageFrameContributor,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
 
 export {layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
 
@@ -10,7 +10,6 @@ interface LayeredSchemaUiOptions{context:()=>{state?:ProjectState;kind:ProjectEn
 const q=<T extends Element>(selector:string):T=>{const value=document.querySelector<T>(selector);if(!value)throw new Error(`Missing ${selector}`);return value;};
 const scopeFor=(kind:ProjectEntityKind):LayerScope=>({profiles:"Shared Profile",events:"Event",pageGroups:"Page Group",pages:"Page",flows:"Flow Page-instance"} as Partial<Record<ProjectEntityKind,LayerScope>>)[kind]??"Event-occurrence";
 export const canonicalLayerEditorSurface=(kind:ProjectEntityKind):"Builder"|"Flow workspace"=>kind==="flows"?"Flow workspace":"Builder";
-export function flowPageFrameContributor(state:ProjectState,flowId:string,pageFrameId:string):ProjectEntity|undefined{const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>|undefined)?.[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)return;const page=state.project.collections.pages.find(({id})=>id===frame.pageId),flow=state.project.collections.flows.find(({id})=>id===flowId);return{...frame,name:typeof frame.name==="string"&&frame.name.trim()?frame.name:`${page?.name??"Page"} in ${flow?.name??"Flow"}`};}
 const structuredPaths=(document:unknown,prefix=""):string[]=>{if(!document||typeof document!=="object")return[];const properties=(document as {properties?:Record<string,unknown>}).properties??{};return Object.entries(properties).flatMap(([name,value])=>{const path=`${prefix}/${name}`;return[path,...structuredPaths(value,path)];});};
 export function composeStructuredRules(rules:Record<string,unknown>[],reusableRules:Record<string,unknown>[],structured:{field?:string;operator?:string;value?:string;reusableRuleId?:string}){return{rules:[...rules,...(structured.field?[{field:structured.field,operator:structured.operator||"equals",...(structured.value?{value:structured.value}:{})}]:[])],reusableRules:[...reusableRules,...(structured.reusableRuleId?[{id:structured.reusableRuleId}]:[])]};}
 const profileStructuredDocument=(profile:ProjectEntity):unknown=>(profile.canonicalSchema as CanonicalSchemaDocument|undefined)?.sourceContent?.document??profile.structuredSchema??(profile.structuredDraft as {document?:unknown}|undefined)?.document;
