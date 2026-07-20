@@ -2,7 +2,8 @@ import { canonicalConstraints } from "./data-layer-canonical-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
-    return { id: entity.id, name: entity.name, scope, constraints: canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? []) };
+    const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? []), sparse = entity.localSchemaContributions ?? [];
+    return { id: entity.id, name: entity.name, scope, constraints: [...base, ...sparse] };
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileId = (state, entity) => {

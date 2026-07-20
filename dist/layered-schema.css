@@ -34,3 +34,24 @@
   min-height: 8rem;
   width: 100%;
 }
+
+[aria-label$="canonical schema editor"] table {
+  border-collapse: collapse;
+  display: block;
+  max-width: 100%;
+  overflow: auto;
+}
+
+[aria-label$="canonical schema editor"] th,
+[aria-label$="canonical schema editor"] td {
+  border: 1px solid var(--border-color, #c8c8c8);
+  padding: 0.35rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.canonical-inline-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
