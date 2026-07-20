@@ -9,6 +9,8 @@ import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-s
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
 import { installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
+import { applyCanonicalCommand, canonicalRequirements, confirmCanonicalMigration, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1";
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -27,6 +29,61 @@ const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page 
 let state, lastCommittedState;
 let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi;
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
+function renderCanonicalProfileEditor(host, entity) {
+    if (!state)
+        return;
+    const canonical = entity.canonicalSchema;
+    if (!canonical) {
+        const review = migrateLegacyProfile(entity, { id }), section = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), list = document.createElement("ul"), confirm = document.createElement("button");
+        section.setAttribute("aria-label", "Canonical schema migration review");
+        heading.textContent = "Migrate legacy schema to one canonical property tree";
+        summary.textContent = `${Object.keys(review.document.nodes).length} properties mapped · ${review.conflicts.length} incompatible definitions · requirements, structured draft, and path constraints will be replaced atomically.`;
+        for (const conflict of [...review.conflicts]) {
+            const item = document.createElement("li"), resolution = document.createElement("select");
+            item.textContent = `${conflict.path}: ${conflict.message} `;
+            resolution.append(new Option("Choose resolution", ""), new Option("Use string", "string"), new Option("Use number", "number"), new Option("Use object", "object"));
+            resolution.setAttribute("aria-label", `Resolve migration conflict ${conflict.path}`);
+            resolution.addEventListener("change", () => { if (!resolution.value)
+                return; review.document.nodes[conflict.propertyId].type = resolution.value; review.conflicts.splice(review.conflicts.indexOf(conflict), 1); confirm.disabled = Boolean(review.conflicts.length); });
+            item.append(resolution);
+            list.append(item);
+        }
+        confirm.type = "button";
+        confirm.textContent = "Confirm canonical migration";
+        confirm.disabled = Boolean(review.conflicts.length);
+        confirm.addEventListener("click", () => persist(confirmCanonicalMigration(state, review)));
+        section.append(heading, summary, list, confirm);
+        host.append(section);
+        return;
+    }
+    const editorHost = document.createElement("section");
+    host.append(editorHost);
+    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections.profiles.find(({ id: profileId }) => profileId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections.profiles.find(({ id: profileId }) => profileId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+            persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => profile.id === entity.id ? { ...profile, canonicalSchema: result.document, requirements: [] } : profile) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
+}
+function renderCanonicalProfileOverview(host) {
+    if (!state || selectedKind !== "profiles" || selectedId)
+        return;
+    const section = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), name = document.createElement("input"), add = document.createElement("button"), saved = document.createElement("select"), adopt = document.createElement("button"), review = document.createElement("p");
+    section.setAttribute("aria-label", "Shared Profiles contextual actions");
+    heading.textContent = "Reusable complete schemas";
+    guidance.textContent = "A Shared Profile is a reusable complete schema for generic or event-specific variables.";
+    name.placeholder = "Shared Profile name";
+    name.setAttribute("aria-label", "New Shared Profile name");
+    add.type = adopt.type = "button";
+    add.textContent = "Add Shared Profile";
+    adopt.textContent = "Add saved schema to project";
+    saved.setAttribute("aria-label", "Saved schema to add");
+    saved.append(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} revision ${schema.version}`, schema.id)));
+    add.addEventListener("click", () => { const profileName = name.value.trim() || "Untitled Shared Profile", next = addProjectEntity(state, "profiles", { name: profileName, requirements: [], canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: "", contributorName: profileName }) }, id); persist(next); selectedId = next.project.collections.profiles.at(-1).id; persistNavigation(); render(); });
+    adopt.addEventListener("click", () => { const source = savedSchemas().find(({ id: schemaId }) => schemaId === saved.value); if (!source) {
+        review.textContent = "Choose a published saved schema for review.";
+        return;
+    } review.replaceChildren(); review.textContent = `Review ${source.name} revision ${source.version}: one project-owned canonical draft will preserve source lineage. `; const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = "Confirm adding saved schema"; confirm.addEventListener("click", () => { const next = adoptSavedSchema(state, source); persist(next); selectedId = next.project.collections.profiles.at(-1).id; persistNavigation(); render(); }); review.append(confirm); });
+    section.append(heading, guidance, labeledControl("Name", name), add, labeledControl("Saved Schema Library", saved), adopt, review);
+    host.prepend(section);
+}
+function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
 function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
@@ -158,23 +215,6 @@ function editorValue(field, control) { if (control instanceof HTMLFieldSetElemen
     return control.checked; if (field.type === "number")
     return Number(control.value); if (field.type === "json")
     return JSON.parse(control.value || "{}"); return control.value; }
-function renderProfileGrid(form, profile) { const heading = document.createElement("h3"), table = document.createElement("table"), head = document.createElement("thead"), body = document.createElement("tbody"), add = document.createElement("button"); heading.textContent = "Requirements · Local only / Effective / Provenance"; head.innerHTML = "<tr><th>Path</th><th>Type</th><th>Required</th><th>Forbidden</th><th>Allowed values</th><th>Rules</th><th>Documentation</th><th>Examples</th></tr>"; const requirements = profile.requirements ?? []; for (const requirement of requirements) {
-    const row = document.createElement("tr");
-    row.dataset.requirement = "true";
-    for (const [key, type] of [["path", "text"], ["type", "text"], ["required", "checkbox"], ["forbidden", "checkbox"], ["allowedValues", "text"], ["rules", "text"], ["description", "text"], ["examples", "text"]]) {
-        const cell = document.createElement("td"), input = document.createElement("input");
-        input.name = key;
-        input.type = type;
-        if (type === "checkbox")
-            input.checked = Boolean(requirement[key]);
-        else
-            input.value = Array.isArray(requirement[key]) ? JSON.stringify(requirement[key]) : String(requirement[key] ?? "");
-        cell.append(input);
-        row.append(cell);
-    }
-    body.append(row);
-} table.append(head, body); add.type = "button"; add.textContent = "Add requirement row"; add.addEventListener("click", () => { const row = document.createElement("tr"); row.dataset.requirement = "true"; row.innerHTML = '<td><input name="path" placeholder="/path"></td><td><input name="type" value="string"></td><td><input name="required" type="checkbox"></td><td><input name="forbidden" type="checkbox"></td><td><input name="allowedValues" placeholder="[&quot;EUR&quot;]"></td><td><input name="rules" placeholder="[]"></td><td><input name="description"></td><td><input name="examples" placeholder="[]"></td>'; body.append(row); row.querySelector('input[name="path"]')?.focus(); }); form.append(heading, table, add); }
-function profileRequirements(form) { return Array.from(form.querySelectorAll('tr[data-requirement]'), (row) => { const value = (name) => row.querySelector(`[name="${name}"]`); const parse = (name) => { const text = value(name).value.trim(); return text ? JSON.parse(text) : undefined; }; return { path: value("path").value.trim(), type: value("type").value.trim(), required: value("required").checked, forbidden: value("forbidden").checked, ...(parse("allowedValues") ? { allowedValues: parse("allowedValues") } : {}), ...(parse("rules") ? { rules: parse("rules") } : {}), ...(value("description").value ? { description: value("description").value } : {}), ...(parse("examples") ? { examples: parse("examples") } : {}) }; }).filter(({ path }) => path); }
 function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
     return; const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
     result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
@@ -186,8 +226,7 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     label.textContent = field.label;
     label.append(control);
     form.append(label);
-} if (selectedKind === "profiles")
-    renderProfileGrid(form, entity); if (selectedKind === "fixtures")
+} if (selectedKind === "fixtures")
     renderFixtureExecution(form, entity); if (selectedKind === "schemaDrafts") {
     const preview = document.createElement("pre"), working = entity.workingDraft;
     preview.textContent = JSON.stringify(working?.document ?? entity.document ?? {}, null, 2);
@@ -198,8 +237,6 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     const update = { name: name.value.trim() };
     for (const field of editorFields[selectedKind])
         update[field.key] = editorValue(field, form.elements.namedItem(field.key));
-    if (selectedKind === "profiles")
-        update.requirements = profileRequirements(form);
     if (selectedKind === "schemaDrafts")
         update.workingDraft = { ...entity.workingDraft, profileIds: update.profileIds };
     const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
@@ -217,7 +254,8 @@ catch (error) {
     return; const dependencies = whereUsed(entity.id); if (dependencies.length) {
     q("#project-state").textContent = `Delete blocked; used by ${dependencies.join(", ")}`;
     return;
-} persist(transactProject(state, `Delete ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].filter(({ id }) => id !== entity.id) } }))); selectedId = undefined; }); section.append(heading, form); content.append(section); }
+} persist(transactProject(state, `Delete ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].filter(({ id }) => id !== entity.id) } }))); selectedId = undefined; }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
+    renderCanonicalProfileEditor(content, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
     return; for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
@@ -307,6 +345,7 @@ function renderWorkspace() {
     }
     q("#flow-inspector-context").replaceChildren();
     renderCollectionGuidance(content);
+    renderCanonicalProfileOverview(content);
     const visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul");
     heading.textContent = labels[selectedKind];
     count.className = "status-text";
@@ -405,12 +444,12 @@ function renderAssignments() {
 function render() { const empty = q("#project-empty"), workspace = q("#project-workspace"); empty.hidden = Boolean(state); workspace.hidden = !state; if (!state) {
     q("#project-context").textContent = "No project";
     return;
-} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts"; q("#assignment-editor").hidden = selectedKind !== "assignments"; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId; renderTree(); renderWorkspace(); renderReferenceSelectors(); flowGraphBuilder?.render(); executableFlowBuilder?.render(); layeredSchemaUi?.render(); }
+} q("#project-context").textContent = `${state.project.name} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts"; q("#assignment-editor").hidden = selectedKind !== "assignments"; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); renderReferenceSelectors(); flowGraphBuilder?.render(); executableFlowBuilder?.render(); layeredSchemaUi?.render(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); persist(createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id })); q("#workspace-pane").focus(); });
 document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
-    return; const defaults = kind === "profiles" ? { requirements: [] } : kind === "events" ? { eventName: name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), sourceId: "event-history", target: "payload" } : kind === "flows" ? { steps: [] } : kind === "fixtures" ? { mode: "event", observations: [], expected: {}, releasePolicy: "required" } : kind === "applicabilitySets" ? { priority: 0, condition: { kind: "all", conditions: [] } } : {}; persist(addProjectEntity(state, kind, { name, ...defaults }, id)); selectedKind = kind; selectedId = state?.project.collections[kind].at(-1)?.id; q("#entity-name").value = ""; persistNavigation(); render(); });
+    return; const defaults = kind === "profiles" ? { requirements: [], canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: "", contributorName: name }) } : kind === "events" ? { eventName: name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), sourceId: "event-history", target: "payload" } : kind === "flows" ? { steps: [] } : kind === "fixtures" ? { mode: "event", observations: [], expected: {}, releasePolicy: "required" } : kind === "applicabilitySets" ? { priority: 0, condition: { kind: "all", conditions: [] } } : {}; persist(addProjectEntity(state, kind, { name, ...defaults }, id)); selectedKind = kind; selectedId = state?.project.collections[kind].at(-1)?.id; q("#entity-name").value = ""; persistNavigation(); render(); });
 q("#undo-project").addEventListener("click", () => { if (state)
     persist(undoProjectTransaction(state)); });
 q("#redo-project").addEventListener("click", () => { if (state)
@@ -558,7 +597,7 @@ q("#restore-release").addEventListener("click", () => { if (!state)
 q("#export-project").addEventListener("click", () => { if (!state)
     return; download(`${state.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-project.json`, exportSpecificationProjectState(state)); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)
-    return; const properties = Object.fromEntries(state.project.collections.profiles.flatMap((profile) => profile.requirements.map((requirement) => [requirement.path.replace(/^\//, ""), { type: requirement.type ?? "string", ...(requirement.allowedValues ? { enum: requirement.allowedValues } : {}) }]))), schema = { $schema: "https://json-schema.org/draft/2020-12/schema", type: "object", properties, "x-lossy-semantics": ["applicability", "flows", "fixtures", "draft", "releases"] }, manifest = { format: "my-chrome-utilities.applicability-flow-manifest", version: 1, projectId: state.project.id, applicability: state.project.collections.applicabilitySets, flows: state.project.collections.flows, fixtures: state.project.collections.fixtures, draft: state.draft, releases: state.project.releases }; download("specification.schema.json", JSON.stringify(schema)); download("specification.manifest.json", JSON.stringify(manifest)); });
+    return; const properties = Object.fromEntries(state.project.collections.profiles.flatMap((profile) => (profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements).map((requirement) => [requirement.path.replace(/^\//, ""), { type: requirement.type ?? "string", ...(requirement.allowedValues ? { enum: requirement.allowedValues } : {}) }]))), schema = { $schema: "https://json-schema.org/draft/2020-12/schema", type: "object", properties, "x-lossy-semantics": ["applicability", "flows", "fixtures", "draft", "releases"] }, manifest = { format: "my-chrome-utilities.applicability-flow-manifest", version: 1, projectId: state.project.id, applicability: state.project.collections.applicabilitySets, flows: state.project.collections.flows, fixtures: state.project.collections.fixtures, draft: state.draft, releases: state.project.releases }; download("specification.schema.json", JSON.stringify(schema)); download("specification.manifest.json", JSON.stringify(manifest)); });
 q("#import-project").addEventListener("click", () => q("#import-project-file").click());
 const importDialog = q("#import-review");
 q("#import-project-file").addEventListener("change", async (event) => { const file = event.currentTarget.files?.[0]; if (!file || !state)

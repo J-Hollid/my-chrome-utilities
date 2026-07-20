@@ -6,6 +6,7 @@ import {
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
 import {appendSharedProfileConstraint,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {canonicalConstraints} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
@@ -55,6 +56,22 @@ assert.equal(invariant.status,"blocked");
 assert.equal(invariant.conflicts[0].path,"/funnel_step");
 assert.deepEqual(invariant.conflicts[0].contributors,["Shipping","Alternative shipping"]);
 
+const parallel=compileLayeredSchema([
+  contribution("page:article","Article","Page",[{path:"/consent_state",definitionId:"definition:page-consent",expectedValue:"granted",enforcement:"invariant"}]),
+  contribution("event:opened","Article Opened","Event",[{path:"/consent_state",definitionId:"definition:event-consent",expectedValue:"denied",enforcement:"invariant"}]),
+],{eventId:"event:opened",eventRole:"interaction",occurrenceId:"occurrence:summer"});
+assert.equal(parallel.status,"blocked");
+assert.match(parallel.conflicts[0].message,/parallel Page and Event branches/);
+assert.equal(parallel.properties["/consent_state"],undefined,"an unresolved parallel conflict must not silently choose a branch");
+const resolvedParallel=compileLayeredSchema([
+  contribution("event:opened","Article Opened","Event",[{path:"/consent_state",definitionId:"definition:event-consent",expectedValue:"denied",enforcement:"invariant"}]),
+  contribution("page:article","Article","Page",[{path:"/consent_state",definitionId:"definition:page-consent",expectedValue:"granted",enforcement:"invariant"}]),
+  contribution("occurrence:summer","Summer article Article Opened","Event-occurrence",[{path:"/consent_state",expectedValue:"granted",overrideReferences:["definition:page-consent","definition:event-consent"]}]),
+],{eventId:"event:opened",eventRole:"interaction",occurrenceId:"occurrence:summer"});
+assert.equal(resolvedParallel.status,"ready");
+assert.equal(resolvedParallel.properties["/consent_state"].expectedValue,"granted");
+assert.deepEqual(resolvedParallel.properties["/consent_state"].overrideReferences,["definition:page-consent","definition:event-consent"]);
+
 const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[
   {path:"/all",target:"all"},{path:"/context",target:"context"},{path:"/interaction",target:"interaction"},{path:"/purchase",target:"event:purchase"},
 ])],{eventId:"event:purchase",eventRole:"interaction"});
@@ -82,6 +99,14 @@ const invalid=validateLayeredObservation({targetId:"target:alternative",targetNa
 assert.deepEqual(invalid.issues.find(({path})=>path==="/funnel_step"),{path:"/funnel_step",code:"EXPECTED_VALUE",severity:"error",expected:"3b",actual:"3a",provenance:"Alternative shipping"});
 assert.equal(invalid.flowCompletionClaim,undefined);
 assert.match(exportLayeredSchema({targetName:"Alternative shipping branch",pageName:"Shipping Page",eventName:"Purchase Event",activation:"documentation-only",compiled:ready}),/Documentation only — not automatically validated/);
+const richValidation=validateLayeredObservation({targetId:"target:rich",targetName:"Rich",revision:9,compiled:compileLayeredSchema([contribution("profile:rich","Rich profile","Shared Profile",[
+  {path:"/required",type:"string",presence:"required"},{path:"/forbidden",presence:"forbidden"},{path:"/choice",type:"string",allowedValues:["News","Guide"]},{path:"/pattern",type:"string",patterns:["^[A-Z]"]},{path:"/count",type:"number",minimum:1,maximum:3},{path:"/items",type:"array",minItems:1,maxItems:2},
+])],{eventId:"event:rich",eventRole:"interaction"})},{forbidden:true,choice:"Other",pattern:"lower",count:8,items:[]});
+assert.deepEqual(richValidation.issues.map(({path,code})=>({path,code})),[
+  {path:"/required",code:"REQUIRED"},{path:"/forbidden",code:"FORBIDDEN"},{path:"/choice",code:"ALLOWED_VALUE"},{path:"/pattern",code:"PATTERN"},{path:"/count",code:"MAXIMUM"},{path:"/items",code:"MIN_ITEMS"},
+]);
+const richExport=exportLayeredSchema({targetName:"Rich target",pageName:"Article",eventName:"Article Opened",activation:"manual",compiled:richValidation.provenance&&compileLayeredSchema([contribution("profile:documented","Documented","Shared Profile",[{path:"/article_name",type:"string",presence:"required",allowedValues:["Summer sale"],condition:{kind:"predicate",propertyId:"property:type",operator:"Equals",value:"News"},documentation:"Opened article title",examples:["Summer sale"]}])],{eventId:"event:opened",eventRole:"interaction"})});
+assert.match(richExport,/condition/);assert.match(richExport,/Opened article title/);assert.match(richExport,/Summer sale/);assert.match(richExport,/Shared Profile Documented/);
 
 const pathState={project:{collections:{
   profiles:[{id:"profile:selected",name:"Selected"},{id:"profile:unrelated",name:"Unrelated"}],
@@ -101,12 +126,12 @@ assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patter
 const profileDraft=createSpecificationProject({name:"Layered profile editor",site:"shop.example",id:(kind)=>`${kind}:layered-editor`});
 profileDraft.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",requirements:[],schemaConstraints:[{path:"/existing",type:"string"}]});
 const editedProfileDraft=appendSharedProfileConstraint(profileDraft,"profile:sitewide",{path:"/nested/value",type:"number",presence:"required",documentation:"Nested value"});
-assert.deepEqual(editedProfileDraft.project.collections.profiles[0].schemaConstraints,[
-  {path:"/existing",type:"string"},
-  {path:"/nested/value",type:"number",presence:"required",documentation:"Nested value"},
+assert.equal("schemaConstraints" in editedProfileDraft.project.collections.profiles[0],false);
+assert.deepEqual(canonicalConstraints(editedProfileDraft.project.collections.profiles[0].canonicalSchema).map(({path,type,presence,documentation})=>({path,type,...(presence?{presence}:{}),...(documentation?{documentation}:{})})),[
+  {path:"/existing",type:"string"},{path:"/nested",type:"object"},{path:"/nested/value",type:"number",presence:"required",documentation:"Nested value"},
 ]);
 assert.equal(editedProfileDraft.project.collections.profiles[0].compiledTargetsStale,true);
-assert.equal(editedProfileDraft.history.undo.at(-1).label,"Save schema constraint for Sitewide");
+assert.equal(editedProfileDraft.history.undo.at(-1).label,"Save canonical schema contribution for Sitewide");
 assert.throws(()=>appendSharedProfileConstraint(profileDraft,"profile:missing",{path:"/value"}),/Shared Profile profile:missing is unavailable/);
 
 const revisionProfile={
