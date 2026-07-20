@@ -46,16 +46,26 @@ Inspector closed. The Inspector is optional contextual detail and owns no exclus
 documentary graph command. Earlier form-first clauses are superseded.
 
 Only ordered Page Group references define named lanes; the empty Flow has no lanes
-and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pages
-remain in one selected eligible membership lane and may move to another eligible
-lane, while free Pages may use transient before-lanes or after-lanes edge targets
-without invented membership. Empty edge targets do not render as permanent
-lane-sized groups; compact free frames sandwich the Page Group lanes only where
-content exists. The Page frame itself is the Page context and may exist without any
-Event. Context-setting and interaction Events use one direct Page-contained
-occurrence model; role and trigger are explanatory metadata, not a validation
-selector. Event occurrences cannot leave their Page frame when its frame moves.
-Parallel branches and merges are included in the first canvas release. Graph records
+and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Named
+lanes are top-to-bottom horizontal bands in which Pages retain free left-to-right
+and vertical branch coordinates. A Page may occupy any selected eligible membership
+lane or a transient before-lanes or after-lanes edge region. Free placement clears
+only the frame's placement-group reference: ordered Page Group memberships,
+inheritance, and effective schema remain unchanged. Empty edge targets do not render
+as permanent lane-sized groups; compact free frames sandwich the named bands only
+where content exists. The Page frame itself is the Page context and may exist
+without any Event. Context-setting and interaction Events use one direct Page-
+contained occurrence model; role and trigger are explanatory metadata, not a
+validation selector. Event occurrences retain free, including side-by-side,
+coordinates inside an expanding Page frame and cannot leave that frame.
+
+Page frames and Event occurrences both expose connection ports. Page-to-Page,
+Page-to-Event, Event-to-Page, and Event-to-Event relationships persist typed stable
+endpoints. Parallel branches and merges are included in the first canvas release.
+An Event node's JSON example is read-only and derived from its canonical effective
+occurrence schema, configured examples, and provenance; it is never a stored payload
+copy. Complete, Incomplete, Invalid, and Blocked states distinguish example
+readiness and deep-link exact repairs without claiming Flow execution. Graph records
 persist stable Page Group, Page, Event, occurrence, relationship, and endpoint
 references without a Page-context binding model.
 
