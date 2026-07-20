@@ -154,7 +154,7 @@ export function installLayeredSchemaUi(options) {
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
     const graphContributorSelector = '[data-occurrence-id],[data-page-frame-id],[aria-label="Interactive directional Flow canvas"] [data-page-group-id]';
     const selectGraphContributor = (target) => { const { state, kind, entityId: flowId } = options.context(); if (!state || kind !== "flows" || !flowId)
-        return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageId = target.dataset.pageFrameId, pageGroupId = !pageId ? target.dataset.pageGroupId : undefined, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (occurrenceId) {
+        return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageId = target.dataset.pageId ?? target.dataset.pageFrameId, pageGroupId = !pageId ? target.dataset.pageGroupId : undefined, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (occurrenceId) {
         graphSelection = graphs[flowId]?.occurrences?.find(({ id }) => id === occurrenceId);
         graphSelectionScope = graphSelection?.freePageFrame ? "Flow Page-instance" : "Event-occurrence";
     }
@@ -168,7 +168,7 @@ export function installLayeredSchemaUi(options) {
     }
     else
         return; if (!graphSelection)
-        return; const id = CSS.escape(occurrenceId ?? pageId ?? pageGroupId), selector = occurrenceId ? `[data-occurrence-id="${id}"]` : pageId ? `[data-page-frame-id="${id}"]` : `[aria-label="Interactive directional Flow canvas"] [data-page-group-id="${id}"]`; flowReturn = { selector, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
+        return; const stableSelectorId = occurrenceId ?? target.dataset.pageFrameId ?? pageGroupId, id = CSS.escape(stableSelectorId), selector = occurrenceId ? `[data-occurrence-id="${id}"]` : pageId ? `[data-page-frame-id="${id}"]` : `[aria-label="Interactive directional Flow canvas"] [data-page-group-id="${id}"]`; flowReturn = { selector, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
     document.addEventListener("click", (event) => { const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")

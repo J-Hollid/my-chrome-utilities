@@ -8,7 +8,7 @@
   ["features/data-layer-directional-flow-specification-graph.feature"
    "features/data-layer-directional-flow-specification-graph-runtime.feature"])
 (def entry-modes
-  {"Shop project contains Pages Checkout, Confirmation, and Delivery options" :model
+  {"Shop project contains Page Groups Checkout, Delivery, and Confirmation" :model
    "the built extension is running with the production project repository and Specification Flow editor" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
