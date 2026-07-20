@@ -3,15 +3,15 @@ Feature: Data layer project library and active context runtime
   Background:
     Given the built extension is running with the production project repository, side panel, and Specification Studio
     And canonical project storage contains
-      | stable identity | name           | website             | draft revision |
-      | project-retail  | Retail website | retail.example.com  | 14             |
-      | project-trade   | Trade portal   | trade.example.com   | 7              |
+      | stable identity | name           | website             | published revision | draft status |
+      | project-retail  | Retail website | retail.example.com  | 3                  | Saved        |
+      | project-trade   | Trade portal   | trade.example.com   | 1                  | Saved        |
 
   # Data layer project library and active context runtime 001
   Scenario: Data layer project library and active context runtime 001
     Given the production Projects projection reads selected identity project-retail
     When actual controls open the Projects side-panel tab
-    Then the rendered Active project card identifies Retail website, retail.example.com, Draft revision 14, and last-modified state
+    Then the rendered Active project card identifies Retail website, retail.example.com, Saved Draft, Published revision 3, and last-modified state
     And installed project actions are Open in Specification Studio, Edit details, and Export
     And the searchable production library marks Retail website Active and renders Switch, Edit details, and Export for Trade portal
     And Create project and Import project render as library actions
@@ -36,7 +36,7 @@ Feature: Data layer project library and active context runtime
     When actual metadata controls save Retail data layer with changed purpose, website, owner, and notes
     Then one production metadata command retains project-retail and every contained stable identity
     And installed Projects, active header, Studio title, and deep links render Retail data layer
-    And every serialized project entity collection and Draft revision remains owned by project-retail
+    And every serialized project entity collection, Saved Draft, and Published revision 3 remain owned by project-retail
     When actual Undo runs once
     Then prior metadata returns without issuing an activation command
 
@@ -52,12 +52,13 @@ Feature: Data layer project library and active context runtime
 
   # Data layer project library and active context runtime 005
   Scenario: Data layer project library and active context runtime 005
-    Given project-retail revision 14 has a production stale property command awaiting resolution
+    Given project-retail Draft token draft-retail-14 has a production stale property command awaiting resolution
     When actual controls request Switch to Trade portal
     Then active-project persistence remains project-retail and no project-trade subscription is established
     And the installed conflict flow offers merge, reject, or retry for the exact command without deleting Retail website Draft bytes
-    When actual controls resolve revision 15 and retry switching
-    Then project-trade becomes active and stored project-retail revision 15 is unchanged
+    When actual controls resolve Draft token draft-retail-15 and retry switching
+    Then project-trade becomes active and the stored project-retail Draft is unchanged
+    And project-retail Published revision 3 has not advanced
 
   # Data layer project library and active context runtime 006
   Scenario: Data layer project library and active context runtime 006

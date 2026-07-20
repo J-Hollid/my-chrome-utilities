@@ -89,7 +89,7 @@ Feature: Data layer directional Flow specification graph runtime
     And reload renders both saved coordinate pairs
     When an actual pointer drag or Arrow key moves add_payment_info across the Cart or Checkout boundary
     Then add_payment_info returns to its last valid transform
-    And project revision plus Page Group, Page, Event, and occurrence IDs remain unchanged
+    And the Saved Draft plus Page Group, Page, Event, and occurrence IDs remain unchanged
     And installed guidance says to add the predefined Event to another Page frame
 
   # Data layer directional Flow specification graph runtime 009

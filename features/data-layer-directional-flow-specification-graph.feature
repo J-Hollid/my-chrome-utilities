@@ -90,7 +90,7 @@ Feature: Data layer directional Flow specification graph
     And their saved presentation coordinates match the chosen positions after reload
     When pointer drag or Arrow keys attempt to move add_payment_info outside Cart or across the Checkout lane boundary
     Then add_payment_info returns to its last valid position
-    And no Page Group, Page, Event, occurrence identity, or canonical revision changes
+    And no Page Group, Page, Event, occurrence identity, or canonical Saved Draft changes
     And guidance says to add the predefined Event to another Page frame instead
 
   # Data layer directional Flow specification graph 009
@@ -203,7 +203,7 @@ Feature: Data layer directional Flow specification graph
     Then every affected occurrence keeps its identity, Page-frame containment, position, and relationship endpoints
     And each occurrence directly stores its Event reference, context-setting role, and trigger
     And canonical Page and Flow records contain no contextEventBindings or contextBindingId field
-    And one Undo restores the complete pre-migration project revision
+    And one page-scoped Undo restores the complete pre-migration Saved Draft
 
   # Data layer directional Flow specification graph 018
   Scenario: Data layer directional Flow specification graph 018

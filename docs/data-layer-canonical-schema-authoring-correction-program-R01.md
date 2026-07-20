@@ -248,7 +248,7 @@ and composing text until the operator deliberately moves focus. This behavior is
 shared by every contributor kind in Builder, Flow workspace, and side panel at wide
 and 360px widths.
 
-Tree and Table are synchronized projections of the same canonical revision and
+Tree and Table are synchronized projections of the same canonical Saved Draft and
 selection. The Table preserves hierarchy and supports the complete property
 lifecycle. Its wide layout exposes property, path, type, presence, expected or
 allowed values, conditions, rules, documentation, example, source, local state,
@@ -266,7 +266,7 @@ stacked property details while the standalone workspace uses a wide multi-row
 table. Nested structural authoring, scalar and container types, array item types,
 all presence modes, allowed values, regular expressions, ranges, cardinality,
 conditions, reusable rules, documentation, examples, property lifecycle actions,
-impact review, and Undo/Redo must round-trip both directions without raw JSON or a
+impact review, and page-scoped Undo/Redo must round-trip both directions without raw JSON or a
 surface-specific stored schema.
 
 ## Direct Page and Page Group schema workspaces
@@ -319,7 +319,7 @@ drafts, or path constraints receives a deterministic migration review:
    source provenance.
 3. Surface incompatible definitions at the generated property path.
 4. Require resolution before commit.
-5. Replace all editable legacy representations in one atomic project revision.
+5. Replace all editable legacy representations in one atomic Saved Draft transaction.
 6. Make one Undo restore the complete pre-migration project state.
 
 No data is discarded merely because it came from a superseded representation.
@@ -448,7 +448,7 @@ feature.
 | C28 | Canonical property search drops focus after each character | Authoring 015–016 | Continuous typing, caret editing, composition, and clearing retain search focus on every contributor surface | Shared canonical editor renderer, navigator projection, and focus adapter | Per-event active element and selection offsets, filtered rows, unchanged revision and storage | B, E | A multi-character query completes without refocusing and search emits no canonical command |
 | C29 | Pages need multiple ordered Page Group memberships | Layering 013 | Searchable Add to Page Group and an accessible ordered rule stack | Page membership command, Page editor, and derived group member projection | Stable ordered references, focus restoration, impact preview, and absent duplicate source | B, C | Page owns one general-to-specific membership list and group members derive from it |
 | C30 | Membership order must refine without hiding unsafe conflicts | Layering 014 | Applicable groups compose in relative order with exclusion and conflict explanations | Applicability matcher, Page-branch compiler, and legality matrix | Retail and Trade outputs, excluded contributors, blocking issues, and overlap evidence | C, D | Order selects no ambiguous group and cannot legalize an unsafe override |
-| C31 | Existing Page and Page Group membership sources may diverge | Layering 015 | Human migration review preserves Page order and appends group-only membership | Membership migration, project transaction store, and derived member projection | Proposed ordered union, missing-reference blocker, canonical revision, and Undo restoration | A | No membership is lost and only the Page-owned ordered list remains editable |
+| C31 | Existing Page and Page Group membership sources may diverge | Layering 015 | Human migration review preserves Page order and appends group-only membership | Membership migration, project transaction store, and derived member projection | Proposed ordered union, missing-reference blocker, canonical Saved Draft, and page-scoped Undo restoration | A | No membership is lost and only the Page-owned ordered list remains editable |
 | C32 | Page and Page Group schema editing is hidden behind Inspector interaction | Layering 016 | Direct entity routes show complete configuration and composed effective-schema rows | Builder routing, shared editor, and effective-schema compiler | Route ancestry, mounted rows, contribution stacks, and absent parallel editor | B, C | Overview-to-entity editing never requires the Inspector |
 | C33 | Page-local overrides must remain intentional and reversible as parents change | Layering 017 | Local facet wins ordinary parent differences, warns, and can reset to live parents | Sparse contribution commands and Page-branch compiler | Local facet storage, shadowed provenance, reset impact, recompilation, and Undo | B, C | Reset deletes the local contribution and never copies a parent snapshot |
 | C34 | Adding a Page Group must preserve configuration even when compilation needs repair | Layering 018 | Membership commits as Draft while uncovered or invariant conflicts block readiness with direct repairs | Membership transaction, legality matrix, validator, and exporter | Committed stable membership, blocked facets, provenance, and readiness state | C, D | No membership is lost, and no blocked effective schema is reported ready |
@@ -471,7 +471,7 @@ show:
 - native inheritance in that editor through stable parent references, sparse local
   facets, effective provenance, and reset without copied parent snapshots;
 - bidirectional standalone parity for structural, type, presence, value, rule,
-  documentation, example, lifecycle, impact, and Undo/Redo operations;
+  documentation, example, lifecycle, impact, and page-scoped Undo/Redo operations;
 - the same rich controls at all contributor levels;
 - direct Page and Page Group composed-schema workspaces with all effective rows
   visible, field-level provenance, inline edits, and expandable complex builders;

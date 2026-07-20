@@ -4,7 +4,7 @@
 
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
-documentation export, and project-management checkpoints. Their contracts are:
+documentation export, project-management, and durable-project repository checkpoints. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
@@ -18,6 +18,8 @@ documentation export, and project-management checkpoints. Their contracts are:
 - `features/data-layer-project-library-and-active-context-runtime.feature`
 - `features/data-layer-project-portability-and-upgrade.feature`
 - `features/data-layer-project-portability-and-upgrade-runtime.feature`
+- `features/data-layer-durable-project-repository.feature`
+- `features/data-layer-durable-project-repository-runtime.feature`
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
@@ -27,6 +29,9 @@ The program for selected-Flow table documentation is
 `docs/data-layer-flow-table-documentation-export-program-R01.md`.
 The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
+The correction program for durable project storage, page-scoped Undo/Redo, and
+intentional publication revisions is
+`docs/data-layer-durable-project-repository-program-R01.md`.
 
 The user-approved canonical-authoring and layered-schema cycles are later authority
 than the earlier graph-only scope reduction. They supersede that reduction only for
@@ -78,7 +83,8 @@ candidate and were merged to `master` at `faa1aa3a`. That merge, including its r
 The following task lineages remain open and must now be recovered in this order:
 
 1. `single-schema-editor-parity`; then
-2. `flow-canvas-topology-examples`.
+2. `durable-project-repository`; then
+3. `flow-canvas-topology-examples`.
 
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
@@ -91,11 +97,13 @@ and non-vacuous pack entry now on `master`.
 
 Recover schema parity first, run only the `layered_schema` checkpoint and package
 command, and carry it through refactorer and architect to a terminal merge. Recover
-Flow only from that new merged baseline, run only the `flow_graph` checkpoint and
-package command, and carry it through the same terminal process. A later
-specification does not replace or deactivate an earlier task. Rejected candidates
-do not satisfy or close a task lineage, and unrelated implementation branches must
-not be merged wholesale.
+the durable repository from that new merged baseline, run only the
+`durable_project_repository` checkpoint and package command, and carry it through
+the same terminal process. Recover Flow only from the resulting durable merged
+baseline, run only the `flow_graph` checkpoint and package command, and carry it
+through the same terminal process. A later specification does not replace or
+deactivate an earlier task. Rejected candidates do not satisfy or close a task
+lineage, and unrelated implementation branches must not be merged wholesale.
 
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
@@ -175,6 +183,29 @@ owned identities and internal references, preserves external lineage, and leaves
 new project inactive until explicitly opened. Existing singleton project storage
 migrates once without identity or data loss.
 
+The durable-project repository checkpoint replaces canonical project, saved-schema,
+Flow graph, fixture, release, and active-project Web Storage documents with one
+versioned IndexedDB repository. Because operators may create numerous projects and
+large schema collections, the packaged extension requires both `storage` and
+`unlimitedStorage`. Those permissions do not excuse silent failure: quota, abort,
+corruption, and unavailable-repository failures remain truthful and recoverable.
+Mounting is read-only unless a verified migration is required and never
+unconditionally rewrites the project library.
+
+Draft saves use opaque base tokens for stale-write protection and update only the
+affected records. Tokens are not operator-facing revisions. Undo and Redo use
+forward and inverse patches held only in the open project page's memory and are
+accepted as lost on close, reload, or project replacement. No command, patch,
+snapshot, history, or checkpoint record persists. A bulk edit remains one atomic
+page-scoped Undo action. Only an intentional Publish creates the next immutable
+project revision.
+
+Legacy equal-generation divergence blocks for explicit source selection. Successful
+migration verifies durable read-back, retains a checksummed recovery backup, omits
+legacy Undo and Redo from active records, and only then removes migrated document
+keys from Web Storage. Project library browsing uses compact metadata and loads only
+the selected project route.
+
 The canonical authoring checkpoint replaces the current lightweight requirements
 grid, structured draft, path-constraint overlay, and any additional Shared Profile
 or composed-schema panel form as competing editable schema models. The side panel
@@ -184,9 +215,9 @@ Shared Profile is a contributor role, not a second schema type or editor. Builde
 standalone entity workspaces, and the side panel use the same complete editor core,
 including structural nested authoring, typed properties, conditional presence,
 allowed values, rich rules, documentation, examples, nested All/Any/Not predicate
-building, revision comparison, and synchronized Tree and Table views. Existing
-profile data migrates atomically without loss. Command-scoped patches, base
-revisions, and subscriptions prevent stale whole-profile overwrites.
+building, opaque Draft-token comparison, and synchronized Tree and Table views. Existing
+profile data migrates atomically without loss. Command-scoped patches, base Draft
+tokens, and subscriptions prevent stale whole-profile overwrites.
 Canonical property search is transient UI state shared across contributor editors;
 typing, caret edits, input-method composition, and clearing retain focus in the same
 connected control and perform no canonical command or persistence write at desktop
@@ -241,8 +272,11 @@ per-Event validator plus Flow selection restoration. These requirements are not 
 general Assignment or resolver redesign. Top-level Fixture and Assignment overview
 creation, opening, and guarded removal are active only as project-entity lifecycle;
 fixture execution and resolver semantics are not. Project-wide batch documentation
-export, coverage, preflight, release, Live, temporal Flow execution, and cross-
-surface concurrency beyond the canonical schema editor are not active work. Agent
+export, coverage, preflight, release assurance, Live, temporal Flow execution, and
+cross-surface concurrency beyond canonical Draft concurrency and durable repository
+subscriptions are not active work. The minimal intentional Publish boundary above
+exists only to create immutable project revisions; it does not activate the archived
+preflight, review, release-gate, Live, or publication-assurance programs. Agent
 role-playing without source knowledge and facilitated Windows usability are not
 acceptance gates. A future slice requires product-owner review, a new approved
 specification cycle, and a new file-based SwarmForge handoff.
@@ -339,6 +373,21 @@ The project-management checkpoint sequence is exactly:
 node scripts/run-focused-acceptance.mjs --pack project_management
 node scripts/package.mjs
 ```
+
+The durable-project repository checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack durable_project_repository
+node scripts/package.mjs
+```
+
+The `durable_project_repository` pack must register both durable-repository
+contracts and focused installed evidence for IndexedDB persistence, verified legacy
+migration, required `storage` and `unlimitedStorage` permissions, record-scoped
+Draft transactions, stale-write handling, page-scoped Undo/Redo, truthful repository
+failures, and the intentional publication boundary. It depends on
+`project_management` so revised portability and active-context contracts execute
+through their existing focused pack rather than being duplicated.
 
 The `project_management` pack must register all four project-management contracts
 and focused production evidence for the project repository, side-panel Projects

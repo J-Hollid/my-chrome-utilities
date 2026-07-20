@@ -36,7 +36,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     And duplicate semantic entries are proposed once with all source provenance
     And incompatible definitions block migration at their generated property paths
     When the operator resolves the conflicts and confirms migration
-    Then one atomic draft revision replaces the three editable representations
+    Then one atomic Saved Draft transaction replaces the three editable representations
     And one Undo restores the complete pre-migration project state
 
   # Data layer canonical Shared Profile schema authoring 005
@@ -120,13 +120,13 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 012
   Scenario: Data layer canonical Shared Profile schema authoring 012
-    Given Builder and side panel opened Opened Article at canonical revision 8
-    When Builder adds property article_author and commits revision 9
-    Then side panel receives revision 9 and displays article_author without reopening the project
-    When a stale side-panel command based on revision 8 adds article_category
+    Given Builder and side panel opened Opened Article at Draft token article-8
+    When Builder adds property article_author and commits Draft token article-9
+    Then side panel receives token article-9 and displays article_author without reopening the project
+    When a stale side-panel command based on token article-8 adds article_category
     Then the complete profile is never overwritten by the stale snapshot
-    And the operator visibly merges, rejects, or retries only the article_category command against revision 9
-    And both surfaces finish on one canonical revision containing every accepted command once
+    And the operator visibly merges, rejects, or retries only the article_category command against token article-9
+    And both surfaces finish on one canonical Saved Draft containing every accepted command once
 
   # Data layer canonical Shared Profile schema authoring 013
   Scenario: Data layer canonical Shared Profile schema authoring 013
@@ -134,7 +134,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     When the operator adds nested metadata.category as string, makes it Required when article_type Equals News, allows World and Technology, documents it, and selects World as its example
     And the operator verifies the property in Table and edits its comments from the side panel
     And the project is reloaded
-    Then Tree, Table, and side panel show one metadata.category property with the same type, conditional presence, values, documentation, example, comments, stable identity, and draft revision
+    Then Tree, Table, and side panel show one metadata.category property with the same type, conditional presence, values, documentation, example, comments, stable identity, and Saved Draft
     And compilation and validation consume exactly that canonical property definition
 
   # Data layer canonical Shared Profile schema authoring 014
@@ -156,7 +156,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then after every character focus remains in Canonical property search
     And its value is the complete typed prefix with the caret after the newest character
     And the property navigator updates to the matching article_name result without moving focus to a result, filter, view control, or property editor
-    And search causes no canonical revision, project transaction, or persisted change
+    And search causes no Draft token, project transaction, or persisted change
 
     Examples:
       | contributor       | surface        | viewport_width |
@@ -215,9 +215,9 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 019
   Scenario Outline: Data layer canonical Shared Profile schema authoring 019
-    Given both schema surfaces subscribe to canonical Opened Article revision 8
+    Given both schema surfaces subscribe to canonical Opened Article Draft token article-8
     When the operator completes <operation> in <authoring_surface>
-    Then <observing_surface> shows <result> at canonical revision 9
+    Then <observing_surface> shows <result> at Draft token article-9
     And both surfaces offered the same purpose-built controls and emitted the same property-scoped command
     And neither surface required raw JSON or stored a surface-specific schema representation
 
@@ -228,4 +228,4 @@ Feature: Data layer canonical Shared Profile schema authoring
       | make article_name Required when article_type Equals News          | side panel        | standalone        | structured conditional presence              |
       | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
       | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
-      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and Undo result |
+      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and page-scoped Undo result |
