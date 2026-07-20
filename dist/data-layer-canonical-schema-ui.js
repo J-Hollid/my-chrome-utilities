@@ -55,46 +55,78 @@ export function mountCanonicalSchemaEditor(options) {
         baseRevision.min = "0";
         baseRevision.setAttribute("aria-label", "Command base revision");
         header.append(title, state, undo, redo, labeled("Command base revision", baseRevision));
-        const refreshResults = () => { results.replaceChildren(); const rows = canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(query.toLowerCase())); if (document.view === "tree") {
-            const tree = dom.createElement("ul");
-            tree.setAttribute("aria-label", "Canonical property tree");
-            for (const row of rows) {
-                const item = dom.createElement("li"), choose = dom.createElement("button");
-                item.style.paddingInlineStart = `${row.depth * 1.25}rem`;
-                choose.type = "button";
-                choose.textContent = `${row.node.name} · ${row.path} · ${row.node.type}`;
-                choose.dataset.propertyId = row.id;
-                choose.setAttribute("aria-current", String(row.selected));
-                choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
-                item.append(choose);
-                tree.append(item);
-            }
-            results.append(tree);
-        }
-        else {
-            const table = dom.createElement("table"), head = dom.createElement("thead"), body = dom.createElement("tbody");
-            head.innerHTML = "<tr><th>Property</th><th>Type</th><th>Presence</th><th>Condition</th><th>Allowed values</th><th>Rules</th><th>Documentation</th><th>Example</th><th>Validation state</th></tr>";
-            for (const row of rows) {
-                const tr = dom.createElement("tr"), choose = dom.createElement("button");
-                choose.type = "button";
-                choose.textContent = `${"› ".repeat(row.depth)}${row.node.name}`;
-                choose.dataset.propertyId = row.id;
-                choose.setAttribute("aria-expanded", String(row.selected));
-                choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
-                const values = [choose, row.node.type, row.node.presence.mode, row.node.presence.condition ? plainPredicate(row.node.presence.condition, document) : "Always", row.node.allowedValues.map(({ value }) => String(value)).join(", "), String(row.node.rules.length), row.node.documentation.description, row.node.documentation.example.method === "blank" ? "Blank" : String(row.node.documentation.example.value), row.validationState];
-                for (const value of values) {
-                    const cell = dom.createElement("td");
-                    if (value instanceof HTMLElement)
-                        cell.append(value);
-                    else
-                        cell.textContent = value;
-                    tr.append(cell);
+        const refreshResults = () => {
+            results.replaceChildren();
+            const rows = canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(query.toLowerCase()));
+            if (document.view === "tree") {
+                const tree = dom.createElement("ul");
+                tree.setAttribute("aria-label", "Canonical property tree");
+                for (const row of rows) {
+                    const item = dom.createElement("li"), choose = dom.createElement("button");
+                    item.style.paddingInlineStart = `${row.depth * 1.25}rem`;
+                    choose.type = "button";
+                    choose.textContent = `${row.node.name} · ${row.path} · ${row.node.type}`;
+                    choose.dataset.propertyId = row.id;
+                    choose.setAttribute("aria-current", String(row.selected));
+                    choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
+                    item.append(choose);
+                    tree.append(item);
                 }
-                body.append(tr);
+                results.append(tree);
             }
-            table.append(head, body);
-            results.append(table);
-        } };
+            else {
+                const table = dom.createElement("table"), head = dom.createElement("thead"), body = dom.createElement("tbody");
+                table.setAttribute("aria-label", "Complete canonical schema table");
+                head.innerHTML = "<tr><th>Property</th><th>Path</th><th>Type</th><th>Presence</th><th>Expected or allowed values</th><th>Conditions</th><th>Rules</th><th>Documentation</th><th>Example</th><th>Source</th><th>Local state</th><th>Validation state</th><th>Actions</th></tr>";
+                for (const row of rows) {
+                    const tr = dom.createElement("tr"), choose = dom.createElement("button"), type = select(`inlineType-${row.id}`, types, row.node.type), presence = select(`inlinePresence-${row.id}`, ["optional", "required", "required-when", "forbidden", "forbidden-when"], row.node.presence.mode), values = input(`inlineValues-${row.id}`, row.node.allowedValues.map(({ value }) => String(value)).join(", ")), expected = input(`inlineExpected-${row.id}`, String(row.node.expectedValue ?? "")), documentation = input(`inlineDocumentation-${row.id}`, row.node.documentation.description), example = input(`inlineExample-${row.id}`, String(row.node.documentation.example.value ?? "")), valueGroup = dom.createElement("div"), actions = dom.createElement("div"), addChild = dom.createElement("button"), addSibling = dom.createElement("button"), rename = dom.createElement("button"), duplicate = dom.createElement("button"), move = dom.createElement("button"), remove = dom.createElement("button"), reveal = dom.createElement("button");
+                    choose.type = "button";
+                    choose.textContent = `${"› ".repeat(row.depth)}${row.node.name}`;
+                    choose.dataset.propertyId = row.id;
+                    choose.setAttribute("aria-expanded", String(row.selected));
+                    choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
+                    type.setAttribute("aria-label", `${row.path} inline type`);
+                    presence.setAttribute("aria-label", `${row.path} inline presence`);
+                    values.setAttribute("aria-label", `${row.path} inline allowed values`);
+                    expected.setAttribute("aria-label", `${row.path} inline expected value`);
+                    documentation.setAttribute("aria-label", `${row.path} inline documentation`);
+                    example.setAttribute("aria-label", `${row.path} inline example`);
+                    type.addEventListener("change", () => send({ kind: "type", baseRevision: document.revision, propertyId: row.id, type: type.value, ...(type.value === "array" ? { itemType: row.node.itemType ?? "string" } : {}) }));
+                    presence.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: row.id, patch: { presence: { mode: presence.value, ...(presence.value.endsWith("-when") && row.node.presence.condition ? { condition: row.node.presence.condition } : {}) } } }));
+                    values.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: row.id, patch: { allowedValues: values.value.split(",").map((value) => value.trim()).filter(Boolean).map((value, index) => ({ id: row.node.allowedValues[index]?.id ?? options.id("allowed-value"), value })) } }));
+                    expected.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: row.id, patch: { expectedValue: expected.value || undefined } }));
+                    documentation.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: row.id, patch: { documentation: { ...row.node.documentation, description: documentation.value } } }));
+                    example.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: row.id, patch: { documentation: { ...row.node.documentation, example: example.value ? { method: "custom", value: example.value } : { method: "blank" } } } }));
+                    valueGroup.append(labeled("Expected", expected), labeled("Allowed", values));
+                    for (const [button, text] of [[addChild, "Add child"], [addSibling, "Add sibling"], [rename, "Rename"], [duplicate, "Duplicate"], [move, "Move"], [remove, "Delete"], [reveal, "Reveal complex row detail"]]) {
+                        button.type = "button";
+                        button.textContent = text;
+                    }
+                    addChild.addEventListener("click", () => send({ kind: "add", baseRevision: document.revision, parentId: row.id, name: "child", type: "string", id: options.id }));
+                    addSibling.addEventListener("click", () => send({ kind: "add", baseRevision: document.revision, ...(row.node.parentId ? { parentId: row.node.parentId } : {}), afterId: row.id, name: "property", type: "string", id: options.id }));
+                    rename.addEventListener("click", () => { const next = prompt(`Rename ${row.node.name}`, row.node.name)?.trim(); if (next)
+                        send({ kind: "rename", baseRevision: document.revision, propertyId: row.id, name: next }); });
+                    duplicate.addEventListener("click", () => send({ kind: "duplicate", baseRevision: document.revision, propertyId: row.id, id: options.id }));
+                    move.addEventListener("click", () => send({ kind: "move", baseRevision: document.revision, propertyId: row.id }));
+                    remove.addEventListener("click", () => send({ kind: "delete", baseRevision: document.revision, propertyId: row.id }));
+                    reveal.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
+                    actions.className = "canonical-inline-row-actions";
+                    actions.append(addChild, addSibling, rename, duplicate, move, remove, reveal);
+                    const cells = [choose, row.path, type, presence, valueGroup, row.node.presence.condition ? plainPredicate(row.node.presence.condition, document) : "Always", String(row.node.rules.length), documentation, example, row.node.provenance.map(({ source }) => source).join(", "), "Local canonical definition", row.validationState, actions];
+                    for (const value of cells) {
+                        const cell = dom.createElement("td");
+                        if (value instanceof HTMLElement)
+                            cell.append(value);
+                        else
+                            cell.textContent = value;
+                        tr.append(cell);
+                    }
+                    body.append(tr);
+                }
+                table.append(head, body);
+                results.append(table);
+            }
+        };
         search.type = "search";
         search.setAttribute("aria-label", "Canonical property search");
         search.placeholder = "Search properties";

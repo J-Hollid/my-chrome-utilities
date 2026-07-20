@@ -7,7 +7,8 @@ export interface LayeredContributorPath {profileId?:string;eventId?:string;pageG
 
 const contributionFor=(entity:ProjectEntity,scope:LayerScope):LayerContributor=>{
   const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;
-  return{id:entity.id,name:entity.name,scope,constraints:canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??[])};
+  const base=canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??[]),sparse=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[];
+  return{id:entity.id,name:entity.name,scope,constraints:[...base,...sparse]};
 };
 const referencedId=(entity:Record<string,unknown>,key:string):string|undefined=>typeof entity[key]==="string"?String(entity[key]):undefined;
 const referencedProfileId=(state:ProjectState,entity:ProjectEntity):string|undefined=>{
