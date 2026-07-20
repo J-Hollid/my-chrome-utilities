@@ -717,19 +717,25 @@
   {
     "id": "layered_schema",
     "source": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-ui.ts"
     ],
     "dependencies": [],
     "unit": [
+      "test/data-layer-canonical-schema-authoring-test.mjs",
       "test/data-layer-layered-schema-test.mjs",
       "test/data-layer-layered-schema-persistence-test.mjs",
       "test/data-layer-layered-schema-adoption-test.mjs"
     ],
     "property": [
+      "test/data-layer-canonical-schema-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [
+      "features/data-layer-canonical-shared-profile-schema-authoring.feature",
+      "features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature",
       "features/data-layer-layered-schema-constraints.feature",
       "features/data-layer-layered-schema-constraints-runtime.feature"
     ],

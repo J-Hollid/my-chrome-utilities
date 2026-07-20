@@ -1,4 +1,5 @@
 import { advanceFlowInstance, conditionMatches as projectConditionMatches, startFlowInstance } from "./data-layer-specification-project.js";
+import { canonicalRequirements } from "./data-layer-canonical-schema.js";
 import { conditionGroupAppliesToValue } from "./data-layer-conditional-validation-rules.js";
 export { applyCanonicalCommand, applyCanonicalSchemaDraftEdits, createCanonicalProjectEnvelope, migrateCanonicalProject } from "./data-layer-specification-model.js";
 const clone = (value) => structuredClone(value);
@@ -16,7 +17,7 @@ function contentIdentity(prefix, value) { let hash = 2166136261; for (const char
 } return `${prefix}:${(hash >>> 0).toString(16).padStart(8, "0")}`; }
 function index(entities) { return Object.fromEntries(entities.map((entity) => [entity.id, clone(entity)])); }
 function requirementDocument(profiles) { const root = { type: "object", properties: {}, required: [] }, effective = new Map(), origins = new Map(), conflicts = []; for (const profile of profiles)
-    for (const requirement of profile.requirements) {
+    for (const requirement of profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements) {
         const prior = effective.get(requirement.path), pathOrigins = origins.get(requirement.path) ?? [];
         if (prior?.type && requirement.type && prior.type !== requirement.type)
             conflicts.push({ path: requirement.path, origins: [...pathOrigins, profile.id], reason: `Incompatible types ${prior.type} and ${requirement.type}` });
@@ -76,7 +77,7 @@ export function compileSpecificationProject(envelope) { const diagnostics = grap
         return { status: "blocked", diagnostics: compiled.conflicts.map((conflict) => ({ code: "profile-conflict", entityId: schema.id, field: conflict.path, referenceId: `${conflict.origins.join(",")}: ${conflict.reason}` })) };
     const working = schema.workingDraft?.document, document = profiles.length ? compiled.document : clone(working ?? schema.document ?? compiled.document), revision = Number(schema.version ?? 1);
     schemas[schema.id] = { schemaId: schema.id, revision, document, required: compiled.required, profileIds: profiles.map(({ id }) => id) };
-    profiles.forEach((profile, position) => profile.requirements.forEach((requirement) => { provenance[`${schema.id}:${requirement.path}`] ??= []; provenance[`${schema.id}:${requirement.path}`].push({ profileId: profile.id, profileName: profile.name, position }); }));
+    profiles.forEach((profile, position) => (profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements).forEach((requirement) => { provenance[`${schema.id}:${requirement.path}`] ??= []; provenance[`${schema.id}:${requirement.path}`].push({ profileId: profile.id, profileName: profile.name, position }); }));
 } const assignments = envelope.project.collections.assignments.map((assignment) => ({ assignmentId: assignment.id, schemaDraftId: String(assignment.schemaDraftId ?? assignment.schemaId), applicabilitySetId: String(assignment.applicabilitySetId), eventId: String(assignment.eventId), priority: Number(assignment.priority ?? 0), schemaRevision: Number(assignment.schemaRevision) })), planContent = { projectId: envelope.project.id, draftId: envelope.draftId, revision: envelope.revision, sourceProject: clone(envelope.project), pages: index(envelope.project.collections.pages), events: index(envelope.project.collections.events), applicability: index(envelope.project.collections.applicabilitySets), flows: index(envelope.project.collections.flows), schemas, assignments, provenance }, executableContent = { projectId: envelope.project.id, pages: planContent.pages, events: planContent.events, applicability: planContent.applicability, flows: planContent.flows, schemas, assignments, provenance }, plan = { ...planContent, contentIdentity: contentIdentity("plan", planContent), evaluatorContentIdentity: contentIdentity("evaluator", executableContent) }; return { status: "compiled", plan: freeze(plan), diagnostics: [] }; }
 function conditionMatches(condition, observation) { return condition ? projectConditionMatches(condition, observation) : true; }
 function observedType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
