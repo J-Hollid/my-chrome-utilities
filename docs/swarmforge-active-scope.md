@@ -68,22 +68,34 @@ not eligible for integration because it deletes the active project-management
 program and all four active project-management feature contracts while this file
 continues to name them.
 
-## Current delivery queue
+## Current delivery and recovery queue
 
-The following task lineages are cumulative and remain open until each reaches an
-architect terminal handoff and is merged to `master`:
+Project library, active context, and the project-entity overview lifecycle landed
+together through the architect-approved `project-library-active-context` terminal
+candidate and were merged to `master` at `faa1aa3a`. That merge, including its real
+`project_management` pack and lifecycle evidence, is the required recovery baseline.
 
-1. `single-schema-editor-parity`;
-2. `flow-canvas-topology-examples`;
-3. `project-library-active-context`; and
-4. `project-entity-overview-lifecycle`.
+The following task lineages remain open and must now be recovered in this order:
 
-The order controls delivery sequencing only. A later specification does not replace
-or deactivate an earlier task, and a candidate for one task must preserve the active
-contracts and parent files for the other three. Rejected candidates do not satisfy
-or close their task lineage; the task must continue from current `master` under the
-same stable task name. Shared prerequisites may be ported when required, but
-unrelated implementation branches must not be merged wholesale.
+1. `single-schema-editor-parity`; then
+2. `flow-canvas-topology-examples`.
+
+The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
+eligible because each introduced a vacuous `project_management` pack. Later coder
+commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their
+lineage predates `faa1aa3a` and must not be merged, rebased, or cherry-picked as a
+whole. Use them only as patch references while reconstructing each task from current
+`master`. The reconstruction must retain every project-management and project-entity
+source file, test, acceptance handler, browser adapter, architecture registration,
+and non-vacuous pack entry now on `master`.
+
+Recover schema parity first, run only the `layered_schema` checkpoint and package
+command, and carry it through refactorer and architect to a terminal merge. Recover
+Flow only from that new merged baseline, run only the `flow_graph` checkpoint and
+package command, and carry it through the same terminal process. A later
+specification does not replace or deactivate an earlier task. Rejected candidates
+do not satisfy or close a task lineage, and unrelated implementation branches must
+not be merged wholesale.
 
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
