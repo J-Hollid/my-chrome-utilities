@@ -117,9 +117,9 @@ const pathState={project:{collections:{
   flows:[{id:"flow:selected",name:"Selected flow"},{id:"flow:unrelated",name:"Unrelated flow"}],
 },documentationFlowGraphs:{"flow:selected":{pageGroupIds:["group:selected"],occurrences:[{id:"occurrence:selected",name:"Selected occurrence",profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected"},{id:"occurrence:sibling",name:"Sibling occurrence",eventId:"event:unrelated",pageGroupId:"group:selected",pageId:"page:selected"}]},"flow:unrelated":{occurrences:[{id:"occurrence:unrelated",name:"Unrelated occurrence",eventId:"event:unrelated",pageGroupId:"group:unrelated",pageId:"page:unrelated"}]}}}};
 const selectedOccurrence=pathState.project.documentationFlowGraphs["flow:selected"].occurrences[0],selectedPath=layeredContributorPath(pathState,selectedOccurrence,"Event-occurrence","flow:selected"),selectedContributors=layeredContributorsForPath(pathState,selectedPath);
-assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",occurrenceId:"occurrence:selected"});
+assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageGroupIds:["group:selected"],pageId:"page:selected",flowId:"flow:selected",occurrenceId:"occurrence:selected"});
 assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","flow:selected","occurrence:selected"]);
-assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.flows[0],"Flow Page-instance"),{pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected"});
+assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.flows[0],"Flow Page-instance"),{pageGroupId:"group:selected",pageGroupIds:["group:selected"],pageId:"page:selected",flowId:"flow:selected"});
 assert.equal(layeredContributorPath(pathState,{id:"occurrence:context",name:"Context occurrence",pageGroupId:"group:selected",pageId:"page:selected",contextBindingId:"binding:selected"},"Event-occurrence","flow:selected").eventId,"event:selected");
 assert.equal(layeredEventRole({id:"occurrence:context",name:"Context occurrence",contextBindingId:"binding:selected"}),"context");
 assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');
@@ -167,5 +167,27 @@ assert.deepEqual(detailRows.slice(0,2),[
   {contributorId:"profile:selected",contributorName:"Selected",scope:"Shared Profile",path:"/profile_value",target:"all",condition:'{"field":"country","equals":"NL"}',enforcement:"invariant",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
   {contributorId:"event:selected",contributorName:"Selected event",scope:"Event",path:"/event_value",target:"event:selected",condition:"Always",enforcement:"overridable",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
 ]);
+
+const orderedState={project:{collections:{
+  profiles:[],events:[],flows:[],
+  pages:[{id:"page:cart",name:"Cart",pageGroupIds:["group:checkout","group:retail","group:trade"]}],
+  pageGroups:[
+    {id:"group:checkout",name:"Checkout",schemaConstraints:[{path:"/funnel_name",type:"string",expectedValue:"checkout"},{path:"/funnel_step",type:"string",allowedValues:["3a","3b"]}]},
+    {id:"group:retail",name:"Retail Checkout",applicabilitySetId:"app:retail",schemaConstraints:[{path:"/funnel_step",allowedValues:["3a"]}]},
+    {id:"group:trade",name:"Trade Checkout",applicabilitySetId:"app:trade",schemaConstraints:[{path:"/funnel_step",allowedValues:["3b"]}]},
+  ],
+  applicabilitySets:[
+    {id:"app:retail",name:"Retail",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}},
+    {id:"app:trade",name:"Trade",condition:{kind:"any",conditions:[{kind:"predicate",field:"customer_type",operator:"equals",value:"trade"},{kind:"predicate",field:"market",operator:"equals",value:"overlap"}]}},
+  ],fixtures:[],schemaDrafts:[],assignments:[],
+},documentationFlowGraphs:{}}};
+const orderedPath=layeredContributorPath(orderedState,orderedState.project.collections.pages[0],"Page");
+assert.deepEqual(orderedPath.pageGroupIds,["group:checkout","group:retail","group:trade"]);
+const retailContributors=layeredContributorsForPath(orderedState,orderedPath,{customer_type:"retail"}),retailCompiled=compileLayeredSchema(retailContributors,{eventId:"event:page",eventRole:"interaction"});
+assert.deepEqual(retailCompiled.provenance.filter(({scope})=>scope==="Page Group").map(({contributorId})=>contributorId),["group:checkout","group:retail"]);
+assert.deepEqual(retailCompiled.properties["/funnel_step"].allowedValues,["3a"]);
+assert.ok(retailCompiled.exclusions.some(({contributorId})=>contributorId==="group:trade"),"inactive memberships remain visible as exclusions");
+const ambiguousContributors=layeredContributorsForPath(orderedState,orderedPath,{customer_type:"retail",market:"overlap"});
+assert.equal(compileLayeredSchema(ambiguousContributors,{eventId:"event:page",eventRole:"interaction"}).status,"blocked","membership order cannot select between overlapping applicable groups");
 
 console.log("data-layer layered schema tests passed");

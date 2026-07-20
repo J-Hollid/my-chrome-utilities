@@ -5,9 +5,12 @@ const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const branch = (scope) => scope === "Event" ? "event" : scope === "Page Group" || scope === "Page" || scope === "Flow Page-instance" ? "page" : scope === "Event-occurrence" ? "occurrence" : "shared";
 const parallelMismatch = (left, right) => Boolean(left.type && right.type && left.type !== right.type || left.expectedValue !== undefined && right.expectedValue !== undefined && !same(left.expectedValue, right.expectedValue) || left.presence === "required" && right.presence === "forbidden" || left.presence === "forbidden" && right.presence === "required");
 export function compileLayeredSchema(contributors, context) {
-    const properties = {}, conflicts = [], provenance = contributors.map(origin), exclusions = [];
+    const activeContributors = contributors.filter(({ active }) => active !== false), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names) => conflicts.push({ path, message, contributors: names });
-    const active = contributors.flatMap((contributor) => contributor.constraints.filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
+    const applicableGroups = activeContributors.filter(({ scope, applicabilityConditional }) => scope === "Page Group" && applicabilityConditional);
+    if (applicableGroups.length > 1)
+        conflict("/", "ambiguous Page Group applicability; membership order cannot select a winner", applicableGroups.map(({ name }) => name));
+    const active = activeContributors.flatMap((contributor) => contributor.constraints.filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
     for (const page of active.filter(({ contributor }) => branch(contributor.scope) === "page"))
         for (const event of active.filter(({ contributor }) => branch(contributor.scope) === "event")) {
             if (page.constraint.path !== event.constraint.path || !parallelMismatch(page.constraint, event.constraint))
@@ -20,7 +23,7 @@ export function compileLayeredSchema(contributors, context) {
                 conflict(page.constraint.path, "parallel Page and Event branches conflict; add an explicit contextual resolution", [page.contributor.name, event.contributor.name]);
             }
         }
-    for (const contributor of contributors)
+    for (const contributor of activeContributors)
         for (const constraint of contributor.constraints) {
             if (!included(constraint.target, context)) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path: constraint.path, target: constraint.target ?? "all" });

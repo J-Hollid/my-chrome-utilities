@@ -4,7 +4,8 @@ import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishPro
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-executable-flow-ui.js";
-import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder } from "./utilities/data-layer/flow-graph.js";
+import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder, moveFlowPageFrame, removeFlowPageFrame } from "./utilities/data-layer/flow-graph.js";
+import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, removePageGroupMembership, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
@@ -29,6 +30,7 @@ const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
 let state, lastCommittedState;
 let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let pageGroupMembershipStatus = "";
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function renderCanonicalProfileEditor(host, entity) {
     if (!state)
@@ -86,6 +88,80 @@ function renderCanonicalProfileOverview(host) {
     host.prepend(section);
 }
 function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
+function renderPageGroupMembershipEditor(host, page) {
+    if (!state)
+        return;
+    const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), menu = document.createElement("details"), menuSummary = document.createElement("summary"), menuAdd = document.createElement("button"), stack = document.createElement("ol"), memberships = orderedPageGroupIds(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group]));
+    section.setAttribute("aria-label", "Page Group rule stack");
+    heading.textContent = "Page Group rule stack";
+    guidance.textContent = "Rules apply from top to bottom, general to specific. Later Page Groups may only make legal guarded refinements.";
+    impact.setAttribute("role", "status");
+    impact.setAttribute("aria-label", "Page Group membership impact");
+    impact.textContent = pageGroupMembershipStatus;
+    picker.setAttribute("aria-label", "Add to Page Group picker");
+    picker.hidden = true;
+    search.type = "search";
+    search.setAttribute("aria-label", "Search Page Groups to add");
+    results.setAttribute("aria-label", "Page Group membership search results");
+    add.type = menuAdd.type = "button";
+    add.textContent = menuAdd.textContent = "Add to Page Group";
+    menu.setAttribute("aria-label", `${page.name} context menu`);
+    menuSummary.textContent = "Page actions";
+    menu.append(menuSummary, menuAdd);
+    const showPicker = () => { picker.hidden = false; search.focus(); }, renderResults = () => { const term = search.value.trim().toLowerCase(); results.replaceChildren(...state.project.collections.pageGroups.filter((group) => !memberships.includes(group.id) && group.name.toLowerCase().includes(term)).map((group) => { const control = document.createElement("button"), constraints = (group.canonicalSchema?.nodes ? Object.keys(group.canonicalSchema.nodes).length : (group.schemaConstraints ?? []).length), applicability = state.project.collections.applicabilitySets.find(({ id }) => id === group.applicabilitySetId); control.type = "button"; control.textContent = `${group.name} · Purpose ${String(group.purpose ?? "Page schema contribution")} · Applicability ${applicability?.name ?? "Always"} · Prospective rule impact ${constraints} properties`; control.addEventListener("click", () => persist(addPageGroupMembership(state, page.id, group.id))); return control; })); };
+    search.addEventListener("input", renderResults);
+    add.addEventListener("click", showPicker);
+    menuAdd.addEventListener("click", showPicker);
+    picker.append(search, results);
+    renderResults();
+    for (const [index, groupId] of memberships.entries()) {
+        const group = groups.get(groupId), row = document.createElement("li"), summary = document.createElement("span"), actions = document.createElement("div"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
+        row.dataset.pageGroupMembershipId = groupId;
+        row.tabIndex = -1;
+        summary.textContent = `${index + 1}. ${group?.name ?? groupId} · ${(group?.schemaConstraints ?? []).length} effective contributions or conflicts`;
+        actions.className = "membership-row-actions";
+        for (const control of [open, earlier, later, remove])
+            control.type = "button";
+        open.textContent = "Open Page Group";
+        earlier.textContent = "Move earlier";
+        later.textContent = "Move later";
+        remove.textContent = "Remove";
+        earlier.disabled = index === 0;
+        later.disabled = index === memberships.length - 1;
+        open.addEventListener("click", () => { selectedKind = "pageGroups"; selectedId = groupId; persistNavigation(); render(); });
+        const reorder = (delta) => { pageGroupMembershipStatus = `Impact preview: changed effective properties for ${page.name}; affected Page instances and compiled targets will be recomputed; exports and evidence become stale; project remains Draft with Undo available.`; persist(movePageGroupMembership(state, page.id, groupId, delta)); queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(groupId)}"]`)?.focus()); };
+        earlier.addEventListener("click", () => reorder(-1));
+        later.addEventListener("click", () => reorder(1));
+        remove.addEventListener("click", () => { const review = inspectPageGroupMembershipRemoval(state.project, page.id, groupId); if (review.blocked) {
+            impact.textContent = review.message;
+            for (const action of review.actions) {
+                const repair = document.createElement("button");
+                repair.type = "button";
+                repair.textContent = action.label;
+                repair.addEventListener("click", () => persist(action.kind === "move-frame" ? moveFlowPageFrame(state, action.flowId, action.frameId, { pageGroupId: action.pageGroupId, y: 90 }) : removeFlowPageFrame(state, action.flowId, action.frameId)));
+                impact.append(" ", repair);
+            }
+            return;
+        } pageGroupMembershipStatus = `Changed membership ${group?.name ?? groupId}; affected schema targets and Page instances updated; exports and evidence are stale; Draft status retained; Undo available.`; persist(removePageGroupMembership(state, page.id, groupId)); });
+        actions.append(open, earlier, later, remove);
+        row.append(summary, actions);
+        stack.append(row);
+    }
+    const legacy = state.project.collections.pageGroups.some((group) => (group.pageIds ?? []).includes(page.id)), migration = stagePageGroupMembershipMigration(state.project, page.id);
+    if (legacy || migration.missingPageGroupIds.length || migration.duplicatePageGroupIds.length) {
+        const review = document.createElement("section"), summary = document.createElement("p"), confirm = document.createElement("button");
+        review.setAttribute("aria-label", "Page Group membership migration review");
+        summary.textContent = `Proposed ordered membership: ${migration.proposedPageGroupIds.map((id) => groups.get(id)?.name ?? id).join(", ")}. Page-owned order is preserved before group-only memberships. ${migration.missingPageGroupIds.length ? `Missing references: ${migration.missingPageGroupIds.join(", ")}.` : "No membership will be lost."}`;
+        confirm.type = "button";
+        confirm.textContent = "Confirm ordered membership migration";
+        confirm.disabled = Boolean(migration.missingPageGroupIds.length || migration.duplicatePageGroupIds.length);
+        confirm.addEventListener("click", () => persist(confirmPageGroupMembershipMigration(state, migration)));
+        review.append(summary, confirm);
+        section.append(review);
+    }
+    section.append(heading, guidance, add, menu, picker, stack, impact);
+    host.append(section);
+}
 function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
@@ -138,8 +214,8 @@ function entitySearchText(value) { return JSON.stringify(value).toLowerCase(); }
 function entitiesForKind(kind) { if (!state)
     return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }
 const editorFields = {
-    profiles: [], pages: [{ key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "pageGroupIds", label: "Page groups", collection: "pageGroups", multiple: true }, { key: "expectedEventIds", label: "Expected events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
-    pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "pageIds", label: "Members", collection: "pages", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    profiles: [], pages: [{ key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "expectedEventIds", label: "Expected events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "role", label: "Documentary role", type: "flow-role" }, { key: "trigger", label: "Default documentary trigger" }, { key: "schemaDraftId", label: "Reusable payload schema", collection: "schemaDrafts" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
@@ -370,8 +446,20 @@ function renderWorkspace() {
         list.append(row);
     }
     content.append(heading, count, list);
-    if (selected)
+    if (selected) {
         renderSelectedEntityEditor(content, selected);
+        if (selectedKind === "pages")
+            renderPageGroupMembershipEditor(content, selected);
+        if (selectedKind === "pageGroups") {
+            const members = document.createElement("section"), memberList = document.createElement("ul");
+            members.setAttribute("aria-label", "Derived Page Group members");
+            members.append(Object.assign(document.createElement("h3"), { textContent: "Derived members" }));
+            for (const page of pageGroupMembers(state.project, selected.id))
+                memberList.append(Object.assign(document.createElement("li"), { textContent: page.name }));
+            members.append(memberList);
+            content.append(members);
+        }
+    }
 }
 function whereUsed(identity) { if (!state)
     return []; const result = []; for (const [kind, entities] of Object.entries(state.project.collections))

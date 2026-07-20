@@ -175,6 +175,13 @@
     "module": "schemas",
     "layer": "core"
   },
+  "src/data-layer-page-group-membership.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-canonical-schema.ts": {
     "module": "schemas",
     "layer": "application",
@@ -195,6 +202,7 @@
     "contracts": [
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-layered-schema.ts",
+      "src/data-layer-page-group-membership.ts",
       "src/data-layer-specification-project.ts"
     ]
   },

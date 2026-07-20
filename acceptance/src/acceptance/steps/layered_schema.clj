@@ -18,7 +18,7 @@
 (defn- verify-model! [] (when-not @model-verified? (checked! "node" "test/data-layer-canonical-schema-authoring-test.mjs") (checked! "node" "test/data-layer-layered-schema-test.mjs") (checked! "node" "test/data-layer-layered-schema-persistence-test.mjs") (checked! "node" "test/data-layer-layered-schema-adoption-test.mjs") (reset! model-verified? true)))
 (defn- observe-browser! [] (or @browser-observation (let [result (checked! "node" "test/browser-packs/layered-schema.mjs") line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result)))) observed (:layeredSchema (json/parse-string line true))] (reset! browser-observation observed))))
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
-                                (map #(keyword (str "authoring" (format "%03d" %))) (range 1 15))
-                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 13)))))
+                                (map #(keyword (str "authoring" (format "%03d" %))) (range 1 17))
+                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 16)))))
 (defn- assert-runtime! [evidence] (support/assert! (and (= runtime-paths (set (keys evidence))) (every? true? (vals evidence))) "Installed layered-schema evidence is incomplete." evidence))
 (def handlers (support/verified-feature-mode-handlers feature-files entry-modes :layered-schema-mode verify-model! (fn [_mode _example] true) observe-browser! assert-runtime!))
