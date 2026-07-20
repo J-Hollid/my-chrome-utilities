@@ -39,18 +39,22 @@ and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pa
 remain in their Page Group lane, while free Pages may use transient before-lanes or
 after-lanes edge targets without invented membership. Empty edge targets do not
 render as permanent lane-sized groups; compact free frames sandwich the Page Group
-lanes only where content exists. Page-owned bindings define context-
-setting occurrences, including multiple SPA bindings; reusable Events define
-interaction occurrences. Occurrences cannot cross Page or Page Group boundaries.
+lanes only where content exists. The Page frame itself is the Page context and may
+exist without any Event. Context-setting and interaction Events use one direct
+Page-contained occurrence model; role and trigger are explanatory metadata, not a
+validation selector. Occurrences cannot cross Page or Page Group boundaries.
 Parallel branches and merges are included in the first canvas release. Graph records
-persist stable Page Group, Page, binding, Event, occurrence, relationship, and
-endpoint references.
+persist stable Page Group, Page, Event, occurrence, relationship, and endpoint
+references without a Page-context binding model.
 
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
 per-Event payload validation remains independent and journey expectations remain
-manual. Any retained executable-step authoring is an explicitly separate Advanced
-function and does not duplicate or replace documentary graph authoring.
+manual. Existing applicability and assignment rules resolve production Page context
+from observation evidence and the observed Event; Flow role or trigger metadata does
+not replace that resolver. Any retained executable-step authoring is an explicitly
+separate Advanced function and does not duplicate or replace documentary graph
+authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the

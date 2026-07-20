@@ -50,13 +50,13 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 005
   Scenario: Data layer directional Flow specification graph runtime 005
-    Given production Cart binds page_view for initial load and route_view for SPA route change
-    And its Page frame is rendered
-    When actual controls expand Context events on Cart
-    Then page_view and route_view controls show binding names and trigger purposes
-    When actual pointer and keyboard controls insert both bindings
-    Then canonical storage contains two Page-context occurrences with stable Cart, Checkout, binding, and Event references
-    And stored records contain no copied schema, editable Event role, or lane-name string
+    Given the production Cart frame contains no Event occurrence
+    And production page_view and route_view are context-setting Events
+    When actual pointer controls insert page_view with trigger Initial load
+    And installed keyboard controls insert route_view with trigger SPA route change
+    Then both production records use the Page-contained Event occurrence shape used by interactions
+    And canonical storage retains stable Cart, Checkout, Event, and occurrence IDs plus role and trigger
+    And stored Page and Flow records contain no context-binding, copied schema, or lane-name field
 
   # Data layer directional Flow specification graph runtime 006
   Scenario: Data layer directional Flow specification graph runtime 006
@@ -71,14 +71,14 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 007
   Scenario: Data layer directional Flow specification graph runtime 007
-    Given production Landing with page_view and Campaign with route_view have no Page Group reference
+    Given production Landing and Campaign have no Page Group reference or Event occurrence
     And the installed canvas contains no free Page frame
     When actual pointer events drag Landing beyond the selected lane bounds
     Then narrow Place before lanes and Place after lanes targets render at opposite canvas edges
     And computed target geometry is not lane-sized
     When pointerup places Landing before the lanes and Campaign after the lanes
     Then compact production frames render on opposite sides of the Page Group lanes
-    And canonical records store before-lanes or after-lanes, coordinates, Page IDs, and binding IDs without Page Group IDs
+    And canonical records store before-lanes or after-lanes, coordinates, Page IDs, and frame IDs without Page Group or context-binding IDs
     And unused edge backgrounds leave the DOM while both frames accept Event drops and connection ports
 
   # Data layer directional Flow specification graph runtime 008
@@ -145,10 +145,10 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
-    Given the production rename fixture has a Page-context node, an interaction node, and their directed edge
+    Given the production rename fixture has one context-setting Event node, one interaction Event node, and their directed edge
     When actual collection controls rename Checkout to Basket, Cart to Basket page, and add_payment_info to payment_details_added
     Then installed canvas, catalogs, popover, and outline render the new names
-    And canonical Page Group, Page, binding, Event, occurrence, and relationship IDs remain byte-identical
+    And canonical Page Group, Page, Event, occurrence, relationship, role, and trigger values remain byte-identical
     When the built extension reloads
     Then production lane order, containment, coordinates, selection, endpoints, and relationship meaning are unchanged
 
@@ -157,7 +157,7 @@ Feature: Data layer directional Flow specification graph runtime
     Given actual controls create a fresh Checkout journey with no graph content
     When only production main-workspace controls add ordered Checkout and Confirmation lanes
     And actual controls insert Cart and Thank you from Pages
-    And actual controls insert Cart page_view, add_payment_info, and Thank you purchase from bindings and Events
+    And actual controls insert Cart page_view, add_payment_info, and Thank you purchase from the Events catalog
     And actual connection ports create a two-edge route through add_payment_info
     And the installed extension reloads with the Inspector closed
     Then production canvas and outline contain two derived lanes, two Page frames, three occurrences, and two directed relationships
@@ -177,3 +177,15 @@ Feature: Data layer directional Flow specification graph runtime
     And rendered guidance links to Cart membership
     When actual Projects controls reopen the saved Flow
     Then each free frame renders in its saved edge region and is absent from canonical lane order and documentation lane headings
+
+  # Data layer directional Flow specification graph runtime 017
+  Scenario: Data layer directional Flow specification graph runtime 017
+    Given the production migration fixture stores Cart page_view and route_view nodes through legacy Page binding records
+    When the built extension opens that Checkout journey
+    Then installed migration review renders each human Page, Event, trigger, and affected occurrence without raw IDs
+    When actual controls confirm migration
+    Then migration preserves the complete topology and layout under the original occurrence identities
+    And migrated occurrences directly store Event IDs, context-setting roles, and triggers
+    And serialized production Page and Flow records have no contextEventBindings or contextBindingId key
+    When actual Undo runs once
+    Then production storage equals the complete pre-migration revision

@@ -31,8 +31,7 @@ workbook.
 An export snapshot contains:
 
 - selected project and Flow identity;
-- graph revision and selected Page-frame, context-binding, and Event-occurrence
-  references;
+- graph revision and selected Page-frame and Event-occurrence references;
 - documentation column labels and ordering;
 - each selected context's canonical effective schema revision, property tree,
   expected values, conditions, validation rules, documentation, and provenance;
@@ -48,11 +47,17 @@ stale and export actions remain disabled until the operator compiles a new snaps
 Operators select columns through human Page and Event names while stable references
 are stored beneath the controls.
 
-- A Page-context column targets one selected Page-owned context-event binding, such
-  as `Cart / page_view` for initial load or `Cart / route_view` for an SPA change.
-- An interaction column targets one Flow Event occurrence, such as
-  `Shipping / add_shipping_info`, and compiles both applicable Page and Event
-  branches.
+- Every column targets one Flow Event occurrence contained by a Page frame and
+  compiles both applicable Page and Event branches.
+- A context-setting role and trigger may explain `Cart / page_view` as initial load
+  or `Cart / route_view` as an SPA change, but they do not create a distinct binding
+  or compiler path. Interaction occurrences such as `Shipping / add_shipping_info`
+  use the same column model.
+
+Flow selection provides the documentary Page/Event context for export. Production
+validation continues to resolve Page applicability through assignment rules and the
+observed Event; export configuration neither creates nor consults a Page-context
+binding.
 
 Column headings can include documentation Step label, Page instance, and Event. Raw
 IDs are never visible.
@@ -130,7 +135,7 @@ The feature reuses the existing specification-table conventions:
 Flow-specific controls add:
 
 - Flow value map or Data capture matrix;
-- Page-context, Event-occurrence, or combined context selection;
+- Page-frame and Event-occurrence selection;
 - Step/Page/Event heading format;
 - branch label and documentation-order overrides;
 - matrix symbols and legend;

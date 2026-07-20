@@ -140,9 +140,11 @@ applicable Shared Profiles -> Page Group -> Page -> Flow Page instance
 
 An Event occurrence outside Page containment compiles only applicable Shared
 Profiles, Event, and occurrence contributions. An Event occurrence inside a Flow
-Page instance combines both branches. Page or Page Group membership is never
-invented for an Event, and moving a canvas occurrence cannot alter its containing
-Page or Page Group contract.
+Page instance combines both branches. The Page or Page instance is itself the
+context; a context-setting role or trigger on an Event occurrence is documentation
+metadata and creates no separate binding or composition path. Page or Page Group
+membership is never invented for an Event, and moving a canvas occurrence cannot
+alter its containing Page or Page Group contract.
 
 More-specific contributions may narrow inherited allowed values, add compatible
 rules, or replace a definition explicitly declared overridable. They may not
@@ -204,6 +206,12 @@ explicit human-readable Flow/Page/Event selection, or marked Documentation only.
 Stable references are persisted beneath those controls. Matcher tests expose failed
 predicates and overlapping candidates; equal-priority ambiguity blocks automatic
 selection.
+
+For an observed data-layer Event, the assignment resolver uses the observed Event
+identity and Page applicability evidence such as URL, pathname, `page_name`, or
+other authored predicates. It does not require a Flow context-binding record. Flow
+context-setting roles and triggers explain documentary intent but cannot alter the
+assignment winner or validation schema.
 
 The selected-context developer export shows the complete effective property tree,
 inherited and local differences, conditions, documentation, examples, activation,
@@ -302,7 +310,7 @@ feature.
 | C18 | Page and Event branches need one effective occurrence | Layering 004 | Combined property tree; parallel conflicts block; explicit resolution | Branch merge and conflict resolver | Blocking result and resolved provenance | C | Neither branch can silently win an incompatibility |
 | C19 | Override legality must protect inherited contracts | Layering 005 | Deterministic narrowing, invariant, condition, and named replacement rules | Compiler legality matrix | One result per example row | C | All unsafe weakenings block with explanation |
 | C20 | Contextual grouping must not become different schema models | Layering 006 | Exact Page Group, Page, Event, instance, and occurrence reach | Scope resolver and stable-reference store | Inclusion/exclusion and storage evidence | C | Each target receives exactly its contextual contributors |
-| C21 | Automatic applicability must be explainable | Layering 007 | Human predicates, failed matches, ambiguity, priority | Matcher and assignment resolver | Winner, rejected candidates, overlap evidence | D | Equal-priority overlap cannot silently select a target |
+| C21 | Automatic applicability and Page context must be explainable | Layering 007 | Human predicates select Page and Event context without a Flow binding | Matcher and assignment resolver | Winner, rejected candidates, overlap evidence, and absent binding lookup | D | Equal-priority overlap cannot silently select a target and no context binding can change the result |
 | C22 | Schemas may be manually assigned | Layering 008 | Human Flow/Page/Event selection uses stable target | Manual assignment resolver | Unified result and stable target identity | D | Manual validation does not claim an automatic winner |
 | C23 | Schemas may exist for documentation only | Layering 009 | Complete export without validation registration | Compiler, exporter, assignment index | Export and absent index entry | D | Documentation-only content creates no runtime ambiguity |
 | C24 | Flow should not force rich editing into Inspector | Layering 010 | Compact summary opens full main editor and restores canvas state | Flow selection routing and shared editor | Selection, viewport, and save-impact evidence | B, C | Full schema editing occurs in main workspace without losing Flow context |

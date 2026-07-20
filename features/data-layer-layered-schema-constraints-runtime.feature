@@ -34,7 +34,7 @@ Feature: Data layer layered schema constraints runtime
       | Checkout    | funnel_step | required                                |
       | Shipping    | funnel_step | required with allowed value 3a          |
     When actual Alternative shipping controls change local funnel_step allowed value to 3b
-    Then the production Alternative shipping Page-context result is
+    Then the production Alternative shipping Page effective result is
       | property    | effective definition                  |
       | funnel_name | required with allowed value checkout   |
       | funnel_step | required with allowed value 3b         |
@@ -113,6 +113,7 @@ Feature: Data layer layered schema constraints runtime
     Then exactly the complete match selects Alternative shipping Purchase
     And each rejected observation renders its failed human-name predicate
     And production assignment evidence uses applicability inputs without inferred Flow sequence
+    And the production resolver consults no Flow context-binding record
     When an equal-priority production candidate also matches the complete observation
     Then automatic selection is blocked as ambiguous and renders both candidate names
     When actual controls give one candidate higher priority and retest
