@@ -8,8 +8,8 @@ const select = (name, values, value) => { const control = dom.createElement("sel
 export function mountCanonicalSchemaEditor(options) {
     let query = "", feedback = "", pendingType;
     const send = (command) => { const result = options.dispatch(command); if (result.status === "conflict")
-        feedback = result.message; if (result.status === "confirmation-required") {
-        pendingType = result;
+        feedback = result.message; if (result.status === "confirmation-required" && command.kind === "type") {
+        pendingType = { result, command };
         feedback = result.impact;
     }
     else if (result.status === "applied" || result.status === "rebased") {
@@ -41,7 +41,7 @@ export function mountCanonicalSchemaEditor(options) {
         options.host.setAttribute("aria-label", `${options.surface} canonical schema editor`);
         options.host.dataset.canonicalSchemaId = document.id;
         options.host.dataset.canonicalRevision = String(document.revision);
-        const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
+        const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), baseRevision = input("commandBaseRevision", String(document.revision), "number"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
         title.textContent = document.contributorName;
         state.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · revision ${document.revision}`;
         undo.type = redo.type = "button";
@@ -51,7 +51,9 @@ export function mountCanonicalSchemaEditor(options) {
         redo.disabled = !options.onRedo;
         undo.addEventListener("click", () => options.onUndo?.());
         redo.addEventListener("click", () => options.onRedo?.());
-        header.append(title, state, undo, redo);
+        baseRevision.min = "0";
+        baseRevision.setAttribute("aria-label", "Command base revision");
+        header.append(title, state, undo, redo, labeled("Command base revision", baseRevision));
         search.type = "search";
         search.setAttribute("aria-label", "Canonical property search");
         search.placeholder = "Search properties";
@@ -108,11 +110,16 @@ export function mountCanonicalSchemaEditor(options) {
             table.append(head, body);
             navigator.append(table);
         }
-        const addRoot = dom.createElement("button");
+        const rootName = input("newRootPropertyName", "property"), addRoot = dom.createElement("button");
+        rootName.setAttribute("aria-label", "New root property name");
         addRoot.type = "button";
         addRoot.textContent = "Add root property";
-        addRoot.addEventListener("click", () => send({ kind: "add", baseRevision: document.revision, name: "property", type: "string", id: options.id }));
-        navigator.append(addRoot);
+        addRoot.addEventListener("click", () => { const name = rootName.value.trim(); if (!name) {
+            rootName.setCustomValidity("Enter a property name");
+            rootName.reportValidity();
+            return;
+        } rootName.setCustomValidity(""); send({ kind: "add", baseRevision: Number(baseRevision.value), name, type: "string", id: options.id }); });
+        navigator.append(labeled("New root property name", rootName), addRoot);
         const selected = document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
         if (selected)
             renderPropertyEditor(editor, document, selected, send, options.id, propertyCommand, pendingType);
@@ -161,40 +168,97 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
         if (option.value)
             option.textContent = document.nodes[option.value]?.name ?? option.value;
     structure.append(labeled("Property name", name), rename, addChild, addSibling, duplicate, labeled("Move under", moveParent), move, remove);
-    const typeSection = dom.createElement("fieldset"), typeLegend = dom.createElement("legend"), type = select("propertyType", types, node.type), itemType = select("itemType", types, node.itemType ?? "string"), impact = dom.createElement("output"), confirm = dom.createElement("button");
+    const pendingHere = pending?.result.propertyId === node.id ? pending : undefined, typeSection = dom.createElement("fieldset"), typeLegend = dom.createElement("legend"), type = select("propertyType", types, pendingHere?.command.type ?? node.type), itemType = select("itemType", types, pendingHere?.command.itemType ?? node.itemType ?? "string"), impact = dom.createElement("output"), confirm = dom.createElement("button");
     typeLegend.textContent = "Scalar, object, array, and item type";
     type.addEventListener("change", () => { const result = send({ kind: "type", baseRevision: document.revision, propertyId: node.id, type: type.value, ...(type.value === "array" ? { itemType: itemType.value } : {}) }); if (result.status === "confirmation-required")
         impact.textContent = result.impact; });
     itemType.addEventListener("change", () => send({ kind: "type", baseRevision: document.revision, propertyId: node.id, type: "array", itemType: itemType.value }));
     confirm.type = "button";
     confirm.textContent = "Confirm destructive type change";
-    confirm.hidden = pending?.propertyId !== node.id;
-    confirm.addEventListener("click", () => send({ kind: "type", baseRevision: document.revision, propertyId: node.id, type: type.value, ...(type.value === "array" ? { itemType: itemType.value } : {}), confirmed: true }));
-    impact.textContent = pending?.propertyId === node.id ? pending.impact : "Impact review: no incompatible dependent data";
+    confirm.hidden = !pendingHere;
+    confirm.addEventListener("click", () => { if (pendingHere)
+        send({ ...pendingHere.command, baseRevision: document.revision, confirmed: true }); });
+    impact.textContent = pendingHere?.result.impact ?? "Impact review: no incompatible dependent data";
     typeSection.append(typeLegend, labeled("Property type", type), labeled("Array item type", itemType), impact, confirm);
     const presence = select("presenceMode", ["optional", "required", "required-when", "forbidden", "forbidden-when"], node.presence.mode), presenceSection = dom.createElement("section");
     presence.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { presence: { mode: presence.value, ...(presence.value.endsWith("-when") && node.presence.condition ? { condition: node.presence.condition } : {}) } } }));
     presenceSection.append(labeled("Presence", presence));
     const predicateHost = dom.createElement("div");
     if (node.presence.mode.endsWith("-when")) {
-        const predicate = node.presence.condition;
-        const builder = dom.createElement("fieldset"), legend = dom.createElement("legend"), group = select("predicateGroup", ["all", "any", "not"], predicate?.kind !== "predicate" ? predicate?.kind ?? "all" : "all"), property = select("predicateProperty", Object.keys(document.nodes), predicate?.kind === "predicate" ? predicate.propertyId : ""), operator = select("predicateOperator", ["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"], predicate?.kind === "predicate" ? predicate.operator : "Equals"), value = input("predicateValue", predicate?.kind === "predicate" ? String(predicate.value ?? "") : ""), save = dom.createElement("button"), all = dom.createElement("button"), any = dom.createElement("button"), not = dom.createElement("button");
+        const predicate = node.presence.condition, draft = predicate && predicate.kind !== "predicate" ? structuredClone(predicate) : { kind: "all", children: predicate ? [structuredClone(predicate)] : [] }, builder = dom.createElement("fieldset"), legend = dom.createElement("legend"), target = dom.createElement("select"), property = select("predicateProperty", Object.keys(document.nodes), predicate?.kind === "predicate" ? predicate.propertyId : ""), operator = select("predicateOperator", ["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"], predicate?.kind === "predicate" ? predicate.operator : "Equals"), value = input("predicateValue", predicate?.kind === "predicate" ? String(predicate.value ?? "") : ""), save = dom.createElement("button"), addPredicate = dom.createElement("button"), all = dom.createElement("button"), any = dom.createElement("button"), not = dom.createElement("button"), summary = dom.createElement("output"), testValue = dom.createElement("textarea"), test = dom.createElement("button"), testResult = dom.createElement("output");
         legend.textContent = "Nested All / Any / Not predicate builder";
+        target.name = "predicateTargetGroup";
+        target.setAttribute("aria-label", "Predicate target group");
         for (const option of Array.from(property.options))
             option.textContent = document.nodes[option.value]?.name ?? option.value;
         property.prepend(new Option("Choose property", ""));
-        for (const [button, text] of [[all, "Add All group"], [any, "Add Any group"], [not, "Add Not group"]]) {
-            button.type = "button";
-            button.textContent = text;
+        summary.setAttribute("aria-label", "Predicate draft in plain language");
+        testValue.setAttribute("aria-label", "Predicate test observation");
+        testValue.value = "{}";
+        testResult.setAttribute("aria-label", "Predicate branch evidence");
+        const groupEntries = () => { const entries = []; const visit = (group, path) => { entries.push({ path, group, label: `${group.kind === "all" ? "All" : group.kind === "any" ? "Any" : "Not"} ${path.length ? path.join(".") : "root"}` }); group.children.forEach((child, index) => { if (child.kind !== "predicate")
+            visit(child, [...path, index]); }); }; visit(draft, []); return entries; };
+        const refresh = () => { const selected = target.value; target.replaceChildren(...groupEntries().map(({ path, label }) => new Option(label, path.join(".")))); if (Array.from(target.options).some(({ value: option }) => option === selected))
+            target.value = selected; summary.textContent = plainPredicate(draft, document); };
+        const selectedGroup = () => groupEntries().find(({ path }) => path.join(".") === target.value)?.group ?? draft;
+        const addGroup = (kind) => { const group = selectedGroup(); if (group.kind === "not" && group.children.length) {
+            target.setCustomValidity("Not accepts one branch");
+            return;
+        } target.setCustomValidity(""); group.children.push({ kind, children: [] }); refresh(); };
+        const typedLeaf = () => { const referenced = document.nodes[property.value]; if (!referenced) {
+            property.setCustomValidity("Choose a referenced property");
+            return;
+        } const numeric = ["Greater than", "At least", "Less than", "At most"].includes(operator.value), textual = ["Starts with", "Contains", "Matches pattern"].includes(operator.value); if (numeric && !["number", "integer"].includes(referenced.type)) {
+            operator.setCustomValidity(`${operator.value} requires a number or integer property`);
+            return;
+        } if (textual && referenced.type !== "string") {
+            operator.setCustomValidity(`${operator.value} requires a string property`);
+            return;
+        } operator.setCustomValidity(""); property.setCustomValidity(""); let typedValue = value.value; if (referenced.type === "number" || referenced.type === "integer") {
+            typedValue = Number(value.value);
+            if (!Number.isFinite(typedValue)) {
+                value.setCustomValidity("Enter a compatible numeric value");
+                return;
+            }
+        }
+        else if (referenced.type === "boolean") {
+            if (!["true", "false"].includes(value.value)) {
+                value.setCustomValidity("Enter true or false");
+                return;
+            }
+            typedValue = value.value === "true";
+        } value.setCustomValidity(""); return { kind: "predicate", propertyId: property.value, operator: operator.value, ...(!["Exists", "Does not exist"].includes(operator.value) ? { value: typedValue } : {}) }; };
+        addPredicate.type = "button";
+        addPredicate.textContent = "Add predicate";
+        addPredicate.addEventListener("click", () => { const leaf = typedLeaf(); if (!leaf)
+            return; const group = selectedGroup(); if (group.kind === "not" && group.children.length) {
+            target.setCustomValidity("Not accepts one branch");
+            return;
+        } group.children.push(leaf); refresh(); });
+        for (const [control, text, kind] of [[all, "Add All group", "all"], [any, "Add Any group", "any"], [not, "Add Not group", "not"]]) {
+            control.type = "button";
+            control.textContent = text;
+            control.addEventListener("click", () => addGroup(kind));
         }
         save.type = "button";
         save.textContent = "Save typed predicate";
-        save.addEventListener("click", () => { if (!property.value) {
-            property.setCustomValidity("Choose a referenced property");
-            property.reportValidity();
-            return;
-        } property.setCustomValidity(""); const leaf = { kind: "predicate", propertyId: property.value, operator: operator.value, ...(!["Exists", "Does not exist"].includes(operator.value) ? { value: value.value } : {}) }, condition = group.value === "all" || group.value === "any" || group.value === "not" ? { kind: group.value, children: [leaf] } : leaf; send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { presence: { mode: node.presence.mode, condition } } }); });
-        builder.append(legend, labeled("Group", group), all, any, not, labeled("Property", property), labeled("Typed operator", operator), labeled("Typed value", value), save);
+        save.addEventListener("click", () => { if (!draft.children.length) {
+            const leaf = typedLeaf();
+            if (!leaf)
+                return;
+            draft.children.push(leaf);
+        } send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { presence: { mode: node.presence.mode, condition: draft } } }); });
+        test.type = "button";
+        test.textContent = "Test predicate observation";
+        test.addEventListener("click", () => { try {
+            const evidence = evaluateCanonicalPredicate(draft, document, JSON.parse(testValue.value));
+            testResult.textContent = `${evidence.matched ? "Matched" : "Did not match"} · ${evidence.branches.map((branch) => `${branch.matched ? "satisfied" : "failed"}: ${branch.label}`).join(" · ")}`;
+        }
+        catch (error) {
+            testResult.textContent = error instanceof Error ? error.message : String(error);
+        } });
+        builder.append(legend, labeled("Target group", target), all, any, not, labeled("Property", property), labeled("Typed operator", operator), labeled("Typed value", value), addPredicate, summary, save, testValue, test, testResult);
+        refresh();
         predicateHost.append(builder);
     }
     const values = dom.createElement("fieldset"), valuesLegend = dom.createElement("legend"), valuesList = dom.createElement("div"), addValue = dom.createElement("button");

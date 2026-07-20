@@ -109,6 +109,6 @@ export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBui
     views.append(canvas,outline);renderRelationshipPopover(popover);renderActions(actions);section.append(heading,boundary,toolbar,laneControls,status,frames,views,actions,popover);host.append(section);document.querySelectorAll<HTMLElement>("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element)=>{const id=element.dataset.occurrenceId??element.dataset.relationshipId??element.dataset.pageFrameId;element.classList.toggle("is-selected",id===selected?.id);});renderInspector();
   }
 
-  function render():void{const {flow}=current();advanced.hidden=!flow;if(flow)renderGraph(flow);else{q<HTMLElement>("#flow-graph-workspace")?.replaceChildren();inspectorContext.replaceChildren();}}
+  function render():void{const {flow}=current();advanced.hidden=!flow;if(flow)renderGraph(flow);else{document.querySelector<HTMLElement>("#flow-graph-workspace")?.replaceChildren();inspectorContext.replaceChildren();}}
   return{render,renderSelectors:render};
 }

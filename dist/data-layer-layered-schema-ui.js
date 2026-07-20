@@ -1,5 +1,5 @@
 import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
-import { transactProject } from "./data-layer-specification-project.js";
+import { redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
 import { applyCanonicalCommand, canonicalConstraints, canonicalSchemaWithConstraint, canonicalTableRows, confirmCanonicalMigration, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
@@ -35,9 +35,16 @@ export function mountSidePanelLayeredProfileEditor(options) { let selectedProfil
     options.host.append(review);
     return;
 } const editorHost = document.createElement("section"); options.host.append(editorHost); mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => options.load().project.collections.profiles.find(({ id }) => id === selectedProfileId).canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const currentState = options.load(), currentProfile = currentState.project.collections.profiles.find(({ id }) => id === selectedProfileId), current = currentProfile.canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
-        options.persist(transactProject(currentState, `${command.kind} canonical property in ${currentProfile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === currentProfile.id ? { ...candidate, canonicalSchema: result.document, requirements: [] } : candidate) } }))); return result; } }); }; render(); return { render }; }
+        options.persist(transactProject(currentState, `${command.kind} canonical property in ${currentProfile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === currentProfile.id ? { ...candidate, canonicalSchema: result.document, requirements: [] } : candidate) } }))); return result; }, onUndo: () => { const current = options.load(); if (current) {
+        options.persist(undoProjectTransaction(current));
+        render();
+    } }, onRedo: () => { const current = options.load(); if (current) {
+        options.persist(redoProjectTransaction(current));
+        render();
+    } } }); }; render(); window.addEventListener("storage", (event) => { if (event.storageArea === localStorage)
+    render(); }); return { render }; }
 export const layeredEventRole = (entity) => entity.contextBindingId || entity.occurrenceType === "page-context" ? "context" : "interaction";
-export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
+export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.expectedValue !== undefined ? `expected ${JSON.stringify(property.expectedValue)}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileId = (state, entity) => referencedId(entity, "profileId") ?? (entity.profileIds?.length === 1 ? String(entity.profileIds[0]) : state.project.collections.profiles.length === 1 ? state.project.collections.profiles[0].id : undefined);
 export function layeredContributorPath(state, entity, scope, flowId) {
@@ -72,6 +79,7 @@ export function installLayeredSchemaUi(options) {
             if (graphSelection)
                 graphSelection = { ...graphSelection, canonicalSchema: result.document };
             options.persist(writeCanonical(live.state, live.entity, live.scope, result.document));
+            queueMicrotask(renderEditor);
         } return result; } }); return true; };
     const contributorsFor = (state, entity, scope) => layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined));
     const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
@@ -140,7 +148,7 @@ export function installLayeredSchemaUi(options) {
         section.append(heading, propertyTree, labeled("Target Event", targetEvent), labeled("Event role", targetRole), labeled("Activation", activation), labeled("Priority", priority), labeled("Applicability", applicability), saveTarget, labeled("Test observation", observation), test, assignmentResult, labeled("Manual Flow / Page / Event", manual), labeled("Validation payload", payload), validate, validationResult, developerExport, exportResult);
         return section;
     }
-    function renderSummary() { const { state, entity, scope } = current(); summary.replaceChildren(); if (!state || !entity) {
+    function renderSummary() { const context = options.context(), { state, entity, scope } = current(); summary.replaceChildren(); summary.dataset.contextKind = context.kind; summary.dataset.contextEntityId = context.entityId ?? ""; if (!state || !entity) {
         summary.hidden = true;
         return;
     } summary.hidden = false; const title = document.createElement("h3"), counts = document.createElement("p"), open = document.createElement("button"), compiled = compileLayeredSchema(contributorsFor(state, entity, scope), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), ...(entity.id ? { occurrenceId: entity.id } : {}) }), local = (entity.schemaConstraints ?? []).length, activation = String(entity.activation ?? "manual"); title.textContent = `Schema constraints · ${entity.name} · ${scope}`; counts.textContent = `Inherited ${Math.max(0, compiled.provenance.length - 1)} · Local ${local} · Effective ${Object.keys(compiled.properties).length} · Conflict ${compiled.conflicts.length} · Activation ${activation}`; open.type = "button"; open.textContent = "Open complete schema editor"; open.addEventListener("click", () => { returnFocus = open; editor.hidden = false; ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); }); summary.append(title, counts, open); }
@@ -174,7 +182,9 @@ export function installLayeredSchemaUi(options) {
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
         return; const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
-    return { render() { if (!editor.hidden)
-            return; graphSelection = undefined; graphSelectionScope = undefined; renderSummary(); } };
+    return { render() { if (editor.hidden) {
+            graphSelection = undefined;
+            graphSelectionScope = undefined;
+        } renderSummary(); } };
 }
 //# sourceMappingURL=data-layer-layered-schema-ui.js.map
