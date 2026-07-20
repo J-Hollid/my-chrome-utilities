@@ -29,8 +29,9 @@
             observed (:flowGraph (json/parse-string line true))]
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
-(def evidence-category-keys #{:authoring :branch :topology :keyboard :empty})
-(def required-evidence-keys (conj evidence-category-keys :installedBoundary))
+(def runtime-evidence-keys
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 16))))
+(def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
 (defn complete-browser-evidence? [evidence]
@@ -38,14 +39,13 @@
    (and (map? evidence)
         (= required-evidence-keys (set (keys evidence)))
         (true? (:installedBoundary evidence))
-        (every? #(all-true? (get evidence %)) evidence-category-keys))))
-(defn- assert-runtime! [{:keys [authoring branch topology keyboard empty] :as evidence}]
+        (every? #(all-true? (get evidence %)) runtime-evidence-keys))))
+(defn- assert-runtime! [evidence]
   (support/assert! (complete-browser-evidence? evidence) "Installed graph evidence is incomplete or contains a false value." evidence)
-  (support/assert! (all-true? authoring) "Installed graph authoring evidence failed." authoring)
-  (support/assert! (all-true? branch) "Parallel branch isolation or stable-ID rename evidence failed." branch)
-  (support/assert! (all-true? topology) "Graph/outline topology or manual-boundary evidence failed." topology)
-  (support/assert! (all-true? keyboard) "Stable relationship keyboard focus/selection evidence failed." keyboard)
-  (support/assert! (all-true? empty) "Empty Flow authoring boundary evidence failed." empty))
+  (doseq [runtime-key (sort runtime-evidence-keys)]
+    (support/assert! (all-true? (get evidence runtime-key))
+                     (str "Installed graph evidence failed for " (name runtime-key) ".")
+                     (get evidence runtime-key))))
 
 (def handlers
   (support/verified-feature-mode-handlers

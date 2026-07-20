@@ -19,6 +19,7 @@ export function installFlowGraphBuilder(options) {
     legacyResult.hidden = true;
     let selected;
     let connection;
+    let suppressNodeClick = false;
     let statusMessage = "";
     let statusRepairHref = "";
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
@@ -190,10 +191,13 @@ export function installFlowGraphBuilder(options) {
             host.append(card);
         }
     }
-    function cancelConnection(announce = true) { const sourceId = connection?.sourceId; connection?.preview?.remove(); connection = undefined; document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); if (announce)
-        statusMessage = "Connection cancelled; canonical state was not changed."; document.querySelector(`[data-occurrence-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
+    function cancelConnection(announce = true, suppressClick = false) { const sourceId = connection?.sourceId; connection?.preview?.remove(); connection = undefined; document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); if (announce)
+        statusMessage = "Connection cancelled; canonical state was not changed."; if (suppressClick) {
+        suppressNodeClick = true;
+        setTimeout(() => { suppressNodeClick = false; }, 0);
+    } document.querySelector(`[data-occurrence-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
     function commitConnection(targetId) { const { state, flow, graph } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || sourceId === targetId) {
-        cancelConnection();
+        cancelConnection(true, true);
         return;
     } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, kind: "expected-next" }, options.id); connection = undefined; persist(next); queueMicrotask(() => { const created = current().graph?.relationships.find(({ id }) => !before.has(id)); if (created) {
         selected = { kind: "relationship", id: created.id };
@@ -206,10 +210,12 @@ export function installFlowGraphBuilder(options) {
         const { state, flow, graph } = current(), relationship = graph?.relationships.find(({ id }) => id === selected.id);
         if (!state || !flow || !graph || !relationship)
             return;
-        const form = document.createElement("form"), heading = document.createElement("h4"), kind = document.createElement("select"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button");
+        const projection = projectFlowGraph(state.project, flow.id).graph, source = projection.nodes.find(({ id }) => id === relationship.sourceNodeId), target = projection.nodes.find(({ id }) => id === relationship.targetNodeId), form = document.createElement("form"), heading = document.createElement("h4"), endpoints = document.createElement("p"), kind = document.createElement("select"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button");
         form.dataset.relationshipPopover = relationship.id;
         form.setAttribute("aria-label", "Inline relationship popover");
         heading.textContent = "Relationship meaning";
+        endpoints.dataset.relationshipEndpoints = relationship.id;
+        endpoints.textContent = `${source?.name ?? relationship.sourceNodeId} → ${target?.name ?? relationship.targetNodeId}`;
         for (const value of ["expected-next", "alternative", "parallel", "merge"])
             kind.append(new Option(value, value));
         kind.value = String(relationship.kind);
@@ -229,7 +235,7 @@ export function installFlowGraphBuilder(options) {
         cancel.addEventListener("click", () => { selected = undefined; render(); document.querySelector(`[data-occurrence-id="${CSS.escape(relationship.sourceNodeId)}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); persist(saveGraphRelationship(current().state, flow.id, relationship.sourceNodeId, { id: relationship.id, toStepId: relationship.targetNodeId, kind: kind.value, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
-        form.append(heading, labeled("Kind", kind), labeled("Group", group), labeled("Label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel);
+        form.append(heading, endpoints, labeled("Kind", kind), labeled("Group", group), labeled("Label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel);
         host.append(form);
     }
     function renderActions(host) {
@@ -398,17 +404,16 @@ export function installFlowGraphBuilder(options) {
             } });
             input.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(nodeData.id); });
             let dragStart;
-            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle"))
-                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY }; group.setPointerCapture(event.pointerId); });
-            group.addEventListener("pointermove", (event) => { if (!dragStart)
-                return; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); });
-            group.addEventListener("pointerup", (event) => { if (!dragStart)
-                return; const x = dragStart.x + event.clientX - dragStart.clientX, y = dragStart.y + event.clientY - dragStart.clientY; dragStart = undefined; const semantic = Boolean(nodeData.pageGroupId || nodeData.pageFrameId || nodeData.freePageFrameId || nodeData.freePageFrame), validX = Math.abs(x - layout.x) <= 85; if (!validX) {
+            const stopDragTracking = () => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); }, moveDraggedNode = (event) => { if (!dragStart)
+                return; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = () => { dragStart = undefined; stopDragTracking(); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!dragStart)
+                return; const x = dragStart.x + event.clientX - dragStart.clientX, y = dragStart.y + event.clientY - dragStart.clientY; dragStart = undefined; stopDragTracking(); const semantic = Boolean(nodeData.pageGroupId || nodeData.pageFrameId || nodeData.freePageFrameId || nodeData.freePageFrame), validX = Math.abs(x - layout.x) <= 85; if (!validX) {
                 group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
                 statusMessage = "Move rejected. Add the predefined Event to another Page frame instead.";
                 render();
                 return;
-            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, semantic ? { y: Math.max(55, Math.round(y)) } : { lane: layout.lane, x, y })); });
+            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, semantic ? { y: Math.max(55, Math.round(y)) } : { lane: layout.lane, x, y })); };
+            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle"))
+                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY }; window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); group.setPointerCapture(event.pointerId); });
             group.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
                 event.preventDefault();
                 startConnection();
@@ -437,7 +442,10 @@ export function installFlowGraphBuilder(options) {
                 render();
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { y: Math.max(55, layout.y + dy) })); });
-            group.addEventListener("click", () => saveSelection({ kind: "occurrence", id: nodeData.id }));
+            group.addEventListener("click", () => { if (suppressNodeClick) {
+                suppressNodeClick = false;
+                return;
+            } saveSelection({ kind: "occurrence", id: nodeData.id }); });
             group.append(box, title, detail, input, output);
             canvas.append(group);
             const row = document.createElement("li"), control = button(`${nodeData.name} · ${nodeData.occurrenceType ?? nodeData.role}`, () => saveSelection({ kind: "occurrence", id: nodeData.id }));
@@ -454,7 +462,7 @@ export function installFlowGraphBuilder(options) {
             return; const input = event.target.closest("[data-input-port-for]"); if (input)
             commitConnection(input.dataset.inputPortFor);
         else
-            cancelConnection(); });
+            cancelConnection(true, true); });
         canvas.addEventListener("keydown", (event) => { if (!connection)
             return; if (event.key === "Escape") {
             event.preventDefault();
