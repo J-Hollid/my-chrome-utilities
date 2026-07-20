@@ -730,6 +730,7 @@
       "test/data-layer-layered-schema-adoption-test.mjs"
     ],
     "property": [
+      "test/data-layer-canonical-schema-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [
