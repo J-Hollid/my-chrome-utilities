@@ -196,7 +196,7 @@ export function installFlowGraphBuilder(options) {
         suppressNodeClick = true;
         setTimeout(() => { suppressNodeClick = false; }, 0);
     } document.querySelector(`[data-occurrence-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
-    function commitConnection(targetId) { const { state, flow, graph } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || sourceId === targetId) {
+    function commitConnection(targetId) { const { state, flow, graph } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || !targetId || sourceId === targetId) {
         cancelConnection(true, true);
         return;
     } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, kind: "expected-next" }, options.id); connection = undefined; persist(next); queueMicrotask(() => { const created = current().graph?.relationships.find(({ id }) => !before.has(id)); if (created) {
@@ -381,7 +381,13 @@ export function installFlowGraphBuilder(options) {
             output.setAttribute("tabindex", "0");
             output.dataset.outputPortFor = nodeData.id;
             output.setAttribute("aria-label", `Output port for ${nodeData.name}`);
-            const startConnection = () => { connection?.preview?.remove(); const preview = svg("line"), targets = Array.from(document.querySelectorAll("[data-input-port-for]")).map((element) => element.getAttribute("data-input-port-for")).filter((id) => Boolean(id) && id !== nodeData.id); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(layout.x + nodeWidth)); preview.setAttribute("y1", String(layout.y + nodeHeight / 2)); preview.setAttribute("x2", String(layout.x + nodeWidth + 20)); preview.setAttribute("y2", String(layout.y + nodeHeight / 2)); canvas.append(preview); connection = { sourceId: nodeData.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); output.focus(); };
+            const startConnection = () => { connection?.preview?.remove(); const targets = Array.from(document.querySelectorAll("[data-input-port-for]")).map((element) => element.getAttribute("data-input-port-for")).filter((id) => Boolean(id) && id !== nodeData.id); if (!targets.length) {
+                connection = undefined;
+                statusMessage = "Add another occurrence before drawing a relationship.";
+                render();
+                queueMicrotask(() => elementByData("data-output-port-for", nodeData.id)?.focus());
+                return;
+            } const preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(layout.x + nodeWidth)); preview.setAttribute("y1", String(layout.y + nodeHeight / 2)); preview.setAttribute("x2", String(layout.x + nodeWidth + 20)); preview.setAttribute("y2", String(layout.y + nodeHeight / 2)); canvas.append(preview); connection = { sourceId: nodeData.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); output.focus(); };
             output.addEventListener("pointerdown", (event) => { event.stopPropagation(); startConnection(); });
             output.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Enter" && !connection) {
                 event.preventDefault();
