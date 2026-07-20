@@ -18,7 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectCollectionOverviewActionLabels, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -90,23 +90,19 @@ function renderCanonicalEntityEditor(host, kind, entity) {
 function renderCanonicalProfileOverview(host) {
     if (!state || selectedKind !== "profiles" || selectedId)
         return;
-    const section = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), name = document.createElement("input"), add = document.createElement("button"), saved = document.createElement("select"), adopt = document.createElement("button"), review = document.createElement("p");
-    section.setAttribute("aria-label", "Shared Profiles contextual actions");
-    heading.textContent = "Reusable complete schemas";
-    guidance.textContent = "A Shared Profile is a reusable complete schema for generic or event-specific variables.";
-    name.placeholder = "Shared Profile name";
-    name.setAttribute("aria-label", "New Shared Profile name");
-    add.type = adopt.type = "button";
-    add.textContent = "Add Shared Profile";
+    const section = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), saved = document.createElement("select"), adopt = document.createElement("button"), review = document.createElement("p");
+    section.setAttribute("aria-label", "Saved Schema Library adoption");
+    heading.textContent = "Adopt a published saved schema";
+    guidance.textContent = "Adoption creates one project-owned Shared Profile Draft with source lineage; new profiles use the overview's single Add Shared Profile route.";
+    adopt.type = "button";
     adopt.textContent = "Add saved schema to project";
     saved.setAttribute("aria-label", "Saved schema to add");
     saved.append(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} revision ${schema.version}`, schema.id)));
-    add.addEventListener("click", () => { const profileName = name.value.trim() || "Untitled Shared Profile", next = addProjectEntity(state, "profiles", { name: profileName, requirements: [], canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: "", contributorName: profileName }) }, id); selectedId = next.project.collections.profiles.at(-1).id; persist(next); persistNavigation(); });
     adopt.addEventListener("click", () => { const source = savedSchemas().find(({ id: schemaId }) => schemaId === saved.value); if (!source) {
         review.textContent = "Choose a published saved schema for review.";
         return;
     } review.replaceChildren(); review.textContent = `Review ${source.name} revision ${source.version}: one project-owned canonical draft will preserve source lineage. `; const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = "Confirm adding saved schema"; confirm.addEventListener("click", () => { const next = adoptSavedSchema(state, source); selectedId = next.project.collections.profiles.at(-1).id; persist(next); persistNavigation(); }); review.append(confirm); });
-    section.append(heading, guidance, labeledControl("Name", name), add, labeledControl("Saved Schema Library", saved), adopt, review);
+    section.append(heading, guidance, labeledControl("Saved Schema Library", saved), adopt, review);
     host.append(section);
 }
 function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
@@ -720,12 +716,12 @@ function renderWorkspace() {
         return;
     }
     q("#flow-inspector-context").replaceChildren();
-    const definition = projectCollectionDefinitions[selectedKind], heading = document.createElement("h1"), primary = document.createElement("button"), guidance = document.createElement("section"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), consumers = document.createElement("p"), count = document.createElement("p"), list = document.createElement("ul"), visible = all.slice(0, 40);
+    const definition = projectCollectionDefinitions[selectedKind], heading = document.createElement("h1"), primary = document.createElement("button"), guidance = document.createElement("section"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), consumers = document.createElement("p"), count = document.createElement("p"), list = document.createElement("ul"), visible = all.slice(0, 40), [primaryAction] = projectCollectionOverviewActionLabels(selectedKind);
     heading.textContent = definition.overview;
     primary.type = "button";
-    primary.textContent = definition.addAction;
+    primary.textContent = primaryAction;
     primary.dataset.addKind = selectedKind;
-    primary.setAttribute("aria-label", `${definition.addAction} to ${state.project.name}`);
+    primary.setAttribute("aria-label", `${primaryAction} to ${state.project.name}`);
     primary.addEventListener("click", () => openProjectCollectionCreation(selectedKind));
     guidance.className = "project-guidance";
     purpose.textContent = definition.purpose;
