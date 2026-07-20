@@ -169,6 +169,13 @@ viewport:
 - a selected-property editor with the complete side-panel capability set; and
 - effective documentation, validation state, impact, and provenance.
 
+Property search is transient editor state, not a canonical command. Typing,
+mid-string editing, clearing, and input-method composition update only the navigator
+results. The same connected search control retains focus, value, caret, selection,
+and composing text until the operator deliberately moves focus. This behavior is
+shared by every contributor kind in Builder, Flow workspace, and side panel at wide
+and 360px widths.
+
 Tree and Table are synchronized projections of the same canonical revision and
 selection. The Table preserves hierarchy and supports the complete property
 lifecycle. Common information is visible in columns; expanding a row opens the same
@@ -317,6 +324,7 @@ feature.
 | C25 | MVP assurance is per-Event, not full-Flow validation | Layering 011 | Positive and negative exact-value results with no sequence claim | Assignment and per-Event validator | Exact issue tuple and unified result | D | Invalid 3a fails expected 3b while valid 3b passes |
 | C26 | Developers need the effective values for a concrete occurrence | Layering 012 | Complete selected-context export plus positive and negative validation | Compiler, exporter, validator | Export, provenance, and issue collection | D, E | Summer article occurrence is documented and validated from one compiled schema |
 | C27 | Complete specifications need richer queries without losing side-panel behavior | Authoring 014 | Nested All, Any, and Not groups with selectors, typed operators, and matcher evidence | Shared predicate AST, rule compiler, applicability matcher | Persisted predicate tree plus positive and negative tests | B, D | Conditions require no raw expression and invalid branches focus exact controls |
+| C28 | Canonical property search drops focus after each character | Authoring 015–016 | Continuous typing, caret editing, composition, and clearing retain search focus on every contributor surface | Shared canonical editor renderer, navigator projection, and focus adapter | Per-event active element and selection offsets, filtered rows, unchanged revision and storage | B, E | A multi-character query completes without refocusing and search emits no canonical command |
 
 ## Terminal acceptance
 
@@ -328,6 +336,7 @@ show:
 - one adopted project schema, one property identity, and one revision across
   Builder, Table, side panel, reload, compilation, and validation;
 - the same rich controls at all contributor levels;
+- uninterrupted canonical property search with deterministic caret and composition behavior;
 - exact Page-branch, Event-branch, and combined-occurrence provenance;
 - blocked unsafe weakening and parallel conflicts;
 - explainable automatic, manual, and Documentation-only activation; and

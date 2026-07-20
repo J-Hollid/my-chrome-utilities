@@ -73,6 +73,10 @@ examples, nested All/Any/Not predicate building, revision comparison, and
 synchronized Tree and Table views. Existing
 profile data migrates atomically without loss. Command-scoped patches, base
 revisions, and subscriptions prevent stale whole-profile overwrites.
+Canonical property search is transient UI state shared across contributor editors;
+typing, caret edits, input-method composition, and clearing retain focus in the same
+connected control and perform no canonical command or persistence write at desktop
+or 360px widths.
 
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
