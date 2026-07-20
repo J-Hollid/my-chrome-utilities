@@ -96,7 +96,7 @@ function observationTargetCommand(
 }
 
 function dataLayerViewCommand(
-  id: "data-layer.show-live" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
+  id: "data-layer.show-live" | "data-layer.show-projects" | "data-layer.show-library" | "data-layer.show-sessions" | "data-layer.show-schemas",
   title: string,
 ): AppCommand {
   const view = title.replace("Show ", "") as DataLayerView;
@@ -151,6 +151,7 @@ const commands: readonly AppCommand[] = [
     "Detach target",
   ),
   dataLayerViewCommand("data-layer.show-live", "Show Live"),
+  dataLayerViewCommand("data-layer.show-projects", "Show Projects"),
   dataLayerViewCommand("data-layer.show-library", "Show Library"),
   dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
   dataLayerViewCommand("data-layer.show-schemas", "Show Schemas"),

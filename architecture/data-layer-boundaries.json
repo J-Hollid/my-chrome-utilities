@@ -194,6 +194,15 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-side-panel-schema-editor.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-page-group-membership.ts": {
     "module": "schemas",
     "layer": "application",
@@ -635,6 +644,30 @@
   "src/data-layer-schema-specification-builder.ts": {
     "module": "schemas",
     "layer": "browser"
+  },
+  "src/data-layer-project-library.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
+  "src/data-layer-project-library-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-library.ts",
+      "src/data-layer-specification-project.ts",
+      "src/data-layer-specification-repository.ts"
+    ]
+  },
+  "src/data-layer-project-entity-lifecycle.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-specification-project.ts"
+    ]
   },
   "src/data-layer-specification-project.ts": {
     "module": "schemas",

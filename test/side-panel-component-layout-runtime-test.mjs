@@ -5687,7 +5687,7 @@ try {
     if (process.env.DEFECT_LIBRARY_BROWSER_ADAPTER === "1") {
       await evaluate(socket, defectLibrarySeedRuntime); await reloadPanel(socket);
       defectLibraryObservation = await evaluate(socket, defectLibraryRuntime);
-      assert.deepEqual(defectLibraryObservation.nav, ["Live","Library","Sessions","Defects","Schemas"]);
+      assert.deepEqual(defectLibraryObservation.nav, ["Live","Projects","Library","Sessions","Defects","Schemas"]);
       assert.equal(defectLibraryObservation.actualReportedLinks, 1);
       assert.deepEqual(defectLibraryObservation.openedFromIssue, { view:"true",detail:false });
       assert.deepEqual(defectLibraryObservation.returnedToIssue, { view:"true",event:"purchase",focused:true,scrollPreserved:true });

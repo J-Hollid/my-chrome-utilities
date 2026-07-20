@@ -74,6 +74,8 @@ import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRule
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
 import { mountSidePanelLayeredProfileEditor } from "./utilities/data-layer/schemas.js";
+import { sidePanelSchemaGroups } from "./utilities/data-layer/schemas.js";
+import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./utilities/data-layer/schemas.js";
@@ -228,6 +230,8 @@ const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [r
 const schemaPanels = Array.from(document.querySelectorAll("#schema-master, #schema-rule-library, #schema-assignments"));
 const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetail = document.querySelector("#schema-detail");
+if (sidePanelLayeredProfileEditorHost && schemaDetail && !schemaDetail.contains(sidePanelLayeredProfileEditorHost))
+    schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorNameAssistance = document.createElement("output");
@@ -661,14 +665,16 @@ let templateEditorReturnTemplateId;
 let savedInspectorTemplateId;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
-const canonicalProjectAtStartup = restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+let sidePanelLayeredProfileEditor;
+const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: globalThis.localStorage, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
+const canonicalProjectAtStartup = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if (canonicalProjectAtStartup)
     schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
 let canonicalProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []);
 const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id)));
-const sidePanelLayeredProfileEditor = sidePanelLayeredProfileEditorHost ? mountSidePanelLayeredProfileEditor({ host: sidePanelLayeredProfileEditorHost, load: () => restoreCanonicalProjectState(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), persist: (next) => { const serialized = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized); if (!envelope || !base)
-        throw new Error("The Specification Project is unavailable."); const result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Side-panel Shared Profile constraint", base }); if (result.status === "conflict")
-        throw new Error(`Shared Profile changed at project revision ${result.revision}; review the structured edit again.`); } }) : undefined;
+sidePanelLayeredProfileEditor = sidePanelLayeredProfileEditorHost ? mountSidePanelLayeredProfileEditor({ host: sidePanelLayeredProfileEditorHost, legacyEditor: schemaEditor, emptyHost: schemaDetailEmpty, load: () => restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), persist: (next) => { const serialized = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized); if (!envelope || !base)
+        throw new Error("The Specification Project is unavailable."); const result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Side-panel canonical schema command", base }); if (result.status === "conflict")
+        throw new Error(`Schema contributor changed at project revision ${result.revision}; review the structured edit again.`); projectLibraryUi.captureActiveProject(next, result.revision); } }) : undefined;
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
     dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -1843,50 +1849,57 @@ function openSchemaExportChoices(trigger, schema) {
     extension.focus({ preventScroll: true });
 }
 function reviewSavedSchemaAdoption(schema, trigger) {
-    const serialized = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized);
-    if (!project || !envelope) {
+    const library = projectLibraryUi.library(), records = Object.values(library.projects);
+    if (!records.length) {
         if (schemaResult)
-            schemaResult.textContent = "Create or open a Specification Project before adopting a saved schema.";
+            schemaResult.textContent = "Create a project before adopting a saved schema.";
         return;
     }
-    if (project.project.collections.schemaDrafts.some(({ id }) => id === schema.id)) {
-        if (schemaResult)
-            schemaResult.textContent = `${schema.name} is already used by ${project.project.name}; open Builder to review synchronization.`;
-        return;
-    }
-    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"), profiles = project.project.collections.profiles.map(({ name }) => name).join(", ") || "no destination Profile selected";
+    const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), picker = document.createElement("select"), confirm = document.createElement("button"), cancel = document.createElement("button");
     heading.textContent = "Review saved-schema adoption";
-    summary.textContent = `${schema.name} revision ${schema.version} → project ${project.project.name}; destination Profiles: ${profiles}; source lineage will be recorded; conflicts: none detected; affected consumers: compilation, coverage, release, and Live.`;
+    picker.setAttribute("aria-label", "Project for saved schema adoption");
+    for (const record of records)
+        picker.append(new Option(record.state.project.name, record.state.project.id));
+    picker.value = library.activeProjectId ?? records[0].state.project.id;
+    const describe = () => { const record = library.projects[picker.value]; summary.textContent = `${schema.name} revision ${schema.version} → project ${record.state.project.name}. Selection changes nothing; confirmation safely activates the chosen project and creates one project-owned canonical Draft with source lineage.`; };
+    describe();
+    picker.addEventListener("change", describe);
     confirm.type = cancel.type = "button";
-    confirm.textContent = "Add saved schema to project";
+    confirm.textContent = "Confirm project switch and adoption";
     cancel.textContent = "Cancel";
     confirm.addEventListener("click", () => { try {
-        const next = adoptSavedSchema(project, schema), result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Adopt saved schema ${schema.name}`, base: project });
+        const record = library.projects[picker.value];
+        if (record.state.project.collections.schemaDrafts.some(({ id }) => id === schema.id))
+            throw new Error(`${schema.name} is already used by ${record.state.project.name}.`);
+        projectLibraryUi.activate(record.state.project.id);
+        const next = adoptSavedSchema(record.state, schema), result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: record.revision, pendingLabel: `Adopt saved schema ${schema.name}`, base: record.state });
         if (result.status === "conflict")
             throw new Error(`Project changed at revision ${result.revision}; review adoption again.`);
+        projectLibraryUi.captureActiveProject(next, result.revision);
         dialog.close();
         dialog.remove();
         if (schemaResult)
-            schemaResult.textContent = `Adopted ${schema.name} revision ${schema.version} into ${project.project.name} with source lineage.`;
+            schemaResult.textContent = `Adopted ${schema.name} revision ${schema.version} into ${record.state.project.name} with source lineage.`;
         renderSchemas();
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
     } });
     cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); trigger.focus({ preventScroll: true }); });
-    dialog.append(heading, summary, confirm, cancel);
+    dialog.append(heading, summary, picker, confirm, cancel);
     document.body.append(dialog);
     dialog.showModal();
     confirm.focus({ preventScroll: true });
 }
 function renderSchemas() {
-    const visible = searchSchemas(schemas, schemaSearch?.value ?? "");
+    const query = (schemaSearch?.value ?? "").trim().toLowerCase(), visible = searchSchemas(schemas, query), project = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), groups = sidePanelSchemaGroups(project, visible).map((group) => ({ ...group, entries: group.name === "Saved schemas" ? group.entries : group.entries.filter((entry) => [entry.name, entry.role, entry.scope, entry.lineage, entry.state].some((value) => String(value).toLowerCase().includes(query))) })).filter(({ entries }) => entries.length), count = groups.reduce((total, { entries }) => total + entries.length, 0), nodes = [];
     if (schemaEmptyState)
-        schemaEmptyState.hidden = visible.length > 0;
+        schemaEmptyState.hidden = count > 0;
     if (schemaCount)
-        schemaCount.textContent = `${visible.length} schemas`;
-    if (schemaList)
-        schemaList.replaceChildren(...visible.map((schema) => {
+        schemaCount.textContent = `${count} schemas and contributors`;
+    const heading = (name) => { const item = document.createElement("li"); item.dataset.schemaGroup = name; item.setAttribute("role", "heading"); item.textContent = name; return item; };
+    if (visible.length) {
+        nodes.push(heading("Saved schemas"), ...visible.map((schema) => {
             const item = document.createElement("li");
             const revise = document.createElement("button");
             const duplicate = document.createElement("button");
@@ -1898,18 +1911,21 @@ function renderSchemas() {
             const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
             const pending = schema.workingDraft?.pendingChanges.length ?? 0;
             const history = schemaRevisionChoices(schema).length;
+            item.dataset.schemaEntryKey = `saved:${schema.id}`;
+            item.dataset.schemaRole = "Saved schema";
             item.textContent = schema.published === false
-                ? `${schema.name} · unpublished draft · ${pending} pending changes. `
-                : `${schema.name} · current revision ${schema.version}${parent ? ` · inherits ${parent.name} v${parent.version}` : ""} · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+                ? `${schema.name} · role Saved schema · scope Library · lineage ${parent?.name ?? "Library root"} · revision ${schema.version} · Draft · ${pending} pending changes. `
+                : `${schema.name} · current revision ${schema.version} · role Saved schema · scope Library · lineage ${parent?.name ?? "Library root"} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
             revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
             revise.textContent = "Edit working draft";
             duplicate.textContent = "Duplicate";
             adopt.textContent = "Add saved schema to project";
-            build.textContent = "Build specification";
+            build.textContent = "Build documentation table";
             exportCurrent.textContent = "Export";
             reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             revise.addEventListener("click", () => {
+                sidePanelLayeredProfileEditor?.close();
                 schemaDraft = schemaEditorDraft(schema);
                 renderSchemaDraft();
             });
@@ -1936,6 +1952,38 @@ function renderSchemas() {
             item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
             return item;
         }));
+    }
+    if (!project) {
+        const item = document.createElement("li"), open = document.createElement("button"), create = document.createElement("button");
+        item.setAttribute("role", "status");
+        item.textContent = "No active project. ";
+        open.type = create.type = "button";
+        open.textContent = "Open project";
+        create.textContent = "Create project";
+        open.addEventListener("click", () => showDataLayerView("Projects", true));
+        create.addEventListener("click", () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); });
+        item.append(open, create);
+        nodes.push(item);
+    }
+    for (const group of groups.filter(({ name }) => name !== "Saved schemas")) {
+        nodes.push(heading(group.name));
+        for (const entry of group.entries) {
+            const item = document.createElement("li"), open = document.createElement("button"), studio = document.createElement("button");
+            item.dataset.schemaEntryKey = entry.key;
+            item.dataset.schemaRole = entry.role;
+            item.textContent = `${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;
+            open.type = studio.type = "button";
+            open.textContent = "Open schema";
+            studio.textContent = "Open schema in Specification Studio";
+            studio.setAttribute("aria-label", `Open ${entry.name} schema in Specification Studio`);
+            open.addEventListener("click", () => { schemaDraft = undefined; sidePanelLayeredProfileEditor?.select(entry.key); });
+            studio.addEventListener("click", () => { if (!project)
+                return; const separator = entry.key.indexOf(":"), kind = entry.key.slice(0, separator), entityId = entry.key.slice(separator + 1); globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`, "_blank"); });
+            item.append(open, studio);
+            nodes.push(item);
+        }
+    }
+    schemaList?.replaceChildren(...nodes);
 }
 function showSchemaSubview(id) {
     schemaPanels.forEach((panel) => { panel.hidden = panel.id !== id; });
@@ -2621,7 +2669,7 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    const previousProject = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
+    const previousProject = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
     const restore = (key, value) => { if (value === null)
         dataLayerStorage.removeItem(key);
     else
@@ -2630,9 +2678,10 @@ function persistSchemaLibrary() {
         if (schemaValue !== previousSchemas)
             dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, schemaValue);
         if (nextProject) {
-            const result = commitCanonicalProjectState(dataLayerStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit", ...(project ? { base: project } : {}) });
+            const result = commitCanonicalProjectState(globalThis.localStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit", ...(project ? { base: project } : {}) });
             if (result.status === "conflict")
                 throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);
+            projectLibraryUi.captureActiveProject(nextProject, result.revision);
         }
     }
     catch (error) {
@@ -4032,7 +4081,7 @@ function recheckCapturedSchemaValidation() {
             schemaResult.textContent = "No captured events are available to recheck.";
         return;
     }
-    const canonical = restoreCanonicalProjectEnvelope(dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), compiled = canonical ? compileSpecificationProject(canonical) : undefined;
+    const canonical = restoreCanonicalProjectEnvelope(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), compiled = canonical ? compileSpecificationProject(canonical) : undefined;
     let checked = 0;
     const issueRows = [];
     const checkedAt = new Date().toISOString();
@@ -4084,7 +4133,7 @@ function refreshCurrentLiveAfterSchemaPublication() {
     return refreshed.revalidatedEventIds.length;
 }
 function reviewCapturedValidationContinuation(record, trigger) {
-    const serialized = dataLayerStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized), captured = liveObserverState.events.find(({ id }) => id === record.eventId);
+    const serialized = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized), captured = liveObserverState.events.find(({ id }) => id === record.eventId);
     if (!project || !envelope) {
         if (schemaResult)
             schemaResult.textContent = "Create or open a Specification Project before continuing captured validation.";
@@ -4124,15 +4173,16 @@ function reviewCapturedValidationContinuation(record, trigger) {
         const toProfile = destination.value === "profile";
         if (toProfile && !profile.value)
             throw new Error("Choose a Profile for the evaluated requirements.");
-        const next = toProfile ? applyCapturedValidationToProfile(project, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(dataLayerStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: project });
+        const next = toProfile ? applyCapturedValidationToProfile(project, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: project });
         if (result.status === "conflict")
             throw new Error(`Project changed at revision ${result.revision}; review the continuation again.`);
-        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ kind, id: entity.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId, evaluationResultIdentity: record.evaluated.resultIdentity }));
+        projectLibraryUi.captureActiveProject(next, result.revision);
+        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ projectId: project.project.id, kind, id: entity.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId, evaluationResultIdentity: record.evaluated.resultIdentity }));
         dialog.close();
         dialog.remove();
         if (schemaResult)
-            schemaResult.textContent = `Saved evaluated capture evidence in ${entity.name}; opening it in Builder.`;
-        globalThis.open(`specification-builder.html?kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel&revision=${result.revision}`, "_blank");
+            schemaResult.textContent = `Saved evaluated capture evidence in ${entity.name}; opening it in Specification Studio.`;
+        globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel&revision=${result.revision}`, "_blank");
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
@@ -6046,7 +6096,8 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
         revokeObservationTargetOrigins(permissions.origins ?? []);
     });
 }
-subscribeCanonicalProjectChanges(globalThis, ({ state: next }) => {
+subscribeCanonicalProjectChanges(globalThis, ({ state: next, revision }) => {
+    projectLibraryUi.captureActiveProject(next, revision);
     const projectSchemas = next.project.collections.schemaDrafts, nextIds = new Set(projectSchemas.map(({ id }) => id));
     schemas = [...schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id) && !nextIds.has(id)), ...projectSchemas];
     canonicalProjectSchemaIds = nextIds;

@@ -21,6 +21,9 @@ export { guidedAttachedRule } from "../../../../data-layer-guided-rule-parameter
 export { guidedPropertyDocument, mergeGuidedDocument } from "../../../../data-layer-guided-nested-property-merge.js";
 export { inspectSpecificIndexRuleTarget } from "../../../../data-layer-schema-nested-path.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "../../../../data-layer-layered-schema-ui.js";
+export { sidePanelSchemaGroups } from "../../../../data-layer-side-panel-schema-editor.js";
+export { mountProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";
+export { PROJECT_LIBRARY_STORAGE_KEY, activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectLibrary, projectMetadata, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, setProjectPendingWrite, stageProjectImport, updateProjectMetadata } from "../../../../data-layer-project-library.js";
 export { openLiveSchemaPropertyDeclarationDialog } from "../../../../data-layer-live-schema-property-declaration-ui.js";
 export { renderSchemaPropertyCopyReview } from "../../../../data-layer-schema-property-copy-ui.js";
 export { renderSchemaPropertyTypeEditor } from "../../../../data-layer-schema-property-type-editing-ui.js";
@@ -28,7 +31,7 @@ export { renderSchemaSpecificationBuilder } from "../../../../data-layer-schema-
 export { revalidateCurrentLiveSession } from "../../../../data-layer-schema-publication-refresh.js";
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "../../../../data-layer-specification-runtime.js";
 export { applyCanonicalSchemaDraftEdits } from "../../../../data-layer-specification-model.js";
-export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "../../../../data-layer-specification-repository.js";
+export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "../../../../data-layer-specification-repository.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, createFixtureFromCapturedValidation, transactProject } from "../../../../data-layer-specification-project.js";
 export { compileSpecificationProject, evaluateSpecificationObservation } from "../../../../data-layer-specification-engine.js";
 //# sourceMappingURL=schemas.js.map

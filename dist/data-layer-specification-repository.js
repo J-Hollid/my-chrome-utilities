@@ -15,6 +15,7 @@ export function restoreCanonicalProjectEnvelope(serialized) { if (!serialized)
     return envelopeFor(parsed, 0); throw new Error("Unsupported Specification Project storage format."); }
 function stateFromEnvelope(envelope) { return { project: clone(envelope.project), ...(envelope.draft ? { draft: clone(envelope.draft) } : {}), history: clone(envelope.history ?? { undo: [], redo: [] }) }; }
 export function restoreCanonicalProjectState(serialized) { const envelope = restoreCanonicalProjectEnvelope(serialized); return envelope ? stateFromEnvelope(envelope) : undefined; }
+export function serializeCanonicalProjectState(state, revision) { return JSON.stringify(envelopeFor(state, revision)); }
 export function subscribeCanonicalProjectChanges(target, notify) {
     const listener = (event) => {
         if (event.key !== CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY || !event.newValue)

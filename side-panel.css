@@ -452,3 +452,27 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
+
+#active-project-header,
+#active-project-card,
+#data-layer-panel-projects li {
+  overflow-wrap: anywhere;
+}
+
+#data-layer-panel-projects {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  overflow-x: hidden;
+}
+
+#data-layer-panel-projects button,
+#data-layer-panel-projects input {
+  max-inline-size: 100%;
+}
+
+#project-library-list {
+  display: grid;
+  gap: 0.5rem;
+  padding-inline-start: 0;
+  list-style: none;
+}

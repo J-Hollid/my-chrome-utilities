@@ -1,5 +1,35 @@
 [
   {
+    "id": "project_management",
+    "source": [
+      "src/data-layer-project-entity-lifecycle.ts",
+      "src/data-layer-project-library.ts",
+      "src/data-layer-project-library-ui.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-project-entity-lifecycle-test.mjs",
+      "test/data-layer-project-library-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-project-entity-lifecycle-property-test.mjs",
+      "test/data-layer-project-library-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-project-library-and-active-context.feature",
+      "features/data-layer-project-library-and-active-context-runtime.feature",
+      "features/data-layer-project-portability-and-upgrade.feature",
+      "features/data-layer-project-portability-and-upgrade-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_management.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-management.mjs",
+      "test/browser-packs/project-entity-lifecycle.mjs"
+    ]
+  },
+  {
     "id": "command-palette",
     "source": [
       "src/command-palette",
@@ -753,7 +783,8 @@
       "src/data-layer-page-group-membership.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",
-      "src/data-layer-layered-schema-ui.ts"
+      "src/data-layer-layered-schema-ui.ts",
+      "src/data-layer-side-panel-schema-editor.ts"
     ],
     "dependencies": [],
     "unit": [

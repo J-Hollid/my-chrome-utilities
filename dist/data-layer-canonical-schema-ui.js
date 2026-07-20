@@ -8,7 +8,7 @@ const select = (name, values, value) => { const control = dom.createElement("sel
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function mountCanonicalSchemaEditor(options) {
     let query = "", feedback = "", pendingType;
-    const send = (command) => { const result = options.dispatch(command); if (result.status === "conflict")
+    const send = (command) => { const propertyId = "propertyId" in command ? command.propertyId : ""; options.host.dataset.canonicalCommandControl = command.kind; options.host.dataset.canonicalCommandPropertyId = propertyId; options.host.ownerDocument.documentElement.dataset.canonicalCommandControl = command.kind; options.host.ownerDocument.documentElement.dataset.canonicalCommandPropertyId = propertyId; const result = options.dispatch(command); if (result.status === "conflict")
         feedback = result.message; if (result.status === "confirmation-required" && command.kind === "type") {
         pendingType = { result, command };
         feedback = result.impact;

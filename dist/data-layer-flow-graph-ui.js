@@ -15,7 +15,7 @@ export function flowEdgeGeometry(source, target, width = nodeWidth, height = nod
 export function installFlowGraphBuilder(options) {
     const inspector = q("#project-inspector"), advanced = q("#flow-step-editor"), legacyForm = q("#add-flow-step-form"), legacyList = q("#flow-step-list"), legacyResult = q("#flow-step-result"), inspectorContext = document.createElement("section");
     inspectorContext.id = "flow-inspector-context";
-    inspector.insertBefore(inspectorContext, q("#add-entity-form"));
+    inspector.insertBefore(inspectorContext, advanced);
     legacyForm.hidden = true;
     legacyList.hidden = true;
     legacyResult.hidden = true;
