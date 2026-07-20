@@ -12,6 +12,7 @@ export const projectCollectionDefinitions = {
     assignments: { kind: "assignments", overview: "Assignments", singular: "Assignment", addAction: "Add Assignment", purpose: "production schema selection for matching observations", example: "Retail Purchase", prerequisites: ["Schema", "Event", "Applicability Set"], consumers: ["production evaluator"] },
 };
 export function hasCanonicalProfileOverviewActions(kind, selectedId) { return kind === "profiles" && !selectedId; }
+export function projectInspectorTogglePresentation(open) { return { label: open ? "Hide Inspector" : "Show Inspector", expanded: open ? "true" : "false" }; }
 const containsIdentity = (value, identity) => { if (value === identity)
     return true; if (Array.isArray(value))
     return value.some((entry) => containsIdentity(entry, identity)); if (value && typeof value === "object")
