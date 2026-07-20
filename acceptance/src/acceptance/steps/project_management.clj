@@ -79,9 +79,12 @@
   (set (concat [:installedBoundary]
                (map #(keyword (str "context" (format "%03d" %))) (range 1 17))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
+(defn complete-browser-evidence? [evidence]
+  (boolean (and (map? evidence)
+                (= runtime-paths (set (keys evidence)))
+                (every? true? (vals evidence)))))
 (defn- assert-runtime! [evidence]
-  (support/assert! (and (= runtime-paths (set (keys evidence)))
-                        (every? true? (vals evidence)))
+  (support/assert! (complete-browser-evidence? evidence)
                    "Installed project-management evidence is incomplete."
                    evidence))
 (def handlers
