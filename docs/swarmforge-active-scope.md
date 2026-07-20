@@ -68,6 +68,23 @@ not eligible for integration because it deletes the active project-management
 program and all four active project-management feature contracts while this file
 continues to name them.
 
+## Current delivery queue
+
+The following task lineages are cumulative and remain open until each reaches an
+architect terminal handoff and is merged to `master`:
+
+1. `single-schema-editor-parity`;
+2. `flow-canvas-topology-examples`;
+3. `project-library-active-context`; and
+4. `project-entity-overview-lifecycle`.
+
+The order controls delivery sequencing only. A later specification does not replace
+or deactivate an earlier task, and a candidate for one task must preserve the active
+contracts and parent files for the other three. Rejected candidates do not satisfy
+or close their task lineage; the task must continue from current `master` under the
+same stable task name. Shared prerequisites may be ported when required, but
+unrelated implementation branches must not be merged wholesale.
+
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
 ports, pointer and keyboard relationship drawing, inline relationship editing, and
