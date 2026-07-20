@@ -7,6 +7,9 @@ export { layeredContributionDetails, layeredContributorPath, layeredContributors
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
 const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", pageGroups: "Page Group", pages: "Page", flows: "Flow Page-instance" }[kind] ?? "Event-occurrence");
+export const canonicalLayerEditorSurface = (kind) => kind === "flows" ? "Flow workspace" : "Builder";
+export function flowPageFrameContributor(state, flowId, pageFrameId) { const graph = state.project.documentationFlowGraphs?.[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId); if (!frame)
+    return; const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), flow = state.project.collections.flows.find(({ id }) => id === flowId); return { ...frame, name: typeof frame.name === "string" && frame.name.trim() ? frame.name : `${page?.name ?? "Page"} in ${flow?.name ?? "Flow"}` }; }
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
 export function composeStructuredRules(rules, reusableRules, structured) { return { rules: [...rules, ...(structured.field ? [{ field: structured.field, operator: structured.operator || "equals", ...(structured.value ? { value: structured.value } : {}) }] : [])], reusableRules: [...reusableRules, ...(structured.reusableRuleId ? [{ id: structured.reusableRuleId }] : [])] }; }
@@ -54,17 +57,17 @@ export function installLayeredSchemaUi(options) {
     editor.hidden = true;
     inspector.insertBefore(summary, inspector.firstChild?.nextSibling ?? null);
     editorHost.append(editor);
-    const current = () => { const { state, kind, entityId } = options.context(), entity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined; return { state, kind, entity: graphSelection ?? entity, scope: graphSelectionScope ?? scopeFor(kind) }; };
+    const current = () => { const { state, kind, entityId } = options.context(), collectionEntity = state && entityId ? state.project.collections[kind].find(({ id }) => id === entityId) : undefined, entity = graphSelection ?? (kind === "flows" ? undefined : collectionEntity); return { state, kind, entity, scope: graphSelectionScope ?? scopeFor(kind) }; };
     const id = (kind) => `${kind}:${crypto.randomUUID()}`;
-    const writeCanonical = (state, entity, scope, canonical) => transactProject(state, `Save canonical schema for ${entity.name}`, (project) => { if (graphSelection && (scope === "Event-occurrence" || Boolean(graphSelection.freePageFrame))) {
-        const flowId = options.context().entityId, graphs = project.documentationFlowGraphs;
-        return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], occurrences: graphs[flowId].occurrences.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } };
+    const writeCanonical = (state, entity, scope, canonical) => transactProject(state, `Save canonical schema for ${entity.name}`, (project) => { if (graphSelection && (scope === "Event-occurrence" || scope === "Flow Page-instance")) {
+        const flowId = options.context().entityId, graphs = project.documentationFlowGraphs, graph = graphs[flowId], ownsPageFrame = scope === "Flow Page-instance" && Boolean(graph.pageFrames?.some(({ id }) => id === entity.id));
+        return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: ownsPageFrame ? { ...graph, pageFrames: graph.pageFrames.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } : { ...graph, occurrences: graph.occurrences.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } };
     } const collectionKind = scope === "Page" ? "pages" : scope === "Page Group" ? "pageGroups" : scope === "Event" ? "events" : scope === "Shared Profile" ? "profiles" : "flows"; return { ...project, collections: { ...project.collections, [collectionKind]: project.collections[collectionKind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical, ...(collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } }; });
     const ensureCanonical = () => { const { state, entity, scope } = current(); if (!state || !entity || entity.canonicalSchema)
         return; const legacy = Boolean(entity.requirements || entity.structuredSchema || entity.structuredDraft || entity.schemaConstraints), canonical = legacy ? migrateLegacyProfile(entity, { id }).document : createCanonicalSchema({ id: id("canonical-schema"), contributorId: entity.id, contributorName: entity.name }); if (graphSelection)
         graphSelection = { ...graphSelection, canonicalSchema: canonical }; options.persist(writeCanonical(state, entity, scope, canonical)); };
     const renderCanonicalLayerEditor = (state, entity, scope) => { const canonical = entity.canonicalSchema; if (!canonical)
-        return false; const title = document.createElement("h2"), identity = document.createElement("p"), areas = document.createElement("nav"), host = document.createElement("section"), back = document.createElement("button"), compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined)), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), occurrenceId: entity.id }); title.tabIndex = -1; title.textContent = "Shared canonical schema editor"; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; areas.textContent = `Inherited constraints · Local contributions · Effective results · Blocking conflicts (${compiled.conflicts.length})`; back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus({ preventScroll: true }); }); editor.append(title, identity, areas, host, renderRuntimeControls(state, entity, scope, compiled), back); mountCanonicalSchemaEditor({ host, surface: "Flow workspace", load: () => current().entity.canonicalSchema, id, dispatch: (command) => { const live = current(), document = live.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {
+        return false; const title = document.createElement("h2"), identity = document.createElement("p"), areas = document.createElement("nav"), host = document.createElement("section"), back = document.createElement("button"), compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined)), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), occurrenceId: entity.id }); title.tabIndex = -1; title.textContent = "Shared canonical schema editor"; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; areas.textContent = `Inherited constraints · Local contributions · Effective results · Blocking conflicts (${compiled.conflicts.length})`; back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus({ preventScroll: true }); }); editor.append(title, identity, areas, host, renderRuntimeControls(state, entity, scope, compiled), back); mountCanonicalSchemaEditor({ host, surface: canonicalLayerEditorSurface(options.context().kind), load: () => current().entity.canonicalSchema, id, dispatch: (command) => { const live = current(), document = live.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {
             if (graphSelection)
                 graphSelection = { ...graphSelection, canonicalSchema: result.document };
             options.persist(writeCanonical(live.state, live.entity, live.scope, result.document));
@@ -152,13 +155,13 @@ export function installLayeredSchemaUi(options) {
         output.textContent = `Affected scope: ${scope} · compiled targets stale · Draft · Undo available`; }));
     const graphContributorSelector = '[data-occurrence-id],[data-page-frame-id],[aria-label="Interactive directional Flow canvas"] [data-page-group-id]';
     const selectGraphContributor = (target) => { const { state, kind, entityId: flowId } = options.context(); if (!state || kind !== "flows" || !flowId)
-        return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageId = target.dataset.pageId ?? target.dataset.pageFrameId, pageGroupId = !pageId ? target.dataset.pageGroupId : undefined, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (occurrenceId) {
+        return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageFrameId = !occurrenceId ? target.dataset.pageFrameId : undefined, pageGroupId = !occurrenceId && !pageFrameId ? target.dataset.pageGroupId : undefined, pane = q("#workspace-pane"), graph = document.querySelector('[aria-label="Interactive directional Flow canvas"]'); if (occurrenceId) {
         graphSelection = graphs[flowId]?.occurrences?.find(({ id }) => id === occurrenceId);
         graphSelectionScope = graphSelection?.freePageFrame ? "Flow Page-instance" : "Event-occurrence";
     }
-    else if (pageId) {
-        graphSelection = state.project.collections.pages.find(({ id }) => id === pageId);
-        graphSelectionScope = "Page";
+    else if (pageFrameId) {
+        graphSelection = flowPageFrameContributor(state, flowId, pageFrameId);
+        graphSelectionScope = "Flow Page-instance";
     }
     else if (pageGroupId && pageGroupId !== "ungrouped") {
         graphSelection = state.project.collections.pageGroups.find(({ id }) => id === pageGroupId);
@@ -166,7 +169,7 @@ export function installLayeredSchemaUi(options) {
     }
     else
         return; if (!graphSelection)
-        return; const stableSelectorId = occurrenceId ?? target.dataset.pageFrameId ?? pageGroupId, id = CSS.escape(stableSelectorId), selector = occurrenceId ? `[data-occurrence-id="${id}"]` : pageId ? `[data-page-frame-id="${id}"]` : `[aria-label="Interactive directional Flow canvas"] [data-page-group-id="${id}"]`; flowReturn = { selector, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
+        return; const stableSelectorId = occurrenceId ?? pageFrameId ?? pageGroupId, id = CSS.escape(stableSelectorId), selector = occurrenceId ? `[data-occurrence-id="${id}"]` : pageFrameId ? `[data-page-frame-id="${id}"]` : `[aria-label="Interactive directional Flow canvas"] [data-page-group-id="${id}"]`; flowReturn = { selector, scrollLeft: pane.scrollLeft, scrollTop: pane.scrollTop, viewBox: graph?.getAttribute("viewBox") ?? "" }; renderSummary(); };
     document.addEventListener("click", (event) => { const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")

@@ -5,9 +5,9 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {appendSharedProfileConstraint,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,canonicalLayerEditorSurface,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,flowPageFrameContributor,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
 import {layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
-import {canonicalConstraints} from "../dist/data-layer-canonical-schema.js";
+import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
@@ -109,17 +109,23 @@ assert.deepEqual(richValidation.issues.map(({path,code})=>({path,code})),[
 const richExport=exportLayeredSchema({targetName:"Rich target",pageName:"Article",eventName:"Article Opened",activation:"manual",compiled:richValidation.provenance&&compileLayeredSchema([contribution("profile:documented","Documented","Shared Profile",[{path:"/article_name",type:"string",presence:"required",allowedValues:["Summer sale"],condition:{kind:"predicate",propertyId:"property:type",operator:"Equals",value:"News"},documentation:"Opened article title",examples:["Summer sale"]}])],{eventId:"event:opened",eventRole:"interaction"})});
 assert.match(richExport,/condition/);assert.match(richExport,/Opened article title/);assert.match(richExport,/Summer sale/);assert.match(richExport,/Shared Profile Documented/);
 
+const pageCanonical=createCanonicalSchema({id:"canonical:page",contributorId:"page:selected",contributorName:"Selected page"}),flowCanonical=createCanonicalSchema({id:"canonical:flow",contributorId:"flow:selected",contributorName:"Selected flow"}),frameCanonical=createCanonicalSchema({id:"canonical:frame",contributorId:"frame:selected",contributorName:"Selected page instance"});
 const pathState={project:{collections:{
   profiles:[{id:"profile:selected",name:"Selected"},{id:"profile:unrelated",name:"Unrelated"}],
   events:[{id:"event:selected",name:"Selected event"},{id:"event:unrelated",name:"Unrelated event"}],
   pageGroups:[{id:"group:selected",name:"Selected group",pageIds:["page:selected"]},{id:"group:unrelated",name:"Unrelated group",pageIds:["page:unrelated"]}],
-  pages:[{id:"page:selected",name:"Selected page",contextEventBindings:[{id:"binding:selected",name:"Selected binding",eventId:"event:selected"}]},{id:"page:unrelated",name:"Unrelated page"}],
-  flows:[{id:"flow:selected",name:"Selected flow"},{id:"flow:unrelated",name:"Unrelated flow"}],
-},documentationFlowGraphs:{"flow:selected":{pageGroupIds:["group:selected"],occurrences:[{id:"occurrence:selected",name:"Selected occurrence",profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected"},{id:"occurrence:sibling",name:"Sibling occurrence",eventId:"event:unrelated",pageGroupId:"group:selected",pageId:"page:selected"}]},"flow:unrelated":{occurrences:[{id:"occurrence:unrelated",name:"Unrelated occurrence",eventId:"event:unrelated",pageGroupId:"group:unrelated",pageId:"page:unrelated"}]}}}};
+  pages:[{id:"page:selected",name:"Selected page",canonicalSchema:pageCanonical,contextEventBindings:[{id:"binding:selected",name:"Selected binding",eventId:"event:selected"}]},{id:"page:unrelated",name:"Unrelated page"}],
+  flows:[{id:"flow:selected",name:"Selected flow",canonicalSchema:flowCanonical},{id:"flow:unrelated",name:"Unrelated flow"}],
+},documentationFlowGraphs:{"flow:selected":{pageGroupIds:["group:selected"],pageFrames:[{id:"frame:selected",name:"Selected page instance",pageId:"page:selected",pageGroupId:"group:selected",canonicalSchema:frameCanonical}],occurrences:[{id:"occurrence:selected",name:"Selected occurrence",profileId:"profile:selected",eventId:"event:selected",pageFrameId:"frame:selected",pageGroupId:"group:selected",pageId:"page:selected"},{id:"occurrence:sibling",name:"Sibling occurrence",eventId:"event:unrelated",pageGroupId:"group:selected",pageId:"page:selected"}]},"flow:unrelated":{occurrences:[{id:"occurrence:unrelated",name:"Unrelated occurrence",eventId:"event:unrelated",pageGroupId:"group:unrelated",pageId:"page:unrelated"}]}}}};
 const selectedOccurrence=pathState.project.documentationFlowGraphs["flow:selected"].occurrences[0],selectedPath=layeredContributorPath(pathState,selectedOccurrence,"Event-occurrence","flow:selected"),selectedContributors=layeredContributorsForPath(pathState,selectedPath);
-assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",occurrenceId:"occurrence:selected"});
-assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","flow:selected","occurrence:selected"]);
-assert.deepEqual(layeredContributorPath(pathState,pathState.project.collections.flows[0],"Flow Page-instance"),{pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected"});
+assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selected",pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",pageFrameId:"frame:selected",occurrenceId:"occurrence:selected"});
+assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","frame:selected","occurrence:selected"]);
+const selectedFrame=flowPageFrameContributor(pathState,"flow:selected","frame:selected");
+assert.deepEqual(layeredContributorPath(pathState,selectedFrame,"Flow Page-instance","flow:selected"),{pageGroupId:"group:selected",pageId:"page:selected",flowId:"flow:selected",pageFrameId:"frame:selected"});
+assert.deepEqual({id:selectedFrame.id,name:selectedFrame.name,canonicalSchemaId:selectedFrame.canonicalSchema.id},{id:"frame:selected",name:"Selected page instance",canonicalSchemaId:"canonical:frame"});
+assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.pages[0].canonicalSchema.id);
+assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.flows[0].canonicalSchema.id);
+assert.equal(canonicalLayerEditorSurface("pageGroups"),"Builder");assert.equal(canonicalLayerEditorSurface("pages"),"Builder");assert.equal(canonicalLayerEditorSurface("events"),"Builder");assert.equal(canonicalLayerEditorSurface("flows"),"Flow workspace");
 assert.equal(layeredContributorPath(pathState,{id:"occurrence:context",name:"Context occurrence",pageGroupId:"group:selected",pageId:"page:selected",contextBindingId:"binding:selected"},"Event-occurrence","flow:selected").eventId,"event:selected");
 assert.equal(layeredEventRole({id:"occurrence:context",name:"Context occurrence",contextBindingId:"binding:selected"}),"context");
 assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');
