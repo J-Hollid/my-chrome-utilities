@@ -2,9 +2,9 @@
 
 ## Current authority
 
-The active specification cycles are the interactive directional Flow graph review
-checkpoint and the focused canonical authoring and layered effective-schema
-checkpoint. Their contracts are:
+The active specification cycles are the interactive directional Flow graph review,
+focused canonical authoring and layered effective-schema, selected-Flow
+documentation export, and project-management checkpoints. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
@@ -14,6 +14,10 @@ checkpoint. Their contracts are:
 - `features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature`
 - `features/data-layer-layered-schema-constraints.feature`
 - `features/data-layer-layered-schema-constraints-runtime.feature`
+- `features/data-layer-project-library-and-active-context.feature`
+- `features/data-layer-project-library-and-active-context-runtime.feature`
+- `features/data-layer-project-portability-and-upgrade.feature`
+- `features/data-layer-project-portability-and-upgrade-runtime.feature`
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
@@ -21,11 +25,18 @@ The correction program for the Flow graph contracts is
 `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
 The program for selected-Flow table documentation is
 `docs/data-layer-flow-table-documentation-export-program-R01.md`.
+The program for project library, active context, and portability is
+`docs/data-layer-project-management-program-R01.md`.
 
 The user-approved canonical-authoring and layered-schema cycles are later authority
 than the earlier graph-only scope reduction. They supersede that reduction only for
 behavior named by the four schema contracts above. Agents must not discard, reject,
 or classify these cycles as inactive because of the earlier reduction.
+
+The project-management contracts are likewise later user-approved authority only
+for the named project library, active context, Studio routing, portability, and
+singleton migration behavior. They do not reactivate the archived project-
+foundation or release specifications.
 
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
@@ -64,6 +75,24 @@ rich Confluence/Jira clipboard, and an offline four-sheet `.xlsx` workbook. Expo
 ordering and Step labels are documentary presentation only. Incomplete Draft exports
 require explicit confirmation and retain Blocked or Incomplete cells, diagnostics,
 and a Draft — incomplete label.
+
+The project-management checkpoint adds a top-level Projects side-panel tab and a
+production project library that may contain multiple complete projects while zero
+or one stable project identity is active. Create, metadata edit, switch, Studio
+routing, import, and export are project functions rather than Schema functions.
+Every project-bound surface subscribes to the same active identity, pending writes
+block switching, and per-project navigation prevents cross-project entity lookup.
+Specification Studio opens from a project at Project overview; schema actions may
+deep-link inside the owning project but do not own the workspace.
+
+The global Saved Schema Library remains usable without active project context.
+Adoption safely activates the chosen project and creates one project-owned Draft
+with source lineage. Versioned project export contains the complete persisted Draft
+graph while excluding permissions, Live data, caches, UI state, and Undo history.
+Import is staged and atomic, supports Import as new project only, remaps all project-
+owned identities and internal references, preserves external lineage, and leaves the
+new project inactive until explicitly opened. Existing singleton project storage
+migrates once without identity or data loss.
 
 The canonical authoring checkpoint replaces the current lightweight requirements
 grid, structured draft, path-constraint overlay, and any additional Shared Profile
@@ -221,6 +250,20 @@ node scripts/run-focused-acceptance.mjs --pack layered_schema
 node scripts/package.mjs
 ```
 
+The project-management checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack project_management
+node scripts/package.mjs
+```
+
+The `project_management` pack must register all four project-management contracts
+and focused production evidence for the project repository, side-panel Projects
+tab, Specification Studio router, versioned serializer, import remapper, and legacy
+singleton migration. It may declare canonical schema dependencies in the pack
+registry but must not invoke archived project-foundation, release, or full-site
+acceptance suites.
+
 The `layered_schema` pack must register all four canonical-authoring and layered-
 schema feature contracts and their focused production evidence. Adding the new
 contracts does not authorize extra checkpoint commands.
@@ -228,8 +271,8 @@ contracts does not authorize extra checkpoint commands.
 Each pack command performs its registered type/build, focused unit tests, installed
 browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
 must be declared in the registry rather than invoked as extra commands. The package
-command consumes that already-built `dist`; `npm run package` is not part of either
-sequence because it rebuilds.
+command consumes that already-built `dist`; `npm run package` is not part of any
+checkpoint sequence because it rebuilds.
 
 For local diagnosis, `npm run typecheck`, `npm run build`,
 `node test/data-layer-flow-graph-test.mjs`, and
