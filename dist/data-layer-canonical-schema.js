@@ -1,4 +1,3 @@
-import { transactProject } from "./data-layer-specification-project.js";
 const clone = (value) => structuredClone(value);
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
@@ -232,9 +231,6 @@ export function migrateLegacyProfile(profile, options) {
     document.changes = [{ revision: 1, propertyIds: Object.keys(document.nodes), kind: "add" }];
     return { profileId: profile.id, document, byPath, conflicts, legacyKeys: ["requirements", "structuredSchema", "structuredDraft", "schemaConstraints"] };
 }
-export function confirmCanonicalMigration(state, plan) { if (plan.conflicts.length)
-    throw new Error(`Resolve ${plan.conflicts.length} canonical migration conflict${plan.conflicts.length === 1 ? "" : "s"} before confirming.`); return transactProject(state, "Migrate legacy schema to canonical document", (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => { if (profile.id !== plan.profileId)
-            return profile; const next = { ...profile, requirements: [], canonicalSchema: clone(plan.document) }; delete next.structuredSchema; delete next.structuredDraft; delete next.schemaConstraints; return next; }) } })); }
 export function canonicalSchemaFromJsonSchema(input) { const profile = { id: input.contributorId, name: input.contributorName, structuredSchema: input.document }, plan = migrateLegacyProfile(profile, { id: input.idFactory }), firstRootId = plan.document.rootIds[0], document = { ...plan.document, id: input.id, source: { identity: input.sourceIdentity, revision: input.sourceRevision, provenance: "saved-schema-library" }, ...(firstRootId ? { selectedPropertyId: firstRootId } : {}) }; for (const node of Object.values(document.nodes))
     node.provenance = node.provenance.map(() => ({ source: "saved-schema", sourceId: input.sourceIdentity, revision: input.sourceRevision })); return document; }
 export function canonicalNodeFromValue(name, value, input) { return { id: input.id("property"), name, ...(input.parentId ? { parentId: input.parentId } : {}), order: input.order, type: typeOf(value), presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: emptyDocumentation(), provenance: [{ source: "created" }], overrideReferences: [] }; }

@@ -1,6 +1,6 @@
 import {compileLayeredSchema,exportLayeredSchema,resolveLayeredTarget,validateLayeredObservation,type LayerActivation,type LayerConstraint,type LayerContributor,type LayerPredicate,type LayerScope,type LayerTarget} from "./data-layer-layered-schema.js";
-import {redoProjectTransaction,transactProject,undoProjectTransaction,type ProjectEntity,type ProjectEntityKind,type ProjectState} from "./data-layer-specification-project.js";
-import {applyCanonicalCommand,canonicalConstraints,canonicalSchemaWithConstraint,canonicalTableRows,confirmCanonicalMigration,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {confirmCanonicalMigration,redoProjectTransaction,transactProject,undoProjectTransaction,type ProjectEntity,type ProjectEntityKind,type ProjectState} from "./data-layer-specification-project.js";
+import {applyCanonicalCommand,canonicalConstraints,canonicalSchemaWithConstraint,canonicalTableRows,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {mountCanonicalSchemaEditor} from "./data-layer-canonical-schema-ui.js";
 
 interface LayeredSchemaUiOptions{context:()=>{state?:ProjectState;kind:ProjectEntityKind;entityId?:string};persist:(state:ProjectState)=>void}

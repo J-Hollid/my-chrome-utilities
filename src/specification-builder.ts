@@ -4,6 +4,7 @@ import {
   buildReleaseReview,
   commitStagedProjectImport,
   commitSavedSchemaSynchronization,
+  confirmCanonicalMigration,
   createSpecificationProject,
   createProjectSchemaDraft,
   exportDocumentation,
@@ -44,7 +45,7 @@ import {
   type CanonicalCommitResult,
 } from "./data-layer-specification-repository.js";
 import {installLayeredSchemaUi} from "./data-layer-layered-schema-ui.js";
-import {applyCanonicalCommand,canonicalRequirements,confirmCanonicalMigration,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {applyCanonicalCommand,canonicalRequirements,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {mountCanonicalSchemaEditor} from "./data-layer-canonical-schema-ui.js";
 
 const STORAGE_KEY=CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,NAVIGATION_KEY="my-chrome-utilities.specification-project-navigation.v1",START_PATH_KEY="my-chrome-utilities.specification-project-start.v1";

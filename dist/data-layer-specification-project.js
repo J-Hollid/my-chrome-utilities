@@ -21,6 +21,19 @@ export function transactProject(state, label, update) {
         throw new Error("A project transaction cannot replace project identity.");
     return { project, draft: { ...state.draft, status: "Saved", updatedAt: now() }, history: { undo: [...state.history.undo, { label, project: before }], redo: [] } };
 }
+export function confirmCanonicalMigration(state, plan) {
+    if (plan.conflicts.length)
+        throw new Error(`Resolve ${plan.conflicts.length} canonical migration conflict${plan.conflicts.length === 1 ? "" : "s"} before confirming.`);
+    return transactProject(state, "Migrate legacy schema to canonical document", (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => {
+                if (profile.id !== plan.profileId)
+                    return profile;
+                const next = { ...profile, requirements: [], canonicalSchema: clone(plan.document) };
+                delete next.structuredSchema;
+                delete next.structuredDraft;
+                delete next.schemaConstraints;
+                return next;
+            }) } }));
+}
 export function undoProjectTransaction(state) {
     const entry = state.history.undo.at(-1);
     if (!entry)

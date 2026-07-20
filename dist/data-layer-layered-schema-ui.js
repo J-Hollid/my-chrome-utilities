@@ -1,6 +1,6 @@
 import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
-import { redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
-import { applyCanonicalCommand, canonicalConstraints, canonicalSchemaWithConstraint, canonicalTableRows, confirmCanonicalMigration, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { confirmCanonicalMigration, redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
+import { applyCanonicalCommand, canonicalConstraints, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };

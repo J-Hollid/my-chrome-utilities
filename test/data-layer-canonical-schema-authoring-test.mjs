@@ -7,7 +7,6 @@ import {
   canonicalSchemaFromJsonSchema,
   canonicalTableRows,
   changeCanonicalPropertyType,
-  confirmCanonicalMigration,
   createCanonicalRepository,
   createCanonicalSchema,
   evaluateCanonicalPredicate,
@@ -15,7 +14,7 @@ import {
   renameCanonicalProperty,
   setCanonicalProperty,
 } from "../dist/data-layer-canonical-schema.js";
-import {createSpecificationProject, undoProjectTransaction} from "../dist/data-layer-specification-project.js";
+import {confirmCanonicalMigration,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`;
