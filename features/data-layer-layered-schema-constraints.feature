@@ -11,7 +11,7 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 001
   Scenario Outline: Data layer layered schema constraints 001
     Given the operator opens the schema contribution for <contributor>
-    Then the same canonical property tree and selected-property editor are available
+    Then the same canonical composed-property table and expandable row editors are available
     And root, child, sibling, rename, move, duplicate, and delete actions are available
     And type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are available
     And inherited, local, effective, superseded, and conflicting definitions are distinguished
@@ -233,3 +233,55 @@ Feature: Data layer layered schema constraints
     Then one atomic revision stores only Cart's ordered stable Page Group references
     And Checkout, Retail Checkout, and Trade Checkout member views derive Cart from that revision
     And one Undo restores the complete pre-migration membership state
+
+  # Data layer layered schema constraints 016
+  Scenario: Data layer layered schema constraints 016
+    Given Sitewide contributes page_name, funnel_name, funnel_step, and page_type
+    And Checkout refines funnel_name and funnel_step
+    And Cart belongs to Checkout and contributes a local funnel_step override
+    When the operator opens Checkout from the Page Groups overview
+    Then Checkout opens as a full main-workspace configuration page without requiring the Inspector
+    And its Effective schema at Checkout table composes Sitewide and Checkout with inherited, local, effective, and provenance values in every row
+    When the operator opens Cart from the Pages overview
+    Then Cart opens as a full main-workspace configuration page with applicability, ordered memberships, and Effective schema at Cart
+    And all four effective properties remain visible with their Shared Profile, Checkout, and Cart contribution stack
+    And inherited rows offer Override here while the locally adjusted funnel_step row offers Reset to parents
+    And the Inspector remains an optional summary and link to this same workspace rather than a different editor
+
+  # Data layer layered schema constraints 017
+  Scenario: Data layer layered schema constraints 017
+    Given the ordinary parent universe for funnel_step contains 2, 3a, and 3b
+    And the Page-level expectation on Cart is 2
+    When the operator adds Retail Checkout which ordinarily expects funnel_step 3a
+    Then the membership addition commits as Draft and Cart effective funnel_step remains 2
+    And the funnel_step row reports Parent difference resolved by Cart override without blocking compilation
+    And provenance shows Checkout and Retail Checkout as shadowed parents and Cart as the effective source
+    And only the expected-value facet is resolved locally while every other facet continues to inherit
+    When the operator activates Reset to parents on funnel_step
+    Then impact preview shows the effective parent value, affected Page instances, stale outputs, and one Undo action
+    When the operator confirms reset
+    Then the Cart expected-value contribution is removed rather than replaced with a copied parent value
+    And the row immediately recompiles from Checkout and Retail Checkout
+    And a Cart-only property offers Remove local property instead of Reset to parents
+
+  # Data layer layered schema constraints 018
+  Scenario: Data layer layered schema constraints 018
+    Given the Cart contribution covers funnel_step expected value but no other facet
+    And Checkout declares funnel_name as an invariant string
+    When the operator adds Partner Checkout with a number funnel_name and an incompatible funnel_step type
+    Then the Page Group membership command still commits as Draft with a visible conflict summary
+    And the local expectation survives solely within its declared facet
+    And the uncovered funnel_step type and Checkout funnel_name invariant block the effective schema
+    And each blocked row distinguishes winning local facets, unresolved parent facets, and invariant provenance
+    And direct repairs offer adjust Cart override where permitted, edit Partner Checkout, or remove the membership
+    And validation and developer export cannot report the blocked Page schema as ready
+
+  # Data layer layered schema constraints 019
+  Scenario: Data layer layered schema constraints 019
+    Given Cart compilation includes parent inheritance, Page edits, and one unresolved conflict
+    When the operator opens Cart at a viewport width of 360 pixels
+    Then one vertical scroll owner presents every effective property as a compact table row
+    And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
+    When the operator expands the funnel_step row
+    Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear as a stacked row detail
+    And closing the row restores focus to funnel_step without hiding the other property rows

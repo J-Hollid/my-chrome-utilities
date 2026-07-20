@@ -97,6 +97,24 @@ its placement group is separate from membership order and lane order. Reordering
 membership never moves a frame, and removing an in-use membership blocks until the
 frame is moved to another eligible lane or removed.
 
+Opening a Page or Page Group from its overview goes directly to a full
+main-workspace configuration with an `Effective schema at <name>` table; the
+Inspector is only an optional summary and link. The wide table keeps every
+effective property visible and exposes common facets inline, with complete complex
+builders expanding beneath a row. Rows distinguish inherited, local, effective,
+shadowed, conflicting, and provenance values. At 360px the same model uses compact
+rows and stacked detail with one vertical scroll owner and no horizontal page
+scroll.
+
+`Override here` stores only the locally changed property facets. A Page-local facet
+wins an ordinary difference on that same facet after its ordered Page Group stack
+and produces a non-blocking warning with shadowed-parent provenance. `Reset to
+parents` deletes that sparse local contribution and recompiles from the live parent
+stack; local-only properties use `Remove local property`. Adding a Page Group always
+persists the Draft membership change. Uncovered illegal differences and inherited
+invariants block effective-schema readiness, validation, and developer export with
+direct repairs, but do not roll back the membership or hide the configuration.
+
 The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a
 general Assignment or resolver redesign. Project-wide batch documentation export,

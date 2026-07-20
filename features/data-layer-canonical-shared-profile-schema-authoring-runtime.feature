@@ -43,7 +43,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   Scenario: Data layer canonical Shared Profile schema authoring runtime 005
     Given actual controls open Opened Article in the wide schema workspace
     When article_name is selected
-    Then the main workspace renders a property navigator, selected-property editor, and effective documentation outside the Inspector
+    Then the main workspace renders a property navigator, complete schema table, expandable article_name details, and effective documentation outside the Inspector
     And production search, filtering, revision comparison, object, array, item-type, scalar-type, presence, allowed-value, regular-expression, range, cardinality, conditional-rule, reusable-rule, documentation, example, and impact-review actions match the side-panel schema editor
     And installed Tree and Table views share the selected property and canonical revision
     And complete authoring succeeds without editing advanced JSON
@@ -108,11 +108,14 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   Scenario: Data layer canonical Shared Profile schema authoring runtime 011
     Given production Opened Article contains nested article metadata and article_name properties
     When actual controls switch from Tree to Table
-    Then rendered indentation and expansion preserve hierarchy and selected stable property identity
-    And headings include property, type, presence, condition, allowed values, rules, documentation, example, and validation state
-    And installed root, child, sibling, rename, move, duplicate, and delete actions remain operable
-    When the article_name row is expanded
-    Then the complete production selected-property controls remain available in Table
+    Then the wide workspace renders one hierarchical row for every effective property
+    And headings include property, path, type, presence, expected or allowed values, conditions, rules, documentation, example, source, local state, validation state, and actions
+    And actual inline controls edit common fields across multiple rows
+    And production root, child, sibling, rename, move, duplicate, and delete commands open no separate one-property screen
+    When actual controls change article_name presence and article_type example without leaving Table
+    Then both rendered rows retain their edits and remain simultaneously visible
+    When the installed Table reveals article_name complex row detail
+    Then complex condition and rule builders render beneath that row without unmounting the other rows
     And an actual Table edit immediately updates Tree and documentation preview
 
   # Data layer canonical Shared Profile schema authoring runtime 012

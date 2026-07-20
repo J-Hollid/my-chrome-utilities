@@ -43,7 +43,7 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario: Data layer canonical Shared Profile schema authoring 005
     Given Opened Article is open in the wide schema workspace
     When the operator selects property article_name
-    Then the workspace shows a property navigator, the selected-property editor, and effective documentation without using the Inspector as its primary editor
+    Then the workspace shows a property navigator, the complete schema table, expandable article_name details, and effective documentation without using the Inspector as its primary editor
     And search, filtering, revision comparison, object, array, item-type, scalar-type, presence, allowed-value, regular-expression, range, cardinality, conditional-rule, reusable-rule, documentation, example, and impact-review actions match the side-panel schema editor
     And Tree and Table are synchronized views of the same profile revision
     And advanced JSON is optional and cannot be the only complete authoring route
@@ -108,11 +108,14 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario: Data layer canonical Shared Profile schema authoring 011
     Given Opened Article contains nested article metadata and article_name properties
     When the operator switches from Tree to Table
-    Then indentation and expansion preserve the property hierarchy and current selection
-    And common columns show property, type, presence, condition, allowed values, rules, documentation, example, and validation state
-    And root, child, sibling, rename, move, duplicate, and delete actions remain available
+    Then one hierarchical row per effective property remains visible in the wide workspace
+    And columns show property, path, type, presence, expected or allowed values, conditions, rules, documentation, example, source, local state, validation state, and actions
+    And common type, presence, expected-value, allowed-value, documentation, example, and row actions are usable inline across multiple rows
+    And root, child, sibling, rename, move, duplicate, and delete commands require no separate one-property screen
+    When the operator changes article_name presence and article_type example without leaving Table
+    Then both rows retain their edits and remain visible together
     When the operator expands the article_name row
-    Then the same complete selected-property controls are available without leaving Table
+    Then complex condition and rule builders open beneath that row while the other property rows remain available
     And an edit made in Table is immediately visible in Tree and the documentation preview
 
   # Data layer canonical Shared Profile schema authoring 012

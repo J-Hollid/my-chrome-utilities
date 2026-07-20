@@ -148,11 +148,14 @@ membership is never invented for an Event, and moving a canvas occurrence cannot
 alter its containing Page or Page Group contract.
 
 More-specific contributions may narrow inherited allowed values, add compatible
-rules, or replace a definition explicitly declared overridable. They may not
-silently change a type, widen an allowed universe, relax required, or re-enable a
-forbidden property. Incompatible Page-branch and Event-branch definitions are
-parallel conflicts: neither branch wins because of storage order or entity type.
-An explicit contextual resolution must reference the definitions it resolves.
+rules, or explicitly replace an ordinary inherited expectation at the same
+property facet. The editor records that replacement as a sparse local override and
+shows the shadowed parent definitions. It may not silently change a type, widen an
+allowed universe, relax required, re-enable a forbidden property, or defeat an
+explicit inherited invariant. Incompatible Page-branch and Event-branch
+definitions are parallel conflicts: neither branch wins because of storage order
+or entity type. An explicit contextual resolution must reference the definitions
+and facets it resolves.
 
 When multiple Shared Profiles contribute to one context, they are parallel peers
 unless an explicit relationship says otherwise. Conflicts block compilation; list
@@ -190,7 +193,7 @@ Draft status, and Undo. Removing a membership currently used as a Flow frame's
 placement group is blocked until the frame moves to another eligible membership or
 is removed.
 
-## Wide workspace, table, and side panel
+## Wide composed-schema workspace, table, and side panel
 
 The proven side-panel schema editor supplies the interaction model. The Builder
 uses the same editor core and command handlers in a layout suited to the larger
@@ -199,7 +202,11 @@ viewport:
 - a profile or contributor header with Draft state, lineage, save state, revision
   comparison, Undo, and Redo;
 - a searchable, filterable property navigator;
-- a selected-property editor with the complete side-panel capability set; and
+- a rich composed-schema table that keeps every effective property visible;
+- inline editing for common type, presence, expectation, allowed-value,
+  documentation, example, and row operations;
+- expandable row detail for complete condition, rule, provenance, impact, and
+  other complex side-panel capabilities; and
 - effective documentation, validation state, impact, and provenance.
 
 Property search is transient editor state, not a canonical command. Typing,
@@ -211,9 +218,45 @@ and 360px widths.
 
 Tree and Table are synchronized projections of the same canonical revision and
 selection. The Table preserves hierarchy and supports the complete property
-lifecycle. Common information is visible in columns; expanding a row opens the same
-full editor rather than a reduced substitute. An edit in any projection appears in
-the others immediately.
+lifecycle. Its wide layout exposes property, path, type, presence, expected or
+allowed values, conditions, rules, documentation, example, source, local state,
+validation state, and actions. Expanding one row mounts its complete complex
+builders beneath that row without unmounting the other property rows or navigating
+to a separate one-property screen. An edit in any projection appears in the others
+immediately. At 360px the same table becomes compact rows with stacked expandable
+detail, one vertical scroll owner, no horizontal page scroll, and deterministic
+focus restoration.
+
+## Direct Page and Page Group schema workspaces
+
+Opening a Page or Page Group from its overview routes directly to its complete
+main-workspace configuration. The workspace combines applicability and membership
+configuration with an `Effective schema at <name>` table. Every row shows the full
+parent contribution stack, the contributor's sparse local contribution, the
+effective definition, shadowed definitions, conflicts, validation state, and exact
+provenance. The Inspector is only an optional contextual summary and link to this
+same workspace; it neither owns the editor nor mounts a parallel schema model.
+
+An inherited row offers `Override here`. Saving changes only the selected property
+facets at the current contributor and leaves all other facets inherited. A locally
+adjusted inherited row offers `Reset to parents`; confirmation deletes the sparse
+local contribution and immediately recompiles from the current parents rather than
+copying a parent value into local storage. A local-only property instead offers
+`Remove local property`. Both actions preview changed effective values, affected
+instances, stale outputs, Draft status, runtime consequences, and one Undo action.
+
+Adding a Page Group to a Page always commits the ordered stable membership as a
+Draft configuration change and then recompiles the Page. A Page's explicit local
+facet resolves an ordinary difference on that same facet, remains effective, and
+produces a non-blocking warning with shadowed-parent provenance. The warning does
+not force the operator to discard either the membership or the intentional Page
+override. A parent difference not covered by a local facet, an illegal type or
+allowed-universe change, or an inherited invariant remains visibly unresolved and
+marks the effective schema `Blocked`. That readiness blocker prevents validation
+and developer export from claiming the Page is ready, but it does not roll back the
+membership edit or make the Page configuration inaccessible. Repairs link directly
+to a permitted local override, the contributing Page Group definition, or removal
+of the membership.
 
 The Flow Inspector remains contextual and compact. It shows useful inherited,
 local, effective, conflict, and activation counts and opens the full editor in the
@@ -300,8 +343,9 @@ Page-Group-owned legacy membership.
 
 Deliver contextual creation, structural nested authoring, type and presence
 controls, allowed values, rich rules, documentation, examples, search, filtering,
-revision comparison, ordered Page Group membership controls, and synchronized Tree
-and Table views in the wide workspace and compact side panel.
+revision comparison, ordered Page Group membership controls, direct Page and Page
+Group composed-schema workspaces, and synchronized Tree and rich multi-row Table
+views in the wide workspace and compact side panel.
 
 ### Phase C — uniform contributors and compiler
 
@@ -335,14 +379,14 @@ feature.
 | C02 | Blank profiles create competing models | Authoring 002 | One empty tree and one next action; no editable grid, path list, or parallel draft | Canonical repository | Persisted shape and rendered workspace | A, B | Exactly one editable schema document exists |
 | C03 | Saved schemas are disconnected from projects | Authoring 003 | Adoption opens a project-owned complete schema and preserves library source | Library adapter, adoption command, repository | Structural equality, lineage, source bytes | A | Every surface and compiler reads the adopted draft identity |
 | C04 | Legacy requirements, drafts, and constraints diverge | Authoring 004 | Review, conflicts, atomic migration, one-step Undo | Migration and transaction store | Before/after documents and Undo restoration | A | No editable legacy representation remains and no content is lost |
-| C05 | Builder lacks side-panel parity | Authoring 005 | Wide navigator, selected-property editor, effective preview, optional JSON | Shared editor core and command bus | Same actions and command results in both surfaces | B | Every supported side-panel edit succeeds in Builder |
+| C05 | Builder lacks side-panel parity | Authoring 005 | Wide navigator, complete schema table, expandable row detail, effective preview, optional JSON | Shared editor core and command bus | Same actions and command results in both surfaces | B | Every supported side-panel edit succeeds in Builder |
 | C06 | Paths and nesting require free text | Authoring 006 | Structural root/child actions and generated paths survive rename | Property tree and reference resolver | Generated paths and stable IDs after rename/reload | A, B | Nested properties require no typed pointer and references remain valid |
 | C07 | Type is unconstrained free text | Authoring 007 | Valid type and item-type selectors with impact review | Schema command validation | Stored typed definition and destructive confirmation | B | An invalid free-text type cannot be stored |
 | C08 | Presence lacks conditional required/forbidden | Authoring 008 | Required, Required when, Forbidden, Forbidden when with property selectors | Condition AST and compiler | Structured conditions and compiled outcomes | B, C | All four modes compile without raw expressions |
 | C09 | Allowed values use an inferior free-text field | Authoring 009 | Labelled repeatable typed values, removal, and keyboard reorder | Typed value command model | Separate stored values and rendered inputs | B | Commas or JSON text are not used as the canonical value set |
 | C10 | Rules use free text instead of the rich builder | Authoring 009 | Type-aware picker, conditions, severity, messages, reusable rules | Rule AST and reusable-rule resolver | Stored structured rule and compiler output | B, C | Every supported side-panel rule is authorable in Builder |
 | C11 | Documentation and examples are incomplete | Authoring 010 | Display text, description, comments, allowed/custom/blank typed examples | Documentation model and renderer | Reloaded typed values and inert rendering | B | Documentation fields and selection method survive reload |
-| C12 | Table is lighter than the side panel | Authoring 011 | Hierarchical synchronized table with common columns and full expanded editor | Tree/Table view models over one revision | Cross-view edits and selection evidence | B | No schema operation requires leaving Table for a different model |
+| C12 | Table is lighter than the side panel | Authoring 011 | Hierarchical synchronized multi-row table with inline common edits and complete expanded builders | Tree/Table view models over one revision | Concurrent visible rows, cross-view edits, and mounted-state evidence | B | No schema operation requires a separate one-property screen or a different model |
 | C13 | Builder and side panel can lose updates | Authoring 012 | Subscriptions plus visible property-scoped stale-write handling | Revisioned command repository | Concurrent revisions and final canonical document | A | A stale save cannot overwrite a newer unrelated edit |
 | C14 | End-to-end rich editing could still use parallel state | Authoring 013 | Adopt, nest, condition, constrain, document, table-edit, side-edit, reload, compile | All authoring and compiler boundaries | Installed terminal trace and persisted identity | E | One property definition is identical across every surface and compiler |
 | C15 | Contributor types have different authoring capabilities | Layering 001 | Identical schema actions for all six contributor kinds | Editor core, command schema, repository | Scenario-outline parity through actual controls | B, C | Contributor type changes only scope and provenance |
@@ -354,7 +398,7 @@ feature.
 | C21 | Automatic applicability and Page context must be explainable | Layering 007 | Human predicates select Page and Event context without a Flow binding | Matcher and assignment resolver | Winner, rejected candidates, overlap evidence, and absent binding lookup | D | Equal-priority overlap cannot silently select a target and no context binding can change the result |
 | C22 | Schemas may be manually assigned | Layering 008 | Human Flow/Page/Event selection uses stable target | Manual assignment resolver | Unified result and stable target identity | D | Manual validation does not claim an automatic winner |
 | C23 | Schemas may exist for documentation only | Layering 009 | Complete export without validation registration | Compiler, exporter, assignment index | Export and absent index entry | D | Documentation-only content creates no runtime ambiguity |
-| C24 | Flow should not force rich editing into Inspector | Layering 010 | Compact summary opens full main editor and restores canvas state | Flow selection routing and shared editor | Selection, viewport, and save-impact evidence | B, C | Full schema editing occurs in main workspace without losing Flow context |
+| C24 | Flow should not force rich editing into Inspector | Layering 010 | Compact optional summary opens the same full main editor and restores canvas state | Flow selection routing and shared editor | Selection, viewport, and save-impact evidence | B, C | Inspector owns no exclusive or parallel schema editor |
 | C25 | MVP assurance is per-Event, not full-Flow validation | Layering 011 | Positive and negative exact-value results with no sequence claim | Assignment and per-Event validator | Exact issue tuple and unified result | D | Invalid 3a fails expected 3b while valid 3b passes |
 | C26 | Developers need the effective values for a concrete occurrence | Layering 012 | Complete selected-context export plus positive and negative validation | Compiler, exporter, validator | Export, provenance, and issue collection | D, E | Summer article occurrence is documented and validated from one compiled schema |
 | C27 | Complete specifications need richer queries without losing side-panel behavior | Authoring 014 | Nested All, Any, and Not groups with selectors, typed operators, and matcher evidence | Shared predicate AST, rule compiler, applicability matcher | Persisted predicate tree plus positive and negative tests | B, D | Conditions require no raw expression and invalid branches focus exact controls |
@@ -362,6 +406,10 @@ feature.
 | C29 | Pages need multiple ordered Page Group memberships | Layering 013 | Searchable Add to Page Group and an accessible ordered rule stack | Page membership command, Page editor, and derived group member projection | Stable ordered references, focus restoration, impact preview, and absent duplicate source | B, C | Page owns one general-to-specific membership list and group members derive from it |
 | C30 | Membership order must refine without hiding unsafe conflicts | Layering 014 | Applicable groups compose in relative order with exclusion and conflict explanations | Applicability matcher, Page-branch compiler, and legality matrix | Retail and Trade outputs, excluded contributors, blocking issues, and overlap evidence | C, D | Order selects no ambiguous group and cannot legalize an unsafe override |
 | C31 | Existing Page and Page Group membership sources may diverge | Layering 015 | Human migration review preserves Page order and appends group-only membership | Membership migration, project transaction store, and derived member projection | Proposed ordered union, missing-reference blocker, canonical revision, and Undo restoration | A | No membership is lost and only the Page-owned ordered list remains editable |
+| C32 | Page and Page Group schema editing is hidden behind Inspector interaction | Layering 016 | Direct entity routes show complete configuration and composed effective-schema rows | Builder routing, shared editor, and effective-schema compiler | Route ancestry, mounted rows, contribution stacks, and absent parallel editor | B, C | Overview-to-entity editing never requires the Inspector |
+| C33 | Page-local overrides must remain intentional and reversible as parents change | Layering 017 | Local facet wins ordinary parent differences, warns, and can reset to live parents | Sparse contribution commands and Page-branch compiler | Local facet storage, shadowed provenance, reset impact, recompilation, and Undo | B, C | Reset deletes the local contribution and never copies a parent snapshot |
+| C34 | Adding a Page Group must preserve configuration even when compilation needs repair | Layering 018 | Membership commits as Draft while uncovered or invariant conflicts block readiness with direct repairs | Membership transaction, legality matrix, validator, and exporter | Committed stable membership, blocked facets, provenance, and readiness state | C, D | No membership is lost, and no blocked effective schema is reported ready |
+| C35 | Complete composed-schema editing must remain operable at 360px | Layering 019 | Compact rows and stacked complete detail use one vertical scroll owner | Responsive shared editor and focus adapter | Width, overflow, mounted rows, controls, and focus restoration | B, E | Every property and schema action remains reachable without horizontal page scrolling |
 
 ## Terminal acceptance
 
@@ -373,6 +421,13 @@ show:
 - one adopted project schema, one property identity, and one revision across
   Builder, Table, side panel, reload, compilation, and validation;
 - the same rich controls at all contributor levels;
+- direct Page and Page Group composed-schema workspaces with all effective rows
+  visible, field-level provenance, inline edits, and expandable complex builders;
+- Page-local ordinary overrides that warn rather than disappear when a parent is
+  added, sparse reset-to-parent behavior, and readiness blocking for uncovered or
+  invariant conflicts;
+- the complete composed-schema editor at 360px with one vertical scroll owner and
+  deterministic row focus restoration;
 - uninterrupted canonical property search with deterministic caret and composition behavior;
 - ordered multi-Page-Group compilation with guarded refinement and exact provenance;
 - exact Page-branch, Event-branch, and combined-occurrence provenance;
