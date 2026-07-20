@@ -715,6 +715,31 @@
     ]
   },
   {
+    "id": "flow_export",
+    "source": [
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-flow-table-documentation-export-ui.ts"
+    ],
+    "dependencies": [
+      "flow_graph",
+      "layered_schema"
+    ],
+    "unit": [
+      "test/data-layer-flow-table-documentation-export-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-flow-table-documentation-export.feature",
+      "features/data-layer-flow-table-documentation-export-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/flow_table_documentation_export.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/flow-table-documentation-export.mjs"
+    ]
+  },
+  {
     "id": "layered_schema",
     "source": [
       "src/data-layer-canonical-schema.ts",
