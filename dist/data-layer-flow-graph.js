@@ -170,6 +170,7 @@ export function moveFreePageFrame(state, flowId, frameId, presentation) {
         return state;
     return transactProject(state, `Move free Page frame ${frameId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, pageFrames: graph.pageFrames.map((item) => item.id === frameId ? { ...item, freePageRegion: next.region, position: { x: next.x, y: next.y } } : item) }); });
 }
+const legacyContextRoleConflictMessage = (event, occurrenceName, flowName, pageName) => event.role === "interaction" ? `${occurrenceName} in ${flowName} on ${pageName} references ${event.name} as Page context, but Event role interaction conflicts with the required context-setting role.` : undefined;
 export function reviewLegacyFlowContextMigration(project, flowId) {
     void flowId;
     const items = [], blockers = [];
@@ -193,8 +194,9 @@ export function reviewLegacyFlowContextMigration(project, flowId) {
                 blockers.push({ ...base, message: `${occurrenceName} in ${flowName} has a missing Event on ${page.name}.` });
                 continue;
             }
-            if (event.role === "interaction") {
-                blockers.push({ ...base, message: `${occurrenceName} in ${flowName} on ${page.name} references ${event.name} as Page context, but Event role interaction conflicts with the required context-setting role.` });
+            const roleConflict = legacyContextRoleConflictMessage(event, occurrenceName, flowName, page.name);
+            if (roleConflict) {
+                blockers.push({ ...base, message: roleConflict });
                 continue;
             }
             items.push({ ...base, pageName: page.name, eventName: event.name, trigger: String(binding.trigger ?? binding.name ?? "") });
