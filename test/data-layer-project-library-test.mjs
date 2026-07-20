@@ -76,6 +76,9 @@ const mergedState=replayProjectCommand(retail,library.projects["project-retail"]
 assert.equal(merged.projects["project-retail"].revision,15);
 assert.equal(merged.projects["project-retail"].state.project.namingConventions.currency,"number");
 assert.equal(merged.projects["project-retail"].state.history.undo.at(-1).label,"Set /currency type");
+const latestRetail=structuredClone(retail);latestRetail.project.notes="Unrelated persisted edit";const mergedLatestState=replayProjectCommand(latestRetail,library.projects["project-retail"].pendingWrite),mergedLatest=resolveProjectWrite(library,"project-retail","merge",{state:mergedLatestState,revision:16},clock);
+assert.equal(mergedLatest.projects["project-retail"].state.project.notes,"Unrelated persisted edit","Merge preserves unrelated edits from the latest persisted state");
+assert.equal(mergedLatest.projects["project-retail"].state.project.namingConventions.currency,"number");
 library=resolveProjectWrite(library,"project-retail","retry",undefined,clock);
 assert.equal(library.projects["project-retail"].state.project.namingConventions.currency,"number");
 assert.equal(library.projects["project-retail"].state.history.undo.at(-1).label,"Set /currency type");

@@ -27,6 +27,7 @@ export function mountProjectLibraryUi(options) {
         options.storage.setItem(options.projectStorageKey, serializeCanonicalProjectState(record.state, record.revision));
     else
         options.storage.removeItem(options.projectStorageKey); };
+    const latestPersistedActive = () => { const current = active(), serialized = options.storage.getItem(options.projectStorageKey), state = restoreCanonicalProjectState(serialized), envelope = restoreCanonicalProjectEnvelope(serialized); return current && state?.project.id === current.state.project.id && envelope && envelope.revision >= current.revision ? { state, revision: envelope.revision } : current ? { state: current.state, revision: current.revision } : undefined; };
     const persist = (next, projection = true) => { library = next; options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); if (projection)
         projectProjection(); options.onChange?.(); render(); };
     options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
@@ -54,7 +55,7 @@ export function mountProjectLibraryUi(options) {
         confirm.disabled = true;
         for (const choice of ["merge", "reject", "retry"])
             dialog.append(button(`${choice[0].toUpperCase()}${choice.slice(1)} ${current.pendingWrite.label}`, `${choice} pending command ${current.pendingWrite.label}`, () => { try {
-                const persisted = choice === "merge" ? { state: replayProjectCommand(current.state, current.pendingWrite), revision: Math.max(current.revision, current.pendingWrite.baseRevision) + 1 } : undefined;
+                const latest = choice === "merge" ? latestPersistedActive() : undefined, persisted = choice === "merge" && latest ? { state: replayProjectCommand(latest.state, current.pendingWrite), revision: Math.max(latest.revision, current.revision, current.pendingWrite.baseRevision) + 1 } : undefined;
                 library = resolveProjectWrite(library, library.activeProjectId, choice, persisted, now);
                 persist(library);
                 confirm.disabled = false;

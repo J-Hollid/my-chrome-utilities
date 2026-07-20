@@ -72,11 +72,11 @@ export function replayProjectCommand(state, pendingWrite) { const command = pend
         throw new Error(`Project command path ${command.path} is unavailable at ${token}.`);
     target = child;
 } target[tokens.at(-1)] = clone(command.value); return next; }); }
-function mergedProjectCommandApplied(current, pendingWrite, merged) { const tokens = commandPath(pendingWrite.command.path); let value = merged.project; for (const token of tokens) {
+function mergedProjectCommandApplied(pendingWrite, merged) { const tokens = commandPath(pendingWrite.command.path); let value = merged.project; for (const token of tokens) {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return false;
     value = value[token];
-} const undo = merged.history.undo.at(-1); return JSON.stringify(value) === JSON.stringify(pendingWrite.command.value) && undo?.label === pendingWrite.label && JSON.stringify(undo.project) === JSON.stringify(current.project); }
+} const undo = merged.history.undo.at(-1); return JSON.stringify(value) === JSON.stringify(pendingWrite.command.value) && undo?.label === pendingWrite.label; }
 export function resolveProjectWrite(library, projectId, choice, persisted, now = () => new Date().toISOString()) { const record = library.projects[projectId]; if (!record)
     throw new Error(`Unknown project ${projectId}.`); if (!record.pendingWrite)
     throw new Error(`Project ${projectId} has no pending write to resolve.`); let next = clone(record); if (choice === "merge") {
@@ -84,8 +84,8 @@ export function resolveProjectWrite(library, projectId, choice, persisted, now =
         throw new Error(`Merge ${record.pendingWrite.label} needs persisted project state.`);
     if (persisted.state.project.id !== projectId || persisted.revision <= record.revision)
         throw new Error(`Merged project state must advance ${projectId} beyond revision ${record.revision}.`);
-    if (!mergedProjectCommandApplied(record.state, record.pendingWrite, persisted.state))
-        throw new Error(`Merged project state must apply ${record.pendingWrite.label} to the current Draft.`);
+    if (!mergedProjectCommandApplied(record.pendingWrite, persisted.state))
+        throw new Error(`Merged project state must apply ${record.pendingWrite.label} to the latest persisted Draft.`);
     next = { ...next, state: clone(persisted.state), revision: persisted.revision, lastModifiedAt: now() };
 }
 else if (choice === "retry") {
