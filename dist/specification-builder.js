@@ -9,9 +9,10 @@ import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPag
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
-import { installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
+import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
@@ -91,6 +92,116 @@ function renderCanonicalProfileOverview(host) {
     host.prepend(section);
 }
 function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
+function renderComposedSchemaWorkspace(host, entity, kind, scope) {
+    if (!state)
+        return;
+    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), operations = document.createElement("div"), validate = document.createElement("button"), developerExport = document.createElement("button");
+    section.className = "composed-schema-workspace";
+    section.setAttribute("aria-label", model.heading);
+    section.dataset.schemaStatus = model.status;
+    heading.textContent = model.heading;
+    summary.setAttribute("role", "status");
+    summary.className = model.status === "blocked" ? "error" : "status-text";
+    summary.textContent = `${model.status === "blocked" ? "Blocked" : "Ready"} · ${model.rows.length} effective properties · ${model.conflictSummary}`;
+    columns.className = "composed-schema-columns";
+    columns.setAttribute("aria-hidden", "true");
+    for (const label of ["Property", "Effective definition", "Source", "Local state", "Validation state", "Actions"])
+        columns.append(Object.assign(document.createElement("strong"), { textContent: label }));
+    rows.setAttribute("role", "table");
+    rows.setAttribute("aria-label", `${model.heading} rows`);
+    const parse = (value, fallback) => { if (!value.trim())
+        return undefined; try {
+        return JSON.parse(value);
+    }
+    catch {
+        return fallback;
+    } }, same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+    for (const row of model.rows) {
+        const wrapper = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = document.createElement("button"), detail = document.createElement("div"), facets = document.createElement("fieldset"), legend = document.createElement("legend"), type = document.createElement("select"), presence = document.createElement("select"), expected = document.createElement("input"), allowed = document.createElement("input"), condition = document.createElement("textarea"), rules = document.createElement("textarea"), documentation = document.createElement("textarea"), example = document.createElement("input"), provenance = document.createElement("ol"), save = document.createElement("button"), impact = document.createElement("div");
+        wrapper.className = "composed-schema-row";
+        wrapper.dataset.effectivePropertyPath = row.path;
+        wrapper.dataset.validationState = row.validationState;
+        overview.className = "composed-schema-row-overview";
+        overview.setAttribute("role", "row");
+        toggle.type = primary.type = save.type = "button";
+        toggle.className = "composed-schema-row-toggle";
+        toggle.textContent = row.path;
+        toggle.setAttribute("aria-expanded", "false");
+        effective.textContent = effectivePropertySummary(row.effective) || "constraint";
+        source.textContent = row.source;
+        local.textContent = Object.keys(row.local).length > 1 ? JSON.stringify(row.local) : "Inherited";
+        validation.textContent = `${row.validationState} · ${row.message}`;
+        actions.className = "composed-schema-row-actions";
+        primary.textContent = row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
+        detail.className = "composed-schema-row-detail";
+        detail.hidden = true;
+        detail.setAttribute("aria-label", `${row.path} stacked row detail`);
+        legend.textContent = `Common and complex facets for ${row.path}`;
+        type.append(new Option("Inherit type", ""), ...['string', 'number', 'integer', 'boolean', 'object', 'array', 'null'].map((value) => new Option(value, value)));
+        presence.append(new Option("Inherit presence", ""), ...['required', 'optional', 'forbidden', 'permitted'].map((value) => new Option(value, value)));
+        type.value = String(row.local.type ?? row.effective.type ?? "");
+        presence.value = String(row.local.presence ?? row.effective.presence ?? "");
+        expected.value = row.local.expectedValue === undefined ? String(row.effective.expectedValue ?? "") : String(row.local.expectedValue);
+        allowed.value = JSON.stringify(row.local.allowedValues ?? row.effective.allowedValues ?? []);
+        condition.value = row.local.condition ? JSON.stringify(row.local.condition, null, 2) : "";
+        rules.value = row.local.rules ? JSON.stringify(row.local.rules, null, 2) : "";
+        documentation.value = String(row.local.documentation ?? row.effective.documentation ?? "");
+        const effectiveExample = row.local.examples?.[0] ?? row.effective.examples?.[0];
+        example.value = effectiveExample === undefined ? "" : JSON.stringify(effectiveExample);
+        for (const [control, label] of [[type, "Type"], [presence, "Presence"], [expected, "Expected value"], [allowed, "Allowed values JSON"], [condition, "Conditions JSON"], [rules, "Rules JSON"], [documentation, "Documentation"], [example, "Example JSON"]])
+            facets.append(labeledControl(label, control));
+        provenance.setAttribute("aria-label", `${row.path} provenance`);
+        provenance.append(Object.assign(document.createElement("li"), { textContent: "Provenance" }));
+        for (const origin of row.provenance)
+            provenance.append(Object.assign(document.createElement("li"), { textContent: `${origin.scope} ${origin.contributorName} · ${origin.state}` }));
+        for (const repair of row.repairs) {
+            const control = document.createElement("button");
+            control.type = "button";
+            control.textContent = repair.label;
+            control.addEventListener("click", () => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
+                selectedKind = match;
+                selectedId = repair.contributorId;
+                persistNavigation();
+                render();
+            } });
+            impact.append(control);
+        }
+        save.textContent = "Save local facets";
+        save.addEventListener("click", () => { const inherited = row.inherited ?? {}, expectedType = type.value || row.effective.type, expectedValue = expected.value === "" ? undefined : expectedType === "string" ? expected.value : parse(expected.value, expected.value), candidate = { type: type.value || undefined, presence: presence.value || undefined, expectedValue, allowedValues: parse(allowed.value, []), condition: parse(condition.value, condition.value), rules: parse(rules.value, []), documentation: documentation.value || undefined, examples: example.value ? [(parse(example.value, example.value))] : undefined }, sparse = Object.fromEntries(Object.entries(candidate).filter(([key, value]) => value !== undefined && !same(value, inherited[key]))); persist(saveComposedSchemaLocalFacets(state, kind, entity.id, row.path, sparse)); });
+        const openDetail = () => { detail.hidden = false; toggle.setAttribute("aria-expanded", "true"); expected.focus(); };
+        toggle.addEventListener("click", () => { detail.hidden = !detail.hidden; toggle.setAttribute("aria-expanded", String(!detail.hidden)); if (detail.hidden)
+            toggle.focus(); });
+        primary.addEventListener("click", () => { if (row.action === "override") {
+            openDetail();
+            return;
+        } impact.replaceChildren(); impact.append(`${row.action === "reset" ? "Reset" : "Remove"} preview: effective parent value ${row.inherited ? effectivePropertySummary(row.inherited) : "none"}; affected Page instances will recompile; outputs become stale; one Undo action will be available. `); const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = row.action === "reset" ? "Confirm reset to parents" : "Confirm remove local property"; confirm.addEventListener("click", () => persist(resetComposedSchemaLocalProperty(state, kind, entity.id, row.path))); impact.append(confirm); openDetail(); });
+        const detailAction = document.createElement("button");
+        detailAction.type = "button";
+        detailAction.textContent = primary.textContent;
+        detailAction.addEventListener("click", () => primary.click());
+        actions.append(primary);
+        overview.append(toggle, effective, source, local, validation, actions);
+        detail.append(facets, save, detailAction, provenance, impact);
+        wrapper.append(overview, detail);
+        rows.append(wrapper);
+    }
+    validate.type = developerExport.type = "button";
+    validate.textContent = "Validate effective schema";
+    developerExport.textContent = "Generate effective schema developer export";
+    validate.disabled = developerExport.disabled = model.status === "blocked";
+    operations.className = "composed-schema-operations";
+    operations.append(validate, developerExport);
+    section.append(heading, summary, columns, rows, operations);
+    host.append(section);
+    const canonical = entity.canonicalSchema;
+    if (canonical) {
+        const canonicalHost = document.createElement("section");
+        canonicalHost.setAttribute("aria-label", `${entity.name} canonical schema contribution`);
+        section.append(canonicalHost);
+        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+                persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
+    }
+}
 function renderPageGroupMembershipEditor(host, page) {
     if (!state)
         return;
@@ -502,8 +613,10 @@ function renderWorkspace() {
     content.append(heading, count, list);
     if (selected) {
         renderSelectedEntityEditor(content, selected);
-        if (selectedKind === "pages")
+        if (selectedKind === "pages") {
             renderPageGroupMembershipEditor(content, selected);
+            renderComposedSchemaWorkspace(content, selected, "pages", "Page");
+        }
         if (selectedKind === "pageGroups") {
             const members = document.createElement("section"), memberList = document.createElement("ul");
             members.setAttribute("aria-label", "Derived Page Group members");
@@ -512,6 +625,7 @@ function renderWorkspace() {
                 memberList.append(Object.assign(document.createElement("li"), { textContent: page.name }));
             members.append(memberList);
             content.append(members);
+            renderComposedSchemaWorkspace(content, selected, "pageGroups", "Page Group");
         }
     }
 }
