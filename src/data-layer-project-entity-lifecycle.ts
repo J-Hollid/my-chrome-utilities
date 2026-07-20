@@ -30,7 +30,7 @@ export const projectCollectionCreationFields:Record<ProjectEntityKind,readonly P
   assignments:[{key:"schemaDraftId",label:"Schema",control:"select",collection:"schemaDrafts"},{key:"eventId",label:"Event",control:"select",collection:"events"},{key:"applicabilitySetId",label:"Applicability Set",control:"select",collection:"applicabilitySets"},{key:"priority",label:"Priority",control:"number",defaultValue:10},{key:"versionPolicy",label:"Version policy",control:"select",options:[{value:"follow latest",label:"Follow latest"},{value:"pinned",label:"Pinned"}],defaultValue:"follow latest"}],
 };
 
-export function hasCanonicalProfileOverviewActions(kind:ProjectEntityKind,selectedId:string|undefined):boolean{return kind==="profiles"&&!selectedId;}
+export function hasSavedSchemaAdoptionActions(kind:ProjectEntityKind,selectedId:string|undefined):boolean{return kind==="profiles"&&!selectedId;}
 export function projectCollectionOverviewActionLabels(kind:ProjectEntityKind):readonly [string]{return[projectCollectionDefinitions[kind].addAction];}
 export function projectInspectorTogglePresentation(open:boolean):{label:string;expanded:"true"|"false"}{return{label:open?"Hide Inspector":"Show Inspector",expanded:open?"true":"false"};}
 export function projectCollectionCreationRoute(kind:ProjectEntityKind):{kind:ProjectEntityKind;heading:string;label:string;backAction:string}{const definition=projectCollectionDefinitions[kind];return{kind,heading:`Create ${definition.singular}`,label:`Create ${definition.singular} for ${definition.overview}`,backAction:`Back to ${definition.overview}`};}

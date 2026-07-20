@@ -11,7 +11,10 @@
       "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-project-entity-lifecycle-property-test.mjs",
+      "test/data-layer-project-library-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-project-library-and-active-context.feature",
       "features/data-layer-project-library-and-active-context-runtime.feature",
