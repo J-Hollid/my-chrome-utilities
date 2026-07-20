@@ -178,3 +178,54 @@ Feature: Data layer canonical Shared Profile schema authoring
     And the matching article_type result appears without changing canonical state
     When the operator clears the query from the keyboard
     Then the complete property navigator returns while focus remains in Canonical property search
+
+  # Data layer canonical Shared Profile schema authoring 017
+  Scenario: Data layer canonical Shared Profile schema authoring 017
+    Given the established Schema editor is open in the side panel
+    And Shop contains Shared Profile Sitewide, Page Group Checkout, Page Cart, Event Purchase, Flow Page instance Cart step, and Event occurrence Cart Purchase
+    When the operator opens the Schema list
+    Then one list groups schema records and contributors as
+      | group          | entry             |
+      | Saved schemas  | Opened Article     |
+      | Shared         | Sitewide           |
+      | Page Groups    | Checkout           |
+      | Pages          | Cart               |
+      | Events         | Purchase           |
+      | Flow instances | Cart step          |
+      | Occurrences    | Cart Purchase      |
+    And each entry shows its human name, role, scope, lineage, revision, and Draft or saved state
+    When the operator selects Sitewide
+    Then the same single in-panel Schema editor displays Sitewide through the established property navigator, controls, and documentation area
+    And Shared Profile changes role, scope, inheritance, and provenance without selecting another schema model
+    And no second Shared Profile editor, requirements grid, composed-schema form, or duplicate property controls appear beside the regular editor
+
+  # Data layer canonical Shared Profile schema authoring 018
+  Scenario: Data layer canonical Shared Profile schema authoring 018
+    Given Sitewide defines funnel_name and funnel_step
+    And Checkout inherits Sitewide and Cart inherits Checkout
+    When the operator selects Cart from the side-panel Schema list
+    Then the regular Schema editor shows Sitewide, Checkout, and Cart contributions in composition order
+    And each property distinguishes inherited, local, effective, shadowed, conflicting, and provenance values within that editor
+    And canonical storage represents inheritance with stable contributor references and sparse local property facets
+    When the operator overrides Cart funnel_step expected value with 2
+    Then one property-scoped Cart command produces the same effective value and provenance in the side panel, standalone workspace, compiler, and validator
+    When the operator activates Reset to parents for funnel_step
+    Then Cart's local expected-value facet is removed and both editors immediately derive the effective value from Sitewide and Checkout
+    And no parent property, inherited value, or composed snapshot is copied into Cart storage
+
+  # Data layer canonical Shared Profile schema authoring 019
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 019
+    Given both schema surfaces subscribe to canonical Opened Article revision 8
+    When the operator completes <operation> in <authoring_surface>
+    Then <observing_surface> shows <result> at canonical revision 9
+    And both surfaces offered the same purpose-built controls and emitted the same property-scoped command
+    And neither surface required raw JSON or stored a surface-specific schema representation
+
+    Examples:
+      | operation                                                        | authoring_surface | observing_surface | result                                      |
+      | add object metadata and nested string category                    | side panel        | standalone        | generated path /metadata/category           |
+      | change tags to array with string item type                        | standalone        | side panel        | typed array and item definition              |
+      | make article_name Required when article_type Equals News          | side panel        | standalone        | structured conditional presence              |
+      | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
+      | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
+      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and Undo result |

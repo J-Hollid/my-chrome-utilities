@@ -178,3 +178,54 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And the rendered result is article_type without a canonical command or storage write
     When actual keyboard controls clear the query
     Then all production property rows return and document.activeElement remains Canonical property search
+
+  # Data layer canonical Shared Profile schema authoring runtime 017
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 017
+    Given the installed side panel has opened its established Schema editor
+    And production Shop contains Shared Profile Sitewide, Page Group Checkout, Page Cart, Event Purchase, Flow Page instance Cart step, and Event occurrence Cart Purchase
+    When actual controls open the Schema list
+    Then the installed list groups entries as
+      | group          | entry             |
+      | Saved schemas  | Opened Article     |
+      | Shared         | Sitewide           |
+      | Page Groups    | Checkout           |
+      | Pages          | Cart               |
+      | Events         | Purchase           |
+      | Flow instances | Cart step          |
+      | Occurrences    | Cart Purchase      |
+    And every rendered entry shows human name, role, scope, lineage, revision, and Draft or saved state
+    When actual controls select Sitewide
+    Then exactly one schema-editor region remains mounted with the established property navigator, controls, and documentation area
+    And production selection changes contributor role, scope, inheritance, and provenance without changing schema model
+    And the DOM contains no adjacent Shared Profile editor, requirements grid, composed-schema form, or duplicate property controls
+
+  # Data layer canonical Shared Profile schema authoring runtime 018
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 018
+    Given production Sitewide defines funnel_name and funnel_step
+    And canonical Checkout references Sitewide while Cart references Checkout
+    When actual side-panel controls select Cart from the Schema list
+    Then the established editor renders Sitewide, Checkout, and Cart contributions in composition order
+    And rows distinguish inherited, local, effective, shadowed, conflicting, and provenance values in that editor
+    And serialized inheritance contains stable contributor references plus sparse Cart property facets
+    When actual controls override Cart funnel_step expected value with 2
+    Then one production property command yields value 2 with identical provenance in panel, standalone workspace, compiler, and validator
+    When actual controls activate Reset to parents for funnel_step
+    Then canonical Cart storage removes the local expected-value facet and both installed editors recompile from Sitewide and Checkout
+    And serialized Cart contains no copied parent property, inherited value, or composed snapshot
+
+  # Data layer canonical Shared Profile schema authoring runtime 019
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 019
+    Given the two installed schema projections subscribe to canonical record Opened Article at revision 8
+    When actual controls complete <operation> in <authoring_surface>
+    Then <observing_surface> renders <result> at canonical revision 9
+    And command telemetry identifies the same purpose-built control and property-scoped command for both surfaces
+    And canonical bytes contain neither raw-JSON substitution nor a surface-specific schema representation
+
+    Examples:
+      | operation                                                        | authoring_surface | observing_surface | result                                      |
+      | add object metadata and nested string category                    | side panel        | standalone        | generated path /metadata/category           |
+      | change tags to array with string item type                        | standalone        | side panel        | typed array and item definition              |
+      | make article_name Required when article_type Equals News          | side panel        | standalone        | structured conditional presence              |
+      | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
+      | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
+      | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and Undo result |

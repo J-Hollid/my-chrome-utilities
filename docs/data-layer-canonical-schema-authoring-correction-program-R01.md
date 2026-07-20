@@ -9,11 +9,11 @@ necessary, supersedes the first implementation of
 this program changes how schema definitions are authored and composed, not the
 graph's documentary purpose.
 
-The product shall have one canonical schema-document model and one authoring
-language. Shared Profiles, Page Groups, Pages, Events, Flow Page instances, and
-Event occurrences use the same property and rule capabilities. Their entity type
-determines applicability and provenance, not which validation features they may
-author.
+The product shall have one canonical schema-document model, one in-panel Schema
+editor, and one authoring language. Shared Profiles, Page Groups, Pages, Events,
+Flow Page instances, and Event occurrences use the same property and rule
+capabilities. Their entity type determines applicability, inheritance, and
+provenance, not their storage shape, editor type, or validation features.
 
 This program does not reactivate the archived full-site R02/R04 release program.
 Fixtures, coverage, preflight, release, Live, temporal journey enforcement, and
@@ -23,11 +23,12 @@ schema selection and validation.
 
 ## Corrective outcome
 
-An operator can create or adopt a complete schema in Shared Profiles, edit the
-same schema from the wide Builder workspace or compact side panel, refine it at
-each applicable Page or Event context, inspect the effective result and its
-provenance, export the selected context for developers, and validate observed
-Events against that result.
+An operator can create or adopt a complete schema, find every saved schema and
+project contributor through one side-panel Schema list, edit the selected record in
+the established in-panel editor or its parity-complete standalone projection,
+refine it at each applicable Page or Event context, inspect inherited and effective
+results with provenance, export the selected context for developers, and validate
+observed Events against that result.
 
 The implementation cannot satisfy this program with a lightweight requirements
 grid, a free-text path overlay, a disconnected structured draft, a contributor-
@@ -47,7 +48,9 @@ The current Shared Profile experience misses the intended base-schema model:
   side-panel interactions;
 - a saved schema can be adopted without becoming the one project schema edited and
   compiled everywhere; and
-- downstream entity types expose a separate, thinner constraint form.
+- downstream entity types expose a separate, thinner constraint form; and
+- the side panel can mount a second Shared Profile or composed-schema editor beside
+  the established Schema editor, splitting the schema list and control surface.
 
 The implementation currently permits three editable profile representations:
 lightweight `requirements`, a `structuredSchema` or `structuredDraft`, and
@@ -127,6 +130,12 @@ occurrence can require `article_name` to equal `Summer sale`.
 The contextual scope controls where a definition participates. It does not replace
 the property editor with entity-specific columns or free-text rules.
 
+A Shared Profile is a role played by a canonical schema contribution. It is not a
+second schema-document type and does not own a Shared-Profile-specific editor.
+Inheritance and composition belong to the canonical model: stable contributor
+references identify parents, sparse local facets record differences, and effective,
+shadowed, conflicting, and provenance values are derived for every editor surface.
+
 ## Composition branches
 
 The Page and Event branches are independent until an Event occurrence is placed in
@@ -193,11 +202,34 @@ Draft status, and Undo. Removing a membership currently used as a Flow frame's
 placement group is blocked until the frame moves to another eligible membership or
 is removed.
 
-## Wide composed-schema workspace, table, and side panel
+## One in-panel Schema list and editor
+
+The pre-existing in-panel Schema editor remains the sole schema editing surface in
+the side panel. One Schema list reaches saved library schemas and project
+contributors, grouped by Shared, Page Groups, Pages, Events, Flow instances, and
+Occurrences. Each entry exposes a human name, role, scope, lineage, revision, and
+Draft or saved state. Filtering or selecting a group changes which canonical record
+the regular editor displays; it never mounts a second editor beside it.
+
+The same property navigator, structural actions, type controls, conditional
+presence, typed allowed values, rich rules, documentation, examples, impact review,
+revision comparison, Undo, and Redo remain available regardless of contributor
+role. Selecting a Shared Profile changes the header, scope, inheritance, and
+provenance context only. The panel must not render an adjacent Shared Profile
+editor, requirements grid, composed-schema form, duplicate property controls, or a
+separate list backed by another representation.
+
+Inherited definitions appear inside this regular editor. An inherited row refers
+to its stable parent contributor and derived effective result; `Override here`
+stores only the current contributor's changed facets, while `Reset to parents`
+deletes those facets and recompiles from live parents. Neither display nor reset
+copies parent properties, effective values, or a composed snapshot into the child.
+
+## Standalone parity and wide composed-schema table
 
 The proven side-panel schema editor supplies the interaction model. The Builder
-uses the same editor core and command handlers in a layout suited to the larger
-viewport:
+and standalone entity workspaces use the same editor core and command handlers in a
+layout suited to the larger viewport:
 
 - a profile or contributor header with Draft state, lineage, save state, revision
   comparison, Undo, and Redo;
@@ -226,6 +258,16 @@ to a separate one-property screen. An edit in any projection appears in the othe
 immediately. At 360px the same table becomes compact rows with stacked expandable
 detail, one vertical scroll owner, no horizontal page scroll, and deterministic
 focus restoration.
+
+Parity means every purpose-built operation in the established in-panel editor is
+available in the standalone workspace and emits the same property-scoped command.
+It does not require identical geometry: the side panel may use a compact tree and
+stacked property details while the standalone workspace uses a wide multi-row
+table. Nested structural authoring, scalar and container types, array item types,
+all presence modes, allowed values, regular expressions, ranges, cardinality,
+conditions, reusable rules, documentation, examples, property lifecycle actions,
+impact review, and Undo/Redo must round-trip both directions without raw JSON or a
+surface-specific stored schema.
 
 ## Direct Page and Page Group schema workspaces
 
@@ -344,8 +386,9 @@ Page-Group-owned legacy membership.
 Deliver contextual creation, structural nested authoring, type and presence
 controls, allowed values, rich rules, documentation, examples, search, filtering,
 revision comparison, ordered Page Group membership controls, direct Page and Page
-Group composed-schema workspaces, and synchronized Tree and rich multi-row Table
-views in the wide workspace and compact side panel.
+Group composed-schema workspaces, one grouped in-panel Schema list, one established
+panel editor, and synchronized Tree and parity-complete rich multi-row Table views
+in the wide workspace.
 
 ### Phase C — uniform contributors and compiler
 
@@ -410,6 +453,9 @@ feature.
 | C33 | Page-local overrides must remain intentional and reversible as parents change | Layering 017 | Local facet wins ordinary parent differences, warns, and can reset to live parents | Sparse contribution commands and Page-branch compiler | Local facet storage, shadowed provenance, reset impact, recompilation, and Undo | B, C | Reset deletes the local contribution and never copies a parent snapshot |
 | C34 | Adding a Page Group must preserve configuration even when compilation needs repair | Layering 018 | Membership commits as Draft while uncovered or invariant conflicts block readiness with direct repairs | Membership transaction, legality matrix, validator, and exporter | Committed stable membership, blocked facets, provenance, and readiness state | C, D | No membership is lost, and no blocked effective schema is reported ready |
 | C35 | Complete composed-schema editing must remain operable at 360px | Layering 019 | Compact rows and stacked complete detail use one vertical scroll owner | Responsive shared editor and focus adapter | Width, overflow, mounted rows, controls, and focus restoration | B, E | Every property and schema action remains reachable without horizontal page scrolling |
+| C36 | Shared Profiles incorrectly mount a second side-panel schema editor | Authoring 017 | One grouped Schema list selects every role into the established editor region | Side-panel routing, schema list projection, and shared editor host | One editor landmark, grouped entries, reused controls, and absent adjacent forms | B, E | Selecting Shared Profile leaves exactly one in-panel schema editor mounted |
+| C37 | Inheritance is treated as a standalone composed-view concern | Authoring 018 | The regular panel editor shows parent stacks and stores sparse overrides and resets | Canonical contributor graph, property command bus, compiler, and validator | Stable parent references, sparse child bytes, two-surface result, and absent snapshots | A, C, E | Panel, standalone, compiler, and validator derive one effective property without copying a parent |
+| C38 | Standalone controls can be thinner or different from the established panel editor | Authoring 019 | Representative rich operations round-trip in both directions through purpose-built controls | Shared editor core, command schema, repository subscriptions, and responsive projections | Control availability, command identity, revision equality, canonical bytes, and rendered results | B, E | Every supported panel operation succeeds standalone with the same canonical result and no raw-JSON substitute |
 
 ## Terminal acceptance
 
@@ -420,6 +466,12 @@ show:
 
 - one adopted project schema, one property identity, and one revision across
   Builder, Table, side panel, reload, compilation, and validation;
+- one grouped side-panel Schema list and exactly one established in-panel editor
+  region for saved schemas and every contributor role;
+- native inheritance in that editor through stable parent references, sparse local
+  facets, effective provenance, and reset without copied parent snapshots;
+- bidirectional standalone parity for structural, type, presence, value, rule,
+  documentation, example, lifecycle, impact, and Undo/Redo operations;
 - the same rich controls at all contributor levels;
 - direct Page and Page Group composed-schema workspaces with all effective rows
   visible, field-level provenance, inline edits, and expandable complex builders;
