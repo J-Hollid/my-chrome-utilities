@@ -4,6 +4,7 @@ import {
   applyCanonicalCommand,
   canonicalConstraints,
   canonicalPropertyPath,
+  canonicalSchemaFromJsonSchema,
   canonicalTableRows,
   changeCanonicalPropertyType,
   confirmCanonicalMigration,
@@ -60,6 +61,21 @@ const impact=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:com
 assert.equal(impact.status,"confirmation-required");
 assert.match(impact.impact,/child definitions and documentation removed/);
 assert.equal(document.nodes[commerce].type,"object");
+const destructive=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string",confirmed:true});
+assert.equal(destructive.status,"applied");
+assert.equal(destructive.document.nodes[commerce].type,"string");
+assert.equal(destructive.document.nodes[transaction],undefined);
+assert.equal(destructive.document.nodes[transactionId],undefined);
+
+const duplicated=applyCanonicalCommand(document,{kind:"duplicate",baseRevision:document.revision,propertyId:transaction,id});
+assert.equal(duplicated.status,"applied");
+const transactionCopy=Object.values(duplicated.document.nodes).find(({name})=>name==="order copy");
+assert.ok(transactionCopy);
+assert.ok(Object.values(duplicated.document.nodes).some(({name,parentId})=>name==="transaction_id"&&parentId===transactionCopy.id));
+const deletedCopy=applyCanonicalCommand(duplicated.document,{kind:"delete",baseRevision:duplicated.document.revision,propertyId:transactionCopy.id});
+assert.equal(deletedCopy.status,"applied");
+assert.equal(deletedCopy.document.nodes[transactionCopy.id],undefined);
+assert.equal(Object.values(deletedCopy.document.nodes).some(({parentId})=>parentId===transactionCopy.id),false);
 
 const repository=createCanonicalRepository(document);
 const observed=[];
@@ -100,5 +116,18 @@ assert.equal(JSON.stringify(undoProjectTransaction(migrated).project),before);
 const command=applyCanonicalCommand(document,{kind:"rename",baseRevision:document.revision,propertyId:transactionId,name:"reference"});
 assert.equal(command.status,"applied");
 assert.equal(command.document.nodes[transactionId].name,"reference");
+
+const adopted=canonicalSchemaFromJsonSchema({
+  id:"canonical:opened-article",
+  contributorId:"profile:opened-article",
+  contributorName:"Opened Article",
+  sourceIdentity:"schema:opened-article",
+  sourceRevision:4,
+  document:{type:"object",properties:{article_type:{type:"string"},metadata:{type:"object",properties:{article_name:{type:"string"}}}}},
+  idFactory:id,
+});
+assert.equal(adopted.selectedPropertyId,adopted.rootIds[0],"an adopted workspace starts on its first root property");
+assert.equal(adopted.nodes[adopted.selectedPropertyId].name,"article_type");
+assert.ok(Object.values(adopted.nodes).every(({provenance})=>provenance.every(({source,sourceId,revision})=>source==="saved-schema"&&sourceId==="schema:opened-article"&&revision===4)));
 
 console.log("data-layer canonical schema authoring tests passed");

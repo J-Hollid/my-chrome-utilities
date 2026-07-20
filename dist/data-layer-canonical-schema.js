@@ -59,7 +59,7 @@ function applyAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
     }
     if (command.kind === "type") {
-        const descendants = orderedIds(next, command.propertyId).slice(1), destructive = node.type === "object" && command.type !== "object" && descendants.length > 0;
+        const descendants = orderedIds(next, command.propertyId), destructive = node.type === "object" && command.type !== "object" && descendants.length > 0;
         const itemChange = node.type === "array" && command.type === "array" && node.itemType !== command.itemType;
         if ((destructive || itemChange) && !command.confirmed)
             return { status: "confirmation-required", document, propertyId: command.propertyId, impact: destructive ? "child definitions and documentation removed; destructive confirmation required" : `every item changes from ${node.itemType ?? "unspecified"} to ${command.itemType ?? "unspecified"}` };
@@ -74,7 +74,7 @@ function applyAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [command.propertyId, ...descendants]) };
     }
     if (command.kind === "delete") {
-        const descendants = orderedIds(next, command.propertyId);
+        const descendants = [command.propertyId, ...orderedIds(next, command.propertyId)];
         const parentId = node.parentId;
         for (const id of descendants)
             delete next.nodes[id];
@@ -98,7 +98,7 @@ function applyAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [command.propertyId, ...(oldParent ? [oldParent] : []), ...(command.parentId ? [command.parentId] : [])]) };
     }
     const source = node, copies = new Map();
-    for (const sourceId of orderedIds(next, command.propertyId)) {
+    for (const sourceId of [command.propertyId, ...orderedIds(next, command.propertyId)]) {
         const copyId = command.id("property");
         copies.set(sourceId, copyId);
         const original = next.nodes[sourceId], copy = clone(original);
@@ -235,7 +235,7 @@ export function migrateLegacyProfile(profile, options) {
 export function confirmCanonicalMigration(state, plan) { if (plan.conflicts.length)
     throw new Error(`Resolve ${plan.conflicts.length} canonical migration conflict${plan.conflicts.length === 1 ? "" : "s"} before confirming.`); return transactProject(state, "Migrate legacy schema to canonical document", (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((profile) => { if (profile.id !== plan.profileId)
             return profile; const next = { ...profile, requirements: [], canonicalSchema: clone(plan.document) }; delete next.structuredSchema; delete next.structuredDraft; delete next.schemaConstraints; return next; }) } })); }
-export function canonicalSchemaFromJsonSchema(input) { const profile = { id: input.contributorId, name: input.contributorName, structuredSchema: input.document }, plan = migrateLegacyProfile(profile, { id: input.idFactory }), document = { ...plan.document, id: input.id, source: { identity: input.sourceIdentity, revision: input.sourceRevision, provenance: "saved-schema-library" } }; for (const node of Object.values(document.nodes))
+export function canonicalSchemaFromJsonSchema(input) { const profile = { id: input.contributorId, name: input.contributorName, structuredSchema: input.document }, plan = migrateLegacyProfile(profile, { id: input.idFactory }), firstRootId = plan.document.rootIds[0], document = { ...plan.document, id: input.id, source: { identity: input.sourceIdentity, revision: input.sourceRevision, provenance: "saved-schema-library" }, ...(firstRootId ? { selectedPropertyId: firstRootId } : {}) }; for (const node of Object.values(document.nodes))
     node.provenance = node.provenance.map(() => ({ source: "saved-schema", sourceId: input.sourceIdentity, revision: input.sourceRevision })); return document; }
 export function canonicalNodeFromValue(name, value, input) { return { id: input.id("property"), name, ...(input.parentId ? { parentId: input.parentId } : {}), order: input.order, type: typeOf(value), presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: emptyDocumentation(), provenance: [{ source: "created" }], overrideReferences: [] }; }
 //# sourceMappingURL=data-layer-canonical-schema.js.map

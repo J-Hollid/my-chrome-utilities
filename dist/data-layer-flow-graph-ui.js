@@ -420,7 +420,7 @@ export function installFlowGraphBuilder(options) {
     function render() { const { flow } = current(); advanced.hidden = !flow; if (flow)
         renderGraph(flow);
     else {
-        q("#flow-graph-workspace")?.replaceChildren();
+        document.querySelector("#flow-graph-workspace")?.replaceChildren();
         inspectorContext.replaceChildren();
     } }
     return { render, renderSelectors: render };
