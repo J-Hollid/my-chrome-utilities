@@ -6,6 +6,7 @@ const svg = (tag) => document.createElementNS("http://www.w3.org/2000/svg", tag)
 const button = (text, action) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", action); return control; };
 const entityName = (entities, id, fallback = "Unknown") => entities.find((entity) => entity.id === id)?.name ?? fallback;
 const elementByData = (attribute, id) => Array.from(document.querySelectorAll(`[${attribute}]`)).find((element) => element.getAttribute(attribute) === id);
+export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
 export function flowEdgeGeometry(source, target, width = nodeWidth, height = nodeHeight) {
     const halfWidth = width / 2, halfHeight = height / 2, sourceCenter = { x: source.x + halfWidth, y: source.y + halfHeight }, targetCenter = { x: target.x + halfWidth, y: target.y + halfHeight }, dx = targetCenter.x - sourceCenter.x, dy = targetCenter.y - sourceCenter.y, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, borderDistance = Math.min(Math.abs(unitX) < 0.001 ? Infinity : halfWidth / Math.abs(unitX), Math.abs(unitY) < 0.001 ? Infinity : halfHeight / Math.abs(unitY)), candidateStart = { x: sourceCenter.x + unitX * borderDistance, y: sourceCenter.y + unitY * borderDistance }, candidateEnd = { x: targetCenter.x - unitX * borderDistance, y: targetCenter.y - unitY * borderDistance }, forwardDistance = (candidateEnd.x - candidateStart.x) * unitX + (candidateEnd.y - candidateStart.y) * unitY, midpoint = { x: (sourceCenter.x + targetCenter.x) / 2, y: (sourceCenter.y + targetCenter.y) / 2 }, startX = forwardDistance > 0 ? candidateStart.x : midpoint.x - unitX * 6, startY = forwardDistance > 0 ? candidateStart.y : midpoint.y - unitY * 6, endX = forwardDistance > 0 ? candidateEnd.x : midpoint.x + unitX * 6, endY = forwardDistance > 0 ? candidateEnd.y : midpoint.y + unitY * 6, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
     return { startX, startY, endX, endY, arrow: `${baseX + normalX},${baseY + normalY} ${endX},${endY} ${baseX - normalX},${baseY - normalY}` };
@@ -343,9 +344,17 @@ export function installFlowGraphBuilder(options) {
             label.setAttribute("x", "10");
             label.setAttribute("y", "22");
             label.textContent = page?.name ?? frame.pageId;
-            let startX;
-            group.addEventListener("pointerdown", (event) => { startX = event.clientX; const finish = (up) => { window.removeEventListener("pointerup", finish); if (startX !== undefined && Math.abs(up.clientX - startX) > 85)
-                reject(); startX = undefined; }; window.addEventListener("pointerup", finish); });
+            let start;
+            const stop = (pointerId) => { window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (group.hasPointerCapture(pointerId))
+                group.releasePointerCapture(pointerId); start = undefined; }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
+                return; const initial = start; stop(initial.pointerId); if (Math.abs(up.clientX - initial.clientX) > 85)
+                reject(); }, cancel = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
+                return; stop(start.pointerId); };
+            group.addEventListener("pointerdown", (event) => { if (start)
+                return; start = { pointerId: event.pointerId, clientX: event.clientX }; window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+                group.setPointerCapture(event.pointerId);
+            }
+            catch { /* Synthetic regression events have no active device pointer to capture. */ } });
             group.addEventListener("keydown", (event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
                 event.preventDefault();
                 reject();
@@ -369,7 +378,7 @@ export function installFlowGraphBuilder(options) {
             label.setAttribute("y", "20");
             label.textContent = `${storedFrame.freePageRegion === "before-lanes" ? "Before" : "After"} lanes · ${page?.name ?? storedFrame.pageId}`;
             let start, targetRegion;
-            const owns = (event) => Boolean(start) && event.pointerId === start.pointerId, stop = (pointerId) => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (frame.hasPointerCapture(pointerId))
+            const owns = (event) => ownsPointerDrag(start?.pointerId, event.pointerId), stop = (pointerId) => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (frame.hasPointerCapture(pointerId))
                 frame.releasePointerCapture(pointerId); start = undefined; targetRegion = undefined; }, move = (event) => { if (!owns(event))
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
                 targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!owns(event))
@@ -488,7 +497,7 @@ export function installFlowGraphBuilder(options) {
                 statusRepairHref = "";
             } render(); focusNode(); };
             let dragStart, dragEdgeRegion;
-            const ownsDrag = (event) => Boolean(dragStart) && event.pointerId === dragStart.pointerId, stopDragTracking = (pointerId) => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); if (group.hasPointerCapture(pointerId))
+            const ownsDrag = (event) => ownsPointerDrag(dragStart?.pointerId, event.pointerId), stopDragTracking = (pointerId) => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); if (group.hasPointerCapture(pointerId))
                 group.releasePointerCapture(pointerId); dragStart = undefined; dragEdgeRegion = undefined; }, moveDraggedNode = (event) => { if (!ownsDrag(event))
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
                 dragEdgeRegion = edge.dataset.freePageEdgeTarget; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))

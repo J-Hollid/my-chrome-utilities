@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,documentaryFlowGraph,flowOccurrenceEventSchema,flowOutline,flowRelationshipText,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
-import {flowEdgeGeometry} from "../dist/data-layer-flow-graph-ui.js";
+import {flowEdgeGeometry,ownsPointerDrag} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
@@ -59,6 +59,9 @@ assert.deepEqual(state.project.collections.flows[0].steps,executableBefore,"docu
 assert.equal(compiledAfter.plan.evaluatorContentIdentity,compiledBefore.plan.evaluatorContentIdentity,"documentary graph authoring must not change compiled/runtime evaluator behavior");
 
 const directedCheckoutToPayment=flowEdgeGeometry({x:30,y:70},{x:430,y:210});
+assert.equal(ownsPointerDrag(undefined,41),false,"a drag has no owner before pointerdown");
+assert.equal(ownsPointerDrag(41,42),false,"a second pointer cannot finish or cancel the active pointer's drag");
+assert.equal(ownsPointerDrag(41,41),true,"only the pointer that started a drag owns its move, finish, and cancel lifecycle");
 assert.deepEqual({startX:directedCheckoutToPayment.startX,startY:directedCheckoutToPayment.startY,endX:directedCheckoutToPayment.endX,endY:directedCheckoutToPayment.endY},{startX:200,startY:140.75,endX:430,endY:221.25},"known source-right to target-left ports must not reverse");
 
 for(const [source,target] of [[{x:230,y:70},{x:30,y:70}],[{x:230,y:70},{x:230,y:190}],[{x:230,y:70},{x:230,y:70}]]){
