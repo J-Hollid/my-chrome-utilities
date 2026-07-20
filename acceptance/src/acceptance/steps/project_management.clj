@@ -24,7 +24,13 @@
    "Retail website is active and a valid bundle contains another project-retail with linked Sitewide, Cart, Purchase, and Retail checkout records"
    "Retail website is active before project import"
    "the pre-library installation contains one singleton Legacy shop project with stable identity project-legacy, metadata, Draft revision 9, project graph, navigation, and Undo history"
-   "the operator starts with Retail website active in the project library"])
+   "the operator starts with Retail website active in the project library"
+   "Retail website is active and <overview> contains <entity>"
+   "Retail website is active and <overview> contains no entities"
+   "the Pages overview contains Cart and unreferenced Landing"
+   "Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture"
+   "the Pages overview at 360 pixels contains <ordered Pages>"
+   "Retail website has empty project collections and its Inspector is closed"])
 (def runtime-entries
   ["the built extension is running with the production project repository, side panel, and Specification Studio"
    "the production Projects projection reads selected identity project-retail"
@@ -41,7 +47,13 @@
    "production project-retail is active and a valid bundle also uses project-retail for linked Sitewide, Cart, Purchase, and Retail checkout records"
    "production project-retail is active before import"
    "production storage has only singleton Legacy shop project project-legacy with metadata, Draft revision 9, project graph, navigation, and Undo history"
-   "the actual extension starts with production Retail website active in its project library"])
+   "the actual extension starts with production Retail website active in its project library"
+   "production project-retail is active and the installed Inspector is closed"
+   "production project-retail is active and <overview> has zero records"
+   "production Pages contain Cart and unreferenced Landing"
+   "production Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture"
+   "the production Pages overview at 360 CSS pixels contains <ordered Pages>"
+   "canonical project-retail collections are all empty"])
 (def entry-modes (merge (zipmap model-entries (repeat :model))
                         (zipmap runtime-entries (repeat :runtime))))
 (defonce model-verified? (atom false))
@@ -56,13 +68,16 @@
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
-      (let [result (checked! "node" "test/browser-packs/project-management.mjs")
-            line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:projectManagement (json/parse-string line true))]
+      (let [management-result (checked! "node" "test/browser-packs/project-management.mjs")
+            management-line (last (filter #(str/starts-with? % "{") (str/split-lines (:out management-result))))
+            lifecycle-result (checked! "node" "test/browser-packs/project-entity-lifecycle.mjs")
+            lifecycle-line (last (filter #(str/starts-with? % "{") (str/split-lines (:out lifecycle-result))))
+            observed (merge (:projectManagement (json/parse-string management-line true))
+                            (:projectEntityLifecycle (json/parse-string lifecycle-line true)))]
         (reset! browser-observation observed))))
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "context" (format "%03d" %))) (range 1 11))
+               (map #(keyword (str "context" (format "%03d" %))) (range 1 17))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

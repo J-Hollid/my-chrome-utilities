@@ -18,6 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
+import { createProjectCollectionEntity, inspectProjectEntityRemoval, projectCollectionDefinitions, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -32,9 +33,9 @@ q("#project-assignment-applicability").required = false;
 q("#project-schema-id").required = false;
 q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
-const labels = { profiles: "Shared profiles", pages: "Pages", pageGroups: "Page groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schema drafts", assignments: "Assignments" };
+const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schemas", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
@@ -484,7 +485,7 @@ function renderTree() { const tree = q("#project-tree"); tree.replaceChildren();
     button.textContent = `${labels[kind]} (${count})`;
     button.dataset.kind = kind;
     button.setAttribute("aria-current", String(!projectOverview && kind === selectedKind));
-    button.addEventListener("click", () => { projectOverview = false; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); q("#workspace-pane").focus(); });
+    button.addEventListener("click", () => { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); q("#workspace-pane").focus(); });
     item.append(button);
     tree.append(item);
 } const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
@@ -524,6 +525,31 @@ function renderCollectionGuidance(content) { if (!state)
     section.append(heading, tasks, map, next, reason, worked);
 } if (section.childElementCount)
     content.append(section); }
+function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
+function renderCreationPage(content, kind) { if (!state)
+    return; const definition = projectCollectionDefinitions[kind], section = document.createElement("section"), heading = document.createElement("h1"), purpose = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), form = document.createElement("form"), name = document.createElement("input"), nameLabel = document.createElement("label"), cancel = document.createElement("button"), create = document.createElement("button"), feedback = document.createElement("output"); section.className = "collection-lifecycle-page"; section.dataset.creationKind = kind; heading.tabIndex = -1; heading.textContent = `Create ${definition.singular}`; purpose.textContent = `Purpose: ${definition.purpose}. Example: ${definition.example}.`; prerequisites.textContent = `Prerequisites: ${definition.prerequisites.join(", ")}.`; usedBy.textContent = `Used by: ${definition.consumers.join(", ")}.`; nameLabel.textContent = `${definition.singular} name`; name.name = "name"; name.required = true; nameLabel.append(name); cancel.type = create.type = "button"; cancel.textContent = "Cancel"; create.textContent = `Create ${definition.singular}`; cancel.addEventListener("click", () => openCollectionOverview(kind)); create.addEventListener("click", () => { try {
+    const next = createProjectCollectionEntity(state, kind, name.value, id), created = next.project.collections[kind].at(-1);
+    creationKind = undefined;
+    selectedKind = kind;
+    selectedId = created.id;
+    lifecycleStatus = `Created ${definition.singular} ${created.name} in Draft revision ${canonicalRevision + 1}.`;
+    persist(next);
+    persistNavigation();
+    queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(created.id)}"]`)?.focus({ preventScroll: true }));
+}
+catch (error) {
+    feedback.textContent = error instanceof Error ? error.message : String(error);
+} }); form.append(nameLabel, cancel, create, feedback); section.append(heading, purpose, prerequisites, usedBy, form); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Create`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
+function renderRemovalPage(content, review) { if (!state)
+    return; const definition = projectCollectionDefinitions[review.kind], section = document.createElement("section"), heading = document.createElement("h1"), summary = document.createElement("p"), dependencies = document.createElement("ul"), actions = document.createElement("div"), cancel = document.createElement("button"), confirm = document.createElement("button"); section.className = "collection-lifecycle-page"; section.dataset.removalKind = review.kind; heading.tabIndex = -1; heading.textContent = `Review removal of ${review.name}`; summary.textContent = review.summary; for (const dependency of review.dependencies) {
+    const item = document.createElement("li"), open = document.createElement("button");
+    item.textContent = `${dependency.name}: ${dependency.relationship}. `;
+    open.type = "button";
+    open.textContent = `Open ${dependency.name}`;
+    open.addEventListener("click", () => openCollectionOverview(dependency.kind === "flowGraph" ? "flows" : dependency.kind, dependency.id));
+    item.append(open);
+    dependencies.append(item);
+} cancel.type = confirm.type = "button"; cancel.textContent = "Cancel removal"; confirm.textContent = `Remove ${review.name}`; confirm.disabled = review.blocked; cancel.addEventListener("click", () => openCollectionOverview(review.kind, review.id)); confirm.addEventListener("click", () => { const entities = state.project.collections[review.kind], index = entities.findIndex(({ id }) => id === review.id), focus = entities[index + 1]?.id ?? entities[index - 1]?.id; removedFocus = { kind: review.kind, id: review.id }; removalReview = undefined; selectedKind = review.kind; selectedId = undefined; lifecycleStatus = `Removed ${review.name}. Draft saved; dependent evidence is stale. Undo restores the same stable identity.`; persist(removeProjectCollectionEntity(state, review.kind, review.id)); persistNavigation(); queueMicrotask(() => { const target = focus ? document.querySelector(`[data-entity-id="${CSS.escape(focus)}"]`) : document.querySelector(`[data-add-kind="${review.kind}"]`); target?.focus({ preventScroll: true }); }); }); actions.append(cancel, confirm); section.append(heading, summary, dependencies, actions); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Remove ${review.name}`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
 function renderWorkspace() {
     const content = q("#workspace-content");
     content.replaceChildren();
@@ -543,6 +569,14 @@ function renderWorkspace() {
         openSchemas.textContent = "Open Shared Profiles";
         openSchemas.addEventListener("click", () => { projectOverview = false; selectedKind = "profiles"; selectedId = undefined; persistNavigation(); render(); });
         content.append(heading, identity, metadata, openSchemas);
+        return;
+    }
+    if (creationKind) {
+        renderCreationPage(content, creationKind);
+        return;
+    }
+    if (removalReview) {
+        renderRemovalPage(content, removalReview);
         return;
     }
     const search = q("#project-search").value.trim().toLowerCase();
@@ -581,30 +615,51 @@ function renderWorkspace() {
         return;
     }
     q("#flow-inspector-context").replaceChildren();
-    renderCollectionGuidance(content);
-    renderCanonicalProfileOverview(content);
-    const visible = all.slice(0, 40), heading = document.createElement("h1"), count = document.createElement("p"), list = document.createElement("ul");
-    heading.textContent = labels[selectedKind];
+    const definition = projectCollectionDefinitions[selectedKind], heading = document.createElement("h1"), primary = document.createElement("button"), guidance = document.createElement("section"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), consumers = document.createElement("p"), count = document.createElement("p"), list = document.createElement("ul"), visible = all.slice(0, 40);
+    heading.textContent = definition.overview;
+    primary.type = "button";
+    primary.textContent = definition.addAction;
+    primary.dataset.addKind = selectedKind;
+    primary.setAttribute("aria-label", `${definition.addAction} to ${state.project.name}`);
+    primary.addEventListener("click", () => { creationKind = selectedKind; selectedId = undefined; render(); });
+    guidance.className = "project-guidance";
+    purpose.textContent = definition.purpose;
+    example.textContent = `Example: ${definition.example}.`;
+    prerequisites.textContent = `Prerequisites: ${definition.prerequisites.join(", ")}.`;
+    consumers.textContent = `Used by: ${definition.consumers.join(", ")}.`;
+    guidance.append(purpose, example, prerequisites, consumers);
     count.className = "status-text";
-    count.textContent = `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}`;
+    count.textContent = all.length ? `${visible.length} of ${all.length} rows rendered${all.length > 40 ? " · windowed; scroll to load more" : ""}` : `No ${definition.overview} yet. ${definition.purpose}.`;
     list.className = "entity-grid";
     list.setAttribute("role", "listbox");
     for (const entity of visible) {
-        const row = document.createElement("li"), select = document.createElement("button"), kindText = document.createElement("span"), usage = document.createElement("span");
+        const row = document.createElement("li"), open = document.createElement("button"), remove = document.createElement("button"), kindText = document.createElement("span"), usage = document.createElement("span");
         row.className = "entity-row";
         row.dataset.entityId = entity.id;
+        row.tabIndex = -1;
         row.setAttribute("role", "option");
         row.setAttribute("aria-selected", String(entity.id === selectedId));
-        select.type = "button";
-        select.textContent = entity.name;
-        select.addEventListener("click", () => { selectedId = entity.id; persistNavigation(); render(); });
+        open.type = remove.type = "button";
+        open.textContent = entity.name;
+        open.setAttribute("aria-label", `Open ${entity.name}`);
+        open.addEventListener("click", () => { selectedId = entity.id; persistNavigation(); render(); });
+        remove.textContent = `Remove ${entity.name}`;
+        remove.setAttribute("aria-label", `Remove ${definition.singular} ${entity.name}`);
+        remove.addEventListener("click", () => { removalReview = inspectProjectEntityRemoval(state, selectedKind, entity.id); selectedId = undefined; render(); });
         kindText.className = "search-location";
-        kindText.textContent = labels[selectedKind];
+        kindText.textContent = definition.singular;
         usage.textContent = `Used ${whereUsed(entity.id).length} times`;
-        row.append(select, kindText, usage);
+        row.append(open, kindText, usage, remove);
         list.append(row);
     }
-    content.append(heading, count, list);
+    if (lifecycleStatus) {
+        const status = document.createElement("p");
+        status.className = "status-text";
+        status.setAttribute("role", "status");
+        status.textContent = lifecycleStatus;
+        content.append(status);
+    }
+    content.append(heading, primary, guidance, count, list);
     if (selected) {
         renderSelectedEntityEditor(content, selected);
         if (selectedKind === "pages") {
@@ -697,14 +752,23 @@ function render() { const empty = q("#project-empty"), workspace = q("#project-w
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
-} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#add-entity-form").hidden = Boolean(selectedId) || projectOverview; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts" || projectOverview; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
+} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = selectedKind !== "schemaDrafts" || projectOverview; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); document.querySelectorAll(".contextual-editor button").forEach((button) => { if (button.textContent === "Delete")
+    button.remove(); }); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); const next = createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id }), at = new Date().toISOString(); library = projectLibrary([{ state: next, revision: 0, createdAt: at, lastModifiedAt: at }], next.project.id); localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); persist(next); q("#workspace-pane").focus(); });
 document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
-    return; const defaults = kind === "profiles" ? { requirements: [], canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: "", contributorName: name }) } : kind === "events" ? { eventName: name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), sourceId: "event-history", target: "payload", role: "interaction" } : kind === "flows" ? { steps: [] } : kind === "fixtures" ? { mode: "event", observations: [], expected: {}, releasePolicy: "required" } : kind === "applicabilitySets" ? { priority: 0, condition: { kind: "all", conditions: [] } } : {}; persist(addProjectEntity(state, kind, { name, ...defaults }, id)); selectedKind = kind; selectedId = state?.project.collections[kind].at(-1)?.id; q("#entity-name").value = ""; persistNavigation(); render(); });
-q("#undo-project").addEventListener("click", () => { if (state)
-    persist(undoProjectTransaction(state)); });
+    return; const next = createProjectCollectionEntity(state, kind, name, id), created = next.project.collections[kind].at(-1); selectedKind = kind; selectedId = created?.id; q("#entity-name").value = ""; persist(next); persistNavigation(); render(); });
+q("#undo-project").addEventListener("click", () => { if (!state)
+    return; const restored = removedFocus; persist(undoProjectTransaction(state)); if (restored) {
+    removedFocus = undefined;
+    selectedKind = restored.kind;
+    selectedId = restored.id;
+    lifecycleStatus = "Removal undone; the same stable identity is restored.";
+    persistNavigation();
+    render();
+    queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(restored.id)}"]`)?.focus({ preventScroll: true }));
+} });
 q("#redo-project").addEventListener("click", () => { if (state)
     persist(redoProjectTransaction(state)); });
 q("#project-search").addEventListener("input", renderWorkspace);

@@ -661,6 +661,14 @@
       "src/data-layer-specification-repository.ts"
     ]
   },
+  "src/data-layer-project-entity-lifecycle.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-specification-project.ts": {
     "module": "schemas",
     "layer": "application",

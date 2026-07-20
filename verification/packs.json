@@ -2,11 +2,13 @@
   {
     "id": "project_management",
     "source": [
+      "src/data-layer-project-entity-lifecycle.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts"
     ],
     "dependencies": [],
     "unit": [
+      "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [],
@@ -20,7 +22,8 @@
       "acceptance/src/acceptance/steps/project_management.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/project-management.mjs"
+      "test/browser-packs/project-management.mjs",
+      "test/browser-packs/project-entity-lifecycle.mjs"
     ]
   },
   {

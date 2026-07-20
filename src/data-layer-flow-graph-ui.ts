@@ -47,7 +47,7 @@ export function flowEdgeGeometry(source:{x:number;y:number},target:{x:number;y:n
 
 export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBuilderIntegration{
   const inspector=q<HTMLElement>("#project-inspector"),advanced=q<HTMLElement>("#flow-step-editor"),legacyForm=q<HTMLFormElement>("#add-flow-step-form"),legacyList=q<HTMLOListElement>("#flow-step-list"),legacyResult=q<HTMLElement>("#flow-step-result"),inspectorContext=document.createElement("section");
-  inspectorContext.id="flow-inspector-context";inspector.insertBefore(inspectorContext,q("#add-entity-form"));
+  inspectorContext.id="flow-inspector-context";inspector.insertBefore(inspectorContext,advanced);
   legacyForm.hidden=true;legacyList.hidden=true;legacyResult.hidden=true;
   let selected:{kind:"page-frame"|"occurrence"|"relationship";id:string}|undefined;
   let connection:{sourceId:string;targets:string[];targetIndex:number;preview?:SVGLineElement}|undefined;
