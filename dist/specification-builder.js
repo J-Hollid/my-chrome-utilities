@@ -9,7 +9,7 @@ import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPag
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
-import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, saveProjectState, serializeProjectLibrary } from "./data-layer-project-library.js";
+import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, saveProjectState, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -897,6 +897,37 @@ flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuil
     } layeredSchemaUi?.openGraphOccurrenceSchema(contextId.replace(/^context:/, ""), path); } });
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
 layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist });
+const synchronizeActiveProjectContext = (serialized) => { const change = activeProjectContextChange(serialized, state?.project.id, canonicalRevision); if (!change.changed)
+    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; selectedKind = "profiles"; selectedId = undefined; projectOverview = Boolean(active); if (active) {
+    const navigation = resolveProjectNavigation(library, active.state.project.id);
+    if (navigation) {
+        projectOverview = false;
+        selectedKind = navigation.kind;
+        selectedId = navigation.id;
+    }
+    const url = new URL(location.href);
+    url.searchParams.set("project", active.state.project.id);
+    url.searchParams.delete("route");
+    url.searchParams.set("kind", selectedKind);
+    if (selectedId)
+        url.searchParams.set("entity", selectedId);
+    else
+        url.searchParams.delete("entity");
+    history.replaceState(null, "", url);
+}
+else {
+    const url = new URL(location.href);
+    for (const key of ["project", "route", "kind", "entity"])
+        url.searchParams.delete(key);
+    history.replaceState(null, "", url);
+} render(); renderAssignments(); q("#project-state").textContent = active ? `Active project synchronized: ${active.state.project.name} · revision ${active.revision}` : "No active project"; };
+window.addEventListener("storage", (event) => { if (event.key !== PROJECT_LIBRARY_STORAGE_KEY || !event.newValue)
+    return; try {
+    synchronizeActiveProjectContext(event.newValue);
+}
+catch (error) {
+    q("#project-state").textContent = error instanceof Error ? error.message : String(error);
+} });
 restore();
 if (!state) {
     const stagedStart = localStorage.getItem(START_PATH_KEY);

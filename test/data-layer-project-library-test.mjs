@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {
   activateProject,
+  activeProjectContextChange,
   commitProjectImport,
   createProjectInLibrary,
   exportProjectBundle,
@@ -76,6 +77,17 @@ assert.equal(library.projects["project-retail"].pendingWrite,undefined);
 library=activateProject(library,"project-trade",clock);
 assert.equal(library.activeProjectId,"project-trade");
 assert.equal(library.projects["project-retail"].revision,15);
+
+const externalLibrary=recordProjectNavigation(library,"project-trade",{kind:"flows",id:"flow:project-trade"}),externalSwitch=activeProjectContextChange(JSON.stringify(externalLibrary),"project-retail",15);
+assert.equal(externalSwitch.changed,true,"an external active identity change invalidates the open Studio context");
+assert.equal(externalSwitch.active?.state.project.id,"project-trade");
+assert.deepEqual(externalSwitch.active?.navigation,{kind:"flows",id:"flow:project-trade"});
+const unchangedContext=activeProjectContextChange(JSON.stringify(externalLibrary),"project-trade",7);
+assert.equal(unchangedContext.changed,false,"the same active identity and revision do not rerender Studio");
+const externallyEdited=structuredClone(library);externallyEdited.projects["project-trade"].revision=8;
+assert.equal(activeProjectContextChange(JSON.stringify(externallyEdited),"project-trade",7).changed,true,"an external active revision refreshes an already-open Studio");
+const noActive=structuredClone(library);delete noActive.activeProjectId;
+assert.equal(activeProjectContextChange(JSON.stringify(noActive),"project-trade",7).active,undefined,"external deactivation clears project-bound Studio state");
 
 const remappedState=structuredClone(library.projects["project-trade"].state);
 remappedState.project.id="project-trade-imported";

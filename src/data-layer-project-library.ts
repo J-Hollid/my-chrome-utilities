@@ -6,6 +6,7 @@ export interface ReplayableProjectCommand {kind:"set-project-value";path:string;
 export interface PendingProjectWrite {label:string;baseRevision:number;fields:string[];command:ReplayableProjectCommand;}
 export interface ProjectLibraryRecord {state:ProjectState;revision:number;createdAt:string;lastModifiedAt:string;navigation?:ProjectNavigation;pendingWrite?:PendingProjectWrite;}
 export interface ProjectLibrary {format:"my-chrome-utilities.project-library";version:1;activeProjectId?:string;projects:Record<string,ProjectLibraryRecord>;singletonMigrated:boolean;}
+export interface ActiveProjectContextChange {library:ProjectLibrary;changed:boolean;active?:ProjectLibraryRecord;}
 export interface ProjectMetadata {name:string;purpose:string;website:string;owner:string;notes:string;}
 export interface StagedProjectBundleImport {sourceName:string;targetName:string;sourceRevision:number;projectId:string;state:ProjectState;entityCounts:Record<string,number>;referenceIntegrity:"valid"|"blocked";migrations:string[];blockers:{section:string;message:string}[];}
 
@@ -21,6 +22,7 @@ export function projectLibrary(records:readonly ProjectLibraryRecord[]=[],active
   return{format:"my-chrome-utilities.project-library",version:1,...(activeProjectId?{activeProjectId}:{}),projects,singletonMigrated:false};
 }
 export function restoreProjectLibrary(serialized:string|null):ProjectLibrary|undefined{if(!serialized)return undefined;const parsed=JSON.parse(serialized) as ProjectLibrary;if(parsed.format!=="my-chrome-utilities.project-library"||parsed.version!==1||!parsed.projects)throw new Error("Unsupported project library format.");if(parsed.activeProjectId&&!parsed.projects[parsed.activeProjectId])throw new Error("The active project is missing from the project library.");return clone(parsed);}
+export function activeProjectContextChange(serialized:string,currentProjectId?:string,currentRevision=0):ActiveProjectContextChange{const library=restoreProjectLibrary(serialized);if(!library)throw new Error("Project library synchronization requires persisted library state.");const active=library.activeProjectId?library.projects[library.activeProjectId]:undefined,changed=library.activeProjectId!==currentProjectId||(active?.revision??0)!==currentRevision;return{library,changed,...(active?{active}: {})};}
 export const serializeProjectLibrary=(library:ProjectLibrary):string=>JSON.stringify(library);
 
 export function migrateSingletonProject(existing:ProjectLibrary|undefined,singleton:{state:ProjectState;revision:number;navigation?:ProjectNavigation}|undefined,now:()=>string=()=>new Date().toISOString()):ProjectLibrary{
