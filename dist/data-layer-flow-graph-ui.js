@@ -24,6 +24,10 @@ export function installFlowGraphBuilder(options) {
     let suppressNodeClick = false;
     let statusMessage = "";
     let statusRepairHref = "";
+    let activeCatalogPayload;
+    const clearActiveCatalogPayload = () => { activeCatalogPayload = undefined; };
+    window.addEventListener("pointerup", clearActiveCatalogPayload);
+    window.addEventListener("pointercancel", clearActiveCatalogPayload);
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next) => { try {
         statusMessage = "";
@@ -69,8 +73,8 @@ export function installFlowGraphBuilder(options) {
         const renderItems = () => { const term = search.value.trim().toLowerCase(); items.replaceChildren(...entities.filter(({ name }) => name.toLowerCase().includes(term)).map((entity) => { const control = button(entity.name, () => activate(entity)); control.draggable = true; control.dataset.componentKind = kind === "Page Groups" ? "page-group" : kind === "Pages" ? "page" : "event"; control.dataset.componentId = entity.id; if (kind === "Pages") {
             const { state } = current(), owners = state ? orderedPageGroupIds(state.project, entity.id).map((id) => entityName(state.project.collections.pageGroups, id)) : [];
             control.textContent = `${entity.name} · ${owners.join(" → ") || "Ungrouped"}`;
-        } control.addEventListener("dragstart", (event) => { event.dataTransfer?.setData("application/x-flow-component", JSON.stringify({ kind: control.dataset.componentKind, id: entity.id })); if (kind === "Pages")
-            event.dataTransfer?.setData("application/x-flow-page-component", entity.id); }); return control; })); };
+        } const payload = () => ({ kind: String(control.dataset.componentKind), id: entity.id }); control.addEventListener("pointerdown", () => { activeCatalogPayload = payload(); }); control.addEventListener("dragstart", (event) => { activeCatalogPayload = payload(); event.dataTransfer?.setData("application/x-flow-component", JSON.stringify(activeCatalogPayload)); if (kind === "Pages")
+            event.dataTransfer?.setData("application/x-flow-page-component", entity.id); }); control.addEventListener("dragend", clearActiveCatalogPayload); return control; })); };
         search.addEventListener("input", renderItems);
         renderItems();
         section.append(heading, search, items);
@@ -147,11 +151,11 @@ export function installFlowGraphBuilder(options) {
         host.append(heading, list);
     }
     function dropPayload(event) { const raw = event.dataTransfer?.getData("application/x-flow-component"); if (!raw)
-        return; try {
+        return activeCatalogPayload; try {
         return JSON.parse(raw);
     }
     catch {
-        return;
+        return activeCatalogPayload;
     } }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();
