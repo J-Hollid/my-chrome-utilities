@@ -1,4 +1,5 @@
-import {orderedPageGroupIds,requiresPageGroupMembershipMigration,transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
+import {orderedPageGroupIds,requiresPageGroupMembershipMigration} from "./utilities/data-layer/page-group-membership.js";
+import {transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
 
 export type FlowRole="context-setting"|"interaction";
 export type FlowObligation="Required"|"Optional"|"Conditional"|"Informational";

@@ -3,6 +3,7 @@
     "module": "flow-graph",
     "layer": "application",
     "contracts": [
+      "src/utilities/data-layer/page-group-membership.ts",
       "src/utilities/data-layer/schemas.ts"
     ]
   },
@@ -10,6 +11,7 @@
     "module": "flow-graph",
     "layer": "browser",
     "contracts": [
+      "src/utilities/data-layer/page-group-membership.ts",
       "src/utilities/data-layer/schemas.ts"
     ]
   },

@@ -1,4 +1,5 @@
-import { orderedPageGroupIds, requiresPageGroupMembershipMigration, transactProject } from "./utilities/data-layer/schemas.js";
+import { orderedPageGroupIds, requiresPageGroupMembershipMigration } from "./utilities/data-layer/page-group-membership.js";
+import { transactProject } from "./utilities/data-layer/schemas.js";
 const clone = (value) => structuredClone(value);
 const graphIndex = (project) => project.documentationFlowGraphs ?? {};
 const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacy = project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds; return { pageGroupIds: [...(stored?.pageGroupIds ?? legacy ?? [])], pageFrames: stored?.pageFrames ?? [], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [], ...(stored?.selectedItem ? { selectedItem: stored.selectedItem } : {}), ...(stored?.viewport ? { viewport: stored.viewport } : {}) }; };
