@@ -160,9 +160,12 @@ function renderPageGroupMembershipEditor(host, page) {
         later.disabled = migrationRequired || index === memberships.length - 1;
         remove.disabled = migrationRequired;
         open.addEventListener("click", () => { selectedKind = "pageGroups"; selectedId = groupId; persistNavigation(); render(); });
-        const reorder = (delta) => { pendingPageGroupMembershipReorder = { pageId: page.id, pageGroupId: groupId, delta }; pageGroupMembershipStatus = `Impact preview before commit: affected properties for ${page.name}; affected Page instances and compiled targets will be recomputed; exports and evidence become stale; project remains Draft with Undo available.`; render(); queueMicrotask(() => document.querySelector("[data-confirm-membership-reorder]")?.focus()); };
+        const reorder = (delta) => { pendingPageGroupMembershipReorder = { pageId: page.id, pageGroupId: groupId, delta }; pageGroupMembershipStatus = `Impact preview before commit: affected properties for ${page.name}; affected Page instances and compiled targets will be recomputed; exports and evidence become stale; project remains Draft with Undo available.`; render(); queueMicrotask(() => document.querySelector("[data-confirm-membership-reorder]")?.focus()); }, keyboardReorder = (event, delta) => { if (event.key !== "Enter" && event.key !== " ")
+            return; event.preventDefault(); reorder(delta); };
         earlier.addEventListener("click", () => reorder(-1));
         later.addEventListener("click", () => reorder(1));
+        earlier.addEventListener("keydown", (event) => keyboardReorder(event, -1));
+        later.addEventListener("keydown", (event) => keyboardReorder(event, 1));
         remove.addEventListener("click", () => { const review = inspectPageGroupMembershipRemoval(state.project, page.id, groupId); if (review.blocked) {
             impact.textContent = review.message;
             for (const action of review.actions) {
