@@ -1,6 +1,6 @@
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorsForPath } from "./data-layer-layered-schema-ui.js";
-import { compileFlowDocumentationSnapshot, configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
+import { compileFlowDocumentationSnapshot, configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, orderFlowDocumentationOccurrenceIds, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
 import { documentaryFlowGraph } from "./utilities/data-layer/flow-graph.js";
 const createButton = (text, action) => {
     const value = document.createElement("button");
@@ -21,19 +21,30 @@ const defaultPorts = () => ({
     },
     download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); },
 });
-const revisionFor = (state, occurrence, fallback) => Number((state.project.layeredSchemaTargets ?? []).find((target) => target.occurrenceId === occurrence.id || target.contributorId === occurrence.id)?.revision ?? fallback);
+const stableRevision = (value) => { const text = JSON.stringify(value), bytes = new TextEncoder().encode(text); let hash = 2166136261; for (const byte of bytes)
+    hash = Math.imul(hash ^ byte, 16777619); return hash >>> 0; };
+const graphRevisionFor = (graph) => stableRevision({ pageGroupIds: graph.pageGroupIds, pageFrames: graph.pageFrames, occurrences: graph.occurrences.map(({ canonicalSchema: _canonicalSchema, schemaConstraints: _schemaConstraints, ...occurrence }) => occurrence), relationships: graph.relationships });
+const schemaRevisionFor = (state, entities, occurrence) => {
+    const ids = new Set([...entities.filter((entity) => Boolean(entity)).map(({ id }) => id), occurrence.id]), canonical = entities.filter((entity) => Boolean(entity)).map((entity) => ({ id: entity.id, revision: Number(entity.canonicalSchema?.revision ?? 0) })), targets = (state.project.layeredSchemaTargets ?? []).filter((target) => target.occurrenceId === occurrence.id || ids.has(String(target.contributorId ?? ""))).map(({ occurrenceId, contributorId, revision }) => ({ occurrenceId, contributorId, revision: Number(revision ?? 0) }));
+    return stableRevision({ canonical: canonical.sort((left, right) => left.id.localeCompare(right.id)), targets: targets.sort((left, right) => String(left.contributorId ?? left.occurrenceId).localeCompare(String(right.contributorId ?? right.occurrenceId))) });
+};
+const emptyCompiled = () => ({ status: "ready", properties: {}, conflicts: [], provenance: [], exclusions: [] });
 export function flowDocumentationSnapshotFromState(state, flowId, generatedAt = new Date().toISOString(), revision = 0) {
     const flow = state.project.collections.flows.find(({ id }) => id === flowId);
     if (!flow)
         throw new Error(`Unknown Flow ${flowId}`);
-    const graph = documentaryFlowGraph(state.project, flowId), pageById = new Map(state.project.collections.pages.map((page) => [page.id, page])), frameById = new Map(graph.pageFrames.map((frame) => [frame.id, frame]));
-    const branched = graph.relationships.filter(({ kind }) => kind === "parallel").length >= 2 && graph.relationships.filter(({ kind }) => kind === "merge").length >= 2 && graph.occurrences.length >= 4;
-    const contexts = graph.occurrences.map((occurrence, index) => {
-        const frame = frameById.get(String(occurrence.pageFrameId)), page = pageById.get(String(occurrence.pageId ?? frame?.pageId)), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), eventId = String(binding?.eventId ?? occurrence.eventId ?? ""), event = state.project.collections.events.find(({ id }) => id === eventId), pageGroupId = String(occurrence.pageGroupId ?? frame?.pageGroupId ?? ""), profileId = String(page?.profileIds?.[0] ?? state.project.collections.profiles[0]?.id ?? "");
-        const compiled = compileLayeredSchema(layeredContributorsForPath(state, { flowId, occurrenceId: occurrence.id, pageGroupId, eventId, ...(page?.id ? { pageId: page.id } : {}), ...(profileId ? { profileId } : {}) }), { eventId, eventRole: binding ? "context" : "interaction", occurrenceId: occurrence.id });
-        return { id: `context:${occurrence.id}`, kind: binding ? "page-context" : "interaction", pageFrameId: String(frame?.id ?? occurrence.freePageFrameId ?? occurrence.id), ...(binding ? { bindingId: binding.id } : { occurrenceId: occurrence.id }), pageName: page?.name ?? "Unresolved Page", eventName: event?.name ?? "Unresolved Event", stepLabel: branched ? ["1", "2a", "2b", "3"][index] ?? String(index + 1) : String(index + 1), effectiveRevision: revisionFor(state, occurrence, revision), compiled };
+    const graph = documentaryFlowGraph(state.project, flowId), pageById = new Map(state.project.collections.pages.map((page) => [page.id, page])), frameById = new Map(graph.pageFrames.map((frame) => [frame.id, frame])), groupById = new Map(state.project.collections.pageGroups.map((group) => [group.id, group])), profileById = new Map(state.project.collections.profiles.map((profile) => [profile.id, profile])), ordered = orderFlowDocumentationOccurrenceIds(graph.occurrences, graph.relationships, graph.pageGroupIds), occurrenceById = new Map(graph.occurrences.map((occurrence) => [occurrence.id, occurrence]));
+    const contexts = ordered.ids.flatMap((occurrenceId, index) => {
+        const occurrence = occurrenceById.get(occurrenceId);
+        if (!occurrence)
+            return [];
+        const frame = frameById.get(String(occurrence.pageFrameId)), page = pageById.get(String(occurrence.pageId ?? frame?.pageId)), binding = (page?.contextEventBindings ?? []).find(({ id }) => id === occurrence.contextBindingId), eventId = String(binding?.eventId ?? occurrence.eventId ?? ""), event = state.project.collections.events.find(({ id }) => id === eventId), pageGroupId = String(occurrence.pageGroupId ?? frame?.pageGroupId ?? ""), pageGroup = groupById.get(pageGroupId), profileId = String(page?.profileIds?.[0] ?? ""), profile = profileById.get(profileId), path = { flowId, occurrenceId: occurrence.id, ...(pageGroupId ? { pageGroupId } : {}), ...(eventId ? { eventId } : {}), ...(page?.id ? { pageId: page.id } : {}), ...(profileId ? { profileId } : {}) }, declaredUnresolved = [occurrence, event, page].flatMap((entity) => (entity?.unresolvedReferences ?? [])), unresolved = [...(occurrence.pageFrameId && !frame ? [{ path: "/context/page-frame", issue: `Unresolved Page frame ${String(occurrence.pageFrameId)}`, repair: "Open Flow Page frame" }] : []), ...(!page ? [{ path: "/context/page", issue: `Unresolved Page ${String(occurrence.pageId ?? frame?.pageId ?? "")}`, repair: "Open Page reference" }] : []), ...(occurrence.contextBindingId && !binding ? [{ path: "/context/binding", issue: `Unresolved Page binding ${String(occurrence.contextBindingId)}`, repair: "Open Page context bindings" }] : []), ...(!event ? [{ path: "/context/event", issue: `Unresolved Event ${eventId}`, repair: "Open Event reference" }] : []), ...(pageGroupId && !pageGroup ? [{ path: "/context/page-group", issue: `Unresolved Page Group ${pageGroupId}`, repair: "Open Page Group membership" }] : []), ...(declaredUnresolved.map((item) => ({ path: item.path ?? "/context/reference", issue: item.issue ?? "Unresolved context reference", repair: item.repair ?? "Open context reference" })))], contributors = layeredContributorsForPath(state, path), compiled = contributors.length ? compileLayeredSchema(contributors, { eventId, eventRole: binding ? "context" : "interaction", occurrenceId: occurrence.id }) : emptyCompiled();
+        return [{ id: `context:${occurrence.id}`, kind: binding ? "page-context" : "interaction", pageFrameId: String(frame?.id ?? occurrence.freePageFrameId ?? occurrence.id), ...(binding ? { bindingId: binding.id } : { occurrenceId: occurrence.id }), pageName: page?.name ?? "Unresolved Page", eventName: event?.name ?? "Unresolved Event", stepLabel: ordered.labels[occurrence.id] ?? String(index + 1), effectiveRevision: schemaRevisionFor(state, [profile, event, pageGroup, page, flow, occurrence], occurrence), compiled, ...(unresolved.length ? { unresolved } : {}) }];
     });
-    return compileFlowDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, flowId, flowName: flow.name, graphRevision: revision, sourceState: state.draft ? "draft" : "published", generatedAt, contexts });
+    const occurrenceIds = new Set(graph.occurrences.map(({ id }) => id));
+    graph.relationships.forEach((relationship, index) => { const source = String(relationship.sourceNodeId ?? ""), target = String(relationship.targetNodeId ?? ""), missing = [...(!occurrenceIds.has(source) ? [`source ${source || "(empty)"}`] : []), ...(!occurrenceIds.has(target) ? [`target ${target || "(empty)"}`] : [])]; if (!missing.length || !contexts.length)
+        return; const anchor = occurrenceIds.has(source) ? source : occurrenceIds.has(target) ? target : ordered.ids[0], contextIndex = Math.max(0, contexts.findIndex(({ id }) => id === `context:${anchor}`)), context = contexts[contextIndex]; contexts[contextIndex] = { ...context, unresolved: [...(context.unresolved ?? []), { path: `/relationships/${String(relationship.id ?? index)}`, issue: `Dangling Flow relationship: unresolved ${missing.join(" and ")}`, repair: "Open Flow relationship" }] }; });
+    return compileFlowDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, flowId, flowName: flow.name, graphRevision: graphRevisionFor(graph), sourceState: state.draft ? "draft" : "published", generatedAt, contexts });
 }
 export function installFlowDocumentationExportUi(options) {
     const ports = options.ports ?? defaultPorts();
@@ -45,7 +56,7 @@ export function installFlowDocumentationExportUi(options) {
     const configuredTable = (kind = view) => configureFlowDocumentationTable(configuredSnapshot(), kind, { selectedPaths: propertyOrder.filter((path) => selectedPaths.has(path)), metadata, pathDisplay, headingParts });
     const move = (items, item, direction) => { const index = items.indexOf(item), target = index + direction; if (index < 0 || target < 0 || target >= items.length)
         return items; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; return next; };
-    const staleState = (revision) => flowDocumentationSnapshotStale(snapshot, { graphRevision: revision ?? 0, contextRevisions: Object.fromEntries(snapshot.contexts.map(({ id }) => [id, revision ?? 0])) });
+    const staleState = (state, flowId, revision) => { const live = flowDocumentationSnapshotFromState(state, flowId, snapshot.generatedAt, revision); return flowDocumentationSnapshotStale(snapshot, { graphRevision: live.graphRevision, contextRevisions: Object.fromEntries(live.contexts.map(({ id, effectiveRevision }) => [id, effectiveRevision])) }); };
     function renderTable(host, value, detail) {
         const tableElement = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), metadataCount = metadata.length, currentSnapshot = configuredSnapshot();
         headRow.append(...value.headings.map((heading) => Object.assign(document.createElement("th"), { textContent: heading })));
@@ -53,7 +64,7 @@ export function installFlowDocumentationExportUi(options) {
         value.rows.forEach((row, rowIndex) => { const tr = document.createElement("tr"); row.forEach((cell, columnIndex) => { const td = document.createElement("td"); if (columnIndex > metadataCount) {
             const context = currentSnapshot.contexts[columnIndex - metadataCount - 1], path = propertyOrder.filter((candidate) => selectedPaths.has(candidate))[rowIndex];
             if (context && path) {
-                const activate = createButton(cell, () => { const value = flowDocumentationCellDetail(currentSnapshot, context.id, path); detail.replaceChildren(Object.assign(document.createElement("h3"), { textContent: value.summary }), Object.assign(document.createElement("p"), { textContent: `${value.rule} · ${value.revision} · ${value.provenance}` }), ...value.repairs.map((repair) => createButton(repair, () => options.openRepair?.(context.id, path)))); });
+                const activate = createButton(cell, () => { const value = flowDocumentationCellDetail(currentSnapshot, context.id, path); detail.replaceChildren(Object.assign(document.createElement("h3"), { textContent: value.summary }), Object.assign(document.createElement("p"), { textContent: `${value.rule} · ${value.revision} · ${value.provenance}` }), ...value.repairs.map((repair) => createButton(repair, () => options.openRepair?.(context.id, path, repair)))); });
                 activate.setAttribute("aria-label", `${cell || "Empty"} details for ${context.pageName} ${context.eventName} ${path}`);
                 td.append(activate);
             }
@@ -73,7 +84,7 @@ export function installFlowDocumentationExportUi(options) {
             return;
         if (!snapshot)
             fresh(state, flowId, revision);
-        const base = snapshot, stale = staleState(revision), configured = configuredSnapshot(), value = configuredTable(), blocked = stale.stale || (base.incomplete && !confirmedIncomplete);
+        const base = snapshot, stale = staleState(state, flowId, revision), configured = configuredSnapshot(), value = configuredTable(), blocked = stale.stale || (base.incomplete && !confirmedIncomplete);
         host.replaceChildren();
         const section = document.createElement("section"), heading = document.createElement("h2"), identity = document.createElement("p"), controls = document.createElement("section"), common = document.createElement("fieldset"), viewSelect = document.createElement("select"), headingControl = document.createElement("input"), styleSelect = document.createElement("select"), pathSelect = document.createElement("select"), propertySearch = document.createElement("input"), propertyList = document.createElement("ol"), metadataList = document.createElement("ol"), contextList = document.createElement("ol"), preview = document.createElement("section"), detail = document.createElement("section"), diagnostics = document.createElement("ul"), feedback = document.createElement("output"), actions = document.createElement("div");
         section.setAttribute("aria-label", "Selected Flow documentation export");
@@ -123,6 +134,12 @@ export function installFlowDocumentationExportUi(options) {
         metadataFieldset.append(Object.assign(document.createElement("legend"), { textContent: "Optional metadata columns" }));
         for (const [key, label] of metadataOptions) {
             const item = document.createElement("li"), check = document.createElement("input");
+            item.dataset.metadataKey = key;
+            item.draggable = metadata.includes(key);
+            item.addEventListener("dragstart", (event) => event.dataTransfer?.setData("application/x-flow-documentation-metadata", key));
+            item.addEventListener("dragover", (event) => event.preventDefault());
+            item.addEventListener("drop", (event) => { event.preventDefault(); const dragged = event.dataTransfer?.getData("application/x-flow-documentation-metadata"); if (!metadata.includes(dragged) || dragged === key)
+                return; const without = metadata.filter((value) => value !== dragged), target = without.indexOf(key); metadata = [...without.slice(0, target), dragged, ...without.slice(target)]; renderWorkspace(); });
             check.type = "checkbox";
             check.checked = metadata.includes(key);
             check.addEventListener("change", () => { metadata = check.checked ? [...metadata, key] : metadata.filter((value) => value !== key); renderWorkspace(); });
@@ -167,8 +184,11 @@ export function installFlowDocumentationExportUi(options) {
         detail.setAttribute("aria-label", "Documentation cell detail");
         renderTable(preview, value, detail);
         diagnostics.setAttribute("aria-label", "Export diagnostics");
-        for (const issue of base.diagnostics)
-            diagnostics.append(Object.assign(document.createElement("li"), { textContent: `${issue.contextName} · ${issue.path} · ${issue.issue} · ${issue.repair}` }));
+        for (const issue of base.diagnostics) {
+            const item = document.createElement("li");
+            item.append(`${issue.contextName} · ${issue.path} · ${issue.issue} · `, createButton(issue.repair, () => options.openRepair?.(issue.contextId, issue.path, issue.repair)));
+            diagnostics.append(item);
+        }
         if (base.incomplete) {
             const confirm = document.createElement("input");
             confirm.type = "checkbox";

@@ -633,7 +633,17 @@ q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
     persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
 flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id });
-flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId) => { flowGraphBuilder?.render(); queueMicrotask(() => { const occurrenceId = contextId.replace(/^context:/, ""); document.querySelector(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`)?.dispatchEvent(new MouseEvent("click", { bubbles: true })); queueMicrotask(() => Array.from(document.querySelectorAll('[aria-label="Selected node inline actions"] button')).find(({ textContent }) => textContent === "Open schema contribution")?.click()); }); } });
+flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
+        const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "pageGroups", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);
+        if (match) {
+            selectedKind = match.kind;
+            selectedId = match.entity.id;
+            persistNavigation();
+            render();
+            selectPath();
+            return;
+        }
+    } layeredSchemaUi?.openGraphOccurrenceSchema(contextId.replace(/^context:/, ""), path); } });
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
 layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist });
 restore();

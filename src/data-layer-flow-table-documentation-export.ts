@@ -1,7 +1,8 @@
 import type {CompiledLayeredSchema,EffectiveProperty} from "./data-layer-layered-schema.js";
 
 export type FlowDocumentationContextKind="page-context"|"interaction";
-export interface FlowDocumentationContextInput{id:string;kind:FlowDocumentationContextKind;pageFrameId:string;bindingId?:string;occurrenceId?:string;pageName:string;eventName:string;stepLabel:string;effectiveRevision:number;compiled:CompiledLayeredSchema}
+export interface FlowDocumentationUnresolvedReference{path:string;issue:string;repair:string}
+export interface FlowDocumentationContextInput{id:string;kind:FlowDocumentationContextKind;pageFrameId:string;bindingId?:string;occurrenceId?:string;pageName:string;eventName:string;stepLabel:string;effectiveRevision:number;compiled:CompiledLayeredSchema;unresolved?:readonly FlowDocumentationUnresolvedReference[]}
 export interface FlowDocumentationSnapshotInput{projectId:string;projectName:string;flowId:string;flowName:string;graphRevision:number;sourceState:"draft"|"published";generatedAt:string;contexts:readonly FlowDocumentationContextInput[]}
 export interface FlowDocumentationSnapshot extends FlowDocumentationSnapshotInput{title:string;incomplete:boolean;diagnostics:readonly FlowDocumentationDiagnostic[]}
 export interface FlowDocumentationDiagnostic{contextId:string;contextName:string;path:string;issue:string;repair:string}
@@ -17,30 +18,30 @@ const displayPath=(path:string)=>path.split("/").filter(Boolean).join(".").repla
 const same=(left:unknown,right:unknown)=>JSON.stringify(left)===JSON.stringify(right);
 
 export function compileFlowDocumentationSnapshot(input:FlowDocumentationSnapshotInput):FlowDocumentationSnapshot{
-  const copy=structuredClone(input),diagnostics:FlowDocumentationDiagnostic[]=copy.contexts.flatMap((context)=>context.compiled.conflicts.map((conflict)=>({contextId:context.id,contextName:contextName(context),path:conflict.path,issue:conflict.message,repair:`Open effective property ${conflict.path} for ${contextName(context)}`})));
+  const copy=structuredClone(input),diagnostics:FlowDocumentationDiagnostic[]=copy.contexts.flatMap((context)=>[...(context.unresolved??[]).map(({path,issue,repair})=>({contextId:context.id,contextName:contextName(context),path,issue,repair})),...context.compiled.conflicts.map((conflict)=>({contextId:context.id,contextName:contextName(context),path:conflict.path,issue:conflict.message,repair:`Open effective property ${conflict.path} for ${contextName(context)}`}))]);
   const incomplete=diagnostics.length>0,source=incomplete?"Draft — incomplete":copy.sourceState==="draft"?"Draft":"Published";
   return deepFreeze({...copy,title:`${copy.flowName} · ${source}`,incomplete,diagnostics});
 }
 
 function conditionText(condition:Record<string,unknown>):string{
-  if(condition.kind==="predicate")return`${String(condition.field??condition.propertyId??"property")} ${String(condition.operator??"Equals")} ${String(condition.value??"")}`.trim();
+  if(condition.kind==="predicate"){const operator=String(condition.operator??"Equals"),renderedOperator=operator.toLowerCase()==="exists"?"exists":operator;return`${String(condition.field??condition.propertyId??"property")} ${renderedOperator} ${String(condition.value??"")}`.trim();}
   const children=(condition.children as Record<string,unknown>[]|undefined)??[],join=condition.kind==="any"?" or ":" and ";return children.map(conditionText).join(join);
 }
 function expectedText(property:EffectiveProperty):string{
   if(property.presence==="forbidden")return"Not expected";
-  const exact=property.expectedValue!==undefined?String(property.expectedValue):property.allowedValues?.length?property.allowedValues.map(String).join(" or "):property.presence==="required"?(property.condition?"Required":"Required — value not specified"):"";
+  const exact=property.expectedValue!==undefined?String(property.expectedValue):property.allowedValues?.length?property.allowedValues.map(String).join(" or "):property.presence==="required"?(property.condition?"Required":"Required value not specified"):"";
   return property.condition?`${exact||property.presence||"Expected"} when ${conditionText(property.condition)}`:exact;
 }
 const conflictAt=(context:FlowDocumentationContextInput,path:string)=>context.compiled.conflicts.find((conflict)=>conflict.path===path);
-const paths=(snapshot:FlowDocumentationSnapshot)=>[...new Set(snapshot.contexts.flatMap((context)=>[...Object.keys(context.compiled.properties),...context.compiled.conflicts.map(({path})=>path)]))];
+const paths=(snapshot:FlowDocumentationSnapshot)=>[...new Set(snapshot.contexts.flatMap((context)=>[...Object.keys(context.compiled.properties),...context.compiled.conflicts.map(({path})=>path),...(context.unresolved??[]).map(({path})=>path)]))];
 export const flowDocumentationPropertyPaths=(snapshot:FlowDocumentationSnapshot):readonly string[]=>paths(snapshot);
 const headings=(snapshot:FlowDocumentationSnapshot)=>[snapshot.flowName,...snapshot.contexts.map((context)=>`Step ${context.stepLabel} ${contextName(context)}`)];
 
 export function flowValueMapTable(snapshot:FlowDocumentationSnapshot):FlowDocumentationTable{
-  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[displayPath(path),...snapshot.contexts.map((context)=>conflictAt(context,path)?"Blocked — conflicting definitions":context.compiled.properties[path]?expectedText(context.compiled.properties[path]!):"Incomplete")])};
+  return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[displayPath(path),...snapshot.contexts.map((context)=>conflictAt(context,path)?"Blocked conflicting definitions":context.compiled.properties[path]?expectedText(context.compiled.properties[path]!):context.unresolved?.some((item)=>item.path===path)?"Incomplete":"")])};
 }
 function matrixMark(context:FlowDocumentationContextInput,path:string):string{
-  if(conflictAt(context,path))return"!";const property=context.compiled.properties[path];if(!property)return"—";if(property.presence==="forbidden")return"N";if(property.condition)return"C";if(property.presence==="required")return"M";return"O";
+  if(conflictAt(context,path))return"!";if(context.unresolved?.some((item)=>item.path===path))return"Incomplete";const property=context.compiled.properties[path];if(!property)return"—";if(property.presence==="forbidden")return"N";if(property.condition)return"C";if(property.presence==="required")return"M";return"O";
 }
 export function captureMatrixTable(snapshot:FlowDocumentationSnapshot):FlowDocumentationTable{
   return{title:snapshot.title,headings:headings(snapshot),rows:paths(snapshot).map((path)=>[displayPath(path),...snapshot.contexts.map((context)=>matrixMark(context,path))]),legend:"M Mandatory · O Optional · C Conditional · N Not expected · — Not defined · ! Blocked"};
@@ -49,6 +50,19 @@ export function captureMatrixTable(snapshot:FlowDocumentationSnapshot):FlowDocum
 export function configureFlowDocumentationSnapshot(snapshot:FlowDocumentationSnapshot,configuration:{contextOrder?:readonly string[];stepLabels?:Readonly<Record<string,string>>}):FlowDocumentationSnapshot{
   const byId=new Map(snapshot.contexts.map((context)=>[context.id,context])),ordered=configuration.contextOrder?configuration.contextOrder.flatMap((id)=>byId.has(id)?[byId.get(id)!]:[]):snapshot.contexts;
   return deepFreeze({...structuredClone(snapshot),contexts:ordered.map((context)=>({...structuredClone(context),stepLabel:configuration.stepLabels?.[context.id]?.trim()||context.stepLabel}))});
+}
+
+export function orderFlowDocumentationOccurrenceIds(
+  occurrences:readonly {id:string;pageGroupId?:unknown}[],
+  relationships:readonly {sourceNodeId:unknown;targetNodeId:unknown;kind?:unknown}[],
+  pageGroupIds:readonly string[],
+):{ids:string[];labels:Record<string,string>}{
+  const occurrenceIds=new Set(occurrences.map(({id})=>id)),parallelBySource=new Map<string,string[]>(),mergeByTarget=new Map<string,string[]>();
+  for(const relationship of relationships){const source=String(relationship.sourceNodeId??""),target=String(relationship.targetNodeId??"");if(!occurrenceIds.has(source)||!occurrenceIds.has(target)||source===target)continue;const index=relationship.kind==="parallel"?parallelBySource:relationship.kind==="merge"?mergeByTarget:undefined;if(index)index.set(relationship.kind==="parallel"?source:target,[...(index.get(relationship.kind==="parallel"?source:target)??[]),relationship.kind==="parallel"?target:source]);}
+  const candidates=[...parallelBySource].flatMap(([source,rawBranches])=>{const branches=[...new Set(rawBranches)];if(branches.length!==2)return[];return[...mergeByTarget].flatMap(([target,rawSources])=>{const sources=[...new Set(rawSources)];return sources.length===2&&branches.every((id)=>sources.includes(id))&&source!==target?[{source,target,branches}]:[];});});
+  if(candidates.length!==1)return{ids:occurrences.map(({id})=>id),labels:{}};
+  const {source,target,branches}=candidates[0]!,byId=new Map(occurrences.map((occurrence)=>[occurrence.id,occurrence])),laneIndex=(id:string)=>{const groupId=String(byId.get(id)?.pageGroupId??"");const index=pageGroupIds.indexOf(groupId);return index<0?Number.MAX_SAFE_INTEGER:index;},orderedBranches=[...branches].sort((left,right)=>laneIndex(left)-laneIndex(right)||left.localeCompare(right)),fork=[source,...orderedBranches,target],remaining=occurrences.map(({id})=>id).filter((id)=>!fork.includes(id));
+  return{ids:[...fork,...remaining],labels:{[source]:"1",[orderedBranches[0]!] :"2a",[orderedBranches[1]!] :"2b",[target]:"3"}};
 }
 
 const metadataLabels:Record<FlowDocumentationMetadata,string>={description:"Description",type:"Type",allowedValues:"Allowed values",example:"Documented example",comments:"Comments",provenance:"Provenance"};
@@ -70,8 +84,9 @@ export function configureFlowDocumentationTable(snapshot:FlowDocumentationSnapsh
 }
 
 export function flowDocumentationCellDetail(snapshot:FlowDocumentationSnapshot,contextId:string,path:string):FlowDocumentationCellDetail{
-  const context=snapshot.contexts.find(({id})=>id===contextId);if(!context)throw new Error(`Unknown documentation context ${contextId}`);const property=context.compiled.properties[path],conflict=conflictAt(context,path),origins=property?.origins??[];
-  return{summary:`${contextName(context)} · ${displayPath(path)}`,rule:conflict?`Blocked — ${conflict.message}`:property?expectedText(property):"Incomplete — property is not resolved for this context",revision:`Effective revision ${context.effectiveRevision}`,provenance:conflict?conflict.contributors.join("; "):origins.map(({contributorName,scope})=>`${contributorName} (${scope})`).join("; ")||"No contributing definition",repairs:conflict?[`Open effective property ${path}`,...conflict.contributors.map((name)=>`Open contributing schema ${name}`)]:[`Open effective property ${path}`,...origins.map(({contributorName})=>`Open contributing schema ${contributorName}`)]};
+  const context=snapshot.contexts.find(({id})=>id===contextId);if(!context)throw new Error(`Unknown documentation context ${contextId}`);const property=context.compiled.properties[path],conflict=conflictAt(context,path),unresolved=context.unresolved?.find((item)=>item.path===path),origins=property?.origins??[];
+  const propertyRule=property?.presence==="required"&&property.expectedValue===undefined&&!property.allowedValues?.length&&!property.condition?`${expectedText(property)} — missing documentation value`:property?.presence==="forbidden"?`${expectedText(property)} — forbidden rule`:property?expectedText(property):undefined;
+  return{summary:`${contextName(context)} · ${displayPath(path)}`,rule:conflict?`Blocked — ${conflict.message}`:unresolved?`Incomplete — ${unresolved.issue}`:propertyRule??"Incomplete — property is not resolved for this context",revision:`Effective revision ${context.effectiveRevision}`,provenance:conflict?conflict.contributors.join("; "):origins.map(({contributorName,scope})=>`${contributorName} (${scope})`).join("; ")||"No contributing definition",repairs:conflict?[`Open effective property ${path}`,...conflict.contributors.map((name)=>`Open contributing schema ${name}`)]:unresolved?[unresolved.repair,`Open effective property ${path}`]:[`Open effective property ${path}`,...origins.map(({contributorName})=>`Open contributing schema ${contributorName}`)]};
 }
 
 const escapeHtml=(value:unknown)=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("\n","<br>");
@@ -88,7 +103,7 @@ export function flowDocumentationSnapshotStale(snapshot:FlowDocumentationSnapsho
 
 const xml=(value:unknown)=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 const columnName=(index:number)=>{let value="";for(let current=index+1;current;current=Math.floor((current-1)/26))value=String.fromCharCode(65+(current-1)%26)+value;return value;};
-function worksheet(table:FlowDocumentationTable):string{const rows=[table.headings,...table.rows],body=rows.map((row,rowIndex)=>`<row r="${rowIndex+1}">${row.map((value,columnIndex)=>`<c r="${columnName(columnIndex)}${rowIndex+1}" t="inlineStr"><is><t xml:space="preserve">${xml(value)}</t></is></c>`).join("")}</row>`).join("");return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;}
+function worksheet(table:FlowDocumentationTable):string{const rows=[[table.title,...Array(Math.max(0,table.headings.length-1)).fill("")],table.headings,...table.rows],body=rows.map((row,rowIndex)=>`<row r="${rowIndex+1}">${row.map((value,columnIndex)=>`<c r="${columnName(columnIndex)}${rowIndex+1}" t="inlineStr"><is><t xml:space="preserve">${xml(value)}</t></is></c>`).join("")}</row>`).join("");return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;}
 const u16=(value:number)=>{const out=new Uint8Array(2);new DataView(out.buffer).setUint16(0,value,true);return out;},u32=(value:number)=>{const out=new Uint8Array(4);new DataView(out.buffer).setUint32(0,value,true);return out;},concat=(...parts:Uint8Array[])=>{const out=new Uint8Array(parts.reduce((sum,part)=>sum+part.length,0));let offset=0;for(const part of parts){out.set(part,offset);offset+=part.length;}return out;};
 const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k+=1)c=(c&1)?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
 const crc32=(bytes:Uint8Array)=>{let crc=0xffffffff;for(const byte of bytes)crc=crcTable[(crc^byte)&255]!^(crc>>>8);return(crc^0xffffffff)>>>0;};
