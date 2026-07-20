@@ -15,27 +15,36 @@ checkpoint. Their contracts are:
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
+The correction program for the Flow graph contracts is
+`docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
 
 The user-approved canonical-authoring and layered-schema cycles are later authority
 than the earlier graph-only scope reduction. They supersede that reduction only for
 behavior named by the four schema contracts above. Agents must not discard, reject,
 or classify these cycles as inactive because of the earlier reduction.
 
-The checkpoint covers human Page and Event selectors, context-setting and
-interaction occurrences, expected-next/alternative/parallel/merge relationships,
-pointer and keyboard positioning, synchronized outline editing, stable references,
-persistence/reload, primary main-workspace ownership of the graph and outline,
-selection-driven contextual Inspector editing, Page Group-defined lanes, Page-owned
-context-event bindings, Event-owned reusable schemas for interaction and context
-events, and the explicit boundary that payload validation is independent while
-journey expectations remain manual. Occurrences inside grouped Page frames persist
-stable Page Group, Page, context-binding, and Event references rather than hardcoded
-lane names or editable global Event roles. Event occurrences cannot move across Page
-or Page Group containment boundaries. Generic Page entry frames may instead be placed
-in an explicit ungrouped region outside the named Flow lanes; they persist Page and
-context-binding references without inventing Page Group membership. Any retained
-executable-step authoring is an explicitly separate Advanced function and does not
-duplicate or replace documentary graph authoring.
+The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
+lane selection and ordering, Page-frame insertion, Event placement, connection
+ports, pointer and keyboard relationship drawing, inline relationship editing, and
+the synchronized outline belong to the main workspace and remain operable with the
+Inspector closed. The Inspector is optional contextual detail and owns no exclusive
+documentary graph command. Earlier form-first clauses are superseded.
+
+Only ordered Page Group references define named lanes; the empty Flow has no lanes
+and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pages
+remain in their Page Group lane, while generic entry Pages may use an explicit
+ungrouped region without invented membership. Page-owned bindings define context-
+setting occurrences, including multiple SPA bindings; reusable Events define
+interaction occurrences. Occurrences cannot cross Page or Page Group boundaries.
+Parallel branches and merges are included in the first canvas release. Graph records
+persist stable Page Group, Page, binding, Event, occurrence, relationship, and
+endpoint references.
+
+The Flow remains documentary: pointer and keyboard positioning, topology,
+optionality, conditions, and multiplicity communicate expected behavior while
+per-Event payload validation remains independent and journey expectations remain
+manual. Any retained executable-step authoring is an explicitly separate Advanced
+function and does not duplicate or replace documentary graph authoring.
 
 The canonical authoring checkpoint replaces the current lightweight requirements
 grid, structured draft, and path-constraint overlay as competing editable schema
