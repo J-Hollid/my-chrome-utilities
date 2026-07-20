@@ -1,18 +1,20 @@
 import { transactProject } from "./data-layer-specification-project.js";
 const storedIds = (page) => Array.isArray(page.pageGroupIds) ? page.pageGroupIds.map(String) : undefined;
 const unique = (values) => [...new Set(values)];
+const legacyIds = (project, pageId) => project.collections.pageGroups.filter((group) => (group.pageIds ?? []).includes(pageId)).map(({ id }) => id);
+export function requiresPageGroupMembershipMigration(project, pageId) {
+    const review = stagePageGroupMembershipMigration(project, pageId);
+    return legacyIds(project, pageId).length > 0 || review.missingPageGroupIds.length > 0 || review.duplicatePageGroupIds.length > 0;
+}
 export function orderedPageGroupIds(project, pageId) {
     const page = project.collections.pages.find(({ id }) => id === pageId);
     if (!page)
         return [];
-    const owned = storedIds(page);
-    if (owned)
-        return [...owned];
-    return project.collections.pageGroups.filter((group) => (group.pageIds ?? []).includes(pageId)).map(({ id }) => id);
+    return unique([...(storedIds(page) ?? []), ...legacyIds(project, pageId)]);
 }
 export function pageGroupMembers(project, pageGroupId) {
     const legacyIds = project.collections.pageGroups.find(({ id }) => id === pageGroupId)?.pageIds ?? [];
-    return project.collections.pages.filter((page) => { const owned = storedIds(page); return owned ? owned.includes(pageGroupId) : legacyIds.includes(page.id); });
+    return project.collections.pages.filter((page) => (storedIds(page) ?? []).includes(pageGroupId) || legacyIds.includes(page.id));
 }
 function writeMemberships(state, pageId, pageGroupIds, label) {
     return transactProject(state, label, (project) => ({ ...project, collections: { ...project.collections, pages: project.collections.pages.map((page) => page.id === pageId ? { ...page, pageGroupIds: [...pageGroupIds] } : page), pageGroups: project.collections.pageGroups.map((group) => { if (!Array.isArray(group.pageIds) || group.pageIds.every((id) => id !== pageId))
@@ -28,20 +30,30 @@ export function addPageGroupMembership(state, pageId, pageGroupId) {
     const group = state.project.collections.pageGroups.find(({ id }) => id === pageGroupId);
     if (!group)
         throw new Error(`Unknown Page Group ${pageGroupId}.`);
+    if (requiresPageGroupMembershipMigration(state.project, pageId))
+        return state;
     const current = orderedPageGroupIds(state.project, pageId);
     if (current.includes(pageGroupId))
         throw new Error(`${page.name} already belongs to ${group.name}.`);
     return writeMemberships(state, pageId, [...current, pageGroupId], `Add ${page.name} to Page Group ${group.name}`);
 }
-export function movePageGroupMembership(state, pageId, pageGroupId, delta) {
-    const page = state.project.collections.pages.find(({ id }) => id === pageId), current = orderedPageGroupIds(state.project, pageId), from = current.indexOf(pageGroupId);
-    if (!page || from < 0)
-        return state;
+export function previewPageGroupMembershipMove(project, pageId, pageGroupId, delta) {
+    const current = orderedPageGroupIds(project, pageId), from = current.indexOf(pageGroupId);
+    if (from < 0 || requiresPageGroupMembershipMigration(project, pageId))
+        return current;
     const to = Math.max(0, Math.min(current.length - 1, from + delta));
     if (to === from)
-        return state;
+        return current;
     const next = [...current], moved = next.splice(from, 1)[0];
     next.splice(to, 0, moved);
+    return next;
+}
+export function movePageGroupMembership(state, pageId, pageGroupId, delta) {
+    if (requiresPageGroupMembershipMigration(state.project, pageId))
+        return state;
+    const page = state.project.collections.pages.find(({ id }) => id === pageId), current = orderedPageGroupIds(state.project, pageId), next = previewPageGroupMembershipMove(state.project, pageId, pageGroupId, delta);
+    if (!page || next === current || next.join("\0") === current.join("\0"))
+        return state;
     return writeMemberships(state, pageId, next, `Reorder Page Group rules for ${page.name}`);
 }
 export function inspectPageGroupMembershipRemoval(project, pageId, pageGroupId) {
@@ -52,6 +64,8 @@ export function inspectPageGroupMembershipRemoval(project, pageId, pageGroupId) 
     return { blocked, message: blocked ? `${affectedTargets[0] ?? "Flow"} uses ${page?.name ?? pageId} in ${group?.name ?? pageGroupId}; move or remove that Page frame before removing membership.` : `${page?.name ?? pageId} can leave ${group?.name ?? pageGroupId}.`, actions, affectedTargets };
 }
 export function removePageGroupMembership(state, pageId, pageGroupId) {
+    if (requiresPageGroupMembershipMigration(state.project, pageId))
+        return state;
     const review = inspectPageGroupMembershipRemoval(state.project, pageId, pageGroupId);
     if (review.blocked)
         return state;
@@ -68,7 +82,7 @@ export function stagePageGroupMembershipMigration(project, pageId) {
     const page = project.collections.pages.find(({ id }) => id === pageId);
     if (!page)
         throw new Error(`Unknown Page ${pageId}.`);
-    const owned = storedIds(page) ?? [], legacy = project.collections.pageGroups.filter((group) => (group.pageIds ?? []).includes(pageId)).map(({ id }) => id), combined = [...owned, ...legacy], counts = new Map();
+    const owned = storedIds(page) ?? [], legacy = legacyIds(project, pageId), combined = [...owned, ...legacy], counts = new Map();
     for (const id of combined)
         counts.set(id, (counts.get(id) ?? 0) + 1);
     const known = new Set(project.collections.pageGroups.map(({ id }) => id));

@@ -1,4 +1,4 @@
-import { orderedPageGroupIds, transactProject } from "./utilities/data-layer/schemas.js";
+import { orderedPageGroupIds, requiresPageGroupMembershipMigration, transactProject } from "./utilities/data-layer/schemas.js";
 const clone = (value) => structuredClone(value);
 const graphIndex = (project) => project.documentationFlowGraphs ?? {};
 const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacy = project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds; return { pageGroupIds: [...(stored?.pageGroupIds ?? legacy ?? [])], pageFrames: stored?.pageFrames ?? [], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [], ...(stored?.selectedItem ? { selectedItem: stored.selectedItem } : {}), ...(stored?.viewport ? { viewport: stored.viewport } : {}) }; };
@@ -58,7 +58,7 @@ function validOccurrence(state, flowId, input) {
     return { ...values, name: input.name.trim(), role };
 }
 export function inspectPageFrameDrop(project, flowId, pageId, targetPageGroupId) {
-    const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.pageGroups.find(({ id }) => id === targetPageGroupId), selected = flowPageGroupLaneIds(project, flowId).includes(targetPageGroupId), memberships = orderedPageGroupIds(project, pageId), member = Boolean(group && memberships.includes(group.id)), rejected = !page || !group || !selected || !member, names = memberships.map((id) => project.collections.pageGroups.find((candidate) => candidate.id === id)?.name ?? id);
+    const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.pageGroups.find(({ id }) => id === targetPageGroupId), selected = flowPageGroupLaneIds(project, flowId).includes(targetPageGroupId), memberships = orderedPageGroupIds(project, pageId), member = Boolean(group && memberships.includes(group.id)), migrationRequired = Boolean(page && requiresPageGroupMembershipMigration(project, pageId)), rejected = !page || !group || !selected || !member || migrationRequired, names = memberships.map((id) => project.collections.pageGroups.find((candidate) => candidate.id === id)?.name ?? id);
     return { rejected, message: rejected ? `${page?.name ?? pageId} belongs to ${names.join(", ") || "no selected Page Group"}, not ${group?.name ?? targetPageGroupId}.` : `${page.name} can be placed in ${group.name}.`, guidance: `?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds` };
 }
 export function addFlowPageFrame(state, flowId, input, id) {

@@ -17,16 +17,20 @@ export interface PageGroupMembershipRemovalReview {
 
 const storedIds=(page:ProjectEntity):string[]|undefined=>Array.isArray(page.pageGroupIds)?page.pageGroupIds.map(String):undefined;
 const unique=(values:readonly string[]):string[]=>[...new Set(values)];
+const legacyIds=(project:SpecificationProject,pageId:string):string[]=>project.collections.pageGroups.filter((group)=>((group.pageIds as string[]|undefined)??[]).includes(pageId)).map(({id})=>id);
+
+export function requiresPageGroupMembershipMigration(project:SpecificationProject,pageId:string):boolean{
+  const review=stagePageGroupMembershipMigration(project,pageId);return legacyIds(project,pageId).length>0||review.missingPageGroupIds.length>0||review.duplicatePageGroupIds.length>0;
+}
 
 export function orderedPageGroupIds(project:SpecificationProject,pageId:string):string[]{
   const page=project.collections.pages.find(({id})=>id===pageId);if(!page)return[];
-  const owned=storedIds(page);if(owned)return[...owned];
-  return project.collections.pageGroups.filter((group)=>((group.pageIds as string[]|undefined)??[]).includes(pageId)).map(({id})=>id);
+  return unique([...(storedIds(page)??[]),...legacyIds(project,pageId)]);
 }
 
 export function pageGroupMembers(project:SpecificationProject,pageGroupId:string):ProjectEntity[]{
   const legacyIds=(project.collections.pageGroups.find(({id})=>id===pageGroupId)?.pageIds as string[]|undefined)??[];
-  return project.collections.pages.filter((page)=>{const owned=storedIds(page);return owned?owned.includes(pageGroupId):legacyIds.includes(page.id);});
+  return project.collections.pages.filter((page)=>(storedIds(page)??[]).includes(pageGroupId)||legacyIds.includes(page.id));
 }
 
 function writeMemberships(state:ProjectState,pageId:string,pageGroupIds:readonly string[],label:string):ProjectState{
@@ -36,13 +40,19 @@ function writeMemberships(state:ProjectState,pageId:string,pageGroupIds:readonly
 export function addPageGroupMembership(state:ProjectState,pageId:string,pageGroupId:string):ProjectState{
   const page=state.project.collections.pages.find(({id})=>id===pageId);if(!page)throw new Error(`Unknown Page ${pageId}.`);
   const group=state.project.collections.pageGroups.find(({id})=>id===pageGroupId);if(!group)throw new Error(`Unknown Page Group ${pageGroupId}.`);
+  if(requiresPageGroupMembershipMigration(state.project,pageId))return state;
   const current=orderedPageGroupIds(state.project,pageId);if(current.includes(pageGroupId))throw new Error(`${page.name} already belongs to ${group.name}.`);
   return writeMemberships(state,pageId,[...current,pageGroupId],`Add ${page.name} to Page Group ${group.name}`);
 }
 
+export function previewPageGroupMembershipMove(project:SpecificationProject,pageId:string,pageGroupId:string,delta:number):string[]{
+  const current=orderedPageGroupIds(project,pageId),from=current.indexOf(pageGroupId);if(from<0||requiresPageGroupMembershipMigration(project,pageId))return current;
+  const to=Math.max(0,Math.min(current.length-1,from+delta));if(to===from)return current;const next=[...current],moved=next.splice(from,1)[0]!;next.splice(to,0,moved);return next;
+}
+
 export function movePageGroupMembership(state:ProjectState,pageId:string,pageGroupId:string,delta:number):ProjectState{
-  const page=state.project.collections.pages.find(({id})=>id===pageId),current=orderedPageGroupIds(state.project,pageId),from=current.indexOf(pageGroupId);if(!page||from<0)return state;
-  const to=Math.max(0,Math.min(current.length-1,from+delta));if(to===from)return state;const next=[...current],moved=next.splice(from,1)[0]!;next.splice(to,0,moved);
+  if(requiresPageGroupMembershipMigration(state.project,pageId))return state;
+  const page=state.project.collections.pages.find(({id})=>id===pageId),current=orderedPageGroupIds(state.project,pageId),next=previewPageGroupMembershipMove(state.project,pageId,pageGroupId,delta);if(!page||next===current||next.join("\0")===current.join("\0"))return state;
   return writeMemberships(state,pageId,next,`Reorder Page Group rules for ${page.name}`);
 }
 
@@ -55,6 +65,7 @@ export function inspectPageGroupMembershipRemoval(project:SpecificationProject,p
 }
 
 export function removePageGroupMembership(state:ProjectState,pageId:string,pageGroupId:string):ProjectState{
+  if(requiresPageGroupMembershipMigration(state.project,pageId))return state;
   const review=inspectPageGroupMembershipRemoval(state.project,pageId,pageGroupId);if(review.blocked)return state;
   const page=state.project.collections.pages.find(({id})=>id===pageId);if(!page)return state;const current=orderedPageGroupIds(state.project,pageId);if(!current.includes(pageGroupId))return state;
   const group=state.project.collections.pageGroups.find(({id})=>id===pageGroupId);
@@ -63,7 +74,7 @@ export function removePageGroupMembership(state:ProjectState,pageId:string,pageG
 
 export function stagePageGroupMembershipMigration(project:SpecificationProject,pageId:string):PageGroupMembershipMigration{
   const page=project.collections.pages.find(({id})=>id===pageId);if(!page)throw new Error(`Unknown Page ${pageId}.`);
-  const owned=storedIds(page)??[],legacy=project.collections.pageGroups.filter((group)=>((group.pageIds as string[]|undefined)??[]).includes(pageId)).map(({id})=>id),combined=[...owned,...legacy],counts=new Map<string,number>();for(const id of combined)counts.set(id,(counts.get(id)??0)+1);
+  const owned=storedIds(page)??[],legacy=legacyIds(project,pageId),combined=[...owned,...legacy],counts=new Map<string,number>();for(const id of combined)counts.set(id,(counts.get(id)??0)+1);
   const known=new Set(project.collections.pageGroups.map(({id})=>id));return{pageId,pageName:page.name,proposedPageGroupIds:unique(combined),missingPageGroupIds:unique(combined.filter((id)=>!known.has(id))),duplicatePageGroupIds:[...counts].filter(([,count])=>count>1).map(([id])=>id).filter((id)=>owned.filter((candidate)=>candidate===id).length>1)};
 }
 

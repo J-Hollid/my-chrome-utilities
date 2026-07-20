@@ -17,8 +17,8 @@ const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return st
 const pageView=add("events",{name:"page_view",eventName:"page_view",role:"context-setting"});
 const routeView=add("events",{name:"route_view",eventName:"route_view",role:"context-setting"});
 const cart=add("pages",{name:"Cart"}),landing=add("pages",{name:"Landing"}),returns=add("pages",{name:"Returns"});
-const checkout=add("pageGroups",{name:"Checkout",pageIds:[cart.id]});
-add("pageGroups",{name:"Support",pageIds:[returns.id]});
+const checkout=add("pageGroups",{name:"Checkout"});
+const support=add("pageGroups",{name:"Support"});state={...state,project:{...state.project,collections:{...state.project.collections,pages:state.project.collections.pages.map((page)=>page.id===cart.id?{...page,pageGroupIds:[checkout.id]}:page.id===returns.id?{...page,pageGroupIds:[support.id]}:page)}}};
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 const otherFlow=add("flows",{name:"Returns journey",steps:[]});
 state=setFlowPageGroupLanes(state,flow.id,[checkout.id]);

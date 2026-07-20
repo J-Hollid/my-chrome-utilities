@@ -1,4 +1,4 @@
-import {orderedPageGroupIds,transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
+import {orderedPageGroupIds,requiresPageGroupMembershipMigration,transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
 
 export type FlowRole="context-setting"|"interaction";
 export type FlowOccurrenceType="page-context"|"interaction";
@@ -45,7 +45,7 @@ function validOccurrence(state:ProjectState,flowId:string,input:FlowOccurrenceIn
 }
 
 export function inspectPageFrameDrop(project:SpecificationProject,flowId:string,pageId:string,targetPageGroupId:string):FlowContainmentReview{
-  const page=project.collections.pages.find(({id})=>id===pageId),group=project.collections.pageGroups.find(({id})=>id===targetPageGroupId),selected=flowPageGroupLaneIds(project,flowId).includes(targetPageGroupId),memberships=orderedPageGroupIds(project,pageId),member=Boolean(group&&memberships.includes(group.id)),rejected=!page||!group||!selected||!member,names=memberships.map((id)=>project.collections.pageGroups.find((candidate)=>candidate.id===id)?.name??id);
+  const page=project.collections.pages.find(({id})=>id===pageId),group=project.collections.pageGroups.find(({id})=>id===targetPageGroupId),selected=flowPageGroupLaneIds(project,flowId).includes(targetPageGroupId),memberships=orderedPageGroupIds(project,pageId),member=Boolean(group&&memberships.includes(group.id)),migrationRequired=Boolean(page&&requiresPageGroupMembershipMigration(project,pageId)),rejected=!page||!group||!selected||!member||migrationRequired,names=memberships.map((id)=>project.collections.pageGroups.find((candidate)=>candidate.id===id)?.name??id);
   return{rejected,message:rejected?`${page?.name??pageId} belongs to ${names.join(", ")||"no selected Page Group"}, not ${group?.name??targetPageGroupId}.`: `${page!.name} can be placed in ${group!.name}.`,guidance:`?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds`};
 }
 export function addFlowPageFrame(state:ProjectState,flowId:string,input:{pageId:string;pageGroupId:string;y:number},id:IdFactory):ProjectState{
