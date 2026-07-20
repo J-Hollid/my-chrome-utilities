@@ -13,6 +13,14 @@
 - Treat archived branches, completed handoffs, historical commits, recovery refs, and workspace-local walkthroughs as non-authoritative unless a new user-approved specifier handoff explicitly activates them.
 - Use the task-scoped verification commands named by the active scope. Do not infer a current implementation program from the full regression suite.
 
+## Scope and Lineage Authority
+- Before accepting, rejecting, or reconstructing a handoff, compare its commit with current `master` and read `docs/swarmforge-active-scope.md` from the newest user-approved specification commit in that lineage. A role worktree may be stale and its checked-out copy must not overrule current `master` or the received commit.
+- A rejected implementation commit rejects only that implementation candidate. It never deactivates an approved specification, correction program, feature contract, or later user-approved handoff.
+- A task-local note cannot overrule a later user-approved specification commit. When they conflict, follow the later commit and treat the stale clause as superseded.
+- A clean reconstruction starts from current `master` and preserves every parent file outside the task-owned implementation and evidence paths. Removing an inherited file is an affirmative task change, not lineage cleanup, and requires explicit current specification authority.
+- Never delete or unregister an active feature, correction program, verification pack, or production capability merely to exclude rejected implementation ancestry. Port the task-owned changes onto the clean parent instead.
+- Reject any candidate that deletes an active contract while leaving scope documentation or verification registration referring to it. Report the exact inconsistency rather than forwarding the candidate.
+
 ## Handoffs
 - Prefer terse, explicit handoffs that report state and request role-appropriate review. Do not include verifications or sender process narrative.
 

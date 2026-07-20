@@ -38,6 +38,36 @@ for the named project library, active context, Studio routing, top-level project
 entity collection lifecycle, portability, and singleton migration behavior. They
 do not reactivate the archived project-foundation or release specifications.
 
+## Scope and lineage processing invariant
+
+Current `master` is the integration baseline for every new reconstruction. Role
+worktrees are transient review state and may contain an older copy of this file.
+Before any scope or ancestry decision, an agent must inspect this file from current
+`master` and from the received handoff commit. A stale role-branch copy cannot
+deactivate a later user-approved specification.
+
+Rejected production implementations do not deactivate their specifications. Clean
+lineage means porting only task-owned implementation changes onto current `master`;
+it does not mean deleting unrelated files already present in that parent. A deleted
+feature, program, pack registration, or production capability is itself a material
+change and requires explicit current authority. A candidate that deletes an active
+contract while retaining references to it in this file is internally invalid and
+must be rejected before refactoring or architectural merge.
+
+The following recent user-approved checkpoints are simultaneously active:
+
+- `18996ab128` — one canonical schema editor;
+- `a901f3c8be` — project library and active context;
+- `18cb5a0cb1` — Flow canvas topology and schema-derived examples; and
+- `01b3d50a3d` — project entity overview lifecycle.
+
+The 2026-07-20 notice claiming project management was outside approved scope and
+the inactive-project clauses in task 687 and task 688 were based on stale role
+branches. They are superseded and must not be used. Flow candidate `b9531aa65a` is
+not eligible for integration because it deletes the active project-management
+program and all four active project-management feature contracts while this file
+continues to name them.
+
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
 lane selection and ordering, Page-frame insertion, Event placement, connection
 ports, pointer and keyboard relationship drawing, inline relationship editing, and
