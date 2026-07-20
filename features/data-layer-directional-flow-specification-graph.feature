@@ -189,3 +189,29 @@ Feature: Data layer directional Flow specification graph
     And each occurrence directly stores its Event reference, context-setting role, and trigger
     And canonical Page and Flow records contain no contextEventBindings or contextBindingId field
     And one Undo restores the complete pre-migration project revision
+
+  # Data layer directional Flow specification graph 018
+  Scenario: Data layer directional Flow specification graph 018
+    Given the eligible-lane fixture has Cart memberships Checkout and Retail Checkout with those lanes selected beside Delivery
+    When the operator starts dragging Cart from Pages
+    Then Checkout and Retail Checkout identify valid Page-frame targets and Delivery identifies an invalid target
+    When Cart is released in Retail Checkout
+    Then one Cart frame stores Retail Checkout as its presentation lane and retains the complete ordered membership stack
+    When keyboard controls move the Cart frame to Checkout
+    Then the frame, contained Events, relationships, and membership references keep their identities
+    And effective schema content, contribution order, and provenance remain unchanged
+    And only the frame placement-group reference and presentation coordinates change
+    And placing Cart in Delivery remains a no-op with guidance to add Delivery membership
+
+  # Data layer directional Flow specification graph 019
+  Scenario: Data layer directional Flow specification graph 019
+    Given Cart is placed in Retail Checkout with membership order Checkout, Retail Checkout, and Trade Checkout
+    When the operator moves Trade Checkout before Retail Checkout in the Page Group rule stack
+    Then the Cart frame remains in the Retail Checkout lane while its effective schema recompiles in the new order
+    When the operator attempts to remove Retail Checkout membership
+    Then the membership command leaves canonical project bytes and revision unchanged
+    And impact guidance names the Checkout journey Cart frame with Move to Checkout and Remove Page frame actions
+    When the operator moves the frame to Checkout and removes Retail Checkout membership
+    Then Cart retains ordered Checkout and Trade Checkout memberships with Checkout as its placement lane
+    And Retail Checkout is no longer an eligible Cart lane
+    And the result states the changed membership, affected schema targets, stale evidence, Draft status, and one Undo action

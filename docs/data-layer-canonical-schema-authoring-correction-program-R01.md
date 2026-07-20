@@ -109,10 +109,11 @@ commands:
 
 1. Shared Profiles provide reusable generic or purpose-specific schemas. A profile
    may be broad, such as Sitewide, or specific, such as Opened Article.
-2. A Page Group contributes rules to the Pages and Page instances that belong to
-   it.
-3. A Page inherits applicable profiles and its Page Group, then contributes its
-   own refinements to every instance of that Page.
+2. Page Groups contribute rules to Pages through each Page's ordered membership
+   stack.
+3. A Page inherits applicable profiles and every applicable Page Group from general
+   to specific membership order, then contributes its own refinements to every
+   instance of that Page.
 4. A Flow Page instance contributes refinements only inside that particular Flow
    context.
 5. An Event inherits applicable profiles and contributes its reusable Event
@@ -132,10 +133,10 @@ The Page and Event branches are independent until an Event occurrence is placed 
 a Page context:
 
 ```text
-applicable Shared Profiles -> Page Group -> Page -> Flow Page instance
-                           \-> Event ----------------> Event occurrence
-                                                    /
-                         effective Event occurrence
+applicable Shared Profiles -> ordered Page Group stack -> Page -> Flow Page instance
+                           \-> Event ------------------------------> Event occurrence
+                                                                  /
+                               effective Event occurrence
 ```
 
 An Event occurrence outside Page containment compiles only applicable Shared
@@ -156,6 +157,38 @@ An explicit contextual resolution must reference the definitions it resolves.
 When multiple Shared Profiles contribute to one context, they are parallel peers
 unless an explicit relationship says otherwise. Conflicts block compilation; list
 order is not precedence.
+
+## Ordered Page Group membership
+
+A Page owns one ordered list of stable Page Group references. The order reads from
+general to specific and is an explicit schema-composition contract. Page Group
+member lists are derived projections and cannot become a competing editable source.
+Duplicate or unknown memberships are rejected.
+
+Migration preserves any existing Page-owned order, appends memberships found only
+in legacy Page Group member lists using stable Page Group collection order, and
+requires human confirmation. Missing references block the atomic migration; one
+Undo restores both legacy sources.
+
+The Page editor exposes a visible `Add to Page Group` action and the same action in
+its context menu. Its searchable picker uses human names and shows purpose,
+applicability, and prospective rule impact. The resulting `Page Group rule stack`
+supports pointer and keyboard reordering, removal, direct group navigation, and an
+effective contribution or conflict summary for every row.
+
+Only memberships applicable to the selected observation participate in compilation;
+inactive memberships remain visible in exclusion evidence and active groups retain
+their relative Page-defined order. A later applicable group may narrow or explicitly
+replace an earlier overridable definition under the same legality rules used at
+other layers. Order cannot legalize a type change, widening, required relaxation,
+forbidden re-enablement, unresolved conflict, or overlapping applicability. Those
+conditions block with exact Page Group provenance and repair actions.
+
+Before membership reorder or removal, impact review names changed effective
+properties, affected Page instances and compiled targets, stale exports or evidence,
+Draft status, and Undo. Removing a membership currently used as a Flow frame's
+placement group is blocked until the frame moves to another eligible membership or
+is removed.
 
 ## Wide workspace, table, and side panel
 
@@ -260,14 +293,15 @@ separate Windows walkthrough after delivery.
 
 Replace the three editable representations with one schema document, stable
 property identities, adoption lineage, command patches, revision subscriptions,
-and deterministic atomic migration.
+deterministic atomic schema migration, and atomic reconciliation of Page-owned and
+Page-Group-owned legacy membership.
 
 ### Phase B — rich shared editor
 
 Deliver contextual creation, structural nested authoring, type and presence
 controls, allowed values, rich rules, documentation, examples, search, filtering,
-revision comparison, and synchronized Tree and Table views in the wide workspace
-and compact side panel.
+revision comparison, ordered Page Group membership controls, and synchronized Tree
+and Table views in the wide workspace and compact side panel.
 
 ### Phase C — uniform contributors and compiler
 
@@ -325,6 +359,9 @@ feature.
 | C26 | Developers need the effective values for a concrete occurrence | Layering 012 | Complete selected-context export plus positive and negative validation | Compiler, exporter, validator | Export, provenance, and issue collection | D, E | Summer article occurrence is documented and validated from one compiled schema |
 | C27 | Complete specifications need richer queries without losing side-panel behavior | Authoring 014 | Nested All, Any, and Not groups with selectors, typed operators, and matcher evidence | Shared predicate AST, rule compiler, applicability matcher | Persisted predicate tree plus positive and negative tests | B, D | Conditions require no raw expression and invalid branches focus exact controls |
 | C28 | Canonical property search drops focus after each character | Authoring 015–016 | Continuous typing, caret editing, composition, and clearing retain search focus on every contributor surface | Shared canonical editor renderer, navigator projection, and focus adapter | Per-event active element and selection offsets, filtered rows, unchanged revision and storage | B, E | A multi-character query completes without refocusing and search emits no canonical command |
+| C29 | Pages need multiple ordered Page Group memberships | Layering 013 | Searchable Add to Page Group and an accessible ordered rule stack | Page membership command, Page editor, and derived group member projection | Stable ordered references, focus restoration, impact preview, and absent duplicate source | B, C | Page owns one general-to-specific membership list and group members derive from it |
+| C30 | Membership order must refine without hiding unsafe conflicts | Layering 014 | Applicable groups compose in relative order with exclusion and conflict explanations | Applicability matcher, Page-branch compiler, and legality matrix | Retail and Trade outputs, excluded contributors, blocking issues, and overlap evidence | C, D | Order selects no ambiguous group and cannot legalize an unsafe override |
+| C31 | Existing Page and Page Group membership sources may diverge | Layering 015 | Human migration review preserves Page order and appends group-only membership | Membership migration, project transaction store, and derived member projection | Proposed ordered union, missing-reference blocker, canonical revision, and Undo restoration | A | No membership is lost and only the Page-owned ordered list remains editable |
 
 ## Terminal acceptance
 
@@ -337,6 +374,7 @@ show:
   Builder, Table, side panel, reload, compilation, and validation;
 - the same rich controls at all contributor levels;
 - uninterrupted canonical property search with deterministic caret and composition behavior;
+- ordered multi-Page-Group compilation with guarded refinement and exact provenance;
 - exact Page-branch, Event-branch, and combined-occurrence provenance;
 - blocked unsafe weakening and parallel conflicts;
 - explainable automatic, manual, and Documentation-only activation; and

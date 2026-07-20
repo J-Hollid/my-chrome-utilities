@@ -189,3 +189,30 @@ Feature: Data layer directional Flow specification graph runtime
     And serialized production Page and Flow records have no contextEventBindings or contextBindingId key
     When actual Undo runs once
     Then production storage equals the complete pre-migration revision
+
+  # Data layer directional Flow specification graph runtime 018
+  Scenario: Data layer directional Flow specification graph runtime 018
+    Given production Cart has ordered Checkout and Retail Checkout memberships
+    And the installed Flow renders Checkout, Retail Checkout, and Delivery lanes
+    When actual pointer events start dragging Cart from Pages
+    Then Checkout and Retail Checkout drop targets render valid while Delivery renders invalid
+    When pointerup places Cart in Retail Checkout
+    Then the canonical frame stores the Retail Checkout placement-group ID and Cart retains both ordered membership IDs
+    When installed keyboard controls move that frame to Checkout
+    Then frame, contained Event, relationship, and membership identities remain byte-identical
+    And compiled schema content, contribution order, and provenance remain unchanged
+    And production changes only placement-group ID and frame coordinates
+    And an actual Delivery drop performs no write and renders guidance to add Delivery membership
+
+  # Data layer directional Flow specification graph runtime 019
+  Scenario: Data layer directional Flow specification graph runtime 019
+    Given the production Cart frame is in Retail Checkout with membership order Checkout, Retail Checkout, and Trade Checkout
+    When the production Page rule stack changes to Checkout, Trade Checkout, and Retail Checkout
+    Then installed canvas keeps Cart in Retail Checkout and production recompiles its effective schema in the new order
+    When actual controls attempt to remove Retail Checkout membership
+    Then canonical project storage is byte-identical and its revision is unchanged
+    And rendered impact guidance names the Checkout journey Cart frame with Move to Checkout and Remove Page frame actions
+    When the frame is reassigned to Checkout before confirming the pending membership removal
+    Then canonical Cart storage retains ordered Checkout and Trade Checkout memberships with Checkout frame placement
+    And production lane eligibility excludes Retail Checkout for Cart
+    And installed feedback names changed membership, affected targets, stale evidence, Draft status, and one Undo action

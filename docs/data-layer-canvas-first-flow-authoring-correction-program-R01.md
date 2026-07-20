@@ -59,9 +59,18 @@ operator moves or removes those frames.
 
 ### Pages define frames and context
 
-A grouped Page may be added only to the lane for its actual Page Group membership.
-Dragging a Page into another group is rejected and deep-links to membership editing.
-The Flow cannot silently rewrite the Page contract.
+A grouped Page may be added to any selected lane whose Page Group is in its ordered
+membership stack. If several memberships are selected as lanes, each is a valid
+target and the operator chooses the frame's placement group. A Page frame may move
+between eligible lanes while retaining its identity, contents, relationships, and
+effective schema. An ineligible target is rejected and deep-links to membership
+editing. The Flow cannot silently rewrite the Page contract.
+
+Page membership order and Flow lane order are independent. Membership order controls
+general-to-specific schema composition; Flow lane order controls documentary canvas
+layout; the frame's placement-group reference records which eligible lane contains
+that instance. Reordering memberships never moves a frame, and moving a frame never
+reorders memberships or changes which applicable Page Group rules compile.
 
 A Page without Page Group membership may be placed before the first lane or after
 the last lane. These are compact free-page regions, not lanes. When no free Page is
@@ -145,8 +154,8 @@ capability and never shares documentary occurrence or relationship records.
 ## Persistence and safety
 
 All catalogs use human names while persisting stable references. Renaming a Page
-Group, Page, Event, or binding updates rendered labels without rewriting graph
-topology. Reload preserves:
+Group, Page, or Event updates rendered labels without rewriting graph topology.
+Reload preserves:
 
 - ordered Page Group references;
 - Page-frame containment;
@@ -156,8 +165,9 @@ topology. Reload preserves:
 - selected item and viewport where applicable; and
 - relationship identity, endpoints, kind, group, label, condition, and expectation.
 
-Invalid drops, cross-boundary movement, cancelled connections, and guarded lane
-removal are no-op commands: project bytes and revision do not change.
+Invalid drops, Event cross-boundary movement, cancelled connections, guarded lane
+removal, and removal of an in-use Page membership are no-op commands: project bytes
+and revision do not change.
 
 ## Accessibility and alternative operation
 
@@ -195,8 +205,8 @@ make the three main-workspace catalogs authoritative.
 ### Phase B — catalog and containment authoring
 
 Implement Page Group lane selection/order, grouped and ungrouped Page frames,
-uniform reusable Event insertion, assignment-owned Page resolution, legacy binding
-migration, and guarded movement.
+multi-membership lane eligibility and placement, uniform reusable Event insertion,
+assignment-owned Page resolution, legacy binding migration, and guarded movement.
 
 ### Phase C — graphical relationship authoring
 
@@ -221,7 +231,7 @@ runtime feature.
 | F02 | Components are not coherently selectable | Flow 001 | Page Groups, Pages, and Events are separate searchable main-workspace catalogs | Catalog projections and command routing | Rendered catalogs using production collections | A, B | Operator can begin a Flow without the global entity or Inspector form |
 | F03 | Swimlanes remain hardcoded | Flow 002 | Empty Flow has no lanes; selected Page Groups exclusively define ordered lanes | Flow repository and lane projection | Stored stable references and rendered lane labels | A, B | No Context, Shipping, Payment, Merge, or other fallback exists |
 | F04 | Lane ordering is hidden in Inspector | Flow 003 | Main-workspace reorder and guarded removal | Lane commands and revision store | Order change plus blocked removal evidence | B | Reordering changes projection without identity changes |
-| F05 | Pages need Page Group-aware insertion | Flow 004 | Page search, owner labels, valid-lane insert, invalid-lane repair | Page membership resolver and frame command | Stable IDs and no-op rejection | B | A Page cannot be inserted into the wrong group |
+| F05 | Pages need Page Group-aware insertion | Flow 004 | Page search, owner labels, valid-lane insert, invalid-lane repair | Page membership resolver and frame command | Stable IDs and no-op rejection | B | A Page cannot be inserted into a group outside its memberships |
 | F06 | Page itself is context and assignment already resolves applicability | Flow 005; Layering 007 | Context-setting Events use ordinary Page-contained occurrences with role and trigger | Event occurrence command, assignment resolver, and legacy migration | Direct Page-frame and Event references, assignment evidence, absent binding state | B, D | No Page or Event action requires or consults a context binding |
 | F07 | Interaction Events must be reusable components | Flow 006 | Drag and keyboard insertion into Page frames | Event catalog and occurrence command | Same Event ID, distinct occurrence IDs | B | Reuse does not duplicate the Event or schema |
 | F08 | Free Pages are rendered as one permanent lane after all Page Groups | Flow 007 | Transient left and right edge targets create compact frames without Event prerequisites | Free-frame command, edge-target UI, and layout projection | Target geometry, stored region and coordinates, absent Page Group and binding IDs | B | No free-page pseudo-lane, empty lane-sized background, or binding prerequisite remains |
@@ -235,6 +245,8 @@ runtime feature.
 | F16 | Isolated tests can mask the wrong interface | Flow 015 | Fresh Flow built entirely through installed main-workspace controls | Built extension, production storage, Flow UI | End-to-end control trace and canonical records | D | Terminal result has derived lanes, frames, nodes, edges, and no binding model or forbidden state |
 | F17 | Free frames need two-sided movement without weakening membership | Flow 016 | Pointer and keyboard move free frames between sides while grouped Pages remain contained | Layout command, membership guard, focus adapter, reload projection | Stable identities, unchanged rejection revision, restored focus and sides | B, D | Edge region changes presentation only and never enters lane order |
 | F18 | Existing binding-backed projects must not preserve a parallel model | Flow 017 | Human migration review converts referenced legacy records to direct Event occurrences with one Undo | Project migration, occurrence repository, and relationship store | Stable identities and endpoints, direct Event role and trigger, absent legacy keys | A, D | Migrated canonical state contains no contextEventBindings or contextBindingId |
+| F19 | A multi-group Page may use any applicable selected lane | Flow 018 | All eligible targets identify valid; pointer and keyboard placement preserve semantic state | Lane eligibility resolver, Page-frame command, and canvas projection | Target states, placement reference, stable membership/schema/content identities, and rejected write evidence | B, D | Moving between eligible lanes changes only frame placement and coordinates |
+| F20 | Membership edits must not orphan Flow frames or move them implicitly | Flow 019 | Reorder leaves placement stable; in-use removal blocks with named repairs | Membership command, frame dependency index, impact review, and Undo | Stable lane after reorder, byte-identical rejection, reassigned frame, affected-output feedback | B, D | Membership removal cannot leave a frame in an ineligible lane |
 
 ## Terminal acceptance
 
@@ -245,7 +257,10 @@ scenarios through the built extension, and packaging consumes that same build.
 Terminal evidence must prove a fresh Flow can be completed with the Inspector
 closed. It must also prove that free Pages use transient left and right edge targets
 rather than a permanent ungrouped lane, and that Page context comes from assignment
-rules while every Event role uses direct Page containment. A component-only canvas,
-direct repository injection, pre-created edges, form-submitted source and target,
-fixed lane constants, binding-backed validation, or assertions over source strings
-cannot satisfy the runtime feature.
+rules while every Event role uses direct Page containment. A multi-membership Page
+must also move between any eligible selected lanes without changing its membership
+order or effective schema, while ineligible placement and unsafe membership removal
+remain no-op commands. A component-only canvas, direct repository injection,
+pre-created edges, form-submitted source and target, fixed lane constants,
+binding-backed validation, or assertions over source strings cannot satisfy the
+runtime feature.
