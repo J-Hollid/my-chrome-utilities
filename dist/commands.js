@@ -94,6 +94,7 @@ const commands = [
     observationTargetCommand("data-layer.attach-selected-target", "Attach selected target", "Attach selected target"),
     observationTargetCommand("data-layer.detach-observation-target", "Detach target", "Detach target"),
     dataLayerViewCommand("data-layer.show-live", "Show Live"),
+    dataLayerViewCommand("data-layer.show-projects", "Show Projects"),
     dataLayerViewCommand("data-layer.show-library", "Show Library"),
     dataLayerViewCommand("data-layer.show-sessions", "Show Sessions"),
     dataLayerViewCommand("data-layer.show-schemas", "Show Schemas"),

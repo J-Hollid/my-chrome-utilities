@@ -81,6 +81,7 @@
             [acceptance.steps.session-boundaries :as session-boundaries]
             [acceptance.steps.sequence-replay :as sequence-replay]
             [acceptance.steps.project-skeleton :as project-skeleton]
+            [acceptance.steps.project-management :as project-management]
             [acceptance.steps.recursive-property-validation :as recursive-property-validation]
             [acceptance.steps.required-rule-type-independence :as required-rule-type-independence]
             [acceptance.steps.reusable-rule-sync :as reusable-rule-sync]
@@ -93,6 +94,7 @@
 
 (def handlers
   (vec (concat schema-specification-preview-layout/handlers
+               project-management/handlers
                array-validation-issue-rollup/handlers
                json-schema-export/handlers
                schema-specification-builder-customization/handlers

@@ -2,7 +2,11 @@ import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, valida
 import { confirmCanonicalMigration, redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
+import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
+import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
+import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY } from "./data-layer-specification-repository.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -18,33 +22,93 @@ const appendRevisionComparisonControls = (host, entity, ariaLabel) => { const fr
 export function appendSharedProfileConstraint(state, profileId, constraint) { const profile = state.project.collections.profiles.find(({ id }) => id === profileId); if (!profile)
     throw new Error(`Shared Profile ${profileId} is unavailable.`); const canonical = profile.canonicalSchema ?? migrateLegacyProfile(profile, { id: (kind) => `${kind}:${crypto.randomUUID()}` }).document, next = canonicalSchemaWithConstraint(canonical, constraint, (kind) => `${kind}:${crypto.randomUUID()}`); return transactProject(state, `Save canonical schema contribution for ${profile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => { if (candidate.id !== profileId)
             return candidate; const updated = { ...candidate, requirements: [], canonicalSchema: next, compiledTargetsStale: true }; delete updated.structuredSchema; delete updated.structuredDraft; delete updated.schemaConstraints; return updated; }) } })); }
-export function mountSidePanelLayeredProfileEditor(options) { let selectedProfileId; const render = () => { const state = options.load(), profiles = state?.project.collections.profiles ?? []; options.host.replaceChildren(); options.host.setAttribute("aria-label", "Side-panel Shared Profile editor"); const heading = document.createElement("h4"); heading.textContent = "Shared Profile schema editor"; options.host.append(heading); if (!state || !profiles.length) {
-    const empty = document.createElement("p");
-    empty.textContent = state ? "Add a Shared Profile in the Builder to begin canonical schema authoring." : "Create or open a Specification Project to edit Shared Profiles.";
-    options.host.append(empty);
-    return;
-} if (!profiles.some(({ id }) => id === selectedProfileId))
-    selectedProfileId = profiles[0].id; const selector = document.createElement("select"), label = document.createElement("label"), profile = profiles.find(({ id }) => id === selectedProfileId); selector.setAttribute("aria-label", "Shared Profile to edit"); for (const candidate of profiles)
-    selector.append(new Option(candidate.name, candidate.id)); selector.value = profile.id; selector.addEventListener("change", () => { selectedProfileId = selector.value; render(); }); label.append("Shared Profile", selector); options.host.append(label); const canonical = profile.canonicalSchema; if (!canonical) {
-    const plan = migrateLegacyProfile(profile, { id: (kind) => `${kind}:${crypto.randomUUID()}` }), review = document.createElement("section"), summary = document.createElement("p"), confirm = document.createElement("button");
-    review.setAttribute("aria-label", "Canonical schema migration review");
-    summary.textContent = `Migration review: ${Object.keys(plan.document.nodes).length} properties · ${plan.conflicts.length} conflicts.`;
-    confirm.type = "button";
-    confirm.textContent = "Confirm canonical migration";
-    confirm.disabled = Boolean(plan.conflicts.length);
-    confirm.addEventListener("click", () => { options.persist(confirmCanonicalMigration(state, plan)); render(); });
-    review.append(summary, confirm);
-    options.host.append(review);
-    return;
-} const editorHost = document.createElement("section"); options.host.append(editorHost); mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => options.load().project.collections.profiles.find(({ id }) => id === selectedProfileId).canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const currentState = options.load(), currentProfile = currentState.project.collections.profiles.find(({ id }) => id === selectedProfileId), current = currentProfile.canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
-        options.persist(transactProject(currentState, `${command.kind} canonical property in ${currentProfile.name}`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === currentProfile.id ? { ...candidate, canonicalSchema: result.document, requirements: [] } : candidate) } }))); return result; }, onUndo: () => { const current = options.load(); if (current) {
-        options.persist(undoProjectTransaction(current));
-        render();
-    } }, onRedo: () => { const current = options.load(); if (current) {
-        options.persist(redoProjectTransaction(current));
-        render();
-    } } }); }; render(); window.addEventListener("storage", (event) => { if (event.storageArea === localStorage)
-    render(); }); return { render }; }
+const writeSidePanelCanonical = (state, selection, canonical) => transactProject(state, `Save canonical schema for ${selection.entity.name}`, (project) => { if (selection.collectionKind) {
+    const collection = project.collections[selection.collectionKind];
+    return { ...project, collections: { ...project.collections, [selection.collectionKind]: collection.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical, ...(selection.collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } };
+} const graphs = project.documentationFlowGraphs, graph = graphs[selection.flowId], key = selection.scope === "Flow Page-instance" ? "pageFrames" : "occurrences", entries = graph[key] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [selection.flowId]: { ...graph, [key]: entries.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } }; });
+export function mountSidePanelLayeredProfileEditor(options) {
+    let selectedKey;
+    const current = () => { const state = options.load(), selection = state && selectedKey ? resolveSidePanelSchemaContributor(state, selectedKey) : undefined; return { state, selection }; };
+    const close = () => { selectedKey = undefined; options.host.hidden = true; options.host.replaceChildren(); };
+    const render = () => {
+        const { state, selection } = current();
+        options.host.replaceChildren();
+        if (!state || !selection) {
+            options.host.hidden = true;
+            return;
+        }
+        options.host.hidden = false;
+        if (options.legacyEditor)
+            options.legacyEditor.hidden = true;
+        if (options.emptyHost)
+            options.emptyHost.hidden = true;
+        options.host.setAttribute("aria-label", "Side panel schema editor region");
+        options.host.dataset.schemaContributorKey = selectedKey;
+        const heading = document.createElement("h4"), identity = document.createElement("p"), inheritance = document.createElement("section"), order = document.createElement("ol"), compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, selection.entity, selection.scope, selection.flowId)), { eventId: String(selection.entity.eventId ?? selection.entity.id), eventRole: layeredEventRole(selection.entity), occurrenceId: selection.entity.id }), contributors = layeredContributorsForPath(state, layeredContributorPath(state, selection.entity, selection.scope, selection.flowId));
+        heading.textContent = selection.entity.name;
+        identity.textContent = `Role ${selection.scope} · scope ${selection.scope} · lineage ${contributors.map(({ name }) => name).join(" → ") || "Project root"} · revision ${selection.entity.canonicalSchema?.revision ?? 0} · Draft`;
+        inheritance.setAttribute("aria-label", "Canonical inheritance and provenance");
+        for (const [at, contributor] of contributors.entries()) {
+            const item = document.createElement("li");
+            item.textContent = `${contributor.scope} ${contributor.name} · ${at === contributors.length - 1 ? "local and effective" : "inherited"} · provenance ${contributor.id}`;
+            order.append(item);
+        }
+        const status = document.createElement("p");
+        status.textContent = `Effective ${Object.keys(compiled.properties).length} · shadowed ${Object.values(compiled.properties).reduce((count, property) => count + property.superseded.length, 0)} · conflicting ${compiled.conflicts.length}`;
+        inheritance.append(order, status);
+        options.host.append(heading, identity, inheritance);
+        const canonical = selection.entity.canonicalSchema;
+        if (!canonical) {
+            const review = document.createElement("section"), summary = document.createElement("p"), confirm = document.createElement("button"), migration = selection.scope === "Shared Profile" ? migrateLegacyProfile(selection.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` }) : undefined;
+            review.setAttribute("aria-label", "Canonical schema migration review");
+            summary.textContent = migration ? `Migration review: ${Object.keys(migration.document.nodes).length} properties · ${migration.conflicts.length} conflicts.` : "Initialize one canonical contribution for this schema role.";
+            confirm.type = "button";
+            confirm.textContent = migration ? "Confirm canonical migration" : "Initialize canonical contribution";
+            confirm.disabled = Boolean(migration?.conflicts.length);
+            confirm.addEventListener("click", () => { options.persist(migration ? confirmCanonicalMigration(state, migration) : writeSidePanelCanonical(state, selection, createCanonicalSchema({ id: `canonical-schema:${crypto.randomUUID()}`, contributorId: selection.entity.id, contributorName: selection.entity.name }))); render(); });
+            review.append(summary, confirm);
+            options.host.append(review);
+            return;
+        }
+        const editorHost = document.createElement("section");
+        options.host.append(editorHost);
+        mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => current().selection.entity.canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const live = current(), document = live.selection.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state)
+                options.persist(writeSidePanelCanonical(live.state, live.selection, result.document)); return result; }, onUndo: () => { const live = current(); if (live.state) {
+                options.persist(undoProjectTransaction(live.state));
+                render();
+            } }, onRedo: () => { const live = current(); if (live.state) {
+                options.persist(redoProjectTransaction(live.state));
+                render();
+            } } });
+        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups") {
+            const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope), facets = document.createElement("section"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
+            facets.setAttribute("aria-label", "Inherited and sparse local schema facets");
+            for (const row of model.rows) {
+                const article = document.createElement("article"), summary = document.createElement("p"), builder = document.createElement("section"), reset = document.createElement("button");
+                article.dataset.sidePanelEffectivePath = row.path;
+                summary.textContent = `${row.path} · inherited ${row.inherited ? effectivePropertySummary(row.inherited) : "none"} · local ${Object.keys(row.local).length > 1 ? "present" : "none"} · effective ${effectivePropertySummary(row.effective)} · ${row.validationState} · provenance ${row.provenance.map(({ contributorName }) => contributorName).join(" → ")}`;
+                mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (next) => { const live = current(); if (live.state && live.selection?.collectionKind)
+                        options.persist(saveComposedSchemaLocalFacets(live.state, live.selection.collectionKind, live.selection.entity.id, row.path, next)); render(); } });
+                reset.type = "button";
+                reset.textContent = row.action === "override" ? "Override here" : "Reset to parents";
+                reset.addEventListener("click", () => { if (row.action === "override") {
+                    builder.querySelector("input,select,button")?.focus();
+                    return;
+                } const live = current(); if (live.state && live.selection?.collectionKind)
+                    options.persist(resetComposedSchemaLocalProperty(live.state, live.selection.collectionKind, live.selection.entity.id, row.path)); render(); });
+                article.append(summary, reset, builder);
+                facets.append(article);
+            }
+            options.host.append(facets);
+        }
+    };
+    const select = (key) => { const state = options.load(); if (!state || !resolveSidePanelSchemaContributor(state, key))
+        return false; selectedKey = key; render(); return true; };
+    close();
+    window.addEventListener("storage", (event) => { if (event.storageArea === localStorage && event.key === CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY && selectedKey)
+        render(); });
+    return { render, select, close };
+}
 export const layeredEventRole = (entity) => entity.role === "context-setting" ? "context" : entity.role === "interaction" ? "interaction" : entity.contextBindingId || entity.occurrenceType === "page-context" ? "context" : "interaction";
 export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.expectedValue !== undefined ? `expected ${JSON.stringify(property.expectedValue)}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
 export function installLayeredSchemaUi(options) {

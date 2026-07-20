@@ -16,8 +16,8 @@ import {
   setLiveQuery,
   updateLiveSourceStatus,
 } from "../dist/data-layer-live-observer.js";
-assert.equal(dataLayerViewForNavigationKey("Live", "ArrowRight"), "Library");
-assert.deepEqual(dataLayerViews, ["Live", "Library", "Sessions", "Defects", "Schemas"]);
+assert.equal(dataLayerViewForNavigationKey("Live", "ArrowRight"), "Projects");
+assert.deepEqual(dataLayerViews, ["Live", "Projects", "Library", "Sessions", "Defects", "Schemas"]);
 assert.equal(dataLayerViewForNavigationKey("Sessions", "ArrowRight"), "Defects");
 assert.equal(dataLayerViewForNavigationKey("Defects", "ArrowRight"), "Schemas");
 assert.equal(dataLayerViewForNavigationKey("Defects", "ArrowLeft"), "Sessions");

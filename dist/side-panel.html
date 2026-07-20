@@ -24,11 +24,13 @@
       <h2>Data Layer</h2>
       <div id="data-layer-views" role="tablist" aria-label="Data Layer views">
         <button id="data-layer-view-live" type="button" role="tab" aria-controls="data-layer-panel-live" aria-selected="true">Live</button>
+        <button id="data-layer-view-projects" type="button" role="tab" aria-controls="data-layer-panel-projects" aria-selected="false" tabindex="-1">Projects</button>
         <button id="data-layer-view-library" type="button" role="tab" aria-controls="data-layer-panel-library" aria-selected="false" tabindex="-1">Library</button>
         <button id="data-layer-view-sessions" type="button" role="tab" aria-controls="data-layer-panel-sessions" aria-selected="false" tabindex="-1">Sessions</button>
         <button id="data-layer-view-defects" type="button" role="tab" aria-controls="data-layer-panel-defects" aria-selected="false" tabindex="-1">Defects</button>
         <button id="data-layer-view-schemas" type="button" role="tab" aria-controls="data-layer-panel-schemas" aria-selected="false" tabindex="-1">Schemas</button>
       </div>
+      <section id="active-project-header" aria-live="polite">No active project</section>
       <section id="data-layer-panel-live" role="tabpanel" aria-labelledby="data-layer-view-live">
         <h3>Live</h3>
         <section id="saved-session-live-banner" aria-label="Saved session feed" hidden>
@@ -128,6 +130,16 @@
           <output id="session-warning" aria-live="polite"></output>
         </details>
       </section>
+      <section id="data-layer-panel-projects" role="tabpanel" aria-labelledby="data-layer-view-projects" hidden>
+        <h3>Projects</h3>
+        <section id="active-project-card" aria-label="Active project card"></section>
+        <label for="project-library-search">Search projects</label><input id="project-library-search" type="search" />
+        <ul id="project-library-list" aria-label="Project library"></ul>
+        <button id="create-library-project" type="button">Create project</button>
+        <button id="import-library-project" type="button">Import project</button>
+        <input id="import-library-project-file" type="file" accept="application/json,.json" hidden />
+        <output id="project-library-status" aria-live="polite"></output>
+      </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
         <h3>Library</h3>
         <section id="event-template-master" aria-label="Event template library">
@@ -213,7 +225,6 @@
         <aside id="defect-library-detail" aria-label="Defect detail" hidden></aside>
       </section>
       <section id="data-layer-panel-schemas" role="tabpanel" aria-labelledby="data-layer-view-schemas" hidden>
-        <a id="open-specification-builder" href="specification-builder.html" target="_blank">Open Specification Builder</a>
         <a id="generate-documentation-table" href="specification-builder.html?view=documentation" target="_blank">Generate documentation table</a><span>Documentation export; does not change project authoring.</span>
         <h3>Schemas</h3><div id="schema-subviews" role="tablist" aria-label="Schema Library"><button id="schema-subview-schemas" role="tab" aria-selected="true" aria-controls="schema-master" type="button">Schemas</button><button id="schema-subview-rules" role="tab" aria-selected="false" aria-controls="schema-rule-library" tabindex="-1" type="button">Rule Library</button><button id="schema-subview-assignments" role="tab" aria-selected="false" aria-controls="schema-assignments" tabindex="-1" type="button">Assignments</button></div>
         <section id="schema-master" role="tabpanel" aria-label="Schema library"><section id="side-panel-layered-profile-editor"></section><label for="schema-search">Search schemas</label><input id="schema-search" type="search" /><button id="create-schema" type="button" data-action-variant="secondary">Create schema</button><button id="import-schema" type="button" data-action-variant="secondary">Import Schema Library</button><input id="schema-library-import-file" type="file" accept="application/json" hidden /><button id="export-schema" type="button" data-action-variant="secondary">Export Schema Library</button><button id="recheck-schema-validation" type="button" data-action-variant="secondary">Recheck captured events</button><output id="schema-count" aria-live="polite"></output><ul id="schema-list"></ul><section id="schema-validation-results" aria-label="Validation issues"><h4>Validation issues</h4><ul id="schema-validation-issues"></ul></section><section id="schema-validation-records" aria-label="Saved validation records"><h4>Saved validation records</h4><ul id="schema-validation-record-list"></ul></section><section id="schema-empty-state" class="panel-empty-state" aria-live="polite"><h4>No schemas saved yet</h4><p>Create a schema to begin validation.</p></section><output id="schema-result" aria-live="polite"></output></section>
