@@ -18,7 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionDefinitions, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionDefinitions, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -526,20 +526,87 @@ function renderCollectionGuidance(content) { if (!state)
 } if (section.childElementCount)
     content.append(section); }
 function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
-function renderCreationPage(content, kind) { if (!state)
-    return; const definition = projectCollectionDefinitions[kind], section = document.createElement("section"), heading = document.createElement("h1"), purpose = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), form = document.createElement("form"), name = document.createElement("input"), nameLabel = document.createElement("label"), cancel = document.createElement("button"), create = document.createElement("button"), feedback = document.createElement("output"); section.className = "collection-lifecycle-page"; section.dataset.creationKind = kind; heading.tabIndex = -1; heading.textContent = `Create ${definition.singular}`; purpose.textContent = `Purpose: ${definition.purpose}. Example: ${definition.example}.`; prerequisites.textContent = `Prerequisites: ${definition.prerequisites.join(", ")}.`; usedBy.textContent = `Used by: ${definition.consumers.join(", ")}.`; nameLabel.textContent = `${definition.singular} name`; name.name = "name"; name.required = true; nameLabel.append(name); cancel.type = create.type = "button"; cancel.textContent = "Cancel"; create.textContent = `Create ${definition.singular}`; cancel.addEventListener("click", () => openCollectionOverview(kind)); create.addEventListener("click", () => { try {
-    const next = createProjectCollectionEntity(state, kind, name.value, id), created = next.project.collections[kind].at(-1);
-    creationKind = undefined;
-    selectedKind = kind;
-    selectedId = created.id;
-    lifecycleStatus = `Created ${definition.singular} ${created.name} in Draft revision ${canonicalRevision + 1}.`;
-    persist(next);
-    persistNavigation();
-    queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(created.id)}"]`)?.focus({ preventScroll: true }));
+function projectCreationFieldControl(field) { if (field.collection && state) {
+    const select = document.createElement("select");
+    select.name = field.key;
+    select.multiple = Boolean(field.multiple);
+    for (const entity of state.project.collections[field.collection])
+        select.append(new Option(entity.name, entity.id));
+    if (!select.options.length)
+        select.append(new Option(`No ${field.label} available`, ""));
+    return select;
+} if (field.control === "select") {
+    const select = document.createElement("select");
+    select.name = field.key;
+    for (const option of field.options ?? [])
+        select.append(new Option(option.label, option.value));
+    if (field.defaultValue !== undefined)
+        select.value = String(field.defaultValue);
+    return select;
+} if (field.control === "textarea") {
+    const textarea = document.createElement("textarea");
+    textarea.name = field.key;
+    textarea.rows = 3;
+    textarea.value = String(field.defaultValue ?? "");
+    return textarea;
+} const input = document.createElement("input"); input.name = field.key; input.type = field.control ?? "text"; if (field.control === "checkbox")
+    input.checked = Boolean(field.defaultValue);
+else
+    input.value = String(field.defaultValue ?? ""); if (field.key === "eventName")
+    input.placeholder = "Derived from name when blank"; return input; }
+function projectCreationFieldValue(field, control) { if (control instanceof HTMLSelectElement)
+    return field.multiple ? Array.from(control.selectedOptions, ({ value }) => value).filter(Boolean) : control.value; if (control instanceof HTMLInputElement && field.control === "checkbox")
+    return control.checked; if (field.control === "number")
+    return Number(control.value); return control.value; }
+function renderCreationPage(content, kind) {
+    if (!state)
+        return;
+    const definition = projectCollectionDefinitions[kind], fields = projectCollectionCreationFields[kind], section = document.createElement("section"), heading = document.createElement("h1"), purpose = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), form = document.createElement("form"), name = document.createElement("input"), nameLabel = document.createElement("label"), settings = document.createElement("fieldset"), legend = document.createElement("legend"), cancel = document.createElement("button"), create = document.createElement("button"), feedback = document.createElement("output");
+    section.className = "collection-lifecycle-page";
+    section.dataset.creationKind = kind;
+    heading.tabIndex = -1;
+    heading.textContent = `Create ${definition.singular}`;
+    purpose.textContent = `Purpose: ${definition.purpose}. Example: ${definition.example}.`;
+    prerequisites.textContent = `Prerequisites: ${definition.prerequisites.join(", ")}.`;
+    usedBy.textContent = `Used by: ${definition.consumers.join(", ")}.`;
+    nameLabel.textContent = `${definition.singular} name`;
+    name.name = "name";
+    name.required = true;
+    nameLabel.append(name);
+    legend.textContent = `${definition.singular} settings`;
+    settings.dataset.creationFields = kind;
+    settings.append(legend);
+    for (const field of fields) {
+        const label = document.createElement("label"), control = projectCreationFieldControl(field);
+        label.textContent = field.label;
+        control.dataset.creationField = field.key;
+        label.append(control);
+        settings.append(label);
+    }
+    cancel.type = "button";
+    create.type = "submit";
+    cancel.textContent = "Cancel";
+    create.textContent = `Create ${definition.singular}`;
+    cancel.addEventListener("click", () => openCollectionOverview(kind));
+    form.addEventListener("submit", (event) => { event.preventDefault(); try {
+        const values = Object.fromEntries(fields.map((field) => [field.key, projectCreationFieldValue(field, form.elements.namedItem(field.key))])), next = createProjectCollectionEntity(state, kind, name.value, id, values), created = next.project.collections[kind].at(-1);
+        creationKind = undefined;
+        selectedKind = kind;
+        selectedId = created.id;
+        lifecycleStatus = `Created ${definition.singular} ${created.name} in Draft revision ${canonicalRevision + 1}.`;
+        persist(next);
+        persistNavigation();
+        queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(created.id)}"]`)?.focus({ preventScroll: true }));
+    }
+    catch (error) {
+        feedback.textContent = error instanceof Error ? error.message : String(error);
+    } });
+    form.append(nameLabel, settings, cancel, create, feedback);
+    section.append(heading, purpose, prerequisites, usedBy, form);
+    content.append(section);
+    q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Create`;
+    queueMicrotask(() => heading.focus({ preventScroll: true }));
 }
-catch (error) {
-    feedback.textContent = error instanceof Error ? error.message : String(error);
-} }); form.append(nameLabel, cancel, create, feedback); section.append(heading, purpose, prerequisites, usedBy, form); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Create`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
 function renderRemovalPage(content, review) { if (!state)
     return; const definition = projectCollectionDefinitions[review.kind], section = document.createElement("section"), heading = document.createElement("h1"), summary = document.createElement("p"), dependencies = document.createElement("ul"), actions = document.createElement("div"), cancel = document.createElement("button"), confirm = document.createElement("button"); section.className = "collection-lifecycle-page"; section.dataset.removalKind = review.kind; heading.tabIndex = -1; heading.textContent = `Review removal of ${review.name}`; summary.textContent = review.summary; for (const dependency of review.dependencies) {
     const item = document.createElement("li"), open = document.createElement("button");
