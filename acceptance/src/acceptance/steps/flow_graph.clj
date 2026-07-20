@@ -30,7 +30,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 16))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 17))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
