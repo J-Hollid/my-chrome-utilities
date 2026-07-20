@@ -5,7 +5,8 @@ import {
   validateLayeredObservation,
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
-import {appendSharedProfileConstraint,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {appendSharedProfileConstraint,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {canonicalConstraints} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 

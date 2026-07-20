@@ -1,11 +1,12 @@
 import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
 import { confirmCanonicalMigration, redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
-import { applyCanonicalCommand, canonicalConstraints, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
+import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
 const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", pageGroups: "Page Group", pages: "Page", flows: "Flow Page-instance" }[kind] ?? "Event-occurrence");
-const contributionFor = (entity, scope) => { const canonical = entity.canonicalSchema; return { id: entity.id, name: entity.name, scope, constraints: canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? []) }; };
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
 export function composeStructuredRules(rules, reusableRules, structured) { return { rules: [...rules, ...(structured.field ? [{ field: structured.field, operator: structured.operator || "equals", ...(structured.value ? { value: structured.value } : {}) }] : [])], reusableRules: [...reusableRules, ...(structured.reusableRuleId ? [{ id: structured.reusableRuleId }] : [])] }; }
@@ -45,18 +46,6 @@ export function mountSidePanelLayeredProfileEditor(options) { let selectedProfil
     render(); }); return { render }; }
 export const layeredEventRole = (entity) => entity.contextBindingId || entity.occurrenceType === "page-context" ? "context" : "interaction";
 export const effectivePropertySummary = (property) => [property.type ? `type ${property.type}` : undefined, property.allowedValues ? `allowed ${JSON.stringify(property.allowedValues)}` : undefined, property.presence ? `presence ${property.presence}` : undefined, property.expectedValue !== undefined ? `expected ${JSON.stringify(property.expectedValue)}` : undefined, property.patterns?.length ? `patterns ${JSON.stringify(property.patterns)}` : undefined, property.minimum !== undefined || property.maximum !== undefined ? `range ${String(property.minimum ?? "−∞")}..${String(property.maximum ?? "∞")}` : undefined, property.minItems !== undefined || property.maxItems !== undefined ? `cardinality ${String(property.minItems ?? 0)}..${String(property.maxItems ?? "∞")}` : undefined, property.rules?.length ? `rules ${property.rules.length}` : undefined, property.reusableRules?.length ? `reusable ${property.reusableRules.length}` : undefined].filter(Boolean).join(" · ");
-const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
-const referencedProfileId = (state, entity) => referencedId(entity, "profileId") ?? (entity.profileIds?.length === 1 ? String(entity.profileIds[0]) : state.project.collections.profiles.length === 1 ? state.project.collections.profiles[0].id : undefined);
-export function layeredContributorPath(state, entity, scope, flowId) {
-    const selectedFlowId = flowId ?? (scope === "Flow Page-instance" ? entity.id : undefined), flowGraph = selectedFlowId ? state.project.documentationFlowGraphs?.[selectedFlowId] : undefined, flowPageGroupIds = flowGraph?.pageGroupIds ?? [], flowPageGroupId = flowPageGroupIds.length === 1 ? flowPageGroupIds[0] : undefined, flowPageGroup = state.project.collections.pageGroups.find(({ id }) => id === flowPageGroupId), flowPageIds = flowPageGroup?.pageIds ?? [], flowPageId = flowPageIds.length === 1 ? flowPageIds[0] : undefined, profileId = scope === "Shared Profile" ? entity.id : referencedProfileId(state, entity), pageId = referencedId(entity, "pageId") ?? (scope === "Page" ? entity.id : scope === "Flow Page-instance" ? flowPageId : undefined), containingGroups = pageId ? state.project.collections.pageGroups.filter((group) => (group.pageIds ?? []).includes(pageId)) : [], pageGroupId = referencedId(entity, "pageGroupId") ?? (scope === "Page Group" ? entity.id : containingGroups.length === 1 ? containingGroups[0].id : scope === "Flow Page-instance" ? flowPageGroupId : undefined), selectedPage = pageId ? state.project.collections.pages.find(({ id }) => id === pageId) : undefined, contextBinding = (selectedPage?.contextEventBindings ?? []).find(({ id }) => id === entity.contextBindingId), eventId = referencedId(entity, "eventId") ?? referencedId(contextBinding ?? { id: "", name: "" }, "eventId") ?? (scope === "Event" ? entity.id : undefined);
-    return { ...(profileId ? { profileId } : {}), ...(eventId ? { eventId } : {}), ...(pageGroupId ? { pageGroupId } : {}), ...(pageId ? { pageId } : {}), ...(flowId || scope === "Flow Page-instance" ? { flowId: flowId ?? entity.id } : {}), ...(scope === "Event-occurrence" ? { occurrenceId: entity.id } : {}) };
-}
-export function layeredContributorsForPath(state, path) {
-    const graph = path.flowId ? state.project.documentationFlowGraphs?.[path.flowId] : undefined, occurrence = graph?.occurrences?.find(({ id }) => id === path.occurrenceId);
-    const one = (entities, id, scope) => id ? entities.filter((entity) => entity.id === id).map((entity) => contributionFor(entity, scope)) : [];
-    return [...one(state.project.collections.profiles, path.profileId, "Shared Profile"), ...one(state.project.collections.events, path.eventId, "Event"), ...one(state.project.collections.pageGroups, path.pageGroupId, "Page Group"), ...one(state.project.collections.pages, path.pageId, "Page"), ...one(state.project.collections.flows, path.flowId, "Flow Page-instance"), ...(occurrence ? [contributionFor(occurrence, occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence")] : [])];
-}
-export function layeredContributionDetails(state, entity, scope, flowId) { return layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)).flatMap((contributor) => contributor.constraints.map((constraint) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, path: constraint.path, target: constraint.target ?? "all", condition: constraint.condition ? JSON.stringify(constraint.condition) : "Always", enforcement: constraint.enforcement ?? "not set", usedById: entity.id, usedByName: entity.name, usedByScope: scope }))); }
 export function installLayeredSchemaUi(options) {
     const inspector = q("#project-inspector"), workspace = q("#workspace-content"), editorHost = q("#layered-schema-editor-host"), summary = document.createElement("section"), editor = document.createElement("section");
     let graphSelection, graphSelectionScope, returnFocus, flowReturn;
@@ -86,12 +75,13 @@ export function installLayeredSchemaUi(options) {
     const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(layeredContributorsForPath(state, target), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
     function renderRuntimeControls(state, entity, scope, compiled) {
         const section = document.createElement("section"), heading = document.createElement("h3"), propertyTree = document.createElement("ol"), targetEvent = document.createElement("select"), targetRole = document.createElement("select"), activation = document.createElement("select"), priority = document.createElement("input"), applicability = document.createElement("textarea"), saveTarget = document.createElement("button"), observation = document.createElement("textarea"), test = document.createElement("button"), assignmentResult = document.createElement("pre"), manual = document.createElement("select"), payload = document.createElement("textarea"), validate = document.createElement("button"), validationResult = document.createElement("pre"), developerExport = document.createElement("button"), exportResult = document.createElement("pre"), existing = storedTargets(state).find(({ contributorId }) => contributorId === entity.id), path = layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined);
+        const effectivePathButton = (propertyPath, text) => { const choose = document.createElement("button"); choose.type = "button"; choose.dataset.propertyId = propertyPath; choose.setAttribute("aria-current", "false"); choose.textContent = text; choose.addEventListener("click", () => { propertyTree.querySelectorAll("[data-property-id]").forEach((candidate) => candidate.setAttribute("aria-current", String(candidate === choose))); choose.focus(); }); return choose; };
         section.setAttribute("aria-label", "Effective schema operations");
         heading.textContent = "Compiled effective schema and activation";
         propertyTree.setAttribute("aria-label", "Compiled layered property tree");
-        for (const [path, property] of Object.entries(compiled.properties)) {
+        for (const [propertyPath, property] of Object.entries(compiled.properties)) {
             const item = document.createElement("li"), effective = effectivePropertySummary(property);
-            item.textContent = `${path}${effective ? ` · ${effective}` : ""} · ${property.origins.map(({ scope: originScope, contributorName }) => `${originScope}: ${contributorName}`).join(" → ")}${property.superseded.length ? ` · superseded ${property.superseded.map(({ contributorName, value }) => `${contributorName} ${String(value)}`).join(", ")}` : ""}`;
+            item.append(effectivePathButton(propertyPath, `${propertyPath}${effective ? ` · ${effective}` : ""} · ${property.origins.map(({ scope: originScope, contributorName }) => `${originScope}: ${contributorName}`).join(" → ")}${property.superseded.length ? ` · superseded ${property.superseded.map(({ contributorName, value }) => `${contributorName} ${String(value)}`).join(", ")}` : ""}`));
             propertyTree.append(item);
         }
         for (const conflict of compiled.conflicts) {
@@ -100,7 +90,7 @@ export function installLayeredSchemaUi(options) {
             left.type = right.type = "button";
             left.textContent = conflict.contributors[0] ?? "Earlier contributor";
             right.textContent = conflict.contributors[1] ?? entity.name;
-            item.append(`${conflict.path}: ${conflict.message} · `, left, " ↔ ", right);
+            item.append(effectivePathButton(conflict.path, `${conflict.path}: ${conflict.message}`), " · ", left, " ↔ ", right);
             propertyTree.append(item);
         }
         targetEvent.setAttribute("aria-label", "Layered target Event");
@@ -182,9 +172,12 @@ export function installLayeredSchemaUi(options) {
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
         return; const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
+    const openGraphOccurrenceSchema = (occurrenceId, path) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === occurrenceId) : undefined; if (!state || kind !== "flows" || !flowId || !occurrence)
+        return false; graphSelection = occurrence; graphSelectionScope = occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; editor.hidden = false; ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
+        setTimeout(() => Array.from(editor.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); return true; };
     return { render() { if (editor.hidden) {
             graphSelection = undefined;
             graphSelectionScope = undefined;
-        } renderSummary(); } };
+        } renderSummary(); }, openGraphOccurrenceSchema };
 }
 //# sourceMappingURL=data-layer-layered-schema-ui.js.map
