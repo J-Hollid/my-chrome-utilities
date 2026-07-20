@@ -8,6 +8,8 @@ checkpoint. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
+- `features/data-layer-flow-table-documentation-export.feature`
+- `features/data-layer-flow-table-documentation-export-runtime.feature`
 - `features/data-layer-canonical-shared-profile-schema-authoring.feature`
 - `features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature`
 - `features/data-layer-layered-schema-constraints.feature`
@@ -17,6 +19,8 @@ The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
 The correction program for the Flow graph contracts is
 `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
+The program for selected-Flow table documentation is
+`docs/data-layer-flow-table-documentation-export-program-R01.md`.
 
 The user-approved canonical-authoring and layered-schema cycles are later authority
 than the earlier graph-only scope reduction. They supersede that reduction only for
@@ -46,6 +50,14 @@ per-Event payload validation remains independent and journey expectations remain
 manual. Any retained executable-step authoring is an explicitly separate Advanced
 function and does not duplicate or replace documentary graph authoring.
 
+The selected-Flow documentation checkpoint derives a Flow value map and Data capture
+matrix from ordered graph contexts and canonical effective schemas. It reuses the
+side-panel specification-table configuration and supports spreadsheet clipboard,
+rich Confluence/Jira clipboard, and an offline four-sheet `.xlsx` workbook. Export
+ordering and Step labels are documentary presentation only. Incomplete Draft exports
+require explicit confirmation and retain Blocked or Incomplete cells, diagnostics,
+and a Draft — incomplete label.
+
 The canonical authoring checkpoint replaces the current lightweight requirements
 grid, structured draft, and path-constraint overlay as competing editable schema
 models. Shared Profiles own one canonical revisioned property tree. Builder and side
@@ -67,7 +79,7 @@ export for a selected context.
 
 The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a
-general Assignment or resolver redesign. Project-wide documentation export,
+general Assignment or resolver redesign. Project-wide batch documentation export,
 fixtures, coverage, preflight, release, Live, temporal Flow execution, and
 cross-surface concurrency beyond the canonical schema editor are not active work.
 Agent role-playing without source knowledge and facilitated Windows usability are
@@ -133,7 +145,7 @@ program. Workspace-local untracked walkthrough files are likewise non-authoritat
 
 ## Verification boundary
 
-Use the task-specific verification pack. Do not estimate or execute either checkpoint
+Use the task-specific verification pack. Do not estimate or execute any checkpoint
 from every command reached through the schema or shell dependency graph. The Flow
 graph checkpoint sequence is exactly:
 
@@ -141,6 +153,17 @@ graph checkpoint sequence is exactly:
 node scripts/run-focused-acceptance.mjs --pack flow_graph
 node scripts/package.mjs
 ```
+
+The selected-Flow documentation checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack flow_export
+node scripts/package.mjs
+```
+
+The `flow_export` pack may register shared build dependencies from `flow_graph`, but
+must contain the selected-Flow export features and their production clipboard and
+workbook evidence without invoking archived project-wide documentation suites.
 
 The layered effective-schema checkpoint sequence is exactly:
 
