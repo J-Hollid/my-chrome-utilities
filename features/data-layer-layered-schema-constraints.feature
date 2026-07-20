@@ -179,3 +179,57 @@ Feature: Data layer layered schema constraints
     Then the valid observation passes per-Event schema validation
     And the invalid observation reports every violated effective property rule with exact provenance
     And no result claims full Flow validation
+
+  # Data layer layered schema constraints 013
+  Scenario: Data layer layered schema constraints 013
+    Given Page Cart belongs to Page Group Checkout
+    When the operator opens Cart Page configuration
+    Then a visible Add to Page Group action and the Cart context menu provide the same searchable command
+    When the operator searches that command for Retail Checkout and Trade Checkout
+    Then each result shows its human name, purpose, applicability summary, and prospective rule impact
+    When the operator adds both groups
+    Then Cart shows an ordered Page Group rule stack
+      | position | Page Group     |
+      | 1        | Checkout       |
+      | 2        | Retail Checkout |
+      | 3        | Trade Checkout |
+    And guidance says rules apply from top to bottom and later groups may only make legal refinements
+    And Cart stores those ordered stable references as the sole editable membership source
+    And each Page Group derives its Cart membership without storing a competing editable order
+    And each stack row offers Open Page Group, Move earlier, Move later, and Remove at 360px without horizontal page scrolling
+    When keyboard controls move Trade Checkout before Retail Checkout
+    Then only Cart membership order changes and focus returns to Trade Checkout in position 2
+    And the impact preview identifies affected properties, Page instances, compiled targets, and stale exports before commit
+
+  # Data layer layered schema constraints 014
+  Scenario: Data layer layered schema constraints 014
+    Given Cart composition order is Checkout followed by Retail Checkout followed by Trade Checkout
+    And Checkout requires funnel_name checkout and allows funnel_step 3a or 3b
+    And conditional Page Group definitions are
+      | Page Group      | applicability                     | funnel_step refinement |
+      | Retail Checkout | customer_type Equals retail       | allowed value 3a       |
+      | Trade Checkout  | customer_type Equals trade        | allowed value 3b       |
+    When effective Cart schemas compile for one retail observation and one trade observation
+    Then their Page Group provenance is
+      | observation | included stack              | funnel_step |
+      | retail      | Checkout, Retail Checkout   | 3a          |
+      | trade       | Checkout, Trade Checkout    | 3b          |
+    And inactive memberships are named as excluded without changing the relative order of active groups
+    When Retail Checkout attempts type number for funnel_step
+    Then compilation is blocked at funnel_step despite Retail Checkout's later position
+    And the issue names Checkout, Retail Checkout, their order, the unsafe type change, and direct repair actions
+    When its allowed-value editor instead adds 4
+    Then compilation is blocked at funnel_step with the unsafe allowed-value expansion
+    When Retail Checkout and Trade Checkout both match one observation
+    Then applicability is blocked as ambiguous rather than allowing membership order to choose a winner
+
+  # Data layer layered schema constraints 015
+  Scenario: Data layer layered schema constraints 015
+    Given a legacy project lists Checkout then Retail Checkout on Cart and also lists Cart from Trade Checkout
+    When the operator opens Cart after the ordered-membership upgrade
+    Then migration review proposes Checkout, Retail Checkout, and Trade Checkout without losing a membership
+    And Page-owned order is preserved before group-only memberships while missing groups block confirmation
+    When the operator confirms the proposed order
+    Then one atomic revision stores only Cart's ordered stable Page Group references
+    And Checkout, Retail Checkout, and Trade Checkout member views derive Cart from that revision
+    And one Undo restores the complete pre-migration membership state

@@ -36,13 +36,14 @@ documentary graph command. Earlier form-first clauses are superseded.
 
 Only ordered Page Group references define named lanes; the empty Flow has no lanes
 and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pages
-remain in their Page Group lane, while free Pages may use transient before-lanes or
-after-lanes edge targets without invented membership. Empty edge targets do not
-render as permanent lane-sized groups; compact free frames sandwich the Page Group
-lanes only where content exists. The Page frame itself is the Page context and may
-exist without any Event. Context-setting and interaction Events use one direct
-Page-contained occurrence model; role and trigger are explanatory metadata, not a
-validation selector. Occurrences cannot cross Page or Page Group boundaries.
+remain in one selected eligible membership lane and may move to another eligible
+lane, while free Pages may use transient before-lanes or after-lanes edge targets
+without invented membership. Empty edge targets do not render as permanent
+lane-sized groups; compact free frames sandwich the Page Group lanes only where
+content exists. The Page frame itself is the Page context and may exist without any
+Event. Context-setting and interaction Events use one direct Page-contained
+occurrence model; role and trigger are explanatory metadata, not a validation
+selector. Event occurrences cannot leave their Page frame when its frame moves.
 Parallel branches and merges are included in the first canvas release. Graph records
 persist stable Page Group, Page, Event, occurrence, relationship, and endpoint
 references without a Page-context binding model.
@@ -82,6 +83,15 @@ occurrence; incompatible parallel rules block until explicitly resolved. The
 checkpoint supports automatic applicability, manual assignment, or explicit
 Documentation-only activation and includes only the effective-schema developer
 export for a selected context.
+
+A Page owns one ordered general-to-specific list of Page Group memberships. Group
+member views derive from that list. Applicable groups compile in relative order, but
+order cannot legalize unsafe weakening or resolve overlapping applicability. The
+Page editor provides searchable add, accessible reorder, removal, provenance, and
+impact review. A Flow Page frame may use any selected lane in that membership list;
+its placement group is separate from membership order and lane order. Reordering
+membership never moves a frame, and removing an in-use membership blocks until the
+frame is moved to another eligible lane or removed.
 
 The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a

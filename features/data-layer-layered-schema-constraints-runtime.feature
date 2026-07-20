@@ -178,3 +178,58 @@ Feature: Data layer layered schema constraints runtime
     Then the valid observation passes per-Event schema validation
     And the invalid observation reports every violated effective property rule with exact provenance
     And neither result claims full Flow validation
+
+  # Data layer layered schema constraints runtime 013
+  Scenario: Data layer layered schema constraints runtime 013
+    Given production Cart initially belongs only to Checkout
+    When actual controls open Cart Page configuration
+    Then the installed Page editor and Cart context menu expose the same Add to Page Group command
+    When actual search finds Retail Checkout and Trade Checkout
+    Then installed results render each name, purpose, applicability summary, and prospective rule impact
+    When actual controls add both groups
+    Then the production Page Group rule stack is
+      | position | Page Group      |
+      | 1        | Checkout        |
+      | 2        | Retail Checkout |
+      | 3        | Trade Checkout  |
+    And rendered guidance explains top-to-bottom guarded refinement
+    And canonical Cart storage contains one ordered stable-reference membership list
+    And production Page Group member views derive Cart without a second editable membership collection
+    And each row exposes Open Page Group, Move earlier, Move later, and Remove at 360px without horizontal page scroll
+    When installed keyboard controls move Trade Checkout before Retail Checkout
+    Then only the ordered Cart membership command is persisted and focus returns to Trade Checkout at position 2
+    And the rendered impact preview names affected properties, Page instances, compiled targets, and stale exports before commit
+
+  # Data layer layered schema constraints runtime 014
+  Scenario: Data layer layered schema constraints runtime 014
+    Given production Cart membership order is Checkout, Retail Checkout, and Trade Checkout
+    And production Checkout requires funnel_name checkout and permits funnel_step 3a or 3b
+    And production conditional group definitions are
+      | Page Group      | applicability              | funnel_step refinement |
+      | Retail Checkout | customer_type retail       | allowed value 3a       |
+      | Trade Checkout  | customer_type trade        | allowed value 3b       |
+    When the production compiler receives retail and trade observations for Cart
+    Then compiled Page Group evidence is
+      | observation | included stack              | funnel_step |
+      | retail      | Checkout, Retail Checkout   | 3a          |
+      | trade       | Checkout, Trade Checkout    | 3b          |
+    And rendered evidence names inactive memberships without reordering active group IDs
+    When production Retail Checkout proposes changing funnel_step from string to number
+    Then compilation blocks at funnel_step regardless of stored membership position
+    And the installed issue names Checkout, Retail Checkout, their order, the unsafe type change, and repair links
+    When production Retail Checkout instead proposes allowed value 4
+    Then compilation blocks at funnel_step with the unsafe allowed-value expansion
+    When one production observation matches Retail Checkout and Trade Checkout
+    Then assignment reports ambiguity without selecting the later membership
+
+  # Data layer layered schema constraints runtime 015
+  Scenario: Data layer layered schema constraints runtime 015
+    Given production legacy storage lists Checkout then Retail Checkout on Cart and lists Cart from Trade Checkout
+    When the installed upgrade opens Cart
+    Then migration review proposes Checkout, Retail Checkout, and Trade Checkout without membership loss
+    And it preserves Page-owned order before group-only memberships and blocks any missing group reference
+    When actual controls confirm the proposed order
+    Then one production transaction stores only Cart's ordered stable Page Group IDs
+    And installed group member views derive Cart from that canonical revision
+    When actual Undo runs once
+    Then serialized membership state equals the complete legacy fixture
