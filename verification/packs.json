@@ -700,7 +700,8 @@
     "dependencies": [],
     "unit": [
       "test/data-layer-flow-graph-test.mjs",
-      "test/data-layer-flow-graph-persistence-test.mjs"
+      "test/data-layer-flow-graph-persistence-test.mjs",
+      "test/data-layer-flow-page-context-model-test.mjs"
     ],
     "property": [],
     "features": [
@@ -746,6 +747,7 @@
     "source": [
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
+      "src/data-layer-page-group-membership.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",
       "src/data-layer-layered-schema-ui.ts"
@@ -753,6 +755,7 @@
     "dependencies": [],
     "unit": [
       "test/data-layer-canonical-schema-authoring-test.mjs",
+      "test/data-layer-page-group-membership-test.mjs",
       "test/data-layer-layered-schema-test.mjs",
       "test/data-layer-layered-schema-persistence-test.mjs",
       "test/data-layer-layered-schema-adoption-test.mjs"

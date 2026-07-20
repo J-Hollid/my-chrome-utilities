@@ -12,4 +12,5 @@ export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, createFixtureFromCapturedValidation, evaluateSpecificationObservation, transactProject } from "./layers/browser/schemas.js";
+export { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, previewPageGroupMembershipMove, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "../../data-layer-page-group-membership.js";
 //# sourceMappingURL=schemas.js.map
