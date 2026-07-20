@@ -4,6 +4,7 @@ import {
   addComposedConditionGroup,
   addComposedConditionPredicate,
   addComposedRule,
+  composedConditionPredicate,
   composedFacetDraft,
   evaluateComposedCondition,
   moveComposedAllowedValue,
@@ -12,6 +13,7 @@ import {
   sparseComposedFacets,
   typedComposedValue,
 } from "../dist/data-layer-composed-schema-builders.js";
+import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 
 const inherited={path:"/funnel_step",type:"string",presence:"required",allowedValues:["2","3a","3b"],documentation:"Checkout step"};
 let draft=composedFacetDraft({path:"/funnel_step",expectedValue:"2"},inherited);
@@ -53,5 +55,19 @@ assert.equal(typedComposedValue("null","anything"),null);
 assert.equal(typedComposedValue("string","02"),"02");
 assert.throws(()=>typedComposedValue("integer","2.5"),/whole number/);
 assert.throws(()=>typedComposedValue("boolean","maybe"),/true or false/);
+assert.equal(composedFacetDraft({path:"/note",allowedValues:["brief"],examples:["brief"]},{path:"/note"}).exampleMethod,"allowed-value","reload reconstructs an allowed-value example method from structured storage");
+
+const propertyChoice={path:"/customer_type",definitionId:"definition:customer-type",type:"string"};
+let validationDraft=composedFacetDraft({path:"/discount",type:"number",presence:"required"},{path:"/discount",type:"number",presence:"required"});
+validationDraft=addComposedConditionPredicate(validationDraft,[],composedConditionPredicate(propertyChoice,"Equals","retail"));
+const savedBuilderFacets=sparseComposedFacets(validationDraft,{path:"/discount"});
+assert.equal(savedBuilderFacets.condition.children[0].propertyId,"definition:customer-type","builder-authored predicates persist the stable canonical definition ID");
+const builderCompiled=compileLayeredSchema([{id:"page:cart",name:"Cart",scope:"Page",constraints:[
+  {path:"/customer_type",definitionId:"definition:customer-type",type:"string"},
+  {path:"/discount",definitionId:"definition:discount",...savedBuilderFacets},
+]}],{eventId:"event:cart",eventRole:"interaction"});
+const validateBuilderPayload=(payload)=>validateLayeredObservation({targetId:"target:cart",targetName:"Cart",revision:1,compiled:builderCompiled},payload).issues;
+assert.deepEqual(validateBuilderPayload({customer_type:"retail"}).map(({path,code})=>({path,code})),[{path:"/discount",code:"REQUIRED"}],"matching observations activate the saved condition in the production validator");
+assert.deepEqual(validateBuilderPayload({customer_type:"trade"}),[],"nonmatching observations leave the saved condition inactive");
 
 console.log("data-layer composed schema builder tests passed");

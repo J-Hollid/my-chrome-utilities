@@ -96,7 +96,7 @@ function labeledControl(text, control) { const label = document.createElement("l
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
     if (!state)
         return;
-    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), propertyChoices = model.rows.map(({ path, effective }) => ({ path, type: effective.type }));
+    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
     section.className = "composed-schema-workspace";
     section.setAttribute("aria-label", model.heading);
     section.dataset.schemaStatus = model.status;

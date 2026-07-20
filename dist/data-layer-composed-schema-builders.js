@@ -9,8 +9,8 @@ const normalizedCondition = (condition) => {
 };
 const conditionGroup = (condition) => condition && ["all", "any", "not"].includes(String(condition.kind)) ? normalizedCondition(condition) : { kind: "all", children: condition ? [normalizedCondition(condition)] : [] };
 export function composedFacetDraft(local, effective) {
-    const examples = local.examples ?? effective.examples ?? [];
-    return { type: local.type ?? effective.type, presence: local.presence ?? effective.presence, expectedValue: Object.hasOwn(local, "expectedValue") ? clone(local.expectedValue) : clone(effective.expectedValue), allowedValues: clone([...(local.allowedValues ?? effective.allowedValues ?? [])]), condition: conditionGroup(local.condition ?? effective.condition), rules: clone([...(local.rules ?? effective.rules ?? [])]), documentation: String(local.documentation ?? effective.documentation ?? ""), exampleMethod: examples.length ? "custom" : "blank", ...(examples.length ? { exampleValue: clone(examples[0]) } : {}) };
+    const examples = local.examples ?? effective.examples ?? [], allowedValues = clone([...(local.allowedValues ?? effective.allowedValues ?? [])]), exampleMethod = !examples.length ? "blank" : allowedValues.some((value) => same(value, examples[0])) ? "allowed-value" : "custom";
+    return { type: local.type ?? effective.type, presence: local.presence ?? effective.presence, expectedValue: Object.hasOwn(local, "expectedValue") ? clone(local.expectedValue) : clone(effective.expectedValue), allowedValues, condition: conditionGroup(local.condition ?? effective.condition), rules: clone([...(local.rules ?? effective.rules ?? [])]), documentation: String(local.documentation ?? effective.documentation ?? ""), exampleMethod, ...(examples.length ? { exampleValue: clone(examples[0]) } : {}) };
 }
 export function typedComposedValue(type, text) {
     if (type === "number") {
@@ -44,17 +44,18 @@ export function addComposedConditionGroup(draft, path, kind) { const condition =
     throw new Error("Not accepts one branch."); group.children.push({ kind, children: [] }); return { ...draft, condition }; }
 export function addComposedConditionPredicate(draft, path, predicate) { const condition = clone(draft.condition), group = groupAt(condition, path); if (group.kind === "not" && group.children.length)
     throw new Error("Not accepts one branch."); group.children.push({ kind: "predicate", ...clone(predicate) }); return { ...draft, condition }; }
+export function composedConditionPredicate(choice, operator, value) { return { propertyId: choice.definitionId, operator, ...(value !== undefined ? { value: clone(value) } : {}) }; }
 export function removeComposedConditionBranch(draft, path) { if (!path.length)
     return { ...draft, condition: { kind: "all", children: [] } }; const condition = clone(draft.condition), parent = groupAt(condition, path.slice(0, -1)); parent.children.splice(path.at(-1), 1); return { ...draft, condition }; }
 export function addComposedRule(draft, rule) { return { ...draft, rules: [...draft.rules, clone(rule)] }; }
 const valueAt = (observation, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, observation);
-export function evaluateComposedCondition(condition, observation) { if (condition.kind !== "predicate") {
+export function evaluateComposedCondition(condition, observation, propertyChoices = []) { if (condition.kind !== "predicate") {
     if (condition.kind === "all")
-        return condition.children.every((child) => evaluateComposedCondition(child, observation));
+        return condition.children.every((child) => evaluateComposedCondition(child, observation, propertyChoices));
     if (condition.kind === "any")
-        return condition.children.some((child) => evaluateComposedCondition(child, observation));
-    return !condition.children.some((child) => evaluateComposedCondition(child, observation));
-} const actual = valueAt(observation, condition.propertyId), expected = condition.value; switch (condition.operator) {
+        return condition.children.some((child) => evaluateComposedCondition(child, observation, propertyChoices));
+    return !condition.children.some((child) => evaluateComposedCondition(child, observation, propertyChoices));
+} const path = propertyChoices.find(({ definitionId }) => definitionId === condition.propertyId)?.path ?? condition.propertyId, actual = valueAt(observation, path), expected = condition.value; switch (condition.operator) {
     case "Equals": return same(actual, expected);
     case "Does not equal": return !same(actual, expected);
     case "Exists": return actual !== undefined;
@@ -82,7 +83,7 @@ const button = (text, run) => { const control = document.createElement("button")
 const option = (value, label = value) => new Option(label, value);
 const groupEntries = (root) => { const entries = []; const visit = (group, path) => { entries.push({ path, label: `${group.kind === "all" ? "All" : group.kind === "any" ? "Any" : "Not"} ${path.length ? path.join(".") : "root"}` }); group.children.forEach((child, index) => { if (child.kind !== "predicate")
     visit(child, [...path, index]); }); }; visit(root, []); return entries; };
-const conditionText = (condition) => condition.kind === "predicate" ? `${condition.propertyId} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind === "all" ? "All" : condition.kind === "any" ? "Any" : "Not"} (${condition.children.map(conditionText).join(condition.kind === "any" ? " or " : " and ")})`;
+const conditionText = (condition, propertyChoices) => condition.kind === "predicate" ? `${propertyChoices.find(({ definitionId }) => definitionId === condition.propertyId)?.path ?? condition.propertyId} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind === "all" ? "All" : condition.kind === "any" ? "Any" : "Not"} (${condition.children.map((child) => conditionText(child, propertyChoices)).join(condition.kind === "any" ? " or " : " and ")})`;
 const conditionBranches = (root) => { const branches = []; const visit = (group, path) => group.children.forEach((child, index) => { const childPath = [...path, index]; branches.push({ path: childPath, condition: child }); if (child.kind !== "predicate")
     visit(child, childPath); }); visit(root, []); return branches; };
 export function mountComposedSchemaFacetBuilder(options) {
@@ -129,13 +130,13 @@ export function mountComposedSchemaFacetBuilder(options) {
         conditionLegend.textContent = "Nested All / Any / Not condition builder";
         for (const entry of groupEntries(draft.condition))
             target.append(option(entry.path.join("."), entry.label));
-        property.append(option("", "Choose property"), ...options.propertyChoices.map(({ path }) => option(path)));
+        property.append(option("", "Choose property"), ...options.propertyChoices.map(({ path, definitionId }) => option(definitionId, path)));
         for (const value of ["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"])
             operator.append(option(value));
-        plain.textContent = conditionText(draft.condition);
+        plain.textContent = conditionText(draft.condition, options.propertyChoices);
         for (const branch of conditionBranches(draft.condition)) {
             const item = document.createElement("li");
-            item.append(`${conditionText(branch.condition)} `, button("Remove condition branch", () => { draft = removeComposedConditionBranch(draft, branch.path); render(); }));
+            item.append(`${conditionText(branch.condition, options.propertyChoices)} `, button("Remove condition branch", () => { draft = removeComposedConditionBranch(draft, branch.path); render(); }));
             branches.append(item);
         }
         const path = () => target.value ? target.value.split(".").map(Number) : [];
@@ -146,12 +147,12 @@ export function mountComposedSchemaFacetBuilder(options) {
         catch (error) {
             feedback = error instanceof Error ? error.message : String(error);
         } render(); };
-        const addPredicate = () => { const selected = options.propertyChoices.find(({ path }) => path === property.value); if (!selected) {
+        const addPredicate = () => { const selected = options.propertyChoices.find(({ definitionId }) => definitionId === property.value); if (!selected) {
             feedback = "Choose a referenced property.";
             render();
             return;
         } try {
-            draft = addComposedConditionPredicate(draft, path(), { propertyId: selected.path, operator: operator.value, ...(!["Exists", "Does not exist"].includes(operator.value) ? { value: typedComposedValue(selected.type, conditionValue.value) } : {}) });
+            draft = addComposedConditionPredicate(draft, path(), composedConditionPredicate(selected, operator.value, ...(!["Exists", "Does not exist"].includes(operator.value) ? [typedComposedValue(selected.type, conditionValue.value)] : [])));
             feedback = "";
         }
         catch (error) {
@@ -162,7 +163,7 @@ export function mountComposedSchemaFacetBuilder(options) {
         testCondition.type = "button";
         testCondition.textContent = "Test condition observation";
         testCondition.addEventListener("click", () => { try {
-            testResult.textContent = evaluateComposedCondition(draft.condition, JSON.parse(observation.value)) ? "Matched" : "Did not match";
+            testResult.textContent = evaluateComposedCondition(draft.condition, JSON.parse(observation.value), options.propertyChoices) ? "Matched" : "Did not match";
         }
         catch (error) {
             testResult.textContent = error instanceof Error ? error.message : String(error);
