@@ -24,6 +24,7 @@ export const projectCollectionCreationFields = {
 };
 export function hasCanonicalProfileOverviewActions(kind, selectedId) { return kind === "profiles" && !selectedId; }
 export function projectInspectorTogglePresentation(open) { return { label: open ? "Hide Inspector" : "Show Inspector", expanded: open ? "true" : "false" }; }
+export function projectEntityWorkspaceRoute(kind, entityId, name) { const definition = projectCollectionDefinitions[kind]; return { kind, entityId, heading: `${definition.singular}: ${name}`, label: `${definition.singular} workspace for ${name}`, backAction: `Back to ${definition.overview}` }; }
 const containsIdentity = (value, identity) => { if (value === identity)
     return true; if (Array.isArray(value))
     return value.some((entry) => containsIdentity(entry, identity)); if (value && typeof value === "object")

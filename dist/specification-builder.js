@@ -18,7 +18,7 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionDefinitions, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { createProjectCollectionEntity, hasCanonicalProfileOverviewActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -485,7 +485,7 @@ function renderTree() { const tree = q("#project-tree"); tree.replaceChildren();
     button.textContent = `${labels[kind]} (${count})`;
     button.dataset.kind = kind;
     button.setAttribute("aria-current", String(!projectOverview && kind === selectedKind));
-    button.addEventListener("click", () => { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); q("#workspace-pane").focus(); });
+    button.addEventListener("click", () => openCollectionOverview(kind));
     item.append(button);
     tree.append(item);
 } const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
@@ -525,7 +525,13 @@ function renderCollectionGuidance(content) { if (!state)
     section.append(heading, tasks, map, next, reason, worked);
 } if (section.childElementCount)
     content.append(section); }
-function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
+function replaceProjectRoute(kind, entityId) { if (!state)
+    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.delete("route"); url.searchParams.set("kind", kind); if (entityId)
+    url.searchParams.set("entity", entityId);
+else
+    url.searchParams.delete("entity"); history.replaceState(null, "", url); }
+function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
+function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(() => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)?.focus({ preventScroll: true })); }
 function projectCreationFieldControl(field) { if (field.collection && state) {
     const select = document.createElement("select");
     select.name = field.key;
@@ -596,7 +602,8 @@ function renderCreationPage(content, kind) {
         lifecycleStatus = `Created ${definition.singular} ${created.name} in Draft revision ${canonicalRevision + 1}.`;
         persist(next);
         persistNavigation();
-        queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(created.id)}"]`)?.focus({ preventScroll: true }));
+        replaceProjectRoute(kind, created.id);
+        queueMicrotask(() => document.querySelector(`[data-project-entity-workspace="${CSS.escape(created.id)}"] h1`)?.focus({ preventScroll: true }));
     }
     catch (error) {
         feedback.textContent = error instanceof Error ? error.message : String(error);
@@ -609,14 +616,35 @@ function renderCreationPage(content, kind) {
 }
 function renderRemovalPage(content, review) { if (!state)
     return; const definition = projectCollectionDefinitions[review.kind], section = document.createElement("section"), heading = document.createElement("h1"), summary = document.createElement("p"), dependencies = document.createElement("ul"), actions = document.createElement("div"), cancel = document.createElement("button"), confirm = document.createElement("button"); section.className = "collection-lifecycle-page"; section.dataset.removalKind = review.kind; heading.tabIndex = -1; heading.textContent = `Review removal of ${review.name}`; summary.textContent = review.summary; for (const dependency of review.dependencies) {
-    const item = document.createElement("li"), open = document.createElement("button");
+    const item = document.createElement("li"), open = document.createElement("button"), kind = dependency.kind === "flowGraph" ? "flows" : dependency.kind;
     item.textContent = `${dependency.name}: ${dependency.relationship}. `;
     open.type = "button";
     open.textContent = `Open ${dependency.name}`;
-    open.addEventListener("click", () => openCollectionOverview(dependency.kind === "flowGraph" ? "flows" : dependency.kind, dependency.id));
+    open.addEventListener("click", () => openProjectEntityWorkspace(kind, dependency.id));
     item.append(open);
     dependencies.append(item);
-} cancel.type = confirm.type = "button"; cancel.textContent = "Cancel removal"; confirm.textContent = `Remove ${review.name}`; confirm.disabled = review.blocked; cancel.addEventListener("click", () => openCollectionOverview(review.kind, review.id)); confirm.addEventListener("click", () => { const entities = state.project.collections[review.kind], index = entities.findIndex(({ id }) => id === review.id), focus = entities[index + 1]?.id ?? entities[index - 1]?.id; removedFocus = { kind: review.kind, id: review.id }; removalReview = undefined; selectedKind = review.kind; selectedId = undefined; lifecycleStatus = `Removed ${review.name}. Draft saved; dependent evidence is stale. Undo restores the same stable identity.`; persist(removeProjectCollectionEntity(state, review.kind, review.id)); persistNavigation(); queueMicrotask(() => { const target = focus ? document.querySelector(`[data-entity-id="${CSS.escape(focus)}"]`) : document.querySelector(`[data-add-kind="${review.kind}"]`); target?.focus({ preventScroll: true }); }); }); actions.append(cancel, confirm); section.append(heading, summary, dependencies, actions); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Remove ${review.name}`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
+} cancel.type = confirm.type = "button"; cancel.textContent = "Cancel removal"; confirm.textContent = `Remove ${review.name}`; confirm.disabled = review.blocked; cancel.addEventListener("click", () => openCollectionOverview(review.kind, review.id)); confirm.addEventListener("click", () => { const entities = state.project.collections[review.kind], index = entities.findIndex(({ id }) => id === review.id), focus = entities[index + 1]?.id ?? entities[index - 1]?.id; removedFocus = { kind: review.kind, id: review.id }; removalReview = undefined; selectedKind = review.kind; selectedId = undefined; lifecycleStatus = `Removed ${review.name}. Draft saved; dependent evidence is stale. Undo restores the same stable identity.`; persist(removeProjectCollectionEntity(state, review.kind, review.id)); persistNavigation(); replaceProjectRoute(review.kind); queueMicrotask(() => { const target = focus ? document.querySelector(`[data-entity-id="${CSS.escape(focus)}"]`) : document.querySelector(`[data-add-kind="${review.kind}"]`); target?.focus({ preventScroll: true }); }); }); actions.append(cancel, confirm); section.append(heading, summary, dependencies, actions); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Remove ${review.name}`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
+function renderProjectEntityWorkspace(content, kind, entity) { if (!state)
+    return; const route = projectEntityWorkspaceRoute(kind, entity.id, entity.name), workspace = document.createElement("section"), heading = document.createElement("h1"), back = document.createElement("button"); workspace.dataset.projectEntityWorkspace = entity.id; workspace.dataset.projectEntityKind = kind; workspace.setAttribute("aria-label", route.label); heading.tabIndex = -1; heading.textContent = route.heading; back.type = "button"; back.textContent = route.backAction; back.addEventListener("click", () => openCollectionOverview(kind, entity.id)); workspace.append(heading, back); content.append(workspace); if (kind === "flows") {
+    const graphHost = document.createElement("div"), inspectorHost = q("#flow-inspector-context");
+    graphHost.id = "flow-graph-workspace";
+    workspace.append(graphHost);
+    inspectorHost.replaceChildren();
+    renderSelectedEntityEditor(inspectorHost, entity);
+    return;
+} q("#flow-inspector-context").replaceChildren(); renderSelectedEntityEditor(workspace, entity); if (kind === "pages") {
+    renderPageGroupMembershipEditor(workspace, entity);
+    renderComposedSchemaWorkspace(workspace, entity, "pages", "Page");
+} if (kind === "pageGroups") {
+    const members = document.createElement("section"), memberList = document.createElement("ul");
+    members.setAttribute("aria-label", "Derived Page Group members");
+    members.append(Object.assign(document.createElement("h3"), { textContent: "Derived members" }));
+    for (const page of pageGroupMembers(state.project, entity.id))
+        memberList.append(Object.assign(document.createElement("li"), { textContent: page.name }));
+    members.append(memberList);
+    workspace.append(members);
+    renderComposedSchemaWorkspace(workspace, entity, "pageGroups", "Page Group");
+} }
 function renderWorkspace() {
     const content = q("#workspace-content");
     content.replaceChildren();
@@ -634,7 +662,7 @@ function renderWorkspace() {
         }
         openSchemas.type = "button";
         openSchemas.textContent = "Open Shared Profiles";
-        openSchemas.addEventListener("click", () => { projectOverview = false; selectedKind = "profiles"; selectedId = undefined; persistNavigation(); render(); });
+        openSchemas.addEventListener("click", () => openCollectionOverview("profiles"));
         content.append(heading, identity, metadata, openSchemas);
         return;
     }
@@ -658,7 +686,7 @@ function renderWorkspace() {
             row.className = "entity-row";
             select.type = "button";
             select.textContent = entity.name;
-            select.addEventListener("click", () => { selectedKind = kind; selectedId = entity.id; persistNavigation(); q("#project-search").value = ""; render(); });
+            select.addEventListener("click", () => { q("#project-search").value = ""; openProjectEntityWorkspace(kind, entity.id); });
             location.className = "search-location";
             location.textContent = labels[kind];
             used.textContent = `Used ${whereUsed(entity.id).length} times`;
@@ -672,13 +700,8 @@ function renderWorkspace() {
     const all = entitiesForKind(selectedKind), selected = all.find(({ id }) => id === selectedId);
     q("#project-breadcrumb").textContent = `${state.project.name} / ${labels[selectedKind]}${selectedId ? ` / ${selected?.name ?? selectedId}` : ""}`;
     q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity.";
-    if (selectedKind === "flows" && selected) {
-        const heading = document.createElement("h1"), graphHost = document.createElement("div"), inspectorHost = q("#flow-inspector-context");
-        heading.textContent = selected.name;
-        graphHost.id = "flow-graph-workspace";
-        content.append(heading, graphHost);
-        inspectorHost.replaceChildren();
-        renderSelectedEntityEditor(inspectorHost, selected);
+    if (selected) {
+        renderProjectEntityWorkspace(content, selectedKind, selected);
         return;
     }
     q("#flow-inspector-context").replaceChildren();
@@ -709,10 +732,10 @@ function renderWorkspace() {
         open.type = remove.type = "button";
         open.textContent = entity.name;
         open.setAttribute("aria-label", `Open ${entity.name}`);
-        open.addEventListener("click", () => { selectedId = entity.id; persistNavigation(); render(); });
+        open.addEventListener("click", () => openProjectEntityWorkspace(selectedKind, entity.id));
         remove.textContent = `Remove ${entity.name}`;
         remove.setAttribute("aria-label", `Remove ${definition.singular} ${entity.name}`);
-        remove.addEventListener("click", () => { removalReview = inspectProjectEntityRemoval(state, selectedKind, entity.id); selectedId = undefined; render(); });
+        remove.addEventListener("click", () => { removalReview = inspectProjectEntityRemoval(state, selectedKind, entity.id); selectedId = undefined; replaceProjectRoute(selectedKind); render(); });
         kindText.className = "search-location";
         kindText.textContent = definition.singular;
         usage.textContent = `Used ${whereUsed(entity.id).length} times`;
@@ -729,23 +752,6 @@ function renderWorkspace() {
     content.append(heading, primary, guidance, count, list);
     if (hasCanonicalProfileOverviewActions(selectedKind, selectedId))
         renderCanonicalProfileOverview(content);
-    if (selected) {
-        renderSelectedEntityEditor(content, selected);
-        if (selectedKind === "pages") {
-            renderPageGroupMembershipEditor(content, selected);
-            renderComposedSchemaWorkspace(content, selected, "pages", "Page");
-        }
-        if (selectedKind === "pageGroups") {
-            const members = document.createElement("section"), memberList = document.createElement("ul");
-            members.setAttribute("aria-label", "Derived Page Group members");
-            members.append(Object.assign(document.createElement("h3"), { textContent: "Derived members" }));
-            for (const page of pageGroupMembers(state.project, selected.id))
-                memberList.append(Object.assign(document.createElement("li"), { textContent: page.name }));
-            members.append(memberList);
-            content.append(members);
-            renderComposedSchemaWorkspace(content, selected, "pageGroups", "Page Group");
-        }
-    }
 }
 function whereUsed(identity) { if (!state)
     return []; const result = []; for (const [kind, entities] of Object.entries(state.project.collections))
@@ -831,9 +837,10 @@ q("#undo-project").addEventListener("click", () => { if (!state)
     return; const restored = removedFocus; persist(undoProjectTransaction(state)); if (restored) {
     removedFocus = undefined;
     selectedKind = restored.kind;
-    selectedId = restored.id;
+    selectedId = undefined;
     lifecycleStatus = "Removal undone; the same stable identity is restored.";
     persistNavigation();
+    replaceProjectRoute(restored.kind);
     render();
     queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(restored.id)}"]`)?.focus({ preventScroll: true }));
 } });
