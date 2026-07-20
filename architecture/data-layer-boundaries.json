@@ -13,6 +13,18 @@
       "src/utilities/data-layer/schemas.ts"
     ]
   },
+  "src/data-layer-flow-table-documentation-export.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
+  "src/data-layer-flow-table-documentation-export-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/flow-graph.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
   "src/data-layer-executable-flow-ui.ts": {
     "module": "schemas",
     "layer": "browser"
