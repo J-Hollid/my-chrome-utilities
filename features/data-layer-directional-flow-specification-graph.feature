@@ -3,7 +3,7 @@ Feature: Data layer directional Flow specification graph
   Background:
     Given Shop project contains Page Groups Checkout, Delivery, and Confirmation
     And Checkout owns Pages Cart and Payment, Delivery owns Page Shipping, and Confirmation owns Page Thank you
-    And ungrouped Page Landing and Events page_view, route_view, add_shipping_info, add_payment_info, and purchase exist
+    And ungrouped Pages Landing and Campaign and Events page_view, route_view, add_shipping_info, add_payment_info, and purchase exist
     And Specification Flow Checkout journey is open
 
   # Data layer directional Flow specification graph 001
@@ -51,13 +51,13 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 005
   Scenario: Data layer directional Flow specification graph 005
-    Given Cart Page binds page_view for initial load and route_view for SPA route change
-    And Cart Page frame is on the canvas
-    When the operator expands Context events on the Cart frame
-    Then page_view and route_view are selectable by binding name and trigger purpose
-    When both bindings are inserted at chosen positions
-    Then two Page-context occurrences persist their stable Cart, Checkout, binding, and Event references
-    And neither occurrence stores a copied schema, editable Event role, or lane-name string
+    Given Cart Page frame has no Event occurrences
+    And page_view and route_view are predefined as context-setting Events
+    When the operator inserts page_view by pointer with trigger Initial load
+    And inserts route_view by keyboard with trigger SPA route change
+    Then both use the same Page-contained Event occurrence model as interaction Events
+    And each persists stable Cart, Checkout, Event, and occurrence references with its role and trigger
+    And no Page-context binding, copied schema, or lane-name string is stored
 
   # Data layer directional Flow specification graph 006
   Scenario: Data layer directional Flow specification graph 006
@@ -72,13 +72,15 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 007
   Scenario: Data layer directional Flow specification graph 007
-    Given Landing Page has context binding page_view and no Page Group membership
-    When the operator drags Landing from Pages into Ungrouped entry pages
-    Then one free Landing frame persists its Page and context-binding references without a Page Group reference
-    And the frame accepts interaction Events and drawn relationships
-    When Landing is released over the named-lane dropzone for Checkout
-    Then the drop is rejected without changing canonical state
-    And guidance links to Page Group membership editing
+    Given Landing and Campaign have neither Page Group membership nor Event occurrences
+    And no free Page frame is present
+    When the operator starts dragging Landing outside the selected Page Group lanes
+    Then narrow Place before lanes and Place after lanes affordances appear at the left and right canvas edges
+    And neither affordance occupies a lane-sized background
+    When Landing is released on Place before lanes and Campaign is released on Place after lanes
+    Then compact free Landing and Campaign frames sandwich the Page Group lanes
+    And each frame persists its before-lanes or after-lanes region, coordinates, Page, and frame references without a Page Group or context-binding reference
+    And empty edge backgrounds collapse while both frames remain available for Events and relationships
 
   # Data layer directional Flow specification graph 008
   Scenario: Data layer directional Flow specification graph 008
@@ -144,10 +146,10 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 014
   Scenario: Data layer directional Flow specification graph 014
-    Given a rename fixture has one Page-context node, one interaction node, and their directed edge
+    Given a rename fixture has one context-setting Event node, one interaction Event node, and their directed edge
     When Page Group Checkout is renamed Basket, Page Cart is renamed Basket page, and Event add_payment_info is renamed payment_details_added
     Then canvas, catalogs, popover, and outline show the new human names
-    And stored Page Group, Page, context-binding, Event, occurrence, and relationship references remain byte-for-byte stable
+    And stored Page Group, Page, Event, occurrence, role, trigger, and relationship values remain byte-for-byte stable
     When the Flow is reloaded
     Then lane order, Page-frame containment, free positions, selection, directed endpoints, and relationship meaning are unchanged
 
@@ -156,9 +158,34 @@ Feature: Data layer directional Flow specification graph
     Given a fresh Checkout journey has no lanes, frames, occurrences, or relationships
     When the operator uses only main-workspace controls to add ordered Checkout and Confirmation lanes
     And inserts Cart and Thank you from Pages
-    And inserts Cart page_view, add_payment_info, and Thank you purchase from Page bindings and Events
+    And inserts Cart page_view, add_payment_info, and Thank you purchase from the Events catalog
     And uses connection ports to create the two-edge route through add_payment_info
     And reloads the project with the Inspector closed
     Then the canvas and outline contain two Page Group-derived lanes, two Page frames, three occurrences, and two directed relationships
     And no fixed lane, Inspector-authored graph item, raw ID, copied Event schema, or executable transition was created
     And per-Event payload validation remains independent while journey expectations remain manual
+
+  # Data layer directional Flow specification graph 016
+  Scenario: Data layer directional Flow specification graph 016
+    Given the movement fixture places free Landing before the lanes, free Campaign after the lanes, and grouped Cart in Checkout
+    When the operator moves Landing through the after-lanes edge affordance
+    Then Landing keeps its frame, Page, Event-occurrence, and relationship identities
+    And only its presentation region and coordinates change from before-lanes to after-lanes
+    When keyboard controls place Landing before the lanes again
+    Then focus returns to Landing at its persisted left-side position
+    When pointer or keyboard controls try to move Cart outside the Page Group lanes
+    Then the move is rejected without a canonical revision change
+    And guidance links to Cart Page Group membership
+    When the Flow reloads
+    Then free frames render only in their saved edge regions and never enter Page Group lane order or documentation lane headings
+
+  # Data layer directional Flow specification graph 017
+  Scenario: Data layer directional Flow specification graph 017
+    Given a saved legacy Checkout journey has Cart page_view and route_view nodes that reference Page-owned binding records
+    When the operator opens the journey after the occurrence-model upgrade
+    Then migration review names each Page, Event, trigger, and affected occurrence without exposing raw IDs
+    When the operator confirms migration
+    Then every affected occurrence keeps its identity, Page-frame containment, position, and relationship endpoints
+    And each occurrence directly stores its Event reference, context-setting role, and trigger
+    And canonical Page and Flow records contain no contextEventBindings or contextBindingId field
+    And one Undo restores the complete pre-migration project revision

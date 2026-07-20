@@ -7,7 +7,6 @@ import {
   canonicalSchemaFromJsonSchema,
   canonicalTableRows,
   changeCanonicalPropertyType,
-  confirmCanonicalMigration,
   createCanonicalRepository,
   createCanonicalSchema,
   evaluateCanonicalPredicate,
@@ -15,7 +14,8 @@ import {
   renameCanonicalProperty,
   setCanonicalProperty,
 } from "../dist/data-layer-canonical-schema.js";
-import {createSpecificationProject, undoProjectTransaction} from "../dist/data-layer-specification-project.js";
+import {confirmCanonicalMigration,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
+import {bindCanonicalPropertySearch} from "../dist/data-layer-canonical-schema-ui.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`;
@@ -129,5 +129,22 @@ const adopted=canonicalSchemaFromJsonSchema({
 assert.equal(adopted.selectedPropertyId,adopted.rootIds[0],"an adopted workspace starts on its first root property");
 assert.equal(adopted.nodes[adopted.selectedPropertyId].name,"article_type");
 assert.ok(Object.values(adopted.nodes).every(({provenance})=>provenance.every(({source,sourceId,revision})=>source==="saved-schema"&&sourceId==="schema:opened-article"&&revision===4)));
+
+class SearchControl extends EventTarget{
+  value="";selectionStart=0;selectionEnd=0;isConnected=true;
+  type(text){this.value=this.value.slice(0,this.selectionStart)+text+this.value.slice(this.selectionEnd);this.selectionStart=this.selectionEnd=this.value.length;this.dispatchEvent(new Event("input"));}
+}
+const search=new SearchControl(),searchObservations=[];
+bindCanonicalPropertySearch(search,(query)=>searchObservations.push({query,control:search,start:search.selectionStart,end:search.selectionEnd}));
+for(const character of "article_n")search.type(character);
+assert.deepEqual(searchObservations.map(({query})=>query),["a","ar","art","arti","artic","articl","article","article_","article_n"]);
+assert.ok(searchObservations.every(({control,start,end},index)=>control===search&&control.isConnected&&start===index+1&&end===index+1));
+search.selectionStart=7;search.selectionEnd=12;search.type("_name");
+assert.equal(search.value,"article_name");
+search.value="article_type";search.selectionStart=search.selectionEnd=12;search.dispatchEvent(new Event("compositionstart"));search.dispatchEvent(new Event("compositionupdate"));search.dispatchEvent(new Event("input"));search.dispatchEvent(new Event("compositionend"));
+assert.equal(searchObservations.at(-1).query,"article_type");
+search.value="";search.selectionStart=search.selectionEnd=0;search.dispatchEvent(new Event("input"));
+assert.equal(searchObservations.at(-1).query,"");
+assert.equal(search.isConnected,true);
 
 console.log("data-layer canonical schema authoring tests passed");

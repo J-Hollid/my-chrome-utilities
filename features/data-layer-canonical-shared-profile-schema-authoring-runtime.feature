@@ -144,3 +144,34 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When actual controls test matching and non-matching observations
     Then rendered evidence identifies satisfied and failed predicate branches
     And unresolved properties or type-incompatible values block the production command at the exact predicate control
+
+  # Data layer canonical Shared Profile schema authoring runtime 015
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 015
+    Given the production canonical editor for <contributor> is rendered in <surface> at <viewport_width>px with article_name and article_type rows
+    When actual keyboard events focus Canonical property search
+    And enter article_n as separate input events
+    Then after each event document.activeElement is the same connected search input
+    And its observed value is the full prefix with selectionStart and selectionEnd after the newest character
+    And production rows narrow to article_name without focusing a result, filter, view control, or property editor
+    And canonical revision, project bytes, transaction history, and persisted storage remain unchanged
+
+    Examples:
+      | contributor       | surface        | viewport_width |
+      | Shared Profile    | Builder        | 1280           |
+      | Page Group        | Builder        | 1280           |
+      | Page              | Builder        | 360            |
+      | Event             | Builder        | 1280           |
+      | Flow Page instance | Flow workspace | 360            |
+      | Event occurrence  | Flow workspace | 1280           |
+      | Shared Profile    | Side panel     | 360            |
+
+  # Data layer canonical Shared Profile schema authoring runtime 016
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 016
+    Given the installed Page editor has focused Canonical property search containing article_type
+    When actual selection APIs select the _type suffix and keyboard events enter _name
+    Then the connected search input contains article_name with both selection offsets after the final character
+    When production compositionstart, compositionupdate, input, and compositionend events replace the query with article_type
+    Then the same input remains active and retains composing text through compositionend
+    And the rendered result is article_type without a canonical command or storage write
+    When actual keyboard controls clear the query
+    Then all production property rows return and document.activeElement remains Canonical property search

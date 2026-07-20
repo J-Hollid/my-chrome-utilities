@@ -1,4 +1,4 @@
-import {canonicalConstraints,canonicalRequirements,canonicalSchemaFromJsonSchema,canonicalSchemaWithConstraint,createCanonicalSchema,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalConstraints,canonicalRequirements,canonicalSchemaFromJsonSchema,canonicalSchemaWithConstraint,createCanonicalSchema,type CanonicalMigrationPlan,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 
 export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "schemaDrafts" | "assignments";
 export type IdFactory = (kind: string) => string;
@@ -58,6 +58,16 @@ export function transactProject(state: ProjectState, label: string, update: (pro
   const before = clone(state.project); const project = update(clone(state.project));
   if (project.id !== state.project.id) throw new Error("A project transaction cannot replace project identity.");
   return { project, draft:{ ...state.draft, status:"Saved", updatedAt:now() }, history:{ undo:[...state.history.undo, { label, project:before }], redo:[] } };
+}
+
+export function confirmCanonicalMigration(state:ProjectState,plan:CanonicalMigrationPlan):ProjectState {
+  if(plan.conflicts.length)throw new Error(`Resolve ${plan.conflicts.length} canonical migration conflict${plan.conflicts.length===1?"":"s"} before confirming.`);
+  return transactProject(state,"Migrate legacy schema to canonical document",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((profile)=>{
+    if(profile.id!==plan.profileId)return profile;
+    const next={...profile,requirements:[],canonicalSchema:clone(plan.document)} as ProjectEntity;
+    delete next.structuredSchema;delete next.structuredDraft;delete next.schemaConstraints;
+    return next as Profile;
+  })}}));
 }
 
 export function undoProjectTransaction(state: ProjectState): ProjectState {

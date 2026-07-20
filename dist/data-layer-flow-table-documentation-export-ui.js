@@ -1,5 +1,5 @@
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
-import { layeredContributorsForPath } from "./data-layer-layered-schema-ui.js";
+import { layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 import { compileFlowDocumentationSnapshot, configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, orderFlowDocumentationOccurrenceIds, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
 import { documentaryFlowGraph } from "./utilities/data-layer/flow-graph.js";
 const createButton = (text, action) => {

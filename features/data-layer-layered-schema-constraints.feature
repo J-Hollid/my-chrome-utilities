@@ -37,7 +37,7 @@ Feature: Data layer layered schema constraints
       | Checkout    | funnel_step | required                                |
       | Shipping    | funnel_step | required with allowed value 3a          |
     When Alternative shipping changes its local funnel_step allowed value to 3b
-    Then the Alternative shipping Page-context result is
+    Then the Alternative shipping Page effective result is
       | property    | effective definition                  |
       | funnel_name | required with allowed value checkout   |
       | funnel_step | required with allowed value 3b         |
@@ -117,6 +117,7 @@ Feature: Data layer layered schema constraints
     Then the complete observation has Alternative shipping Purchase as its sole matching target
     And each rejected observation identifies its failed human-name predicate
     And automatic evaluation uses applicability evidence rather than inferred Flow sequence
+    And Page context is resolved by assignment predicates without a Flow context-binding prerequisite
     When an equal-priority candidate also matches the complete observation
     Then automatic selection is blocked as ambiguous and names both candidates
     When the operator gives one candidate explicit higher priority and retests

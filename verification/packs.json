@@ -721,7 +721,8 @@
       "src/data-layer-flow-table-documentation-export-ui.ts"
     ],
     "dependencies": [
-      "flow_graph"
+      "flow_graph",
+      "layered_schema"
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs"
@@ -746,6 +747,7 @@
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-layered-schema.ts",
+      "src/data-layer-layered-schema-project.ts",
       "src/data-layer-layered-schema-ui.ts"
     ],
     "dependencies": [],

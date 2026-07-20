@@ -16,15 +16,15 @@ Feature: Data layer Flow table documentation export runtime
   # Data layer Flow table documentation export runtime 002
   Scenario: Data layer Flow table documentation export runtime 002
     When actual selectors include documentation columns
-      | Page         | Event                | context kind |
-      | Cart         | page_view            | Page context |
-      | Shipping     | add_shipping_info    | interaction  |
-      | Payment      | add_payment_info     | interaction  |
-      | Confirmation | purchase             | interaction  |
+      | Page         | Event                | Event role      |
+      | Cart         | page_view            | context-setting |
+      | Shipping     | add_shipping_info    | interaction     |
+      | Payment      | add_payment_info     | interaction     |
+      | Confirmation | purchase             | interaction     |
     Then each rendered column heading contains Step label, Page name, and Event name
-    And production configuration stores Page-frame, binding, and Event-occurrence IDs
-    And the compiler receives the selected context-setting target for Page-context columns
-    And it receives combined effective Page and Event branches for interaction columns
+    And production configuration stores Page-frame and Event-occurrence IDs
+    And the compiler receives combined effective Page and Event branches for every column
+    And production context-setting metadata creates no binding lookup or alternate compiler route
     And the installed UI exposes no raw ID as a heading or selector label
 
   # Data layer Flow table documentation export runtime 003

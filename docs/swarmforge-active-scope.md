@@ -36,19 +36,25 @@ documentary graph command. Earlier form-first clauses are superseded.
 
 Only ordered Page Group references define named lanes; the empty Flow has no lanes
 and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Pages
-remain in their Page Group lane, while generic entry Pages may use an explicit
-ungrouped region without invented membership. Page-owned bindings define context-
-setting occurrences, including multiple SPA bindings; reusable Events define
-interaction occurrences. Occurrences cannot cross Page or Page Group boundaries.
+remain in their Page Group lane, while free Pages may use transient before-lanes or
+after-lanes edge targets without invented membership. Empty edge targets do not
+render as permanent lane-sized groups; compact free frames sandwich the Page Group
+lanes only where content exists. The Page frame itself is the Page context and may
+exist without any Event. Context-setting and interaction Events use one direct
+Page-contained occurrence model; role and trigger are explanatory metadata, not a
+validation selector. Occurrences cannot cross Page or Page Group boundaries.
 Parallel branches and merges are included in the first canvas release. Graph records
-persist stable Page Group, Page, binding, Event, occurrence, relationship, and
-endpoint references.
+persist stable Page Group, Page, Event, occurrence, relationship, and endpoint
+references without a Page-context binding model.
 
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
 per-Event payload validation remains independent and journey expectations remain
-manual. Any retained executable-step authoring is an explicitly separate Advanced
-function and does not duplicate or replace documentary graph authoring.
+manual. Existing applicability and assignment rules resolve production Page context
+from observation evidence and the observed Event; Flow role or trigger metadata does
+not replace that resolver. Any retained executable-step authoring is an explicitly
+separate Advanced function and does not duplicate or replace documentary graph
+authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the
@@ -67,6 +73,10 @@ examples, nested All/Any/Not predicate building, revision comparison, and
 synchronized Tree and Table views. Existing
 profile data migrates atomically without loss. Command-scoped patches, base
 revisions, and subscriptions prevent stale whole-profile overwrites.
+Canonical property search is transient UI state shared across contributor editors;
+typing, caret edits, input-method composition, and clearing retain focus in the same
+connected control and perform no canonical command or persistence write at desktop
+or 360px widths.
 
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence

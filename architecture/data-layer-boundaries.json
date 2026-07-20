@@ -179,8 +179,7 @@
     "module": "schemas",
     "layer": "application",
     "contracts": [
-      "src/data-layer-layered-schema.ts",
-      "src/data-layer-specification-project.ts"
+      "src/data-layer-layered-schema.ts"
     ]
   },
   "src/data-layer-canonical-schema-ui.ts": {
@@ -188,6 +187,15 @@
     "layer": "browser",
     "contracts": [
       "src/data-layer-canonical-schema.ts"
+    ]
+  },
+  "src/data-layer-layered-schema-project.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-specification-project.ts"
     ]
   },
   "src/data-layer-layered-schema-ui.ts": {

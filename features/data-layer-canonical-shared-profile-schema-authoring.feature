@@ -144,3 +144,34 @@ Feature: Data layer canonical Shared Profile schema authoring
     When the operator tests matching and non-matching observations in the builder
     Then each result identifies the satisfied and failed predicate branches
     And unresolved properties or type-incompatible values block saving at the exact predicate control
+
+  # Data layer canonical Shared Profile schema authoring 015
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 015
+    Given the canonical schema for <contributor> is open in <surface> at <viewport_width>px with article_name and article_type visible
+    When the operator focuses Canonical property search
+    And types article_n one character at a time
+    Then after every character focus remains in Canonical property search
+    And its value is the complete typed prefix with the caret after the newest character
+    And the property navigator updates to the matching article_name result without moving focus to a result, filter, view control, or property editor
+    And search causes no canonical revision, project transaction, or persisted change
+
+    Examples:
+      | contributor       | surface        | viewport_width |
+      | Shared Profile    | Builder        | 1280           |
+      | Page Group        | Builder        | 1280           |
+      | Page              | Builder        | 360            |
+      | Event             | Builder        | 1280           |
+      | Flow Page instance | Flow workspace | 360            |
+      | Event occurrence  | Flow workspace | 1280           |
+      | Shared Profile    | Side panel     | 360            |
+
+  # Data layer canonical Shared Profile schema authoring 016
+  Scenario: Data layer canonical Shared Profile schema authoring 016
+    Given Canonical property search is focused in the Page editor with query article_type
+    When the operator selects the _type suffix and types _name
+    Then the search value is article_name and the caret remains after the final typed character
+    When an input-method composition replaces the query with article_type
+    Then focus and the composing text remain in the search control until composition ends
+    And the matching article_type result appears without changing canonical state
+    When the operator clears the query from the keyboard
+    Then the complete property navigator returns while focus remains in Canonical property search

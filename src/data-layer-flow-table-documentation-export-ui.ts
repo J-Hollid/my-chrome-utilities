@@ -1,5 +1,5 @@
 import {compileLayeredSchema} from "./data-layer-layered-schema.js";
-import {layeredContributorsForPath} from "./data-layer-layered-schema-ui.js";
+import {layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
 import {
   captureMatrixTable,
   compileFlowDocumentationSnapshot,
