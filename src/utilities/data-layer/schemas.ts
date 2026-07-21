@@ -16,7 +16,7 @@ export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCa
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
 export { composedCanonicalSchema, saveComposedCanonicalDocument } from "./layers/browser/schemas.js";
 export { applyCanonicalCommand, canonicalPropertyPath, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict, type CanonicalSchemaDocument } from "../../data-layer-canonical-schema.js";
-export { canonicalCommandsFromCompactProjection, compactSchemaProjection, mountUnifiedSidePanelCanonicalEditor, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
+export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, mountUnifiedSidePanelCanonicalEditor, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, createFixtureFromCapturedValidation, evaluateSpecificationObservation, transactProject, type IdFactory, type ProjectEntity, type ProjectState, type SpecificationProject } from "./layers/browser/schemas.js";

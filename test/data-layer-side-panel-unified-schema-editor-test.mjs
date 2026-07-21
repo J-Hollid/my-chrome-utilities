@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   canonicalCommandsFromCompactProjection,
+  compactConditionalPresence,
   compactSchemaProjection,
   createUnifiedCanonicalEditorController,
   savedSchemaCanonicalDocument,
@@ -115,5 +116,9 @@ delete removedProjection.document.properties.article.properties.category;
 const removedCommands=canonicalCommandsFromCompactProjection(compactSource,removedProjection,id);
 assert.deepEqual(removedCommands.map(({kind})=>kind),["delete"],"compact removal emits one canonical subtree command");
 assert.equal(removedCommands[0].propertyId,category.id);
+
+assert.deepEqual(compactConditionalPresence("required-when",article.id,"Equals","News"),{
+  mode:"required-when",condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"},
+},"compact conditional controls author the chosen typed predicate instead of an Exists fallback");
 
 console.log("data-layer unified side-panel schema editor tests passed");

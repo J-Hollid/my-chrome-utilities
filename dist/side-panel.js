@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandsFromCompactProjection, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandsFromCompactProjection, canonicalPropertyPath, compactConditionalPresence, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
@@ -2425,18 +2425,35 @@ function renderSchemaDraft() {
         copyProperty.addEventListener("click", () => openSchemaPropertyCopyReview(persistedPath, copyProperty));
         const compactPresence = compactCanonicalEditor ? document.createElement("fieldset") : undefined;
         if (compactPresence && compactCanonicalEditor) {
-            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select");
+            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select"), predicateControls = document.createElement("fieldset"), predicateLegend = document.createElement("legend"), predicateProperty = document.createElement("select"), predicateOperator = document.createElement("select"), predicateValue = document.createElement("input"), savePredicate = document.createElement("button"), currentPredicate = canonicalNode?.presence.condition?.kind === "predicate" ? canonicalNode.presence.condition : undefined, fallbackProperty = Object.values(canonical.nodes).find(({ id, name }) => id !== canonicalNode?.id && name === "article_type") ?? Object.values(canonical.nodes).find(({ id }) => id !== canonicalNode?.id);
             compactPresence.className = "compact-canonical-presence";
             compactPresence.dataset.compactPropertyId = canonicalNode?.id ?? "";
             legend.textContent = "Conditional presence";
             mode.setAttribute("aria-label", `Conditional presence for ${persistedPath}`);
             mode.append(...["optional", "required", "required-when", "forbidden", "forbidden-when"].map((value) => new Option(value.replaceAll("-", " "), value)));
             mode.value = canonicalNode?.presence.mode ?? "optional";
-            mode.addEventListener("change", () => { if (!canonicalNode || !compactCanonicalEditor)
-                return; const conditional = mode.value.endsWith("-when"), fallbackProperty = Object.values(canonical.nodes).find(({ id }) => id !== canonicalNode.id), presence = { mode: mode.value, ...(conditional ? { condition: canonicalNode.presence.condition ?? { kind: "predicate", propertyId: fallbackProperty?.id ?? canonicalNode.id, operator: "Exists" } } : {}) }; document.documentElement.dataset.canonicalCommandControl = "set"; document.documentElement.dataset.canonicalCommandPropertyId = canonicalNode.id; const result = compactCanonicalEditor.dispatch({ kind: "set", baseRevision: canonical.revision, propertyId: canonicalNode.id, patch: { presence } }); if (result.status === "conflict")
+            const dispatchPresence = (presence) => { if (!canonicalNode || !compactCanonicalEditor)
+                return; document.documentElement.dataset.canonicalCommandControl = "set"; document.documentElement.dataset.canonicalCommandPropertyId = canonicalNode.id; const result = compactCanonicalEditor.dispatch({ kind: "set", baseRevision: canonical.revision, propertyId: canonicalNode.id, patch: { presence } }); if (result.status === "conflict")
                 throw new Error(result.message); if (result.status === "confirmation-required")
-                throw new Error(result.impact); renderCompactCanonicalEditor(); });
-            compactPresence.append(legend, mode);
+                throw new Error(result.impact); renderCompactCanonicalEditor(); };
+            predicateLegend.textContent = "Typed conditional predicate";
+            predicateProperty.setAttribute("aria-label", `Conditional predicate property for ${persistedPath}`);
+            predicateProperty.append(...Object.values(canonical.nodes).filter(({ id }) => id !== canonicalNode?.id).map((node) => new Option(`${node.name} · ${canonicalPropertyPath(canonical, node.id)}`, node.id)));
+            predicateProperty.value = currentPredicate?.propertyId ?? fallbackProperty?.id ?? "";
+            predicateOperator.setAttribute("aria-label", `Conditional predicate operator for ${persistedPath}`);
+            predicateOperator.append(...["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains"].map((operator) => new Option(operator, operator)));
+            predicateOperator.value = currentPredicate?.operator ?? "Equals";
+            predicateValue.setAttribute("aria-label", `Conditional predicate value for ${persistedPath}`);
+            predicateValue.value = currentPredicate?.value === undefined ? "" : String(currentPredicate.value);
+            savePredicate.type = "button";
+            savePredicate.textContent = "Save conditional presence";
+            savePredicate.addEventListener("click", () => { if (!canonicalNode || !predicateProperty.value || !mode.value.endsWith("-when"))
+                return; dispatchPresence(compactConditionalPresence(mode.value, predicateProperty.value, predicateOperator.value, predicateValue.value)); });
+            predicateControls.append(predicateLegend, predicateProperty, predicateOperator, predicateValue, savePredicate);
+            predicateControls.hidden = !mode.value.endsWith("-when");
+            mode.addEventListener("change", () => { predicateControls.hidden = !mode.value.endsWith("-when"); if (!mode.value.endsWith("-when") && canonicalNode)
+                dispatchPresence({ mode: mode.value }); });
+            compactPresence.append(legend, mode, predicateControls);
         }
         const compactLifecycle = compactNode && compactCanonicalEditor ? document.createElement("fieldset") : undefined;
         if (compactLifecycle && compactNode && compactCanonicalEditor && compactDocument) {

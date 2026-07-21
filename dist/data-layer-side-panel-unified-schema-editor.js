@@ -42,6 +42,9 @@ export function compactSchemaProjection(document, identity) {
     const { canonicalSchema: _canonicalSchema, ...compact } = projected;
     return compact;
 }
+export function compactConditionalPresence(mode, propertyId, operator, value) {
+    return { mode, condition: { kind: "predicate", propertyId, operator, ...(!operator.includes("exist") && !operator.includes("Exist") ? { value } : {}) } };
+}
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const presenceFamily = (mode) => mode.startsWith("required") ? "required" : mode.startsWith("forbidden") ? "forbidden" : "optional";
 const valuesWithStableIds = (current, next, id) => next.map((entry, index) => {

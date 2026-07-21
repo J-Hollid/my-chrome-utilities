@@ -1,4 +1,4 @@
-import {canonicalPropertyPath,canonicalSchemaFromJsonSchema,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalPropertyPath,canonicalSchemaFromJsonSchema,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPredicateOperator,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {mountCanonicalSchemaEditor,type CanonicalSchemaEditorOptions} from "./data-layer-canonical-schema-ui.js";
 import type {AttachedSchemaRule,JsonSchema,SchemaDefinition} from "./data-layer-schema-verification.js";
 
@@ -51,6 +51,10 @@ export function compactSchemaProjection(document:CanonicalSchemaDocument,identit
   const projected=savedSchemaFromCanonical(base,document);
   const {canonicalSchema:_canonicalSchema,...compact}=projected;
   return compact;
+}
+
+export function compactConditionalPresence(mode:Extract<CanonicalPresenceMode,"required-when"|"forbidden-when">,propertyId:string,operator:CanonicalPredicateOperator,value?:unknown):CanonicalPropertyNode["presence"]{
+  return{mode,condition:{kind:"predicate",propertyId,operator,...(!operator.includes("exist")&&!operator.includes("Exist")?{value}:{})}};
 }
 
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
