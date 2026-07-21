@@ -373,7 +373,7 @@ function restore() { const stored = projectStorage.getItem(STORAGE_KEY); let sin
     selectedId = navigation.id;
 } }
 function persistNavigation() { if (!state || library.activeProjectId !== state.project.id)
-    return; const navigation = { kind: selectedKind, ...(selectedId ? { id: selectedId } : {}) }; library = recordProjectNavigation(library, state.project.id, navigation); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); localStorage.setItem(NAVIGATION_KEY, JSON.stringify({ projectId: state.project.id, ...navigation })); }
+    return; const navigation = { kind: selectedKind, ...(selectedId ? { id: selectedId } : {}) }; library = recordProjectNavigation(library, state.project.id, navigation); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); }
 function entitySearchText(value) { return JSON.stringify(value).toLowerCase(); }
 function entitiesForKind(kind) { if (!state)
     return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }

@@ -179,7 +179,7 @@ export class DurableProjectRepository {
                 throw new DOMException(`Published revision ${publishedRevision} for ${projectId} already exists and is immutable.`, "ConstraintError");
             const draftSequence = input.draftSequence ?? 0;
             await replaceProjectParts(transaction, projectId, parts);
-            const value = { projectId, name: state.project.name, site: state.project.site, owner: String(state.project.owner ?? ""), draftToken, draftSequence, publishedRevision, lastSavedAt, fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, draftSequence])), active: Boolean(input.active), ...(state.draft ? { draft: clone(state.draft) } : {}) };
+            const value = { projectId, name: state.project.name, site: state.project.site, owner: String(state.project.owner ?? ""), draftToken, draftSequence, publishedRevision, lastSavedAt, fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, draftSequence])), active: Boolean(input.active), ...(state.draft ? { draft: clone(state.draft) } : {}), ...(input.navigation ? { navigation: clone(input.navigation) } : {}) };
             await transaction.put("projectMetadata", projectId, value);
             if (input.active)
                 await transaction.put("settings", "activeProjectId", projectId);
@@ -202,6 +202,16 @@ export class DurableProjectRepository {
     async putProject(state, input = {}) { await this.putProjectMetadataOnly(state, input); return this.loadProject(state.project.id); }
     async listProjectMetadata() { return this.backend.transaction(["projectMetadata", "settings"], "readonly", async (transaction) => { const active = await transaction.get("settings", "activeProjectId"), entries = await transaction.getAll("projectMetadata"); return entries.map(({ value }) => ({ ...value, active: value.projectId === active })).sort((left, right) => left.name.localeCompare(right.name)); }); }
     async activeProjectId() { return this.backend.transaction(["settings"], "readonly", transaction => transaction.get("settings", "activeProjectId")); }
+    async setProjectNavigation(projectId, navigation) { const changeToken = this.options.token(), metadata = await this.backend.transaction(["projectMetadata"], "readwrite", async (transaction) => { const current = await transaction.get("projectMetadata", projectId); if (!current)
+        throw new Error(`Unknown durable project ${projectId}.`); const next = { ...current }; if (navigation)
+        next.navigation = clone(navigation);
+    else
+        delete next.navigation; await transaction.put("projectMetadata", projectId, next); return next; }); const notification = { type: "durable-project-metadata-change", projectId, draftToken: metadata.draftToken, changeToken }; for (const listener of this.metadataListeners)
+        listener(clone(notification)); if (typeof BroadcastChannel !== "undefined") {
+        const channel = new BroadcastChannel("my-chrome-utilities.durable-project-metadata");
+        channel.postMessage(notification);
+        channel.close();
+    } }
     async setActiveProject(projectId) { const token = this.options.token(), notification = { type: "durable-active-context-change", projectId, token }; await this.backend.transaction(["projectMetadata", "settings"], "readwrite", async (transaction) => { if (!await transaction.get("projectMetadata", projectId))
         throw new Error(`Unknown durable project ${projectId}.`); await transaction.put("settings", "activeProjectId", projectId); await transaction.put("settings", "activeProjectChange", { projectId, token, at: this.options.now() }); }); for (const listener of this.activeListeners)
         listener(clone(notification)); if (typeof BroadcastChannel !== "undefined") {
@@ -225,7 +235,7 @@ export class DurableProjectRepository {
             for (const { value } of [...entityRecords, ...fixtureRecords])
                 (collections[value.kind] ??= []).push(clone(value.entity));
             const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
-            return { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt };
+            return { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
         });
     }
     async loadProjectRoute(projectId, route) { return this.loadVisibleProjectRoute(projectId, route); }
@@ -258,7 +268,7 @@ export class DurableProjectRepository {
                     target.push(clone(value.entity));
             }
             const releases = route.includeReleases ? await transaction.getPrefix("releases", projectPrefix(projectId)) : [], project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs && route.includeFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) };
-            return { state: { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } }, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt };
+            return { state: { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } }, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
         });
     }
     async saveDraft(command) {
@@ -383,7 +393,7 @@ export class DurableProjectRepository {
         throw new DOMException("Legacy migration lease is not owned by this context.", "AbortError"); for (const entry of records.projects) {
         const draftToken = this.options.token(), parts = projectParts(entry.state), publishedRevision = Math.max(0, ...entry.state.project.releases.map(({ revision }) => revision));
         await replaceProjectParts(transaction, entry.state.project.id, parts);
-        await transaction.put("projectMetadata", entry.state.project.id, { projectId: entry.state.project.id, name: entry.state.project.name, site: entry.state.project.site, owner: String(entry.state.project.owner ?? ""), draftToken, draftSequence: entry.revision, publishedRevision, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, entry.revision])), active: entry.active, ...(entry.state.draft ? { draft: clone(entry.state.draft) } : {}) });
+        await transaction.put("projectMetadata", entry.state.project.id, { projectId: entry.state.project.id, name: entry.state.project.name, site: entry.state.project.site, owner: String(entry.state.project.owner ?? ""), draftToken, draftSequence: entry.revision, publishedRevision, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, entry.revision])), active: entry.active, ...(entry.state.draft ? { draft: clone(entry.state.draft) } : {}), ...(entry.navigation ? { navigation: clone(entry.navigation) } : {}) });
         for (const release of entry.state.project.releases) {
             const publishedProject = { ...clone(entry.state.project), collections: clone(release.snapshot), releases: entry.state.project.releases.filter(candidate => candidate.revision <= release.revision), currentRelease: release.id }, revision = { projectId: entry.state.project.id, revision: release.revision, publicationId: release.id, publishedAt: release.createdAt, sourceDraftToken: draftToken, state: { project: publishedProject, history: { undo: [], redo: [] } } };
             await transaction.put("projectRevisions", `${entry.state.project.id}:${release.revision}`, revision);
@@ -398,6 +408,8 @@ export class DurableProjectRepository {
         const loaded = await this.loadProject(entry.state.project.id);
         if (!same(loaded.state.project, entry.state.project))
             throw new DOMException(`Migration verification failed for ${entry.state.project.id}: ${differingFields(loaded.state.project, entry.state.project).join(", ")}.`, "OperationError");
+        if (!same(loaded.navigation, entry.navigation))
+            throw new DOMException(`Migration verification failed for ${entry.state.project.id} navigation.`, "OperationError");
         for (const release of entry.state.project.releases) {
             const revision = await this.loadPublishedRevision(entry.state.project.id, release.revision);
             if (!same(revision.state.project.collections, release.snapshot))
@@ -461,21 +473,23 @@ export async function migrateLegacyProjectStorage(repository, storage, options =
     const raw = Object.values(LEGACY_PROJECT_KEYS).flatMap(key => { const value = storage.getItem(key); return value === null ? [] : [{ key, value }]; });
     if (!raw.length)
         return { status: "none", removedKeys: [] };
-    const libraryRaw = storage.getItem(LEGACY_PROJECT_KEYS.library), activeRaw = storage.getItem(LEGACY_PROJECT_KEYS.active), schemasRaw = storage.getItem(LEGACY_PROJECT_KEYS.schemas), invalid = new Map(), parse = (key, value) => { if (value === null)
+    const libraryRaw = storage.getItem(LEGACY_PROJECT_KEYS.library), activeRaw = storage.getItem(LEGACY_PROJECT_KEYS.active), navigationRaw = storage.getItem(LEGACY_PROJECT_KEYS.navigation), schemasRaw = storage.getItem(LEGACY_PROJECT_KEYS.schemas), invalid = new Map(), parse = (key, value) => { if (value === null)
         return undefined; try {
         return JSON.parse(value);
     }
     catch (error) {
         invalid.set(key, error instanceof Error ? error.message : String(error));
         return undefined;
-    } }, libraryValue = parse(LEGACY_PROJECT_KEYS.library, libraryRaw), activeValue = parse(LEGACY_PROJECT_KEYS.active, activeRaw), schemasValue = parse(LEGACY_PROJECT_KEYS.schemas, schemasRaw);
+    } }, libraryValue = parse(LEGACY_PROJECT_KEYS.library, libraryRaw), activeValue = parse(LEGACY_PROJECT_KEYS.active, activeRaw), navigationValue = parse(LEGACY_PROJECT_KEYS.navigation, navigationRaw), schemasValue = parse(LEGACY_PROJECT_KEYS.schemas, schemasRaw);
     if (libraryValue !== undefined && (!record(libraryValue) || !record(libraryValue.projects)))
         invalid.set(LEGACY_PROJECT_KEYS.library, "Project library must contain a projects object.");
     if (activeValue !== undefined && (!record(activeValue) || !record(activeValue.project)))
         invalid.set(LEGACY_PROJECT_KEYS.active, "Active projection must contain a project object.");
+    if (navigationValue !== undefined && (!record(navigationValue) || typeof navigationValue.kind !== "string" || (navigationValue.id !== undefined && typeof navigationValue.id !== "string") || (navigationValue.projectId !== undefined && typeof navigationValue.projectId !== "string")))
+        invalid.set(LEGACY_PROJECT_KEYS.navigation, "Project navigation must contain a route kind and optional project/entity identities.");
     if (schemasValue !== undefined && !Array.isArray(schemasValue))
         invalid.set(LEGACY_PROJECT_KEYS.schemas, "Saved schema source must be an array.");
-    const library = libraryValue, active = activeValue, activeState = active?.project ? { project: active.project, ...(active.draft ? { draft: active.draft } : {}), history: active.history ?? { undo: [], redo: [] } } : undefined;
+    const library = libraryValue, active = activeValue, navigation = navigationValue, activeState = active?.project ? { project: active.project, ...(active.draft ? { draft: active.draft } : {}), history: active.history ?? { undo: [], redo: [] } } : undefined;
     for (const [projectId, entry] of Object.entries(library?.projects ?? {})) {
         for (const error of legacyProjectErrors(entry?.state, `Library project ${projectId}`))
             invalid.set(LEGACY_PROJECT_KEYS.library, error);
@@ -495,9 +509,9 @@ export async function migrateLegacyProjectStorage(repository, storage, options =
         if (fromLibrary && fromActive && fromLibrary.revision === fromActive.revision && !same(fromLibrary.state.project, fromActive.state.project) && !options.choice) {
             return { status: "review-required", projectId, sources: [{ source: "library", revision: fromLibrary.revision, checksum: await checksum(JSON.stringify(fromLibrary.state.project)) }, { source: "active", revision: fromActive.revision, checksum: await checksum(JSON.stringify(fromActive.state.project)) }], conflictingFields: differingFields(fromLibrary.state.project, fromActive.state.project) };
         }
-        const winner = !fromLibrary ? fromActive : !fromActive ? fromLibrary : fromActive.revision > fromLibrary.revision ? fromActive : fromLibrary, state = clone(winner.state);
+        const winner = !fromLibrary ? fromActive : !fromActive ? fromLibrary : fromActive.revision > fromLibrary.revision ? fromActive : fromLibrary, state = clone(winner.state), standaloneNavigation = navigation && (navigation.projectId === projectId || (!navigation.projectId && (effectiveLibrary?.activeProjectId === projectId || effectiveActiveState?.project.id === projectId))) ? { kind: navigation.kind, ...(navigation.id ? { id: navigation.id } : {}) } : undefined, projectNavigation = standaloneNavigation ?? fromLibrary?.navigation;
         state.history = { undo: [], redo: [] };
-        selected.push({ state, revision: winner.revision, active: options.choice === "active" ? effectiveActiveState?.project.id === projectId : effectiveLibrary?.activeProjectId === projectId || (options.choice === undefined && effectiveActiveState?.project.id === projectId) });
+        selected.push({ state, revision: winner.revision, active: options.choice === "active" ? effectiveActiveState?.project.id === projectId : effectiveLibrary?.activeProjectId === projectId || (options.choice === undefined && effectiveActiveState?.project.id === projectId), ...(projectNavigation ? { navigation: clone(projectNavigation) } : {}) });
     }
     const owner = crypto.randomUUID(), claim = await repository.claimLegacyMigration(owner);
     if (claim === "busy") {

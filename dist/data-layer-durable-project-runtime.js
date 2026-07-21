@@ -7,9 +7,9 @@ function placeholder(metadata) {
     const state = createSpecificationProject({ name: metadata.name, site: metadata.site, id: (kind) => kind === "project" ? metadata.projectId : `placeholder:${kind}:${metadata.projectId}` });
     state.project.owner = metadata.owner;
     state.project.placeholder = true;
-    return { state, revision: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, createdAt: metadata.lastSavedAt, lastModifiedAt: metadata.lastSavedAt };
+    return { state, revision: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, createdAt: metadata.lastSavedAt, lastModifiedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: structuredClone(metadata.navigation) } : {}) };
 }
-function record(loaded) { return { state: structuredClone(loaded.state), revision: loaded.draftSequence, publishedRevision: loaded.publishedRevision, createdAt: loaded.lastSavedAt, lastModifiedAt: loaded.lastSavedAt }; }
+function record(loaded) { return { state: structuredClone(loaded.state), revision: loaded.draftSequence, publishedRevision: loaded.publishedRevision, createdAt: loaded.lastSavedAt, lastModifiedAt: loaded.lastSavedAt, ...(loaded.navigation ? { navigation: structuredClone(loaded.navigation) } : {}) }; }
 export async function createDurableProjectRuntime(repository, legacy, startup = {}) {
     const migration = await migrateLegacyProjectStorage(repository, legacy);
     const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
@@ -91,17 +91,19 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
                 const priorEntry = prior.projects[projectId];
                 if (!priorEntry) {
                     if (next.activeProjectId === projectId) {
-                        await repository.putProject(entry.state, { draftSequence: entry.revision, active: true });
+                        await repository.putProject(entry.state, { draftSequence: entry.revision, active: true, ...(entry.navigation ? { navigation: entry.navigation } : {}) });
                         installLoaded(projectId, await repository.loadProject(projectId));
                     }
                     else {
-                        await repository.putProjectMetadataOnly(entry.state, { draftSequence: entry.revision, active: false });
+                        await repository.putProjectMetadataOnly(entry.state, { draftSequence: entry.revision, active: false, ...(entry.navigation ? { navigation: entry.navigation } : {}) });
                         await refreshMetadata(projectId);
                     }
                     continue;
                 }
                 if (loaded.has(projectId) && !same(priorEntry.state, entry.state))
                     await persistState(projectId, entry.state);
+                if (!same(priorEntry.navigation, entry.navigation))
+                    await repository.setProjectNavigation(projectId, entry.navigation);
             } if (next.activeProjectId && next.activeProjectId !== prior.activeProjectId) {
                 const notification = await repository.setActiveProject(next.activeProjectId), install = activeInstalls.get(notification.token);
                 if (install)
