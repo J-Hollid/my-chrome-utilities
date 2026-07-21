@@ -138,6 +138,14 @@ function compiledConditionMatches(condition, payload, pathsByDefinition) { if (!
         catch {
             return false;
         }
+    if (operator === "Greater than")
+        return Number(actual) > Number(expected);
+    if (operator === "At least")
+        return Number(actual) >= Number(expected);
+    if (operator === "Less than")
+        return Number(actual) < Number(expected);
+    if (operator === "At most")
+        return Number(actual) <= Number(expected);
     return false;
 } const children = condition.children ?? []; if (kind === "all")
     return children.every((child) => compiledConditionMatches(child, payload, pathsByDefinition)); if (kind === "any")

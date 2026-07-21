@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, composedCanonicalSchema, createCanonicalSchema, mountSidePanelLayeredProfileEditor, mountUnifiedSidePanelCanonicalEditor, redoProjectTransaction, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, composedCanonicalSchema, createCanonicalSchema, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, mountUnifiedSidePanelCanonicalEditor, redoProjectTransaction, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
@@ -2738,18 +2738,21 @@ function openContributorInUnifiedEditor(key) {
     const state = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selection = state && resolveSidePanelSchemaContributor(state, key);
     if (!state || !selection)
         throw new Error("The selected schema contributor is unavailable.");
-    if (!selection.entity.canonicalSchema && selection.collectionKind !== "pages" && selection.collectionKind !== "pageGroups") {
-        unifiedSchemaEditor?.close();
-        sidePanelLayeredProfileEditor?.select(key);
-        return;
-    }
     sidePanelLayeredProfileEditor?.close();
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = true;
-    let composedUi = {};
+    let composedUi = {}, compatibilityCanonical;
     const isComposed = (selected) => selected.collectionKind === "pages" || selected.collectionKind === "pageGroups";
-    const documentFor = (live, selected) => { if (!isComposed(selected))
-        return selected.entity.canonicalSchema ?? createCanonicalSchema({ id: `canonical:${selected.entity.id}`, contributorId: selected.entity.id, contributorName: selected.entity.name }); const projected = composedCanonicalSchema(live, selected.entity, selected.collectionKind === "pages" ? "Page" : "Page Group"), selectedPropertyId = composedUi.selectedPropertyId && projected.nodes[composedUi.selectedPropertyId] ? composedUi.selectedPropertyId : projected.selectedPropertyId; return { ...projected, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(composedUi.view ? { view: composedUi.view } : {}) }; };
+    const documentFor = (live, selected) => { if (!isComposed(selected)) {
+        const stored = selected.entity.canonicalSchema;
+        if (stored)
+            return stored;
+        if (!compatibilityCanonical) {
+            const legacy = Boolean(selected.entity.requirements || selected.entity.structuredSchema || selected.entity.structuredDraft || selected.entity.schemaConstraints);
+            compatibilityCanonical = legacy ? migrateLegacyProfile(selected.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` }).document : createCanonicalSchema({ id: `canonical:${selected.entity.id}`, contributorId: selected.entity.id, contributorName: selected.entity.name });
+        }
+        return compatibilityCanonical;
+    } const projected = composedCanonicalSchema(live, selected.entity, selected.collectionKind === "pages" ? "Page" : "Page Group"), selectedPropertyId = composedUi.selectedPropertyId && projected.nodes[composedUi.selectedPropertyId] ? composedUi.selectedPropertyId : projected.selectedPropertyId; return { ...projected, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(composedUi.view ? { view: composedUi.view } : {}) }; };
     unifiedSchemaEditor?.select({ key, label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`, load: () => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); }, dispatch: (command) => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), result = applyCanonicalCommand(documentFor(live, selected), command); if (result.status === "applied" || result.status === "rebased") {
             if (isComposed(selected)) {
                 composedUi = { ...(result.document.selectedPropertyId ? { selectedPropertyId: result.document.selectedPropertyId } : {}), view: result.document.view };
@@ -2763,7 +2766,8 @@ function openContributorInUnifiedEditor(key) {
         } return result; }, onUndo: () => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)); commitUnifiedContributorState(undoProjectTransaction(live), `Undo canonical schema edit in ${selection.entity.name}`); unifiedSchemaEditor?.render(); }, onRedo: () => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)); commitUnifiedContributorState(redoProjectTransaction(live), `Redo canonical schema edit in ${selection.entity.name}`); unifiedSchemaEditor?.render(); } });
 }
 function writeUnifiedContributorCanonical(state, selection, canonical) {
-    const replace = (candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical, ...(selection.collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate;
+    const replace = (candidate) => { if (candidate.id !== selection.entity.id)
+        return candidate; const next = { ...candidate, canonicalSchema: canonical, compiledTargetsStale: true, ...(selection.collectionKind === "profiles" ? { requirements: [] } : {}) }; delete next.structuredSchema; delete next.structuredDraft; delete next.schemaConstraints; return next; };
     return transactProject(state, `Save canonical schema for ${selection.entity.name}`, (project) => { if (selection.collectionKind) {
         const collection = project.collections[selection.collectionKind];
         return { ...project, collections: { ...project.collections, [selection.collectionKind]: collection.map(replace) } };

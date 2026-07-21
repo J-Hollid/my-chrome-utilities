@@ -132,8 +132,8 @@ export function savedSchemaFromCanonical(schema, canonical) {
         for (const rule of node.rules) {
             if (rule.id.startsWith("json-facet:"))
                 continue;
-            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters;
-            attachedRules.push({ ...prior, id: rule.id, version: prior?.version ?? 1, propertyPath: prior?.propertyPath ?? path, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, message: rule.message });
+            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path;
+            attachedRules.push({ ...prior, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, message: rule.message });
         }
     }
     const clean = (value) => { const next = structuredClone(value); delete next.attachedRules; if (next.required && !next.required.length)

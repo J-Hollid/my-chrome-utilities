@@ -4,6 +4,7 @@ import {
   savedSchemaCanonicalDocument,
   savedSchemaFromCanonical,
 } from "../dist/data-layer-side-panel-unified-schema-editor.js";
+import {applyCanonicalCommand} from "../dist/data-layer-canonical-schema.js";
 import {createSchemaWorkingDraft,publishSchemaWorkingDraft} from "../dist/data-layer-schema-verification.js";
 
 let sequence=0;
@@ -47,6 +48,16 @@ assert.deepEqual(reloaded,canonical,"reloading a saved schema restores the exact
 const published=publishSchemaWorkingDraft(createSchemaWorkingDraft(roundTrip));
 assert.deepEqual(published.canonicalSchema,canonical,"publishing carries canonical identities and rich facets into the immutable saved revision");
 
+const article=Object.values(canonical.nodes).find(({name})=>name==="article");
+const renamed=applyCanonicalCommand(canonical,{kind:"rename",baseRevision:canonical.revision,propertyId:article.id,name:"story"});
+assert.equal(renamed.status,"applied");
+const afterRename=savedSchemaFromCanonical(saved,renamed.document);
+assert.deepEqual(afterRename.attachedRules.map(({propertyPath})=>propertyPath),["/story/category","/story/category"],"rename atomically rebases every attached-rule path from stable canonical identities");
+const moved=applyCanonicalCommand(renamed.document,{kind:"move",baseRevision:renamed.document.revision,propertyId:category.id});
+assert.equal(moved.status,"applied");
+const afterMove=savedSchemaFromCanonical(afterRename,moved.document);
+assert.deepEqual(afterMove.attachedRules.map(({propertyPath})=>propertyPath),["/category","/category"],"move atomically rebases every attached-rule path from stable canonical identities");
+
 const documents={saved:canonical,profile:{...canonical,id:"canonical:profile",contributorId:"profile:article",contributorName:"Article profile"}},writes=[];
 let mounts=0,render;
 const controller=createUnifiedCanonicalEditorController((options)=>{mounts+=1;render=()=>options.load();return{render};});
@@ -56,8 +67,10 @@ controller.select({key:"profile",label:"Article profile",load:()=>documents.prof
 assert.equal(controller.current().id,"canonical:profile");
 controller.select({key:"page-group",label:"Checkout Page Group",load:()=>documents.profile,dispatch:(command)=>{writes.push(["page-group",command.kind]);return{status:"applied",document:documents.profile};}});
 controller.select({key:"page",label:"Cart Page",load:()=>documents.profile,dispatch:(command)=>{writes.push(["page",command.kind]);return{status:"applied",document:documents.profile};}});
+controller.select({key:"event",label:"Purchase Event",load:()=>documents.profile,dispatch:(command)=>{writes.push(["event",command.kind]);return{status:"applied",document:documents.profile};}});
+controller.select({key:"flow",label:"Cart step",load:()=>documents.profile,dispatch:(command)=>{writes.push(["flow",command.kind]);return{status:"applied",document:documents.profile};}});
 controller.dispatch({kind:"view",baseRevision:documents.profile.revision,view:"table"});
-assert.deepEqual(writes,[["page","view"]]);
-assert.equal(mounts,1,"saved schemas, Page Groups, Pages, and other contributors reuse one mounted canonical editor core");
+assert.deepEqual(writes,[["flow","view"]]);
+assert.equal(mounts,1,"saved schemas, Page Groups, Pages, Events, Flow contributors, and other roles reuse one mounted canonical editor core");
 
 console.log("data-layer unified side-panel schema editor tests passed");
