@@ -1,7 +1,7 @@
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
-export const DURABLE_PROJECT_DATABASE_VERSION = 4;
+export const DURABLE_PROJECT_DATABASE_VERSION = 5;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
-export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "settings", "migrationReceipts", "migrationBackups"];
+export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups"];
 export function durableProjectRouteForWorkspace(collectionKind, entityId) { const dependencies = { pages: ["profiles", "pageGroups", "applicabilitySets", "assignments", "schemaDrafts"], pageGroups: ["profiles", "pages", "applicabilitySets", "assignments", "schemaDrafts"], events: ["profiles", "applicabilitySets", "assignments", "flows", "schemaDrafts"], flows: ["profiles", "pages", "pageGroups", "events", "applicabilitySets", "assignments", "schemaDrafts"], profiles: ["applicabilitySets", "assignments", "schemaDrafts"], fixtures: ["profiles", "pages", "pageGroups", "events", "flows"] }; return { collectionKind, ...(entityId ? { entityId } : {}), collectionKinds: dependencies[collectionKind] ?? [], includeFlowGraphs: collectionKind === "flows", includeFixtures: collectionKind === "fixtures" }; }
 const clone = (value) => structuredClone(value);
 const comparable = (value) => Array.isArray(value) ? value.map(comparable) : record(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, comparable(value[key])])) : value;
@@ -10,6 +10,11 @@ const record = (value) => Boolean(value) && typeof value === "object" && !Array.
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
 const projectPrefix = (projectId) => `${projectId}:`;
 const fieldFor = (patch) => { const path = ["entity", "graph", "release"].includes(patch.path[0] ?? "") ? patch.path.slice(1) : patch.path; return `${patch.store}/${patch.key}${path.length ? `/${path.join("/")}` : ""}`; };
+export const durablePatchField = (patch) => fieldFor(patch);
+export function durableConflictSemanticField(field) {
+    const match = /^(projectEntities|projectEntityMetadata)\/([^/]+)(\/.*)?$/.exec(field);
+    return match ? `projectEntity/${match[2]}${match[3] ?? ""}` : field;
+}
 const overlaps = (left, right) => left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
 async function checksum(value) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""); }
 function changed(base, next, path = []) {
@@ -84,16 +89,20 @@ class IndexedDbBackend {
     constructor(database) {
         this.database = database;
     }
-    async transaction(stores, mode, operation) { const native = this.database.transaction([...stores], mode), request = (value) => new Promise((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(value.error ?? new Error("IndexedDB request failed.")); }), prefixEntries = (store, prefix) => new Promise((resolve, reject) => { const entries = [], range = IDBKeyRange.bound(prefix, `${prefix}\uffff`), cursor = native.objectStore(store).openCursor(range); cursor.onerror = () => reject(cursor.error ?? new Error("IndexedDB prefix read failed.")); cursor.onsuccess = () => { const current = cursor.result; if (!current) {
+    async transaction(stores, mode, operation) { const native = this.database.transaction([...stores], mode), completion = new Promise((resolve, reject) => { native.oncomplete = () => resolve(); native.onabort = () => reject(native.error ?? new DOMException("IndexedDB transaction aborted.", "AbortError")); native.onerror = () => reject(native.error ?? new Error("IndexedDB transaction failed.")); }), request = (value) => new Promise((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(value.error ?? new Error("IndexedDB request failed.")); }), prefixEntries = (store, prefix) => new Promise((resolve, reject) => { const entries = [], range = IDBKeyRange.bound(prefix, `${prefix}\uffff`), cursor = native.objectStore(store).openCursor(range); cursor.onerror = () => reject(cursor.error ?? new Error("IndexedDB prefix read failed.")); cursor.onsuccess = () => { const current = cursor.result; if (!current) {
         resolve(entries);
         return;
     } entries.push({ key: String(current.key), value: clone(current.value) }); current.continue(); }; }), adapter = { get: async (store, key) => { this.reads.push({ store, key, operation: "read" }); const value = await request(native.objectStore(store).get(key)); return value === undefined ? undefined : clone(value); }, getAll: async (store) => { this.reads.push({ store, key: "*", operation: "read" }); const keys = await request(native.objectStore(store).getAllKeys()), values = await request(native.objectStore(store).getAll()); return values.map((value, index) => ({ key: String(keys[index]), value: clone(value) })); }, getPrefix: async (store, prefix) => { this.reads.push({ store, key: `prefix:${prefix}`, operation: "read" }); return prefixEntries(store, prefix); }, put: async (store, key, value) => { this.writes.push({ store, key, operation: "write" }); await request(native.objectStore(store).put(clone(value), key)); }, delete: async (store, key) => { this.writes.push({ store, key, operation: "delete" }); await request(native.objectStore(store).delete(key)); } }; let result; try {
         result = await operation(adapter);
     }
     catch (error) {
-        native.abort();
+        try {
+            native.abort();
+        }
+        catch { /* transaction already inactive */ }
+        await completion.catch(() => { });
         throw error;
-    } await new Promise((resolve, reject) => { native.oncomplete = () => resolve(); native.onabort = () => reject(native.error ?? new DOMException("IndexedDB transaction aborted.", "AbortError")); native.onerror = () => reject(native.error ?? new Error("IndexedDB transaction failed.")); }); return result; }
+    } await completion; return result; }
     trace() { return { reads: clone(this.reads), writes: clone(this.writes) }; }
     clearTrace() { this.reads = []; this.writes = []; }
 }
@@ -225,7 +234,7 @@ export class DurableProjectRepository {
         throw new Error("Switch to another project before deleting the active project."); if (metadata.draftToken !== input.baseToken)
         throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions"])
         for (const { key } of await transaction.getPrefix(store, projectPrefix(input.projectId)))
-            await transaction.delete(store, key); await transaction.delete("projectRoots", input.projectId); await transaction.delete("projectMetadata", input.projectId); }); }
+            await transaction.delete(store, key); await transaction.delete("changeFeed", input.projectId); await transaction.delete("projectRoots", input.projectId); await transaction.delete("projectMetadata", input.projectId); }); }
     async loadProject(projectId) {
         return this.backend.transaction(["projectMetadata", "projectRoots", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", projectId), root = await transaction.get("projectRoots", projectId);
@@ -273,7 +282,7 @@ export class DurableProjectRepository {
     }
     async saveDraft(command) {
         this.fail(command.label);
-        const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
+        const stores = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases", "changeFeed"], result = await this.backend.transaction(stores, "readwrite", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", command.projectId);
             if (!metadata)
                 throw new Error(`Durable project ${command.projectId} is unavailable.`);
@@ -310,17 +319,19 @@ export class DurableProjectRepository {
             const metadataIdentity = { store: "projectMetadata", key: command.projectId };
             await transaction.put("projectMetadata", command.projectId, nextMetadata);
             changed.set(`projectMetadata/${command.projectId}`, metadataIdentity);
-            const changedRecords = [...changed.values()];
+            const changedRecords = [...changed.values()], feed = { projectId: command.projectId, draftToken, draftSequence, commandId: command.commandId, changedRecords: clone(changedRecords), savedAt: lastSavedAt };
+            await transaction.put("changeFeed", command.projectId, feed);
             return { status: stale ? "rebased" : "committed", projectId: command.projectId, draftToken, draftSequence, publishedRevision: metadata.publishedRevision, changedRecords, notification: { type: "durable-project-change", projectId: command.projectId, draftToken, draftSequence, commandId: command.commandId, changedRecords } };
         });
         if (result.status !== "conflict")
             this.notify(result.notification);
         return result;
     }
-    async publish(projectId, baseToken, input) { this.fail("Publish project"); const current = await this.loadProject(projectId), result = await this.backend.transaction(["projectMetadata", "projectRevisions"], "readwrite", async (transaction) => { const metadata = await transaction.get("projectMetadata", projectId); if (!metadata)
+    async publish(projectId, baseToken, input) { this.fail("Publish project"); const current = await this.loadProject(projectId), result = await this.backend.transaction(["projectMetadata", "projectRevisions", "changeFeed"], "readwrite", async (transaction) => { const metadata = await transaction.get("projectMetadata", projectId); if (!metadata)
         throw new Error(`Durable project ${projectId} is unavailable.`); if (metadata.draftToken !== baseToken)
         throw new Error(`Publish requires current Draft token ${metadata.draftToken}.`); const publishedRevision = metadata.publishedRevision + 1, release = current.state.project.releases.find(candidate => candidate.id === input.publicationId && candidate.revision === publishedRevision); if (!release)
-        throw new DOMException(`Publish revision ${publishedRevision} requires matching release ${input.publicationId}.`, "DataError"); const draftToken = this.options.token(), at = this.options.now(), revisionKey = `${projectId}:${publishedRevision}`, draftSequence = (metadata.draftSequence ?? 0) + 1, publishedProject = { ...clone(current.state.project), collections: clone(release.snapshot), releases: current.state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: release.id }, revision = { projectId, revision: publishedRevision, publicationId: input.publicationId, publishedAt: at, sourceDraftToken: baseToken, state: { project: publishedProject, history: { undo: [], redo: [] } } }, changedRecords = [{ store: "projectRevisions", key: revisionKey }, { store: "projectMetadata", key: projectId }], fieldVersions = { ...(metadata.fieldVersions ?? {}), [`projectRevisions/${revisionKey}`]: draftSequence }; await transaction.put("projectRevisions", revisionKey, revision); await transaction.put("projectMetadata", projectId, { ...metadata, publishedRevision, draftToken, draftSequence, lastSavedAt: at, fieldVersions }); return { draftToken, draftSequence, publishedRevision, changedRecords }; }); this.notify({ type: "durable-project-change", projectId, draftToken: result.draftToken, draftSequence: result.draftSequence, commandId: input.publicationId, changedRecords: result.changedRecords }); return { draftToken: result.draftToken, publishedRevision: result.publishedRevision }; }
+        throw new DOMException(`Publish revision ${publishedRevision} requires matching release ${input.publicationId}.`, "DataError"); const draftToken = this.options.token(), at = this.options.now(), revisionKey = `${projectId}:${publishedRevision}`, draftSequence = (metadata.draftSequence ?? 0) + 1, publishedProject = { ...clone(current.state.project), collections: clone(release.snapshot), releases: current.state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: release.id }, revision = { projectId, revision: publishedRevision, publicationId: input.publicationId, publishedAt: at, sourceDraftToken: baseToken, state: { project: publishedProject, history: { undo: [], redo: [] } } }, changedRecords = [{ store: "projectRevisions", key: revisionKey }, { store: "projectMetadata", key: projectId }], fieldVersions = { ...(metadata.fieldVersions ?? {}), [`projectRevisions/${revisionKey}`]: draftSequence }, feed = { projectId, draftToken, draftSequence, commandId: input.publicationId, changedRecords: clone(changedRecords), savedAt: at }; await transaction.put("projectRevisions", revisionKey, revision); await transaction.put("projectMetadata", projectId, { ...metadata, publishedRevision, draftToken, draftSequence, lastSavedAt: at, fieldVersions }); await transaction.put("changeFeed", projectId, feed); return { draftToken, draftSequence, publishedRevision, changedRecords }; }); this.notify({ type: "durable-project-change", projectId, draftToken: result.draftToken, draftSequence: result.draftSequence, commandId: input.publicationId, changedRecords: result.changedRecords }); return { draftToken: result.draftToken, publishedRevision: result.publishedRevision }; }
+    async latestProjectChange(projectId) { const value = await this.backend.transaction(["changeFeed"], "readonly", transaction => transaction.get("changeFeed", projectId)); return value ? clone(value) : undefined; }
     async loadPublishedRevision(projectId, revision) { const snapshot = await this.backend.transaction(["projectRevisions"], "readonly", transaction => transaction.get("projectRevisions", `${projectId}:${revision}`)); if (!snapshot)
         throw new Error(`Published revision ${revision} for ${projectId} is unavailable.`); return clone(snapshot); }
     async loadCurrentPublishedProject(projectId) { const metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId); if (!metadata?.publishedRevision)
@@ -329,6 +340,12 @@ export class DurableProjectRepository {
     async hashProject(projectId) { const loaded = await this.loadProject(projectId); return checksum(JSON.stringify(loaded)); }
     async storageDiagnostics(projectId, estimate, unsavedCommand) { const loaded = await this.loadProject(projectId), prefix = projectPrefix(projectId), sizes = await this.backend.transaction(["projectEntities", "flowGraphs", "fixtures", "releases", "projectRevisions", "migrationBackups"], "readonly", async (transaction) => { const selected = async (store) => (await transaction.getPrefix(store, prefix)).reduce((total, { value }) => total + bytes(value), 0); return { projectEntityBytes: await selected("projectEntities") + await selected("flowGraphs"), releaseBytes: await selected("releases") + await selected("projectRevisions"), fixtureBytes: await selected("fixtures"), migrationBackupBytes: (await transaction.getAll("migrationBackups")).reduce((total, { value }) => total + bytes(value), 0) }; }); return { lastSavedAt: loaded.lastSavedAt, publishedRevision: loaded.publishedRevision, ...(unsavedCommand ? { unsavedCommand } : {}), ...sizes, ...(estimate ? { browserEstimate: { ...estimate, label: "Browser storage estimate" } } : {}), explanation: "Unlimited storage reduces quota risk; it does not make a failed write successful or provide infinite disk." }; }
     async migrationBackup() { return this.backend.transaction(["migrationBackups"], "readonly", async (transaction) => (await transaction.getAll("migrationBackups"))[0]?.value ?? { sources: [] }); }
+    async deleteMigrationBackup(input) {
+        if (input.label !== "Delete retained legacy migration backup")
+            throw new Error("Migration backup deletion requires its named consequence review.");
+        return this.backend.transaction(["migrationBackups"], "readwrite", async (transaction) => { const existing = await transaction.get("migrationBackups", input.backupId); if (existing === undefined)
+            return false; await transaction.delete("migrationBackups", input.backupId); return true; });
+    }
     normalizeSavedSchema(value) { if (record(value.schema) && typeof value.token === "string") {
         const { tokenHistory: _tokenHistory, ...current } = value;
         return clone(current);
@@ -389,42 +406,61 @@ export class DurableProjectRepository {
         channel.addEventListener("message", () => void poll());
         channel.unref?.();
     } void poll(); }); }
-    async importLegacy(owner, records) { await this.backend.transaction(allStores, "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner !== owner)
-        throw new DOMException("Legacy migration lease is not owned by this context.", "AbortError"); for (const entry of records.projects) {
-        const draftToken = this.options.token(), parts = projectParts(entry.state), publishedRevision = Math.max(0, ...entry.state.project.releases.map(({ revision }) => revision));
-        await replaceProjectParts(transaction, entry.state.project.id, parts);
-        await transaction.put("projectMetadata", entry.state.project.id, { projectId: entry.state.project.id, name: entry.state.project.name, site: entry.state.project.site, owner: String(entry.state.project.owner ?? ""), draftToken, draftSequence: entry.revision, publishedRevision, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, entry.revision])), active: entry.active, ...(entry.state.draft ? { draft: clone(entry.state.draft) } : {}), ...(entry.navigation ? { navigation: clone(entry.navigation) } : {}) });
-        for (const release of entry.state.project.releases) {
-            const publishedProject = { ...clone(entry.state.project), collections: clone(release.snapshot), releases: entry.state.project.releases.filter(candidate => candidate.revision <= release.revision), currentRelease: release.id }, revision = { projectId: entry.state.project.id, revision: release.revision, publicationId: release.id, publishedAt: release.createdAt, sourceDraftToken: draftToken, state: { project: publishedProject, history: { undo: [], redo: [] } } };
-            await transaction.put("projectRevisions", `${entry.state.project.id}:${release.revision}`, revision);
+    async importLegacy(owner, records) {
+        await this.backend.transaction(allStores, "readwrite", async (transaction) => {
+            const lock = await transaction.get("settings", "legacyMigrationLock");
+            if (lock?.owner !== owner)
+                throw new DOMException("Legacy migration lease is not owned by this context.", "AbortError");
+            const manifests = [];
+            for (const entry of records.projects) {
+                const draftToken = this.options.token(), parts = projectParts(entry.state), publishedRevision = Math.max(0, ...entry.state.project.releases.map(({ revision }) => revision));
+                manifests.push({ entry, parts });
+                await replaceProjectParts(transaction, entry.state.project.id, parts);
+                await transaction.put("projectMetadata", entry.state.project.id, { projectId: entry.state.project.id, name: entry.state.project.name, site: entry.state.project.site, owner: String(entry.state.project.owner ?? ""), draftToken, draftSequence: entry.revision, publishedRevision, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, entry.revision])), active: entry.active, ...(entry.state.draft ? { draft: clone(entry.state.draft) } : {}), ...(entry.navigation ? { navigation: clone(entry.navigation) } : {}) });
+                for (const release of entry.state.project.releases) {
+                    const publishedProject = { ...clone(entry.state.project), collections: clone(release.snapshot), releases: entry.state.project.releases.filter(candidate => candidate.revision <= release.revision), currentRelease: release.id }, revision = { projectId: entry.state.project.id, revision: release.revision, publicationId: release.id, publishedAt: release.createdAt, sourceDraftToken: draftToken, state: { project: publishedProject, history: { undo: [], redo: [] } } };
+                    await transaction.put("projectRevisions", `${entry.state.project.id}:${release.revision}`, revision);
+                }
+                if (entry.active)
+                    await transaction.put("settings", "activeProjectId", entry.state.project.id);
+            }
+            for (const schema of records.schemas) {
+                const token = this.options.token();
+                await transaction.put("savedSchemas", String(schema.id), { schema: clone(schema), token, revision: Number(schema.version ?? 0), lastSavedAt: this.options.now() });
+            }
+            await transaction.put("migrationBackups", "legacy-v1", records.backup);
+            this.fail("Legacy migration verification");
+            for (const { entry, parts } of manifests) {
+                const metadata = await transaction.get("projectMetadata", entry.state.project.id);
+                if (!metadata || metadata.draftSequence !== entry.revision || !same(metadata.navigation, entry.navigation))
+                    throw new DOMException(`Migration verification failed for ${entry.state.project.id} metadata.`, "OperationError");
+                for (const { identity, value } of parts.values())
+                    if (!same(await transaction.get(identity.store, identity.key), value))
+                        throw new DOMException(`Migration verification failed for ${identity.store}/${identity.key}.`, "OperationError");
+                for (const release of entry.state.project.releases) {
+                    const revision = await transaction.get("projectRevisions", `${entry.state.project.id}:${release.revision}`);
+                    if (!revision || !same(revision.state.project.collections, release.snapshot))
+                        throw new DOMException(`Migration verification failed for immutable release ${release.id}.`, "OperationError");
+                }
+            }
+            for (const schema of records.schemas) {
+                const saved = await transaction.get("savedSchemas", String(schema.id));
+                if (!saved || !same(saved.schema, schema))
+                    throw new DOMException(`Migration verification failed for saved schema ${String(schema.id)}.`, "OperationError");
+            }
+            const backup = await transaction.get("migrationBackups", "legacy-v1");
+            if (!same(backup?.sources.map(({ key, checksum }) => ({ key, checksum })), records.backup.sources.map(({ key, checksum }) => ({ key, checksum }))))
+                throw new DOMException("Migration backup manifest verification failed.", "OperationError");
+            const verifiedAt = this.options.now();
+            await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: records.projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), verified: true, phase: "verified", owner, at: verifiedAt, verifiedAt });
+            await transaction.delete("settings", "legacyMigrationLock");
+        });
+        if (typeof BroadcastChannel !== "undefined") {
+            const channel = new BroadcastChannel("my-chrome-utilities.durable-migration");
+            channel.postMessage({ status: "verified" });
+            channel.close();
         }
-        if (entry.active)
-            await transaction.put("settings", "activeProjectId", entry.state.project.id);
-    } for (const schema of records.schemas) {
-        const token = this.options.token();
-        await transaction.put("savedSchemas", String(schema.id), { schema: clone(schema), token, revision: Number(schema.version ?? 0), lastSavedAt: this.options.now() });
-    } await transaction.put("migrationBackups", "legacy-v1", records.backup); await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: records.projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), verified: false, phase: "records-written", owner, at: this.options.now() }); }); }
-    async verifyLegacyImport(records) { for (const entry of records.projects) {
-        const loaded = await this.loadProject(entry.state.project.id);
-        if (!same(loaded.state.project, entry.state.project))
-            throw new DOMException(`Migration verification failed for ${entry.state.project.id}: ${differingFields(loaded.state.project, entry.state.project).join(", ")}.`, "OperationError");
-        if (!same(loaded.navigation, entry.navigation))
-            throw new DOMException(`Migration verification failed for ${entry.state.project.id} navigation.`, "OperationError");
-        for (const release of entry.state.project.releases) {
-            const revision = await this.loadPublishedRevision(entry.state.project.id, release.revision);
-            if (!same(revision.state.project.collections, release.snapshot))
-                throw new DOMException(`Migration verification failed for immutable release ${release.id}.`, "OperationError");
-        }
-    } const schemas = await this.savedSchemas(); for (const schema of records.schemas)
-        if (!schemas.some(candidate => String(candidate.id) === String(schema.id) && same(candidate, schema)))
-            throw new DOMException(`Migration verification failed for saved schema ${String(schema.id)}.`, "OperationError"); const backup = await this.migrationBackup(); if (!same(backup.sources.map(({ key, checksum }) => ({ key, checksum })), records.backup.sources.map(({ key, checksum }) => ({ key, checksum }))))
-        throw new DOMException("Migration backup manifest verification failed.", "OperationError"); }
-    async completeLegacyMigration(owner) { await this.backend.transaction(["settings", "migrationReceipts"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"), receipt = await transaction.get("migrationReceipts", "legacy-v1"); if (lock?.owner !== owner || !receipt)
-        throw new DOMException("Legacy migration cannot complete without its verified lease and receipt.", "AbortError"); await transaction.put("migrationReceipts", "legacy-v1", { ...receipt, verified: true, phase: "verified", verifiedAt: this.options.now() }); await transaction.delete("settings", "legacyMigrationLock"); }); if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel("my-chrome-utilities.durable-migration");
-        channel.postMessage({ status: "verified" });
-        channel.close();
-    } }
+    }
     async abandonLegacyMigration(owner) { await this.backend.transaction(["settings"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner === owner)
         await transaction.delete("settings", "legacyMigrationLock"); }); }
     async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 1, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, ...(publishedProject ? { publishedProject: clone(publishedProject) } : {}), project: clone(loaded.state.project), draft: clone(loaded.state.draft) }; }
@@ -441,9 +477,45 @@ export async function openIndexedDbProjectRepository(factory = globalThis.indexe
     request.result.deleteObjectStore("changes"); for (const store of DURABLE_PROJECT_STORES)
     if (!request.result.objectStoreNames.contains(store))
         request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); return new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); }
-export function createPageProjectHistory() {  const undo = [], redo = []; return { push(command) { undo.push({ forward: clone(command), inverse: command.patches.map(patch => ({ ...clone(patch), before: clone(patch.after), after: clone(patch.before) })) }); redo.length = 0; }, undo(current) { const entry = undo.pop(); if (!entry)
-        return undefined; redo.push(entry); return { projectId: entry.forward.projectId, baseToken: current.draftToken, baseSequence: current.draftSequence, commandId: `undo:${entry.forward.commandId}`, label: `Undo ${entry.forward.label}`, patches: clone(entry.inverse), pendingState: clone(current.state) }; }, redo(current) { const entry = redo.pop(); if (!entry)
-        return undefined; undo.push(entry); return { ...clone(entry.forward), baseToken: current.draftToken, baseSequence: current.draftSequence, commandId: `redo:${entry.forward.commandId}`, label: `Redo ${entry.forward.label}`, pendingState: clone(current.state) }; }, snapshot: () => ({ undo: undo.map(({ forward }) => ({ commandId: forward.commandId, label: forward.label })), redo: redo.map(({ forward }) => ({ commandId: forward.commandId, label: forward.label })) }) }; }
+export class DurablePageHistoryConflict extends DOMException {
+    projectId;
+    commandId;
+    label;
+    direction;
+    field;
+    currentValue;
+    expectedValue;
+    patches;
+    constructor(projectId, commandId, label, direction, field, currentValue, expectedValue, patches) {
+        super(`${direction === "undo" ? "Undo" : "Redo"} ${label} is blocked because ${field} changed in a newer Saved Draft.`, "AbortError");
+        this.projectId = projectId;
+        this.commandId = commandId;
+        this.label = label;
+        this.direction = direction;
+        this.field = field;
+        this.currentValue = currentValue;
+        this.expectedValue = expectedValue;
+        this.patches = patches;
+    }
+}
+export function createPageProjectHistory() {  const undo = [], redo = [], currentValue = (current, patch) => { let value = projectParts(current.state).get(`${patch.store}/${patch.key}`)?.value; for (const part of patch.path)
+    value = record(value) ? value[part] : undefined; return value; }, excludedAction = (command) => command.patches.some((patch) => patch.store === "fixtures" || patch.store === "releases" || patch.store === "projectEntityMetadata" && patch.key.startsWith(`${command.projectId}:fixtures:`) || patch.store === "projectRoots" && patch.path.includes("currentRelease")), assertExpected = (current, entry, direction) => { const expected = direction === "undo" ? entry.forward.map(({ after }) => after) : entry.forward.map(({ before }) => before), mismatch = entry.forward.findIndex((patch, index) => !same(currentValue(current, patch), expected[index])); if (mismatch >= 0) {
+    const patch = entry.forward[mismatch], currentFieldValue = currentValue(current, patch), pendingPatches = direction === "undo" ? entry.inverse : entry.forward;
+    throw new DurablePageHistoryConflict(entry.projectId, entry.commandId, entry.label, direction, fieldFor(patch), clone(currentFieldValue), clone(pendingPatches[mismatch]?.after), clone(pendingPatches));
+} }; return { push(command) { if (excludedAction(command))
+        return; const forward = command.patches.map(clone); if (!forward.length)
+        return; undo.push({ projectId: command.projectId, commandId: command.commandId, label: command.label, forward, inverse: forward.map(patch => ({ ...clone(patch), before: clone(patch.after), after: clone(patch.before) })) }); redo.length = 0; }, undo(current) { const entry = undo.at(-1); if (!entry)
+        return undefined; assertExpected(current, entry, "undo"); undo.pop(); redo.push(entry); return { projectId: entry.projectId, baseToken: current.draftToken, baseSequence: current.draftSequence, commandId: `undo:${entry.commandId}`, label: `Undo ${entry.label}`, patches: clone(entry.inverse), pendingState: clone(current.state) }; }, redo(current) { const entry = redo.at(-1); if (!entry)
+        return undefined; assertExpected(current, entry, "redo"); redo.pop(); undo.push(entry); return { projectId: entry.projectId, baseToken: current.draftToken, baseSequence: current.draftSequence, commandId: `redo:${entry.commandId}`, label: `Redo ${entry.label}`, patches: clone(entry.forward), pendingState: clone(current.state) }; }, restoreFailed(direction) { if (direction === "undo") {
+        const entry = redo.pop();
+        if (entry)
+            undo.push(entry);
+    }
+    else {
+        const entry = undo.pop();
+        if (entry)
+            redo.push(entry);
+    } }, snapshot: () => ({ undo: undo.map(({ commandId, label }) => ({ commandId, label })), redo: redo.map(({ commandId, label }) => ({ commandId, label })) }) }; }
 const differingFields = (left, right, path = "project") => { if (same(left, right))
     return []; if (record(left) && record(right)) {
     const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
@@ -528,10 +600,7 @@ export async function migrateLegacyProjectStorage(repository, storage, options =
     }
     const backup = { sources: await Promise.all(raw.map(async ({ key, value }) => ({ key, bytes: new TextEncoder().encode(value).byteLength, checksum: await checksum(value), value }))) }, schemas = (schemasValue ?? []);
     try {
-        const manifest = { projects: selected, schemas, backup };
-        await repository.importLegacy(owner, manifest);
-        await repository.verifyLegacyImport(manifest);
-        await repository.completeLegacyMigration(owner);
+        await repository.importLegacy(owner, { projects: selected, schemas, backup });
     }
     catch (error) {
         await repository.abandonLegacyMigration(owner);

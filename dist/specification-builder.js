@@ -1,6 +1,6 @@
-import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
-import { durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
+import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
@@ -21,7 +21,7 @@ import { installFlowDocumentationExportUi } from "./data-layer-flow-table-docume
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
-const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
+const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
@@ -43,7 +43,7 @@ q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schemas", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
@@ -92,7 +92,9 @@ function renderCanonicalEntityEditor(host, kind, entity) {
     mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
             canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
             persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document, ...(kind === "profiles" ? { requirements: [] } : {}) } : candidate) } })));
-        } return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)), ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
+        } return result; }, onUndo: () => { if (state)
+            void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
+            void durableProjectRuntime.redo(state.project.id); }, ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
 }
 function renderCanonicalProfileOverview(host) {
     if (!state || selectedKind !== "profiles" || selectedId)
@@ -194,7 +196,9 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
                 canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
                 persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } })));
-            } return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)), ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
+            } return result; }, onUndo: () => { if (state)
+                void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
+                void durableProjectRuntime.redo(state.project.id); }, ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
     }
 }
 function renderPageGroupMembershipEditor(host, page) {
@@ -322,34 +326,57 @@ function renderPageGroupMembershipEditor(host, page) {
     section.append(heading, guidance, add, menu, picker, stack, effective, evaluation, impact);
     host.append(section);
 }
-function writeProjectState(next) { const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
+function writeProjectState(next, label = "Project edit") { const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: canonicalRevision, pendingLabel: label, ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
     lastCommittedState = structuredClone(result.current);
     canonicalRevision = result.revision;
     throw new Error(`A newer Saved Draft conflicts with pending ${result.pendingLabel}.`);
-} canonicalRevision = result.revision; pendingConflict = undefined; releasePreflight = undefined; lastCommittedState = structuredClone(next); if (library.activeProjectId) {
-    library = replaceActiveProjectState(library, next, result.revision);
+} const committed = restoreCanonicalProjectState(projectStorage.getItem(STORAGE_KEY)) ?? next; canonicalRevision = result.revision; pendingConflict = undefined; releasePreflight = undefined; state = { ...structuredClone(committed), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); if (library.activeProjectId) {
+    library = replaceActiveProjectState(library, state, result.revision);
     projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
 } }
-function showConflictReview() { if (!pendingConflict)
-    return; const inspection = inspectCanonicalProjectConflict(pendingConflict), dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"); q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`; fields.querySelectorAll("label").forEach((label) => label.remove()); for (const field of inspection.conflictingFields) {
-    const label = document.createElement("label"), input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = field;
-    label.append(input, ` Use pending value for ${field}`);
-    fields.append(label);
+function showConflictReview() { if (!pendingConflict && !durableConflict)
+    return; const dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"), historyBlocked = durableProjectRuntime.failedSave()?.command.commandId.startsWith("blocked-history:") ?? false; fields.querySelectorAll("label").forEach((label) => label.remove()); q("#reapply-project-conflict").disabled = historyBlocked; q("#merge-project-conflict").disabled = historyBlocked; if (durableConflict) {
+    q("#project-conflict-summary").textContent = historyBlocked ? `${durableConflict.label}: a newer Saved Draft changed ${durableConflict.conflictingFields.join(", ")}. Reject this window history action to preserve the newer value; the history entry remains available.` : `${durableConflict.label}: base Draft differs from the newer Saved Draft. Pending fields ${durableConflict.pendingFields.join(", ")}; newer fields ${durableConflict.currentFields.join(", ")}; conflicts ${durableConflict.conflictingFields.join(", ")}.`;
+    const groups = new Map();
+    for (const field of durableConflict.conflictingFields) {
+        const semantic = durableConflictSemanticField(field), group = groups.get(semantic) ?? [];
+        group.push(field);
+        groups.set(semantic, group);
+    }
+    for (const [semantic, group] of groups) {
+        const field = group[0], label = document.createElement("label"), input = document.createElement("input"), current = document.createElement("span"), pending = document.createElement("span");
+        input.type = "checkbox";
+        input.value = semantic;
+        input.disabled = historyBlocked;
+        current.textContent = ` Current ${JSON.stringify(durableConflict.currentValues[field])}.`;
+        pending.textContent = ` Pending ${JSON.stringify(durableConflict.pendingValues[field])}.`;
+        const description = group.length > 1 ? `${semantic} (${group.join(" and ")}; committed together)` : field;
+        label.append(input, historyBlocked ? ` Blocked history value for ${description}.` : ` Use pending value for ${description}.`, current, pending);
+        fields.append(label);
+    }
+}
+else {
+    const inspection = inspectCanonicalProjectConflict(pendingConflict);
+    q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`;
+    for (const field of inspection.conflictingFields) {
+        const label = document.createElement("label"), input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = field;
+        label.append(input, ` Use pending value for ${field}`);
+        fields.append(label);
+    }
 } if (!dialog.open)
     dialog.showModal(); dialog.querySelector("h2")?.focus(); }
-function persist(next) { state = next; try {
-    writeProjectState(next);
-    q("#project-state").textContent = `Saved Draft · Published revision ${publishedRevision}`;
+function persist(next) { const label = next.history.undo.at(-1)?.label ?? "Project edit", clean = { ...structuredClone(next), history: { undo: [], redo: [] } }; state = clean; saveStatus = { kind: "saving", label }; try {
+    writeProjectState(clean, label);
     q("#retry-save").hidden = true;
 }
 catch (error) {
+    saveStatus = { kind: "failed", label, message: error instanceof Error ? error.message : String(error) };
     if (!pendingConflict)
-        state = next.draft ? { ...next, draft: { ...next.draft, status: "Save failed" } } : next;
-    q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : "Save failed";
+        state = clean.draft ? { ...clean, draft: { ...clean.draft, status: "Save failed" } } : clean;
     q("#retry-save").hidden = false;
     if (pendingConflict)
         showConflictReview();
@@ -362,13 +389,7 @@ function restore() { const stored = projectStorage.getItem(STORAGE_KEY); let sin
     }
     catch {
         projectStorage.removeItem(STORAGE_KEY);
-    } const rawNavigation = localStorage.getItem(NAVIGATION_KEY); let legacyNavigation; if (rawNavigation)
-    try {
-        legacyNavigation = JSON.parse(rawNavigation);
-    }
-    catch {
-        localStorage.removeItem(NAVIGATION_KEY);
-    } library = migrateSingletonProject(restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)), singleton ? { state: singleton, revision, ...(legacyNavigation ? { navigation: legacyNavigation } : {}) } : undefined); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); const navigation = library.activeProjectId ? resolveProjectNavigation(library, library.activeProjectId) : undefined; if (navigation) {
+    } library = migrateSingletonProject(restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)), singleton ? { state: singleton, revision } : undefined); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; state = active ? { ...structuredClone(active.state), history: { undo: [], redo: [] } } : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); const navigation = library.activeProjectId ? resolveProjectNavigation(library, library.activeProjectId) : undefined; if (navigation) {
     selectedKind = navigation.kind ?? selectedKind;
     selectedId = navigation.id;
 } }
@@ -547,8 +568,11 @@ else
     url.searchParams.set("entity", entityId);
 else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
-function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); queueMicrotask(() => { const target = focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`); target?.focus({ preventScroll: true }); }); }
-function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(() => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)?.focus({ preventScroll: true })); }
+function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
+    return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
+    return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
+function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
+function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
 function openProjectCollectionCreation(kind) { projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.collection && state) {
     const select = document.createElement("select");
@@ -847,7 +871,7 @@ function render() { const empty = q("#project-empty"), workspace = q("#project-w
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
-} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
+} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : durableConflict ? `${durableConflict.label} conflicts with a newer Saved Draft; review current and pending fields.` : saveStatus.kind === "saving" ? `Saving ${saveStatus.label}… · Published revision ${publishedRevision}` : saveStatus.kind === "failed" ? `Save failed for ${state.project.name}: ${saveStatus.label}. ${saveStatus.message ?? "The last Saved Draft is unchanged."}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !durableProjectRuntime.canUndo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#redo-project").disabled = !durableProjectRuntime.canRedo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#publish-project").disabled = Boolean(durableProjectRuntime.failedSave()); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId || projectOverview; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); if (durableProjectRuntime.failedSave()) {
     q("#project-state").textContent = "A failed durable Draft blocks creating and switching active project context until Retry succeeds.";
     return;
@@ -858,18 +882,17 @@ q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefau
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
     return; const next = createProjectCollectionEntity(state, kind, name, id), created = next.project.collections[kind].at(-1); selectedKind = kind; selectedId = created?.id; q("#entity-name").value = ""; persist(next); persistNavigation(); render(); });
 q("#undo-project").addEventListener("click", () => { if (!state)
-    return; const restored = removedFocus; persist(undoProjectTransaction(state)); if (restored) {
+    return; const projectId = state.project.id, restored = removedFocus; void durableProjectRuntime.undo(projectId).then(() => { if (restored) {
     removedFocus = undefined;
     selectedKind = restored.kind;
     selectedId = undefined;
     lifecycleStatus = "Removal undone; the same stable identity is restored.";
     persistNavigation();
     replaceProjectRoute(restored.kind);
-    render();
     queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(restored.id)}"]`)?.focus({ preventScroll: true }));
-} });
+} render(); }); });
 q("#redo-project").addEventListener("click", () => { if (state)
-    persist(redoProjectTransaction(state)); });
+    void durableProjectRuntime.redo(state.project.id).then(render); });
 q("#project-search").addEventListener("input", renderWorkspace);
 q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
@@ -997,10 +1020,11 @@ q("#publish-project").addEventListener("click", (event) => { if (!state)
     lastCommittedState = structuredClone(state);
     canonicalRevision = durable.draftSequence;
     publishedRevision = durable.publishedRevision;
-    releasePreflight = projectPreflight(state, state.project.releases.length + 1);
+    const nextPublishedRevision = Math.max(publishedRevision, ...state.project.releases.map((release) => release.revision)) + 1;
+    releasePreflight = projectPreflight(state, nextPublishedRevision);
     const preflight = releasePreflight, prior = state.project.releases.at(-1), emptyProject = { ...state.project, collections: Object.fromEntries(Object.keys(state.project.collections).map((kind) => [kind, []])), releases: [] }, review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : emptyProject, state.project), diff = q("#release-diff");
     diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; }));
-    releaseSummary.textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${state.project.releases.length + 1} has ${review.sections.length} structured changes and one reviewed executable plan.`;
+    releaseSummary.textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${nextPublishedRevision} has ${review.sections.length} structured changes and one reviewed executable plan.`;
     q("#confirm-release").disabled = Boolean(preflight.blockers.length || !review.sections.length);
     q("#confirm-release-close").disabled = Boolean(preflight.blockers.length || !review.sections.length);
     q("#restore-release").disabled = !prior;
@@ -1013,7 +1037,7 @@ catch (error) {
 q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
 const confirmRelease = async (close) => { if (!state || !releasePreflight)
     return; const confirm = q(close ? "#confirm-release-close" : "#confirm-release"), other = q(close ? "#confirm-release" : "#confirm-release-close"); confirm.disabled = other.disabled = true; try {
-    const next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) }), publicationId = next.project.releases.at(-1)?.id;
+    const next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, ...(state?.draft ? { draft: structuredClone(state.draft) } : {}), history: { undo: [], redo: [] } }) }), publicationId = next.project.releases.at(-1)?.id;
     if (!publicationId)
         throw new Error("Publication did not create a reviewed release identity.");
     await durableProjectRuntime.settled();
@@ -1068,18 +1092,48 @@ q("#remap-import").addEventListener("click", () => { if (!stagedImport || !state
 q("#commit-import").addEventListener("click", () => { if (!state || !stagedImport)
     return; persist(commitStagedProjectImport(state, stagedImport, { write: () => { } })); importDialog.close(); q("#import-project").focus(); });
 q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; importDialog.close(); q("#import-project").focus(); });
-const conflictDialog = q("#project-conflict-review");
-function completeConflict(strategy) { if (!pendingConflict)
-    return; const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value), resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); q("#project-inspector").focus(); }
-q("#reload-project-conflict").addEventListener("click", () => { if (!pendingConflict)
+const conflictDialog = q("#project-conflict-review"), restoreDurableProjection = () => { restore(); library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; };
+function completeConflict(strategy) { const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value); if (durableConflict) {
+    void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    return;
+} if (!pendingConflict)
+    return; const resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); q("#project-inspector").focus(); }
+q("#reload-project-conflict").addEventListener("click", () => { if (durableConflict) {
+    void durableProjectRuntime.resolveFailedSave("reject").then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    return;
+} if (!pendingConflict)
     return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); q("#project-inspector").focus(); });
 q("#reapply-project-conflict").addEventListener("click", () => completeConflict("reapply"));
 q("#merge-project-conflict").addEventListener("click", () => completeConflict("merge"));
-q("#retry-save").addEventListener("click", () => { if (pendingConflict) {
+q("#retry-save").addEventListener("click", () => { if (pendingConflict || durableConflict) {
     showConflictReview();
     return;
-} if (state)
-    persist(state.draft ? { ...state, draft: { ...state.draft, status: "Saved" } } : state); });
+} void durableProjectRuntime.retryFailedSave(); });
+const builderRecoveryDialog = q("#builder-storage-recovery"), builderRecoveryResult = q("#builder-recovery-result");
+let builderRecoveryOrigin;
+q("#builder-retry-save").addEventListener("click", () => { builderRecoveryResult.textContent = "Retrying the exact unsaved command…"; void durableProjectRuntime.retryFailedSave().then(() => { builderRecoveryResult.textContent = "Retry committed the Saved Draft."; builderRecoveryResult.focus(); }, (error) => { builderRecoveryResult.textContent = `Retry was not committed; the exact unsaved command remains available for recovery. ${error instanceof Error ? error.message : String(error)}`; builderRecoveryResult.focus(); }); });
+q("#builder-export-unsaved").addEventListener("click", () => { const failed = durableProjectRuntime.failedSave(); if (!failed)
+    return; download(`${failed.projectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-unsaved-draft.json`, durableProjectRuntime.exportUnsavedDraft()); builderRecoveryResult.textContent = "Exported the exact unsaved Draft."; builderRecoveryResult.focus(); });
+q("#builder-export-repository").addEventListener("click", () => { builderRecoveryResult.textContent = "Preparing repository backup…"; void durableProjectRuntime.repository.exportRepositoryRecoveryBundle().then((bundle) => { download("durable-project-repository-backup.json", JSON.stringify(bundle)); builderRecoveryResult.textContent = "Exported repository backup without changing the Saved Draft."; builderRecoveryResult.focus(); }); });
+q("#builder-storage-diagnostics").addEventListener("click", () => { const failed = durableProjectRuntime.failedSave(); if (!failed)
+    return; void navigator.storage.estimate().then((estimate) => durableProjectRuntime.repository.storageDiagnostics(failed.projectId, { usage: estimate.usage ?? 0, quota: estimate.quota ?? 0 }, failed.command.label)).then((diagnostics) => { builderRecoveryResult.textContent = `Last saved ${diagnostics.lastSavedAt}; Published revision ${diagnostics.publishedRevision}; unsaved ${diagnostics.unsavedCommand}; project ${diagnostics.projectEntityBytes} bytes; releases ${diagnostics.releaseBytes} bytes; fixtures ${diagnostics.fixtureBytes} bytes; migration backup ${diagnostics.migrationBackupBytes} bytes. ${diagnostics.explanation}`; builderRecoveryResult.focus(); }); });
+q("#builder-close-recovery").addEventListener("click", () => { builderRecoveryDialog.close(); builderRecoveryOrigin?.focus(); });
+globalThis.addEventListener("durable-project-saving", (event) => { const label = event.detail?.label ?? "project edit"; saveStatus = { kind: "saving", label }; });
+globalThis.addEventListener("durable-project-saved", () => { saveStatus = { kind: "idle" }; q("#retry-save").hidden = true; if (builderRecoveryDialog.open)
+    builderRecoveryDialog.close(); render(); });
+globalThis.addEventListener("durable-project-save-failed", (event) => { const failed = durableProjectRuntime.failedSave(); if (!failed)
+    return; state = { ...structuredClone(failed.state), history: { undo: [], redo: [] } }; saveStatus = { kind: "failed", label: failed.command.label, message: failed.error instanceof Error ? failed.error.message : String(failed.error) }; q("#retry-save").hidden = false; if (failed.conflict) {
+    durableConflict = structuredClone(failed.conflict);
+    showConflictReview();
+}
+else {
+    builderRecoveryOrigin = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+    q("#builder-recovery-summary").textContent = `Save failed for ${failed.projectName}: ${failed.command.label}. ${saveStatus.message} The last Saved Draft is unchanged; switching and publication remain blocked.`;
+    builderRecoveryResult.textContent = "Retry, export the unsaved Draft, export the repository backup, or inspect storage diagnostics.";
+    if (!builderRecoveryDialog.open)
+        builderRecoveryDialog.showModal();
+    builderRecoveryDialog.querySelector("h2")?.focus();
+} render(); });
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
 flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id });
 flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
@@ -1094,9 +1148,11 @@ flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuil
         }
     } layeredSchemaUi?.openGraphOccurrenceSchema(contextId.replace(/^context:/, ""), path); } });
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
-layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist });
+layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist, onUndo: () => { if (state)
+        void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
+        void durableProjectRuntime.redo(state.project.id); } });
 const synchronizeActiveProjectContext = (serialized) => { const change = activeProjectContextChange(serialized, state?.project.id, canonicalRevision); if (!change.changed)
-    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
+    return; library = change.library; pendingConflict = undefined; durableConflict = undefined; saveStatus = { kind: "idle" }; const active = change.active; state = active ? { ...structuredClone(active.state), history: { undo: [], redo: [] } } : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
     const navigation = resolveProjectNavigation(library, active.state.project.id);
     if (navigation) {
         projectOverview = false;
@@ -1129,7 +1185,7 @@ if (!state) {
         catch { /* ignore invalid start-path recovery */ }
 }
 durableProjectRuntime.subscribe(({ library: incoming, active }) => {
-    if (pendingConflict)
+    if (pendingConflict || durableConflict)
         return;
     if (active?.state.project.id !== state?.project.id) {
         synchronizeActiveProjectContext(serializeProjectLibrary(incoming));
@@ -1138,11 +1194,12 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     library = structuredClone(incoming);
     if (!active)
         return;
-    const windowHistory = structuredClone(state?.history ?? active.state.history);
-    state = { ...structuredClone(active.state), history: windowHistory };
+    state = { ...structuredClone(active.state), history: { undo: [], redo: [] } };
     lastCommittedState = structuredClone(state);
     canonicalRevision = active.draftSequence;
     publishedRevision = active.publishedRevision;
+    if (!durableProjectRuntime.failedSave())
+        saveStatus = { kind: "idle" };
     render();
     renderAssignments();
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;

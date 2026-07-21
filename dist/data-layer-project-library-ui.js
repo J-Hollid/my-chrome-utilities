@@ -1,5 +1,4 @@
 import { activateProject, createProjectInLibrary, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
-import { undoProjectTransaction } from "./data-layer-specification-project.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 const q = (root, selector) => { const value = root.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -20,7 +19,7 @@ export function subscribeProjectLibraryChanges(target, current, notify) { const 
     return; const next = restoreProjectLibrary(event.newValue); if (next && serializeProjectLibrary(next) !== serializeProjectLibrary(current()))
     notify(next); }; target.addEventListener("storage", listener); return () => target.removeEventListener("storage", listener); }
 export function mountProjectLibraryUi(options) {
-    const now = options.now ?? (() => new Date().toISOString()), id = options.id ?? ((kind) => `${kind}:${crypto.randomUUID()}`), activeHeader = q(options.root, "#active-project-header"), activeCard = q(options.root, "#active-project-card"), search = q(options.root, "#project-library-search"), list = q(options.root, "#project-library-list"), create = q(options.root, "#create-library-project"), importControl = q(options.root, "#import-library-project"), file = q(options.root, "#import-library-project-file"), status = q(options.root, "#project-library-status");
+    const now = options.now ?? (() => new Date().toISOString()), id = options.id ?? ((kind) => `${kind}:${crypto.randomUUID()}`), activeHeader = q(options.root, "#active-project-header"), activeCard = q(options.root, "#active-project-card"), search = q(options.root, "#project-library-search"), sort = options.root.querySelector("#project-library-sort"), list = q(options.root, "#project-library-list"), create = q(options.root, "#create-library-project"), importControl = q(options.root, "#import-library-project"), file = q(options.root, "#import-library-project-file"), status = q(options.root, "#project-library-status");
     const singleton = options.storage.getItem(options.projectStorageKey), state = restoreCanonicalProjectState(singleton), envelope = restoreCanonicalProjectEnvelope(singleton), navigation = options.storage.getItem(options.navigationStorageKey);
     let library = migrateSingletonProject(restoreProjectLibrary(options.storage.getItem(PROJECT_LIBRARY_STORAGE_KEY)), state && envelope ? { state, revision: envelope.revision, ...(navigation ? { navigation: JSON.parse(navigation) } : {}) } : undefined, now);
     const active = () => library.activeProjectId ? library.projects[library.activeProjectId] : undefined;
@@ -30,15 +29,17 @@ export function mountProjectLibraryUi(options) {
     else
         options.storage.removeItem(options.projectStorageKey); };
     const latestPersistedActive = () => { const current = active(), serialized = options.storage.getItem(options.projectStorageKey), state = restoreCanonicalProjectState(serialized), envelope = restoreCanonicalProjectEnvelope(serialized); return current && state?.project.id === current.state.project.id && envelope && envelope.revision >= current.revision ? { state, revision: envelope.revision } : current ? { state: current.state, revision: current.revision } : undefined; };
-    const persist = (next, projection = true) => { library = next; options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); if (projection)
+    const persist = (next, projection = false) => { library = next; options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); if (projection)
         projectProjection(); status.textContent = "Saving durable Draft…"; void options.settled?.().then(() => { status.textContent = "Saved to durable project storage."; }, error => { status.textContent = `Save failed; last Saved Draft is unchanged. ${error instanceof Error ? error.message : String(error)}`; }); options.onChange?.(); render(); };
-    options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
-    if (library.activeProjectId)
-        projectProjection();
+    library = { ...structuredClone(library), projects: Object.fromEntries(Object.entries(library.projects).map(([projectId, entry]) => [projectId, { ...structuredClone(entry), state: { ...structuredClone(entry.state), history: { undo: [], redo: [] } } }])) };
     const blocked = () => Boolean(options.blocked?.()), open = (projectId, route = "overview") => { if (blocked()) {
         status.textContent = "A failed Draft save blocks project switching until Retry succeeds or the unsaved Draft is exported and explicitly rejected.";
         return;
-    } const next = activateProject(library, projectId, now); persist(next); options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`); };
+    } if (projectId === library.activeProjectId) {
+        status.textContent = "Opening the current Saved Draft in Specification Studio…";
+        void Promise.resolve(options.settled?.()).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Specification Studio was not opened because the pending durable save failed. ${error instanceof Error ? error.message : String(error)}`; });
+        return;
+    } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now)); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
     const download = async (projectId) => { const record = library.projects[projectId]; status.textContent = `Preparing durable export for ${record.state.project.name}…`; try {
         const serialized = await options.exportProject(projectId), link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" }));
@@ -53,12 +54,27 @@ export function mountProjectLibraryUi(options) {
     const closeDialog = (dialog) => { dialog.close(); dialog.remove(); };
     const edit = (projectId, returnFocus) => { const record = library.projects[projectId], dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, projectMetadata(library, projectId)), save = button("Save project details", `Save details for ${record.state.project.name}`, () => { try {
         persist(updateProjectMetadata(library, projectId, readMetadata(fields), now));
-        heading.textContent = `Saved Draft for ${library.projects[projectId].state.project.name}. Stable identity ${projectId}; Published revision ${publishedRevision(library.projects[projectId])}.`;
+        heading.textContent = `Saving durable Draft for ${library.projects[projectId].state.project.name}. Stable identity ${projectId}; Published revision ${publishedRevision(library.projects[projectId])}.`;
         undo.hidden = false;
     }
     catch (error) {
         heading.textContent = error instanceof Error ? error.message : String(error);
-    } }), undo = button("Undo metadata edit", `Undo metadata edit for ${record.state.project.name}`, () => { const current = library.projects[projectId], restored = undoProjectTransaction(current.state); persist({ ...library, projects: { ...library.projects, [projectId]: { ...current, state: restored, revision: current.revision + 1, lastModifiedAt: now() } } }); heading.textContent = `Restored prior metadata for ${projectId} without changing active context.`; undo.hidden = true; }), cancel = button("Close", "Close project details", () => { closeDialog(dialog); returnFocus.focus(); }); heading.textContent = `Edit ${record.state.project.name} details`; undo.hidden = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(save, undo, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); fields.name.focus(); };
+    } }), undo = button("Undo metadata edit", `Undo metadata edit for ${record.state.project.name}`, () => { void (async () => { try {
+        await options.settled?.();
+        if (!options.undoProject)
+            throw new Error("This project surface has no page-scoped Undo command.");
+        await options.undoProject(projectId);
+        library = restoreProjectLibrary(options.storage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library;
+        const restored = projectMetadata(library, projectId);
+        for (const key of Object.keys(fields))
+            fields[key].value = restored[key];
+        heading.textContent = `Restored prior metadata for ${projectId} through a token-checked Saved Draft.`;
+        undo.hidden = true;
+        render();
+    }
+    catch (error) {
+        heading.textContent = `Undo was not applied. ${error instanceof Error ? error.message : String(error)}`;
+    } })(); }), cancel = button("Close", "Close project details", () => { closeDialog(dialog); returnFocus.focus(); }); heading.textContent = `Edit ${record.state.project.name} details`; undo.hidden = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(save, undo, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); fields.name.focus(); };
     const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
         if (blocked())
             throw new Error("A failed durable Draft still blocks project switching.");
@@ -139,8 +155,9 @@ export function mountProjectLibraryUi(options) {
             message.textContent = "No active project";
             activeCard.append(message, openProject, createProject);
         }
+        const entries = Object.entries(library.projects).filter(([, entry]) => [entry.state.project.name, entry.state.project.site, String(entry.state.project.owner ?? "")].some((value) => value.toLowerCase().includes(term))).sort(([, left], [, right]) => sort?.value === "last-saved" ? right.lastModifiedAt.localeCompare(left.lastModifiedAt) || left.state.project.name.localeCompare(right.state.project.name) : left.state.project.name.localeCompare(right.state.project.name));
         list.replaceChildren();
-        for (const [projectId, entry] of Object.entries(library.projects).filter(([, entry]) => [entry.state.project.name, entry.state.project.site, String(entry.state.project.owner ?? "")].some((value) => value.toLowerCase().includes(term)))) {
+        for (const [projectId, entry] of entries) {
             const item = document.createElement("li"), summary = document.createElement("p"), isActive = projectId === library.activeProjectId;
             item.dataset.projectId = projectId;
             item.tabIndex = -1;
@@ -149,8 +166,8 @@ export function mountProjectLibraryUi(options) {
             if (isActive)
                 item.append(button("Active", `${entry.state.project.name} Active`, () => { }));
             else {
-                const switchButton = button("Switch", `Switch to ${entry.state.project.name}`, function () { const control = this; if (blocked())
-                    return; void prepare(projectId).then(() => switchReview(projectId, control)); });
+                const switchButton = button("Switch", `Switch to ${entry.state.project.name}`, function () { if (blocked())
+                    return; switchReview(projectId, this); });
                 switchButton.disabled = blocked();
                 item.append(switchButton);
             }
@@ -159,6 +176,7 @@ export function mountProjectLibraryUi(options) {
         }
     }
     search.addEventListener("input", render);
+    sort?.addEventListener("change", render);
     create.addEventListener("click", creation);
     importControl.addEventListener("click", () => file.click());
     file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
@@ -176,10 +194,10 @@ export function mountProjectLibraryUi(options) {
             heading.tabIndex = -1;
             heading.focus();
         } file.value = ""; });
-    options.subscribe((next) => { const prior = library; library = { ...structuredClone(next), projects: Object.fromEntries(Object.entries(next.projects).map(([projectId, entry]) => { const history = prior.projects[projectId]?.state.history; return [projectId, !entry.state.history.undo.length && !entry.state.history.redo.length && history ? { ...structuredClone(entry), state: { ...structuredClone(entry.state), history: structuredClone(history) } } : structuredClone(entry)]; })) }; render(); options.onChange?.(); });
+    options.subscribe((next) => { library = { ...structuredClone(next), projects: Object.fromEntries(Object.entries(next.projects).map(([projectId, entry]) => [projectId, { ...structuredClone(entry), state: { ...structuredClone(entry.state), history: { undo: [], redo: [] } } }])) }; render(); options.onChange?.(); });
     render();
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
-        return; const activeHistory = library.projects[state.project.id]?.state.history, windowState = !state.history.undo.length && !state.history.redo.length && activeHistory ? { ...state, history: structuredClone(activeHistory) } : state; library = saveProjectState(library, state.project.id, windowState, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
+        return; library = saveProjectState(library, state.project.id, { ...structuredClone(state), history: { undo: [], redo: [] } }, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
     const activate = (projectId) => { if (blocked())
         throw new Error("A failed durable Draft blocks project switching."); persist(activateProject(library, projectId, now)); };
     return { render, library: () => cloneLibrary(library), activate, syncActiveProject: projectProjection, captureActiveProject };

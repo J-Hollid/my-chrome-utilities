@@ -134,6 +134,7 @@
         <h3>Projects</h3>
         <section id="active-project-card" aria-label="Active project card"></section>
         <label for="project-library-search">Search projects</label><input id="project-library-search" type="search" />
+        <label for="project-library-sort">Sort projects</label><select id="project-library-sort"><option value="name">Name</option><option value="last-saved">Last saved</option></select>
         <ul id="project-library-list" aria-label="Project library"></ul>
         <button id="create-library-project" type="button">Create project</button>
         <button id="import-library-project" type="button">Import project</button>
@@ -169,6 +170,13 @@
               <button id="export-unsaved-draft" type="button" disabled>Export unsaved Draft</button>
               <button id="export-repository-backup" type="button">Export repository backup</button>
               <button id="open-storage-diagnostics" type="button">Open storage diagnostics</button>
+              <button id="review-delete-migration-backup" type="button">Review deleting retained migration backup</button>
+              <section id="delete-migration-backup-review" aria-labelledby="delete-migration-backup-title" hidden>
+                <h5 id="delete-migration-backup-title" tabindex="-1">Delete retained legacy migration backup</h5>
+                <p>Current projects, saved schemas, fixtures, releases, and Published revisions remain unchanged. The original legacy source bytes will no longer be available for recovery.</p>
+                <button id="cancel-delete-migration-backup" type="button">Cancel and retain migration backup</button>
+                <button id="confirm-delete-migration-backup" type="button">Delete only the migration backup</button>
+              </section>
               <output id="durable-recovery-result" tabindex="-1" aria-live="polite"></output>
               <button id="close-storage-recovery" type="button">Close</button>
             </section>

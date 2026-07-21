@@ -34,31 +34,44 @@ function renderDiagnostics(root, diagnostics) {
     q(root, "#durable-storage-explanation").textContent = diagnostics.explanation;
 }
 export async function mountDurableProjectRepositoryUi(root, factory = globalThis.indexedDB, existing) {
-    const repository = existing ?? await openIndexedDbProjectRepository(factory), status = q(root, "#durable-repository-status"), open = q(root, "#open-storage-recovery"), dialog = q(root, "#durable-storage-recovery"), close = q(root, "#close-storage-recovery"), retry = q(root, "#retry-durable-save"), exportUnsaved = q(root, "#export-unsaved-draft"), exportBackup = q(root, "#export-repository-backup"), diagnose = q(root, "#open-storage-diagnostics"), result = q(root, "#durable-recovery-result");
+    const repository = existing ?? await openIndexedDbProjectRepository(factory), status = q(root, "#durable-repository-status"), open = q(root, "#open-storage-recovery"), dialog = q(root, "#durable-storage-recovery"), close = q(root, "#close-storage-recovery"), retry = q(root, "#retry-durable-save"), exportUnsaved = q(root, "#export-unsaved-draft"), exportBackup = q(root, "#export-repository-backup"), diagnose = q(root, "#open-storage-diagnostics"), reviewDeleteBackup = q(root, "#review-delete-migration-backup"), deleteBackupReview = q(root, "#delete-migration-backup-review"), cancelDeleteBackup = q(root, "#cancel-delete-migration-backup"), confirmDeleteBackup = q(root, "#confirm-delete-migration-backup"), result = q(root, "#durable-recovery-result");
     let failure, returnFocus;
     const estimate = async () => { const value = await navigator.storage?.estimate?.(); return typeof value?.usage === "number" && typeof value?.quota === "number" ? { usage: value.usage, quota: value.quota } : undefined; };
-    const refresh = async () => { const projects = await repository.listProjectMetadata(), active = projects.find(({ active }) => active); if (!failure)
-        status.textContent = `Durable project storage ready · ${projects.length} project${projects.length === 1 ? "" : "s"}${active ? ` · Active ${active.name}` : ""}`; open.disabled = !active && !failure; if (active)
+    const refresh = async (includeDiagnostics = false) => { const projects = await repository.listProjectMetadata(), active = projects.find(({ active }) => active), backup = includeDiagnostics ? await repository.migrationBackup() : undefined; if (!failure)
+        status.textContent = `Durable project storage ready · ${projects.length} project${projects.length === 1 ? "" : "s"}${active ? ` · Active ${active.name}` : ""}`; open.disabled = !active && !failure; reviewDeleteBackup.disabled = backup ? backup.sources.length === 0 : false; if (active && includeDiagnostics)
         renderDiagnostics(root, await repository.storageDiagnostics(active.projectId, await estimate(), failure?.command.label)); };
-    const show = async (origin) => { returnFocus = origin; await refresh(); dialog.showModal(); q(dialog, "#durable-storage-recovery-title").focus(); };
+    const show = async (origin) => { returnFocus = origin; await refresh(true); dialog.showModal(); q(dialog, "#durable-storage-recovery-title").focus(); };
     open.addEventListener("click", () => void show(open));
     close.addEventListener("click", () => { dialog.close(); returnFocus?.focus(); });
-    diagnose.addEventListener("click", async () => { await refresh(); result.textContent = "Storage diagnostics refreshed without deleting project data."; result.focus(); });
-    retry.addEventListener("click", async () => { if (!failure)
+    diagnose.addEventListener("click", async () => { await refresh(true); result.textContent = "Storage diagnostics refreshed without deleting project data."; result.focus(); });
+    retry.addEventListener("click", async () => { const activeFailure = failure; if (!activeFailure)
         return; try {
-        await failure.retry();
-        result.textContent = `${failure.command.label} saved. Project switching and publication are available.`;
+        await activeFailure.retry();
+        result.textContent = activeFailure.kind === "saved-schema" ? `${activeFailure.command.label} committed to the Saved Schema Library.` : `${activeFailure.command.label} saved. Project switching and publication are available.`;
         failure = undefined;
         retry.disabled = true;
         exportUnsaved.disabled = true;
-        await refresh();
+        await refresh(true);
     }
     catch (error) {
-        result.textContent = `Retry was not committed; the last Saved Draft remains unchanged. ${text(error)}`;
+        result.textContent = activeFailure.kind === "saved-schema" ? `Retry was not committed; the durable Saved Schema Library remains unchanged. ${text(error)}` : `Retry was not committed; the last Saved Draft remains unchanged. ${text(error)}`;
     } result.focus(); });
-    exportUnsaved.addEventListener("click", () => { failure?.exportUnsaved(); result.textContent = failure ? `Exported unsaved Draft for ${failure.projectName}.` : "There is no unsaved Draft to export."; result.focus(); });
+    exportUnsaved.addEventListener("click", () => { failure?.exportUnsaved(); result.textContent = failure ? failure.kind === "saved-schema" ? `Exported the exact unsaved schema batch for ${failure.projectName}.` : `Exported unsaved Draft for ${failure.projectName}.` : "There is no unsaved operation to export."; result.focus(); });
     exportBackup.addEventListener("click", async () => { const bundle = await repository.exportRepositoryRecoveryBundle(), serialized = JSON.stringify(bundle), link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); link.download = "durable-repository-recovery.json"; link.click(); URL.revokeObjectURL(link.href); result.textContent = `Exported parseable recovery data for ${bundle.projects instanceof Array ? bundle.projects.length : 0} projects, all saved schemas, immutable revisions, fixtures, releases, and migration sources.`; result.focus(); });
-    const ui = { repository, refresh, async reportSaveFailure(input, error) { failure = input; status.textContent = `Save failed for ${input.projectName}: ${input.command.label}. Last Saved Draft is unchanged. ${text(error)}`; retry.disabled = false; exportUnsaved.disabled = false; renderDiagnostics(root, await repository.storageDiagnostics(input.projectId, await estimate(), input.command.label)); await show(input.originControl ?? status); q(dialog, "#durable-recovery-result").textContent = `${input.command.label} was not committed. Retry or export the unsaved Draft.`; } };
+    reviewDeleteBackup.addEventListener("click", () => { deleteBackupReview.hidden = false; q(deleteBackupReview, "#delete-migration-backup-title").focus(); });
+    cancelDeleteBackup.addEventListener("click", () => { deleteBackupReview.hidden = true; result.textContent = "Cancelled. The retained legacy migration backup remains available; current projects are unchanged."; result.focus(); });
+    confirmDeleteBackup.addEventListener("click", async () => { try {
+        const deleted = await repository.deleteMigrationBackup({ backupId: "legacy-v1", label: "Delete retained legacy migration backup" });
+        deleteBackupReview.hidden = true;
+        result.textContent = deleted ? "Deleted only the retained legacy migration backup. Current projects, saved schemas, fixtures, releases, and Published revisions are unchanged." : "No retained legacy migration backup was present; current projects are unchanged.";
+        await refresh(true);
+    }
+    catch (error) {
+        deleteBackupReview.hidden = false;
+        result.textContent = `Migration backup deletion was not committed. The retained backup and current projects remain unchanged. ${text(error)}`;
+    } result.focus(); });
+    const ui = { repository, refresh, async reportSaveFailure(input, error) { failure = input; const schema = input.kind === "saved-schema"; status.textContent = schema ? `Save failed for ${input.projectName}: ${input.command.label}. The durable Saved Schema Library is unchanged. ${text(error)}` : `Save failed for ${input.projectName}: ${input.command.label}. Last Saved Draft is unchanged. ${text(error)}`; retry.disabled = false; exportUnsaved.disabled = false; if (input.projectId)
+            renderDiagnostics(root, await repository.storageDiagnostics(input.projectId, await estimate(), input.command.label)); await show(input.originControl ?? status); q(dialog, "#durable-recovery-result").textContent = schema ? `${input.command.label} was not committed. Retry the exact batch or export it for recovery.` : `${input.command.label} was not committed. Retry or export the unsaved Draft.`; } };
     repository.subscribe(() => { void refresh(); });
     repository.subscribeProjectMetadata(() => { void refresh(); });
     repository.subscribeActiveContext(() => { void refresh(); });

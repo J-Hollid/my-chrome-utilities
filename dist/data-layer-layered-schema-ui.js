@@ -1,5 +1,5 @@
 import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
-import { confirmCanonicalMigration, redoProjectTransaction, transactProject, undoProjectTransaction } from "./data-layer-specification-project.js";
+import { confirmCanonicalMigration, transactProject } from "./data-layer-specification-project.js";
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
@@ -96,13 +96,7 @@ export function mountSidePanelLayeredProfileEditor(options) {
         const editorHost = document.createElement("section");
         options.host.append(editorHost);
         mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => current().selection.entity.canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const live = current(), document = live.selection.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state)
-                options.persist(writeSidePanelCanonical(live.state, live.selection, result.document)); return result; }, onUndo: () => { const live = current(); if (live.state) {
-                options.persist(undoProjectTransaction(live.state));
-                render();
-            } }, onRedo: () => { const live = current(); if (live.state) {
-                options.persist(redoProjectTransaction(live.state));
-                render();
-            } } });
+                options.persist(writeSidePanelCanonical(live.state, live.selection, result.document)); return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() });
         if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups")
             renderSidePanelComposedSchemaContext({ host: options.host, load: options.load, key: selectedKey, persist: options.persist, render });
     };
@@ -138,7 +132,7 @@ export function installLayeredSchemaUi(options) {
                 graphSelection = { ...graphSelection, canonicalSchema: result.document };
             options.persist(writeCanonical(live.state, live.entity, live.scope, result.document));
             queueMicrotask(renderEditor);
-        } return result; } }); return true; };
+        } return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() }); return true; };
     const contributorsFor = (state, entity, scope) => layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined));
     const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
     const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(layeredContributorsForPath(state, target), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
