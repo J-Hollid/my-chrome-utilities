@@ -229,3 +229,22 @@ Feature: Data layer canonical Shared Profile schema authoring
       | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
       | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
       | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and page-scoped Undo result |
+
+  # Data layer canonical Shared Profile schema authoring 020
+  Scenario: Data layer canonical Shared Profile schema authoring 020
+    Given canonical Opened Article Draft article-8 has compact-panel and wide-workspace projections
+    When the operator opens Opened Article in the side panel
+    Then the sole editor retains the compact established schema header, property filter, property sort, complete property tree, and assisted Add property controls
+    And selecting metadata/category exposes valid type, conditional presence, typed allowed values, rich rules, documentation, examples, copy, move, and remove actions in stacked panel detail
+    And no standalone wide table, Builder canonical editor, or second schema form is embedded inside the side-panel editor
+    When the operator opens the same Opened Article Draft in the standalone workspace
+    Then the workspace keeps all property rows visible in its wide table and exposes the same complex operations in expandable row detail
+    And the standalone renderer does not replace or reconfigure the side-panel renderer
+    When the operator changes metadata/category documentation through the compact side-panel control
+    And the operator changes metadata/category conditional presence through the standalone row detail
+    Then canonical subscription results are
+      | projection          | rendered facet       | Draft token |
+      | standalone table    | changed documentation | article-9   |
+      | compact panel detail | changed condition     | article-10  |
+    And each result identifies its originating property-scoped command
+    And both surfaces persist one canonical property identity without a presentation-specific schema representation

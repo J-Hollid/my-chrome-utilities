@@ -229,3 +229,23 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | add allowed values News and Guide plus a conditional reusable rule | standalone        | side panel        | typed values and structured rule references  |
       | document article_type and select Guide as its example             | side panel        | standalone        | documentation and typed example              |
       | duplicate, move, rename, and delete a nested property             | standalone        | side panel        | identical property lifecycle and page-scoped Undo result |
+
+  # Data layer canonical Shared Profile schema authoring runtime 020
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 020
+    Given canonical Opened Article Draft article-8 has installed compact-panel and wide-workspace projections
+    When actual side-panel selection opens the compact projection
+    Then exactly one compact established editor renders its schema header, property filter, property sort, complete property tree, and assisted Add property controls
+    And actual selection of metadata/category renders valid type, conditional presence, typed allowed values, rich rules, documentation, examples, copy, move, and remove controls in stacked panel detail
+    And the side-panel editor contains no standalone wide table, Builder canonical editor landmark, or nested second schema form
+    And at 360 CSS pixels one measured vertical scroll owner contains every selected-property control with no horizontal page overflow
+    When actual controls open the same canonical Draft in the installed standalone workspace
+    Then all property rows remain mounted in the wide table and expandable row detail contains the same complex operations
+    And reopening the side panel retains its compact renderer, selected property, and panel scroll ownership
+    When actual side-panel controls change metadata/category documentation
+    And actual standalone row-detail controls change metadata/category conditional presence
+    Then installed subscription evidence is
+      | projection          | rendered facet        | opaque Draft token |
+      | standalone table    | changed documentation | article-9          |
+      | compact panel detail | changed condition     | article-10         |
+    And telemetry attributes each token to its originating property-scoped command
+    And repository inspection finds one canonical property identity with no panel-specific or standalone-specific schema payload

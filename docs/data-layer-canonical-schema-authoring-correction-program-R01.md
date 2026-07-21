@@ -211,6 +211,17 @@ Occurrences. Each entry exposes a human name, role, scope, lineage, revision, an
 Draft or saved state. Filtering or selecting a group changes which canonical record
 the regular editor displays; it never mounts a second editor beside it.
 
+This requirement has a fixed presentation direction. The existing compact
+side-panel renderer remains the side-panel editor: its schema header, property
+filter and sort, complete property tree, assisted nested-property creation,
+type selector, conditional presence controls, typed allowed-value builder, rich
+rule builder, documentation and example controls, and property lifecycle actions
+must remain usable in their panel-oriented layout. A canonical model adapter may
+replace its persistence internals, but the Builder/standalone canonical editor or
+wide table must not be mounted inside the established side-panel form. Parity is
+not satisfied by hiding the established controls and embedding the project editor
+in the narrower viewport.
+
 The same property navigator, structural actions, type controls, conditional
 presence, typed allowed values, rich rules, documentation, examples, impact review,
 revision comparison, Undo, and Redo remain available regardless of contributor
@@ -228,8 +239,9 @@ copies parent properties, effective values, or a composed snapshot into the chil
 ## Standalone parity and wide composed-schema table
 
 The proven side-panel schema editor supplies the interaction model. The Builder
-and standalone entity workspaces use the same editor core and command handlers in a
-layout suited to the larger viewport:
+and standalone entity workspaces use the same canonical command model and provide
+the same operations through a layout suited to the larger viewport. They do not
+require the side panel and standalone workspace to share one rendered DOM tree:
 
 - a profile or contributor header with Draft state, lineage, save state, revision
   comparison, Undo, and Redo;
@@ -456,6 +468,7 @@ feature.
 | C36 | Shared Profiles incorrectly mount a second side-panel schema editor | Authoring 017 | One grouped Schema list selects every role into the established editor region | Side-panel routing, schema list projection, and shared editor host | One editor landmark, grouped entries, reused controls, and absent adjacent forms | B, E | Selecting Shared Profile leaves exactly one in-panel schema editor mounted |
 | C37 | Inheritance is treated as a standalone composed-view concern | Authoring 018 | The regular panel editor shows parent stacks and stores sparse overrides and resets | Canonical contributor graph, property command bus, compiler, and validator | Stable parent references, sparse child bytes, two-surface result, and absent snapshots | A, C, E | Panel, standalone, compiler, and validator derive one effective property without copying a parent |
 | C38 | Standalone controls can be thinner or different from the established panel editor | Authoring 019 | Representative rich operations round-trip in both directions through purpose-built controls | Shared editor core, command schema, repository subscriptions, and responsive projections | Control availability, command identity, revision equality, canonical bytes, and rendered results | B, E | Every supported panel operation succeeds standalone with the same canonical result and no raw-JSON substitute |
+| C39 | Parity was inverted by mounting the standalone/project editor inside the side panel | Authoring 020 | The panel retains its compact established editor while standalone uses a wide table over the same canonical commands | Surface-specific renderers, canonical command adapter, repository subscriptions, and responsive layout | Installed side-panel and standalone landmarks, complete control inventories, no nested project editor, command identity, revision equality, and 360px measurements | B, E | The side panel remains fully usable with its established compact controls and the standalone workspace independently provides complete parity |
 
 ## Terminal acceptance
 

@@ -209,10 +209,12 @@ the selected project route.
 The canonical authoring checkpoint replaces the current lightweight requirements
 grid, structured draft, path-constraint overlay, and any additional Shared Profile
 or composed-schema panel form as competing editable schema models. The side panel
-retains one established Schema editor and one grouped Schema list for saved schemas,
+retains one established compact Schema editor and one grouped Schema list for saved schemas,
 Shared Profiles, Page Groups, Pages, Events, Flow instances, and occurrences. A
-Shared Profile is a contributor role, not a second schema type or editor. Builder,
-standalone entity workspaces, and the side panel use the same complete editor core,
+Shared Profile is a contributor role, not a second schema type or editor. The side
+panel keeps its pre-existing panel-oriented renderer; Builder and standalone
+entity workspaces reproduce its complete capabilities in their wider renderer.
+All surfaces use the same canonical model, property-scoped commands, and results,
 including structural nested authoring, typed properties, conditional presence,
 allowed values, rich rules, documentation, examples, nested All/Any/Not predicate
 building, opaque Draft-token comparison, and synchronized Tree and Table views. Existing
@@ -227,9 +229,11 @@ Inheritance is native canonical data: stable contributor references identify
 parents, sparse local facets hold overrides, and effective values and provenance are
 derived in the regular panel editor, standalone workspace, compiler, and validator.
 The standalone workspace must have functional parity with the pre-existing panel
-editor while using its wider multi-row layout. Selecting a schema role never mounts
-a second panel editor; `Reset to parents` deletes local facets rather than copying a
-parent or composed snapshot.
+editor while using its wider multi-row layout. Parity must not be implemented by
+hiding the established side-panel controls and mounting the standalone/project
+editor inside the side-panel form. Selecting a schema role never mounts a second
+panel editor; `Reset to parents` deletes local facets rather than copying a parent
+or composed snapshot.
 
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
