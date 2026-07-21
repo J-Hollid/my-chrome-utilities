@@ -793,6 +793,7 @@
     "source": [
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
+      "src/data-layer-canonical-predicate-editor.ts",
       "src/data-layer-side-panel-unified-schema-editor.ts",
       "src/data-layer-composed-schema-builders.ts",
       "src/data-layer-composed-schema-workspace.ts",

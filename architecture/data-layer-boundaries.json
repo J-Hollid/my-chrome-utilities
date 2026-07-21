@@ -221,6 +221,14 @@
     "module": "schemas",
     "layer": "browser",
     "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-predicate-editor.ts"
+    ]
+  },
+  "src/data-layer-canonical-predicate-editor.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
       "src/data-layer-canonical-schema.ts"
     ]
   },

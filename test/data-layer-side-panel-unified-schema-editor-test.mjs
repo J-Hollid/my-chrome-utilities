@@ -7,6 +7,7 @@ import {
   savedSchemaFromCanonical,
 } from "../dist/data-layer-side-panel-unified-schema-editor.js";
 import {applyCanonicalCommand} from "../dist/data-layer-canonical-schema.js";
+import {canonicalPredicateLeafFromInput, canonicalPredicateText, validateCanonicalPredicateTree} from "../dist/data-layer-canonical-predicate-editor.js";
 import {createSchemaWorkingDraft,publishSchemaWorkingDraft} from "../dist/data-layer-schema-verification.js";
 
 let sequence=0;
@@ -67,15 +68,15 @@ const compactSource={
     ...canonical.nodes,
     [category.id]:{
       ...category,
-      presence:{mode:"required-when",condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"}},
-      rules:category.rules.map((rule)=>rule.id==="rule:category"?{...rule,condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"}}:rule),
+      presence:{mode:"required-when",condition:{kind:"all",children:[{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"},{kind:"not",children:[{kind:"predicate",propertyId:category.id,operator:"Contains",value:"Draft"}]}]}},
+      rules:category.rules.map((rule)=>rule.id==="rule:category"?{...rule,condition:{kind:"all",children:[{kind:"any",children:[{kind:"predicate",propertyId:category.id,operator:"Equals",value:"News"},{kind:"predicate",propertyId:category.id,operator:"Starts with",value:"Guide"}]},{kind:"not",children:[{kind:"predicate",propertyId:category.id,operator:"Contains",value:"Draft"}]}]}}:rule),
     },
   },
 };
 const compact=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8});
 assert.equal(compact.canonicalSchema,undefined,"the compact renderer receives a projection instead of a nested standalone-editor payload");
 const compactConditionalRule=compact.attachedRules.find(({id})=>id==="rule:category");
-assert.deepEqual(compactConditionalRule.conditionGroup,{operator:"All",predicates:[{propertyPath:"/article",operator:"Equals",comparison:{type:"string",value:"News"},detectedType:"object"}]},"the compact rich rule builder receives the canonical condition as editable structured controls");
+assert.equal(compactConditionalRule.conditionGroup,undefined,"the compact adapter never translates canonical predicates through the legacy flat conditionGroup");
 compact.documentation.properties["/article/category"]={
   ...compact.documentation.properties["/article/category"],
   description:"Changed through compact panel",
@@ -86,12 +87,15 @@ assert.equal(compactCommands[0].propertyId,category.id,"compact edits retain the
 const compactResult=applyCanonicalCommand(compactSource,compactCommands[0]);
 assert.equal(compactResult.document.nodes[category.id].documentation.description,"Changed through compact panel");
 assert.equal(compactResult.document.nodes[category.id].presence.mode,"required-when","projection edits preserve conditional presence owned by canonical state");
-assert.equal(compactResult.document.nodes[category.id].presence.condition.propertyId,article.id);
-assert.deepEqual(compactResult.document.nodes[category.id].rules.find(({id})=>id==="rule:category").condition,{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"},"compact projection edits round-trip the rendered canonical rule condition");
-const editedRuleProjection=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}),editedConditionalRule=editedRuleProjection.attachedRules.find(({id})=>id==="rule:category");
-editedConditionalRule.conditionGroup.predicates[0].comparison.value="Guide";
-const editedRuleCommands=canonicalCommandsFromCompactProjection(compactSource,editedRuleProjection,id),editedRuleResult=applyCanonicalCommand(compactSource,editedRuleCommands[0]);
-assert.equal(editedRuleResult.document.nodes[category.id].rules.find(({id})=>id==="rule:category").condition.value,"Guide","editing the rendered rich condition writes the typed predicate back to the canonical rule model");
+assert.deepEqual(compactResult.document.nodes[category.id].presence.condition,compactSource.nodes[category.id].presence.condition,"compact projection edits preserve the nested conditional-presence tree unchanged");
+assert.deepEqual(compactResult.document.nodes[category.id].rules.find(({id})=>id==="rule:category").condition,compactSource.nodes[category.id].rules.find(({id})=>id==="rule:category").condition,"compact projection edits preserve the nested rule tree unchanged");
+const nestedRule=compactSource.nodes[category.id].rules.find(({id})=>id==="rule:category").condition;
+assert.equal(validateCanonicalPredicateTree(compactSource,nestedRule).ready,true);
+assert.equal(canonicalPredicateText(compactSource,nestedRule),"All (Any (category Equals News or category Starts with Guide) and Not (category Contains Draft))");
+assert.deepEqual(canonicalPredicateLeafFromInput(compactSource,category.id,"Equals","News"),{ready:true,predicate:{kind:"predicate",propertyId:category.id,operator:"Equals",value:"News"}},"the simple Equals News operand remains supported by the canonical editor");
+assert.deepEqual(canonicalPredicateLeafFromInput(compactSource,category.id,"Starts with","/news/"),{ready:true,predicate:{kind:"predicate",propertyId:category.id,operator:"Starts with",value:"/news/"}},"typed string operators are authored directly in the canonical tree");
+assert.equal(canonicalPredicateLeafFromInput(compactSource,article.id,"Starts with","/news/").ready,false,"an incompatible typed operator blocks the exact canonical predicate operand");
+assert.equal(canonicalPredicateLeafFromInput(compactSource,category.id,"Matches pattern","[").ready,false,"an invalid regular expression blocks the exact canonical predicate operand");
 
 const addedProjection=structuredClone(compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}));
 addedProjection.document.properties.article.properties.section={type:"string",description:"Nested section"};

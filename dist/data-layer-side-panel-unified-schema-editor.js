@@ -2,24 +2,7 @@ import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-lay
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
 const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
-const compactOperator = (operator) => ({ "Greater than": "Is greater than", "At least": "Is at least", "Less than": "Is less than", "At most": "Is at most" }[operator] ?? operator);
 const canonicalOperator = (operator) => ({ "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
-const compactComparison = (value) => value === null ? { type: "null", value: null } : typeof value === "string" ? { type: "string", value } : typeof value === "number" ? { type: "number", value } : typeof value === "boolean" ? { type: "boolean", value } : undefined;
-function compactRuleCondition(document, condition) {
-    if (!condition)
-        return undefined;
-    let group, leaves;
-    if (condition.kind === "predicate")
-        leaves = [condition];
-    else if ((condition.kind === "all" || condition.kind === "any") && condition.children.every((child) => child.kind === "predicate")) {
-        group = condition;
-        leaves = condition.children;
-    }
-    else
-        return undefined;
-    return { operator: group?.kind === "any" ? "Any" : "All", predicates: leaves.flatMap((leaf) => { const node = document.nodes[leaf.propertyId]; if (!node)
-            return []; const comparison = compactComparison(leaf.value); return [{ propertyPath: canonicalPropertyPath(document, node.id), operator: compactOperator(leaf.operator), ...(comparison ? { comparison } : {}), detectedType: node.type === "integer" ? "number" : node.type }]; }) };
-}
 function canonicalRuleCondition(document, group) {
     if (!group)
         return undefined;
@@ -196,8 +179,8 @@ export function savedSchemaFromCanonical(schema, canonical) {
         for (const rule of node.rules) {
             if (rule.id.startsWith("json-facet:"))
                 continue;
-            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, conditionGroup = compactRuleCondition(canonical, rule.condition);
-            attachedRules.push({ ...prior, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), ...(conditionGroup ? { conditionGroup } : {}), severity: rule.severity, message: rule.message });
+            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, { conditionGroup: _legacyConditionGroup, ...priorWithoutLegacyCondition } = prior ?? {};
+            attachedRules.push({ ...priorWithoutLegacyCondition, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, message: rule.message });
         }
     }
     const clean = (value) => { const next = structuredClone(value); delete next.attachedRules; if (next.required && !next.required.length)

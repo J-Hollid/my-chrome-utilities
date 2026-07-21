@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandsFromCompactProjection, canonicalPropertyPath, compactConditionalPresence, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandsFromCompactProjection, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
@@ -2432,7 +2432,7 @@ function renderSchemaDraft() {
         copyProperty.addEventListener("click", () => openSchemaPropertyCopyReview(persistedPath, copyProperty));
         const compactPresence = compactCanonicalEditor ? document.createElement("fieldset") : undefined;
         if (compactPresence && compactCanonicalEditor) {
-            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select"), savePresence = document.createElement("button"), predicateControls = document.createElement("fieldset"), predicateLegend = document.createElement("legend"), predicateProperty = document.createElement("select"), predicateOperator = document.createElement("select"), predicateValue = document.createElement("input"), savePredicate = document.createElement("button"), currentPredicate = canonicalNode?.presence.condition?.kind === "predicate" ? canonicalNode.presence.condition : undefined, fallbackProperty = Object.values(canonical.nodes).find(({ id, name }) => id !== canonicalNode?.id && name === "article_type") ?? Object.values(canonical.nodes).find(({ id }) => id !== canonicalNode?.id), presenceDraft = canonicalNode && compactCanonicalPresenceDraft?.propertyId === canonicalNode.id ? compactCanonicalPresenceDraft : undefined;
+            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select"), savePresence = document.createElement("button"), predicateControls = document.createElement("section"), presenceDraft = canonicalNode && compactCanonicalPresenceDraft?.propertyId === canonicalNode.id ? compactCanonicalPresenceDraft : undefined;
             compactPresence.className = "compact-canonical-presence";
             compactPresence.dataset.compactPropertyId = canonicalNode?.id ?? "";
             legend.textContent = "Conditional presence";
@@ -2441,20 +2441,9 @@ function renderSchemaDraft() {
             mode.value = presenceDraft?.mode ?? canonicalNode?.presence.mode ?? "optional";
             const dispatchPresence = (presence) => { if (!canonicalNode || !compactCanonicalEditor)
                 return; dispatchCompactCanonicalCommand({ kind: "set", baseRevision: presenceDraft?.baseRevision ?? canonical.revision, propertyId: canonicalNode.id, patch: { presence } }); };
-            predicateLegend.textContent = "Typed conditional predicate";
-            predicateProperty.setAttribute("aria-label", `Conditional predicate property for ${persistedPath}`);
-            predicateProperty.append(...Object.values(canonical.nodes).filter(({ id }) => id !== canonicalNode?.id).map((node) => new Option(`${node.name} · ${canonicalPropertyPath(canonical, node.id)}`, node.id)));
-            predicateProperty.value = currentPredicate?.propertyId ?? fallbackProperty?.id ?? "";
-            predicateOperator.setAttribute("aria-label", `Conditional predicate operator for ${persistedPath}`);
-            predicateOperator.append(...["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains"].map((operator) => new Option(operator, operator)));
-            predicateOperator.value = currentPredicate?.operator ?? "Equals";
-            predicateValue.setAttribute("aria-label", `Conditional predicate value for ${persistedPath}`);
-            predicateValue.value = currentPredicate?.value === undefined ? "" : String(currentPredicate.value);
-            savePredicate.type = "button";
-            savePredicate.textContent = "Save conditional presence";
-            savePredicate.addEventListener("click", () => { if (!canonicalNode || !predicateProperty.value || !mode.value.endsWith("-when"))
-                return; dispatchPresence(compactConditionalPresence(mode.value, predicateProperty.value, predicateOperator.value, predicateValue.value)); });
-            predicateControls.append(predicateLegend, predicateProperty, predicateOperator, predicateValue, savePredicate);
+            if (canonicalNode)
+                mountCanonicalPredicateEditor({ host: predicateControls, document: canonical, ...(canonicalNode.presence.condition ? { condition: canonicalNode.presence.condition } : {}), label: `Nested conditional presence for ${persistedPath}`, saveLabel: "Save conditional presence", excludePropertyId: canonicalNode.id, onSave: (condition) => { if (!mode.value.endsWith("-when"))
+                        return; dispatchPresence({ mode: mode.value, condition }); }, ...(canonicalNode.presence.condition ? { onClear: () => dispatchPresence({ mode: mode.value.startsWith("forbidden") ? "forbidden" : "required" }) } : {}) });
             predicateControls.hidden = !mode.value.endsWith("-when");
             mode.addEventListener("change", () => { predicateControls.hidden = !mode.value.endsWith("-when"); if (canonicalNode)
                 compactCanonicalPresenceDraft = { propertyId: canonicalNode.id, baseRevision: presenceDraft?.baseRevision ?? canonical.revision, mode: mode.value }; });
@@ -2536,9 +2525,12 @@ function renderSchemaDraft() {
             row.dataset.ruleId = rule.id;
             row.dataset.propertyPath = persistedPath;
             row.tabIndex = -1;
-            const conditionSummary = rule.conditionGroup && rule.propertyPath && rule.operator
-                ? conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: rule.propertyPath, operator: rule.operator, ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}) } })
-                : undefined;
+            const canonicalRule = compactNode?.rules.find(({ id }) => id === rule.id);
+            const conditionSummary = canonicalRule?.condition && compactDocument
+                ? canonicalPredicateText(compactDocument, canonicalRule.condition)
+                : rule.conditionGroup && rule.propertyPath && rule.operator
+                    ? conditionalRuleSummary({ conditionGroup: rule.conditionGroup, consequence: { propertyPath: rule.propertyPath, operator: rule.operator, ...(rule.parameters !== undefined ? { parameters: rule.parameters } : {}) } })
+                    : undefined;
             row.textContent = `${rule.id} v${rule.version} · ${conditionSummary ?? `${rule.operator ?? "rule"} · ${rule.parameters ?? "no parameters"}`} · ${rule.severity ?? "error"} · ${rule.enabled === false ? "disabled" : "active"} `;
             const toggle = document.createElement("button");
             toggle.type = "button";
@@ -2566,6 +2558,14 @@ function renderSchemaDraft() {
             edit.className = "schema-attached-rule-edit";
             edit.addEventListener("click", () => openAttachedSchemaRuleEditor(path, rule, edit));
             row.append(...(promotion ? [promotion] : []), edit, toggle, remove);
+            if (compactCanonicalEditor && compactDocument && compactNode && canonicalRule) {
+                const predicateEditor = document.createElement("section");
+                mountCanonicalPredicateEditor({ host: predicateEditor, document: compactDocument, ...(canonicalRule.condition ? { condition: canonicalRule.condition } : {}), label: `Nested rule predicate for ${rule.id}`, saveLabel: "Save nested rule predicate", onSave: (condition) => { const latest = compactCanonicalEditor?.load(), latestNode = latest?.nodes[compactNode.id]; if (!latest || !latestNode)
+                        return; dispatchCompactCanonicalCommand({ kind: "set", baseRevision: latest.revision, propertyId: latestNode.id, patch: { rules: latestNode.rules.map((candidate) => candidate.id === canonicalRule.id ? { ...candidate, condition } : candidate) } }); }, ...(canonicalRule.condition ? { onClear: () => { const latest = compactCanonicalEditor?.load(), latestNode = latest?.nodes[compactNode.id]; if (!latest || !latestNode)
+                            return; dispatchCompactCanonicalCommand({ kind: "set", baseRevision: latest.revision, propertyId: latestNode.id, patch: { rules: latestNode.rules.map((candidate) => { if (candidate.id !== canonicalRule.id)
+                                    return candidate; const { condition: _condition, ...withoutCondition } = candidate; return withoutCondition; }) } }); } } : {}) });
+                row.append(predicateEditor);
+            }
             view.append(row);
         }
         if (compactCanonicalEditor) {
@@ -4102,8 +4102,15 @@ function renderSchemaLocalRuleConfiguration(path, configuration) {
     reusable.checked = configuration.saveReusable;
     reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
     reusable.addEventListener("change", () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector("#schema-local-rule-reusable")?.focus(); });
-    form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel, conditionalLabel);
-    if (configuration.applyOnlyWhen)
+    form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel);
+    if (compactCanonicalEditor) {
+        const canonicalNotice = document.createElement("p");
+        canonicalNotice.textContent = "Save the rule, then author its nested All, Any, or Not condition directly in the canonical stacked rule detail.";
+        form.append(canonicalNotice);
+    }
+    else
+        form.append(conditionalLabel);
+    if (configuration.applyOnlyWhen && !compactCanonicalEditor)
         form.append(renderConditionalRuleConfiguration(path, configuration, refreshValidation));
     if (!editing)
         form.append(reusableLabel);

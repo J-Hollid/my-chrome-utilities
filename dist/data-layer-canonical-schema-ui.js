@@ -1,4 +1,5 @@
 import { canonicalPropertyPath, canonicalTableRows, evaluateCanonicalPredicate } from "./data-layer-canonical-schema.js";
+import { mountCanonicalPredicateEditor } from "./data-layer-canonical-predicate-editor.js";
 const dom = globalThis.document;
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
 const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope} ${contributorName} ${state}` : source).join(" → ");
@@ -311,8 +312,11 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
     const rules = dom.createElement("details"), rulesSummary = dom.createElement("summary"), ruleKind = select("ruleKind", ["pattern", "range", "cardinality", "condition", "custom"], "pattern"), severity = select("ruleSeverity", ["error", "warning"], "error"), message = input("ruleMessage"), pattern = input("rulePattern"), minimum = input("ruleMinimum", "", "number"), maximum = input("ruleMaximum", "", "number"), reusable = input("reusableRuleId"), addRule = dom.createElement("button"), ruleList = dom.createElement("ul");
     rulesSummary.textContent = "Add rule";
     for (const rule of node.rules) {
-        const item = dom.createElement("li");
-        item.textContent = `${rule.kind} · ${rule.severity} · ${rule.message}${rule.reusableRuleId ? ` · reusable ${rule.reusableRuleId}` : ""}`;
+        const item = dom.createElement("li"), description = dom.createElement("p"), predicateHost = dom.createElement("section");
+        description.textContent = `${rule.kind} · ${rule.severity} · ${rule.message}${rule.reusableRuleId ? ` · reusable ${rule.reusableRuleId}` : ""}${rule.condition ? ` · ${plainPredicate(rule.condition, document)}` : ""}`;
+        mountCanonicalPredicateEditor({ host: predicateHost, document, ...(rule.condition ? { condition: rule.condition } : {}), label: `Nested rule predicate for ${rule.id}`, saveLabel: "Save nested rule predicate", onSave: (condition) => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => candidate.id === rule.id ? { ...candidate, condition } : candidate) } }), ...(rule.condition ? { onClear: () => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => { if (candidate.id !== rule.id)
+                            return candidate; const { condition: _condition, ...withoutCondition } = candidate; return withoutCondition; }) } }) } : {}) });
+        item.append(description, predicateHost);
         ruleList.append(item);
     }
     addRule.type = "button";
