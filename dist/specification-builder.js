@@ -1211,6 +1211,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     library = structuredClone(incoming);
     if (!active)
         return;
+    const focusedMembershipId = document.activeElement instanceof HTMLElement ? document.activeElement.closest("[data-page-group-membership-id]")?.dataset.pageGroupMembershipId : undefined;
     state = { ...structuredClone(active.state), history: { undo: [], redo: [] } };
     lastCommittedState = structuredClone(state);
     canonicalRevision = active.draftSequence;
@@ -1219,6 +1220,8 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
         saveStatus = { kind: "idle" };
     render();
     renderAssignments();
+    if (focusedMembershipId)
+        queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
 });
 render();

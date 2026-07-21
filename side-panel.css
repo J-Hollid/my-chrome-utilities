@@ -459,6 +459,16 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
 [data-schema-presentation="compact-panel"] fieldset { margin-inline:0; padding:.4rem; }
 [data-schema-presentation="compact-panel"] :is(input:not([type="button"]):not([type="radio"]):not([type="checkbox"]),select,textarea) { inline-size:100%; }
 [data-schema-presentation="compact-panel"] #schema-property-tree { padding-inline-start:.35rem; }
+@media (max-width:699px) {
+  /* The compact schema detail owns vertical navigation at side-panel widths.
+     Its workspace and editor descendants must not form competing scrollports. */
+  #workspace-panel-data-layer:has([data-schema-presentation="compact-panel"]) { overflow-y:hidden; }
+  #schema-detail:has([data-schema-presentation="compact-panel"]) { min-block-size:0; overflow-y:auto; overscroll-behavior-y:contain; }
+  #schema-detail:has([data-schema-presentation="compact-panel"]) :is([data-schema-presentation="compact-panel"],#schema-property-tree,[aria-label^="Stacked property detail"],fieldset,details,section,ul,li,pre) {
+    max-block-size:none;
+    overflow-y:visible;
+  }
+}
 
 #active-project-header,
 #active-project-card,

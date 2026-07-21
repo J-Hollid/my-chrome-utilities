@@ -280,7 +280,9 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     finally {
         locallySavingProjects.delete(projectId);
     } };
-    const settled = async () => { await latest; await settleFeeds(); };
+    const settled = async (scope = "all") => { await latest; await settleFeeds(); if (scope !== "schema" && failed)
+        throw failed.error; if (scope !== "project" && failedSchema)
+        throw failedSchema.error; };
     return { repository, storage, ensureProject, ensureProjectRoute, refreshProject, settled, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
 }
 export async function openDurableProjectRuntime(legacy, factory = globalThis.indexedDB, startup = {}) { return createDurableProjectRuntime(await openIndexedDbProjectRepository(factory), legacy, startup); }

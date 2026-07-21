@@ -818,9 +818,13 @@
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",
       "src/data-layer-layered-schema-ui.ts",
-      "src/data-layer-side-panel-schema-editor.ts"
+      "src/data-layer-side-panel-schema-editor.ts",
+      "src/side-panel.ts",
+      "side-panel.css"
     ],
-    "dependencies": [],
+    "dependencies": [
+      "durable_project_repository"
+    ],
     "unit": [
       "test/data-layer-canonical-schema-authoring-test.mjs",
       "test/data-layer-compact-canonical-history-test.mjs",

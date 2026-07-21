@@ -248,9 +248,9 @@ if(!state){const stagedStart=localStorage.getItem(START_PATH_KEY);if(stagedStart
 durableProjectRuntime.subscribe(({library:incoming,active})=>{
   if(pendingConflict||durableConflict)return;
   if(active?.state.project.id!==state?.project.id){synchronizeActiveProjectContext(serializeProjectLibrary(incoming));return;}
-  library=structuredClone(incoming);if(!active)return;
+  library=structuredClone(incoming);if(!active)return;const focusedMembershipId=document.activeElement instanceof HTMLElement?document.activeElement.closest<HTMLElement>("[data-page-group-membership-id]")?.dataset.pageGroupMembershipId:undefined;
   state={...structuredClone(active.state),history:{undo:[],redo:[]}};lastCommittedState=structuredClone(state);canonicalRevision=active.draftSequence;publishedRevision=active.publishedRevision;if(!durableProjectRuntime.failedSave())saveStatus={kind:"idle"};
-  render();renderAssignments();q("#project-state").textContent=`Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
+  render();renderAssignments();if(focusedMembershipId)queueMicrotask(()=>document.querySelector<HTMLElement>(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());q("#project-state").textContent=`Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
 });
 render();renderAssignments();
 const applyRequestedRoute=()=>{const deepKind=routeParameters.get("kind") as ProjectEntityKind|null,deepId=routeParameters.get("entity"),requestedAction=routeParameters.get("route");if(deepKind&&deepKind in labels){projectOverview=false;selectedKind=deepKind;creationKind=requestedAction==="add"?deepKind:undefined;selectedId=creationKind?undefined:deepId&&state&&(state.project.collections[deepKind] as ProjectEntity[]).some(({id})=>id===deepId)?deepId:undefined;persistNavigation();render();queueMicrotask(()=>{const target=creationKind?document.querySelector<HTMLElement>(`[data-creation-kind="${deepKind}"] h1`):selectedId?document.querySelector<HTMLElement>(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`):q<HTMLElement>("#project-inspector");if(target){target.tabIndex=-1;target.focus({preventScroll:true});}});}if(routeParameters.get("view")==="documentation"&&state)q<HTMLElement>("#generate-documentation").click();};
