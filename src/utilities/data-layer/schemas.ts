@@ -13,7 +13,8 @@ export { type AttachedSchemaRule, type ValidationIssue, type ValidationResult, t
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation, type SpecificationRuntimeObservation, type SpecificationRuntimeResult, type SpecificationRuntimeStorage } from "./layers/browser/schemas.js";
 export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
-export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
+export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
+export { composedCanonicalSchema, saveComposedCanonicalDocument } from "./layers/browser/schemas.js";
 export { applyCanonicalCommand, createCanonicalSchema, migrateLegacyProfile, type CanonicalSchemaDocument } from "../../data-layer-canonical-schema.js";
 export { mountUnifiedSidePanelCanonicalEditor, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";

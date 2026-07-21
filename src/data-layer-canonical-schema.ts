@@ -1,4 +1,4 @@
-import type {LayerConstraint} from "./data-layer-layered-schema.js";
+import type {LayerConstraint,LayerScope} from "./data-layer-layered-schema.js";
 
 export type CanonicalScalarType="string"|"number"|"integer"|"boolean"|"null";
 export type CanonicalPropertyType=CanonicalScalarType|"object"|"array";
@@ -12,7 +12,7 @@ export interface CanonicalPredicateEvidence {matched:boolean;branches:{label:str
 export interface CanonicalAllowedValue {id:string;value:unknown;label?:string;}
 export interface CanonicalRule {id:string;kind:"pattern"|"range"|"cardinality"|"condition"|"custom";pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;severity:"error"|"warning";message:string;reusableRuleId?:string;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
-export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;}
+export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective";}
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
@@ -20,8 +20,8 @@ export interface CanonicalPropertyNode {
 }
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;
-  source?:{identity:string;revision:number;provenance:"saved-schema-library"};selectedPropertyId?:string;view:"tree"|"table";
-  sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[]};
+  source?:{identity:string;revision:number;provenance:"saved-schema-library"|"project-composed-effective"};selectedPropertyId?:string;view:"tree"|"table";
+  sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[];definitionsByNodeId?:Record<string,Record<string,unknown>>};
   changes:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]}[];
 }
 export interface CanonicalSchemaInput {id:string;contributorId:string;contributorName:string;source?:CanonicalSchemaDocument["source"];}

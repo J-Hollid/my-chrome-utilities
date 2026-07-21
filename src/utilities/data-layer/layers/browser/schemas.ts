@@ -20,7 +20,8 @@ export { exampleValueFromInput, schemaPropertyExampleChoices, schemaPropertyExam
 export { guidedAttachedRule } from "../../../../data-layer-guided-rule-parameter-integrity.js";
 export { guidedPropertyDocument, mergeGuidedDocument } from "../../../../data-layer-guided-nested-property-merge.js";
 export { inspectSpecificIndexRuleTarget } from "../../../../data-layer-schema-nested-path.js";
-export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "../../../../data-layer-layered-schema-ui.js";
+export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "../../../../data-layer-layered-schema-ui.js";
+export { composedCanonicalSchema, saveComposedCanonicalDocument } from "../../../../data-layer-composed-schema-workspace.js";
 export { sidePanelSchemaGroups } from "../../../../data-layer-side-panel-schema-editor.js";
 export { mountProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";
 export type { ProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";

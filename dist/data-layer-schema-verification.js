@@ -110,6 +110,7 @@ export function createSchemaWorkingDraft(schema, sourceVersion = schema.version)
             ...(source.parentSchemaId ? { parentSchemaId: source.parentSchemaId } : {}),
             ...(source.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(source.inheritedRuleOverrides) } : {}),
             ...(source.documentation !== undefined ? { documentation: clone(source.documentation) } : {}),
+            ...(source.canonicalSchema !== undefined ? { canonicalSchema: clone(source.canonicalSchema) } : {}),
             pendingChanges: [],
         },
     };
@@ -152,7 +153,7 @@ export function publishSchemaWorkingDraft(schema) {
     if (!draft)
         throw new Error("Schema has no working draft to publish.");
     const snapshot = schemaSnapshot(schema);
-    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = snapshot;
+    const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = snapshot;
     return {
         ...current,
         name: draft.name ?? schema.name,
@@ -164,6 +165,7 @@ export function publishSchemaWorkingDraft(schema) {
         ...(draft.parentSchemaId ? { parentSchemaId: draft.parentSchemaId } : {}),
         ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides: clone(draft.inheritedRuleOverrides) } : {}),
         ...(draft.documentation !== undefined ? { documentation: clone(draft.documentation) } : {}),
+        ...(draft.canonicalSchema !== undefined ? { canonicalSchema: clone(draft.canonicalSchema) } : {}),
         revisionHistory: schema.published === false ? [] : [...(schema.revisionHistory ?? []).map(schemaSnapshot), snapshot],
     };
 }

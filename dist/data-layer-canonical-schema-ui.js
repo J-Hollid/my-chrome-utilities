@@ -1,6 +1,8 @@
 import { canonicalPropertyPath, canonicalTableRows, evaluateCanonicalPredicate } from "./data-layer-canonical-schema.js";
 const dom = globalThis.document;
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
+const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope} ${contributorName} ${state}` : source).join(" → ");
+const inheritsFromParent = (node) => node.provenance.some(({ state }) => state === "inherited" || state === "shadowed");
 const labeled = (text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const select = (name, values, value) => { const control = dom.createElement("select"); control.name = name; for (const entry of values)
@@ -65,7 +67,7 @@ export function mountCanonicalSchemaEditor(options) {
                     const item = dom.createElement("li"), choose = dom.createElement("button");
                     item.style.paddingInlineStart = `${row.depth * 1.25}rem`;
                     choose.type = "button";
-                    choose.textContent = `${row.node.name} · ${row.path} · ${row.node.type}`;
+                    choose.textContent = `${row.node.name} · ${row.path} · ${row.node.type} · ${provenanceText(row.node)}`;
                     choose.dataset.propertyId = row.id;
                     choose.setAttribute("aria-current", String(row.selected));
                     choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
@@ -112,7 +114,7 @@ export function mountCanonicalSchemaEditor(options) {
                     reveal.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
                     actions.className = "canonical-inline-row-actions";
                     actions.append(addChild, addSibling, rename, duplicate, move, remove, reveal);
-                    const cells = [choose, row.path, type, presence, valueGroup, row.node.presence.condition ? plainPredicate(row.node.presence.condition, document) : "Always", String(row.node.rules.length), documentation, example, row.node.provenance.map(({ source }) => source).join(", "), "Local canonical definition", row.validationState, actions];
+                    const cells = [choose, row.path, type, presence, valueGroup, row.node.presence.condition ? plainPredicate(row.node.presence.condition, document) : "Always", String(row.node.rules.length), documentation, example, provenanceText(row.node), row.node.provenance.at(-1)?.state ?? "Local canonical definition", row.validationState, actions];
                     for (const value of cells) {
                         const cell = dom.createElement("td");
                         if (value instanceof HTMLElement)
@@ -185,8 +187,8 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
     host.setAttribute("aria-label", "Complete selected-property editor");
     const heading = dom.createElement("h3"), path = dom.createElement("p"), structure = dom.createElement("div"), name = input("propertyName", node.name), rename = dom.createElement("button"), addChild = dom.createElement("button"), addSibling = dom.createElement("button"), duplicate = dom.createElement("button"), move = dom.createElement("button"), remove = dom.createElement("button");
     heading.textContent = node.name;
-    path.textContent = `Generated path ${canonicalPropertyPath(document, node.id)} · stable identity ${node.id}`;
-    for (const [button, text] of [[rename, "Rename"], [addChild, "Add child"], [addSibling, "Add sibling"], [duplicate, "Duplicate"], [move, "Move"], [remove, "Delete"]]) {
+    path.textContent = `Generated path ${canonicalPropertyPath(document, node.id)} · stable identity ${node.id} · provenance ${provenanceText(node)}`;
+    for (const [button, text] of [[rename, "Rename"], [addChild, "Add child"], [addSibling, "Add sibling"], [duplicate, "Duplicate"], [move, "Move"], [remove, inheritsFromParent(node) ? "Reset to parents" : "Delete"]]) {
         button.type = "button";
         button.textContent = text;
     }

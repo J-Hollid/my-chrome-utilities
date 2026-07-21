@@ -67,11 +67,13 @@ for(let example=0;example<120;example+=1){
   const before=structuredClone(saved);
   const canonical=savedSchemaCanonicalDocument(saved,id);
   const roundTrip=savedSchemaFromCanonical(saved,canonical);
+  const reloaded=savedSchemaCanonicalDocument(roundTrip,()=>{throw new Error(`example ${example} regenerated canonical identity`);});
 
   assert.deepEqual(saved,before,`example ${example} leaves its saved schema untouched`);
   assert.deepEqual(roundTrip.document,saved.document,`example ${example} preserves JSON schema`);
   assert.deepEqual(roundTrip.attachedRules,saved.attachedRules,`example ${example} preserves attached rules`);
   assert.deepEqual(roundTrip.documentation,saved.documentation,`example ${example} preserves documentation`);
+  assert.deepEqual(reloaded,canonical,`example ${example} preserves every canonical node identity and rich facet`);
 }
 
 console.log("data-layer unified side-panel schema editor property tests passed");

@@ -26,6 +26,30 @@ const writeSidePanelCanonical = (state, selection, canonical) => transactProject
     const collection = project.collections[selection.collectionKind];
     return { ...project, collections: { ...project.collections, [selection.collectionKind]: collection.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical, ...(selection.collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } };
 } const graphs = project.documentationFlowGraphs, graph = graphs[selection.flowId], key = selection.scope === "Flow Page-instance" ? "pageFrames" : "occurrences", entries = graph[key] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [selection.flowId]: { ...graph, [key]: entries.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } }; });
+export function renderSidePanelComposedSchemaContext(options) {
+    const state = options.load(), selection = state ? resolveSidePanelSchemaContributor(state, options.key) : undefined;
+    if (!state || !selection || (selection.collectionKind !== "pages" && selection.collectionKind !== "pageGroups"))
+        return;
+    const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope), facets = document.createElement("section"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
+    facets.setAttribute("aria-label", "Inherited and sparse local schema facets");
+    for (const row of model.rows) {
+        const article = document.createElement("article"), summary = document.createElement("p"), builder = document.createElement("section"), reset = document.createElement("button");
+        article.dataset.sidePanelEffectivePath = row.path;
+        summary.textContent = `${row.path} · inherited ${row.inherited ? effectivePropertySummary(row.inherited) : "none"} · local ${Object.keys(row.local).length > 1 ? "present" : "none"} · effective ${effectivePropertySummary(row.effective)} · ${row.validationState} · provenance ${row.provenance.map(({ contributorName }) => contributorName).join(" → ")}`;
+        mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (next) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
+                options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, next)); options.render(); } });
+        reset.type = "button";
+        reset.textContent = row.action === "override" ? "Override here" : "Reset to parents";
+        reset.addEventListener("click", () => { if (row.action === "override") {
+            builder.querySelector("input,select,button")?.focus();
+            return;
+        } const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
+            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); });
+        article.append(summary, reset, builder);
+        facets.append(article);
+    }
+    options.host.append(facets);
+}
 export function mountSidePanelLayeredProfileEditor(options) {
     let selectedKey;
     const current = () => { const state = options.load(), selection = state && selectedKey ? resolveSidePanelSchemaContributor(state, selectedKey) : undefined; return { state, selection }; };
@@ -80,27 +104,8 @@ export function mountSidePanelLayeredProfileEditor(options) {
                 options.persist(redoProjectTransaction(live.state));
                 render();
             } } });
-        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups") {
-            const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope), facets = document.createElement("section"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
-            facets.setAttribute("aria-label", "Inherited and sparse local schema facets");
-            for (const row of model.rows) {
-                const article = document.createElement("article"), summary = document.createElement("p"), builder = document.createElement("section"), reset = document.createElement("button");
-                article.dataset.sidePanelEffectivePath = row.path;
-                summary.textContent = `${row.path} · inherited ${row.inherited ? effectivePropertySummary(row.inherited) : "none"} · local ${Object.keys(row.local).length > 1 ? "present" : "none"} · effective ${effectivePropertySummary(row.effective)} · ${row.validationState} · provenance ${row.provenance.map(({ contributorName }) => contributorName).join(" → ")}`;
-                mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (next) => { const live = current(); if (live.state && live.selection?.collectionKind)
-                        options.persist(saveComposedSchemaLocalFacets(live.state, live.selection.collectionKind, live.selection.entity.id, row.path, next)); render(); } });
-                reset.type = "button";
-                reset.textContent = row.action === "override" ? "Override here" : "Reset to parents";
-                reset.addEventListener("click", () => { if (row.action === "override") {
-                    builder.querySelector("input,select,button")?.focus();
-                    return;
-                } const live = current(); if (live.state && live.selection?.collectionKind)
-                    options.persist(resetComposedSchemaLocalProperty(live.state, live.selection.collectionKind, live.selection.entity.id, row.path)); render(); });
-                article.append(summary, reset, builder);
-                facets.append(article);
-            }
-            options.host.append(facets);
-        }
+        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups")
+            renderSidePanelComposedSchemaContext({ host: options.host, load: options.load, key: selectedKey, persist: options.persist, render });
     };
     const select = (key) => { const state = options.load(); if (!state || !resolveSidePanelSchemaContributor(state, key))
         return false; selectedKey = key; render(); return true; };

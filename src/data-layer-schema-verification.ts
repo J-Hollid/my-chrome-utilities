@@ -28,6 +28,7 @@ import {
   cardinalityConstraint,
   type CardinalityComparison,
 } from "./data-layer-cardinality.js";
+import type { CanonicalSchemaDocument } from "./data-layer-canonical-schema.js";
 
 export type ValidationTarget = "payload" | "raw input";
 export type { JsonSchema } from "./data-layer-schema-document.js";
@@ -43,9 +44,10 @@ export interface SchemaWorkingDraft {
   parentSchemaId?: string | undefined;
   inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">> | undefined;
   documentation?: SchemaDocumentation | undefined;
+  canonicalSchema?: CanonicalSchemaDocument | undefined;
   pendingChanges: readonly string[];
 }
-export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; attachedRules?: readonly AttachedSchemaRule[]; parentSchemaId?: string; inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">>; documentation?: SchemaDocumentation; revisionHistory?: readonly SchemaDefinition[]; workingDraft?: SchemaWorkingDraft; published?: boolean; }
+export interface SchemaDefinition { id: string; name: string; version: number; document: JsonSchema; assignments: readonly SchemaAssignment[]; attachedRules?: readonly AttachedSchemaRule[]; parentSchemaId?: string; inheritedRuleOverrides?: Readonly<Record<string, "inherit" | "enabled" | "disabled">>; documentation?: SchemaDocumentation; canonicalSchema?: CanonicalSchemaDocument; revisionHistory?: readonly SchemaDefinition[]; workingDraft?: SchemaWorkingDraft; published?: boolean; }
 export interface SchemaRenameInspection { ready: boolean; proposedName: string; assistance: string; }
 export interface SchemaAssignment {
   sourceId: string;
@@ -189,13 +191,14 @@ export function createSchemaWorkingDraft(schema: SchemaDefinition, sourceVersion
       ...(source.parentSchemaId ? { parentSchemaId:source.parentSchemaId } : {}),
       ...(source.inheritedRuleOverrides ? { inheritedRuleOverrides:clone(source.inheritedRuleOverrides) } : {}),
       ...(source.documentation !== undefined ? { documentation:clone(source.documentation) } : {}),
+      ...(source.canonicalSchema !== undefined ? { canonicalSchema:clone(source.canonicalSchema) } : {}),
       pendingChanges:[],
     },
   };
 }
 export function updateSchemaWorkingDraft(
   schema: SchemaDefinition,
-  changes: Partial<Pick<SchemaWorkingDraft, "name" | "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation">>,
+  changes: Partial<Pick<SchemaWorkingDraft, "name" | "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation" | "canonicalSchema">>,
   change?: string,
 ): SchemaDefinition {
   const withDraft = schema.workingDraft ? clone(schema) : createSchemaWorkingDraft(schema);
@@ -235,7 +238,7 @@ export function publishSchemaWorkingDraft(schema: SchemaDefinition): SchemaDefin
   const draft = schema.workingDraft;
   if (!draft) throw new Error("Schema has no working draft to publish.");
   const snapshot = schemaSnapshot(schema);
-  const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, ...current } = snapshot;
+  const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = snapshot;
   return {
     ...current,
     name:draft.name ?? schema.name,
@@ -247,6 +250,7 @@ export function publishSchemaWorkingDraft(schema: SchemaDefinition): SchemaDefin
     ...(draft.parentSchemaId ? { parentSchemaId:draft.parentSchemaId } : {}),
     ...(draft.inheritedRuleOverrides ? { inheritedRuleOverrides:clone(draft.inheritedRuleOverrides) } : {}),
     ...(draft.documentation !== undefined ? { documentation:clone(draft.documentation) } : {}),
+    ...(draft.canonicalSchema !== undefined ? { canonicalSchema:clone(draft.canonicalSchema) } : {}),
     revisionHistory:schema.published === false ? [] : [...(schema.revisionHistory ?? []).map(schemaSnapshot), snapshot],
   };
 }
