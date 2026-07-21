@@ -56,7 +56,8 @@
       "acceptance/src/acceptance/steps/durable_project_repository.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/durable-project-repository.mjs"
+      "test/browser-packs/durable-project-repository.mjs",
+      "test/browser-packs/durable-project-renderer.mjs"
     ]
   },
   {
